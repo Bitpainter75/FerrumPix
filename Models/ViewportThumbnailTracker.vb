@@ -12,6 +12,8 @@ Namespace Models
     Public NotInheritable Class ViewportThumbnailTracker
         Private _keepFirst As Integer = -1
         Private _keepLast As Integer = -1
+        Private _pinnedFirst As Integer = -1
+        Private _pinnedLast As Integer = -1
 
         ''' <summary>Wie viele Elemente über den sichtbaren Bereich hinaus "warmgehalten" werden,
         ''' als Vielfaches der sichtbaren Anzahl (mindestens minKeepBuffer).</summary>
@@ -54,6 +56,22 @@ Namespace Models
             _keepFirst = keepFirst
             _keepLast = keepLast
 
+            ' Nur den tatsächlich sichtbaren Bereich (nicht den größeren Keep-Alive-Puffer) gegen
+            ' Verdrängung durch die globale LRU-Cap pinnen - siehe ImageItem.SetPinnedVisible/
+            ' TouchResident. Alten Bereich zuerst entpinnen, dann den neuen pinnen.
+            If _pinnedFirst >= 0 Then
+                For i = _pinnedFirst To _pinnedLast
+                    If i < firstVisible OrElse i > lastVisible Then
+                        If i < items.Count Then items(i)?.SetPinnedVisible(False)
+                    End If
+                Next
+            End If
+            For i = firstVisible To lastVisible
+                items(i)?.SetPinnedVisible(True)
+            Next
+            _pinnedFirst = firstVisible
+            _pinnedLast = lastVisible
+
             ' In umgekehrter Reihenfolge aufbauen, damit die LIFO-Warteschlange oben zuerst befüllt
             Dim viewportItems As New List(Of ImageItem)()
             For i = lastVisible To firstVisible Step -1
@@ -68,6 +86,8 @@ Namespace Models
         Public Sub Reset()
             _keepFirst = -1
             _keepLast = -1
+            _pinnedFirst = -1
+            _pinnedLast = -1
         End Sub
     End Class
 

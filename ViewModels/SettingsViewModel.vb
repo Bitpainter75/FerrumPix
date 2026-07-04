@@ -21,6 +21,7 @@ Namespace ViewModels
         Private _accentColor As String = "#F08A1A"
         Private _showBreadcrumbs As Boolean = True
         Private _thumbnailQuality As Integer = 82
+        Private _thumbnailMemoryCacheCapacity As Integer = 250
         Private _jpgSaveQuality As Integer = 90
         Private _thumbnailCacheEnabled As Boolean = True
         Private _cacheSizeMb As Integer = 512
@@ -57,6 +58,7 @@ Namespace ViewModels
         Private _savedDensity As String = "Komfortabel"
         Private _savedViewerOpenFitToWindow As Boolean = True
         Private _savedThumbnailQuality As Integer = 82
+        Private _savedThumbnailMemoryCacheCapacity As Integer = 250
         Private _savedJpgSaveQuality As Integer = 90
         Private _savedThumbnailCacheEnabled As Boolean = True
         Private _savedShowHiddenFolders As Boolean = False
@@ -233,6 +235,21 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _thumbnailCacheEnabled = value Then Return
                 Me.RaiseAndSetIfChanged(_thumbnailCacheEnabled, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' Wie viele bereits geladene Vorschaubilder maximal dauerhaft im Arbeitsspeicher gehalten
+        ''' werden (siehe ImageItem.MaxResidentThumbnails) - wirkt sofort, auch ohne "Übernehmen".
+        Public Property ThumbnailMemoryCacheCapacity As Integer
+            Get
+                Return _thumbnailMemoryCacheCapacity
+            End Get
+            Set(value As Integer)
+                value = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(value)
+                If _thumbnailMemoryCacheCapacity = value Then Return
+                Me.RaiseAndSetIfChanged(_thumbnailMemoryCacheCapacity, value)
+                ImageItem.MaxResidentThumbnails = value
                 SavePerformanceSettings()
             End Set
         End Property
@@ -742,6 +759,8 @@ Namespace ViewModels
             ParseRunningApplicationScale(_runningApplicationScale, _runningApplicationScaleScreen)
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
             _thumbnailQuality = _appSettings.ThumbnailQuality
+            _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)
+            ImageItem.MaxResidentThumbnails = _thumbnailMemoryCacheCapacity
             _jpgSaveQuality = _appSettings.JpgSaveQuality
             _showHiddenFolders = _appSettings.ShowHiddenFolders
             _galleryShowFolders = _appSettings.GalleryShowFolders
@@ -819,6 +838,7 @@ Namespace ViewModels
             _savedBreadcrumbs = _showBreadcrumbs
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
             _savedThumbnailQuality = _thumbnailQuality
+            _savedThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             _savedJpgSaveQuality = _jpgSaveQuality
             _savedThumbnailCacheEnabled = _thumbnailCacheEnabled
             _savedShowHiddenFolders = _showHiddenFolders
@@ -846,6 +866,7 @@ Namespace ViewModels
             ShowBreadcrumbs = _savedBreadcrumbs
             ViewerOpenFitToWindow = _savedViewerOpenFitToWindow
             ThumbnailQuality = _savedThumbnailQuality
+            ThumbnailMemoryCacheCapacity = _savedThumbnailMemoryCacheCapacity
             JpgSaveQuality = _savedJpgSaveQuality
             ThumbnailCacheEnabled = _savedThumbnailCacheEnabled
             ShowHiddenFolders = _savedShowHiddenFolders
@@ -895,6 +916,7 @@ Namespace ViewModels
             StartupImageMode = "Viewer"
             ThumbnailCacheEnabled = True
             ThumbnailQuality = 82
+            ThumbnailMemoryCacheCapacity = 250
             JpgSaveQuality = 90
             CacheSizeMb = 512
             ShowHiddenFolders = False
@@ -998,6 +1020,7 @@ Namespace ViewModels
             Dim settings = AppSettingsService.Load()
             settings.ThumbnailCacheEnabled = _thumbnailCacheEnabled
             settings.ThumbnailQuality = _thumbnailQuality
+            settings.GalleryThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             settings.JpgSaveQuality = _jpgSaveQuality
             AppSettingsService.Save(settings)
         End Sub

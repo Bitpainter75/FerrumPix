@@ -181,34 +181,105 @@ Namespace Models
         Private _thumbnailCacheScopeName As String = Nothing
         Private _fileInfoLoaded As Boolean = False
         Private _residentLruNode As LinkedListNode(Of ImageItem)
+        Private _isPinnedVisible As Boolean = False
 
         ' Ein bei ~480px Cache-Breite dekodiertes Thumbnail liegt typischerweise bei ca. 400-700KB
         ' (Bgra8888). Der Cap bindet die dauerhaft im Speicher gehaltenen, bereits gesehenen
-        ' Thumbnails auf ca. 100-180MB, unabhängig davon, wie weit der Nutzer inzwischen
-        ' weitergescrollt ist - deutlich mehr als der alte, an die Sichtfenster-Position gekoppelte
-        ' Keep-Alive-Puffer, damit Hin- und Herscrollen im selben Bereich keinen Re-Decode mehr
-        ' auslöst (siehe TouchResident).
-        Private Const MaxResidentThumbnails As Integer = 250
+        ' Thumbnails auf ca. 100-180MB bei Standardeinstellung (250), unabhängig davon, wie weit
+        ' der Nutzer inzwischen weitergescrollt ist - deutlich mehr als der alte, an die
+        ' Sichtfenster-Position gekoppelte Keep-Alive-Puffer, damit Hin- und Herscrollen im selben
+        ' Bereich keinen Re-Decode mehr auslöst (siehe TouchResident). Über die Einstellungen
+        ' (Vorschaubild-Speichercache-Regler) vom Nutzer einstellbar, siehe MaxResidentThumbnails.
+        Private Const DefaultMaxResidentThumbnails As Integer = 250
+        Private Shared _maxResidentThumbnails As Integer = DefaultMaxResidentThumbnails
         Private Shared ReadOnly _residentLru As New LinkedList(Of ImageItem)()
+
+        ''' <summary>Von den Einstellungen aus gesetzte Obergrenze für dauerhaft im Speicher
+        ''' gehaltene Thumbnails (siehe AppSettingsService.GalleryThumbnailMemoryCacheCapacity).
+        ''' Ein Herabsetzen verdrängt sofort überzählige, nicht aktuell sichtbare Elemente, statt
+        ''' erst beim nächsten TouchResident-Aufruf.</summary>
+        Public Shared Property MaxResidentThumbnails As Integer
+            Get
+                Return Volatile.Read(_maxResidentThumbnails)
+            End Get
+            Set(value As Integer)
+                Dim evicted As List(Of ImageItem) = Nothing
+                SyncLock _thumbnailQueueLock
+                    _maxResidentThumbnails = Math.Max(0, value)
+                    evicted = EvictExcessLocked()
+                End SyncLock
+                DisposeEvictedThumbnails(evicted)
+            End Set
+        End Property
+
+        ''' <summary>Als aktuell sichtbar markierte Elemente überleben die LRU-Verdrängung in
+        ''' TouchResident immer, unabhängig von ihrer Position in der Warteschlange - sonst kann
+        ''' eine parallel laufende Hintergrund-Vorladung des ganzen Ordners (QueueBackgroundThumbnails)
+        ''' die gerade erst angezeigten Thumbnails wieder verdrängen, weil diese als erste "berührt"
+        ''' wurden und damit die ältesten LRU-Einträge sind. Wird von ViewportThumbnailTracker anhand
+        ''' des tatsächlich sichtbaren Bereichs gesetzt/gelöscht.</summary>
+        Public Sub SetPinnedVisible(pinned As Boolean)
+            SyncLock _thumbnailQueueLock
+                _isPinnedVisible = pinned
+            End SyncLock
+        End Sub
 
         ''' <summary>Merkt ein bereits geladenes Thumbnail als zuletzt genutzt vor (MRU-Ende der
         ''' LRU-Liste) und verdrängt bei Überschreiten von MaxResidentThumbnails das am längsten
-        ''' nicht mehr angefragte Element - unabhängig von dessen Position im Sichtfenster. Muss
-        ''' unter _thumbnailQueueLock aufgerufen werden (SyncLock ist pro Thread reentrant, daher
-        ''' auch von Aufrufern sicher, die das Lock bereits halten).</summary>
+        ''' nicht mehr angefragte, nicht aktuell sichtbare Element. Muss unter _thumbnailQueueLock
+        ''' aufgerufen werden (SyncLock ist pro Thread reentrant, daher auch von Aufrufern sicher,
+        ''' die das Lock bereits halten).</summary>
         Private Shared Sub TouchResident(item As ImageItem)
+            Dim evicted As List(Of ImageItem) = Nothing
             SyncLock _thumbnailQueueLock
                 If item._residentLruNode IsNot Nothing Then _residentLru.Remove(item._residentLruNode)
                 item._residentLruNode = _residentLru.AddLast(item)
-                While _residentLru.Count > MaxResidentThumbnails
-                    Dim oldest = _residentLru.First.Value
-                    _residentLru.RemoveFirst()
-                    oldest._residentLruNode = Nothing
-                    oldest._thumbnail?.Dispose()
-                    oldest._thumbnail = Nothing
-                    oldest._thumbState = 0
-                End While
+                evicted = EvictExcessLocked()
             End SyncLock
+            DisposeEvictedThumbnails(evicted)
+        End Sub
+
+        ''' <summary>Verdrängt vom ältesten Ende der LRU-Liste, bis MaxResidentThumbnails erreicht
+        ''' ist oder keine weiteren nicht aktuell sichtbaren Kandidaten mehr existieren. Muss unter
+        ''' _thumbnailQueueLock aufgerufen werden.</summary>
+        Private Shared Function EvictExcessLocked() As List(Of ImageItem)
+            Dim evicted As List(Of ImageItem) = Nothing
+            Dim node = _residentLru.First
+            While _residentLru.Count > _maxResidentThumbnails AndAlso node IsNot Nothing
+                Dim nextNode = node.Next
+                Dim candidate = node.Value
+                If Not candidate._isPinnedVisible Then
+                    _residentLru.Remove(node)
+                    candidate._residentLruNode = Nothing
+                    candidate._thumbState = 0
+                    If evicted Is Nothing Then evicted = New List(Of ImageItem)()
+                    evicted.Add(candidate)
+                End If
+                node = nextNode
+            End While
+            Return evicted
+        End Function
+
+        ''' <summary>Ein per Binding an ein Image.Source gebundenes Bitmap darf erst disposed
+        ''' werden, NACHDEM die UI per PropertyChanged benachrichtigt wurde und die Bindung
+        ''' entfernt hat - sonst kann ein noch laufender Avalonia-Layoutdurchlauf (z.B. beim
+        ''' Scrollen) auf ein bereits disposed Bitmap zugreifen und mit einer
+        ''' NullReferenceException abstürzen (Image.ArrangeOverride). Das Umhängen von
+        ''' Source=Nothing und das Dispose müssen daher auf dem UI-Thread und in dieser
+        ''' Reihenfolge erfolgen.</summary>
+        Private Shared Sub DisposeEvictedThumbnails(evicted As List(Of ImageItem))
+            If evicted IsNot Nothing Then
+                For Each oldest In evicted
+                    Dim bmp = oldest._thumbnail
+                    oldest._thumbnail = Nothing
+                    If bmp IsNot Nothing Then
+                        Dispatcher.UIThread.Post(Sub()
+                                                      oldest.RaisePropertyChanged(NameOf(Thumbnail))
+                                                      bmp.Dispose()
+                                                  End Sub, DispatcherPriority.Background)
+                    End If
+                Next
+            End If
         End Sub
 
         Private Sub UntrackResident()
@@ -593,7 +664,7 @@ Namespace Models
         End Sub
 
         Public Sub ClearThumbnail()
-            _thumbnail?.Dispose()
+            Dim bmp = _thumbnail
             _thumbnail = Nothing
             _inViewportQueue = False
             _inBackgroundQueue = False
@@ -601,6 +672,15 @@ Namespace Models
             _evictThumbnailAfterLoad = False
             _thumbState = 0
             UntrackResident()
+            ' Siehe TouchResident: Dispose erst nach der UI-Benachrichtigung, damit ein noch an
+            ' dieses Bitmap gebundenes Image.Source nicht während eines Layoutdurchlaufs auf ein
+            ' bereits disposed Bitmap zugreift.
+            If bmp IsNot Nothing Then
+                Dispatcher.UIThread.Post(Sub()
+                                              RaisePropertyChanged(NameOf(Thumbnail))
+                                              bmp.Dispose()
+                                          End Sub, DispatcherPriority.Background)
+            End If
         End Sub
     End Class
 

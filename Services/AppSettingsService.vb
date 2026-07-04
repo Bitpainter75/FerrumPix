@@ -39,6 +39,7 @@ Namespace Services
         Public Property LanguageMode As String = "System"
         Public Property ThumbnailCacheEnabled As Boolean = True
         Public Property ThumbnailQuality As Integer = 82
+        Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 250
         Public Property JpgSaveQuality As Integer = 90
         Public Property EditorInfoSidebarExpanded As Boolean = True
         Public Property ViewerInfoSidebarExpanded As Boolean = True
@@ -87,6 +88,7 @@ Namespace Services
                 settings.StartupImageMode = NormalizeStartupImageMode(settings.StartupImageMode)
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
+                settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
@@ -118,6 +120,7 @@ Namespace Services
                 settings.StartupImageMode = NormalizeStartupImageMode(settings.StartupImageMode)
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
+                settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
@@ -141,6 +144,10 @@ Namespace Services
 
         Public Shared Function NormalizeThumbnailQuality(value As Integer) As Integer
             Return Math.Max(45, Math.Min(95, value))
+        End Function
+
+        Public Shared Function NormalizeGalleryThumbnailMemoryCacheCapacity(value As Integer) As Integer
+            Return Math.Max(50, Math.Min(2500, value))
         End Function
 
         Public Shared Function NormalizeJpgSaveQuality(value As Integer) As Integer

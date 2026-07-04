@@ -661,6 +661,25 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
+                                <TextBlock Text="Vorschaubild-Speichercache" FontSize="12"/>
+                                <TextBlock Text="Wie viele Vorschaubilder maximal gleichzeitig im Arbeitsspeicher gehalten werden. Höhere Werte verringern erneutes Laden beim Scrollen, benötigen aber mehr Arbeitsspeicher." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="50"
+                                                   Maximum="2500"
+                                                   Value="{Binding ThumbnailMemoryCacheCapacity}"/>
+                                <TextBlock Text="{Binding ThumbnailMemoryCacheCapacity}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="11"
+                                           Width="34"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
                                 <TextBlock Text="JPG-Qualität" FontSize="12"/>
                                 <TextBlock Text="Wird für das Speichern und Exportieren als JPG verwendet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
                             </StackPanel>
