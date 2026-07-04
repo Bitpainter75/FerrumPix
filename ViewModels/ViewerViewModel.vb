@@ -98,6 +98,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' Löst das alte Bitmap erst einen Dispatcher-Tick später auf (statt im selben Aufruf) -
+        ''' MainImage/FullscreenImage (siehe ViewerView.axaml) könnten die alte Quelle sonst noch
+        ''' kurz zum Kompositieren/Rendern brauchen, obwohl die Bindung bereits auf das neue Bild
+        ''' umgestellt wurde.
+        Private Shared Sub DisposeDeferred(bitmap As Bitmap)
+            If bitmap Is Nothing Then Return
+            Dispatcher.UIThread.Post(Sub() bitmap.Dispose(), DispatcherPriority.Background)
+        End Sub
+
         Public Property CurrentImage As Bitmap
             Get
                 Return _currentImage
@@ -106,7 +115,7 @@ Namespace ViewModels
                 Dim previous = _currentImage
                 Me.RaiseAndSetIfChanged(_currentImage, value)
                 Me.RaisePropertyChanged(NameOf(HasNoMedia))
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then previous.Dispose()
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
 
@@ -226,7 +235,7 @@ Namespace ViewModels
             Set(value As Bitmap)
                 Dim previous = _histogramImage
                 Me.RaiseAndSetIfChanged(_histogramImage, value)
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then previous.Dispose()
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
 
@@ -689,7 +698,8 @@ Namespace ViewModels
                 AddHandler _mediaPlayer.Playing, AddressOf OnVideoPlayingChanged
                 AddHandler _mediaPlayer.Paused, AddressOf OnVideoPausedChanged
                 AddHandler _mediaPlayer.Stopped, AddressOf OnVideoPausedChanged
-            Catch
+            Catch ex As Exception
+                DiagnosticLogService.LogException("VideoPlayback.EnsureMediaPlayer", ex)
                 _mediaPlayer?.Dispose()
                 _mediaPlayer = Nothing
                 _libVlc?.Dispose()
@@ -725,7 +735,8 @@ Namespace ViewModels
                     _mediaPlayer.Media = media
                 End Using
                 _pendingVideoAutoplay = True
-            Catch
+            Catch ex As Exception
+                DiagnosticLogService.LogException("VideoPlayback.LoadVideo", ex)
             End Try
         End Sub
 
@@ -734,7 +745,8 @@ Namespace ViewModels
             _pendingVideoAutoplay = False
             Try
                 _mediaPlayer?.Play()
-            Catch
+            Catch ex As Exception
+                DiagnosticLogService.LogException("VideoPlayback.StartPendingVideoAutoplay", ex)
             End Try
         End Sub
 
@@ -742,7 +754,8 @@ Namespace ViewModels
             If _mediaPlayer Is Nothing Then Return
             Try
                 _mediaPlayer.Stop()
-            Catch
+            Catch ex As Exception
+                DiagnosticLogService.LogException("VideoPlayback.StopVideoPlayback", ex)
             End Try
             IsVideoPlaying = False
         End Sub

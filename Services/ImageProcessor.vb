@@ -2166,9 +2166,13 @@ Namespace Services
                     For x As Integer = 0 To source.Width - 1
                         Dim c = source.GetPixel(x, y)
                         Dim b = blurred.GetPixel(x, y)
-                        Dim r = ClampToByte(c.Red + (c.Red - b.Red) * amount * 1.6F)
-                        Dim g = ClampToByte(c.Green + (c.Green - b.Green) * amount * 1.6F)
-                        Dim bl = ClampToByte(c.Blue + (c.Blue - b.Blue) * amount * 1.6F)
+                        ' Ohne die expliziten CInt-Weitungen würde "c.Red - b.Red" als Byte-Subtraktion
+                        ' ausgewertet - da Byte vorzeichenlos ist, wirft VB im Checked-Kontext eine
+                        ' OverflowException, sobald der weichgezeichnete Pixel heller ist als das
+                        ' Original (b.Red > c.Red), was in praktisch jedem Foto ständig vorkommt.
+                        Dim r = ClampToByte(CInt(c.Red) + (CInt(c.Red) - CInt(b.Red)) * amount * 1.6F)
+                        Dim g = ClampToByte(CInt(c.Green) + (CInt(c.Green) - CInt(b.Green)) * amount * 1.6F)
+                        Dim bl = ClampToByte(CInt(c.Blue) + (CInt(c.Blue) - CInt(b.Blue)) * amount * 1.6F)
                         result.SetPixel(x, y, New SKColor(r, g, bl, c.Alpha))
                     Next
                 Next

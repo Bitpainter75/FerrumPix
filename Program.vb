@@ -1,5 +1,6 @@
 Imports Avalonia
 Imports Avalonia.ReactiveUI
+Imports Avalonia.X11
 Imports FerrumPix.Services
 
 Module Program
@@ -13,6 +14,7 @@ Module Program
         Return AppBuilder.Configure(Of App)().
             UsePlatformDetect().
             UseReactiveUI().
-            LogToTrace()
+            LogToTrace().
+            With(New X11PlatformOptions With {.UseDBusMenu = False})
     End Function
 End Module

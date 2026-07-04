@@ -625,6 +625,16 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' Löst das alte Bitmap erst einen Dispatcher-Tick später auf (statt im selben Aufruf), da
+        ''' AfterImageControl/BeforeImageControl (siehe EditorView.axaml) dieselbe Quelle noch
+        ''' kurz zum Kompositieren/Rendern brauchen können, nachdem die Bindung bereits auf das
+        ''' neue Bild umgestellt wurde - ein sofortiges Dispose direkt im Property-Setter lief dem
+        ''' bei sehr häufigen Vorschau-Wechseln (Live-Regler) gelegentlich davon.
+        Private Shared Sub DisposeDeferred(bitmap As Bitmap)
+            If bitmap Is Nothing Then Return
+            Dispatcher.UIThread.Post(Sub() bitmap.Dispose(), DispatcherPriority.Background)
+        End Sub
+
         Public Property CurrentImage As Bitmap
             Get
                 Return _currentImage
@@ -635,7 +645,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DisplayImage))
                 Me.RaisePropertyChanged(NameOf(BeforeDisplayImage))
                 RaiseCropPropertiesChanged()
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then previous.Dispose()
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
 
@@ -647,7 +657,7 @@ Namespace ViewModels
                 Dim previous = _previewImage
                 Me.RaiseAndSetIfChanged(_previewImage, value)
                 Me.RaisePropertyChanged(NameOf(DisplayImage))
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then previous.Dispose()
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
 
@@ -659,7 +669,7 @@ Namespace ViewModels
                 Dim previous = _comparisonImage
                 Me.RaiseAndSetIfChanged(_comparisonImage, value)
                 Me.RaisePropertyChanged(NameOf(BeforeDisplayImage))
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then previous.Dispose()
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
 
@@ -2606,7 +2616,7 @@ Namespace ViewModels
             Set(value As Bitmap)
                 Dim previous = _histogramImage
                 Me.RaiseAndSetIfChanged(_histogramImage, value)
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then previous.Dispose()
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
 
@@ -3751,6 +3761,7 @@ Namespace ViewModels
             Catch ex As OperationCanceledException
             Catch ex As Exception
                 StatusText = "Vorschau-Fehler: " & ex.Message
+                LogPreviewError(ex)
             Finally
                 If ReferenceEquals(_previewRenderCts, cts) Then
                     _previewRenderCts = Nothing
@@ -3759,6 +3770,14 @@ Namespace ViewModels
                 RegisterPreviewRenderEnd()
             End Try
         End Function
+
+        ''' <summary>Vollständige Exception-Details (inkl. Stacktrace) für Vorschau-Fehler - die im
+        ''' UI angezeigte StatusText-Meldung zeigt nur ex.Message, das reicht zur Ferndiagnose
+        ''' seltener/schwer reproduzierbarer Fehler nicht aus. Nur aktiv, wenn in den Einstellungen
+        ''' eingeschaltet (Settings.EnableDiagnosticLogging).</summary>
+        Private Shared Sub LogPreviewError(ex As Exception)
+            DiagnosticLogService.LogException("EditorPreview", ex)
+        End Sub
 
         Private Async Function SaveImageAsync(saveAs As Boolean) As Task(Of Boolean)
             If String.IsNullOrEmpty(_currentImagePath) Then Return False

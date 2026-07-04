@@ -689,6 +689,18 @@
                             </StackPanel>
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Fehlerdiagnose-Protokoll" FontSize="12"/>
+                                <TextBlock Text="Schreibt Details zu Vorschau-/Wiedergabe-Fehlern nach %LocalAppData%/FerrumPix/logs/diagnostics.log. Nur bei Bedarf zur Fehlersuche einschalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EnableDiagnosticLogging}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2">

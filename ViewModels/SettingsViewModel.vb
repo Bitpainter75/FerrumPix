@@ -47,6 +47,7 @@ Namespace ViewModels
         Private _videoHardwareAcceleration As Boolean = False
         Private _transparencyBackgroundMode As String = "Checkerboard"
         Private _transparencyBackgroundColor As String = "#FFFFFFFF"
+        Private _enableDiagnosticLogging As Boolean = False
 
         Private _savedThemeMode As String = "Dark"
         Private _savedAccentColor As String = "#F08A1A"
@@ -755,6 +756,7 @@ Namespace ViewModels
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _transparencyBackgroundMode = AppSettingsService.NormalizeTransparencyBackgroundMode(_appSettings.TransparencyBackgroundMode)
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
+            _enableDiagnosticLogging = _appSettings.EnableDiagnosticLogging
             FolderNode.ShowHiddenFolders = _showHiddenFolders
             NavigateSectionCommand = ReactiveCommand.Create(Of String)(Sub(s)
                                                                            Dim parsed As SettingsSection
@@ -931,6 +933,25 @@ Namespace ViewModels
             settings.VideoHardwareAcceleration = _videoHardwareAcceleration
             AppSettingsService.Save(settings)
         End Sub
+
+        ''' Schaltet das Datei-Logging in DiagnosticLogService ein/aus (schreibt nach
+        ''' %LocalAppData%/FerrumPix/logs/diagnostics.log) - deckt sowohl gezielt instrumentierte
+        ''' Stellen (Editor-Vorschau, Video-Wiedergabe) als auch wirklich unbehandelte Ausnahmen
+        ''' (App.axaml.vb, AppDomain.UnhandledException/TaskScheduler.UnobservedTaskException) ab.
+        ''' Standardmäßig aus, damit im Normalbetrieb keine Logdatei anwächst - nur zur gezielten
+        ''' Fehlersuche einschalten.
+        Public Property EnableDiagnosticLogging As Boolean
+            Get
+                Return _enableDiagnosticLogging
+            End Get
+            Set(value As Boolean)
+                If _enableDiagnosticLogging = value Then Return
+                Me.RaiseAndSetIfChanged(_enableDiagnosticLogging, value)
+                Dim settings = AppSettingsService.Load()
+                settings.EnableDiagnosticLogging = value
+                AppSettingsService.Save(settings)
+            End Set
+        End Property
 
         Private Sub SaveDisplaySettings()
             Dim settings = AppSettingsService.Load()

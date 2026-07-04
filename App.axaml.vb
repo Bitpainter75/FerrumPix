@@ -3,6 +3,7 @@ Imports Avalonia.Controls
 Imports Avalonia.Controls.ApplicationLifetimes
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Platform
+Imports System.Threading.Tasks
 Imports FerrumPix.ViewModels
 Imports FerrumPix.Views
 Imports FerrumPix.Services
@@ -19,11 +20,21 @@ Public Class App
     ''' Core.Initialize() (misst spürbar CPU-Zeit) nur läuft, wenn tatsächlich ein Video-Thumbnail
     ''' oder eine Wiedergabe angefragt wird, statt bei jedem App-Start unabhängig vom Nutzer.
     ''' Lazy(Of Boolean) übernimmt Thread-Sicherheit, da der erste Zugriff auch von einem
-    ''' Thumbnail-Hintergrund-Worker (VideoPreviewService) statt vom UI-Thread kommen kann.
+    ''' Thumbnail-Hintergrund-Worker (VideoPreviewService) statt vom UI-Thread kommen kann - genau
+    ''' das erzwingt aber trotzdem einen Sprung auf den UI-Thread für den eigentlichen
+    ''' Initialize()-Aufruf: vor dieser Lazy-Umstellung lief Core.Initialize() immer im
+    ''' Initialize()-Lifecycle-Hook von Avalonia, also garantiert auf dem UI-Thread. Ein
+    ''' Erstzugriff von einem Hintergrund-Thumbnail-Worker (z.B. beim Scrollen über Video-Dateien
+    ''' in der Gallery) würde sonst libvlc auf einem Nicht-UI-Thread initialisieren, was hier im
+    ''' Verdacht steht, zu den gemeldeten Abstürzen beim Scrollen über Videos zu führen.
     Private Shared ReadOnly _videoPlaybackAvailable As New Lazy(Of Boolean)(
         Function()
             Try
-                LibVLCSharp.Shared.Core.Initialize()
+                If Avalonia.Threading.Dispatcher.UIThread.CheckAccess() Then
+                    LibVLCSharp.Shared.Core.Initialize()
+                Else
+                    Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(Sub() LibVLCSharp.Shared.Core.Initialize()).Wait()
+                End If
                 Return True
             Catch
                 Return False
@@ -39,6 +50,19 @@ Public Class App
     Public Overrides Sub Initialize()
         AvaloniaXamlLoader.Load(Me)
         AppIcon = New WindowIcon(AssetLoader.Open(New Uri("avares://FerrumPix/Assets/FerrumPix_Icon.ico")))
+
+        ' Globales Sicherheitsnetz für Ausnahmen, die NICHT bereits lokal per Try/Catch abgefangen
+        ' werden (würden sonst kommentarlos abstürzen bzw. spurlos verschwinden) - nur relevant für
+        ' Diagnose, daher wie alle DiagnosticLogService-Aufrufe an den Einstellungen-Schalter
+        ' gekoppelt. Verhindert den Absturz selbst NICHT (das ist hier auch nicht das Ziel), sichert
+        ' aber den Stacktrace, bevor der Prozess endet.
+        AddHandler AppDomain.CurrentDomain.UnhandledException,
+            Sub(sender, e) DiagnosticLogService.LogException("UnhandledException", TryCast(e.ExceptionObject, Exception))
+        AddHandler TaskScheduler.UnobservedTaskException,
+            Sub(sender, e)
+                DiagnosticLogService.LogException("UnobservedTaskException", e.Exception)
+                e.SetObserved()
+            End Sub
     End Sub
 
     Public Overrides Sub OnFrameworkInitializationCompleted()

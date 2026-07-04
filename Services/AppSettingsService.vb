@@ -53,6 +53,7 @@ Namespace Services
         Public Property TransparencyBackgroundMode As String = "Checkerboard"
         Public Property TransparencyBackgroundColor As String = "#FFFFFFFF"
         Public Property LastBatchRenamePattern As String = "{name}_###"
+        Public Property EnableDiagnosticLogging As Boolean = False
     End Class
 
     Public NotInheritable Class AppSettingsService
