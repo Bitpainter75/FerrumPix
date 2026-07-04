@@ -1,0 +1,93 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:icons="clr-namespace:FerrumPix.Controls"
+        xmlns:views="clr-namespace:FerrumPix.Views"
+        x:Class="FerrumPix.Views.MainWindow"
+        Title="{Binding Title}"
+        Width="1280" Height="800"
+        MinWidth="1024" MinHeight="768"
+        CanResize="True"
+        SystemDecorations="None"
+        WindowStartupLocation="Manual"
+        Background="Transparent">
+
+    <Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource FP.Bg.Root}">
+        <Grid>
+            <Grid x:Name="TitleBar"
+                  RowDefinitions="Auto,*"
+                  IsHitTestVisible="{Binding IsAppContentHitTestVisible}">
+                <Border Grid.Row="0" Classes="toolbar" Height="50"
+                        IsVisible="{Binding IsWindowChromeVisible}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="0"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    Margin="18,0,0,0"
+                                    IsHitTestVisible="False">
+                            <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarDark.png"
+                                   Width="180"
+                                   Height="41"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform"
+                                   IsVisible="{Binding IsDarkLogoVisible}"/>
+                            <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarLight.png"
+                                   Width="180"
+                                   Height="41"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform"
+                                   IsVisible="{Binding IsLightLogoVisible}"/>
+                        </StackPanel>
+
+                    </Grid>
+                </Border>
+
+                <ContentControl Grid.Row="1" Content="{Binding CurrentContent}"/>
+            </Grid>
+
+            <views:DialogOverlayView x:Name="DialogOverlay" ZIndex="500"/>
+
+            <StackPanel Orientation="Horizontal"
+                        Spacing="7"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,8,8,0"
+                        IsHitTestVisible="{Binding IsAppContentHitTestVisible}"
+                        IsVisible="{Binding IsWindowChromeVisible}">
+                <Button Classes="wnd-btn" x:Name="MinimizeButton" ToolTip.Tip="Minimieren">
+                    <TextBlock Text="−" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+                <Button Classes="wnd-btn" x:Name="MaximizeButton" ToolTip.Tip="Maximieren">
+                    <TextBlock x:Name="MaximizeGlyph" Text="□" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+                <Button Classes="wnd-close" x:Name="CloseButton" ToolTip.Tip="Schließen">
+                    <TextBlock Text="×" FontSize="16" Margin="0,-2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+            </StackPanel>
+
+            <Border x:Name="ResizeTop" Height="5" Background="Transparent"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                    Cursor="TopSide"/>
+            <Border x:Name="ResizeBottom" Height="5" Background="Transparent"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
+                    Cursor="BottomSide"/>
+            <Border x:Name="ResizeLeft" Width="5" Background="Transparent"
+                    HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                    Cursor="LeftSide"/>
+            <Border x:Name="ResizeRight" Width="3" Background="Transparent"
+                    HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                    Cursor="RightSide"/>
+            <Border x:Name="ResizeTopLeft" Width="14" Height="14" Background="Transparent"
+                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                    Cursor="TopLeftCorner"/>
+            <Border x:Name="ResizeTopRight" Width="14" Height="14" Background="Transparent"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Cursor="TopRightCorner"/>
+            <Border x:Name="ResizeBottomLeft" Width="14" Height="14" Background="Transparent"
+                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                    Cursor="BottomLeftCorner"/>
+            <Border x:Name="ResizeBottomRight" Width="14" Height="14" Background="Transparent"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Cursor="BottomRightCorner"/>
+        </Grid>
+    </Border>
+</Window>

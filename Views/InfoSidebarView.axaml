@@ -1,0 +1,221 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:services="clr-namespace:FerrumPix.Services"
+             x:Class="FerrumPix.Views.InfoSidebarView">
+
+    <!-- Gemeinsame Info-Seitenleiste (Allgemein/EXIF/IPTC/XMP) für Viewer und Editor - beide
+         ViewModels exponieren dieselben Property-/Command-Namen (ExifInfo, Tags, HistogramImage,
+         IsInfoTab*, ToggleFavoriteCommand, SetRatingCommand, AddTagCommand, RemoveTagCommand,
+         Rating, IsFavorite, IsInfoSidebarVisible), daher genügt ein einziges, DataContext-loses
+         UserControl statt der zuvor doppelt gepflegten Markup-Kopie in ViewerView/EditorView. -->
+    <Border x:Name="InfoSidebarBorder" Classes="panel-right" Padding="14,14"
+            IsVisible="{Binding IsInfoSidebarVisible}">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14">
+            <StackPanel Spacing="0">
+                <TextBlock Text="Info" FontSize="15" FontWeight="SemiBold"/>
+                <StackPanel Orientation="Horizontal" Spacing="18" Margin="0,14,0,0">
+                    <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="General" Classes.active="{Binding IsInfoTabGeneral}">
+                        <TextBlock Text="Allgemein"/>
+                    </Button>
+                    <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="Exif" Classes.active="{Binding IsInfoTabExif}">
+                        <TextBlock Text="EXIF"/>
+                    </Button>
+                    <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="Iptc" Classes.active="{Binding IsInfoTabIptc}">
+                        <TextBlock Text="IPTC"/>
+                    </Button>
+                    <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="Xmp" Classes.active="{Binding IsInfoTabXmp}">
+                        <TextBlock Text="XMP"/>
+                    </Button>
+                </StackPanel>
+                <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,7,0,0"/>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
+                <StackPanel Spacing="18">
+                    <StackPanel Spacing="18" IsVisible="{Binding IsInfoTabGeneral}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Bild" FontSize="14" FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                                <TextBlock Text="Abmessungen" Foreground="{DynamicResource FP.Text.Muted}"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding ExifInfo.ImageWidth}"/>
+                                    <TextBlock Text="x" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Text="{Binding ExifInfo.ImageHeight}"/>
+                                </StackPanel>
+                                <TextBlock Grid.Row="1" Text="Megapixel" Foreground="{DynamicResource FP.Text.Muted}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ExifInfo.Megapixels}" HorizontalAlignment="Right"/>
+                                <TextBlock Grid.Row="2" Text="Seitenverhältnis" Foreground="{DynamicResource FP.Text.Muted}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ExifInfo.AspectRatio}" HorizontalAlignment="Right"/>
+                                <TextBlock Grid.Row="3" Text="Farbraum" Foreground="{DynamicResource FP.Text.Muted}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ExifInfo.ColorSpace}" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Histogramm" FontSize="14" FontWeight="SemiBold"/>
+                            <Border Height="92" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
+                                <Image Source="{Binding HistogramImage}"
+                                       Stretch="Fill"
+                                       RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                            </Border>
+                        </StackPanel>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Stichwörter" FontSize="14" FontWeight="SemiBold"/>
+                            <ItemsControl ItemsSource="{Binding Tags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Classes="metric-pill" Margin="0,0,6,6">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="{Binding}"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                                           VerticalAlignment="Center" FontSize="11"/>
+                                                <Button Background="Transparent" BorderThickness="0" Padding="0"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <TextBlock Text="×" FontSize="13"
+                                                               Foreground="{DynamicResource FP.Text.Muted}"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Text="{Binding NewTagText}"
+                                         Watermark="Stichwort hinzufügen…"
+                                         FontSize="11"
+                                         Padding="8,5"/>
+                                <Button Grid.Column="1" Classes="ghost" Padding="10,5" Margin="6,0,0,0"
+                                        Command="{Binding AddTagCommand}">
+                                    <TextBlock Text="+ Hinzufügen" FontSize="11"/>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                    </StackPanel>
+
+                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabExif}">
+                        <TextBlock Text="EXIF" FontSize="14" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding ExifInfo.ExifTags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type services:ExifTag}">
+                                    <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="0,0,0,1" Padding="0,8">
+                                        <Grid ColumnDefinitions="170,*">
+                                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource FP.Text.Muted}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabIptc}">
+                        <TextBlock Text="IPTC" FontSize="14" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding ExifInfo.IptcTags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type services:ExifTag}">
+                                    <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="0,0,0,1" Padding="0,8">
+                                        <Grid ColumnDefinitions="170,*">
+                                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource FP.Text.Muted}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabXmp}">
+                        <TextBlock Text="XMP" FontSize="14" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding ExifInfo.XmpTags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type services:ExifTag}">
+                                    <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="0,0,0,1" Padding="0,8">
+                                        <Grid ColumnDefinitions="170,*">
+                                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource FP.Text.Muted}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Border Grid.Row="2" IsVisible="{Binding IsInfoTabGeneral}">
+                <StackPanel Spacing="10">
+                    <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Bewertung" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1"
+                                    Background="Transparent" BorderThickness="0" Padding="4,0,0,0"
+                                    Command="{Binding ToggleFavoriteCommand}"
+                                    ToolTip.Tip="Favorit">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                               Width="20" Height="20"
+                                               Classes="fav-heart" Classes.active="{Binding IsFavorite}"/>
+                            </Button>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="1">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=1}"/>
+                            </Button>
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="2">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=2}"/>
+                            </Button>
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="3">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=3}"/>
+                            </Button>
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="4">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=4}"/>
+                            </Button>
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="5">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=5}"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

@@ -1,0 +1,759 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             x:Class="FerrumPix.Views.SettingsView"
+             Classes="settings-view"
+             Background="{DynamicResource FP.Bg.Root}"
+             Focusable="True"
+             KeyDown="OnKeyDown">
+
+    <Grid ColumnDefinitions="250,*">
+
+        <Border Grid.Column="0" Classes="sidebar" Padding="12,16,10,16">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Einstellungen" FontSize="15" FontWeight="SemiBold" Margin="6,0,0,8"/>
+
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="GeneralSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/01_Allgemein.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Allgemein"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="AppearanceSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/03_Aussehen.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Darstellung"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="GallerySection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/10_Vorschau.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Galerie"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="ViewerSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/11_Wiedergabe.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Betrachter"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="EditorSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/03_Editor/07_Belichtung.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Editor"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="PerformanceSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/33_Leistung.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Leistung"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Column="1" RowDefinitions="*,74">
+        <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" Padding="28,26,24,32"
+                      Margin="0,0,8,0"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="18" MaxWidth="960" Margin="0,0,0,0">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Einstellungen" FontSize="24" FontWeight="SemiBold"/>
+                    <TextBlock Text="Alle Optionen für Oberfläche, Galerie und Bildansicht." Foreground="{DynamicResource FP.Text.Secondary}"/>
+                </StackPanel>
+
+                <Border x:Name="GeneralSection" Classes="section">
+                    <StackPanel Spacing="16">
+                        <Border Height="170" Background="{DynamicResource FP.Bg.Input}" BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="8" Padding="0, 22">
+                            <Grid>
+                                <Image Source="avares://FerrumPix/Assets/FerrumPix_SettingsDark.png"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Left"
+                                       IsVisible="{Binding IsDarkOrGrayDarkThemeMode}"/>
+                                <Image Source="avares://FerrumPix/Assets/FerrumPix_SettingsLight.png"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Left"
+                                       IsVisible="{Binding IsLightOrGrayLightThemeMode}"/>
+                            </Grid>
+                        </Border>
+
+                        <Grid ColumnDefinitions="160,*" RowDefinitions="Auto" RowSpacing="8">
+                            <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}"/>
+                            <TextBlock Grid.Column="1" Text="0.30 - Juli 2026"/>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="GitHub Repository" FontSize="12"/>
+                                <TextBlock Text="https://github.com/Bitpainter75/FerrumPix" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Click="OnGitHubClick">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/27_Extern.svg" Width="14" Height="14"/>
+                                    <TextBlock Text="Öffnen"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Allgemein" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="Grundlegende Einstellungen für Startverhalten und Sprache." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Start mit Bilddatei" FontSize="12"/>
+                                <TextBlock Text="Legt fest, welcher Modus verwendet wird, wenn FerrumPix mit einem Bild als Parameter geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupGalleryMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupImageModeCommand}"
+                                        CommandParameter="Gallery">Galerie</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupViewerMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupImageModeCommand}"
+                                        CommandParameter="Viewer">Viewer</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupEditorMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupImageModeCommand}"
+                                        CommandParameter="Editor">Editor</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupFullscreenMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupImageModeCommand}"
+                                        CommandParameter="Fullscreen">Vollbild</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Sprache" FontSize="12"/>
+                                <TextBlock Text="Verwendet standardmäßig die Systemsprache; falls nicht unterstützt, Englisch." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsLanguageSystem}"
+                                        Padding="10,6"
+                                        Command="{Binding SetLanguageModeCommand}"
+                                        CommandParameter="System">System</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsLanguageGerman}"
+                                        Padding="10,6"
+                                        Command="{Binding SetLanguageModeCommand}"
+                                        CommandParameter="German">Deutsch</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsLanguageEnglish}"
+                                        Padding="10,6"
+                                        Command="{Binding SetLanguageModeCommand}"
+                                        CommandParameter="English">Englisch</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsLanguageSpanish}"
+                                        Padding="10,6"
+                                        Command="{Binding SetLanguageModeCommand}"
+                                        CommandParameter="Spanish">Spanisch</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsLanguageFrench}"
+                                        Padding="10,6"
+                                        Command="{Binding SetLanguageModeCommand}"
+                                        CommandParameter="French">Französisch</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsLanguageItalian}"
+                                        Padding="10,6"
+                                        Command="{Binding SetLanguageModeCommand}"
+                                        CommandParameter="Italian">Italienisch</Button>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="AppearanceSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Darstellung" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="Wählen Sie das Erscheinungsbild der Benutzeroberfläche." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                        </StackPanel>
+                        <Grid ColumnDefinitions="*,*,*,*">
+                            <Button Grid.Column="0"
+                                    Classes="theme-choice"
+                                    Classes.active="{Binding IsDarkThemeMode}"
+                                    Command="{Binding SetThemeModeCommand}"
+                                    CommandParameter="Dark"
+                                    Margin="0,0,6,0">
+                                <StackPanel Spacing="10">
+                                    <Border Height="92" CornerRadius="6" ClipToBounds="True" Background="#11161B">
+                                        <Image Source="avares://FerrumPix/Assets/Gallery.png"
+                                               Stretch="UniformToFill"
+                                               Opacity="0.78"/>
+                                    </Border>
+                                    <TextBlock Text="Dunkel" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Classes="theme-choice"
+                                    Classes.active="{Binding IsLightThemeMode}"
+                                    Command="{Binding SetThemeModeCommand}"
+                                    CommandParameter="Light"
+                                    Margin="6,0">
+                                <StackPanel Spacing="10">
+                                    <Border Height="92" CornerRadius="6" ClipToBounds="True" Background="#E9EDF2">
+                                        <Image Source="avares://FerrumPix/Assets/Gallery_Light.png"
+                                               Stretch="UniformToFill"
+                                               Opacity="0.9"/>
+                                    </Border>
+                                    <TextBlock Text="Hell" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Classes="theme-choice"
+                                    Classes.active="{Binding IsGrayDarkThemeMode}"
+                                    Command="{Binding SetThemeModeCommand}"
+                                    CommandParameter="GrayDark"
+                                    Margin="6,0">
+                                <StackPanel Spacing="10">
+                                    <Border Height="92" CornerRadius="6" ClipToBounds="True" Background="#232628">
+                                        <Image Source="avares://FerrumPix/Assets/Gallery_GrayDark.png"
+                                               Stretch="UniformToFill"
+                                               Opacity="0.88"/>
+                                    </Border>
+                                    <TextBlock Text="Grau Dunkel" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="3"
+                                    Classes="theme-choice"
+                                    Classes.active="{Binding IsGrayLightThemeMode}"
+                                    Command="{Binding SetThemeModeCommand}"
+                                    CommandParameter="GrayLight"
+                                    Margin="6,0,0,0">
+                                <StackPanel Spacing="10">
+                                    <Border Height="92" CornerRadius="6" ClipToBounds="True" Background="#4A5057">
+                                        <Image Source="avares://FerrumPix/Assets/Gallery_GrayLight.png"
+                                               Stretch="UniformToFill"
+                                               Opacity="0.92"/>
+                                    </Border>
+                                    <TextBlock Text="Grau Hell" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <StackPanel Spacing="12" Margin="0,4,0,0">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Akzentfarbe" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="Wählen Sie eine Akzentfarbe für Hervorhebungen und aktive Elemente." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button Classes="swatch" Classes.active="{Binding IsOrangeAccent}" Background="#F08A1A" Command="{Binding SetAccentColorCommand}" CommandParameter="#F08A1A"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsRedAccent}" Background="#E74C3C" Command="{Binding SetAccentColorCommand}" CommandParameter="#E74C3C"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsPinkAccent}" Background="#F03B88" Command="{Binding SetAccentColorCommand}" CommandParameter="#F03B88"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsPurpleAccent}" Background="#8B5CF6" Command="{Binding SetAccentColorCommand}" CommandParameter="#8B5CF6"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsBlueAccent}" Background="#3B82F6" Command="{Binding SetAccentColorCommand}" CommandParameter="#3B82F6"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsCyanAccent}" Background="#0891B2" Command="{Binding SetAccentColorCommand}" CommandParameter="#0891B2"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsTealAccent}" Background="#0F766E" Command="{Binding SetAccentColorCommand}" CommandParameter="#0F766E"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsGreenAccent}" Background="#22C55E" Command="{Binding SetAccentColorCommand}" CommandParameter="#22C55E"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsYellowAccent}" Background="#FACC15" Command="{Binding SetAccentColorCommand}" CommandParameter="#FACC15"/>
+                        </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Spacing="12" Margin="0,4,0,0">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Transparenz-Hintergrund" FontSize="15" FontWeight="SemiBold"/>
+                                <TextBlock Text="Legt fest, wie transparente Bildbereiche in Viewer und Editor dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Darstellung" FontSize="12"/>
+                                    <TextBlock Text="Schachbrettmuster (Standard), echt durchsichtig oder eine feste Farbe." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsTransparencyCheckerboardMode}"
+                                            Padding="10,6"
+                                            Command="{Binding SetTransparencyBackgroundModeCommand}"
+                                            CommandParameter="Checkerboard">Schachbrett</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsTransparencyNoneMode}"
+                                            Padding="10,6"
+                                            Command="{Binding SetTransparencyBackgroundModeCommand}"
+                                            CommandParameter="None">Transparent</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsTransparencySolidMode}"
+                                            Padding="10,6"
+                                            Command="{Binding SetTransparencyBackgroundModeCommand}"
+                                            CommandParameter="Solid">Farbe</Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsTransparencySolidMode}">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Hintergrundfarbe" FontSize="12"/>
+                                    <TextBlock Text="Volltonfarbe hinter transparenten Bereichen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Height="34" Padding="6,4" Width="140" ToolTip.Tip="Hintergrundfarbe wählen">
+                                    <Grid ColumnDefinitions="28,*" ColumnSpacing="8">
+                                        <Border Width="26"
+                                                Height="22"
+                                                Background="{Binding TransparencyBackgroundColorBrush}"
+                                                BorderBrush="{DynamicResource FP.Border.Strong}"
+                                                BorderThickness="1"
+                                                CornerRadius="4"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding TransparencyBackgroundColor}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   FontSize="11"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <Border Background="{DynamicResource FP.Bg.Panel}"
+                                                    BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="6"
+                                                    Padding="10">
+                                                <StackPanel Spacing="2" Width="230">
+                                                    <ColorPicker Color="{Binding TransparencyBackgroundColorValue, Mode=TwoWay}"
+                                                                 ColorModel="Rgba"
+                                                                 HorizontalAlignment="Stretch"/>
+                                                    <TextBox Text="{Binding TransparencyBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                             Watermark="#AARRGGBB"
+                                                             FontSize="11"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="InterfaceSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Oberfläche" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="Steuert die Darstellung der Oberfläche und die sichtbaren Bedienelemente." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Navigationspfad anzeigen" FontSize="12"/>
+                                <TextBlock Text="Zeigt den Navigationspfad über der Dateiliste an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowBreadcrumbs}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <StackPanel Spacing="14" IsVisible="{Binding IsApplicationScaleSupported}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Anwendungsskalierung" FontSize="12"/>
+                                    <TextBlock Text="Skaliert die komplette Oberfläche beim nächsten Start." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <icons:RoundSlider Width="150"
+                                                       Minimum="100"
+                                                       Maximum="250"
+                                                       Value="{Binding ApplicationScalePercent}"/>
+                                    <TextBlock Text="{Binding ApplicationScaleText}"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="11"
+                                               Width="42"
+                                               TextAlignment="Right"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,220">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Bildschirm für Skalierung" FontSize="12"/>
+                                    <TextBlock Text="Legt fest, auf welchem Bildschirm die gewählte Skalierung angewendet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Classes="dropdown-btn"
+                                        Width="220"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch">
+                                    <Button.Flyout>
+                                        <Flyout Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
+                                            <ItemsControl ItemsSource="{Binding ApplicationScaleScreens}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Classes="dropdown-item"
+                                                                MinWidth="220"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Stretch"
+                                                                Padding="10,8"
+                                                                Click="OnScaleScreenOptionClick">
+                                                            <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding ApplicationScaleScreen}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <icons:SvgIcon Grid.Column="1"
+                                                       Source="avares://FerrumPix/Assets/Icons/01_Navigation/05_Nach_unten.svg"
+                                                       Width="16"
+                                                       Height="16"
+                                                       Margin="10,0,0,0"
+                                                       VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                            </Grid>
+
+                            <TextBlock Text="Änderung wird nach einem Neustart aktiv."
+                                       Foreground="{DynamicResource FP.Accent}"
+                                       FontSize="10"
+                                       IsVisible="{Binding IsApplicationScaleRestartRequired}"/>
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="GallerySection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Galerie" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="Einstellungen für die Ordner- und Dateiansicht im Seitenbereich." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Versteckte Ordner anzeigen" FontSize="12"/>
+                                <TextBlock Text="Zeigt Ordner an, deren Name mit einem Punkt beginnt (z. B. .config, .local)." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowHiddenFolders}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Ordner in der Galerie anzeigen" FontSize="12"/>
+                                <TextBlock Text="Zeigt Unterordner neben Bildern an; Doppelklick öffnet den Ordner." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryShowFolders}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Übergeordnete Ordner anzeigen" FontSize="12"/>
+                                <TextBlock Text="Blendet in der Galerie zusätzlich einen Eintrag für den übergeordneten Ordner ein." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryShowParentFolder}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Ansicht" FontSize="12"/>
+                                <TextBlock Text="Legt fest, ob die Galerie als Raster oder als Liste angezeigt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsGalleryViewModeGrid}"
+                                        Padding="10,6"
+                                        Command="{Binding SetGalleryViewModeCommand}"
+                                        CommandParameter="Grid">Raster</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsGalleryViewModeList}"
+                                        Padding="10,6"
+                                        Command="{Binding SetGalleryViewModeCommand}"
+                                        CommandParameter="List">Liste</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Startordner der Galerie" FontSize="12"/>
+                                <TextBlock Text="Bestimmt, welcher Ordner beim Start der Anwendung geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsGalleryStartupPicturesFolder}"
+                                        Padding="10,6"
+                                        Command="{Binding SetGalleryStartupFolderModeCommand}"
+                                        CommandParameter="Pictures">Bilder-Ordner</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsGalleryStartupLastFolder}"
+                                        Padding="10,6"
+                                        Command="{Binding SetGalleryStartupFolderModeCommand}"
+                                        CommandParameter="Last">Letzter Ordner</Button>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="ViewerSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Betrachter" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="Legt fest, wie Bilder beim Öffnen dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Bilder an Fenstergröße anpassen" FontSize="12"/>
+                                <TextBlock Text="Öffnet Bilder skaliert auf die verfügbare Fensterfläche statt in Originalgröße." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerOpenFitToWindow}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Filmstrip im Viewer anzeigen" FontSize="12"/>
+                                <TextBlock Text="Zeigt die Bildleiste am unteren Rand des Viewers an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerShowFilmstrip}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Info-Seitenleiste im Viewer anzeigen" FontSize="12"/>
+                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerInfoSidebarExpanded}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Diashow-Dauer" FontSize="12"/>
+                                <TextBlock Text="Legt fest, wie lange ein Bild in der Diashow sichtbar bleibt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="1"
+                                                   Maximum="30"
+                                                   Value="{Binding ViewerSlideshowIntervalSeconds}"/>
+                                <TextBlock Text="{Binding ViewerSlideshowIntervalSeconds, StringFormat={}{0}s}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="11"
+                                           Width="34"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Hardwarebeschleunigung für Videowiedergabe" FontSize="12"/>
+                                <TextBlock Text="Nutzt die Grafikhardware zur Videodekodierung. Bei Bildfehlern in der Videowiedergabe deaktivieren (Software-Decoding). Wirkt beim nächsten Öffnen eines Videos." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding VideoHardwareAcceleration}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="EditorSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Editor" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="Einstellungen für Bearbeitung und Vorschau." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Filmstrip im Editor anzeigen" FontSize="12"/>
+                                <TextBlock Text="Zeigt die Bildleiste am unteren Rand des Editors an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorShowFilmstrip}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Info-Seitenleiste im Editor anzeigen" FontSize="12"/>
+                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorInfoSidebarExpanded}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="PerformanceSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Leistung" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="Cache und Verarbeitung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Vorschaubilder zwischenspeichern" FontSize="12"/>
+                                <TextBlock Text="Speichert Vorschaubilder auf dem Gerät, damit Ordner beim nächsten Öffnen schneller geladen werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ThumbnailCacheEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Vorschaubild-Qualität" FontSize="12"/>
+                                <TextBlock Text="Bestimmt die JPEG-Qualität neu erzeugter zwischengespeicherter Vorschaubilder." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="45"
+                                                   Maximum="95"
+                                                   Value="{Binding ThumbnailQuality}"/>
+                                <TextBlock Text="{Binding ThumbnailQuality, StringFormat={}{0}%}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="11"
+                                           Width="34"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="JPG-Qualität" FontSize="12"/>
+                                <TextBlock Text="Wird für das Speichern und Exportieren als JPG verwendet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="1"
+                                                   Maximum="100"
+                                                   Value="{Binding JpgSaveQuality}"/>
+                                <TextBlock Text="{Binding JpgSaveQuality, StringFormat={}{0}%}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="11"
+                                           Width="34"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Datenbank bereinigen" FontSize="12"/>
+                                <TextBlock Text="Entfernt Metadaten (Bewertungen, Favoriten, Tags) von Bildern, die nicht mehr existieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding CleanupResultMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CleanupDatabaseCommand}">Bereinigen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Vorschaubild-Cache nach Ordnern" FontSize="12"/>
+                                    <TextBlock Text="{Binding ThumbnailCacheSummaryText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding ThumbnailCacheResultMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11" VerticalAlignment="Center"/>
+                                    <Button Classes="ghost" Padding="12,7" Command="{Binding RefreshThumbnailCacheCommand}">Aktualisieren</Button>
+                                    <Button Classes="ghost" Padding="12,7" Command="{Binding DeleteAllThumbnailCacheCommand}">Alle löschen</Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <ItemsControl ItemsSource="{Binding ThumbnailCacheFolders}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="10,8"
+                                                Margin="0,0,0,6">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontSize="12"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding DetailText}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="10"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="1"
+                                                        Classes="ghost"
+                                                        Padding="10,6"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding DataContext.DeleteThumbnailCacheFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}">Löschen</Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Height="150" Background="Transparent"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1" Background="{DynamicResource FP.Bg.Dark}" BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0" Padding="16,0">
+            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                <Button Classes="ghost" Padding="12,8" Command="{Binding ResetCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/05_Dialoge/28_Wiederherstellen.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Auf Standardeinstellungen zurücksetzen"/>
+                    </StackPanel>
+                </Button>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button Classes="ghost" Padding="18,8" Command="{Binding CancelCommand}">Abbrechen</Button>
+                    <Button Classes="accent" Padding="18,8" Command="{Binding ApplyCommand}">Speichern</Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+        </Grid>
+    </Grid>
+</UserControl>

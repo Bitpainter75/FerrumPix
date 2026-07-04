@@ -1,0 +1,407 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:services="clr-namespace:FerrumPix.Services"
+             xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.ViewerView"
+             Background="{DynamicResource FP.Bg.Root}"
+             Focusable="True"
+             FocusAdorner="{x:Null}"
+             KeyDown="OnKeyDown"
+             PointerReleased="OnGlobalPointerReleased">
+
+    <Grid x:Name="ViewerRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="*,300">
+
+        <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="toolbar" Height="60" Padding="24,0">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" VerticalAlignment="Center">
+                <Button Classes="icon-btn" Width="36" Height="36"
+                        Command="{Binding BackToGalleryCommand}"
+                        ToolTip.Tip="Zurück zur Galerie">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/01_Home.svg"
+                           Width="20" Height="20"/>
+                </Button>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" Margin="18,0,0,0">
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding PreviousCommand}"
+                            ToolTip.Tip="Vorheriges Bild">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/02_Zurueck.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding NextCommand}"
+                            ToolTip.Tip="Nächstes Bild">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/03_Vorwaerts.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+                </StackPanel>
+
+                <Border Grid.Column="2" Width="1" Height="42" Background="{DynamicResource FP.Border.Subtle}" Margin="18,0,0,0"/>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="18" Margin="28,0,0,0" VerticalAlignment="Center">
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Command="{Binding ToggleSlideshowCommand}"
+                            ToolTip.Tip="Diashow starten">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/16_Diashow_starten.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="38" Height="38" Command="{Binding EditCommand}" ToolTip.Tip="Im Editor öffnen"
+                            IsEnabled="{Binding CanEdit}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/03_Editor/07_Belichtung.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="Zoom:" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center" Focusable="False"
+                                Command="{Binding ZoomOutCommand}" ToolTip.Tip="Verkleinern">
+                            <TextBlock Text="−" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        </Button>
+                        <icons:RoundSlider Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
+                                            Value="{Binding ZoomSliderValue, Mode=TwoWay}" VerticalAlignment="Center"/>
+                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center" Focusable="False"
+                                Command="{Binding ZoomInCommand}" ToolTip.Tip="Vergrößern">
+                            <TextBlock Text="+" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        </Button>
+                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="12,0,0,0" Focusable="False"
+                                Command="{Binding ZoomActualCommand}" ToolTip.Tip="Auf 100 Prozent springen">
+                            <TextBlock Text="{Binding ZoomText}" Foreground="{DynamicResource FP.Text.Primary}" VerticalAlignment="Center"/>
+                        </Button>
+                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="8,0,0,0" Focusable="False"
+                                Command="{Binding ZoomFitCommand}" ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/26_Anpassen.svg" Width="20" Height="20"/>
+                                <TextBlock Text="Einpassen"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Classes.active="{Binding IsInfoSidebarVisible}"
+                            Command="{Binding ToggleInfoSidebarCommand}"
+                            ToolTip.Tip="Info">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/01_Info.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Click="OnToggleFullscreenClick"
+                            ToolTip.Tip="Vollbild">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/21_Vollbild.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Grid.Column="0" Background="{DynamicResource FP.Bg.Root}">
+            <Border Margin="88,0,80,0" ClipToBounds="True">
+                <Grid>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
+                                IsVisible="{Binding HasNoMedia}">
+                        <TextBlock Text="Kein Bild geöffnet" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Wähle ein Bild aus der Galerie" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
+                                IsVisible="{Binding ShowVideoUnavailableNotice}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/08_Dateitypen/31_Video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
+                        <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <ScrollViewer Name="ImageScrollViewer"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  SizeChanged="OnImageViewportSizeChanged"
+                                  IsVisible="{Binding CurrentImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Panel>
+                            <Border HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="{Binding TransparencyBackgroundBrush}">
+                                <Border.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="{Binding ScaleX}" ScaleY="1"/>
+                                        <RotateTransform Angle="{Binding RotationAngle}"/>
+                                    </TransformGroup>
+                                </Border.RenderTransform>
+                                <Image Name="MainImage"
+                                       Source="{Binding CurrentImage}"
+                                       Stretch="Uniform"
+                                       RenderOptions.BitmapInterpolationMode="HighQuality"
+                                       PointerPressed="OnImagePointerPressed"
+                                       PointerMoved="OnImagePointerMoved"
+                                       PointerReleased="OnImagePointerReleased"
+                                       PointerCaptureLost="OnImagePointerCaptureLost"
+                                       DoubleTapped="OnImageDoubleTapped">
+                                    <Image.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Kopieren" Click="OnCopyPathClick"/>
+                                        </ContextMenu>
+                                    </Image.ContextMenu>
+                                </Image>
+                            </Border>
+                            <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
+                                <Border Name="CropSelectionRect"
+                                        IsVisible="False"
+                                        IsHitTestVisible="False"
+                                        Background="#33F08A1A"
+                                        BorderBrush="{DynamicResource FP.Accent}"
+                                        BorderThickness="1.5">
+                                    <Border Background="#CC1A1D24"
+                                            CornerRadius="4"
+                                            Padding="6,3"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            Margin="6,6,0,0">
+                                        <TextBlock Name="CropSelectionSizeBadgeText"
+                                                   Text=""
+                                                   Foreground="White"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"/>
+                                    </Border>
+                                </Border>
+                            </Canvas>
+                        </Panel>
+                    </ScrollViewer>
+
+                </Grid>
+            </Border>
+
+            <Button Classes="ghost"
+                    Width="54" Height="54"
+                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Margin="26,0"
+                    Command="{Binding PreviousCommand}"
+                    CornerRadius="27"
+                    Background="#8010161B"
+                    BorderBrush="{DynamicResource FP.Border.Normal}">
+                <Canvas Width="20" Height="20"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <Path Stroke="{DynamicResource FP.Text.Primary}"
+                          StrokeThickness="2.6"
+                          StrokeLineCap="Round"
+                          StrokeJoin="Round"
+                          Data="M 13 4 L 7 10 L 13 16"/>
+                </Canvas>
+            </Button>
+            <Button Classes="ghost"
+                    Width="54" Height="54"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Margin="26,0"
+                    Command="{Binding NextCommand}"
+                    CornerRadius="27"
+                    Background="#8010161B"
+                    BorderBrush="{DynamicResource FP.Border.Normal}">
+                <Canvas Width="20" Height="20"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <Path Stroke="{DynamicResource FP.Text.Primary}"
+                          StrokeThickness="2.6"
+                          StrokeLineCap="Round"
+                          StrokeJoin="Round"
+                          Data="M 7 4 L 13 10 L 7 16"/>
+                </Canvas>
+            </Button>
+        </Grid>
+
+        <views:InfoSidebarView Grid.Row="1" Grid.Column="1"/>
+
+        <Border Grid.Row="2" Grid.ColumnSpan="2"
+                Background="{DynamicResource FP.Bg.Dark}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}"
+                BorderThickness="0,1,0,0"
+                Padding="24,8,24,8">
+            <Grid RowDefinitions="Auto,28">
+                <ListBox Name="FilmstripListBox"
+                         Classes="filmstrip-list"
+                         Height="110"
+                         IsVisible="{Binding ShowFilmstrip}"
+                         ItemsSource="{Binding FilmstripItems}"
+                         SelectedIndex="{Binding CurrentFilmstripIndex, Mode=OneWay}"
+                         SelectionMode="Single"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel Orientation="Horizontal" Margin="0,0,0,8"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type models:ImageItem}">
+                            <Border Width="148" Height="100"
+                                    Classes="thumb-card"
+                                    Classes.selected="{Binding IsSelected}"
+                                    ClipToBounds="True"
+                                    PointerPressed="OnFilmstripItemPressed">
+                                <Border CornerRadius="6" ClipToBounds="True">
+                                    <Image Source="{Binding Thumbnail}"
+                                           Stretch="UniformToFill"
+                                           RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                                </Border>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                        <Button Classes="icon-btn"
+                                Width="28" Height="28"
+                                Command="{Binding ToggleFavoriteCommand}"
+                                ToolTip.Tip="Favorit">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                           Width="20" Height="20"
+                                           Classes="fav-heart" Classes.active="{Binding IsFavorite}"/>
+                        </Button>
+                        <TextBlock Text="{Binding CurrentFileName}" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="1">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=1}"/>
+                            </Button>
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="2">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=2}"/>
+                            </Button>
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="3">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=3}"/>
+                            </Button>
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="4">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=4}"/>
+                            </Button>
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                    Command="{Binding SetRatingCommand}" CommandParameter="5">
+                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=5}"/>
+                            </Button>
+                        </StackPanel>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Click="OnToggleFilmstripClick"
+                                Classes.active="{Binding ShowFilmstrip}"
+                                ToolTip.Tip="Filmstreifen ein- oder ausblenden">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/11_Auge.svg"
+                                           Width="18" Height="18"/>
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Command="{Binding DeleteCurrentCommand}"
+                                ToolTip.Tip="Löschen">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/35_Loeschen.svg"
+                                   Width="18" Height="18"/>
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Click="OnSettingsClick"
+                                ToolTip.Tip="Einstellungen">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/34_Einstellungen.svg"
+                                   Width="18" Height="18"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Schnellvorschau-Overlay (Mausrad-Klick auf Filmstrip) -->
+        <Panel Name="FilmstripPreviewOverlay"
+               Grid.RowSpan="3" Grid.ColumnSpan="2"
+               IsVisible="False"
+               Background="#D9000000"
+               ZIndex="100">
+            <Image Name="FilmstripPreviewImage"
+                   Stretch="Uniform"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Margin="60"/>
+        </Panel>
+
+        <Grid Name="FullscreenViewport"
+              Grid.RowSpan="3" Grid.ColumnSpan="2"
+              Background="Black"
+              SizeChanged="OnFullscreenViewportSizeChanged"
+              IsVisible="{Binding IsFullscreenMode}">
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="{Binding TransparencyBackgroundBrush}">
+                <Image Name="FullscreenImage"
+                       Source="{Binding CurrentImage}"
+                       RenderOptions.BitmapInterpolationMode="HighQuality"/>
+            </Border>
+
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
+                        IsVisible="{Binding ShowVideoUnavailableNotice}">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/08_Dateitypen/31_Video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
+                <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
+                <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+        </Grid>
+
+        <!-- Einziges, dauerhaft angehängtes VideoView für Fenster- UND Vollbildmodus - wird per
+             Grid.Row/Column/RowSpan/ColumnSpan/Margin im Code-behind (ApplyVideoLayout) zwischen
+             beiden Zuständen umgeschaltet, statt zwei separate VideoViews mit eigenem
+             Anhängen/Abhängen-Zyklus zu verwenden. Letzteres führte dazu, dass das native
+             Fenster-Handle beim Wechsel nicht zuverlässig rechtzeitig bereitstand (kein Bild,
+             oder LibVLC erzeugte mangels Ziel kurzzeitig ein eigenes Fenster).
+        -->
+        <Grid Name="VideoOverlay"
+              Grid.Row="1" Grid.Column="0"
+              Margin="88,0,80,0"
+              Background="Black"
+              IsVisible="{Binding IsVideoFile}"
+              RowDefinitions="*,Auto">
+            <vlc:VideoView Name="TheVideoView" Grid.Row="0"
+                           IsVisible="{Binding IsVideoPlaybackAvailable}"
+                           Tapped="OnVideoViewTapped"/>
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
+                        IsVisible="{Binding ShowVideoUnavailableNotice}">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/08_Dateitypen/31_Video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
+                <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
+                <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+            </StackPanel>
+            <Border Grid.Row="1"
+                    IsVisible="{Binding IsVideoPlaybackAvailable}"
+                    Background="#CC1A1D24"
+                    CornerRadius="8"
+                    Padding="12,8"
+                    Margin="12">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                    <Button Grid.Column="0" Classes="icon-btn" Width="32" Height="32"
+                            Command="{Binding PlayPauseVideoCommand}"
+                            ToolTip.Tip="Play/Pause">
+                        <Panel>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/079_Play.svg" Width="16" Height="16" IsVisible="{Binding !IsVideoPlaying}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/080_Pause.svg" Width="16" Height="16" IsVisible="{Binding IsVideoPlaying}"/>
+                        </Panel>
+                    </Button>
+                    <icons:RoundSlider Grid.Column="1" Name="VideoSeekSlider" Margin="10,0"
+                                       Minimum="0" Maximum="{Binding VideoDurationSeconds}"
+                                       Value="{Binding VideoPositionSeconds, Mode=OneWay}"/>
+                    <TextBlock Grid.Column="2" Text="{Binding VideoTimeText}" Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <Button Grid.Column="3" Classes="icon-btn" Width="32" Height="32"
+                            Command="{Binding ToggleVideoMuteCommand}"
+                            ToolTip.Tip="Stumm">
+                        <Panel Width="16" Height="16">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/09_Audio.svg" Width="16" Height="16" IconBrush="White"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/108_X.svg"
+                                           Width="9" Height="9"
+                                           HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                           IconBrush="White"
+                                           IsVisible="{Binding IsVideoMuted}"/>
+                        </Panel>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

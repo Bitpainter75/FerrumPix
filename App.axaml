@@ -1,0 +1,27 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:FerrumPix"
+             xmlns:conv="clr-namespace:FerrumPix.Converters"
+             x:Class="FerrumPix.App"
+             RequestedThemeVariant="Dark">
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+    <Application.Resources>
+        <conv:EditorToolEqualsConverter x:Key="EditorToolEqualsConverter"/>
+        <conv:StringEqualsConverter x:Key="StringEqualsConverter"/>
+        <conv:RatingThresholdConverter x:Key="RatingThresholdConverter"/>
+        <conv:RatingStarGlyphConverter x:Key="RatingStarGlyphConverter"/>
+        <conv:BoolToWidthConverter x:Key="BoolToWidthConverter"/>
+    </Application.Resources>
+    <Application.Styles>
+        <FluentTheme>
+            <FluentTheme.Palettes>
+                <ColorPaletteResources x:Key="Light" Accent="#F08A1A"/>
+                <ColorPaletteResources x:Key="Dark" Accent="#F08A1A"/>
+            </FluentTheme.Palettes>
+        </FluentTheme>
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml"/>
+        <StyleInclude Source="avares://FerrumPix/Styles/FerrumPixTheme.axaml"/>
+    </Application.Styles>
+</Application>

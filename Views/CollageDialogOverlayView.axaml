@@ -1,0 +1,329 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.CollageDialogOverlayView">
+
+    <Border Background="#B8000000"
+            IsVisible="{Binding IsCollageDialogOpen}">
+        <Border Width="1040"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{DynamicResource FP.Bg.Panel}"
+                BorderBrush="{DynamicResource FP.Border.Strong}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="22">
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Collage erstellen"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource FP.Text.Primary}"/>
+                    <TextBlock Text="Die ausgewählten Bilder werden als Collage im aktuellen Ordner gespeichert."
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="520,*"
+                      ColumnSpacing="28">
+                    <StackPanel Grid.Column="0" Spacing="8">
+                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="10"
+                                Height="440"
+                                ClipToBounds="True"
+                                PointerWheelChanged="OnPreviewPointerWheelChanged">
+                            <Grid>
+                                <TextBlock Text="Vorschau wird berechnet…"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           IsVisible="{Binding CollagePreviewImage, Converter={x:Static ObjectConverters.IsNull}}"/>
+                                <ScrollViewer Name="PreviewScrollViewer"
+                                              HorizontalScrollBarVisibility="Auto"
+                                              VerticalScrollBarVisibility="Auto"
+                                              IsVisible="{Binding CollagePreviewImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <Image Name="PreviewImage"
+                                           Source="{Binding CollagePreviewImage}"
+                                           Stretch="Fill"
+                                           Cursor="SizeAll"
+                                           PointerPressed="OnPreviewPointerPressed"
+                                           PointerMoved="OnPreviewPointerMoved"
+                                           PointerReleased="OnPreviewPointerReleased"/>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
+                            <TextBlock Text="Zoom" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="12"/>
+                            <icons:RoundSlider Grid.Column="1"
+                                               Minimum="0.25"
+                                               Maximum="4"
+                                               Value="{Binding CollagePreviewZoom}"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding CollagePreviewZoom, StringFormat={}{0:P0}}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       MinWidth="42"
+                                       TextAlignment="Right"/>
+                            <Button Grid.Column="3" Classes="ghost" Padding="10,4" Click="OnFitPreviewClick" ToolTip.Tip="Vorschau einpassen">
+                                <TextBlock Text="Einpassen"/>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+
+                    <Grid Grid.Column="1"
+                          ColumnDefinitions="120,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                          ColumnSpacing="14"
+                          RowSpacing="12">
+                        <TextBlock Text="Dateiname"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding CollageBaseName}"
+                                 MinHeight="34"/>
+
+                        <TextBlock Grid.Row="1"
+                                   Text="Layout"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button Classes="segmented" Classes.active="{Binding IsCollageGridMode}" Click="OnLayoutModeClick" Tag="Grid">Raster</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsCollageHeroMode}" Click="OnLayoutModeClick" Tag="Hero">Hero</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsCollageRandomMode}" Click="OnLayoutModeClick" Tag="Random">Zufällig</Button>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="2" Grid.Column="1"
+                                   Text="Klicke in der Vorschau auf ein Bild, um es als Hero festzulegen."
+                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                   FontSize="11"
+                                   IsVisible="{Binding IsCollageHeroMode}"
+                                   TextWrapping="Wrap"/>
+
+                        <TextBlock Grid.Row="3"
+                                   Text="Hero-Position"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsCollageHeroMode}"/>
+                        <Border Grid.Row="3" Grid.Column="1"
+                                IsVisible="{Binding IsCollageHeroMode}"
+                                BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6"
+                                Padding="12,10" HorizontalAlignment="Left">
+                            <Grid Width="72" Height="72" ColumnDefinitions="*,*,*" RowDefinitions="*,*,*">
+                                <Button Grid.Row="0" Grid.Column="0" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="TopLeft" ToolTip.Tip="Oben links">
+                                    <Grid>
+                                        <Border Classes="anchor-dot-idle"/>
+                                        <Border Classes="anchor-dot-active" IsVisible="{Binding CollageHeroPosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=TopLeft}"/>
+                                    </Grid>
+                                </Button>
+                                <Button Grid.Row="0" Grid.Column="1" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="Top" ToolTip.Tip="Oben">
+                                    <Grid>
+                                        <Border Classes="anchor-dot-idle"/>
+                                        <Border Classes="anchor-dot-active" IsVisible="{Binding CollageHeroPosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Top}"/>
+                                    </Grid>
+                                </Button>
+                                <Button Grid.Row="0" Grid.Column="2" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="TopRight" ToolTip.Tip="Oben rechts">
+                                    <Grid>
+                                        <Border Classes="anchor-dot-idle"/>
+                                        <Border Classes="anchor-dot-active" IsVisible="{Binding CollageHeroPosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=TopRight}"/>
+                                    </Grid>
+                                </Button>
+                                <Button Grid.Row="1" Grid.Column="0" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="Left" ToolTip.Tip="Links">
+                                    <Grid>
+                                        <Border Classes="anchor-dot-idle"/>
+                                        <Border Classes="anchor-dot-active" IsVisible="{Binding CollageHeroPosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Left}"/>
+                                    </Grid>
+                                </Button>
+                                <Button Grid.Row="1" Grid.Column="1" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="Center" ToolTip.Tip="Mitte">
+                                    <Grid>
+                                        <Border Classes="anchor-dot-idle"/>
+                                        <Border Classes="anchor-dot-active" IsVisible="{Binding CollageHeroPosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Center}"/>
+                                    </Grid>
+                                </Button>
+                                <Button Grid.Row="1" Grid.Column="2" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="Right" ToolTip.Tip="Rechts">
+                                    <Grid>
+                                        <Border Classes="anchor-dot-idle"/>
+                                        <Border Classes="anchor-dot-active" IsVisible="{Binding CollageHeroPosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Right}"/>
+                                    </Grid>
+                                </Button>
+                                <Button Grid.Row="2" Grid.Column="0" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="BottomLeft" ToolTip.Tip="Unten links">
+                                    <Grid>
+                                        <Border Classes="anchor-dot-idle"/>
+                                        <Border Classes="anchor-dot-active" IsVisible="{Binding CollageHeroPosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BottomLeft}"/>
+                                    </Grid>
+                                </Button>
+                                <Button Grid.Row="2" Grid.Column="1" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="Bottom" ToolTip.Tip="Unten">
+                                    <Grid>
+                                        <Border Classes="anchor-dot-idle"/>
+                                        <Border Classes="anchor-dot-active" IsVisible="{Binding CollageHeroPosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Bottom}"/>
+                                    </Grid>
+                                </Button>
+                                <Button Grid.Row="2" Grid.Column="2" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="BottomRight" ToolTip.Tip="Unten rechts">
+                                    <Grid>
+                                        <Border Classes="anchor-dot-idle"/>
+                                        <Border Classes="anchor-dot-active" IsVisible="{Binding CollageHeroPosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BottomRight}"/>
+                                    </Grid>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Grid.Row="4"
+                                   Text=" "/>
+                        <Button Grid.Row="4" Grid.Column="1"
+                                Classes="ghost"
+                                Padding="10,6"
+                                HorizontalAlignment="Left"
+                                Click="OnReshuffleClick"
+                                ToolTip.Tip="Reihenfolge der Bilder (und im Zufallsmodus Größe/Rotation) neu mischen">
+                            <TextBlock Text="Neu mischen"/>
+                        </Button>
+
+                        <TextBlock Grid.Row="5"
+                                   Text="Format"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="5"
+                                  Grid.Column="1"
+                                  ItemsSource="{Binding CollageFormatOptions}"
+                                  SelectedItem="{Binding CollageFormat}"
+                                  MinHeight="34"/>
+
+                        <TextBlock Grid.Row="6"
+                                   Text="Breite"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="6"
+                                       Grid.Column="1"
+                                       Classes="combo-like"
+                                       Minimum="640"
+                                       Maximum="12000"
+                                       Increment="100"
+                                       Value="{Binding CollageWidth}"
+                                       MinHeight="34"/>
+
+                        <TextBlock Grid.Row="7"
+                                   Text="Spalten"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="7"
+                                       Grid.Column="1"
+                                       Classes="combo-like"
+                                       Minimum="1"
+                                       Maximum="12"
+                                       Increment="1"
+                                       Value="{Binding CollageColumns}"
+                                       MinHeight="34"/>
+
+                        <TextBlock Grid.Row="8"
+                                   Text="Bildrahmen"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"
+                                   ToolTip.Tip="Weißer (Hintergrundfarbe) Rahmen um jedes einzelne Bild"/>
+                        <NumericUpDown Grid.Row="8"
+                                       Grid.Column="1"
+                                       Classes="combo-like"
+                                       Minimum="0"
+                                       Maximum="200"
+                                       Increment="2"
+                                       Value="{Binding CollageGap}"
+                                       MinHeight="34"/>
+
+                        <TextBlock Grid.Row="9"
+                                   Text="Rand"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="9"
+                                       Grid.Column="1"
+                                       Classes="combo-like"
+                                       Minimum="0"
+                                       Maximum="800"
+                                       Increment="8"
+                                       Value="{Binding CollageMargin}"
+                                       MinHeight="34"/>
+
+                        <TextBlock Grid.Row="10"
+                                   Text="Hintergrund"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Row="10"
+                                Grid.Column="1"
+                                Classes="ghost"
+                                MinHeight="34"
+                                Padding="10,6"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                ToolTip.Tip="Hintergrundfarbe der Collage wählen">
+                            <Grid ColumnDefinitions="28,*" ColumnSpacing="8">
+                                <Border Width="24"
+                                        Height="20"
+                                        Background="{Binding CollageBackgroundBrush}"
+                                        BorderBrush="{DynamicResource FP.Border.Strong}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding CollageBackgroundColor}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <Border Background="{DynamicResource FP.Bg.Panel}"
+                                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="10">
+                                        <StackPanel Spacing="6" Width="230">
+                                            <ColorPicker Color="{Binding CollageBackgroundColorValue, Mode=TwoWay}"
+                                                         ColorModel="Rgba"
+                                                         HorizontalAlignment="Stretch"/>
+                                            <TextBox Text="{Binding CollageBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     Watermark="#AARRGGBB"
+                                                     FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+
+                        <TextBlock Grid.Row="11"
+                                   Text="Qualität"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsCollageJpgQualityVisible}"/>
+                        <NumericUpDown Grid.Row="11"
+                                       Grid.Column="1"
+                                       Classes="combo-like"
+                                       Minimum="1"
+                                       Maximum="100"
+                                       Increment="1"
+                                       Value="{Binding CollageQuality}"
+                                       IsVisible="{Binding IsCollageJpgQualityVisible}"
+                                       MinHeight="34"/>
+                    </Grid>
+                </Grid>
+
+                <StackPanel Grid.Row="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Spacing="10">
+                    <Button Classes="ghost"
+                            Padding="14,8"
+                            Click="OnCancelClick">
+                        <TextBlock Text="Abbrechen"/>
+                    </Button>
+                    <Button Classes="accent"
+                            Padding="16,8"
+                            Click="OnCreateClick">
+                        <TextBlock Text="Erstellen"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Border>
+</UserControl>

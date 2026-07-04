@@ -1,0 +1,1260 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:icons="clr-namespace:FerrumPix.Controls">
+
+    <Styles.Resources>
+        <SolidColorBrush x:Key="FP.Bg.Root" Color="#0B0E11"/>
+        <SolidColorBrush x:Key="FP.Bg.Dark" Color="#0E1216"/>
+        <SolidColorBrush x:Key="FP.Bg.Panel" Color="#11161B"/>
+        <SolidColorBrush x:Key="FP.Bg.Content" Color="#141A20"/>
+        <SolidColorBrush x:Key="FP.Bg.Elevated" Color="#192128"/>
+        <SolidColorBrush x:Key="FP.Bg.Hover" Color="#1F2830"/>
+        <SolidColorBrush x:Key="FP.Bg.Input" Color="#10161B"/>
+        <SolidColorBrush x:Key="FP.Bg.Active" Color="#24303A"/>
+
+        <SolidColorBrush x:Key="FP.Accent" Color="#F08A1A"/>
+        <SolidColorBrush x:Key="FP.Accent.Light" Color="#FF9D2F"/>
+        <SolidColorBrush x:Key="FP.Accent.Dark" Color="#BC6711"/>
+        <SolidColorBrush x:Key="FP.Accent.Dim" Color="#2B1606"/>
+        <SolidColorBrush x:Key="FP.Brand.Accent" Color="#F08A1A"/>
+
+        <SolidColorBrush x:Key="FP.Text.Primary" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="FP.Text.Secondary" Color="#A6AFB7"/>
+        <SolidColorBrush x:Key="FP.Text.Muted" Color="#6C7780"/>
+        <SolidColorBrush x:Key="FP.Text.Accent" Color="#F08A1A"/>
+
+        <SolidColorBrush x:Key="FP.Border.Subtle" Color="#182028"/>
+        <SolidColorBrush x:Key="FP.Border.Normal" Color="#26313B"/>
+        <SolidColorBrush x:Key="FP.Border.Strong" Color="#34414C"/>
+
+        <SolidColorBrush x:Key="FP.Sel.Bg" Color="#24303A"/>
+        <SolidColorBrush x:Key="FP.Sel.Hover" Color="#2A3742"/>
+
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#192128"/>
+        <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#26313B"/>
+        <SolidColorBrush x:Key="ComboBoxItemBackground" Color="Transparent"/>
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#1F2830"/>
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed" Color="#24303A"/>
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#24303A"/>
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#2A3742"/>
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="#2A3742"/>
+        <SolidColorBrush x:Key="ComboBoxItemForeground" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="ComboBoxItemForegroundPointerOver" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPressed" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="ListBoxItemBackground" Color="Transparent"/>
+        <SolidColorBrush x:Key="ListBoxItemBackgroundPointerOver" Color="#1F2830"/>
+        <SolidColorBrush x:Key="ListBoxItemBackgroundPressed" Color="#24303A"/>
+        <SolidColorBrush x:Key="ListBoxItemBackgroundSelected" Color="#24303A"/>
+        <SolidColorBrush x:Key="ListBoxItemBackgroundSelectedPointerOver" Color="#2A3742"/>
+        <SolidColorBrush x:Key="ListBoxItemBackgroundSelectedPressed" Color="#2A3742"/>
+        <SolidColorBrush x:Key="ListBoxItemForeground" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="ListBoxItemForegroundPointerOver" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="ListBoxItemForegroundSelected" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="ListBoxItemForegroundSelectedPointerOver" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="ListBoxItemForegroundSelectedPressed" Color="#E7ECF0"/>
+
+        <SolidColorBrush x:Key="SystemControlHighlightListAccentLowBrush" Color="#24303A"/>
+        <SolidColorBrush x:Key="SystemControlHighlightListAccentMediumBrush" Color="#2A3742"/>
+        <SolidColorBrush x:Key="SystemControlHighlightListAccentHighBrush" Color="#34414C"/>
+        <SolidColorBrush x:Key="SystemControlHighlightListLowBrush" Color="#1F2830"/>
+        <SolidColorBrush x:Key="SystemControlHighlightListMediumBrush" Color="#24303A"/>
+        <SolidColorBrush x:Key="SystemControlHighlightListHighBrush" Color="#2A3742"/>
+        <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#F08A1A"/>
+        <SolidColorBrush x:Key="SystemControlHighlightAltLowBrush" Color="#24303A"/>
+        <SolidColorBrush x:Key="SystemControlHighlightAltMediumBrush" Color="#2A3742"/>
+        <SolidColorBrush x:Key="SystemControlHighlightAltHighBrush" Color="#34414C"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBackgroundPointerOver" Color="#1F2830"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBackgroundPressed" Color="#24303A"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBackgroundSelected" Color="#24303A"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBackgroundSelectedPointerOver" Color="#2A3742"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBackgroundSelectedPressed" Color="#2A3742"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBorderBrushPointerOver" Color="#34414C"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBorderBrushPressed" Color="#34414C"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBorderBrushSelected" Color="#34414C"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBorderBrushSelectedPointerOver" Color="#34414C"/>
+        <SolidColorBrush x:Key="ComboBoxItemRevealBorderBrushSelectedPressed" Color="#34414C"/>
+    </Styles.Resources>
+
+    <Style Selector="Window">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Root}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="FontFamily" Value="Segoe UI, Cantarell, DejaVu Sans, sans-serif"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <Style Selector="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+    <Style Selector="TextBlock.secondary">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+    <Style Selector="TextBlock.muted">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>
+        <Setter Property="FontSize" Value="10"/>
+    </Style>
+    <Style Selector="TextBlock.section-header">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>
+        <Setter Property="FontSize" Value="9"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="10,10,10,4"/>
+        <Setter Property="LetterSpacing" Value="1.3"/>
+    </Style>
+    <Style Selector="TextBlock.brand">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="TextBlock.brand-accent">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Brand.Accent}"/>
+    </Style>
+
+    <Style Selector="icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+
+    <Style Selector="Button">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="14,8"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <!-- Icon+Text-Buttons packen ihren Inhalt in ein horizontales StackPanel - darin wird das
+         (kürzere) TextBlock per Default auf die Höhe des (höheren) Icons gestreckt und rendert den
+         Text dann oben statt vertikal zentriert. -->
+    <Style Selector="Button StackPanel[Orientation=Horizontal] > TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="UserControl.settings-view Button:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="UserControl.editor-view Button:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button:pressed /template/ ContentPresenter">
+        <Setter Property="Opacity" Value="0.8"/>
+    </Style>
+    <Style Selector="Button:disabled /template/ ContentPresenter">
+        <Setter Property="Opacity" Value="0.35"/>
+    </Style>
+    <Style Selector="Button.accent">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.accent /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="TextElement.Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.accent:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="TextElement.Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.accent icons|SvgIcon">
+        <Setter Property="IconBrush" Value="White"/>
+    </Style>
+    <Style Selector="Button.ghost">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="11,6"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="Button.insert-option-btn">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="Height" Value="46"/>
+        <Setter Property="Margin" Value="0,0,6,6"/>
+    </Style>
+    <Style Selector="Button.insert-option-btn.compact">
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="Margin" Value="0,0,4,4"/>
+    </Style>
+    <Style Selector="Button.insert-option-btn /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+    </Style>
+    <Style Selector="Button.insert-option-btn.active">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="Button.insert-option-btn.active /template/ ContentPresenter">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="Button.insert-option-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="Button.insert-option-btn.active:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.insert-option-btn.selected-kind icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.info-tab">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+        <Setter Property="Padding" Value="0,0,0,8"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.info-tab:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.info-tab.active">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.info-tab.active TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.dropdown-btn">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="Button.dropdown-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="Button.dropdown-btn:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.dropdown-btn:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.dropdown-btn:pressed /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.dropdown-item">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="MinWidth" Value="220"/>
+    </Style>
+    <Style Selector="Button.dropdown-item:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+    </Style>
+    <Style Selector="Button.dropdown-item:pointerover /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.dropdown-item:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.dropdown-item:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.dropdown-item:pressed /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.dropdown-item:pointerover:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.dropdown-item:pointerover:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.dropdown-item:pointerover:pressed /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.dropdown-item TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="Button.dropdown-item:pressed TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <!-- Ghost-Buttons in der Toolbar ohne Rahmen -->
+    <Style Selector="Border.toolbar Button.ghost">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.ghost.active">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.ghost.active icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.icon-btn">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.icon-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="Button.icon-btn.active">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button.icon-btn.active icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.anchor-dot">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.anchor-dot:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="Button.anchor-dot Grid">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.anchor-dot-idle">
+        <Setter Property="Width" Value="10"/>
+        <Setter Property="Height" Value="10"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.anchor-dot-active">
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ToggleButton.layer-eye">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="ToggleButton.layer-eye /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="ToggleButton.layer-eye:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="ToggleButton.layer-eye:checked /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="ToggleButton.layer-eye icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Muted}"/>
+    </Style>
+    <Style Selector="ToggleButton.layer-eye:checked icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.tool-btn">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Width" Value="40"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.tool-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="Button.tool-btn.active">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button.tool-btn-row">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.tool-btn-row:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="Button.tool-btn-row.active">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button.tool-btn-row.active icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.winchr">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="#A0A8AF"/>
+        <Setter Property="Width" Value="44"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.winchr:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#24303A"/>
+        <Setter Property="TextElement.Foreground" Value="#EDF2F7"/>
+    </Style>
+    <Style Selector="Button.winchr.close:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#BE3A2B"/>
+        <Setter Property="TextElement.Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.theme-choice">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Button.theme-choice:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="Button.theme-choice.active">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="Button.swatch">
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button.swatch:pointerover /template/ ContentPresenter">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="Button.swatch.active">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderThickness" Value="3"/>
+    </Style>
+    <Style Selector="Button.wnd-btn, Button.wnd-close">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="Width" Value="30"/>
+        <Setter Property="Height" Value="30"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.wnd-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="Button.wnd-close:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#3A1511"/>
+        <Setter Property="BorderBrush" Value="#8D332A"/>
+        <Setter Property="TextElement.Foreground" Value="White"/>
+    </Style>
+
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="12,7"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBox:focus">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="TextBox.search-input">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.search-input:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="TextBox.overlay-editor">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="SelectionBrush" Value="#55F08A1A"/>
+    </Style>
+    <Style Selector="TextBox.overlay-editor /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="TextBox.overlay-editor:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="TextBox.overlay-editor:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="TextBox.search-input:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+
+    <Style Selector="Slider">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="Height" Value="20"/>
+    </Style>
+    <Style Selector="Slider /template/ Border">
+        <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Slider /template/ RepeatButton /template/ ContentPresenter">
+        <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Slider /template/ Thumb">
+        <Setter Property="Width" Value="14"/>
+        <Setter Property="Height" Value="14"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Bg.Root}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="CornerRadius" Value="7"/>
+    </Style>
+    <Style Selector="Slider /template/ Thumb /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Bg.Root}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="CornerRadius" Value="7"/>
+    </Style>
+    <Style Selector="Slider:pointerover /template/ Thumb /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Bg.Root}"/>
+    </Style>
+    <Style Selector="icons|RoundSlider">
+        <Setter Property="TrackBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="FillBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="ThumbBorderBrush" Value="{DynamicResource FP.Bg.Root}"/>
+        <Setter Property="Height" Value="42"/>
+    </Style>
+    <Style Selector="ScrollBar:vertical">
+        <Setter Property="Width" Value="13"/>
+    </Style>
+    <Style Selector="ScrollBar:horizontal">
+        <Setter Property="Height" Value="13"/>
+    </Style>
+    <Style Selector="ScrollBar:vertical /template/ Thumb">
+        <Setter Property="MinWidth" Value="10"/>
+    </Style>
+    <Style Selector="ScrollBar:horizontal /template/ Thumb">
+        <Setter Property="MinHeight" Value="10"/>
+    </Style>
+
+    <Style Selector="ListBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="ListBoxItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Margin" Value="4,2"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="ListBoxItem:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ListBoxItem:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ListBoxItem:pressed /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBox.layers-list ListBoxItem:selected Border.layer-item">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="ListBoxItem:selected:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ListBoxItem:selected:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ListBoxItem:selected:pressed /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+    </Style>
+    <Style Selector="ListBox.filmstrip-list ListBoxItem">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.filmstrip-list ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+    <Style Selector="TreeView">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="TreeViewItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="TreeViewItem:selected /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="TreeViewItem:pointerover /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+
+    <Style Selector="ToggleSwitch">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+
+    <Style Selector="Separator">
+        <Setter Property="Background" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Margin" Value="8,6"/>
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter">
+        <Setter Property="Width" Value="220"/>
+    </Style>
+    <Style Selector="FlyoutPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter, ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="MenuItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="MinWidth" Value="208"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+    </Style>
+    <Style Selector="MenuItem /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Padding" Value="14,9"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="MenuItem:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="MenuItem:pressed /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="MenuItem:pressed /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+    </Style>
+
+    <Style Selector="ToolTip">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MaxWidth" Value="260"/>
+    </Style>
+
+    <Style Selector="Border.sidebar">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+    </Style>
+    <Style Selector="Border.toolbar">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Dark}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Height" Value="60"/>
+        <Setter Property="Padding" Value="10,0"/>
+    </Style>
+    <Style Selector="Border.statusbar">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Dark}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="Padding" Value="10,0"/>
+    </Style>
+    <Style Selector="Border.panel-right">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1,0,0,0"/>
+    </Style>
+    <Style Selector="Border.thumb-card">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Margin" Value="5"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Border.thumb-card:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="Border.thumb-card.list-row">
+        <Setter Property="Margin" Value="5,3"/>
+    </Style>
+    <Style Selector="Border.thumb-card.selected">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="Border.thumb-card.navigation-selected">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="14"/>
+    </Style>
+    <Style Selector="Border.section">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="12"/>
+    </Style>
+    <Style Selector="Border.adjustment-group">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="10,8"/>
+    </Style>
+    <Style Selector="Border.adjustment-group Expander">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Border.divider">
+        <Setter Property="Width" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="Margin" Value="6,8"/>
+    </Style>
+    <Style Selector="Border.metric-pill">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="10,6"/>
+    </Style>
+    <Style Selector="Border.preview-frame">
+        <Setter Property="Background" Value="#0B0F13"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+
+    <!-- Favoriten-Herz: inaktiv = Textfarbe, aktiv = Akzentfarbe -->
+    <Style Selector="Button.favorite-btn">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="Button.favorite-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.favorite-btn:pressed /template/ ContentPresenter">
+        <Setter Property="Opacity" Value="0.72"/>
+    </Style>
+    <Style Selector="Button.selection-badge">
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#CC10161B"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.video-play-badge">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.video-play-badge:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Light}"/>
+    </Style>
+    <Style Selector="Button.video-play-badge:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Dark}"/>
+    </Style>
+    <Style Selector="Button.selection-badge.compact">
+        <Setter Property="Width" Value="14"/>
+        <Setter Property="Height" Value="14"/>
+        <Setter Property="CornerRadius" Value="7"/>
+    </Style>
+    <Style Selector="Button.selection-badge:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.selection-badge.active">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.selection-badge.active /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="TextElement.Foreground" Value="White"/>
+    </Style>
+    <!-- Klasse statt reinem TextBlock-Selektor: Avalonias ToolTip-Popup hängt logisch unter dem
+         Button, ein reiner "TextBlock"-Selektor würde sonst auch den Tooltip-Text transparent färben. -->
+    <Style Selector="Button.selection-badge TextBlock.badge-glyph">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="Transparent"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.selection-badge.active TextBlock.badge-glyph">
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.favorite-btn:pointerover icons|SvgIcon.fav-heart">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="Button.favorite-btn:pointerover icons|SvgIcon.fav-heart.active">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent.Light}"/>
+    </Style>
+    <Style Selector="icons|SvgIcon.fav-heart">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="icons|SvgIcon.fav-heart.active">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+
+    <!-- Bewertungssterne: inaktiv = leerer Stern, aktiv = gefüllter Stern in Akzentfarbe -->
+    <Style Selector="Button.star-btn TextBlock">
+        <Setter Property="Text" Value="☆"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.star-btn.active TextBlock">
+        <Setter Property="Text" Value="★"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+
+    <!-- Ausgewählte Thumbnail-Karte: oranger Rahmen -->
+    <Style Selector="ListBoxItem:selected Border.thumb-card">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <Style Selector="ComboBox">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="ComboBox:pointerover /template/ Border#Background">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="ComboBox:pressed /template/ Border#Background">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+    </Style>
+    <Style Selector="ComboBox:focus /template/ Border#Background">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="ComboBox /template/ ToggleButton#DropDownButton:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+    </Style>
+    <Style Selector="ComboBox /template/ ToggleButton#DropDownButton:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+    </Style>
+    <Style Selector="ComboBox /template/ Popup#PART_Popup Border#PopupBorder">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+    </Style>
+    <Style Selector="ComboBox /template/ Popup#PART_Popup ScrollViewer">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+
+    <Style Selector="NumericUpDown.combo-like">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like:focus">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <!-- PART_TextBox ist selbst ein vollwertiges TextBox-Control mit eigenem Fokus-Erscheinungsbild
+         (eigener Rahmen/Hintergrund im :focus-Zustand seines eigenen Templates) - ohne diese
+         Overrides überdeckt das beim Reinklicken den feinen äußeren Rahmen des NumericUpDown mit der
+         dunkleren Eingabefeld-Hintergrundfarbe. VerticalContentAlignment/HorizontalContentAlignment
+         zentrieren den Text vertikal statt am oberen Rand kleben zu bleiben. -->
+    <Style Selector="NumericUpDown.combo-like /template/ TextBox#PART_TextBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ TextBox#PART_TextBox:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ TextBox#PART_TextBox /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ RepeatButton#PART_DecreaseButton:pointerover">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ RepeatButton#PART_IncreaseButton:pointerover">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ RepeatButton#PART_DecreaseButton:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ RepeatButton#PART_IncreaseButton:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ RepeatButton#PART_DecreaseButton /template/ ContentPresenter">
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ RepeatButton#PART_IncreaseButton /template/ ContentPresenter">
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ComboBoxItem /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pressed /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pressed /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover:pressed /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover:pressed /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pointerover">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pointerover /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pointerover /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pressed">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pressed /template/ Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pressed /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+    </Style>
+    <Style Selector="Popup Border">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+    </Style>
+
+    <Style Selector="Expander">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="14,5,10,2"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <Grid RowDefinitions="Auto,Auto">
+                        <ToggleButton Background="Transparent"
+                                      BorderThickness="0"
+                                      Padding="{TemplateBinding Padding}"
+                                      MinHeight="28"
+                                      HorizontalAlignment="Stretch"
+                                      HorizontalContentAlignment="Stretch"
+                                      VerticalContentAlignment="Center"
+                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <ContentPresenter Content="{TemplateBinding Header}"
+                                              ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Stretch"
+                                              Foreground="{TemplateBinding Foreground}"/>
+                        </ToggleButton>
+                        <ContentPresenter Grid.Row="1"
+                                          IsVisible="{TemplateBinding IsExpanded}"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Margin="{TemplateBinding Padding}"/>
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Arrow"/>
+    </Style>
+    <Style Selector="Expander:pointerover /template/ ToggleButton">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Expander:pointerover /template/ ToggleButton ContentPresenter">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton:checked">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton:checked /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Expander:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+</Styles>

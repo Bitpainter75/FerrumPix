@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.ColorPickerButton">
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+        <Button Name="SwatchButton" Classes="ghost" Height="34" Padding="6,4" HorizontalAlignment="Stretch" ToolTip.Tip="Farbe wählen">
+            <Grid ColumnDefinitions="28,*" ColumnSpacing="8">
+                <Border Name="SwatchBorder" Width="26" Height="22" BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1" CornerRadius="4"/>
+                <TextBlock Grid.Column="1" Name="HexTextBlock" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11" VerticalAlignment="Center"/>
+            </Grid>
+            <Button.Flyout>
+                <Flyout Placement="Bottom">
+                    <Border Background="{DynamicResource FP.Bg.Panel}" BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6" Padding="10">
+                        <StackPanel Spacing="2" Width="230">
+                            <ColorPicker Name="InnerColorPicker" ColorModel="Rgba" HorizontalAlignment="Stretch"/>
+                            <TextBox Name="HexTextBox" Watermark="#AARRGGBB" FontSize="11"/>
+                            <ItemsControl Name="RecentColorsList">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Width="20" Height="20" Padding="0" Margin="0,0,4,4" CornerRadius="4"
+                                                Background="{Binding}"
+                                                BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1"
+                                                Click="OnRecentColorClick"
+                                                Tag="{Binding}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Flyout>
+            </Button.Flyout>
+        </Button>
+        <Button Grid.Column="1" Name="EyedropperButton" Classes="icon-btn" Width="30" Height="30" Padding="0" Click="OnEyedropperClick" ToolTip.Tip="Farbe aus dem Bild aufnehmen (Pipette)">
+            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/200_Pipette.svg" Width="15" Height="15"/>
+        </Button>
+    </Grid>
+</UserControl>

@@ -1,0 +1,162 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.SearchDialogView">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+          RowSpacing="14">
+        <Grid ColumnDefinitions="160,*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="8">
+            <TextBlock Text="Name" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBox Grid.Column="1"
+                     Grid.ColumnSpan="2"
+                     Text="{Binding DialogSearchName, Mode=TwoWay}"
+                     MinHeight="36"/>
+            <TextBlock Grid.Row="1" Text="Dateimuster oder Tags" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBox Grid.Row="1"
+                     Grid.Column="1"
+                     Grid.ColumnSpan="2"
+                     Text="{Binding DialogSearchText, Mode=TwoWay}"
+                     MinHeight="36"/>
+            <TextBlock Grid.Row="2" Text="Startordner (optional)" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBox Grid.Row="2"
+                     Grid.Column="1"
+                     Text="{Binding DialogSearchRootFolder, Mode=TwoWay}"
+                     MinHeight="36"/>
+            <Button Grid.Row="2"
+                    Grid.Column="2"
+                    Width="38"
+                    Height="36"
+                    Padding="0"
+                    Click="OnBrowseFolderClick"
+                    ToolTip.Tip="Ordner wählen">...</Button>
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0">
+            <TextBlock Text="Umfang" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <CheckBox Grid.Column="1"
+                      IsChecked="{Binding DialogSearchIncludeSubfolders, Mode=TwoWay}"
+                      Content="Unterordner durchsuchen"/>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0">
+            <TextBlock Text="Favoriten" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Classes="segmented"
+                        Classes.active="{Binding IsDialogSearchFavoriteOnly}"
+                        Click="OnFavoriteClick"
+                        Tag="Only">Nur Favoriten</Button>
+                <Button Classes="segmented"
+                        Classes.active="{Binding IsDialogSearchFavoriteNot}"
+                        Click="OnFavoriteClick"
+                        Tag="Not">Ohne Favoriten</Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="3" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0">
+            <TextBlock Text="Bewertung" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <Button Grid.Column="1"
+                    Classes="dropdown-btn"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch">
+                <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
+                        <StackPanel MinWidth="200">
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="-1">
+                                <Grid ColumnDefinitions="*,20">
+                                    <TextBlock Text="Alle"/>
+                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRatingAll}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
+                                </Grid>
+                            </Button>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="0">
+                                <Grid ColumnDefinitions="*,20">
+                                    <TextBlock Text="Nicht bewertet"/>
+                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRatingUnrated}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
+                                </Grid>
+                            </Button>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="1">
+                                <Grid ColumnDefinitions="*,20">
+                                    <TextBlock Text="1 Stern"/>
+                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating1}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
+                                </Grid>
+                            </Button>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="2">
+                                <Grid ColumnDefinitions="*,20">
+                                    <TextBlock Text="2 Sterne"/>
+                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating2}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
+                                </Grid>
+                            </Button>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="3">
+                                <Grid ColumnDefinitions="*,20">
+                                    <TextBlock Text="3 Sterne"/>
+                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating3}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
+                                </Grid>
+                            </Button>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="4">
+                                <Grid ColumnDefinitions="*,20">
+                                    <TextBlock Text="4 Sterne"/>
+                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating4}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
+                                </Grid>
+                            </Button>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="5">
+                                <Grid ColumnDefinitions="*,20">
+                                    <TextBlock Text="5 Sterne"/>
+                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating5}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+                <TextBlock Text="{Binding DialogSearchRatingLabel}"
+                           VerticalAlignment="Center"/>
+            </Button>
+        </Grid>
+
+        <Grid Grid.Row="4" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0">
+            <TextBlock Text="Bedingungen" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <StackPanel Grid.Column="1" Spacing="8">
+                <ItemsControl ItemsSource="{Binding DialogSearchConditions}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="120,90,*,Auto" ColumnSpacing="6" Margin="0,0,0,6">
+                                <ComboBox ItemsSource="{Binding DataContext.DialogSearchConditionFieldOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          SelectedItem="{Binding Field, Mode=TwoWay}"
+                                          MinHeight="32"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding DataContext.DialogSearchConditionOperatorOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          SelectedItem="{Binding Operator, Mode=TwoWay}"
+                                          MinHeight="32"/>
+                                <TextBox Grid.Column="2"
+                                         Text="{Binding Value, Mode=TwoWay}"
+                                         Watermark="Wert"
+                                         MinHeight="32"/>
+                                <Button Grid.Column="3"
+                                        Classes="ghost"
+                                        Width="32"
+                                        Height="32"
+                                        Padding="0"
+                                        Click="OnRemoveConditionClick"
+                                        ToolTip.Tip="Bedingung entfernen">✕</Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <Button Classes="ghost" Padding="10,6" Click="OnAddConditionClick">
+                        <TextBlock Text="+ Bedingung hinzufügen"/>
+                    </Button>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Classes="segmented"
+                                Classes.active="{Binding IsDialogSearchConditionAnd}"
+                                Click="OnConditionCombinatorClick"
+                                Tag="AND">Alle müssen zutreffen</Button>
+                        <Button Classes="segmented"
+                                Classes.active="{Binding IsDialogSearchConditionOr}"
+                                Click="OnConditionCombinatorClick"
+                                Tag="OR">Eine muss zutreffen</Button>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

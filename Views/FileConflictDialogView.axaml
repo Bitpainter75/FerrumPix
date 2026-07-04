@@ -1,0 +1,66 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FerrumPix.Views.FileConflictDialogView">
+
+    <Grid RowDefinitions="Auto,Auto"
+          RowSpacing="14">
+        <Grid ColumnDefinitions="*,*"
+              ColumnSpacing="18">
+        <Border Background="{DynamicResource FP.Bg.Content}"
+                BorderBrush="{DynamicResource FP.Border.Normal}"
+                BorderThickness="1"
+                CornerRadius="7"
+                Padding="14">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Datei im Zielordner" FontWeight="SemiBold"/>
+                <TextBlock Text="bereits vorhanden" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11"/>
+                <Border Height="150" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
+                    <Image Source="{Binding DialogExistingFile.Preview}" Stretch="UniformToFill"/>
+                </Border>
+                <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                    <TextBlock Text="Dateiname" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding DialogExistingFile.FileName}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Row="1" Text="Dateigröße" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DialogExistingFile.FileSizeText}"/>
+                    <TextBlock Grid.Row="2" Text="Änderungsdatum" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DialogExistingFile.ModifiedText}"/>
+                    <TextBlock Grid.Row="3" Text="Abmessungen" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DialogExistingFile.DimensionsText}"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+        <Border Grid.Column="1"
+                Background="{DynamicResource FP.Bg.Content}"
+                BorderBrush="{DynamicResource FP.Border.Normal}"
+                BorderThickness="1"
+                CornerRadius="7"
+                Padding="14">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Datei, die kopiert/verschoben wird" FontWeight="SemiBold"/>
+                <TextBlock Text="neue Datei" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11"/>
+                <Border Height="150" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
+                    <Image Source="{Binding DialogIncomingFile.Preview}" Stretch="UniformToFill"/>
+                </Border>
+                <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                    <TextBlock Text="Dateiname" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding DialogIncomingFile.FileName}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Row="1" Text="Dateigröße" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DialogIncomingFile.FileSizeText}" Foreground="{DynamicResource FP.Accent}"/>
+                    <TextBlock Grid.Row="2" Text="Änderungsdatum" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DialogIncomingFile.ModifiedText}" Foreground="{DynamicResource FP.Accent}"/>
+                    <TextBlock Grid.Row="3" Text="Abmessungen" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DialogIncomingFile.DimensionsText}"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Spacing="8">
+            <TextBlock Text="Neue Datei umbenennen"
+                       Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="12"/>
+            <TextBox Text="{Binding DialogConflictRenameText, Mode=TwoWay}"
+                     MinHeight="36"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

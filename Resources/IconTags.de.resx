@@ -1,0 +1,1404 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Kreis" xml:space="preserve">
+    <value>Kreis</value>
+  </data>
+  <data name="Kreis_gef_llt_outline" xml:space="preserve">
+    <value>Kreis gefüllt outline</value>
+  </data>
+  <data name="Quadrat" xml:space="preserve">
+    <value>Quadrat</value>
+  </data>
+  <data name="Quadrat_abgerundet" xml:space="preserve">
+    <value>Quadrat abgerundet</value>
+  </data>
+  <data name="Rechteck" xml:space="preserve">
+    <value>Rechteck</value>
+  </data>
+  <data name="Kapsel" xml:space="preserve">
+    <value>Kapsel</value>
+  </data>
+  <data name="Dreieck" xml:space="preserve">
+    <value>Dreieck</value>
+  </data>
+  <data name="Dreieck_abgerundet" xml:space="preserve">
+    <value>Dreieck abgerundet</value>
+  </data>
+  <data name="Dreieck_rechts" xml:space="preserve">
+    <value>Dreieck rechts</value>
+  </data>
+  <data name="Dreieck_links" xml:space="preserve">
+    <value>Dreieck links</value>
+  </data>
+  <data name="Raute" xml:space="preserve">
+    <value>Raute</value>
+  </data>
+  <data name="Parallelogramm" xml:space="preserve">
+    <value>Parallelogramm</value>
+  </data>
+  <data name="Trapez" xml:space="preserve">
+    <value>Trapez</value>
+  </data>
+  <data name="Fuenfeck" xml:space="preserve">
+    <value>Fuenfeck</value>
+  </data>
+  <data name="Sechseck" xml:space="preserve">
+    <value>Sechseck</value>
+  </data>
+  <data name="Achteck" xml:space="preserve">
+    <value>Achteck</value>
+  </data>
+  <data name="Oval" xml:space="preserve">
+    <value>Oval</value>
+  </data>
+  <data name="Halbkreis" xml:space="preserve">
+    <value>Halbkreis</value>
+  </data>
+  <data name="Bogen" xml:space="preserve">
+    <value>Bogen</value>
+  </data>
+  <data name="Linie" xml:space="preserve">
+    <value>Linie</value>
+  </data>
+  <data name="Linie_vertikal" xml:space="preserve">
+    <value>Linie vertikal</value>
+  </data>
+  <data name="Linie_diagonal" xml:space="preserve">
+    <value>Linie diagonal</value>
+  </data>
+  <data name="Kreuz" xml:space="preserve">
+    <value>Kreuz</value>
+  </data>
+  <data name="Plus" xml:space="preserve">
+    <value>Plus</value>
+  </data>
+  <data name="Minus" xml:space="preserve">
+    <value>Minus</value>
+  </data>
+  <data name="Punkt" xml:space="preserve">
+    <value>Punkt</value>
+  </data>
+  <data name="Doppelpunkt" xml:space="preserve">
+    <value>Doppelpunkt</value>
+  </data>
+  <data name="Ellipsis" xml:space="preserve">
+    <value>Ellipsis</value>
+  </data>
+  <data name="Gitter" xml:space="preserve">
+    <value>Gitter</value>
+  </data>
+  <data name="Kachel_4" xml:space="preserve">
+    <value>Kachel 4</value>
+  </data>
+  <data name="Diamant_facette" xml:space="preserve">
+    <value>Diamant facette</value>
+  </data>
+  <data name="Wuerfel" xml:space="preserve">
+    <value>Wuerfel</value>
+  </data>
+  <data name="Pfeil_oben" xml:space="preserve">
+    <value>Pfeil oben</value>
+  </data>
+  <data name="Pfeil_unten" xml:space="preserve">
+    <value>Pfeil unten</value>
+  </data>
+  <data name="Pfeil_links" xml:space="preserve">
+    <value>Pfeil links</value>
+  </data>
+  <data name="Pfeil_rechts" xml:space="preserve">
+    <value>Pfeil rechts</value>
+  </data>
+  <data name="Pfeil_oben_rechts" xml:space="preserve">
+    <value>Pfeil oben rechts</value>
+  </data>
+  <data name="Chevron_oben" xml:space="preserve">
+    <value>Chevron oben</value>
+  </data>
+  <data name="Chevron_unten" xml:space="preserve">
+    <value>Chevron unten</value>
+  </data>
+  <data name="Chevron_links" xml:space="preserve">
+    <value>Chevron links</value>
+  </data>
+  <data name="Chevron_rechts" xml:space="preserve">
+    <value>Chevron rechts</value>
+  </data>
+  <data name="Doppelpfeil_vertikal" xml:space="preserve">
+    <value>Doppelpfeil vertikal</value>
+  </data>
+  <data name="Doppelpfeil_horizontal" xml:space="preserve">
+    <value>Doppelpfeil horizontal</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Undo" xml:space="preserve">
+    <value>Undo</value>
+  </data>
+  <data name="Redo" xml:space="preserve">
+    <value>Redo</value>
+  </data>
+  <data name="Herz" xml:space="preserve">
+    <value>Herz</value>
+  </data>
+  <data name="Sprechblase" xml:space="preserve">
+    <value>Sprechblase</value>
+  </data>
+  <data name="Sprechblase_rund" xml:space="preserve">
+    <value>Sprechblase rund</value>
+  </data>
+  <data name="Gedankenblase" xml:space="preserve">
+    <value>Gedankenblase</value>
+  </data>
+  <data name="Tropfen" xml:space="preserve">
+    <value>Tropfen</value>
+  </data>
+  <data name="Flamme" xml:space="preserve">
+    <value>Flamme</value>
+  </data>
+  <data name="Spirale" xml:space="preserve">
+    <value>Spirale</value>
+  </data>
+  <data name="Welle" xml:space="preserve">
+    <value>Welle</value>
+  </data>
+  <data name="Blitz" xml:space="preserve">
+    <value>Blitz</value>
+  </data>
+  <data name="Sonne" xml:space="preserve">
+    <value>Sonne</value>
+  </data>
+  <data name="Mond" xml:space="preserve">
+    <value>Mond</value>
+  </data>
+  <data name="Wolke" xml:space="preserve">
+    <value>Wolke</value>
+  </data>
+  <data name="Regen" xml:space="preserve">
+    <value>Regen</value>
+  </data>
+  <data name="Schnee" xml:space="preserve">
+    <value>Schnee</value>
+  </data>
+  <data name="Stern" xml:space="preserve">
+    <value>Stern</value>
+  </data>
+  <data name="Funke" xml:space="preserve">
+    <value>Funke</value>
+  </data>
+  <data name="Krone" xml:space="preserve">
+    <value>Krone</value>
+  </data>
+  <data name="Kranz" xml:space="preserve">
+    <value>Kranz</value>
+  </data>
+  <data name="Schild" xml:space="preserve">
+    <value>Schild</value>
+  </data>
+  <data name="Schluessel" xml:space="preserve">
+    <value>Schluessel</value>
+  </data>
+  <data name="Schloss" xml:space="preserve">
+    <value>Schloss</value>
+  </data>
+  <data name="Offenes_Schloss" xml:space="preserve">
+    <value>Offenes Schloss</value>
+  </data>
+  <data name="Auge" xml:space="preserve">
+    <value>Auge</value>
+  </data>
+  <data name="Auge_aus" xml:space="preserve">
+    <value>Auge aus</value>
+  </data>
+  <data name="Telefon" xml:space="preserve">
+    <value>Telefon</value>
+  </data>
+  <data name="Brief" xml:space="preserve">
+    <value>Brief</value>
+  </data>
+  <data name="Haus" xml:space="preserve">
+    <value>Haus</value>
+  </data>
+  <data name="Benutzer" xml:space="preserve">
+    <value>Benutzer</value>
+  </data>
+  <data name="Gruppe" xml:space="preserve">
+    <value>Gruppe</value>
+  </data>
+  <data name="Kamera" xml:space="preserve">
+    <value>Kamera</value>
+  </data>
+  <data name="Bild" xml:space="preserve">
+    <value>Bild</value>
+  </data>
+  <data name="Musiknote" xml:space="preserve">
+    <value>Musiknote</value>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="Pause" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="Stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="Record" xml:space="preserve">
+    <value>Record</value>
+  </data>
+  <data name="Mikrofon" xml:space="preserve">
+    <value>Mikrofon</value>
+  </data>
+  <data name="Glocke" xml:space="preserve">
+    <value>Glocke</value>
+  </data>
+  <data name="Lupe" xml:space="preserve">
+    <value>Lupe</value>
+  </data>
+  <data name="Zahnrad" xml:space="preserve">
+    <value>Zahnrad</value>
+  </data>
+  <data name="Stift" xml:space="preserve">
+    <value>Stift</value>
+  </data>
+  <data name="Papier" xml:space="preserve">
+    <value>Papier</value>
+  </data>
+  <data name="Ordner" xml:space="preserve">
+    <value>Ordner</value>
+  </data>
+  <data name="Papierkorb" xml:space="preserve">
+    <value>Papierkorb</value>
+  </data>
+  <data name="Kalender" xml:space="preserve">
+    <value>Kalender</value>
+  </data>
+  <data name="Uhr" xml:space="preserve">
+    <value>Uhr</value>
+  </data>
+  <data name="Sanduhr" xml:space="preserve">
+    <value>Sanduhr</value>
+  </data>
+  <data name="Kompass" xml:space="preserve">
+    <value>Kompass</value>
+  </data>
+  <data name="Zielscheibe" xml:space="preserve">
+    <value>Zielscheibe</value>
+  </data>
+  <data name="Karte_Pin" xml:space="preserve">
+    <value>Karte Pin</value>
+  </data>
+  <data name="Flagge" xml:space="preserve">
+    <value>Flagge</value>
+  </data>
+  <data name="Anker" xml:space="preserve">
+    <value>Anker</value>
+  </data>
+  <data name="Schere" xml:space="preserve">
+    <value>Schere</value>
+  </data>
+  <data name="Kette" xml:space="preserve">
+    <value>Kette</value>
+  </data>
+  <data name="Klammer" xml:space="preserve">
+    <value>Klammer</value>
+  </data>
+  <data name="Hashtag" xml:space="preserve">
+    <value>Hashtag</value>
+  </data>
+  <data name="At_Zeichen" xml:space="preserve">
+    <value>At Zeichen</value>
+  </data>
+  <data name="Prozent" xml:space="preserve">
+    <value>Prozent</value>
+  </data>
+  <data name="Dollar" xml:space="preserve">
+    <value>Dollar</value>
+  </data>
+  <data name="Euro" xml:space="preserve">
+    <value>Euro</value>
+  </data>
+  <data name="Check" xml:space="preserve">
+    <value>Check</value>
+  </data>
+  <data name="X" xml:space="preserve">
+    <value>X</value>
+  </data>
+  <data name="Info" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="Fragezeichen" xml:space="preserve">
+    <value>Fragezeichen</value>
+  </data>
+  <data name="Ausrufezeichen" xml:space="preserve">
+    <value>Ausrufezeichen</value>
+  </data>
+  <data name="Warnung" xml:space="preserve">
+    <value>Warnung</value>
+  </data>
+  <data name="Daumen_hoch" xml:space="preserve">
+    <value>Daumen hoch</value>
+  </data>
+  <data name="Daumen_runter" xml:space="preserve">
+    <value>Daumen runter</value>
+  </data>
+  <data name="Hand" xml:space="preserve">
+    <value>Hand</value>
+  </data>
+  <data name="L_cheln" xml:space="preserve">
+    <value>Lächeln</value>
+  </data>
+  <data name="Traurig" xml:space="preserve">
+    <value>Traurig</value>
+  </data>
+  <data name="Neutral" xml:space="preserve">
+    <value>Neutral</value>
+  </data>
+  <data name="Herzschlag" xml:space="preserve">
+    <value>Herzschlag</value>
+  </data>
+  <data name="Blatt" xml:space="preserve">
+    <value>Blatt</value>
+  </data>
+  <data name="Baum" xml:space="preserve">
+    <value>Baum</value>
+  </data>
+  <data name="Blume" xml:space="preserve">
+    <value>Blume</value>
+  </data>
+  <data name="Schmetterling" xml:space="preserve">
+    <value>Schmetterling</value>
+  </data>
+  <data name="Fisch" xml:space="preserve">
+    <value>Fisch</value>
+  </data>
+  <data name="Vogel" xml:space="preserve">
+    <value>Vogel</value>
+  </data>
+  <data name="Pfote" xml:space="preserve">
+    <value>Pfote</value>
+  </data>
+  <data name="Buch" xml:space="preserve">
+    <value>Buch</value>
+  </data>
+  <data name="Lesezeichen" xml:space="preserve">
+    <value>Lesezeichen</value>
+  </data>
+  <data name="Etikett" xml:space="preserve">
+    <value>Etikett</value>
+  </data>
+  <data name="Pin" xml:space="preserve">
+    <value>Pin</value>
+  </data>
+  <data name="Bueroklammer" xml:space="preserve">
+    <value>Bueroklammer</value>
+  </data>
+  <data name="Teilen" xml:space="preserve">
+    <value>Teilen</value>
+  </data>
+  <data name="Filter" xml:space="preserve">
+    <value>Filter</value>
+  </data>
+  <data name="Sortieren" xml:space="preserve">
+    <value>Sortieren</value>
+  </data>
+  <data name="Liste" xml:space="preserve">
+    <value>Liste</value>
+  </data>
+  <data name="Menue" xml:space="preserve">
+    <value>Menue</value>
+  </data>
+  <data name="Upload" xml:space="preserve">
+    <value>Upload</value>
+  </data>
+  <data name="Download" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Extern" xml:space="preserve">
+    <value>Extern</value>
+  </data>
+  <data name="Kopieren" xml:space="preserve">
+    <value>Kopieren</value>
+  </data>
+  <data name="Einf_gen" xml:space="preserve">
+    <value>Einfügen</value>
+  </data>
+  <data name="Code" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="Terminal" xml:space="preserve">
+    <value>Terminal</value>
+  </data>
+  <data name="Globus" xml:space="preserve">
+    <value>Globus</value>
+  </data>
+  <data name="WLAN" xml:space="preserve">
+    <value>WLAN</value>
+  </data>
+  <data name="Batterie" xml:space="preserve">
+    <value>Batterie</value>
+  </data>
+  <data name="100_Prozent" xml:space="preserve">
+    <value>100 Prozent</value>
+  </data>
+  <data name="7Z" xml:space="preserve">
+    <value>7Z</value>
+  </data>
+  <data name="Abbrechen" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="Achtung" xml:space="preserve">
+    <value>Achtung</value>
+  </data>
+  <data name="Aktentasche" xml:space="preserve">
+    <value>Aktentasche</value>
+  </data>
+  <data name="Aktualisieren" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="Alle_Fotos" xml:space="preserve">
+    <value>Alle Fotos</value>
+  </data>
+  <data name="Allgemein" xml:space="preserve">
+    <value>Allgemein</value>
+  </data>
+  <data name="An_Fenster_anpassen" xml:space="preserve">
+    <value>An Fenster anpassen</value>
+  </data>
+  <data name="Anhaenger" xml:space="preserve">
+    <value>Anhaenger</value>
+  </data>
+  <data name="Anpassen" xml:space="preserve">
+    <value>Anpassen</value>
+  </data>
+  <data name="Anzeige" xml:space="preserve">
+    <value>Anzeige</value>
+  </data>
+  <data name="Apfel" xml:space="preserve">
+    <value>Apfel</value>
+  </data>
+  <data name="Archivierung" xml:space="preserve">
+    <value>Archivierung</value>
+  </data>
+  <data name="ARW" xml:space="preserve">
+    <value>ARW</value>
+  </data>
+  <data name="Audio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="Ausbessern" xml:space="preserve">
+    <value>Ausbessern</value>
+  </data>
+  <data name="Ausblenden" xml:space="preserve">
+    <value>Ausblenden</value>
+  </data>
+  <data name="Ausgeblendete_anzeigen" xml:space="preserve">
+    <value>Ausgeblendete anzeigen</value>
+  </data>
+  <data name="Ausgewaehlt" xml:space="preserve">
+    <value>Ausgewaehlt</value>
+  </data>
+  <data name="Aussehen" xml:space="preserve">
+    <value>Aussehen</value>
+  </data>
+  <data name="Auto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Baer" xml:space="preserve">
+    <value>Baer</value>
+  </data>
+  <data name="Ball" xml:space="preserve">
+    <value>Ball</value>
+  </data>
+  <data name="Banane" xml:space="preserve">
+    <value>Banane</value>
+  </data>
+  <data name="Baum_variante" xml:space="preserve">
+    <value>Baum variante</value>
+  </data>
+  <data name="Belichtung" xml:space="preserve">
+    <value>Belichtung</value>
+  </data>
+  <data name="Benachrichtigungen" xml:space="preserve">
+    <value>Benachrichtigungen</value>
+  </data>
+  <data name="Benutzerkonten" xml:space="preserve">
+    <value>Benutzerkonten</value>
+  </data>
+  <data name="Bestaetigung" xml:space="preserve">
+    <value>Bestaetigung</value>
+  </data>
+  <data name="Besteck" xml:space="preserve">
+    <value>Besteck</value>
+  </data>
+  <data name="Bett" xml:space="preserve">
+    <value>Bett</value>
+  </data>
+  <data name="Bewertung" xml:space="preserve">
+    <value>Bewertung</value>
+  </data>
+  <data name="Bewertungen" xml:space="preserve">
+    <value>Bewertungen</value>
+  </data>
+  <data name="Bildverwaltung" xml:space="preserve">
+    <value>Bildverwaltung</value>
+  </data>
+  <data name="Blockieren" xml:space="preserve">
+    <value>Blockieren</value>
+  </data>
+  <data name="BMP" xml:space="preserve">
+    <value>BMP</value>
+  </data>
+  <data name="Boot" xml:space="preserve">
+    <value>Boot</value>
+  </data>
+  <data name="Brot" xml:space="preserve">
+    <value>Brot</value>
+  </data>
+  <data name="Bruecke" xml:space="preserve">
+    <value>Bruecke</value>
+  </data>
+  <data name="Buntstift" xml:space="preserve">
+    <value>Buntstift</value>
+  </data>
+  <data name="Burger" xml:space="preserve">
+    <value>Burger</value>
+  </data>
+  <data name="Bus" xml:space="preserve">
+    <value>Bus</value>
+  </data>
+  <data name="Cabrio" xml:space="preserve">
+    <value>Cabrio</value>
+  </data>
+  <data name="Clipboard" xml:space="preserve">
+    <value>Clipboard</value>
+  </data>
+  <data name="Cloud" xml:space="preserve">
+    <value>Cloud</value>
+  </data>
+  <data name="Cloud_Dienste" xml:space="preserve">
+    <value>Cloud-Dienste</value>
+  </data>
+  <data name="Color_Grading" xml:space="preserve">
+    <value>Color Grading</value>
+  </data>
+  <data name="Computer" xml:space="preserve">
+    <value>Computer</value>
+  </data>
+  <data name="CR2" xml:space="preserve">
+    <value>CR2</value>
+  </data>
+  <data name="CR3" xml:space="preserve">
+    <value>CR3</value>
+  </data>
+  <data name="Datei" xml:space="preserve">
+    <value>Datei</value>
+  </data>
+  <data name="Datenbank" xml:space="preserve">
+    <value>Datenbank</value>
+  </data>
+  <data name="Datenschutz" xml:space="preserve">
+    <value>Datenschutz</value>
+  </data>
+  <data name="Details_anzeigen" xml:space="preserve">
+    <value>Details anzeigen</value>
+  </data>
+  <data name="Diagramm" xml:space="preserve">
+    <value>Diagramm</value>
+  </data>
+  <data name="Diashow" xml:space="preserve">
+    <value>Diashow</value>
+  </data>
+  <data name="Diashow_Intervall" xml:space="preserve">
+    <value>Diashow-Intervall</value>
+  </data>
+  <data name="Diashow_Optionen" xml:space="preserve">
+    <value>Diashow-Optionen</value>
+  </data>
+  <data name="Diashow_pausieren" xml:space="preserve">
+    <value>Diashow pausieren</value>
+  </data>
+  <data name="Diashow_starten" xml:space="preserve">
+    <value>Diashow starten</value>
+  </data>
+  <data name="Diashow_stoppen" xml:space="preserve">
+    <value>Diashow stoppen</value>
+  </data>
+  <data name="DNG" xml:space="preserve">
+    <value>DNG</value>
+  </data>
+  <data name="Dokument" xml:space="preserve">
+    <value>Dokument</value>
+  </data>
+  <data name="Downloads" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="Drehen_links" xml:space="preserve">
+    <value>Drehen links</value>
+  </data>
+  <data name="Drehen_rechts" xml:space="preserve">
+    <value>Drehen rechts</value>
+  </data>
+  <data name="Drucken" xml:space="preserve">
+    <value>Drucken</value>
+  </data>
+  <data name="Drucker" xml:space="preserve">
+    <value>Drucker</value>
+  </data>
+  <data name="Duplizieren" xml:space="preserve">
+    <value>Duplizieren</value>
+  </data>
+  <data name="Dynamik" xml:space="preserve">
+    <value>Dynamik</value>
+  </data>
+  <data name="Einkaufstasche" xml:space="preserve">
+    <value>Einkaufstasche</value>
+  </data>
+  <data name="Einkaufswagen" xml:space="preserve">
+    <value>Einkaufswagen</value>
+  </data>
+  <data name="Einstellungen" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="Elefant" xml:space="preserve">
+    <value>Elefant</value>
+  </data>
+  <data name="Ellipse" xml:space="preserve">
+    <value>Ellipse</value>
+  </data>
+  <data name="Entfernen" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="Entsperren" xml:space="preserve">
+    <value>Entsperren</value>
+  </data>
+  <data name="Entsperrt" xml:space="preserve">
+    <value>Entsperrt</value>
+  </data>
+  <data name="Entwickler" xml:space="preserve">
+    <value>Entwickler</value>
+  </data>
+  <data name="Erfolg" xml:space="preserve">
+    <value>Erfolg</value>
+  </data>
+  <data name="Erste_Hilfe_Koffer" xml:space="preserve">
+    <value>Erste Hilfe Koffer</value>
+  </data>
+  <data name="Erstes_Bild" xml:space="preserve">
+    <value>Erstes Bild</value>
+  </data>
+  <data name="Erweiterungen" xml:space="preserve">
+    <value>Erweiterungen</value>
+  </data>
+  <data name="Eule" xml:space="preserve">
+    <value>Eule</value>
+  </data>
+  <data name="EXIF" xml:space="preserve">
+    <value>EXIF</value>
+  </data>
+  <data name="Exporteinstellungen" xml:space="preserve">
+    <value>Exporteinstellungen</value>
+  </data>
+  <data name="Exportieren" xml:space="preserve">
+    <value>Exportieren</value>
+  </data>
+  <data name="Externer_Speicher" xml:space="preserve">
+    <value>Externer Speicher</value>
+  </data>
+  <data name="Fabrik" xml:space="preserve">
+    <value>Fabrik</value>
+  </data>
+  <data name="Fahrrad" xml:space="preserve">
+    <value>Fahrrad</value>
+  </data>
+  <data name="Farbmischer" xml:space="preserve">
+    <value>Farbmischer</value>
+  </data>
+  <data name="Farbton" xml:space="preserve">
+    <value>Farbton</value>
+  </data>
+  <data name="Favorit" xml:space="preserve">
+    <value>Favorit</value>
+  </data>
+  <data name="Favoriten" xml:space="preserve">
+    <value>Favoriten</value>
+  </data>
+  <data name="Fehler" xml:space="preserve">
+    <value>Fehler</value>
+  </data>
+  <data name="Filter_bearbeiten" xml:space="preserve">
+    <value>Filter bearbeiten</value>
+  </data>
+  <data name="Filter_loeschen" xml:space="preserve">
+    <value>Filter loeschen</value>
+  </data>
+  <data name="Fisch_variante" xml:space="preserve">
+    <value>Fisch variante</value>
+  </data>
+  <data name="Flugzeug" xml:space="preserve">
+    <value>Flugzeug</value>
+  </data>
+  <data name="Formen" xml:space="preserve">
+    <value>Formen</value>
+  </data>
+  <data name="Frage" xml:space="preserve">
+    <value>Frage</value>
+  </data>
+  <data name="Fuchs" xml:space="preserve">
+    <value>Fuchs</value>
+  </data>
+  <data name="Gefaellt_mir" xml:space="preserve">
+    <value>Gefaellt mir</value>
+  </data>
+  <data name="Gefaellt_mir_nicht" xml:space="preserve">
+    <value>Gefaellt mir nicht</value>
+  </data>
+  <data name="Gerade_richten" xml:space="preserve">
+    <value>Gerade richten</value>
+  </data>
+  <data name="Geschenk" xml:space="preserve">
+    <value>Geschenk</value>
+  </data>
+  <data name="Gesperrt" xml:space="preserve">
+    <value>Gesperrt</value>
+  </data>
+  <data name="Geteilte_Ansicht" xml:space="preserve">
+    <value>Geteilte Ansicht</value>
+  </data>
+  <data name="GIF" xml:space="preserve">
+    <value>GIF</value>
+  </data>
+  <data name="Groesse_aendern" xml:space="preserve">
+    <value>Groesse aendern</value>
+  </data>
+  <data name="Hase" xml:space="preserve">
+    <value>Hase</value>
+  </data>
+  <data name="Haus_variante" xml:space="preserve">
+    <value>Haus variante</value>
+  </data>
+  <data name="HEIF_HEIC" xml:space="preserve">
+    <value>HEIF HEIC</value>
+  </data>
+  <data name="Helikopter" xml:space="preserve">
+    <value>Helikopter</value>
+  </data>
+  <data name="Herd" xml:space="preserve">
+    <value>Herd</value>
+  </data>
+  <data name="Herunterladen" xml:space="preserve">
+    <value>Herunterladen</value>
+  </data>
+  <data name="Herzmonitor" xml:space="preserve">
+    <value>Herzmonitor</value>
+  </data>
+  <data name="Hilfe" xml:space="preserve">
+    <value>Hilfe</value>
+  </data>
+  <data name="Hinzufuegen" xml:space="preserve">
+    <value>Hinzufuegen</value>
+  </data>
+  <data name="Histogramm" xml:space="preserve">
+    <value>Histogramm</value>
+  </data>
+  <data name="Hochladen" xml:space="preserve">
+    <value>Hochladen</value>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Horizontal_spiegeln" xml:space="preserve">
+    <value>Horizontal spiegeln</value>
+  </data>
+  <data name="Hund" xml:space="preserve">
+    <value>Hund</value>
+  </data>
+  <data name="Importeinstellungen" xml:space="preserve">
+    <value>Importeinstellungen</value>
+  </data>
+  <data name="Importieren" xml:space="preserve">
+    <value>Importieren</value>
+  </data>
+  <data name="In_den_Papierkorb" xml:space="preserve">
+    <value>In den Papierkorb</value>
+  </data>
+  <data name="Information" xml:space="preserve">
+    <value>Information</value>
+  </data>
+  <data name="IPTC" xml:space="preserve">
+    <value>IPTC</value>
+  </data>
+  <data name="JPG_JPEG" xml:space="preserve">
+    <value>JPG JPEG</value>
+  </data>
+  <data name="JSON" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="Kachel" xml:space="preserve">
+    <value>Kachel</value>
+  </data>
+  <data name="Kaese" xml:space="preserve">
+    <value>Kaese</value>
+  </data>
+  <data name="Karotte" xml:space="preserve">
+    <value>Karotte</value>
+  </data>
+  <data name="Katalog" xml:space="preserve">
+    <value>Katalog</value>
+  </data>
+  <data name="Katze" xml:space="preserve">
+    <value>Katze</value>
+  </data>
+  <data name="Kegel" xml:space="preserve">
+    <value>Kegel</value>
+  </data>
+  <data name="Kirche" xml:space="preserve">
+    <value>Kirche</value>
+  </data>
+  <data name="Klarheit" xml:space="preserve">
+    <value>Klarheit</value>
+  </data>
+  <data name="Knochen" xml:space="preserve">
+    <value>Knochen</value>
+  </data>
+  <data name="Kontrast" xml:space="preserve">
+    <value>Kontrast</value>
+  </data>
+  <data name="Krankenhaus" xml:space="preserve">
+    <value>Krankenhaus</value>
+  </data>
+  <data name="Kuehlschrank" xml:space="preserve">
+    <value>Kuehlschrank</value>
+  </data>
+  <data name="Kuh" xml:space="preserve">
+    <value>Kuh</value>
+  </data>
+  <data name="Kurven" xml:space="preserve">
+    <value>Kurven</value>
+  </data>
+  <data name="Laden" xml:space="preserve">
+    <value>Laden</value>
+  </data>
+  <data name="Lampe" xml:space="preserve">
+    <value>Lampe</value>
+  </data>
+  <data name="Laptop" xml:space="preserve">
+    <value>Laptop</value>
+  </data>
+  <data name="Laufwerk" xml:space="preserve">
+    <value>Laufwerk</value>
+  </data>
+  <data name="Leistung" xml:space="preserve">
+    <value>Leistung</value>
+  </data>
+  <data name="Letztes_Bild" xml:space="preserve">
+    <value>Letztes Bild</value>
+  </data>
+  <data name="Lichter" xml:space="preserve">
+    <value>Lichter</value>
+  </data>
+  <data name="Lieferwagen" xml:space="preserve">
+    <value>Lieferwagen</value>
+  </data>
+  <data name="Lineal" xml:space="preserve">
+    <value>Lineal</value>
+  </data>
+  <data name="Link" xml:space="preserve">
+    <value>Link</value>
+  </data>
+  <data name="Link_entfernen" xml:space="preserve">
+    <value>Link entfernen</value>
+  </data>
+  <data name="Listenansicht" xml:space="preserve">
+    <value>Listenansicht</value>
+  </data>
+  <data name="LKW" xml:space="preserve">
+    <value>LKW</value>
+  </data>
+  <data name="Loeschen" xml:space="preserve">
+    <value>Loeschen</value>
+  </data>
+  <data name="Markiert" xml:space="preserve">
+    <value>Markiert</value>
+  </data>
+  <data name="Markierung" xml:space="preserve">
+    <value>Markierung</value>
+  </data>
+  <data name="Maus" xml:space="preserve">
+    <value>Maus</value>
+  </data>
+  <data name="Mehrbenutzer" xml:space="preserve">
+    <value>Mehrbenutzer</value>
+  </data>
+  <data name="Mehr_Optionen" xml:space="preserve">
+    <value>Mehr Optionen</value>
+  </data>
+  <data name="Mikrowelle" xml:space="preserve">
+    <value>Mikrowelle</value>
+  </data>
+  <data name="Motorrad" xml:space="preserve">
+    <value>Motorrad</value>
+  </data>
+  <data name="Nach_links_drehen" xml:space="preserve">
+    <value>Nach links drehen</value>
+  </data>
+  <data name="Nach_oben" xml:space="preserve">
+    <value>Nach oben</value>
+  </data>
+  <data name="Nach_rechts_drehen" xml:space="preserve">
+    <value>Nach rechts drehen</value>
+  </data>
+  <data name="Nach_unten" xml:space="preserve">
+    <value>Nach unten</value>
+  </data>
+  <data name="Naechstes_Bild" xml:space="preserve">
+    <value>Naechstes Bild</value>
+  </data>
+  <data name="NEF" xml:space="preserve">
+    <value>NEF</value>
+  </data>
+  <data name="Neu" xml:space="preserve">
+    <value>Neu</value>
+  </data>
+  <data name="Neuer_Ordner" xml:space="preserve">
+    <value>Neuer Ordner</value>
+  </data>
+  <data name="Neues_Dokument" xml:space="preserve">
+    <value>Neues Dokument</value>
+  </data>
+  <data name="Nicht_ausgewaehlt" xml:space="preserve">
+    <value>Nicht ausgewaehlt</value>
+  </data>
+  <data name="Notizbuch" xml:space="preserve">
+    <value>Notizbuch</value>
+  </data>
+  <data name="Oberflaeche" xml:space="preserve">
+    <value>Oberflaeche</value>
+  </data>
+  <data name="Objektivkorrektur" xml:space="preserve">
+    <value>Objektivkorrektur</value>
+  </data>
+  <data name="Oeffnen" xml:space="preserve">
+    <value>Oeffnen</value>
+  </data>
+  <data name="Optionen" xml:space="preserve">
+    <value>Optionen</value>
+  </data>
+  <data name="Ordner_duplizieren" xml:space="preserve">
+    <value>Ordner duplizieren</value>
+  </data>
+  <data name="Ordner_loeschen" xml:space="preserve">
+    <value>Ordner loeschen</value>
+  </data>
+  <data name="Ordner_mit_Bildern" xml:space="preserve">
+    <value>Ordner mit Bildern</value>
+  </data>
+  <data name="Ordner_umbenennen" xml:space="preserve">
+    <value>Ordner umbenennen</value>
+  </data>
+  <data name="Ordner_verschieben" xml:space="preserve">
+    <value>Ordner verschieben</value>
+  </data>
+  <data name="ORF" xml:space="preserve">
+    <value>ORF</value>
+  </data>
+  <data name="Originalgroesse" xml:space="preserve">
+    <value>Originalgroesse</value>
+  </data>
+  <data name="Paket" xml:space="preserve">
+    <value>Paket</value>
+  </data>
+  <data name="PDF" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="PEF" xml:space="preserve">
+    <value>PEF</value>
+  </data>
+  <data name="Pferd" xml:space="preserve">
+    <value>Pferd</value>
+  </data>
+  <data name="Pflaster" xml:space="preserve">
+    <value>Pflaster</value>
+  </data>
+  <data name="Pfote_im_Kreis" xml:space="preserve">
+    <value>Pfote im Kreis</value>
+  </data>
+  <data name="Pilz" xml:space="preserve">
+    <value>Pilz</value>
+  </data>
+  <data name="Pinnnadel" xml:space="preserve">
+    <value>Pinnnadel</value>
+  </data>
+  <data name="Pinsel" xml:space="preserve">
+    <value>Pinsel</value>
+  </data>
+  <data name="Pizza" xml:space="preserve">
+    <value>Pizza</value>
+  </data>
+  <data name="Plugins" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
+  <data name="PNG" xml:space="preserve">
+    <value>PNG</value>
+  </data>
+  <data name="Protokolle" xml:space="preserve">
+    <value>Protokolle</value>
+  </data>
+  <data name="PSD" xml:space="preserve">
+    <value>PSD</value>
+  </data>
+  <data name="Pyramide" xml:space="preserve">
+    <value>Pyramide</value>
+  </data>
+  <data name="QR_Code" xml:space="preserve">
+    <value>QR Code</value>
+  </data>
+  <data name="Radialfilter" xml:space="preserve">
+    <value>Radialfilter</value>
+  </data>
+  <data name="RAF" xml:space="preserve">
+    <value>RAF</value>
+  </data>
+  <data name="Rahmen" xml:space="preserve">
+    <value>Rahmen</value>
+  </data>
+  <data name="Rakete" xml:space="preserve">
+    <value>Rakete</value>
+  </data>
+  <data name="RAR" xml:space="preserve">
+    <value>RAR</value>
+  </data>
+  <data name="Raster" xml:space="preserve">
+    <value>Raster</value>
+  </data>
+  <data name="Rasteransicht" xml:space="preserve">
+    <value>Rasteransicht</value>
+  </data>
+  <data name="Rauschreduzierung" xml:space="preserve">
+    <value>Rauschreduzierung</value>
+  </data>
+  <data name="RAW" xml:space="preserve">
+    <value>RAW</value>
+  </data>
+  <data name="Region" xml:space="preserve">
+    <value>Region</value>
+  </data>
+  <data name="Reparatur" xml:space="preserve">
+    <value>Reparatur</value>
+  </data>
+  <data name="Retusche" xml:space="preserve">
+    <value>Retusche</value>
+  </data>
+  <data name="Roller" xml:space="preserve">
+    <value>Roller</value>
+  </data>
+  <data name="Rote_Augen" xml:space="preserve">
+    <value>Rote Augen</value>
+  </data>
+  <data name="Rucksack" xml:space="preserve">
+    <value>Rucksack</value>
+  </data>
+  <data name="RW2" xml:space="preserve">
+    <value>RW2</value>
+  </data>
+  <data name="Saettigung" xml:space="preserve">
+    <value>Saettigung</value>
+  </data>
+  <data name="Sammlungen" xml:space="preserve">
+    <value>Sammlungen</value>
+  </data>
+  <data name="Schaerfen" xml:space="preserve">
+    <value>Schaerfen</value>
+  </data>
+  <data name="Schaf" xml:space="preserve">
+    <value>Schaf</value>
+  </data>
+  <data name="Schildkroete" xml:space="preserve">
+    <value>Schildkroete</value>
+  </data>
+  <data name="Schirm" xml:space="preserve">
+    <value>Schirm</value>
+  </data>
+  <data name="Schuetzen" xml:space="preserve">
+    <value>Schuetzen</value>
+  </data>
+  <data name="Schule" xml:space="preserve">
+    <value>Schule</value>
+  </data>
+  <data name="Schwarz" xml:space="preserve">
+    <value>Schwarz</value>
+  </data>
+  <data name="Seitenverhaeltnis" xml:space="preserve">
+    <value>Seitenverhaeltnis</value>
+  </data>
+  <data name="Sicherheit" xml:space="preserve">
+    <value>Sicherheit</value>
+  </data>
+  <data name="Sicherheitshinweis" xml:space="preserve">
+    <value>Sicherheitshinweis</value>
+  </data>
+  <data name="Sicherung" xml:space="preserve">
+    <value>Sicherung</value>
+  </data>
+  <data name="Sofa" xml:space="preserve">
+    <value>Sofa</value>
+  </data>
+  <data name="Speicher" xml:space="preserve">
+    <value>Speicher</value>
+  </data>
+  <data name="Speichern" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="Speichern_unter" xml:space="preserve">
+    <value>Speichern unter</value>
+  </data>
+  <data name="Speicherorte" xml:space="preserve">
+    <value>Speicherorte</value>
+  </data>
+  <data name="Spiegel" xml:space="preserve">
+    <value>Spiegel</value>
+  </data>
+  <data name="Spiegeln_horizontal" xml:space="preserve">
+    <value>Spiegeln horizontal</value>
+  </data>
+  <data name="Spiegeln_vertikal" xml:space="preserve">
+    <value>Spiegeln vertikal</value>
+  </data>
+  <data name="Sprache" xml:space="preserve">
+    <value>Sprache</value>
+  </data>
+  <data name="Spritze" xml:space="preserve">
+    <value>Spritze</value>
+  </data>
+  <data name="Staubsauger" xml:space="preserve">
+    <value>Staubsauger</value>
+  </data>
+  <data name="Stempel" xml:space="preserve">
+    <value>Stempel</value>
+  </data>
+  <data name="Stethoskop" xml:space="preserve">
+    <value>Stethoskop</value>
+  </data>
+  <data name="Stichwoerter" xml:space="preserve">
+    <value>Stichwoerter</value>
+  </data>
+  <data name="Stuhl" xml:space="preserve">
+    <value>Stuhl</value>
+  </data>
+  <data name="Suchen" xml:space="preserve">
+    <value>Suchen</value>
+  </data>
+  <data name="Support" xml:space="preserve">
+    <value>Support</value>
+  </data>
+  <data name="SVG" xml:space="preserve">
+    <value>SVG</value>
+  </data>
+  <data name="Synchronisieren" xml:space="preserve">
+    <value>Synchronisieren</value>
+  </data>
+  <data name="Tablette" xml:space="preserve">
+    <value>Tablette</value>
+  </data>
+  <data name="Tafel" xml:space="preserve">
+    <value>Tafel</value>
+  </data>
+  <data name="Tag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="Tankstelle" xml:space="preserve">
+    <value>Tankstelle</value>
+  </data>
+  <data name="Taschenrechner" xml:space="preserve">
+    <value>Taschenrechner</value>
+  </data>
+  <data name="Tasse" xml:space="preserve">
+    <value>Tasse</value>
+  </data>
+  <data name="Tastaturkuerzel" xml:space="preserve">
+    <value>Tastaturkuerzel</value>
+  </data>
+  <data name="Taxi" xml:space="preserve">
+    <value>Taxi</value>
+  </data>
+  <data name="Teilen_Exportieren" xml:space="preserve">
+    <value>Teilen Exportieren</value>
+  </data>
+  <data name="Teiltonung" xml:space="preserve">
+    <value>Teiltonung</value>
+  </data>
+  <data name="Temperatur" xml:space="preserve">
+    <value>Temperatur</value>
+  </data>
+  <data name="Text" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="Thermometer" xml:space="preserve">
+    <value>Thermometer</value>
+  </data>
+  <data name="Tiefen" xml:space="preserve">
+    <value>Tiefen</value>
+  </data>
+  <data name="TIFF" xml:space="preserve">
+    <value>TIFF</value>
+  </data>
+  <data name="Tisch" xml:space="preserve">
+    <value>Tisch</value>
+  </data>
+  <data name="Traktor" xml:space="preserve">
+    <value>Traktor</value>
+  </data>
+  <data name="Transformation" xml:space="preserve">
+    <value>Transformation</value>
+  </data>
+  <data name="TXT" xml:space="preserve">
+    <value>TXT</value>
+  </data>
+  <data name="Ueber" xml:space="preserve">
+    <value>Ueber</value>
+  </data>
+  <data name="Umbenennen" xml:space="preserve">
+    <value>Umbenennen</value>
+  </data>
+  <data name="Unbekannte_Datei" xml:space="preserve">
+    <value>Unbekannte Datei</value>
+  </data>
+  <data name="Updates" xml:space="preserve">
+    <value>Updates</value>
+  </data>
+  <data name="Vergleichen" xml:space="preserve">
+    <value>Vergleichen</value>
+  </data>
+  <data name="Vergroessern" xml:space="preserve">
+    <value>Vergroessern</value>
+  </data>
+  <data name="Verkleinern" xml:space="preserve">
+    <value>Verkleinern</value>
+  </data>
+  <data name="Verknuepfung_erstellen" xml:space="preserve">
+    <value>Verknuepfung erstellen</value>
+  </data>
+  <data name="Verlauf" xml:space="preserve">
+    <value>Verlauf</value>
+  </data>
+  <data name="Verlaufsfilter" xml:space="preserve">
+    <value>Verlaufsfilter</value>
+  </data>
+  <data name="Verlaufsueberlagerung" xml:space="preserve">
+    <value>Verlaufsueberlagerung</value>
+  </data>
+  <data name="Verschieben" xml:space="preserve">
+    <value>Verschieben</value>
+  </data>
+  <data name="Vertikal_spiegeln" xml:space="preserve">
+    <value>Vertikal spiegeln</value>
+  </data>
+  <data name="Verzerrung" xml:space="preserve">
+    <value>Verzerrung</value>
+  </data>
+  <data name="Video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="Vignette" xml:space="preserve">
+    <value>Vignette</value>
+  </data>
+  <data name="Vogel_variante" xml:space="preserve">
+    <value>Vogel variante</value>
+  </data>
+  <data name="Vollbild" xml:space="preserve">
+    <value>Vollbild</value>
+  </data>
+  <data name="Vollbild_beenden" xml:space="preserve">
+    <value>Vollbild beenden</value>
+  </data>
+  <data name="Vorheriges_Bild" xml:space="preserve">
+    <value>Vorheriges Bild</value>
+  </data>
+  <data name="Vorher_Nachher" xml:space="preserve">
+    <value>Vorher Nachher</value>
+  </data>
+  <data name="Vorher_Nachher_Slider_Handle" xml:space="preserve">
+    <value>Vorher Nachher Slider Handle</value>
+  </data>
+  <data name="Vorschau" xml:space="preserve">
+    <value>Vorschau</value>
+  </data>
+  <data name="Vorwaerts" xml:space="preserve">
+    <value>Vorwaerts</value>
+  </data>
+  <data name="Waschmaschine" xml:space="preserve">
+    <value>Waschmaschine</value>
+  </data>
+  <data name="WEBP" xml:space="preserve">
+    <value>WEBP</value>
+  </data>
+  <data name="Weiss" xml:space="preserve">
+    <value>Weiss</value>
+  </data>
+  <data name="Weitere_Optionen" xml:space="preserve">
+    <value>Weitere Optionen</value>
+  </data>
+  <data name="Wiedergabe" xml:space="preserve">
+    <value>Wiedergabe</value>
+  </data>
+  <data name="Wiederherstellen" xml:space="preserve">
+    <value>Wiederherstellen</value>
+  </data>
+  <data name="Wiederholen" xml:space="preserve">
+    <value>Wiederholen</value>
+  </data>
+  <data name="Wohnmobil" xml:space="preserve">
+    <value>Wohnmobil</value>
+  </data>
+  <data name="X3F" xml:space="preserve">
+    <value>X3F</value>
+  </data>
+  <data name="XML" xml:space="preserve">
+    <value>XML</value>
+  </data>
+  <data name="XMP" xml:space="preserve">
+    <value>XMP</value>
+  </data>
+  <data name="Zahn" xml:space="preserve">
+    <value>Zahn</value>
+  </data>
+  <data name="Ziel" xml:space="preserve">
+    <value>Ziel</value>
+  </data>
+  <data name="ZIP" xml:space="preserve">
+    <value>ZIP</value>
+  </data>
+  <data name="Zoom_minus" xml:space="preserve">
+    <value>Zoom minus</value>
+  </data>
+  <data name="Zoom_plus" xml:space="preserve">
+    <value>Zoom plus</value>
+  </data>
+  <data name="Zufaellig" xml:space="preserve">
+    <value>Zufaellig</value>
+  </data>
+  <data name="Zug" xml:space="preserve">
+    <value>Zug</value>
+  </data>
+  <data name="Zuletzt_hinzugefuegt" xml:space="preserve">
+    <value>Zuletzt hinzugefuegt</value>
+  </data>
+  <data name="Zurueck" xml:space="preserve">
+    <value>Zurueck</value>
+  </data>
+  <data name="Zuschneiden" xml:space="preserve">
+    <value>Zuschneiden</value>
+  </data>
+</root>

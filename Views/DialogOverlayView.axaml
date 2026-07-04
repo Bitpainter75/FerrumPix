@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.DialogOverlayView">
+
+    <Border Background="#B8000000"
+            IsVisible="{Binding IsDialogOpen}"
+            ZIndex="500">
+        <Border Width="{Binding DialogUsesWideLayout, Converter={StaticResource BoolToWidthConverter}, ConverterParameter='820|440'}"
+                MaxWidth="820"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{DynamicResource FP.Bg.Panel}"
+                BorderBrush="{DynamicResource FP.Border.Strong}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="22">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                <TextBlock Text="{Binding DialogTitle}"
+                           FontSize="18"
+                           FontWeight="SemiBold"/>
+                <TextBlock Grid.Row="1"
+                           Text="{Binding DialogMessage}"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           TextWrapping="Wrap"
+                           Margin="0,10,0,0"
+                           LineHeight="18"/>
+
+                <views:FileConflictDialogView Grid.Row="2"
+                                              Margin="0,18,0,0"
+                                              IsVisible="{Binding DialogShowsFileConflict}"/>
+
+                <!-- Einfache Texteingabe -->
+                <TextBox x:Name="DialogInputBox"
+                         Grid.Row="2"
+                         Text="{Binding DialogInputText, Mode=TwoWay}"
+                         IsVisible="{Binding DialogShowsInput}"
+                         Margin="0,18,0,0"
+                         MinHeight="36"/>
+
+                <views:SearchDialogView Grid.Row="3"
+                                        Margin="0,16,0,0"
+                                        IsVisible="{Binding DialogShowsSearch}"/>
+
+                <!-- Speichern unter -->
+                <StackPanel Grid.Row="3"
+                            Spacing="14"
+                            Margin="0,14,0,0"
+                            IsVisible="{Binding DialogShowsSaveAsOptions}">
+                    <Grid ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto"
+                          ColumnSpacing="14"
+                          RowSpacing="12">
+                        <TextBlock Text="Format"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        <Button Grid.Column="1"
+                                Classes="dropdown-btn"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch">
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
+                                    <ItemsControl ItemsSource="{Binding DialogFormatOptions}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Classes="dropdown-item"
+                                                        HorizontalAlignment="Stretch"
+                                                        HorizontalContentAlignment="Stretch"
+                                                        Click="OnDialogFormatOptionClick">
+                                                    <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Flyout>
+                            </Button.Flyout>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding DialogSelectedFormat}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <icons:SvgIcon Grid.Column="1"
+                                               Source="avares://FerrumPix/Assets/Icons/07_Symbole/23_Pfeil_nach_unten.svg"
+                                               Width="14"
+                                               Height="14"
+                                               Margin="10,0,0,0"
+                                               VerticalAlignment="Center"/>
+                            </Grid>
+                        </Button>
+
+                        <TextBlock Grid.Row="1"
+                                   Text="JPG-Qualität"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   IsVisible="{Binding IsDialogJpgQualityVisible}"/>
+                        <Grid Grid.Row="1"
+                              Grid.Column="1"
+                              ColumnDefinitions="*,Auto"
+                              ColumnSpacing="12"
+                              IsVisible="{Binding IsDialogJpgQualityVisible}">
+                            <icons:RoundSlider Minimum="1"
+                                               Maximum="100"
+                                               Value="{Binding DialogJpgQuality, Mode=TwoWay}"
+                                               VerticalAlignment="Center"
+                                               Height="28"
+                                               MinHeight="0"
+                                               Width="220"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding DialogJpgQuality, StringFormat={}{0}%}"
+                                       MinWidth="42"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        </Grid>
+                    </Grid>
+                </StackPanel>
+
+                <views:BatchRenameDialogView Grid.Row="3"
+                                             Margin="0,16,0,0"
+                                             IsVisible="{Binding DialogShowsBatchRename}"/>
+
+                <!-- Aktionsbuttons -->
+                <StackPanel Grid.Row="5"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Spacing="10"
+                            Margin="0,22,0,0">
+                    <Button Classes="ghost"
+                            Command="{Binding DialogCancelCommand}"
+                            IsVisible="{Binding IsDialogCancelVisible}">
+                        <TextBlock Text="{Binding DialogCancelText}"/>
+                    </Button>
+                    <Button Classes="ghost"
+                            Command="{Binding DialogSkipCommand}"
+                            IsVisible="{Binding DialogShowsFileConflict}">
+                        <TextBlock Text="Überspringen"/>
+                    </Button>
+                    <Button Classes="ghost"
+                            Command="{Binding DialogRenameCommand}"
+                            IsVisible="{Binding DialogShowsFileConflict}">
+                        <TextBlock Text="Umbenennen"/>
+                    </Button>
+                    <Button Classes="accent"
+                            Command="{Binding DialogConfirmCommand}">
+                        <TextBlock Text="{Binding DialogConfirmText}"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Border>
+
+</UserControl>

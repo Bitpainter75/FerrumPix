@@ -1,0 +1,964 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models;assembly=FerrumPix"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.GalleryView"
+             Background="{DynamicResource FP.Bg.Root}"
+             Focusable="True"
+             FocusAdorner="{x:Null}"
+             KeyDown="OnKeyDown"
+             KeyUp="HandleKeyUp"
+             PointerReleased="OnGlobalPointerReleased">
+
+    <UserControl.Styles>
+        <Style Selector="TreeViewItem">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="60,*,60">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="288" MinWidth="220" MaxWidth="520"/>
+            <ColumnDefinition Width="6"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Row="0" Grid.Column="2" Classes="toolbar" Height="60" Padding="16,0">
+            <Grid ColumnDefinitions="Auto,Auto,*" VerticalAlignment="Center">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding NavigateUpCommand}"
+                            IsEnabled="{Binding CanNavigateBack}"
+                            ToolTip.Tip="Zurück">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/02_Zurueck.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding NavigateForwardCommand}"
+                            IsEnabled="{Binding CanNavigateForward}"
+                            ToolTip.Tip="Vorwärts">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/03_Vorwaerts.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding NavigateParentCommand}"
+                            IsEnabled="{Binding HasBreadcrumbParent}"
+                            ToolTip.Tip="Eine Ebene nach oben">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/04_Nach_oben.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6" Margin="8,0,18,0">
+                    <Button Classes="icon-btn"
+                            Width="36"
+                            Height="36"
+                            Command="{Binding NavigatePicturesCommand}"
+                            ToolTip.Tip="Zum Bilder-Ordner">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/01_Home.svg"
+                                       Width="20" Height="20"/>
+                    </Button>
+                    <Button Classes="ghost"
+                            Command="{Binding NavigateParentCommand}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="0"
+                            Height="30"
+                            VerticalContentAlignment="Center"
+                            IsVisible="{Binding HasBreadcrumbParent}">
+                        <TextBlock Text="{Binding BreadcrumbParent}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </Button>
+                    <TextBlock Text="›"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding HasBreadcrumbParent}"/>
+                    <TextBlock Text="{Binding CurrentFolderName}"
+                               Foreground="{DynamicResource FP.Text.Primary}"
+                               FontSize="12"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                    <Border Grid.Column="0"
+                            Background="{DynamicResource FP.Bg.Input}"
+                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,8"
+                            MinWidth="190"
+                            Height="32"
+                            Margin="0,0,12,0">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/21_Suchen.svg"
+                                   Width="16" Height="16" VerticalAlignment="Center" Opacity="0.65"/>
+                            <TextBox Grid.Column="1"
+                                     Name="GallerySearchBox"
+                                     Classes="search-input"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Padding="0"
+                                     Height="20"
+                                     Margin="10,0,0,2"
+                                     Text="{Binding SearchText}"
+                                     VerticalContentAlignment="Center"
+                                     KeyDown="OnSearchBoxKeyDown"/>
+                            <Button Grid.Column="2"
+                                    Classes="ghost"
+                                    Width="18"
+                                    Height="18"
+                                    Padding="0"
+                                    Margin="4,0,4,0"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding ClearSearchCommand}"
+                                    IsVisible="{Binding SearchText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                    ToolTip.Tip="Suche zurücksetzen">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/18_Entfernen.svg"
+                                               Width="12"
+                                               Height="12"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Opacity="0.75"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <Button Grid.Column="1" Padding="10,7" Margin="0,0,8,0"
+                            ToolTip.Tip="Filter">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedRight" VerticalOffset="2">
+                                <StackPanel Spacing="1" MinWidth="248">
+
+                                        <!-- FAVORITEN -->
+                                        <TextBlock Text="FAVORITEN" FontSize="10" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,8,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterFavoriteCommand}" CommandParameter="All">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterFavoriteAll}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterFavoriteCommand}" CommandParameter="Only">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nur Favoriten" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterFavoriteOnly}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+
+                                        <Separator Margin="4,6"/>
+
+                                        <!-- BEWERTUNG -->
+                                        <TextBlock Text="BEWERTUNG" FontSize="10" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,4,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRatingCommand}" CommandParameter="-1">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRatingAll}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRatingCommand}" CommandParameter="0">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nicht bewertet" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRatingUnrated}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRatingCommand}" CommandParameter="1">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="★" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating1Plus}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRatingCommand}" CommandParameter="2">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="★★" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating2Plus}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRatingCommand}" CommandParameter="3">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="★★★" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating3Plus}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRatingCommand}" CommandParameter="4">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="★★★★" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating4Plus}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRatingCommand}" CommandParameter="5">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="★★★★★" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating5}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+
+                                        <Separator Margin="4,6"/>
+
+                                        <!-- DATEITYP -->
+                                        <TextBlock Text="DATEITYP" FontSize="10" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,4,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterTypeCommand}" CommandParameter="All">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterTypeAll}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterTypeCommand}" CommandParameter="Raw">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nur RAW" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterTypeRaw}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterTypeCommand}" CommandParameter="NonRaw">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nur Nicht-RAW" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterTypeNonRaw}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+
+                                        <!-- Zurücksetzen -->
+                                        <Separator Margin="4,6" IsVisible="{Binding HasActiveFilter}"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,8"
+                                                IsVisible="{Binding HasActiveFilter}"
+                                                Command="{Binding ClearFiltersCommand}">
+                                            <TextBlock Text="Alle Filter zurücksetzen"
+                                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                        </Button>
+
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/19_Filter.svg"
+                                   Width="20" Height="20"/>
+                            <TextBlock Text="{Binding FilterLabel}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2"
+                            Width="156"
+                            Padding="10,7" Margin="0,0,8,0"
+                            ToolTip.Tip="Sortieren">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft"
+                                    VerticalOffset="2">
+                                <StackPanel Spacing="1" MinWidth="188">
+                                    <TextBlock Text="SORTIEREN NACH" FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               Margin="10,8,10,4"/>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Name">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Name" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortName}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Date">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Datum" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortDate}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Size">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Dateigröße" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortSize}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Type">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Dateityp" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortType}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Rating">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Bewertung" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortRating}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Favorite">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Favorit" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortFavorite}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+
+                                    <Separator Margin="4,6"/>
+
+                                    <TextBlock Text="REIHENFOLGE" FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               Margin="10,4,10,4"/>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortDirectionCommand}" CommandParameter="Ascending">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Aufsteigend" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortAscending}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortDirectionCommand}" CommandParameter="Descending">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Absteigend" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortDescending}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/22_Sortieren.svg"
+                                   Width="20" Height="20"/>
+                            <TextBlock Text="{Binding SortLabel}"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </Button>
+
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
+                        <Button Classes="icon-btn" Width="36" Height="36"
+                                Classes.active="{Binding IsListView}"
+                                Command="{Binding SetViewModeCommand}" CommandParameter="List"
+                                ToolTip.Tip="Listenansicht">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/19_Liste.svg"
+                                   Width="20" Height="20" Opacity="0.78"/>
+                        </Button>
+                        <Button Classes="icon-btn" Width="36" Height="36"
+                                Classes.active="{Binding IsGridView}"
+                                Command="{Binding SetViewModeCommand}" CommandParameter="Grid"
+                                ToolTip.Tip="Rasteransicht">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/18_Raster.svg"
+                                   Width="20" Height="20"/>
+                        </Button>
+                        <Button Classes="icon-btn" Width="36" Height="36"
+                                Click="OnFullscreenClick"
+                                ToolTip.Tip="Vollbild">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/21_Vollbild.svg"
+                                   Width="20" Height="20"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Classes="sidebar">
+            <Grid RowDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Row="0"
+                            Margin="24,22,12,8"
+                            Spacing="6"
+                            ClipToBounds="True">
+                    <Grid ColumnDefinitions="*" Margin="0,0,14,8">
+                        <TextBlock Text="Suchen" FontSize="14" FontWeight="SemiBold"/>
+                    </Grid>
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  MaxHeight="180">
+                        <TreeView Name="SearchTreeView"
+                                  ItemsSource="{Binding SearchTree}"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  SelectionChanged="OnVirtualTreeSelectionChanged">
+                            <TreeView.ItemTemplate>
+                                <TreeDataTemplate ItemsSource="{Binding Children}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-36,3,0,3">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/21_Suchen.svg"
+                                                       Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="6,0,0,0"
+                                                   VerticalAlignment="Center" FontSize="12"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <Button Grid.Column="2"
+                                                Classes="ghost"
+                                                Width="18"
+                                                Height="18"
+                                                Padding="0"
+                                                Margin="4,0,4,0"
+                                                IsVisible="{Binding IsRemovable}"
+                                                Click="OnRemoveVirtualSearchClick"
+                                                ToolTip.Tip="Suche entfernen">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/18_Entfernen.svg"
+                                                           Width="12"
+                                                           Height="12"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Opacity="0.75"/>
+                                        </Button>
+                                    </Grid>
+                                </TreeDataTemplate>
+                            </TreeView.ItemTemplate>
+                        </TreeView>
+                    </ScrollViewer>
+                </StackPanel>
+
+                <Grid Grid.Row="1"
+                      Margin="24,8,12,0"
+                      RowDefinitions="Auto,*"
+                      ClipToBounds="True">
+                    <Grid ColumnDefinitions="*" Margin="0,0,14,8">
+                        <TextBlock Text="Ordner" FontSize="14" FontWeight="SemiBold"/>
+                    </Grid>
+                    <ScrollViewer Grid.Row="1"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <TreeView Name="FolderTreeView"
+                                  ItemsSource="{Binding FolderTree}"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  ContextRequested="OnFolderTreeContextRequested"
+                                  DragDrop.AllowDrop="True"
+                                  DragDrop.DragOver="OnFolderTreeDragOver"
+                                  DragDrop.Drop="OnFolderTreeDrop"
+                                  SelectionChanged="OnFolderTreeSelectionChanged">
+                            <TreeView.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Name="FolderTreeCreateFolderMenuItem" Header="Neuer Ordner" Click="OnContextCreateFolder"/>
+                                    <Separator/>
+                                    <MenuItem Name="FolderTreeRenameMenuItem" Header="Umbenennen" Click="OnContextRenameFolder"/>
+                                    <MenuItem Name="FolderTreeCopyMenuItem" Header="Kopieren" Click="OnContextCopyFolder"/>
+                                    <MenuItem Name="FolderTreeCutMenuItem" Header="Ausschneiden" Click="OnContextCutFolder"/>
+                                    <MenuItem Name="FolderTreePasteMenuItem" Header="Einfügen" Click="OnContextPasteFolder"/>
+                                    <MenuItem Header="Pfad kopieren" Click="OnContextCopyFolderPath"/>
+                                    <Separator/>
+                                    <MenuItem Name="FolderTreeDeleteMenuItem" Header="Löschen" Click="OnContextDeleteFolder"/>
+                                </ContextMenu>
+                            </TreeView.ContextMenu>
+                            <TreeView.ItemTemplate>
+                                <TreeDataTemplate ItemsSource="{Binding Children}">
+                                    <Grid ColumnDefinitions="Auto,*"
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Stretch"
+                                          Margin="4,4">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/05_Ordner.svg"
+                                               Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="10,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Stretch"
+                                                   FontSize="12"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip.Tip="{Binding FullPath}"/>
+                                    </Grid>
+                                </TreeDataTemplate>
+                                </TreeView.ItemTemplate>
+                        </TreeView>
+                    </ScrollViewer>
+                </Grid>
+
+                <StackPanel Grid.Row="2" Margin="24,18,24,21" Spacing="9">
+                    <Button Classes="ghost"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Padding="8,7"
+                            Click="OnSettingsClick">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/34_Einstellungen.svg"
+                                           Width="20" Height="20"/>
+                            <TextBlock Text="Einstellungen"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="{Binding StorageFreeText}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="10"/>
+                    <ProgressBar Value="{Binding StorageFillPercent}"
+                                 Minimum="0" Maximum="100"
+                                 Height="4"
+                                 CornerRadius="2"
+                                 Foreground="{DynamicResource FP.Accent}"
+                                 Background="#1B232B"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <GridSplitter Grid.Row="0"
+                      Grid.RowSpan="3"
+                      Grid.Column="1"
+                      Width="6"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="Transparent"
+                      ResizeDirection="Columns"
+                      ResizeBehavior="PreviousAndNext"
+                      ShowsPreview="False"
+                      Cursor="SizeWestEast"/>
+
+        <Border Grid.Row="1" Grid.Column="2" Background="{DynamicResource FP.Bg.Root}" ClipToBounds="True">
+            <Grid>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
+                            IsVisible="{Binding CurrentFolder, Converter={x:Static ObjectConverters.IsNull}}">
+                    <TextBlock Text="Kein Ordner geöffnet" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Wähle einen Ordner in der Sidebar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <ScrollViewer x:Name="GalleryGridScrollViewer"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              IsVisible="{Binding IsGridView}"
+                              ContextRequested="OnGalleryAreaContextRequested"
+                              Margin="0,0,8,0">
+                    <ScrollViewer.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Name="GalleryGridViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
+                            <MenuItem Name="GalleryGridViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
+                        </ContextMenu>
+                    </ScrollViewer.ContextMenu>
+                    <StackPanel Margin="12,12,18,20">
+                        <Border Height="{Binding TopSpacerHeight}"/>
+                        <ItemsControl ItemsSource="{Binding DisplayItems}"
+                                      ContextRequested="OnGalleryAreaContextRequested">
+                            <ItemsControl.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Name="GalleryGridCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
+                                <MenuItem Name="GalleryGridPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
+                            </ContextMenu>
+                            </ItemsControl.ContextMenu>
+                            <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:ImageItem}">
+                                <Border Name="ThumbBorder"
+                                        Classes="thumb-card"
+                                        Classes.selected="{Binding IsSelected}"
+                                        Classes.navigation-selected="{Binding IsNavigationSelected}"
+                                        Width="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Cursor="Hand"
+                                        ContextRequested="OnThumbnailContextRequested"
+                                        PointerPressed="OnThumbnailPointerPressed"
+                                        PointerMoved="OnThumbnailPointerMoved"
+                                        DoubleTapped="OnThumbnailDoubleTapped"
+                                        DragDrop.AllowDrop="True"
+                                        DragDrop.DragOver="OnItemDragOver"
+                                        DragDrop.Drop="OnItemDrop">
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Name="GridContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
+                                            <MenuItem Name="GridContextEditMenuItem" Header="Im Editor öffnen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
+                                            <Separator Name="GridContextTopSeparator"/>
+                                            <MenuItem Name="GridContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
+                                            <MenuItem Name="GridContextRenameMenuItem" Header="Umbenennen" Click="OnContextRename" IsVisible="{Binding CanFileOperationRename}"/>
+                                            <MenuItem Name="GridContextCopyMenuItem" Header="Kopieren" Click="OnContextCopy" IsVisible="{Binding CanFileOperationCopy}"/>
+                                            <MenuItem Name="GridContextCutMenuItem" Header="Ausschneiden" Click="OnContextCut" IsVisible="{Binding CanFileOperationRename}"/>
+                                            <MenuItem Name="GridContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste" IsVisible="{Binding CanFileOperationPasteInto}"/>
+                                            <MenuItem Name="GridContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
+                                            <MenuItem Name="GridContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
+                                            <MenuItem Name="GridContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
+                                            <Separator Name="GridContextPathSeparator"/>
+                                            <MenuItem Name="GridContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
+                                            <MenuItem Name="GridContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
+                                            <Separator Name="GridContextDeleteSeparator"/>
+                                            <MenuItem Header="Löschen" Click="OnContextDelete" IsVisible="{Binding CanFileOperationDelete}"/>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+                                    <Grid RowDefinitions="Auto,68">
+                                        <Border Grid.Row="0"
+                                                Background="{DynamicResource FP.Bg.Input}"
+                                                Height="{Binding DataContext.ThumbnailImageHeight, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ClipToBounds="True"
+                                                CornerRadius="8,8,0,0">
+                                            <Grid>
+                                                <Image Source="{Binding Thumbnail}"
+                                                       IsVisible="{Binding IsImage}"
+                                                       Stretch="UniformToFill"
+                                                       RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/05_Ordner.svg"
+                                                               IsVisible="{Binding IsFolder}"
+                                                               Width="54" Height="54"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               IconBrush="{DynamicResource FP.Accent}"/>
+                                                <Button IsVisible="{Binding IsVideoFile}"
+                                                        Classes="video-play-badge"
+                                                        Width="46" Height="46"
+                                                        CornerRadius="23"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Click="OnVideoPlayBadgeClick"
+                                                        ToolTip.Tip="Abspielen">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/079_Play.svg"
+                                                                   Width="22" Height="22"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   IconBrush="White"/>
+                                                </Button>
+                                                <Button Classes="selection-badge"
+                                                        Width="16"
+                                                        Height="16"
+                                                        IsVisible="{Binding IsSelectableEntry}"
+                                                        Classes.active="{Binding IsSelected}"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        Margin="8"
+                                                        Click="OnSelectionBadgeClick"
+                                                        ToolTip.Tip="Auswählen">
+                                                    <TextBlock Classes="badge-glyph" Text="✓"/>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                        <Border Grid.Row="1" Background="{DynamicResource FP.Bg.Content}" CornerRadius="0,0,8,8" Padding="14,9">
+                                            <StackPanel Spacing="7">
+                                                <TextBlock Text="{Binding FileName}"
+                                                           FontSize="13"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                                    <TextBlock Text="{Binding DateText}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding FileSizeText}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="2"
+                                                            Classes="favorite-btn"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Padding="4,2,0,0"
+                                                            VerticalAlignment="Center"
+                                                            IsVisible="{Binding IsImage}"
+                                                            Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Favorit">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                                       Width="20" Height="20"
+                                                                       Classes="fav-heart" Classes.active="{Binding IsFavorite}"/>
+                                                    </Button>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Border Height="{Binding BottomSpacerHeight}"/>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="GalleryListScrollViewer"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              IsVisible="{Binding IsListView}"
+                              ContextRequested="OnGalleryAreaContextRequested"
+                              Margin="0,0,8,0">
+                    <ScrollViewer.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Name="GalleryListViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
+                            <MenuItem Name="GalleryListViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
+                        </ContextMenu>
+                    </ScrollViewer.ContextMenu>
+                    <StackPanel Margin="12,12,18,150">
+                        <Border Height="{Binding TopSpacerHeight}"/>
+                        <ItemsControl ItemsSource="{Binding DisplayItems}"
+                                      ContextRequested="OnGalleryAreaContextRequested">
+                            <ItemsControl.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Name="GalleryListCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
+                                <MenuItem Name="GalleryListPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
+                            </ContextMenu>
+                            </ItemsControl.ContextMenu>
+                            <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Vertical"/>
+                            </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:ImageItem}">
+                            <Border Name="ListItemBorder"
+                                        Classes="thumb-card list-row"
+                                        Classes.selected="{Binding IsSelected}"
+                                        Classes.navigation-selected="{Binding IsNavigationSelected}"
+                                        Cursor="Hand"
+                                        ContextRequested="OnThumbnailContextRequested"
+                                        PointerPressed="OnThumbnailPointerPressed"
+                                        PointerMoved="OnThumbnailPointerMoved"
+                                        DoubleTapped="OnThumbnailDoubleTapped"
+                                        DragDrop.AllowDrop="True"
+                                        DragDrop.DragOver="OnItemDragOver"
+                                        DragDrop.Drop="OnItemDrop">
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Name="ListContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
+                                            <MenuItem Name="ListContextEditMenuItem" Header="Im Editor öffnen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
+                                            <Separator Name="ListContextTopSeparator"/>
+                                            <MenuItem Name="ListContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
+                                            <MenuItem Name="ListContextRenameMenuItem" Header="Umbenennen" Click="OnContextRename" IsVisible="{Binding CanFileOperationRename}"/>
+                                            <MenuItem Name="ListContextCopyMenuItem" Header="Kopieren" Click="OnContextCopy" IsVisible="{Binding CanFileOperationCopy}"/>
+                                            <MenuItem Name="ListContextCutMenuItem" Header="Ausschneiden" Click="OnContextCut" IsVisible="{Binding CanFileOperationRename}"/>
+                                            <MenuItem Name="ListContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste" IsVisible="{Binding CanFileOperationPasteInto}"/>
+                                            <MenuItem Name="ListContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
+                                            <MenuItem Name="ListContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
+                                            <MenuItem Name="ListContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
+                                            <Separator Name="ListContextPathSeparator"/>
+                                            <MenuItem Name="ListContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
+                                            <MenuItem Name="ListContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
+                                            <Separator Name="ListContextDeleteSeparator"/>
+                                            <MenuItem Header="Löschen" Click="OnContextDelete" IsVisible="{Binding CanFileOperationDelete}"/>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+                                    <Grid ColumnDefinitions="76,*,150,90,28" Height="72">
+                                        <Border Grid.Column="0"
+                                                Width="56"
+                                                Height="56"
+                                                Background="{DynamicResource FP.Bg.Input}"
+                                                ClipToBounds="True"
+                                                CornerRadius="6"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center">
+                                            <Grid>
+                                                <Image Source="{Binding Thumbnail}"
+                                                       IsVisible="{Binding IsImage}"
+                                                       Stretch="UniformToFill"
+                                                       RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/05_Ordner.svg"
+                                                               IsVisible="{Binding IsFolder}"
+                                                               Width="28" Height="28"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               IconBrush="{DynamicResource FP.Accent}"/>
+                                                <Button IsVisible="{Binding IsVideoFile}"
+                                                        Classes="video-play-badge"
+                                                        Width="26" Height="26"
+                                                        CornerRadius="13"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Click="OnVideoPlayBadgeClick"
+                                                        ToolTip.Tip="Abspielen">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/079_Play.svg"
+                                                                   Width="13" Height="13"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   IconBrush="White"/>
+                                                </Button>
+                                                <Button Classes="selection-badge compact"
+                                                        Width="14"
+                                                        Height="14"
+                                                        IsVisible="{Binding IsSelectableEntry}"
+                                                        Classes.active="{Binding IsSelected}"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        Margin="4"
+                                                        Click="OnSelectionBadgeClick"
+                                                        ToolTip.Tip="Auswählen">
+                                                    <TextBlock Classes="badge-glyph" Text="✓"/>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                        <StackPanel Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="5"
+                                                    Margin="4,0,14,0">
+                                            <TextBlock Text="{Binding FileName}"
+                                                       FontSize="13"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding FilePath}"
+                                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                                       FontSize="11"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding DateText}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Text="{Binding FileSizeText}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   HorizontalAlignment="Right"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,14,0"/>
+                                        <Button Grid.Column="4"
+                                                Classes="favorite-btn"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0,2,0,0"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                IsVisible="{Binding IsImage}"
+                                                Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="Favorit">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                           Width="20" Height="20"
+                                                           Classes="fav-heart" Classes.active="{Binding IsFavorite}"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Border Height="{Binding BottomSpacerHeight}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Grid.Column="2" Classes="statusbar" Height="60" Padding="20,0">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" VerticalAlignment="Center">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center"
+                            IsVisible="{Binding HasSelectedImage}">
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="1">
+                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=1}"/>
+                    </Button>
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="2">
+                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=2}"/>
+                    </Button>
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="3">
+                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=3}"/>
+                    </Button>
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="4">
+                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=4}"/>
+                    </Button>
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="5">
+                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=5}"/>
+                    </Button>
+                </StackPanel>
+
+                <TextBlock Grid.Column="1"
+                           Text="{Binding FooterStatusText}"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="12"
+                           Margin="16,0,0,0"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock Grid.Column="2"
+                           Text="{Binding StatusText}"
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Command="{Binding SelectAllCommand}"
+                                ToolTip.Tip="Alle auswählen">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/15_Ausgewaehlt.svg"
+                                           Width="20" Height="20"/>
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Command="{Binding ClearSelectionCommand}"
+                                IsEnabled="{Binding HasSelection}"
+                                ToolTip.Tip="Alle abwählen">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/16_Nicht_ausgewaehlt.svg"
+                                           Width="20" Height="20"/>
+                        </Button>
+                    </StackPanel>
+                    <Button Classes="icon-btn" Width="34" Height="34"
+                            Command="{Binding DeleteSelectedCommand}"
+                            IsEnabled="{Binding HasSelection}"
+                            ToolTip.Tip="Löschen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/35_Loeschen.svg"
+                                       Width="20" Height="20"/>
+                    </Button>
+                    <TextBlock Text="−" Foreground="{DynamicResource FP.Text.Muted}" VerticalAlignment="Center"/>
+                    <icons:RoundSlider Width="136"
+                                       Minimum="140"
+                                       Maximum="520"
+                                       Value="{Binding ThumbnailSize}"
+                                       VerticalAlignment="Center"/>
+                    <TextBlock Text="+" Foreground="{DynamicResource FP.Text.Muted}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <views:CollageDialogOverlayView Grid.Row="0"
+                                        Grid.RowSpan="3"
+                                        Grid.Column="0"
+                                        Grid.ColumnSpan="3"
+                                        ZIndex="180"/>
+
+        <!-- Schnellvorschau-Overlay (Mausrad-Klick) -->
+        <Panel x:Name="PreviewOverlay"
+               Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="3"
+               IsVisible="False"
+               Background="#D9000000"
+               ZIndex="200">
+            <Image x:Name="PreviewImage"
+                   Stretch="Uniform"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Margin="60"/>
+        </Panel>
+
+    </Grid>
+</UserControl>

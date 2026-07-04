@@ -1,0 +1,2118 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="0_10_Juni_2026_57bc8a06" xml:space="preserve">
+    <value>0.10 - giugno 2026</value>
+  </data>
+  <data name="100_percent_80fe0483" xml:space="preserve">
+    <value>100 percento</value>
+  </data>
+  <data name="100_Prozent_f8a012b6" xml:space="preserve">
+    <value>100 percento</value>
+  </data>
+  <data name="1_Element_ausgew_hlt_e2bb9fc9" xml:space="preserve">
+    <value>1 elemento selezionato</value>
+  </data>
+  <data name="1_Element_in_der_Zwischenablage_3d329e07" xml:space="preserve">
+    <value>1 elemento negli appunti</value>
+  </data>
+  <data name="1_item_in_clipboard_e8e89535" xml:space="preserve">
+    <value>1 elemento negli appunti</value>
+  </data>
+  <data name="1_item_selected_7680f619" xml:space="preserve">
+    <value>1 elemento selezionato</value>
+  </data>
+  <data name="A_folder_cannot_be_moved_into_itself_59adb3b1" xml:space="preserve">
+    <value>Una cartella non puo essere spostata dentro se stessa.</value>
+  </data>
+  <data name="Abbrechen_07af7cb3" xml:space="preserve">
+    <value>Annulla</value>
+  </data>
+  <data name="Abgerundete_Ecken_verwenden_7610fffa" xml:space="preserve">
+    <value>Usa angoli arrotondati</value>
+  </data>
+  <data name="Abmessungen_7cc78479" xml:space="preserve">
+    <value>Dimensioni</value>
+  </data>
+  <data name="About_FerrumPix_8116f441" xml:space="preserve">
+    <value>Informazioni su FerrumPix</value>
+  </data>
+  <data name="absteigend_0fe98c77" xml:space="preserve">
+    <value>decrescente</value>
+  </data>
+  <data name="Absteigend_840b5d3b" xml:space="preserve">
+    <value>Decrescente</value>
+  </data>
+  <data name="Accent_color_e49578ed" xml:space="preserve">
+    <value>Colore accento</value>
+  </data>
+  <data name="Access_denied_64343a83" xml:space="preserve">
+    <value>Accesso negato</value>
+  </data>
+  <data name="Additional_options_946c9b17" xml:space="preserve">
+    <value>Opzioni aggiuntive.</value>
+  </data>
+  <data name="Adjust_ab166bd5" xml:space="preserve">
+    <value>Regola</value>
+  </data>
+  <data name="Adjusted_7bba98e4" xml:space="preserve">
+    <value>Regolato</value>
+  </data>
+  <data name="Adjustments_ce5b2f72" xml:space="preserve">
+    <value>Regolazioni</value>
+  </data>
+  <data name="Advanced_4d064726" xml:space="preserve">
+    <value>Avanzato</value>
+  </data>
+  <data name="After_79ba5e1b" xml:space="preserve">
+    <value>Dopo</value>
+  </data>
+  <data name="Akzentfarbe_d8839e9b" xml:space="preserve">
+    <value>Colore accento</value>
+  </data>
+  <data name="All_options_for_interface_gallery_and_image_view_1f47eb77" xml:space="preserve">
+    <value>Tutte le opzioni per interfaccia, galleria e visualizzazione immagini.</value>
+  </data>
+  <data name="All_photos_b2b81016" xml:space="preserve">
+    <value>Tutte le foto</value>
+  </data>
+  <data name="Alle_4c7a986f" xml:space="preserve">
+    <value>Tutti</value>
+  </data>
+  <data name="Alle_abw_hlen_37f0c4d6" xml:space="preserve">
+    <value>Deseleziona tutto</value>
+  </data>
+  <data name="Alle_ausw_hlen_77d37d69" xml:space="preserve">
+    <value>Seleziona tutto</value>
+  </data>
+  <data name="Alle_Filter_zur_cksetzen_c714b23f" xml:space="preserve">
+    <value>Reimposta tutti i filtri</value>
+  </data>
+  <data name="Alle_Fotos_bd5f13cc" xml:space="preserve">
+    <value>Tutte le foto</value>
+  </data>
+  <data name="Alle_Optionen_f_r_Oberfl_che_Galerie_und_Bildans_571dd265" xml:space="preserve">
+    <value>Tutte le opzioni per interfaccia, galleria e visualizzazione immagini.</value>
+  </data>
+  <data name="Allgemein_21a7b4ec" xml:space="preserve">
+    <value>Generale</value>
+  </data>
+  <data name="An_Fenster_anpassen_078d3ff5" xml:space="preserve">
+    <value>Adatta alla finestra</value>
+  </data>
+  <data name="An_item_with_this_name_already_exists_90c60037" xml:space="preserve">
+    <value>Esiste gia un elemento con questo nome.</value>
+  </data>
+  <data name="Angepasst_83cb00ae" xml:space="preserve">
+    <value>Regolato</value>
+  </data>
+  <data name="Anpassen_09f1b2d1" xml:space="preserve">
+    <value>Regola</value>
+  </data>
+  <data name="Anpassungen_2527ca87" xml:space="preserve">
+    <value>Regolazioni</value>
+  </data>
+  <data name="Ansicht_9da8c3fa" xml:space="preserve">
+    <value>Vista:</value>
+  </data>
+  <data name="Anwendungsskalierung_e336c491" xml:space="preserve">
+    <value>Ridimensionamento dell'applicazione</value>
+  </data>
+  <data name="Appearance_41def7a0" xml:space="preserve">
+    <value>Aspetto</value>
+  </data>
+  <data name="Ascending_2b226c79" xml:space="preserve">
+    <value>Crescente</value>
+  </data>
+  <data name="ascending_f393cc99" xml:space="preserve">
+    <value>crescente</value>
+  </data>
+  <data name="Associations_for_supported_image_formats_1619664f" xml:space="preserve">
+    <value>Associazioni per i formati immagine supportati.</value>
+  </data>
+  <data name="Auf_100_Prozent_springen_60c0ab80" xml:space="preserve">
+    <value>Vai al 100 percento</value>
+  </data>
+  <data name="Auf_Standardeinstellungen_zur_cksetzen_f9e7e0a4" xml:space="preserve">
+    <value>Ripristina predefiniti</value>
+  </data>
+  <data name="Aufnahme_70807c97" xml:space="preserve">
+    <value>Scatto</value>
+  </data>
+  <data name="aufsteigend_3b39b788" xml:space="preserve">
+    <value>crescente</value>
+  </data>
+  <data name="Aufsteigend_909ecd19" xml:space="preserve">
+    <value>Crescente</value>
+  </data>
+  <data name="Ausgabe_dbeb8b99" xml:space="preserve">
+    <value>Output</value>
+  </data>
+  <data name="Ausrichten_79fbf83d" xml:space="preserve">
+    <value>Raddrizza</value>
+  </data>
+  <data name="Ausschneiden_fa89f6e7" xml:space="preserve">
+    <value>Taglia</value>
+  </data>
+  <data name="Ausschnitt_fba13cb4" xml:space="preserve">
+    <value>Area di ritaglio</value>
+  </data>
+  <data name="Ausschnitt_zur_cksetzen_ecda7293" xml:space="preserve">
+    <value>Reimposta ritaglio</value>
+  </data>
+  <data name="Ausw_hlen_2ac692f4" xml:space="preserve">
+    <value>Seleziona</value>
+  </data>
+  <data name="Back_b52b36b7" xml:space="preserve">
+    <value>Indietro</value>
+  </data>
+  <data name="Back_to_gallery_af86c3f8" xml:space="preserve">
+    <value>Torna alla galleria</value>
+  </data>
+  <data name="Bearbeiten_104f3bfd" xml:space="preserve">
+    <value>Modifica</value>
+  </data>
+  <data name="Bearbeitungsrezept_geladen_abbe85fe" xml:space="preserve">
+    <value>Ricetta di modifica caricata</value>
+  </data>
+  <data name="Bearbeitungsrezept_gespeichert_58590c9b" xml:space="preserve">
+    <value>Ricetta di modifica salvata</value>
+  </data>
+  <data name="Before_74f39697" xml:space="preserve">
+    <value>Prima</value>
+  </data>
+  <data name="Before_After_03b01278" xml:space="preserve">
+    <value>Prima/Dopo</value>
+  </data>
+  <data name="Belichtung_09d968f2" xml:space="preserve">
+    <value>Esposizione</value>
+  </data>
+  <data name="Benutzeroberfl_chendichte_0d0c40a6" xml:space="preserve">
+    <value>Densita interfaccia</value>
+  </data>
+  <data name="ber_FerrumPix_ead98293" xml:space="preserve">
+    <value>Informazioni su FerrumPix</value>
+  </data>
+  <data name="bereits_vorhanden_bdb1ca45" xml:space="preserve">
+    <value>gia presente</value>
+  </data>
+  <data name="bergeordnete_Ordner_anzeigen_b73790f5" xml:space="preserve">
+    <value>Mostra cartelle superiori</value>
+  </data>
+  <data name="berschreiben_5ab49d12" xml:space="preserve">
+    <value>Sovrascrivi</value>
+  </data>
+  <data name="berspringen_3af1d9e8" xml:space="preserve">
+    <value>Salta</value>
+  </data>
+  <data name="Bestimmt_die_Gr_e_von_Elementen_in_der_Benutzero_994e460b" xml:space="preserve">
+    <value>Controlla la dimensione degli elementi dell interfaccia.</value>
+  </data>
+  <data name="Bestimmt_die_JPEG_Qualit_t_neu_erzeugter_zwische_a025cc32" xml:space="preserve">
+    <value>Controlla la qualita JPEG delle nuove miniature memorizzate nella cache.</value>
+  </data>
+  <data name="Bestimmt_welcher_Ordner_beim_Start_der_Anwendung_0b03a132" xml:space="preserve">
+    <value>Controlla quale cartella viene aperta all'avvio dell'applicazione.</value>
+  </data>
+  <data name="Betrachter_1574727b" xml:space="preserve">
+    <value>Visualizzatore</value>
+  </data>
+  <data name="Bewertung_58ca7df8" xml:space="preserve">
+    <value>Valutazione</value>
+  </data>
+  <data name="BEWERTUNG_fca3954d" xml:space="preserve">
+    <value>VALUTAZIONE</value>
+  </data>
+  <data name="Bibliothek_d75732b8" xml:space="preserve">
+    <value>Libreria</value>
+  </data>
+  <data name="Bild_d4248534" xml:space="preserve">
+    <value>immagine</value>
+  </data>
+  <data name="Bild_verschieben_0223e726" xml:space="preserve">
+    <value>Sposta immagine</value>
+  </data>
+  <data name="Bild_vollst_ndig_in_die_Vorschau_einpassen_a08fc235" xml:space="preserve">
+    <value>Adatta completamente l'immagine all'anteprima</value>
+  </data>
+  <data name="Bilder_512227d4" xml:space="preserve">
+    <value>immagini</value>
+  </data>
+  <data name="Bilder_an_Fenstergr_e_anpassen_beb5983d" xml:space="preserve">
+    <value>Adatta immagini alla finestra</value>
+  </data>
+  <data name="Bildgr_e_87d94164" xml:space="preserve">
+    <value>Dimensione immagine</value>
+  </data>
+  <data name="Bildschirm_f_r_Skalierung_875b3ec6" xml:space="preserve">
+    <value>Schermo per il ridimensionamento</value>
+  </data>
+  <data name="Black_b406fb57" xml:space="preserve">
+    <value>Nero</value>
+  </data>
+  <data name="Blau_c2ca4aa6" xml:space="preserve">
+    <value>Blu</value>
+  </data>
+  <data name="Blende_ca1503c2" xml:space="preserve">
+    <value>Diaframma</value>
+  </data>
+  <data name="Blendet_die_rechte_Metadatenleiste_ein_oder_aus_9edf5d5a" xml:space="preserve">
+    <value>Mostra o nasconde la barra laterale destra dei metadati.</value>
+  </data>
+  <data name="Blendet_in_der_Galerie_zus_tzlich_einen_Eintrag__4af3527c" xml:space="preserve">
+    <value>Mostra anche una voce per la cartella superiore nella galleria.</value>
+  </data>
+  <data name="Breite_861387c8" xml:space="preserve">
+    <value>Larghezza</value>
+  </data>
+  <data name="Brennweite_8a6091f7" xml:space="preserve">
+    <value>Lunghezza focale</value>
+  </data>
+  <data name="Brightness_e1a2b65d" xml:space="preserve">
+    <value>Luminosita</value>
+  </data>
+  <data name="Cache_and_processing_dd70e68b" xml:space="preserve">
+    <value>Cache ed elaborazione.</value>
+  </data>
+  <data name="Cache_und_Verarbeitung_fcbf98e1" xml:space="preserve">
+    <value>Cache ed elaborazione.</value>
+  </data>
+  <data name="Cancel_77dfd213" xml:space="preserve">
+    <value>Annulla</value>
+  </data>
+  <data name="Choose_an_accent_color_for_highlights_and_active_7bff5178" xml:space="preserve">
+    <value>Scegli un colore accento per evidenziazioni ed elementi attivi.</value>
+  </data>
+  <data name="Choose_the_interface_appearance_091c302e" xml:space="preserve">
+    <value>Scegli l aspetto dell interfaccia.</value>
+  </data>
+  <data name="Close_bbfa773e" xml:space="preserve">
+    <value>Chiudi</value>
+  </data>
+  <data name="Color_1d0c8304" xml:space="preserve">
+    <value>Colore</value>
+  </data>
+  <data name="Comfortable_2313707a" xml:space="preserve">
+    <value>Comoda</value>
+  </data>
+  <data name="Compact_1df39aa5" xml:space="preserve">
+    <value>Compatta</value>
+  </data>
+  <data name="Contrast_c4fc37ad" xml:space="preserve">
+    <value>Contrasto</value>
+  </data>
+  <data name="Controls_density_and_visible_interface_elements_4fce3a15" xml:space="preserve">
+    <value>Controlla densita ed elementi visibili dell interfaccia.</value>
+  </data>
+  <data name="Controls_how_images_are_displayed_when_opened_c5f2a407" xml:space="preserve">
+    <value>Controlla come vengono visualizzate le immagini all apertura.</value>
+  </data>
+  <data name="Controls_the_size_of_interface_elements_5b7204d6" xml:space="preserve">
+    <value>Controlla la dimensione degli elementi dell interfaccia.</value>
+  </data>
+  <data name="Controls_which_mode_is_used_when_FerrumPix_is_op_4eb9747d" xml:space="preserve">
+    <value>Controlla quale modalita viene usata quando FerrumPix viene aperto con un immagine come parametro.</value>
+  </data>
+  <data name="Copy_af74f7c5" xml:space="preserve">
+    <value>Copia</value>
+  </data>
+  <data name="Copy_path_9804556f" xml:space="preserve">
+    <value>Copia percorso</value>
+  </data>
+  <data name="Crop_c5db3d91" xml:space="preserve">
+    <value>Ritaglia</value>
+  </data>
+  <data name="Cut_38d13bda" xml:space="preserve">
+    <value>Taglia</value>
+  </data>
+  <data name="Dark_ae1ef014" xml:space="preserve">
+    <value>Scuro</value>
+  </data>
+  <data name="Darstellung_7058d4fa" xml:space="preserve">
+    <value>Aspetto</value>
+  </data>
+  <data name="Date_eb9a4bc1" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="Datei_berschreiben_6c4a079a" xml:space="preserve">
+    <value>Sovrascrivere il file?</value>
+  </data>
+  <data name="Datei_die_kopiert_verschoben_wird_ed00b826" xml:space="preserve">
+    <value>File da copiare/spostare</value>
+  </data>
+  <data name="Datei_im_Zielordner_56de4889" xml:space="preserve">
+    <value>File nella cartella di destinazione</value>
+  </data>
+  <data name="Dateibrowser_cb6cf2b4" xml:space="preserve">
+    <value>Browser file</value>
+  </data>
+  <data name="Dateigr_e_34f011ef" xml:space="preserve">
+    <value>Dimensione file</value>
+  </data>
+  <data name="Dateiname_39dc7732" xml:space="preserve">
+    <value>Nome file</value>
+  </data>
+  <data name="Dateiname_eingeben_c6f6f192" xml:space="preserve">
+    <value>Inserisci nome file</value>
+  </data>
+  <data name="DATEITYP_2fdcdfaa" xml:space="preserve">
+    <value>TIPO DI FILE</value>
+  </data>
+  <data name="Dateityp_62d872cf" xml:space="preserve">
+    <value>Tipo file</value>
+  </data>
+  <data name="Dateizuordnungen_f04397d0" xml:space="preserve">
+    <value>Associazioni file</value>
+  </data>
+  <data name="Datenbank_bereinigen_39526357" xml:space="preserve">
+    <value>Pulisci database</value>
+  </data>
+  <data name="Datum_df5c3008" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="Delete_f6fdbe48" xml:space="preserve">
+    <value>Elimina</value>
+  </data>
+  <data name="Delete_failed_64513b47" xml:space="preserve">
+    <value>Eliminazione non riuscita</value>
+  </data>
+  <data name="Delete_items_permanently_98eda0b7" xml:space="preserve">
+    <value>Eliminare definitivamente gli elementi?</value>
+  </data>
+  <data name="delete_permanently_113155b7" xml:space="preserve">
+    <value>eliminare definitivamente?</value>
+  </data>
+  <data name="Der_Dateiname_enth_lt_ung_ltige_Zeichen_9ff28619" xml:space="preserve">
+    <value>Il nome file contiene caratteri non validi.</value>
+  </data>
+  <data name="Der_Name_enth_lt_ung_ltige_Zeichen_700c2edc" xml:space="preserve">
+    <value>Il nome contiene caratteri non validi.</value>
+  </data>
+  <data name="Der_Ordnername_enth_lt_ung_ltige_Zeichen_065fbefc" xml:space="preserve">
+    <value>Il nome della cartella contiene caratteri non validi.</value>
+  </data>
+  <data name="Descending_36377adf" xml:space="preserve">
+    <value>Decrescente</value>
+  </data>
+  <data name="descending_48609391" xml:space="preserve">
+    <value>decrescente</value>
+  </data>
+  <data name="Details_dc3decbb" xml:space="preserve">
+    <value>Dettagli</value>
+  </data>
+  <data name="Details_zur_cksetzen_8efe38d2" xml:space="preserve">
+    <value>Reimposta dettagli</value>
+  </data>
+  <data name="Deutsch_a6a77092" xml:space="preserve">
+    <value>Tedesco</value>
+  </data>
+  <data name="Diashow_aa9acf40" xml:space="preserve">
+    <value>Presentazione</value>
+  </data>
+  <data name="Diashow_Dauer_02e3ffa8" xml:space="preserve">
+    <value>Durata presentazione</value>
+  </data>
+  <data name="Diashow_starten_d515fd3d" xml:space="preserve">
+    <value>Avvia presentazione</value>
+  </data>
+  <data name="Diashow_starten_stoppen_09d19a8b" xml:space="preserve">
+    <value>Avvia / interrompi presentazione</value>
+  </data>
+  <data name="Diashow_starten_stoppen_Leertaste_a2679098" xml:space="preserve">
+    <value>Avvia / interrompi presentazione (Spazio)</value>
+  </data>
+  <data name="Drehen_64c37334" xml:space="preserve">
+    <value>Ruota</value>
+  </data>
+  <data name="Dunkel_ec4616f8" xml:space="preserve">
+    <value>Scuro</value>
+  </data>
+  <data name="Duplicate_972d5737" xml:space="preserve">
+    <value>Duplica</value>
+  </data>
+  <data name="Duplicate_failed_2f008a9c" xml:space="preserve">
+    <value>Duplicazione non riuscita</value>
+  </data>
+  <data name="Duplizieren_8524c5cd" xml:space="preserve">
+    <value>Duplica</value>
+  </data>
+  <data name="Duplizieren_fehlgeschlagen_2a5c86de" xml:space="preserve">
+    <value>Duplicazione non riuscita</value>
+  </data>
+  <data name="Dynamik_b1e6bf80" xml:space="preserve">
+    <value>Vividezza</value>
+  </data>
+  <data name="Edit_5301648d" xml:space="preserve">
+    <value>Modifica</value>
+  </data>
+  <data name="Edit_in_editor_43ded19d" xml:space="preserve">
+    <value>Modifica nell editor</value>
+  </data>
+  <data name="Editor_c7e9fb2e" xml:space="preserve">
+    <value>Editor</value>
+  </data>
+  <data name="Effects_8f25a859" xml:space="preserve">
+    <value>Effetti</value>
+  </data>
+  <data name="Effekte_ab682b7e" xml:space="preserve">
+    <value>Effetti</value>
+  </data>
+  <data name="Effekte_zur_cksetzen_c0df5ee2" xml:space="preserve">
+    <value>Reimposta effetti</value>
+  </data>
+  <data name="Ein_Element_mit_diesem_Namen_existiert_bereits_84e054cd" xml:space="preserve">
+    <value>Esiste gia un elemento con questo nome.</value>
+  </data>
+  <data name="Ein_Ordner_kann_nicht_in_sich_selbst_verschoben__08ab887c" xml:space="preserve">
+    <value>Una cartella non puo essere spostata dentro se stessa.</value>
+  </data>
+  <data name="Eine_Datei_mit_diesem_Namen_existiert_bereits_M__915f206b" xml:space="preserve">
+    <value>Esiste gia un file con questo nome. Vuoi davvero sovrascrivere il file esistente?</value>
+  </data>
+  <data name="Eine_Ebene_nach_oben_b1cafd86" xml:space="preserve">
+    <value>Su di un livello</value>
+  </data>
+  <data name="Einf_gen_0a393b9b" xml:space="preserve">
+    <value>Incolla</value>
+  </data>
+  <data name="Einf_gen_fehlgeschlagen_dd9d57ab" xml:space="preserve">
+    <value>Incolla non riuscito</value>
+  </data>
+  <data name="Einpassen_b24eb061" xml:space="preserve">
+    <value>Adatta</value>
+  </data>
+  <data name="Einstellungen_3e5af3d1" xml:space="preserve">
+    <value>Impostazioni</value>
+  </data>
+  <data name="Einstellungen_f_r_Bearbeitung_und_Vorschau_ac3c9c1d" xml:space="preserve">
+    <value>Impostazioni per modifica e anteprima.</value>
+  </data>
+  <data name="Einstellungen_f_r_die_Ordner_und_Dateiansicht_im_2750e4f3" xml:space="preserve">
+    <value>Impostazioni per la vista cartelle e file nella barra laterale.</value>
+  </data>
+  <data name="Element_49fa9fd8" xml:space="preserve">
+    <value>elemento</value>
+  </data>
+  <data name="Elemente_44d5e77e" xml:space="preserve">
+    <value>elementi</value>
+  </data>
+  <data name="Elemente_ausgew_hlt_7ed53f5d" xml:space="preserve">
+    <value>elementi selezionati</value>
+  </data>
+  <data name="Elemente_endg_ltig_l_schen_9dc622c2" xml:space="preserve">
+    <value>Eliminare definitivamente gli elementi?</value>
+  </data>
+  <data name="endg_ltig_l_schen_d1690950" xml:space="preserve">
+    <value>eliminare definitivamente?</value>
+  </data>
+  <data name="Englisch_edd873d6" xml:space="preserve">
+    <value>Inglese</value>
+  </data>
+  <data name="English_649df08a" xml:space="preserve">
+    <value>Inglese</value>
+  </data>
+  <data name="Enter_a_new_name_29f4b2d6" xml:space="preserve">
+    <value>Inserisci un nuovo nome</value>
+  </data>
+  <data name="Enter_file_name_f2637be0" xml:space="preserve">
+    <value>Inserisci nome file</value>
+  </data>
+  <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Tags_vo_e5f7741e" xml:space="preserve">
+    <value>Rimuove metadati (valutazioni, preferiti, tag) da immagini che non esistono piu.</value>
+  </data>
+  <data name="Error_787aa161" xml:space="preserve">
+    <value>Errore:</value>
+  </data>
+  <data name="Erstellen_dbc9fb8c" xml:space="preserve">
+    <value>Crea</value>
+  </data>
+  <data name="Erweitert_52ef4f28" xml:space="preserve">
+    <value>Avanzato</value>
+  </data>
+  <data name="EXIF_Infos_anzeigen_2bee9177" xml:space="preserve">
+    <value>Mostra info EXIF</value>
+  </data>
+  <data name="Export_fehlgeschlagen_e2f759c5" xml:space="preserve">
+    <value>Esportazione non riuscita</value>
+  </data>
+  <data name="Exportieren_4e4a0d71" xml:space="preserve">
+    <value>Esporta</value>
+  </data>
+  <data name="Exportiert_051cfa1f" xml:space="preserve">
+    <value>Esportato:</value>
+  </data>
+  <data name="Exposure_862ee3b1" xml:space="preserve">
+    <value>Esposizione</value>
+  </data>
+  <data name="F_r_private_Nutzung_frei_be3eeedc" xml:space="preserve">
+    <value>Gratis per uso privato</value>
+  </data>
+  <data name="Fade_5298d08b" xml:space="preserve">
+    <value>Sbiadito</value>
+  </data>
+  <data name="Farbe_89b7957d" xml:space="preserve">
+    <value>Colore</value>
+  </data>
+  <data name="Farbe_zur_cksetzen_226b0cb4" xml:space="preserve">
+    <value>Reimposta colore</value>
+  </data>
+  <data name="Farbmischer_1f0c48cc" xml:space="preserve">
+    <value>Mixer colori</value>
+  </data>
+  <data name="Farbmischer_zur_cksetzen_764463fe" xml:space="preserve">
+    <value>Reimposta mixer colori</value>
+  </data>
+  <data name="Farbraum_ce914831" xml:space="preserve">
+    <value>Spazio colore</value>
+  </data>
+  <data name="Farbton_42054d9b" xml:space="preserve">
+    <value>Tonalita</value>
+  </data>
+  <data name="Favorit_39c0b929" xml:space="preserve">
+    <value>Preferito</value>
+  </data>
+  <data name="Favorite_6b90b6a1" xml:space="preserve">
+    <value>Preferito</value>
+  </data>
+  <data name="FAVORITEN_8594ac88" xml:space="preserve">
+    <value>PREFERITI</value>
+  </data>
+  <data name="Favoriten_9f50b3eb" xml:space="preserve">
+    <value>Preferiti</value>
+  </data>
+  <data name="Favorites_07b3e447" xml:space="preserve">
+    <value>Preferiti</value>
+  </data>
+  <data name="Fehler_8ce17ad9" xml:space="preserve">
+    <value>Errore: </value>
+  </data>
+  <data name="Fehler_9c6f16dc" xml:space="preserve">
+    <value>Errore:</value>
+  </data>
+  <data name="Fehler_beim_Laden_25ca8906" xml:space="preserve">
+    <value>Errore di caricamento</value>
+  </data>
+  <data name="ffne_ein_Bild_aus_dem_Betrachter_1ae5a15b" xml:space="preserve">
+    <value>Apri un immagine dal visualizzatore</value>
+  </data>
+  <data name="ffnen_fc718f82" xml:space="preserve">
+    <value>Apri</value>
+  </data>
+  <data name="ffnet_Bilder_skaliert_auf_die_verf_gbare_Fenster_0f9fbb39" xml:space="preserve">
+    <value>Apre le immagini adattate all area disponibile della finestra invece che alle dimensioni originali.</value>
+  </data>
+  <data name="File_associations_4d95177a" xml:space="preserve">
+    <value>Associazioni file</value>
+  </data>
+  <data name="File_browser_b89ec59e" xml:space="preserve">
+    <value>Browser file</value>
+  </data>
+  <data name="File_size_45d0df35" xml:space="preserve">
+    <value>Dimensione file</value>
+  </data>
+  <data name="File_type_7072340b" xml:space="preserve">
+    <value>Tipo file</value>
+  </data>
+  <data name="Filmstrip_im_Editor_anzeigen_69698114" xml:space="preserve">
+    <value>Mostra filmstrip nell editor</value>
+  </data>
+  <data name="Filmstrip_im_Viewer_anzeigen_c541ebf7" xml:space="preserve">
+    <value>Mostra filmstrip nel visualizzatore</value>
+  </data>
+  <data name="Filter_d7decf1a" xml:space="preserve">
+    <value>Filtro</value>
+  </data>
+  <data name="Fit_dab564d8" xml:space="preserve">
+    <value>Adatta</value>
+  </data>
+  <data name="Fit_images_to_window_4f1b952c" xml:space="preserve">
+    <value>Adatta immagini alla finestra</value>
+  </data>
+  <data name="Fit_to_window_54983cda" xml:space="preserve">
+    <value>Adatta alla finestra</value>
+  </data>
+  <data name="Folders_19adc47b" xml:space="preserve">
+    <value>Cartelle</value>
+  </data>
+  <data name="Format_041a5dec" xml:space="preserve">
+    <value>Formato</value>
+  </data>
+  <data name="Forward_ba4e7226" xml:space="preserve">
+    <value>Avanti</value>
+  </data>
+  <data name="Frame_91b06583" xml:space="preserve">
+    <value>Cornice</value>
+  </data>
+  <data name="Franz_sisch_a2091993" xml:space="preserve">
+    <value>Francese</value>
+  </data>
+  <data name="Free_for_private_use_66a554ae" xml:space="preserve">
+    <value>Gratis per uso privato</value>
+  </data>
+  <data name="French_44389f6a" xml:space="preserve">
+    <value>Francese</value>
+  </data>
+  <data name="Fullscreen_bb08d10b" xml:space="preserve">
+    <value>Schermo intero</value>
+  </data>
+  <data name="Galerie_1e88ec32" xml:space="preserve">
+    <value>Galleria</value>
+  </data>
+  <data name="Gallery_9c30a348" xml:space="preserve">
+    <value>Galleria</value>
+  </data>
+  <data name="Gelb_9642c760" xml:space="preserve">
+    <value>Giallo</value>
+  </data>
+  <data name="General_9239ee2c" xml:space="preserve">
+    <value>Generale</value>
+  </data>
+  <data name="Ger_umig_f8a30c5e" xml:space="preserve">
+    <value>Spaziosa</value>
+  </data>
+  <data name="Gerade_richten_f1e5c91a" xml:space="preserve">
+    <value>Raddrizza</value>
+  </data>
+  <data name="German_da91388c" xml:space="preserve">
+    <value>Tedesco</value>
+  </data>
+  <data name="Gespeichert_6a1781ba" xml:space="preserve">
+    <value>Salvato</value>
+  </data>
+  <data name="Gespeichert_als_0a8bad3b" xml:space="preserve">
+    <value>Salvato come</value>
+  </data>
+  <data name="GitHub_Repository_e5531ada" xml:space="preserve">
+    <value>Repository GitHub</value>
+  </data>
+  <data name="Gr_e_d9130ae8" xml:space="preserve">
+    <value>Dimensione</value>
+  </data>
+  <data name="Gr_e_zur_cksetzen_77eafa99" xml:space="preserve">
+    <value>Reimposta dimensione</value>
+  </data>
+  <data name="Gr_n_c3486362" xml:space="preserve">
+    <value>Verde</value>
+  </data>
+  <data name="Grau_Dunkel_ad6ddf82" xml:space="preserve">
+    <value>Grigio scuro</value>
+  </data>
+  <data name="Grau_Hell_39c0ef48" xml:space="preserve">
+    <value>Grigio chiaro</value>
+  </data>
+  <data name="Grid_view_d44ec861" xml:space="preserve">
+    <value>Vista griglia</value>
+  </data>
+  <data name="Grundlegende_Einstellungen_f_r_Startverhalten_un_2c001b64" xml:space="preserve">
+    <value>Impostazioni di base per avvio e lingua.</value>
+  </data>
+  <data name="H_he_f0c362ad" xml:space="preserve">
+    <value>Altezza</value>
+  </data>
+  <data name="Hell_ed10fe11" xml:space="preserve">
+    <value>Chiaro</value>
+  </data>
+  <data name="Helligkeit_b2a967ed" xml:space="preserve">
+    <value>Luminosita</value>
+  </data>
+  <data name="Highlights_1f9c9c4e" xml:space="preserve">
+    <value>Luci</value>
+  </data>
+  <data name="Hinzuf_gen_fe11952b" xml:space="preserve">
+    <value>+ Aggiungi</value>
+  </data>
+  <data name="Histogramm_455b1e18" xml:space="preserve">
+    <value>Istogramma</value>
+  </data>
+  <data name="Horizontal_4f57a1ce" xml:space="preserve">
+    <value>Orizzontale</value>
+  </data>
+  <data name="Im_Dateimanager_zeigen_c3bc5ce6" xml:space="preserve">
+    <value>Mostra nel file manager</value>
+  </data>
+  <data name="Im_Editor_bearbeiten_87b2eb75" xml:space="preserve">
+    <value>Modifica nell editor</value>
+  </data>
+  <data name="Im_Editor_ffnen_8c9ed1e5" xml:space="preserve">
+    <value>Apri nell editor</value>
+  </data>
+  <data name="image_0e762927" xml:space="preserve">
+    <value>immagine</value>
+  </data>
+  <data name="images_19f49d85" xml:space="preserve">
+    <value>immagini</value>
+  </data>
+  <data name="in_clipboard_c928fb84" xml:space="preserve">
+    <value>negli appunti</value>
+  </data>
+  <data name="in_der_Zwischenablage_b8c9f8d4" xml:space="preserve">
+    <value>negli appunti</value>
+  </data>
+  <data name="Info_4b631f69" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="Info_Seitenleiste_bd33aafc" xml:space="preserve">
+    <value>Barra laterale info</value>
+  </data>
+  <data name="Info_Seitenleiste_im_Editor_anzeigen_105d00fd" xml:space="preserve">
+    <value>Mostra barra laterale info nell'editor</value>
+  </data>
+  <data name="Infos_df9161f6" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="Interface_7b4db7ef" xml:space="preserve">
+    <value>Interfaccia</value>
+  </data>
+  <data name="Interface_density_7e6e3076" xml:space="preserve">
+    <value>Densita interfaccia</value>
+  </data>
+  <data name="Italian_485b57ad" xml:space="preserve">
+    <value>Italiano</value>
+  </data>
+  <data name="Italienisch_0e44d924" xml:space="preserve">
+    <value>Italiano</value>
+  </data>
+  <data name="items_7316c8b2" xml:space="preserve">
+    <value>elementi</value>
+  </data>
+  <data name="items_selected_7494106a" xml:space="preserve">
+    <value>elementi selezionati</value>
+  </data>
+  <data name="JPG_Qualit_t_038d0284" xml:space="preserve">
+    <value>Qualita JPG</value>
+  </data>
+  <data name="June_a9db9067" xml:space="preserve">
+    <value>giugno</value>
+  </data>
+  <data name="Juni_7e1115bd" xml:space="preserve">
+    <value>giugno</value>
+  </data>
+  <data name="K_hl_10e891c6" xml:space="preserve">
+    <value>Freddo</value>
+  </data>
+  <data name="Kamera_83008f45" xml:space="preserve">
+    <value>Fotocamera</value>
+  </data>
+  <data name="Kein_Bearbeitungsrezept_gefunden_330ec739" xml:space="preserve">
+    <value>Nessuna ricetta di modifica trovata</value>
+  </data>
+  <data name="Kein_Bild_ge_ffnet_1bd73187" xml:space="preserve">
+    <value>Nessuna immagine aperta</value>
+  </data>
+  <data name="Kein_Bild_zum_Bearbeiten_ec816123" xml:space="preserve">
+    <value>Nessuna immagine da modificare</value>
+  </data>
+  <data name="Kein_Element_ausgew_hlt_024bfd9d" xml:space="preserve">
+    <value>Nessun elemento selezionato</value>
+  </data>
+  <data name="Kein_Ordner_ge_ffnet_10dc06be" xml:space="preserve">
+    <value>Nessuna cartella aperta</value>
+  </data>
+  <data name="Kein_Ordner_gew_hlt_4e5fd1d1" xml:space="preserve">
+    <value>Nessuna cartella selezionata</value>
+  </data>
+  <data name="Kein_Vorschaubild_Cache_vorhanden_182b5777" xml:space="preserve">
+    <value>Nessuna cache miniature disponibile.</value>
+  </data>
+  <data name="Keine_3ce60e74" xml:space="preserve">
+    <value>Nessuno</value>
+  </data>
+  <data name="Keine_Bildschirme_erkannt_45fa0a13" xml:space="preserve">
+    <value>Nessuno schermo rilevato.</value>
+  </data>
+  <data name="Keine_EXIF_Daten_66a1342f" xml:space="preserve">
+    <value>Nessun dato EXIF</value>
+  </data>
+  <data name="Klarheit_cc2bec9d" xml:space="preserve">
+    <value>Chiarezza</value>
+  </data>
+  <data name="Komfortabel_ed69e8a4" xml:space="preserve">
+    <value>Comoda</value>
+  </data>
+  <data name="Kompakt_2e1aa0a6" xml:space="preserve">
+    <value>Compatta</value>
+  </data>
+  <data name="Kontrast_40740423" xml:space="preserve">
+    <value>Contrasto</value>
+  </data>
+  <data name="Kopieren_d37925ec" xml:space="preserve">
+    <value>Copia</value>
+  </data>
+  <data name="Kurve_zur_cksetzen_bf81369a" xml:space="preserve">
+    <value>Reimposta curva</value>
+  </data>
+  <data name="L_schen_fehlgeschlagen_0b03e19f" xml:space="preserve">
+    <value>Eliminazione non riuscita</value>
+  </data>
+  <data name="L_schen_ffa5a8a7" xml:space="preserve">
+    <value>Elimina</value>
+  </data>
+  <data name="Language_89b86ab0" xml:space="preserve">
+    <value>Lingua</value>
+  </data>
+  <data name="Legt_fest_auf_welchem_Bildschirm_die_gew_hlte_Sk_dde40652" xml:space="preserve">
+    <value>Controlla su quale schermo viene applicato il ridimensionamento scelto.</value>
+  </data>
+  <data name="Legt_fest_welcher_Modus_verwendet_wird_wenn_Ferr_915824a3" xml:space="preserve">
+    <value>Controlla quale modalita viene usata quando FerrumPix viene aperto con un immagine come parametro.</value>
+  </data>
+  <data name="Legt_fest_wie_Bilder_beim_ffnen_dargestellt_werd_83b8aead" xml:space="preserve">
+    <value>Controlla come vengono visualizzate le immagini all apertura.</value>
+  </data>
+  <data name="Legt_fest_wie_lange_ein_Bild_in_der_Diashow_sich_09664a6a" xml:space="preserve">
+    <value>Controlla per quanto tempo un'immagine resta visibile nella presentazione.</value>
+  </data>
+  <data name="Leistung_4606f4f0" xml:space="preserve">
+    <value>Prestazioni</value>
+  </data>
+  <data name="Library_b8100f5b" xml:space="preserve">
+    <value>Libreria</value>
+  </data>
+  <data name="License_3229609e" xml:space="preserve">
+    <value>Licenza</value>
+  </data>
+  <data name="Licht_97999345" xml:space="preserve">
+    <value>Chiaro</value>
+  </data>
+  <data name="Licht_zur_cksetzen_ec4af2d9" xml:space="preserve">
+    <value>Reimposta luce</value>
+  </data>
+  <data name="Lichter_0d752db1" xml:space="preserve">
+    <value>Luci</value>
+  </data>
+  <data name="Light_a36ef8ab" xml:space="preserve">
+    <value>Chiaro</value>
+  </data>
+  <data name="Links_014bcd65" xml:space="preserve">
+    <value>Sinistra</value>
+  </data>
+  <data name="List_view_694bbd75" xml:space="preserve">
+    <value>Vista lista</value>
+  </data>
+  <data name="Listenansicht_2e5963f1" xml:space="preserve">
+    <value>Vista lista</value>
+  </data>
+  <data name="Live_Aktualisierung_e757c377" xml:space="preserve">
+    <value>Aggiornamento live</value>
+  </data>
+  <data name="Live_update_8c3cfb28" xml:space="preserve">
+    <value>Aggiornamento live</value>
+  </data>
+  <data name="Lizenz_a0dcbd4b" xml:space="preserve">
+    <value>Licenza</value>
+  </data>
+  <data name="Loading_error_1b2e1167" xml:space="preserve">
+    <value>Errore di caricamento</value>
+  </data>
+  <data name="Magenta_ff6912e2" xml:space="preserve">
+    <value>Magenta</value>
+  </data>
+  <data name="Maximieren_a1c4dde2" xml:space="preserve">
+    <value>Massimizza</value>
+  </data>
+  <data name="Maximize_35afae8b" xml:space="preserve">
+    <value>Massimizza</value>
+  </data>
+  <data name="Megapixel_a25ce44d" xml:space="preserve">
+    <value>Megapixel</value>
+  </data>
+  <data name="Minimieren_209bcbdc" xml:space="preserve">
+    <value>Minimizza</value>
+  </data>
+  <data name="Minimize_1c5b768c" xml:space="preserve">
+    <value>Minimizza</value>
+  </data>
+  <data name="Mitten_55ed270d" xml:space="preserve">
+    <value>Mezzi toni</value>
+  </data>
+  <data name="Move_failed_795434c4" xml:space="preserve">
+    <value>Spostamento non riuscito</value>
+  </data>
+  <data name="Move_image_a97c8332" xml:space="preserve">
+    <value>Sposta immagine</value>
+  </data>
+  <data name="N_chstes_Bild_6a520514" xml:space="preserve">
+    <value>Immagine successiva</value>
+  </data>
+  <data name="Nach_links_drehen_50f2450c" xml:space="preserve">
+    <value>Ruota a sinistra</value>
+  </data>
+  <data name="Nachher_be9b9933" xml:space="preserve">
+    <value>Dopo</value>
+  </data>
+  <data name="Name_709a2322" xml:space="preserve">
+    <value>Nome</value>
+  </data>
+  <data name="Navigationspfad_anzeigen_ec471b82" xml:space="preserve">
+    <value>Mostra percorso</value>
+  </data>
+  <data name="nderung_wird_nach_einem_Neustart_aktiv_d994f6d3" xml:space="preserve">
+    <value>La modifica sara attiva dopo il riavvio.</value>
+  </data>
+  <data name="nderungsdatum_186353a4" xml:space="preserve">
+    <value>Data modifica</value>
+  </data>
+  <data name="neue_Datei_8f3f6152" xml:space="preserve">
+    <value>nuovo file</value>
+  </data>
+  <data name="Neuen_Namen_eingeben_1f39e63b" xml:space="preserve">
+    <value>Inserisci un nuovo nome</value>
+  </data>
+  <data name="Neuer_Ordner_23635f61" xml:space="preserve">
+    <value>Nuova cartella</value>
+  </data>
+  <data name="Next_image_eb89a789" xml:space="preserve">
+    <value>Immagine successiva</value>
+  </data>
+  <data name="Nicht_bewertet_2944fe26" xml:space="preserve">
+    <value>Non valutato</value>
+  </data>
+  <data name="No_folder_open_bb7b6b23" xml:space="preserve">
+    <value>Nessuna cartella aperta</value>
+  </data>
+  <data name="No_folder_selected_dd008e47" xml:space="preserve">
+    <value>Nessuna cartella selezionata</value>
+  </data>
+  <data name="No_image_open_7c1f18d4" xml:space="preserve">
+    <value>Nessuna immagine aperta</value>
+  </data>
+  <data name="No_image_to_edit_790f0db7" xml:space="preserve">
+    <value>Nessuna immagine da modificare</value>
+  </data>
+  <data name="No_item_selected_74539c00" xml:space="preserve">
+    <value>Nessun elemento selezionato</value>
+  </data>
+  <data name="Noise_15b378e9" xml:space="preserve">
+    <value>Rumore</value>
+  </data>
+  <data name="Nur_Favoriten_87501cd3" xml:space="preserve">
+    <value>Solo preferiti</value>
+  </data>
+  <data name="Nur_Nicht_RAW_4d714c67" xml:space="preserve">
+    <value>Solo non RAW</value>
+  </data>
+  <data name="Nur_RAW_707b586b" xml:space="preserve">
+    <value>Solo RAW</value>
+  </data>
+  <data name="Nutzung_a2aa7b81" xml:space="preserve">
+    <value>Uso</value>
+  </data>
+  <data name="Oben_94cf5b78" xml:space="preserve">
+    <value>Alto</value>
+  </data>
+  <data name="Oberfl_che_ae0be527" xml:space="preserve">
+    <value>Interfaccia</value>
+  </data>
+  <data name="Objektiv_5cc9bce9" xml:space="preserve">
+    <value>Obiettivo</value>
+  </data>
+  <data name="OK_9ce3bd42" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Open_an_image_from_the_viewer_0d677338" xml:space="preserve">
+    <value>Apri un immagine dal visualizzatore</value>
+  </data>
+  <data name="Open_cf9b7706" xml:space="preserve">
+    <value>Apri</value>
+  </data>
+  <data name="Open_in_editor_d47c851b" xml:space="preserve">
+    <value>Apri nell editor</value>
+  </data>
+  <data name="Opens_images_scaled_to_the_available_window_area_421d65a2" xml:space="preserve">
+    <value>Apre le immagini adattate all area disponibile della finestra invece che alle dimensioni originali.</value>
+  </data>
+  <data name="Orange_09fb6aab" xml:space="preserve">
+    <value>Arancione</value>
+  </data>
+  <data name="Ordner_adfefd71" xml:space="preserve">
+    <value>Cartelle</value>
+  </data>
+  <data name="Ordner_erstellen_fehlgeschlagen_17b59568" xml:space="preserve">
+    <value>Creazione cartella non riuscita</value>
+  </data>
+  <data name="Ordner_in_der_Galerie_anzeigen_243bc6af" xml:space="preserve">
+    <value>Mostra cartelle nella galleria</value>
+  </data>
+  <data name="Ordner_kann_nicht_in_sich_selbst_verschoben_werd_c874e142" xml:space="preserve">
+    <value>Una cartella non puo essere spostata dentro se stessa.</value>
+  </data>
+  <data name="Ordnernamen_eingeben_5815f6d2" xml:space="preserve">
+    <value>Inserisci nome cartella</value>
+  </data>
+  <data name="Original_c0a8060f" xml:space="preserve">
+    <value>Originale</value>
+  </data>
+  <data name="Paste_db248300" xml:space="preserve">
+    <value>Incolla</value>
+  </data>
+  <data name="Paste_failed_18bdc45c" xml:space="preserve">
+    <value>Incolla non riuscito</value>
+  </data>
+  <data name="Performance_63c90455" xml:space="preserve">
+    <value>Prestazioni</value>
+  </data>
+  <data name="Pfad_kopieren_ec28c54c" xml:space="preserve">
+    <value>Copia percorso</value>
+  </data>
+  <data name="Previous_image_46edf0f8" xml:space="preserve">
+    <value>Immagine precedente</value>
+  </data>
+  <data name="R_ckg_ngig_b626f2e4" xml:space="preserve">
+    <value>Annulla</value>
+  </data>
+  <data name="Radius_e5aaeaac" xml:space="preserve">
+    <value>Raggio</value>
+  </data>
+  <data name="Rahmen_62ee97cc" xml:space="preserve">
+    <value>Cornice</value>
+  </data>
+  <data name="Rasteransicht_317f9f8f" xml:space="preserve">
+    <value>Vista griglia</value>
+  </data>
+  <data name="Rating_6437b7bf" xml:space="preserve">
+    <value>Valutazione</value>
+  </data>
+  <data name="Rauschen_ded8bdce" xml:space="preserve">
+    <value>Rumore</value>
+  </data>
+  <data name="Rechts_d2911a6a" xml:space="preserve">
+    <value>Destra</value>
+  </data>
+  <data name="Redo_471b94d4" xml:space="preserve">
+    <value>Ripeti</value>
+  </data>
+  <data name="Registerkartenleiste_anzeigen_595f1784" xml:space="preserve">
+    <value>Mostra barra schede</value>
+  </data>
+  <data name="REIHENFOLGE_f98966d7" xml:space="preserve">
+    <value>ORDINE</value>
+  </data>
+  <data name="Rename_d3f4cb89" xml:space="preserve">
+    <value>Rinomina</value>
+  </data>
+  <data name="Rename_failed_85aa47dd" xml:space="preserve">
+    <value>Rinomina non riuscita</value>
+  </data>
+  <data name="Reset_44c57abd" xml:space="preserve">
+    <value>Reimposta</value>
+  </data>
+  <data name="Reset_to_defaults_ddefe47d" xml:space="preserve">
+    <value>Ripristina predefiniti</value>
+  </data>
+  <data name="Retouch_d0b8e975" xml:space="preserve">
+    <value>Ritocco</value>
+  </data>
+  <data name="Retusche_fb5c6ed6" xml:space="preserve">
+    <value>Ritocco</value>
+  </data>
+  <data name="Retusche_zur_cksetzen_b81fb3a8" xml:space="preserve">
+    <value>Reimposta ritocco</value>
+  </data>
+  <data name="Rezept_konnte_nicht_geladen_werden_ca7226d7" xml:space="preserve">
+    <value>Impossibile caricare la ricetta: </value>
+  </data>
+  <data name="Rezept_konnte_nicht_gespeichert_werden_af3ff7fa" xml:space="preserve">
+    <value>Impossibile salvare la ricetta: </value>
+  </data>
+  <data name="Rot_ab9513c7" xml:space="preserve">
+    <value>Rosso</value>
+  </data>
+  <data name="Rotate_87b85dca" xml:space="preserve">
+    <value>Ruota</value>
+  </data>
+  <data name="Rotate_left_6f72f3cd" xml:space="preserve">
+    <value>Ruota a sinistra</value>
+  </data>
+  <data name="S_ttigung_d84091b7" xml:space="preserve">
+    <value>Saturazione</value>
+  </data>
+  <data name="Save_as_c8182796" xml:space="preserve">
+    <value>Salva con nome...</value>
+  </data>
+  <data name="Save_as_f313a0b1" xml:space="preserve">
+    <value>Salva con nome</value>
+  </data>
+  <data name="Save_efc007a3" xml:space="preserve">
+    <value>Salva</value>
+  </data>
+  <data name="Save_failed_0a444467" xml:space="preserve">
+    <value>Salvataggio non riuscito</value>
+  </data>
+  <data name="Saved_c0ae8f6e" xml:space="preserve">
+    <value>Salvato</value>
+  </data>
+  <data name="Saving_ae7e8875" xml:space="preserve">
+    <value>Salvataggio...</value>
+  </data>
+  <data name="Sch_rfe_d7ee5f27" xml:space="preserve">
+    <value>Nitidezza</value>
+  </data>
+  <data name="Sch_rfen_662ae02c" xml:space="preserve">
+    <value>Nitidezza</value>
+  </data>
+  <data name="Schlie_en_44424b18" xml:space="preserve">
+    <value>Chiudi</value>
+  </data>
+  <data name="Schwarz_4b436dc5" xml:space="preserve">
+    <value>Nero</value>
+  </data>
+  <data name="Seitenverh_ltnis_8a496526" xml:space="preserve">
+    <value>Proporzioni</value>
+  </data>
+  <data name="Seitenverh_ltnis_beibehalten_113e6edb" xml:space="preserve">
+    <value>Mantieni proporzioni</value>
+  </data>
+  <data name="Select_85982229" xml:space="preserve">
+    <value>Seleziona</value>
+  </data>
+  <data name="Select_a_folder_in_the_sidebar_7f9e356f" xml:space="preserve">
+    <value>Seleziona una cartella nella barra laterale</value>
+  </data>
+  <data name="Select_an_image_from_the_gallery_5b557a0b" xml:space="preserve">
+    <value>Seleziona un immagine dalla galleria</value>
+  </data>
+  <data name="Settings_c7f73bb5" xml:space="preserve">
+    <value>Impostazioni</value>
+  </data>
+  <data name="Settings_for_editing_and_preview_3a8595b6" xml:space="preserve">
+    <value>Impostazioni per modifica e anteprima.</value>
+  </data>
+  <data name="Settings_for_the_folder_and_file_view_in_the_sid_98ffff27" xml:space="preserve">
+    <value>Impostazioni per la vista cartelle e file nella barra laterale.</value>
+  </data>
+  <data name="Shadows_446d99fc" xml:space="preserve">
+    <value>Ombre</value>
+  </data>
+  <data name="Sharpen_f4777fae" xml:space="preserve">
+    <value>Nitidezza</value>
+  </data>
+  <data name="Show_breadcrumb_9c95da14" xml:space="preserve">
+    <value>Mostra percorso</value>
+  </data>
+  <data name="Show_EXIF_info_98ba3341" xml:space="preserve">
+    <value>Mostra info EXIF</value>
+  </data>
+  <data name="Show_filmstrip_in_editor_2a88e956" xml:space="preserve">
+    <value>Mostra filmstrip nell editor</value>
+  </data>
+  <data name="Show_filmstrip_in_viewer_20f1322a" xml:space="preserve">
+    <value>Mostra filmstrip nel visualizzatore</value>
+  </data>
+  <data name="Show_folders_in_gallery_5025ab4f" xml:space="preserve">
+    <value>Mostra cartelle nella galleria</value>
+  </data>
+  <data name="Show_hidden_folders_89d20f49" xml:space="preserve">
+    <value>Mostra cartelle nascoste</value>
+  </data>
+  <data name="Show_in_file_manager_075f7ac8" xml:space="preserve">
+    <value>Mostra nel file manager</value>
+  </data>
+  <data name="Show_tab_bar_8ed66022" xml:space="preserve">
+    <value>Mostra barra schede</value>
+  </data>
+  <data name="Shows_folders_whose_name_starts_with_a_dot_for_e_b9da2300" xml:space="preserve">
+    <value>Mostra cartelle il cui nome inizia con un punto (ad esempio .config, .local).</value>
+  </data>
+  <data name="Shows_subfolders_next_to_images_double_click_ope_45a64218" xml:space="preserve">
+    <value>Mostra sottocartelle accanto alle immagini; doppio clic apre la cartella.</value>
+  </data>
+  <data name="Shows_the_breadcrumb_above_the_file_list_c7baf540" xml:space="preserve">
+    <value>Mostra il percorso sopra la lista file.</value>
+  </data>
+  <data name="Shows_the_image_strip_at_the_bottom_of_the_edito_dc3934aa" xml:space="preserve">
+    <value>Mostra la striscia immagini in basso nell editor.</value>
+  </data>
+  <data name="Shows_the_image_strip_at_the_bottom_of_the_viewe_bf6b2029" xml:space="preserve">
+    <value>Mostra la striscia immagini in basso nel visualizzatore.</value>
+  </data>
+  <data name="Shows_the_tab_bar_in_the_main_window_4cba4d0b" xml:space="preserve">
+    <value>Mostra la barra schede nella finestra principale.</value>
+  </data>
+  <data name="Size_b7152342" xml:space="preserve">
+    <value>Dimensione</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__57d3635a" xml:space="preserve">
+    <value>Ridimensiona l'intera interfaccia al prossimo avvio.</value>
+  </data>
+  <data name="Slideshow_001d54c2" xml:space="preserve">
+    <value>Presentazione</value>
+  </data>
+  <data name="Sort_adc4e96a" xml:space="preserve">
+    <value>Ordina</value>
+  </data>
+  <data name="Sortieren_dce5f31e" xml:space="preserve">
+    <value>Ordina</value>
+  </data>
+  <data name="SORTIEREN_NACH_7a6e7a81" xml:space="preserve">
+    <value>ORDINA PER</value>
+  </data>
+  <data name="Spacious_af7760d4" xml:space="preserve">
+    <value>Spaziosa</value>
+  </data>
+  <data name="Spanisch_3e0743d5" xml:space="preserve">
+    <value>Spagnolo</value>
+  </data>
+  <data name="Spanish_8df7f1b3" xml:space="preserve">
+    <value>Spagnolo</value>
+  </data>
+  <data name="Speichern_70b73bbc" xml:space="preserve">
+    <value>Salva</value>
+  </data>
+  <data name="Speichern_fehlgeschlagen_d47d5fa0" xml:space="preserve">
+    <value>Salvataggio non riuscito</value>
+  </data>
+  <data name="Speichern_unter_273d68d4" xml:space="preserve">
+    <value>Salva con nome...</value>
+  </data>
+  <data name="Speichern_unter_9153c1b5" xml:space="preserve">
+    <value>Salva con nome</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_auf_dem_Ger_t_damit_Ord_da808761" xml:space="preserve">
+    <value>Salva le miniature sul dispositivo per caricare piu rapidamente le cartelle alla prossima apertura.</value>
+  </data>
+  <data name="Sprache_3d9f5cb4" xml:space="preserve">
+    <value>Lingua</value>
+  </data>
+  <data name="Start_mit_Bilddatei_6a19cd1d" xml:space="preserve">
+    <value>Avvio con file immagine</value>
+  </data>
+  <data name="Start_stop_slideshow_Space_e8338383" xml:space="preserve">
+    <value>Avvia / interrompi presentazione (Spazio)</value>
+  </data>
+  <data name="Startordner_der_Galerie_155a2046" xml:space="preserve">
+    <value>Cartella iniziale della galleria</value>
+  </data>
+  <data name="Startup_with_image_file_1fc7c689" xml:space="preserve">
+    <value>Avvio con file immagine</value>
+  </data>
+  <data name="Steuert_die_Darstellung_der_Oberfl_che_und_die_s_0c165951" xml:space="preserve">
+    <value>Controlla l aspetto dell interfaccia e i controlli visibili.</value>
+  </data>
+  <data name="Steuert_die_Gr_enwirkung_und_die_sichtbaren_Bedi_160c94ad" xml:space="preserve">
+    <value>Controlla densita ed elementi visibili dell interfaccia.</value>
+  </data>
+  <data name="Stichw_rter_475b7e84" xml:space="preserve">
+    <value>Parole chiave</value>
+  </data>
+  <data name="Stichwort_hinzuf_gen_d9c75a38" xml:space="preserve">
+    <value>Aggiungi parola chiave...</value>
+  </data>
+  <data name="System_bc0792d8" xml:space="preserve">
+    <value>Sistema</value>
+  </data>
+  <data name="Temperatur_71866035" xml:space="preserve">
+    <value>Temperatura</value>
+  </data>
+  <data name="Text_c3328c39" xml:space="preserve">
+    <value>Testo</value>
+  </data>
+  <data name="The_file_name_contains_invalid_characters_adc33b68" xml:space="preserve">
+    <value>Il nome file contiene caratteri non validi.</value>
+  </data>
+  <data name="The_name_contains_invalid_characters_30c299b0" xml:space="preserve">
+    <value>Il nome contiene caratteri non validi.</value>
+  </data>
+  <data name="Thema_b2f1380a" xml:space="preserve">
+    <value>Tema</value>
+  </data>
+  <data name="Theme_a797e309" xml:space="preserve">
+    <value>Tema</value>
+  </data>
+  <data name="Thumbnails_fcecbb00" xml:space="preserve">
+    <value>Miniature</value>
+  </data>
+  <data name="Tiefen_c71e9bb8" xml:space="preserve">
+    <value>Ombre</value>
+  </data>
+  <data name="Tonwertkurve_9ef1ed82" xml:space="preserve">
+    <value>Curva tonale</value>
+  </data>
+  <data name="Transformieren_1dab88e2" xml:space="preserve">
+    <value>Trasforma</value>
+  </data>
+  <data name="Transformieren_zur_cksetzen_8f478d3d" xml:space="preserve">
+    <value>Reimposta trasformazione</value>
+  </data>
+  <data name="Typ_edcaf9aa" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="Type_3deb7456" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="Umbenennen_a0aa20d8" xml:space="preserve">
+    <value>Rinomina</value>
+  </data>
+  <data name="Umbenennen_fehlgeschlagen_7550d3c3" xml:space="preserve">
+    <value>Rinomina non riuscita</value>
+  </data>
+  <data name="und_h_her_3240b4f6" xml:space="preserve">
+    <value>★★ e oltre</value>
+  </data>
+  <data name="und_h_her_51bc56d1" xml:space="preserve">
+    <value>★ e oltre</value>
+  </data>
+  <data name="und_h_her_957ca8f8" xml:space="preserve">
+    <value>★★★★ e oltre</value>
+  </data>
+  <data name="und_h_her_fbb27b0c" xml:space="preserve">
+    <value>★★★ e oltre</value>
+  </data>
+  <data name="Undo_39fc7212" xml:space="preserve">
+    <value>Annulla</value>
+  </data>
+  <data name="Unten_5249c3f9" xml:space="preserve">
+    <value>Basso</value>
+  </data>
+  <data name="Usage_0bb18642" xml:space="preserve">
+    <value>Uso</value>
+  </data>
+  <data name="Use_rounded_corners_93585ca6" xml:space="preserve">
+    <value>Usa angoli arrotondati</value>
+  </data>
+  <data name="Uses_rounded_corners_for_windows_and_controls_89d473a7" xml:space="preserve">
+    <value>Usa angoli arrotondati per finestre e controlli.</value>
+  </data>
+  <data name="Uses_the_system_language_by_default_falls_back_t_e568e099" xml:space="preserve">
+    <value>Usa la lingua di sistema per impostazione predefinita; torna all inglese se non supportata.</value>
+  </data>
+  <data name="Vergleich_410b57da" xml:space="preserve">
+    <value>Confronto</value>
+  </data>
+  <data name="Vergleich_ein_oder_ausblenden_294aac27" xml:space="preserve">
+    <value>Mostra o nascondi confronto</value>
+  </data>
+  <data name="Vergr_ern_3779202e" xml:space="preserve">
+    <value>Ingrandisci</value>
+  </data>
+  <data name="Verkleinern_2b3117e1" xml:space="preserve">
+    <value>Riduci</value>
+  </data>
+  <data name="Verschieben_af0e5681" xml:space="preserve">
+    <value>Sposta</value>
+  </data>
+  <data name="Verschieben_fehlgeschlagen_2bd4e5f3" xml:space="preserve">
+    <value>Spostamento non riuscito</value>
+  </data>
+  <data name="Verschieben_Modus_ein_oder_ausschalten_f8deeb6b" xml:space="preserve">
+    <value>Attiva o disattiva modalita sposta</value>
+  </data>
+  <data name="Version_2da600bf" xml:space="preserve">
+    <value>Versione</value>
+  </data>
+  <data name="Versteckte_Ordner_anzeigen_cadedad8" xml:space="preserve">
+    <value>Mostra cartelle nascoste</value>
+  </data>
+  <data name="Versteckte_Ordner_k_nnen_hier_nicht_erstellt_wer_8128a80d" xml:space="preserve">
+    <value>Le cartelle nascoste non possono essere create qui.</value>
+  </data>
+  <data name="Vertikal_dc5d0020" xml:space="preserve">
+    <value>Verticale</value>
+  </data>
+  <data name="Verwendet_abgerundete_Ecken_f_r_Fenster_und_Bedi_68ea06e4" xml:space="preserve">
+    <value>Usa angoli arrotondati per finestre e controlli.</value>
+  </data>
+  <data name="Verwendet_standardm_ig_die_Systemsprache_falls_n_eb8ed68d" xml:space="preserve">
+    <value>Usa la lingua di sistema per impostazione predefinita; torna all inglese se non supportata.</value>
+  </data>
+  <data name="View_3718bc8d" xml:space="preserve">
+    <value>Vista:</value>
+  </data>
+  <data name="Viewer_dbad9f12" xml:space="preserve">
+    <value>Visualizzatore</value>
+  </data>
+  <data name="Vignette_42275e06" xml:space="preserve">
+    <value>Vignettatura</value>
+  </data>
+  <data name="Vollbild_d6d9901a" xml:space="preserve">
+    <value>Schermo intero</value>
+  </data>
+  <data name="Vorher_60c78d26" xml:space="preserve">
+    <value>Prima</value>
+  </data>
+  <data name="Vorher_Nachher_fb3ae0a3" xml:space="preserve">
+    <value>Prima/Dopo</value>
+  </data>
+  <data name="Vorheriges_Bild_d978fd96" xml:space="preserve">
+    <value>Immagine precedente</value>
+  </data>
+  <data name="Vorschau_aktualisieren_6edcba5c" xml:space="preserve">
+    <value>Aggiorna anteprima</value>
+  </data>
+  <data name="Vorschau_bereit_213bcdb3" xml:space="preserve">
+    <value>Anteprima pronta</value>
+  </data>
+  <data name="Vorschau_Fehler_df505ab1" xml:space="preserve">
+    <value>Errore anteprima: </value>
+  </data>
+  <data name="Vorschau_mit_den_aktuellen_Einstellungen_neu_ber_f37c3c48" xml:space="preserve">
+    <value>Ricalcola l anteprima con le impostazioni attuali</value>
+  </data>
+  <data name="Vorschau_wird_aktualisiert_cb7c2c8b" xml:space="preserve">
+    <value>Anteprima in aggiornamento...</value>
+  </data>
+  <data name="Vorschau_wird_berechnet_7b753457" xml:space="preserve">
+    <value>Calcolo anteprima...</value>
+  </data>
+  <data name="Vorschaubild_Cache_nach_Ordnern_fbee800a" xml:space="preserve">
+    <value>Cache miniature per cartella</value>
+  </data>
+  <data name="Vorschaubild_Qualit_t_3c4921cf" xml:space="preserve">
+    <value>Qualita miniature</value>
+  </data>
+  <data name="Vorschaubilder_89f4bb44" xml:space="preserve">
+    <value>Miniature</value>
+  </data>
+  <data name="Vorschaubilder_zwischenspeichern_246a8f7a" xml:space="preserve">
+    <value>Memorizza miniature nella cache</value>
+  </data>
+  <data name="Vorw_rts_1f386fb2" xml:space="preserve">
+    <value>Avanti</value>
+  </data>
+  <data name="W_hle_ein_Bild_aus_der_Galerie_fbdad853" xml:space="preserve">
+    <value>Seleziona un immagine dalla galleria</value>
+  </data>
+  <data name="W_hle_einen_Ordner_in_der_Sidebar_8c51f4b6" xml:space="preserve">
+    <value>Seleziona una cartella nella barra laterale</value>
+  </data>
+  <data name="W_hlen_Sie_das_Erscheinungsbild_der_Benutzerober_80459ecf" xml:space="preserve">
+    <value>Scegli l aspetto dell interfaccia.</value>
+  </data>
+  <data name="W_hlen_Sie_eine_Akzentfarbe_f_r_Hervorhebungen_u_d658f955" xml:space="preserve">
+    <value>Scegli un colore accento per evidenziazioni ed elementi attivi.</value>
+  </data>
+  <data name="Warm_63e49827" xml:space="preserve">
+    <value>Caldo</value>
+  </data>
+  <data name="Wei_abgleich_e530d9c9" xml:space="preserve">
+    <value>Bilanciamento del bianco</value>
+  </data>
+  <data name="Wei_fb938e02" xml:space="preserve">
+    <value>Bianco</value>
+  </data>
+  <data name="Weitere_Optionen_d83a4ef1" xml:space="preserve">
+    <value>Opzioni aggiuntive.</value>
+  </data>
+  <data name="White_37619fc1" xml:space="preserve">
+    <value>Bianco</value>
+  </data>
+  <data name="Wiederholen_6a36d3b7" xml:space="preserve">
+    <value>Ripeti</value>
+  </data>
+  <data name="Willkommen_bei_FerrumPix_efcd4f95" xml:space="preserve">
+    <value>Benvenuto in FerrumPix</value>
+  </data>
+  <data name="Wird_f_r_das_Speichern_und_Exportieren_als_JPG_v_614ce77a" xml:space="preserve">
+    <value>Usato per salvare ed esportare come JPG.</value>
+  </data>
+  <data name="Wird_gespeichert_129ed064" xml:space="preserve">
+    <value>Salvataggio...</value>
+  </data>
+  <data name="Zeigt_den_Navigationspfad_ber_der_Dateiliste_an_f3fc97a0" xml:space="preserve">
+    <value>Mostra il percorso sopra la lista file.</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_am_unteren_Rand_des_Editors_3e30b75c" xml:space="preserve">
+    <value>Mostra la striscia immagini in basso nell editor.</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_am_unteren_Rand_des_Viewers_108721b7" xml:space="preserve">
+    <value>Mostra la striscia immagini in basso nel visualizzatore.</value>
+  </data>
+  <data name="Zeigt_die_Registerkartenleiste_im_Hauptfenster_a_13a6d0a8" xml:space="preserve">
+    <value>Mostra la barra schede nella finestra principale.</value>
+  </data>
+  <data name="Zeigt_Ordner_an_deren_Name_mit_einem_Punkt_begin_c6e56c44" xml:space="preserve">
+    <value>Mostra cartelle il cui nome inizia con un punto (ad esempio .config, .local).</value>
+  </data>
+  <data name="Zeigt_Unterordner_neben_Bildern_an_Doppelklick_f_6344f95c" xml:space="preserve">
+    <value>Mostra sottocartelle accanto alle immagini; doppio clic apre la cartella.</value>
+  </data>
+  <data name="Zoom_78cea61f" xml:space="preserve">
+    <value>Zoom:</value>
+  </data>
+  <data name="Zoom_in_4fc05f27" xml:space="preserve">
+    <value>Ingrandisci</value>
+  </data>
+  <data name="Zoom_out_a4ae4b24" xml:space="preserve">
+    <value>Riduci</value>
+  </data>
+  <data name="Zugriff_verweigert_37c15cff" xml:space="preserve">
+    <value>Accesso negato</value>
+  </data>
+  <data name="Zum_Bilder_Ordner_9a02ca44" xml:space="preserve">
+    <value>Alla cartella Immagini</value>
+  </data>
+  <data name="Zuordnungen_f_r_unterst_tzte_Bildformate_514740cc" xml:space="preserve">
+    <value>Associazioni per i formati immagine supportati.</value>
+  </data>
+  <data name="Zur_ck_40806243" xml:space="preserve">
+    <value>Indietro</value>
+  </data>
+  <data name="Zur_ck_zur_Galerie_2b08bee2" xml:space="preserve">
+    <value>Torna alla galleria</value>
+  </data>
+  <data name="Zur_cksetzen_a4565af5" xml:space="preserve">
+    <value>Reimposta</value>
+  </data>
+  <data name="Zuschneiden_1f1fa12c" xml:space="preserve">
+    <value>Ritaglia</value>
+  </data>
+  <data name="1_Stern_fde89dab" xml:space="preserve">
+    <value>1 stella</value>
+  </data>
+  <data name="2_Sterne_535da2c5" xml:space="preserve">
+    <value>2 stelle</value>
+  </data>
+  <data name="3_Sterne_a3cd44c7" xml:space="preserve">
+    <value>3 stelle</value>
+  </data>
+  <data name="4_Sterne_4b9429c4" xml:space="preserve">
+    <value>4 stelle</value>
+  </data>
+  <data name="5_Sterne_c00c61a3" xml:space="preserve">
+    <value>5 stelle</value>
+  </data>
+  <data name="Alle_Texte_entfernen_26729507" xml:space="preserve">
+    <value>Rimuovi tutti i testi</value>
+  </data>
+  <data name="Alter_Name_45df7c94" xml:space="preserve">
+    <value>Vecchio nome</value>
+  </data>
+  <data name="Anker_Mitte_9dc94369" xml:space="preserve">
+    <value>Ancoraggio centro</value>
+  </data>
+  <data name="Anker_links_864e8064" xml:space="preserve">
+    <value>Ancoraggio sinistra</value>
+  </data>
+  <data name="Anker_oben_3d76a2f4" xml:space="preserve">
+    <value>Ancoraggio in alto</value>
+  </data>
+  <data name="Anker_oben_links_7dc9ed6b" xml:space="preserve">
+    <value>Ancoraggio in alto a sinistra</value>
+  </data>
+  <data name="Anker_oben_rechts_97aa9ebf" xml:space="preserve">
+    <value>Ancoraggio in alto a destra</value>
+  </data>
+  <data name="Anker_rechts_540c412c" xml:space="preserve">
+    <value>Ancoraggio destra</value>
+  </data>
+  <data name="Anker_unten_719ca8ac" xml:space="preserve">
+    <value>Ancoraggio in basso</value>
+  </data>
+  <data name="Anker_unten_links_d4b5c7af" xml:space="preserve">
+    <value>Ancoraggio in basso a sinistra</value>
+  </data>
+  <data name="Anker_unten_rechts_fc904b61" xml:space="preserve">
+    <value>Ancoraggio in basso a destra</value>
+  </data>
+  <data name="Ansicht_5c388792" xml:space="preserve">
+    <value>Visualizzazione</value>
+  </data>
+  <data name="Ausschnitt_auf_die_Vorschau_anwenden_8e64a5a3" xml:space="preserve">
+    <value>Applica il ritaglio all'anteprima</value>
+  </data>
+  <data name="Dateimuster_oder_Tags_b897e226" xml:space="preserve">
+    <value>Modello di file o tag</value>
+  </data>
+  <data name="Eigene_Konturfarbe_w_hlen_7954549e" xml:space="preserve">
+    <value>Scegli colore contorno personalizzato</value>
+  </data>
+  <data name="Eigene_Textfarbe_w_hlen_bd2baee7" xml:space="preserve">
+    <value>Scegli colore testo personalizzato</value>
+  </data>
+  <data name="Filmstreifen_ein_oder_ausblenden_fc46ea89" xml:space="preserve">
+    <value>Mostra o nascondi filmstrip</value>
+  </data>
+  <data name="Klicke_ins_Bild_oder_nutze_um_eine_Textebene_anz_1999bb75" xml:space="preserve">
+    <value>Fai clic sull'immagine o usa + per creare un livello di testo.</value>
+  </data>
+  <data name="Kontur_b102996e" xml:space="preserve">
+    <value>Contorno</value>
+  </data>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_oder_als_Lis_aa0783b1" xml:space="preserve">
+    <value>Determina se la galleria viene visualizzata a griglia o a elenco.</value>
+  </data>
+  <data name="Leinwand_b50ab315" xml:space="preserve">
+    <value>Tela</value>
+  </data>
+  <data name="Leinwand_zur_cksetzen_a52c33cc" xml:space="preserve">
+    <value>Reimposta tela</value>
+  </data>
+  <data name="Namensvorlage_873ff44a" xml:space="preserve">
+    <value>Modello di nome</value>
+  </data>
+  <data name="Neue_Datei_umbenennen_eed2fa77" xml:space="preserve">
+    <value>Rinomina nuovo file</value>
+  </data>
+  <data name="Neuen_Text_hinzuf_gen_71713ff2" xml:space="preserve">
+    <value>Aggiungi nuovo testo</value>
+  </data>
+  <data name="Neuer_Name_b9c2ca05" xml:space="preserve">
+    <value>Nuovo nome</value>
+  </data>
+  <data name="Ordner_w_hlen_25d4e964" xml:space="preserve">
+    <value>Scegli cartella</value>
+  </data>
+  <data name="Platzhalter_name_date_yyyyMMdd_fafdceb7" xml:space="preserve">
+    <value>Segnaposto: #, ###, {name}, {date:yyyyMMdd}</value>
+  </data>
+  <data name="S_W_abe58de7" xml:space="preserve">
+    <value>B/N</value>
+  </data>
+  <data name="Schrift_0ff47fd9" xml:space="preserve">
+    <value>Carattere</value>
+  </data>
+  <data name="Schrittweite_1f875f41" xml:space="preserve">
+    <value>Incremento</value>
+  </data>
+  <data name="Stapel_umbenennen_dca07f43" xml:space="preserve">
+    <value>Rinomina in blocco</value>
+  </data>
+  <data name="Startordner_optional_de694ced" xml:space="preserve">
+    <value>Cartella iniziale (opzionale)</value>
+  </data>
+  <data name="Startwert_275892c9" xml:space="preserve">
+    <value>Valore iniziale</value>
+  </data>
+  <data name="Status_bae7d5be" xml:space="preserve">
+    <value>Stato</value>
+  </data>
+  <data name="Suche_entfernen_527809b8" xml:space="preserve">
+    <value>Rimuovi ricerca</value>
+  </data>
+  <data name="Suche_zur_cksetzen_6366c7d6" xml:space="preserve">
+    <value>Cancella ricerca</value>
+  </data>
+  <data name="Suchen_20a96919" xml:space="preserve">
+    <value>Cerca</value>
+  </data>
+  <data name="Text_eingeben_e92c29d0" xml:space="preserve">
+    <value>Inserisci testo</value>
+  </data>
+  <data name="Textebene_l_schen_66ccf786" xml:space="preserve">
+    <value>Elimina livello di testo</value>
+  </data>
+  <data name="Textfeld_verschieben_37b55c8c" xml:space="preserve">
+    <value>Sposta casella di testo</value>
+  </data>
+  <data name="Umfang_4e3edfe5" xml:space="preserve">
+    <value>Ambito</value>
+  </data>
+  <data name="Unterordner_durchsuchen_f95308f4" xml:space="preserve">
+    <value>Cerca nelle sottocartelle</value>
+  </data>
+  <data name="Verzeichnis_fc15c350" xml:space="preserve">
+    <value>Directory</value>
+  </data>
+  <data name="Zuschneiden_anwenden_4868e7ab" xml:space="preserve">
+    <value>Applica ritaglio</value>
+  </data>
+
+  <data name="Bedingung_hinzuf_gen_0c64f68a" xml:space="preserve">
+    <value>+ Aggiungi condizione</value>
+  </data>
+  <data name="0_20_Juli_2026_f08172eb" xml:space="preserve">
+    <value>0.20 - luglio 2026</value>
+  </data>
+  <data name="ANPASSUNGEN_a344381a" xml:space="preserve">
+    <value>REGOLAZIONI</value>
+  </data>
+  <data name="AUSWAHL_b42782f7" xml:space="preserve">
+    <value>SELEZIONE</value>
+  </data>
+  <data name="Abspielen_b2eaf9fd" xml:space="preserve">
+    <value>Riproduci</value>
+  </data>
+  <data name="Auswahl_0177f6dc" xml:space="preserve">
+    <value>Selezione</value>
+  </data>
+  <data name="Auswahl_f_llen_7dd01fb3" xml:space="preserve">
+    <value>Riempi selezione</value>
+  </data>
+  <data name="Auswahl_mit_der_gew_hlten_F_llung_f_llen_a95e0844" xml:space="preserve">
+    <value>Riempi la selezione con il riempimento scelto</value>
+  </data>
+  <data name="Auswahlinhalt_als_neues_frei_verschiebbares_Bild_51de7eb5" xml:space="preserve">
+    <value>Copia il contenuto della selezione come nuovo oggetto immagine liberamente spostabile</value>
+  </data>
+  <data name="Bedingung_entfernen_c9785481" xml:space="preserve">
+    <value>Rimuovi condizione</value>
+  </data>
+  <data name="Bedingungen_55933265" xml:space="preserve">
+    <value>Condizioni</value>
+  </data>
+  <data name="Berechnungsmethode_f_r_die_Gr_en_nderung_0523cef9" xml:space="preserve">
+    <value>Metodo di calcolo per il ridimensionamento</value>
+  </data>
+  <data name="Bildgr_e_anwenden_c6388271" xml:space="preserve">
+    <value>Applica dimensione immagine</value>
+  </data>
+  <data name="Bildgr_e_auf_die_Vorschau_anwenden_31e8307b" xml:space="preserve">
+    <value>Applica la dimensione dell'immagine all'anteprima</value>
+  </data>
+  <data name="Bildrahmen_cbd409da" xml:space="preserve">
+    <value>Cornice immagine</value>
+  </data>
+  <data name="Collage_erstellen_44bc7b19" xml:space="preserve">
+    <value>Crea collage</value>
+  </data>
+  <data name="Collage_erstellen_18876d79" xml:space="preserve">
+    <value>Crea collage...</value>
+  </data>
+  <data name="Cross_dbfe7362" xml:space="preserve">
+    <value>Cross</value>
+  </data>
+  <data name="DETAILS_UND_EFFEKTE_7fa450cc" xml:space="preserve">
+    <value>DETTAGLI ED EFFETTI</value>
+  </data>
+  <data name="Deckkraft_3c11c68b" xml:space="preserve">
+    <value>Opacità</value>
+  </data>
+  <data name="Die_ausgew_hlten_Bilder_werden_als_Collage_im_ak_2b3be65b" xml:space="preserve">
+    <value>Le immagini selezionate verranno salvate come collage nella cartella corrente.</value>
+  </data>
+  <data name="Dramatisch_35e38c2b" xml:space="preserve">
+    <value>Dramatisch</value>
+  </data>
+  <data name="Drehung_bb151d57" xml:space="preserve">
+    <value>Rotazione</value>
+  </data>
+  <data name="Drehung_annehmen_a0aa2a65" xml:space="preserve">
+    <value>Accetta rotazione</value>
+  </data>
+  <data name="Drehung_auf_die_Vorschau_anwenden_c8518b0a" xml:space="preserve">
+    <value>Applica la rotazione all'anteprima</value>
+  </data>
+  <data name="Duoton_63f5b65d" xml:space="preserve">
+    <value>Duoton</value>
+  </data>
+  <data name="EINF_GEN_a58d212b" xml:space="preserve">
+    <value>INSERISCI</value>
+  </data>
+  <data name="Effekte_und_Rahmen_4e0b3203" xml:space="preserve">
+    <value>Effetti e cornice</value>
+  </data>
+  <data name="Eigenschaften_2e237aab" xml:space="preserve">
+    <value>Proprietà</value>
+  </data>
+  <data name="Farbe_1_80173a92" xml:space="preserve">
+    <value>Colore 1</value>
+  </data>
+  <data name="Farbe_2_6e12a50e" xml:space="preserve">
+    <value>Colore 2</value>
+  </data>
+  <data name="Farbe_aus_dem_Bild_aufnehmen_Pipette_104005c6" xml:space="preserve">
+    <value>Preleva colore dall'immagine (contagocce)</value>
+  </data>
+  <data name="Farbe_w_hlen_fefe02b0" xml:space="preserve">
+    <value>Scegli colore</value>
+  </data>
+  <data name="Formen_und_Symbole_7570e9aa" xml:space="preserve">
+    <value>Forme e simboli</value>
+  </data>
+  <data name="F_llart_66a23d35" xml:space="preserve">
+    <value>Tipo di riempimento</value>
+  </data>
+  <data name="F_llen_52ab7ed8" xml:space="preserve">
+    <value>Riempi</value>
+  </data>
+  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
+    <value>Gaussiano: sfocatura uniforme. Mediana: preserva i bordi, riduzione del rumore reale.</value>
+  </data>
+  <data name="Glow_d5545dea" xml:space="preserve">
+    <value>Glow</value>
+  </data>
+  <data name="Hardwarebeschleunigung_f_r_Videowiedergabe_03878f11" xml:space="preserve">
+    <value>Accelerazione hardware per la riproduzione video</value>
+  </data>
+  <data name="Hero_Position_f83a9bc2" xml:space="preserve">
+    <value>Posizione dell'immagine principale</value>
+  </data>
+  <data name="Hintergrund_6ea4ea25" xml:space="preserve">
+    <value>Sfondo</value>
+  </data>
+  <data name="Hintergrundfarbe_9d9e3704" xml:space="preserve">
+    <value>Colore di sfondo</value>
+  </data>
+  <data name="Hintergrundfarbe_der_Collage_w_hlen_9a97e62f" xml:space="preserve">
+    <value>Scegli il colore di sfondo del collage</value>
+  </data>
+  <data name="Hintergrundfarbe_w_hlen_3bf1f581" xml:space="preserve">
+    <value>Scegli colore di sfondo</value>
+  </data>
+  <data name="H_rte_bdd12be4" xml:space="preserve">
+    <value>Durezza</value>
+  </data>
+  <data name="Info_Seitenleiste_im_Viewer_anzeigen_cc2961cd" xml:space="preserve">
+    <value>Mostra la barra laterale informazioni nel visualizzatore</value>
+  </data>
+  <data name="Klicke_in_der_Vorschau_auf_ein_Bild_um_es_als_He_6f81d7cd" xml:space="preserve">
+    <value>Fai clic su un'immagine nell'anteprima per impostarla come immagine principale.</value>
+  </data>
+  <data name="Klicke_ins_Bild_oder_nutze_die_Werkzeugleiste_ob_f980bfd7" xml:space="preserve">
+    <value>Fai clic sull'immagine oppure usa la barra degli strumenti in alto.</value>
+  </data>
+  <data name="Konturbreite_04706bad" xml:space="preserve">
+    <value>Spessore del contorno</value>
+  </data>
+  <data name="Konvertieren_nach_f0ce4383" xml:space="preserve">
+    <value>Converti in...</value>
+  </data>
+  <data name="Korn_e7528bc0" xml:space="preserve">
+    <value>Grana</value>
+  </data>
+  <data name="Layout_972ad8d8" xml:space="preserve">
+    <value>Layout</value>
+  </data>
+  <data name="Legt_fest_wie_transparente_Bildbereiche_in_Viewe_a5cb2c2b" xml:space="preserve">
+    <value>Definisce come vengono visualizzate le aree trasparenti dell'immagine nel visualizzatore e nell'editor.</value>
+  </data>
+  <data name="Leinwand_automatisch_vergr_ern_03fea3c8" xml:space="preserve">
+    <value>Ingrandisci automaticamente la tela</value>
+  </data>
+  <data name="Leinwandgr_e_anwenden_f01b4499" xml:space="preserve">
+    <value>Applica dimensione tela</value>
+  </data>
+  <data name="Leinwandgr_e_auf_die_Vorschau_anwenden_e0bd6463" xml:space="preserve">
+    <value>Applica la dimensione della tela all'anteprima</value>
+  </data>
+  <data name="Linksklick_Punkt_hinzuf_gen_verschieben_Rechtskl_f81ffcf7" xml:space="preserve">
+    <value>Clic sinistro: aggiungi/sposta punto. Clic destro: rimuovi punto.</value>
+  </data>
+  <data name="Malen_d58457a8" xml:space="preserve">
+    <value>Dipingi</value>
+  </data>
+  <data name="Matt_0f9fe690" xml:space="preserve">
+    <value>Matt</value>
+  </data>
+  <data name="Methode_5dcc6d55" xml:space="preserve">
+    <value>Metodo</value>
+  </data>
+  <data name="Mitte_649ad246" xml:space="preserve">
+    <value>Centro</value>
+  </data>
+  <data name="Neu_mischen_68e774a5" xml:space="preserve">
+    <value>Rimescola</value>
+  </data>
+  <data name="Neuberechnung_2ed9c792" xml:space="preserve">
+    <value>Ricalcolo</value>
+  </data>
+  <data name="Noir_c34fc172" xml:space="preserve">
+    <value>Noir</value>
+  </data>
+  <data name="Nutzt_die_Grafikhardware_zur_Videodekodierung_Be_164b727e" xml:space="preserve">
+    <value>Utilizza l'hardware grafico per la decodifica video. Disattiva (decodifica software) in caso di artefatti visivi durante la riproduzione video. Ha effetto alla successiva apertura di un video.</value>
+  </data>
+  <data name="Oben_links_f880dd14" xml:space="preserve">
+    <value>In alto a sinistra</value>
+  </data>
+  <data name="Oben_rechts_4646e5f8" xml:space="preserve">
+    <value>In alto a destra</value>
+  </data>
+  <data name="Objekt_duplizieren_Strg_D_d123f119" xml:space="preserve">
+    <value>Duplica oggetto (Ctrl+D)</value>
+  </data>
+  <data name="Objekt_ein_ausblenden_c0adc9c1" xml:space="preserve">
+    <value>Mostra/nascondi oggetto</value>
+  </data>
+  <data name="Objekt_l_schen_b6dd7857" xml:space="preserve">
+    <value>Elimina oggetto</value>
+  </data>
+  <data name="Objekt_l_schen_Entf_efd16004" xml:space="preserve">
+    <value>Elimina oggetto (Canc)</value>
+  </data>
+  <data name="Objekt_nach_hinten_91ade9ea" xml:space="preserve">
+    <value>Sposta oggetto indietro</value>
+  </data>
+  <data name="Objekt_nach_vorne_f3c2b517" xml:space="preserve">
+    <value>Porta oggetto avanti</value>
+  </data>
+  <data name="Objekte_cc1c689c" xml:space="preserve">
+    <value>Oggetti</value>
+  </data>
+  <data name="Pinsel_2d6dced7" xml:space="preserve">
+    <value>Pennello</value>
+  </data>
+  <data name="Platzhalter_name_date_yyyyMMdd_datetaken_yyyyMMd_372a51cd" xml:space="preserve">
+    <value>Segnaposto: #, ###, {name}, {date:yyyyMMdd}, {datetaken:yyyyMMdd}, {width}, {height}, {camera}, {iso}, {aperture}, {focal}</value>
+  </data>
+  <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
+    <value>Riproduci/Pausa</value>
+  </data>
+  <data name="Polaroid_31795d24" xml:space="preserve">
+    <value>Polaroid</value>
+  </data>
+  <data name="Position_cf1c85ad" xml:space="preserve">
+    <value>Posizione</value>
+  </data>
+  <data name="Qualit_t_b17ad979" xml:space="preserve">
+    <value>Qualità</value>
+  </data>
+  <data name="Radial_e2a166db" xml:space="preserve">
+    <value>Radiale</value>
+  </data>
+  <data name="Radiergummi_aeae28c6" xml:space="preserve">
+    <value>Gomma</value>
+  </data>
+  <data name="Rand_3660b486" xml:space="preserve">
+    <value>Bordo</value>
+  </data>
+  <data name="Rechteck_im_Bild_aufziehen_dann_kopieren_oder_f__3bbaa302" xml:space="preserve">
+    <value>Disegna un rettangolo sull'immagine, poi copialo o riempilo.</value>
+  </data>
+  <data name="Reihenfolge_der_Bilder_und_im_Zufallsmodus_Gr_e__4c5c48c1" xml:space="preserve">
+    <value>Rimescola l'ordine delle immagini (e, in modalità casuale, dimensione/rotazione)</value>
+  </data>
+  <data name="Schachbrettmuster_Standard_echt_durchsichtig_ode_bdf3665e" xml:space="preserve">
+    <value>Motivo a scacchiera (predefinito), trasparenza reale o un colore pieno.</value>
+  </data>
+  <data name="Schatten_0d4f122f" xml:space="preserve">
+    <value>Ombra</value>
+  </data>
+  <data name="Sepia_46a14fdb" xml:space="preserve">
+    <value>Seppia</value>
+  </data>
+  <data name="Spalten_b334142b" xml:space="preserve">
+    <value>Colonne</value>
+  </data>
+  <data name="Stumm_fe557aec" xml:space="preserve">
+    <value>Muto</value>
+  </data>
+  <data name="St_rke_7e752b5c" xml:space="preserve">
+    <value>Intensità</value>
+  </data>
+  <data name="Symbol_suchen_ca294091" xml:space="preserve">
+    <value>Cerca simbolo…</value>
+  </data>
+  <data name="TRANSFORMIEREN_a0941f33" xml:space="preserve">
+    <value>TRASFORMA</value>
+  </data>
+  <data name="Text_und_Bild_5fdc8445" xml:space="preserve">
+    <value>Testo e immagine</value>
+  </data>
+  <data name="Text_QR_Inhalt_oder_Symbol_eingeben_34279b33" xml:space="preserve">
+    <value>Inserisci testo, contenuto QR o simbolo</value>
+  </data>
+  <data name="Transparenz_Hintergrund_98abebb9" xml:space="preserve">
+    <value>Sfondo di trasparenza</value>
+  </data>
+  <data name="Unten_links_a3a30e11" xml:space="preserve">
+    <value>In basso a sinistra</value>
+  </data>
+  <data name="Unten_rechts_deaa68e3" xml:space="preserve">
+    <value>In basso a destra</value>
+  </data>
+  <data name="VHS_d1f8be8f" xml:space="preserve">
+    <value>VHS</value>
+  </data>
+  <data name="VLC_ist_auf_diesem_System_nicht_installiert_32d60fa1" xml:space="preserve">
+    <value>VLC non è installato su questo sistema</value>
+  </data>
+  <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_212f0168" xml:space="preserve">
+    <value>Ingrandisce la tela durante la raddrizzatura in modo che nessun angolo dell'immagine venga tagliato, invece di ingrandire l'immagine per compensare.</value>
+  </data>
+  <data name="Verlauf_35bec7db" xml:space="preserve">
+    <value>Sfumatura</value>
+  </data>
+  <data name="Verlauf_bis_a31f1c3e" xml:space="preserve">
+    <value>Sfumatura fino a</value>
+  </data>
+  <data name="Verlauf_invertieren_8fc7bbc5" xml:space="preserve">
+    <value>Inverti sfumatura</value>
+  </data>
+  <data name="Versatz_X_9bdcf1b7" xml:space="preserve">
+    <value>Offset X</value>
+  </data>
+  <data name="Versatz_Y_18ad06c7" xml:space="preserve">
+    <value>Offset Y</value>
+  </data>
+  <data name="Verwischen_c085a378" xml:space="preserve">
+    <value>Sfuma</value>
+  </data>
+  <data name="Verwischen_zur_cksetzen_03bcc327" xml:space="preserve">
+    <value>Ripristina sfumatura</value>
+  </data>
+  <data name="Videowiedergabe_nicht_verf_gbar_a4f7b807" xml:space="preserve">
+    <value>Riproduzione video non disponibile</value>
+  </data>
+  <data name="Vollfarbe_3ee0e6c4" xml:space="preserve">
+    <value>Colore pieno</value>
+  </data>
+  <data name="Volltonfarbe_hinter_transparenten_Bereichen_8bd8d745" xml:space="preserve">
+    <value>Colore pieno dietro le aree trasparenti.</value>
+  </data>
+  <data name="Vorschau_einpassen_358e05cb" xml:space="preserve">
+    <value>Adatta anteprima</value>
+  </data>
+  <data name="Weich_e9f1bbad" xml:space="preserve">
+    <value>Morbido</value>
+  </data>
+  <data name="Weichz_8e42ec6e" xml:space="preserve">
+    <value>Sfoc.</value>
+  </data>
+  <data name="Weichzeichnen_16dafa4b" xml:space="preserve">
+    <value>Sfocatura</value>
+  </data>
+  <data name="Wei_er_Hintergrundfarbe_Rahmen_um_jedes_einzelne_fae3eef2" xml:space="preserve">
+    <value>Bordo bianco (colore di sfondo) attorno a ogni singola immagine</value>
+  </data>
+  <data name="Wert_9d3fb5bb" xml:space="preserve">
+    <value>Valore</value>
+  </data>
+  <data name="Winkel_c44f4c17" xml:space="preserve">
+    <value>Angolo</value>
+  </data>
+  <data name="W_hle_unten_einen_Objekttyp_aus_und_klicke_dann__4add2974" xml:space="preserve">
+    <value>Scegli un tipo di oggetto qui sotto, poi fai clic sull'immagine per posizionarlo lì.</value>
+  </data>
+  <data name="Ziehen_zum_Drehen_Shift_15_Schritte_af03841b" xml:space="preserve">
+    <value>Trascina per ruotare (Maiusc = passi di 15°)</value>
+  </data>
+  <data name="Zoom_9b3cbed5" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="Zuletzt_zuerst_9484e3f3" xml:space="preserve">
+    <value>Più recenti per primi</value>
+  </data>
+
+  <data name="Bitte_behebe_Namenskonflikte_oder_ung_ltige_Name_f0c666d6" xml:space="preserve">
+    <value>Risolvi i conflitti di nome o i nomi non validi nell'anteprima.</value>
+  </data>
+  <data name="Bitte_w_hle_einen_g_ltigen_Startordner_e4b5cad6" xml:space="preserve">
+    <value>Scegli una cartella di partenza valida.</value>
+  </data>
+  <data name="Collage_wird_erstellt_551f0bb2" xml:space="preserve">
+    <value>Creazione del collage...</value>
+  </data>
+  <data name="F_r_eine_Collage_m_ssen_mindestens_zwei_Bilder_a_c6c8e71c" xml:space="preserve">
+    <value>Per un collage devono essere selezionate almeno due immagini.</value>
+  </data>
+  <data name="Konvertiere_51570794" xml:space="preserve">
+    <value>Conversione in corso…</value>
+  </data>
+  <data name="Stapel_Umbenennen_fehlgeschlagen_2cf89e03" xml:space="preserve">
+    <value>Ridenominazione in blocco non riuscita</value>
+  </data>
+  <data name="Startordner_nicht_gefunden_3077346b" xml:space="preserve">
+    <value>Cartella di partenza non trovata</value>
+  </data>
+  <data name="Suche_entfernt_882fcab1" xml:space="preserve">
+    <value>Ricerca rimossa</value>
+  </data>
+  <data name="Suche_fehlgeschlagen_f28916a1" xml:space="preserve">
+    <value>Ricerca non riuscita</value>
+  </data>
+
+  <data name="0_30_Juli_2026_2d318df2" xml:space="preserve">
+    <value>0.30 - luglio 2026</value>
+  </data>
+</root>
