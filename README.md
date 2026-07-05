@@ -2,7 +2,7 @@
 
 # FerrumPix
 
-FerrumPix is a desktop photo management and editing application for Linux (and Windows), built with [Avalonia UI](https://avaloniaui.net/) and VB.NET.
+FerrumPix is a desktop photo management and editing application for Linux and Windows, built with [Avalonia UI](https://avaloniaui.net/) and VB.NET.
 
 > **Status:** Actively in development. Further details will follow once the project reaches a suitable maturity level.
 
