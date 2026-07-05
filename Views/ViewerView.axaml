@@ -17,22 +17,21 @@
     <Grid x:Name="ViewerRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="*,300">
 
         <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="toolbar" Height="60" Padding="24,0">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" VerticalAlignment="Center">
-                <Button Classes="icon-btn" Width="36" Height="36"
-                        Command="{Binding BackToGalleryCommand}"
-                        ToolTip.Tip="Zurück zur Galerie">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/01_Home.svg"
-                           Width="20" Height="20"/>
-                </Button>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" Margin="18,0,0,0">
-                    <Button Classes="icon-btn" Width="36" Height="36"
+            <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Command="{Binding BackToGalleryCommand}"
+                            ToolTip.Tip="Zurück zur Galerie">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/01_Home.svg"
+                                       Width="20" Height="20"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding PreviousCommand}"
                             ToolTip.Tip="Vorheriges Bild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/02_Zurueck.svg"
                                Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="36" Height="36"
+                    <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding NextCommand}"
                             ToolTip.Tip="Nächstes Bild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/03_Vorwaerts.svg"
@@ -40,53 +39,50 @@
                     </Button>
                 </StackPanel>
 
-                <Border Grid.Column="2" Width="1" Height="42" Background="{DynamicResource FP.Border.Subtle}" Margin="18,0,0,0"/>
-
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="18" Margin="28,0,0,0" VerticalAlignment="Center">
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Margin="-110,0,0,0">
+                    <Button Classes="ghost" Height="38"
                             Command="{Binding ToggleSlideshowCommand}"
                             ToolTip.Tip="Diashow starten">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/16_Diashow_starten.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/16_Diashow_starten.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Diashow starten" />
+                        </StackPanel>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38" Command="{Binding EditCommand}" ToolTip.Tip="Im Editor öffnen"
+                    <Button Classes="ghost" Height="38" Command="{Binding EditCommand}" ToolTip.Tip="Im Editor öffnen"
                             IsEnabled="{Binding CanEdit}">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/03_Editor/07_Belichtung.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/03_Editor/07_Belichtung.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Anpassen" />
+                        </StackPanel>
                     </Button>
                 </StackPanel>
 
-                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <TextBlock Text="Zoom:" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center" Focusable="False"
-                                Command="{Binding ZoomOutCommand}" ToolTip.Tip="Verkleinern">
-                            <TextBlock Text="−" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}"/>
-                        </Button>
-                        <icons:RoundSlider Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
-                                            Value="{Binding ZoomSliderValue, Mode=TwoWay}" VerticalAlignment="Center"/>
-                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center" Focusable="False"
-                                Command="{Binding ZoomInCommand}" ToolTip.Tip="Vergrößern">
-                            <TextBlock Text="+" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}"/>
-                        </Button>
-                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="12,0,0,0" Focusable="False"
-                                Classes.active="{Binding IsZoomActualActive}"
-                                Command="{Binding ZoomActualCommand}" ToolTip.Tip="Auf 100 Prozent springen">
-                            <TextBlock Text="{Binding ZoomText}" Foreground="{DynamicResource FP.Text.Primary}" VerticalAlignment="Center"/>
-                        </Button>
-                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="8,0,0,0" Focusable="False"
-                                Classes.active="{Binding IsZoomFitActive}"
-                                Command="{Binding ZoomFitCommand}" ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/26_Anpassen.svg" Width="20" Height="20"/>
-                                <TextBlock Text="Einpassen"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right" >
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Command="{Binding DeleteCurrentCommand}"
+                            ToolTip.Tip="Löschen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/35_Loeschen.svg"
+                                       Width="18" Height="18"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Click="OnToggleFilmstripClick"
+                            Classes.active="{Binding ShowFilmstrip}"
+                            ToolTip.Tip="Filmstreifen ein- oder ausblenden">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/11_Auge.svg"
+                                       Width="18" Height="18"/>
+                    </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Classes.active="{Binding IsInfoSidebarVisible}"
                             Command="{Binding ToggleInfoSidebarCommand}"
                             ToolTip.Tip="Info">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/01_Info.svg"
-                               Width="20" Height="20"/>
+                                       Width="20" Height="20"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Click="OnSettingsClick"
+                            ToolTip.Tip="Einstellungen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/34_Einstellungen.svg"
+                                       Width="18" Height="18"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Click="OnToggleFullscreenClick"
@@ -250,16 +246,8 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                        <Button Classes="icon-btn"
-                                Width="28" Height="28"
-                                Command="{Binding ToggleFavoriteCommand}"
-                                ToolTip.Tip="Favorit">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
-                                           Width="20" Height="20"
-                                           Classes="fav-heart" Classes.active="{Binding IsFavorite}"/>
-                        </Button>
                         <TextBlock Text="{Binding CurrentFileName}" FontSize="12" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
@@ -267,53 +255,73 @@
                                    IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                                    Foreground="{DynamicResource FP.Text.Muted}" FontSize="12" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="Zoom:" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center" Focusable="False"
+                                Command="{Binding ZoomOutCommand}" ToolTip.Tip="Verkleinern">
+                            <TextBlock Text="−" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        </Button>
+                        <icons:RoundSlider Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
+                                            Value="{Binding ZoomSliderValue, Mode=TwoWay}" VerticalAlignment="Center"/>
+                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center" Focusable="False"
+                                Command="{Binding ZoomInCommand}" ToolTip.Tip="Vergrößern">
+                            <TextBlock Text="+" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        </Button>
+                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="12,0,0,0" Focusable="False"
+                                Classes.active="{Binding IsZoomActualActive}"
+                                Command="{Binding ZoomActualCommand}" ToolTip.Tip="Auf 100 Prozent springen">
+                            <TextBlock Text="{Binding ZoomText}" Foreground="{DynamicResource FP.Text.Primary}" VerticalAlignment="Center"/>
+                        </Button>
+                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="8,0,0,0" Focusable="False"
+                                Classes.active="{Binding IsZoomFitActive}"
+                                Command="{Binding ZoomFitCommand}" ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/26_Anpassen.svg" Width="20" Height="20"/>
+                                <TextBlock Text="Einpassen"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2" 
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="1">
-                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=1}"/>
+                                <TextBlock FontSize="20" VerticalAlignment="Center"
+                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=1}" />
                             </Button>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="2">
-                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=2}"/>
+                                <TextBlock FontSize="20" VerticalAlignment="Center"
+                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=2}" />
                             </Button>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="3">
-                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=3}"/>
+                                <TextBlock FontSize="20" VerticalAlignment="Center"
+                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=3}" />
                             </Button>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="4">
-                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=4}"/>
+                                <TextBlock FontSize="20" VerticalAlignment="Center"
+                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=4}" />
                             </Button>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="5">
-                                <TextBlock FontSize="18" Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=5}"/>
+                                <TextBlock FontSize="20" VerticalAlignment="Center"
+                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=5}" />
+                            </Button>
+                            <Button Classes="icon-btn"
+                                    Width="24" Height="24" VerticalAlignment="Center"
+                                    Command="{Binding ToggleFavoriteCommand}"
+                                    ToolTip.Tip="Favorit" Margin="6,0,0,0">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                               Width="20" Height="20" 
+                                               Classes="fav-heart" Classes.active="{Binding IsFavorite}" />
                             </Button>
                         </StackPanel>
-                        <Button Classes="icon-btn" Width="34" Height="34"
-                                Click="OnToggleFilmstripClick"
-                                Classes.active="{Binding ShowFilmstrip}"
-                                ToolTip.Tip="Filmstreifen ein- oder ausblenden">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/11_Auge.svg"
-                                           Width="18" Height="18"/>
-                        </Button>
-                        <Button Classes="icon-btn" Width="34" Height="34"
-                                Command="{Binding DeleteCurrentCommand}"
-                                ToolTip.Tip="Löschen">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/35_Loeschen.svg"
-                                   Width="18" Height="18"/>
-                        </Button>
-                        <Button Classes="icon-btn" Width="34" Height="34"
-                                Click="OnSettingsClick"
-                                ToolTip.Tip="Einstellungen">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/34_Einstellungen.svg"
-                                   Width="18" Height="18"/>
-                        </Button>
                     </StackPanel>
                 </Grid>
             </Grid>
