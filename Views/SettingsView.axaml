@@ -99,7 +99,7 @@
 
                         <Grid ColumnDefinitions="160,*" RowDefinitions="Auto" RowSpacing="8">
                             <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}"/>
-                            <TextBlock Grid.Column="1" Text="0.30 - Juli 2026"/>
+                            <TextBlock Grid.Column="1" Text="0.4.0 - Juli 2026"/>
                         </Grid>
 
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
@@ -532,6 +532,25 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
+                                <TextBlock Text="Einpassen-Verhalten" FontSize="12"/>
+                                <TextBlock Text="Gilt für Viewer und Editor: nur verkleinern, wenn das Bild größer als die Darstellungsfläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerFitBehaviorOnlyWhenLarger}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerFitBehaviorCommand}"
+                                        CommandParameter="OnlyWhenLarger">Nur wenn größer</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerFitBehaviorAlways}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerFitBehaviorCommand}"
+                                        CommandParameter="Always">Immer einpassen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
                                 <TextBlock Text="Filmstrip im Viewer anzeigen" FontSize="12"/>
                                 <TextBlock Text="Zeigt die Bildleiste am unteren Rand des Viewers an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
                             </StackPanel>
@@ -662,12 +681,12 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Vorschaubild-Speichercache" FontSize="12"/>
-                                <TextBlock Text="Wie viele Vorschaubilder maximal gleichzeitig im Arbeitsspeicher gehalten werden. Höhere Werte verringern erneutes Laden beim Scrollen, benötigen aber mehr Arbeitsspeicher." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                                <TextBlock Text="Wie viele Vorschaubilder maximal gleichzeitig im Arbeitsspeicher gehalten werden. Höhere Werte verringern erneutes Laden beim Scrollen, benötigen aber mehr Arbeitsspeicher." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
                                                    Minimum="50"
-                                                   Maximum="2500"
+                                                   Maximum="5000"
                                                    Value="{Binding ThumbnailMemoryCacheCapacity}"/>
                                 <TextBlock Text="{Binding ThumbnailMemoryCacheCapacity}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"

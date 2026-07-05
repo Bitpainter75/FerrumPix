@@ -145,6 +145,122 @@ Namespace Models
             End Set
         End Property
 
+        ' 0 = noch nicht geladen (Kachel zeigt in dem Fall nichts an, siehe DimensionsText)
+        Private _imageWidth As Integer = 0
+        Public Property ImageWidth As Integer
+            Get
+                Return _imageWidth
+            End Get
+            Set(value As Integer)
+                If _imageWidth = value Then Return
+                _imageWidth = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(DimensionsText))
+            End Set
+        End Property
+
+        Private _imageHeight As Integer = 0
+        Public Property ImageHeight As Integer
+            Get
+                Return _imageHeight
+            End Get
+            Set(value As Integer)
+                If _imageHeight = value Then Return
+                _imageHeight = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(DimensionsText))
+            End Set
+        End Property
+
+        Public ReadOnly Property DimensionsText As String
+            Get
+                If _imageWidth <= 0 OrElse _imageHeight <= 0 Then Return ""
+                Return $"{_imageWidth}×{_imageHeight}"
+            End Get
+        End Property
+
+        Private _fileCreatedAt As DateTime = DateTime.MinValue
+        Public Property FileCreatedAt As DateTime
+            Get
+                Return _fileCreatedAt
+            End Get
+            Set(value As DateTime)
+                If _fileCreatedAt = value Then Return
+                _fileCreatedAt = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(DateFileCreatedText))
+            End Set
+        End Property
+
+        ' EXIF DateTimeOriginal - unterscheidet sich vom Dateisystem-Erstellungsdatum, da EXIF beim
+        ' Kopieren/Synchronisieren der Datei erhalten bleibt, das Dateisystem-Datum aber nicht.
+        Private _exifDateTaken As DateTime?
+        Public Property ExifDateTaken As DateTime?
+            Get
+                Return _exifDateTaken
+            End Get
+            Set(value As DateTime?)
+                If Nullable.Equals(_exifDateTaken, value) Then Return
+                _exifDateTaken = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(DateExifTakenText))
+            End Set
+        End Property
+
+        ' EXIF IFD0 TagDateTime - vom Aufnahmegerät/der Bearbeitungssoftware gesetztes "geändert"-Datum,
+        ' unabhängig vom Dateisystem-Änderungsdatum.
+        Private _exifDateModified As DateTime?
+        Public Property ExifDateModified As DateTime?
+            Get
+                Return _exifDateModified
+            End Get
+            Set(value As DateTime?)
+                If Nullable.Equals(_exifDateModified, value) Then Return
+                _exifDateModified = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(DateExifModifiedText))
+            End Set
+        End Property
+
+        ' Schlanke EXIF-Sortierfelder, aus dem Katalog gespiegelt (siehe GalleryViewModel.LoadFolderImages/
+        ' QueueBackgroundMetaRefresh) - vermeidet DB-Zugriffe live während des Sortierens.
+        Private _exifCamera As String = ""
+        Public Property ExifCamera As String
+            Get
+                Return _exifCamera
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _exifCamera = value Then Return
+                _exifCamera = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Private _exifIso As Integer?
+        Public Property ExifIso As Integer?
+            Get
+                Return _exifIso
+            End Get
+            Set(value As Integer?)
+                If Nullable.Equals(_exifIso, value) Then Return
+                _exifIso = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Private _exifAperture As Double?
+        Public Property ExifAperture As Double?
+            Get
+                Return _exifAperture
+            End Get
+            Set(value As Double?)
+                If Nullable.Equals(_exifAperture, value) Then Return
+                _exifAperture = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
         Private _isSelected As Boolean
         Private _isNavigationSelected As Boolean
 
@@ -307,9 +423,11 @@ Namespace Models
                 Dim info = New FileInfo(filePath)
                 FileSize = info.Length
                 DateModified = info.LastWriteTime
+                FileCreatedAt = info.CreationTime
             Catch
                 FileSize = 0
                 DateModified = DateTime.MinValue
+                FileCreatedAt = DateTime.MinValue
             End Try
             _fileInfoLoaded = True
         End Sub
@@ -379,6 +497,28 @@ Namespace Models
             Get
                 EnsureFileInfoLoaded()
                 Return DateModified.ToString("dd.MM.yyyy  HH:mm")
+            End Get
+        End Property
+
+        Public ReadOnly Property DateFileCreatedText As String
+            Get
+                EnsureFileInfoLoaded()
+                If FileCreatedAt = DateTime.MinValue Then Return ""
+                Return FileCreatedAt.ToString("dd.MM.yyyy  HH:mm")
+            End Get
+        End Property
+
+        Public ReadOnly Property DateExifTakenText As String
+            Get
+                If Not _exifDateTaken.HasValue Then Return ""
+                Return _exifDateTaken.Value.ToString("dd.MM.yyyy  HH:mm")
+            End Get
+        End Property
+
+        Public ReadOnly Property DateExifModifiedText As String
+            Get
+                If Not _exifDateModified.HasValue Then Return ""
+                Return _exifDateModified.Value.ToString("dd.MM.yyyy  HH:mm")
             End Get
         End Property
 

@@ -25,6 +25,7 @@ Namespace ViewModels
         Private _zoomText As String = "100%"
         Private _currentIndex As Integer = -1
         Private _statusInfo As String = ""
+        Private _mousePositionText As String = ""
         Private _imageWidth As Integer
         Private _imageHeight As Integer
         Private _currentFileName As String = ""
@@ -42,6 +43,7 @@ Namespace ViewModels
         Private _folderPaths As New List(Of String)()
         Private ReadOnly _navDebouncer As FilmstripNavigationDebouncer
         Private _isFitToWindow As Boolean = True
+        Private _activeZoomPreset As ZoomPresetMode = ZoomPresetMode.Fit
         Private _imageViewportWidth As Double
         Private _imageViewportHeight As Double
 
@@ -154,6 +156,7 @@ Namespace ViewModels
             Set(value As Double)
                 Dim clampedSlider = Math.Max(0, Math.Min(100, value))
                 Dim pct = ZoomSliderMinPercent * Math.Pow(ZoomSliderMaxPercent / ZoomSliderMinPercent, clampedSlider / 100.0)
+                ActiveZoomPreset = ZoomPresetMode.Manual
                 IsFitToWindow = False
                 ZoomLevel = pct / 100.0
             End Set
@@ -167,6 +170,32 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_isFitToWindow, value)
                 ZoomText = $"{CInt(_zoomLevel * 100)}%"
             End Set
+        End Property
+
+        ''' <summary>Zuletzt bewusst gewählter Zoom-Modus (Fit/Actual/Manual) - bleibt über einen
+        ''' Bildwechsel hinweg erhalten (siehe LoadPathAt), nur eine manuelle Zoomänderung setzt ihn
+        ''' auf Manual zurück. Dient außerdem den Classes.active-Bindings der Fit/100%-Buttons.</summary>
+        Public Property ActiveZoomPreset As ZoomPresetMode
+            Get
+                Return _activeZoomPreset
+            End Get
+            Set(value As ZoomPresetMode)
+                Me.RaiseAndSetIfChanged(_activeZoomPreset, value)
+                Me.RaisePropertyChanged(NameOf(IsZoomFitActive))
+                Me.RaisePropertyChanged(NameOf(IsZoomActualActive))
+            End Set
+        End Property
+
+        Public ReadOnly Property IsZoomFitActive As Boolean
+            Get
+                Return _activeZoomPreset = ZoomPresetMode.Fit
+            End Get
+        End Property
+
+        Public ReadOnly Property IsZoomActualActive As Boolean
+            Get
+                Return _activeZoomPreset = ZoomPresetMode.Actual
+            End Get
         End Property
 
         Public Property ZoomText As String
@@ -198,6 +227,17 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_statusInfo, value)
+            End Set
+        End Property
+
+        ''' <summary>Bildpixel-Koordinate der Maus über dem Bild, für die Fußleiste - leer, wenn die
+        ''' Maus das Bild nicht berührt.</summary>
+        Public Property MousePositionText As String
+            Get
+                Return _mousePositionText
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_mousePositionText, value)
             End Set
         End Property
 
@@ -525,10 +565,12 @@ Namespace ViewModels
             ZoomInCommand = ReactiveCommand.Create(Sub() ZoomIn())
             ZoomOutCommand = ReactiveCommand.Create(Sub() ZoomOut())
             ZoomFitCommand = ReactiveCommand.Create(Sub()
+                                                        ActiveZoomPreset = ZoomPresetMode.Fit
                                                         IsFitToWindow = True
                                                         UpdateFitZoom()
                                                     End Sub)
             ZoomActualCommand = ReactiveCommand.Create(Sub()
+                                                           ActiveZoomPreset = ZoomPresetMode.Actual
                                                            IsFitToWindow = False
                                                            ZoomLevel = 1.0
                                                        End Sub)
@@ -601,6 +643,7 @@ Namespace ViewModels
             RotationAngle = 0
             ScaleX = 1.0
             IsFitToWindow = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.ViewerOpenFitToWindow, True)
+            ActiveZoomPreset = If(_isFitToWindow, ZoomPresetMode.Fit, ZoomPresetMode.Actual)
 
             If allPaths IsNot Nothing Then
                 _folderPaths = allPaths.
@@ -1038,7 +1081,18 @@ Namespace ViewModels
             CurrentFileName = IO.Path.GetFileName(_currentImagePath)
             RotationAngle = 0
             ScaleX = 1.0
-            IsFitToWindow = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.ViewerOpenFitToWindow, True)
+            ' Anders als OpenImage (frischer Start) NICHT mehr aus den Settings neu initialisieren -
+            ' der zuletzt vom Nutzer gewählte Zoom-Modus soll über einen Bildwechsel hinweg erhalten
+            ' bleiben (siehe ActiveZoomPreset), nur bei Manual bleibt der bisherige ZoomLevel stehen.
+            Select Case _activeZoomPreset
+                Case ZoomPresetMode.Fit
+                    IsFitToWindow = True
+                Case ZoomPresetMode.Actual
+                    IsFitToWindow = False
+                    ZoomLevel = 1.0
+                Case Else
+                    IsFitToWindow = False
+            End Select
             LoadBitmap()
             If _isFitToWindow Then UpdateFitZoom()
             UpdateStatus()
@@ -1115,11 +1169,13 @@ Namespace ViewModels
         End Sub
 
         Public Sub ZoomIn()
+            ActiveZoomPreset = ZoomPresetMode.Manual
             IsFitToWindow = False
             ZoomLevel = ZoomLevel * 1.25
         End Sub
 
         Public Sub ZoomOut()
+            ActiveZoomPreset = ZoomPresetMode.Manual
             IsFitToWindow = False
             ZoomLevel = ZoomLevel / 1.25
         End Sub
@@ -1160,7 +1216,15 @@ Namespace ViewModels
 
             Dim scaleX = _imageViewportWidth / imageWidth
             Dim scaleY = _imageViewportHeight / imageHeight
-            Return Math.Max(0.05, Math.Min(scaleX, scaleY))
+            Dim fitScale = Math.Max(0.05, Math.Min(scaleX, scaleY))
+
+            ' "Nur wenn größer": kleinere Bilder nicht auf die Darstellungsfläche hochskalieren,
+            ' sondern in Originalgröße (100%) zeigen - "Immer einpassen" (Default) skaliert dagegen
+            ' auch kleinere Bilder auf die volle Fläche.
+            If String.Equals(_mainVm?.Settings?.ViewerFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase) Then
+                Return Math.Min(fitScale, 1.0)
+            End If
+            Return fitScale
         End Function
 
         Public Sub RaiseFullscreenChanged()

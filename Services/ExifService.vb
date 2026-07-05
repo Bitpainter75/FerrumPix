@@ -13,6 +13,7 @@ Namespace Services
     ' bereits von ReadExif() erzeugten formatierten Anzeige-Strings (kein zweites Einlesen der Datei).
     Public Class ExifSearchFields
         Public Property DateTaken As String = ""       ' EXIF-Rohformat "YYYY:MM:DD HH:MM:SS" - sortiert korrekt als Text
+        Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
         Public Property Lens As String = ""
         Public Property Aperture As Double?
@@ -39,6 +40,7 @@ Namespace Services
         Public Property FileType As String = ""
         Public Property FileSize As String = ""
         Public Property DateTaken As String = ""
+        Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
         Public Property Lens As String = ""
         Public Property FocalLength As String = ""
@@ -107,6 +109,7 @@ Namespace Services
                 .FileType = source.FileType,
                 .FileSize = source.FileSize,
                 .DateTaken = source.DateTaken,
+                .DateModifiedExif = source.DateModifiedExif,
                 .Camera = source.Camera,
                 .Lens = source.Lens,
                 .FocalLength = source.FocalLength,
@@ -180,8 +183,9 @@ Namespace Services
                     data.Camera = (make & " " & model).Trim()
                     data.Software = GetTagDesc(exifIfd, ExifIfd0Directory.TagSoftware)
                     data.Copyright = GetTagDesc(exifIfd, ExifIfd0Directory.TagCopyright)
+                    data.DateModifiedExif = GetTagDesc(exifIfd, ExifIfd0Directory.TagDateTime)
                     If String.IsNullOrEmpty(data.DateTaken) Then
-                        data.DateTaken = GetTagDesc(exifIfd, ExifIfd0Directory.TagDateTime)
+                        data.DateTaken = data.DateModifiedExif
                     End If
                 End If
 
@@ -213,6 +217,7 @@ Namespace Services
             If data Is Nothing Then Return result
 
             result.DateTaken = data.DateTaken
+            result.DateModifiedExif = data.DateModifiedExif
             result.Camera = data.Camera
             result.Lens = data.Lens
             result.ShutterSpeed = data.ShutterSpeed
@@ -269,6 +274,15 @@ Namespace Services
             Dim normalized = text.Replace(","c, "."c)
             Dim value As Double
             If Double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, value) Then Return value
+            Return Nothing
+        End Function
+
+        ''' <summary>Parst das EXIF-Rohdatumsformat ("yyyy:MM:dd HH:mm:ss") aus DateTaken/DateModifiedExif
+        ''' in ein DateTime für Anzeige/Sortierung. Liefert Nothing, wenn das Feld leer/nicht parsbar ist.</summary>
+        Public Shared Function ParseExifDateTime(raw As String) As DateTime?
+            If String.IsNullOrWhiteSpace(raw) Then Return Nothing
+            Dim result As DateTime
+            If DateTime.TryParseExact(raw, "yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, result) Then Return result
             Return Nothing
         End Function
 

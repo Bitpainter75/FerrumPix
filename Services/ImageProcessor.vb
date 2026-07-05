@@ -63,6 +63,8 @@ Namespace Services
         Private _shadowBlur As Single = 6
         Private _shadowStrength As Single = 100
         Private _shadowColor As String = "#80000000"
+        Private _shadowRounded As Boolean = False
+        Private _shadowCornerRadiusPercent As Single = 20
         Private _glowEnabled As Boolean = False
         Private _glowBlur As Single = 10
         Private _glowStrength As Single = 100
@@ -412,6 +414,24 @@ Namespace Services
             End Set
         End Property
 
+        Public Property ShadowRounded As Boolean
+            Get
+                Return _shadowRounded
+            End Get
+            Set(value As Boolean)
+                SetField(_shadowRounded, value)
+            End Set
+        End Property
+
+        Public Property ShadowCornerRadiusPercent As Single
+            Get
+                Return _shadowCornerRadiusPercent
+            End Get
+            Set(value As Single)
+                SetField(_shadowCornerRadiusPercent, value)
+            End Set
+        End Property
+
         Public Property GlowEnabled As Boolean
             Get
                 Return _glowEnabled
@@ -476,6 +496,8 @@ Namespace Services
                 .ShadowBlur = ShadowBlur,
                 .ShadowStrength = ShadowStrength,
                 .ShadowColor = ShadowColor,
+                .ShadowRounded = ShadowRounded,
+                .ShadowCornerRadiusPercent = ShadowCornerRadiusPercent,
                 .GlowEnabled = GlowEnabled,
                 .GlowBlur = GlowBlur,
                 .GlowStrength = GlowStrength,
@@ -1304,9 +1326,13 @@ Namespace Services
             ' bemessener Blur-Radius so riesig, dass er sich fast unsichtbar verwaschen würde (genau das
             ' Problem "Glow hat bei Text keine Auswirkung") - Text-/Objektgröße variiert unabhängig von
             ' der Fotoauflösung, der Effekt soll aber immer proportional zum jeweiligen Objekt wirken.
+            ' Skalierungsfaktor 0.4 (vormals 0.12): bei 0.12 blieb der Blur-Radius bei üblichen
+            ' Slider-Werten (Default Glow=10, Shadow=6) so klein (wenige Zehntel-Prozent der
+            ' Objektgröße), dass er komplett unter dem später deckend gezeichneten Objekt
+            ' verschwand - "Glow wirkungslos"/"Shadow-Stärke ohne Auswirkung".
             Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
-            Dim glowBlurPx = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 0.12F
-            Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * 0.12F
+            Dim glowBlurPx = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 0.4F
+            Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * 0.4F
             Dim offsetX = objSize * annotation.ShadowOffsetXPercent / 100.0F
             Dim offsetY = objSize * annotation.ShadowOffsetYPercent / 100.0F
 
@@ -1344,13 +1370,35 @@ Namespace Services
 
                 If annotation.ShadowEnabled Then
                     Dim shadowColor = ApplyAlpha(ParseColor(annotation.ShadowColor, New SKColor(0, 0, 0, 128)), alphaFactor * Clamp(annotation.ShadowStrength, 0, 100) / 100.0F)
-                    Using shadowColorFilter = SKColorFilter.CreateBlendMode(shadowColor, SKBlendMode.SrcIn)
-                        Using shadowMaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(0.1F, shadowBlurPx))
-                            Using paint = New SKPaint With {.ColorFilter = shadowColorFilter, .MaskFilter = shadowMaskFilter}
-                                canvas.DrawBitmap(mask, maskLeft + offsetX, maskTop + offsetY, paint)
+                    Dim shadowSource = mask
+                    Dim roundedShadowMask As SKBitmap = Nothing
+                    Try
+                        ' Abgerundeter Schatten nutzt eine eigene Rechteck-Maske statt der exakten
+                        ' Objekt-Silhouette - der Glow-Effekt bleibt davon unberührt und folgt weiter
+                        ' der echten Objektform.
+                        If annotation.ShadowRounded Then
+                            roundedShadowMask = New SKBitmap(maskWidth, maskHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
+                            Using roundCanvas = New SKCanvas(roundedShadowMask)
+                                roundCanvas.Clear(SKColors.Transparent)
+                                roundCanvas.Translate(-maskLeft, -maskTop)
+                                Dim cornerRadius = Math.Min(rect.Width, rect.Height) / 2.0F * Clamp(annotation.ShadowCornerRadiusPercent, 0, 100) / 100.0F
+                                Using roundPaint = New SKPaint With {.Color = SKColors.Black, .IsAntialias = True}
+                                    roundCanvas.DrawRoundRect(rect, cornerRadius, cornerRadius, roundPaint)
+                                End Using
+                            End Using
+                            shadowSource = roundedShadowMask
+                        End If
+
+                        Using shadowColorFilter = SKColorFilter.CreateBlendMode(shadowColor, SKBlendMode.SrcIn)
+                            Using shadowMaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(0.1F, shadowBlurPx))
+                                Using paint = New SKPaint With {.ColorFilter = shadowColorFilter, .MaskFilter = shadowMaskFilter}
+                                    canvas.DrawBitmap(shadowSource, maskLeft + offsetX, maskTop + offsetY, paint)
+                                End Using
                             End Using
                         End Using
-                    End Using
+                    Finally
+                        roundedShadowMask?.Dispose()
+                    End Try
                 End If
             End Using
         End Sub

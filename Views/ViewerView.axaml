@@ -6,6 +6,7 @@
              xmlns:services="clr-namespace:FerrumPix.Services"
              xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
              xmlns:views="clr-namespace:FerrumPix.Views"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="FerrumPix.Views.ViewerView"
              Background="{DynamicResource FP.Bg.Root}"
              Focusable="True"
@@ -67,10 +68,12 @@
                             <TextBlock Text="+" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}"/>
                         </Button>
                         <Button Classes="ghost" Height="28" Padding="8,2" Margin="12,0,0,0" Focusable="False"
+                                Classes.active="{Binding IsZoomActualActive}"
                                 Command="{Binding ZoomActualCommand}" ToolTip.Tip="Auf 100 Prozent springen">
                             <TextBlock Text="{Binding ZoomText}" Foreground="{DynamicResource FP.Text.Primary}" VerticalAlignment="Center"/>
                         </Button>
                         <Button Classes="ghost" Height="28" Padding="8,2" Margin="8,0,0,0" Focusable="False"
+                                Classes.active="{Binding IsZoomFitActive}"
                                 Command="{Binding ZoomFitCommand}" ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/26_Anpassen.svg" Width="20" Height="20"/>
@@ -134,6 +137,7 @@
                                        PointerMoved="OnImagePointerMoved"
                                        PointerReleased="OnImagePointerReleased"
                                        PointerCaptureLost="OnImagePointerCaptureLost"
+                                       PointerExited="OnImagePointerExited"
                                        DoubleTapped="OnImageDoubleTapped">
                                     <Image.ContextMenu>
                                         <ContextMenu>
@@ -259,6 +263,9 @@
                         <TextBlock Text="{Binding CurrentFileName}" FontSize="12" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding MousePositionText}"
+                                   IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                   Foreground="{DynamicResource FP.Text.Muted}" FontSize="12" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">

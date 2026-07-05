@@ -26,6 +26,7 @@ Namespace ViewModels
         Private _thumbnailCacheEnabled As Boolean = True
         Private _cacheSizeMb As Integer = 512
         Private _viewerOpenFitToWindow As Boolean = True
+        Private _viewerFitBehavior As String = "Always"
         Private _showHiddenFolders As Boolean = False
         Private _galleryShowFolders As Boolean = True
         Private _galleryShowParentFolder As Boolean = True
@@ -57,6 +58,7 @@ Namespace ViewModels
         Private _savedRounded As Boolean = False
         Private _savedDensity As String = "Komfortabel"
         Private _savedViewerOpenFitToWindow As Boolean = True
+        Private _savedViewerFitBehavior As String = "Always"
         Private _savedThumbnailQuality As Integer = 82
         Private _savedThumbnailMemoryCacheCapacity As Integer = 250
         Private _savedJpgSaveQuality As Integer = 90
@@ -280,8 +282,39 @@ Namespace ViewModels
                 Return _viewerOpenFitToWindow
             End Get
             Set(value As Boolean)
+                If _viewerOpenFitToWindow = value Then Return
                 Me.RaiseAndSetIfChanged(_viewerOpenFitToWindow, value)
+                SaveLayoutSettings()
             End Set
+        End Property
+
+        ''' <summary>"Always" (immer einpassen) oder "OnlyWhenLarger" (nur einpassen, wenn das Bild
+        ''' größer als die Darstellungsfläche ist, sonst 100%) - gilt einheitlich für Viewer und
+        ''' Editor.</summary>
+        Public Property ViewerFitBehavior As String
+            Get
+                Return _viewerFitBehavior
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeViewerFitBehavior(value)
+                If _viewerFitBehavior = value Then Return
+                Me.RaiseAndSetIfChanged(_viewerFitBehavior, value)
+                Me.RaisePropertyChanged(NameOf(IsViewerFitBehaviorAlways))
+                Me.RaisePropertyChanged(NameOf(IsViewerFitBehaviorOnlyWhenLarger))
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsViewerFitBehaviorAlways As Boolean
+            Get
+                Return String.Equals(_viewerFitBehavior, "Always", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsViewerFitBehaviorOnlyWhenLarger As Boolean
+            Get
+                Return String.Equals(_viewerFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
+            End Get
         End Property
 
         Public Property StartupImageMode As String
@@ -729,6 +762,7 @@ Namespace ViewModels
         Public ReadOnly Property SetStartupImageModeCommand As ICommand
         Public ReadOnly Property SetGalleryViewModeCommand As ICommand
         Public ReadOnly Property SetGalleryStartupFolderModeCommand As ICommand
+        Public ReadOnly Property SetViewerFitBehaviorCommand As ICommand
         Public ReadOnly Property SetLanguageModeCommand As ICommand
         Public ReadOnly Property SetTransparencyBackgroundModeCommand As ICommand
         Public ReadOnly Property CleanupDatabaseCommand As ICommand
@@ -769,6 +803,8 @@ Namespace ViewModels
             _galleryStartupFolderMode = _appSettings.GalleryStartupFolderMode
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
             _viewerSlideshowIntervalSeconds = _appSettings.ViewerSlideshowIntervalSeconds
+            _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
+            _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
             _editorShowFilmstrip = _appSettings.EditorShowFilmstrip
             _editorInfoSidebarExpanded = _appSettings.EditorInfoSidebarExpanded
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
@@ -797,6 +833,7 @@ Namespace ViewModels
             SetStartupImageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) StartupImageMode = m)
             SetGalleryViewModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryViewMode = m)
             SetGalleryStartupFolderModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryStartupFolderMode = m)
+            SetViewerFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerFitBehavior = m)
             SetLanguageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) LanguageMode = m)
             SetTransparencyBackgroundModeCommand = ReactiveCommand.Create(Of String)(Sub(m) TransparencyBackgroundMode = m)
             CleanupDatabaseCommand = ReactiveCommand.Create(Sub()
@@ -837,6 +874,7 @@ Namespace ViewModels
             _savedAccentColor = _accentColor
             _savedBreadcrumbs = _showBreadcrumbs
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
+            _savedViewerFitBehavior = _viewerFitBehavior
             _savedThumbnailQuality = _thumbnailQuality
             _savedThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             _savedJpgSaveQuality = _jpgSaveQuality
@@ -865,6 +903,7 @@ Namespace ViewModels
             AccentColor = _savedAccentColor
             ShowBreadcrumbs = _savedBreadcrumbs
             ViewerOpenFitToWindow = _savedViewerOpenFitToWindow
+            ViewerFitBehavior = _savedViewerFitBehavior
             ThumbnailQuality = _savedThumbnailQuality
             ThumbnailMemoryCacheCapacity = _savedThumbnailMemoryCacheCapacity
             JpgSaveQuality = _savedJpgSaveQuality
@@ -913,6 +952,7 @@ Namespace ViewModels
             AccentColor = "#F08A1A"
             ShowBreadcrumbs = True
             ViewerOpenFitToWindow = True
+            ViewerFitBehavior = "Always"
             StartupImageMode = "Viewer"
             ThumbnailCacheEnabled = True
             ThumbnailQuality = 82
@@ -1010,6 +1050,8 @@ Namespace ViewModels
             Dim settings = AppSettingsService.Load()
             settings.ViewerShowFilmstrip = _viewerShowFilmstrip
             settings.ViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
+            settings.ViewerOpenFitToWindow = _viewerOpenFitToWindow
+            settings.ViewerFitBehavior = _viewerFitBehavior
             settings.EditorShowFilmstrip = _editorShowFilmstrip
             settings.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded

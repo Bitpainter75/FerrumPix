@@ -181,7 +181,9 @@ Namespace ViewModels
         ' WrapPanel-Margin der Karte (Margin="5", oben+unten = 10). Muss mit dem tatsächlichen XAML
         ' übereinstimmen - sonst driftet die virtualisierte Scroll-Berechnung mit der Scrolltiefe
         ' immer weiter auseinander (einzige Quelle für beide, damit sie nicht wieder auseinanderlaufen).
-        Private Const GridItemLabelRowHeight As Double = 68
+        ' Muss mit der Grid-Zeilenhöhe "RowDefinitions=Auto,92" in GalleryView.axaml übereinstimmen
+        ' (92 statt vormals 68, seit die Kachel zusätzlich eine DimensionsText-Zeile zeigt).
+        Private Const GridItemLabelRowHeight As Double = 92
         Private Const GridItemCardBorderHeight As Double = 4
         Private Const GridItemCardMarginHeight As Double = 10
 
@@ -254,7 +256,15 @@ Namespace ViewModels
             Get
                 Dim modeLabel As String
                 Select Case _sortMode
-                    Case "Date" : modeLabel = LocalizationService.T("Datum")
+                    Case "FileCreatedAt" : modeLabel = LocalizationService.T("Erstellt (Datei)")
+                    Case "FileModifiedAt" : modeLabel = LocalizationService.T("Geändert (Datei)")
+                    Case "ExifDateTaken" : modeLabel = LocalizationService.T("Aufgenommen (EXIF)")
+                    Case "ExifDateModified" : modeLabel = LocalizationService.T("Geändert (EXIF)")
+                    Case "Width" : modeLabel = LocalizationService.T("Bildbreite")
+                    Case "Height" : modeLabel = LocalizationService.T("Bildhöhe")
+                    Case "Camera" : modeLabel = LocalizationService.T("Kamera")
+                    Case "Iso" : modeLabel = LocalizationService.T("ISO")
+                    Case "Aperture" : modeLabel = LocalizationService.T("Blende")
                     Case "Size" : modeLabel = LocalizationService.T("Größe")
                     Case "Type" : modeLabel = LocalizationService.T("Typ")
                     Case "Rating" : modeLabel = LocalizationService.T("Bewertung")
@@ -272,9 +282,57 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property IsSortDate As Boolean
+        Public ReadOnly Property IsSortFileCreatedAt As Boolean
             Get
-                Return String.Equals(_sortMode, "Date", StringComparison.OrdinalIgnoreCase)
+                Return String.Equals(_sortMode, "FileCreatedAt", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSortFileModifiedAt As Boolean
+            Get
+                Return String.Equals(_sortMode, "FileModifiedAt", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSortExifDateTaken As Boolean
+            Get
+                Return String.Equals(_sortMode, "ExifDateTaken", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSortExifDateModified As Boolean
+            Get
+                Return String.Equals(_sortMode, "ExifDateModified", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSortWidth As Boolean
+            Get
+                Return String.Equals(_sortMode, "Width", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSortHeight As Boolean
+            Get
+                Return String.Equals(_sortMode, "Height", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSortCamera As Boolean
+            Get
+                Return String.Equals(_sortMode, "Camera", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSortIso As Boolean
+            Get
+                Return String.Equals(_sortMode, "Iso", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSortAperture As Boolean
+            Get
+                Return String.Equals(_sortMode, "Aperture", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
@@ -317,7 +375,15 @@ Namespace ViewModels
         Private Sub RaiseSortStateChanged()
             For Each propertyName In {
                 NameOf(IsSortName),
-                NameOf(IsSortDate),
+                NameOf(IsSortFileCreatedAt),
+                NameOf(IsSortFileModifiedAt),
+                NameOf(IsSortExifDateTaken),
+                NameOf(IsSortExifDateModified),
+                NameOf(IsSortWidth),
+                NameOf(IsSortHeight),
+                NameOf(IsSortCamera),
+                NameOf(IsSortIso),
+                NameOf(IsSortAperture),
                 NameOf(IsSortSize),
                 NameOf(IsSortType),
                 NameOf(IsSortRating),
@@ -1722,7 +1788,7 @@ Namespace ViewModels
         Private Async Function EvaluateConditionsAsync(meta As LibraryImageMeta, conditions As List(Of SearchCondition), combinator As String) As Task(Of Boolean)
             If conditions Is Nothing OrElse conditions.Count = 0 Then Return True
 
-            If conditions.Any(Function(c) Not MetaHasField(meta, c.Field)) Then
+            If conditions.Any(Function(c) Not MetaHasField(meta, c.Field)) OrElse IsMetaStale(meta) Then
                 Await Task.Run(Sub() ResolveMissingMetaFields(meta))
             End If
 
@@ -1748,12 +1814,33 @@ Namespace ViewModels
             End Select
         End Function
 
+        ''' <summary>Vergleicht den beim letzten EXIF-Scan festgehaltenen Dateisystem-Zeitstempel mit dem
+        ''' aktuellen - True, wenn beide übereinstimmen (Katalogeintrag ist noch gültig).</summary>
+        Private Shared Function IsScannedSnapshotFresh(scannedSourceModifiedAt As String, currentModified As DateTime) As Boolean
+            If String.IsNullOrWhiteSpace(scannedSourceModifiedAt) Then Return False
+            Dim scanned As DateTime
+            If Not DateTime.TryParse(scannedSourceModifiedAt, Globalization.CultureInfo.InvariantCulture, Globalization.DateTimeStyles.RoundtripKind, scanned) Then Return False
+            Return scanned = currentModified
+        End Function
+
+        ''' <summary>Snapshot-Vergleich: Der SQLite-Katalog invalidiert sich sonst nie automatisch bei
+        ''' Dateiänderungen (weder der FileSystemWatcher noch MetaHasField erkennen das) - ohne diesen
+        ''' Check würden nach dem ersten erfolgreichen Lesen dauerhaft veraltete EXIF-Werte geliefert.</summary>
+        Private Shared Function IsMetaStale(meta As LibraryImageMeta) As Boolean
+            Try
+                Return Not IsScannedSnapshotFresh(meta.ScannedSourceModifiedAt, File.GetLastWriteTime(meta.FilePath))
+            Catch
+                Return True
+            End Try
+        End Function
+
         Private Shared Sub ResolveMissingMetaFields(meta As LibraryImageMeta)
             Try
                 Dim data = ExifService.ReadExif(meta.FilePath)
                 Dim fields = ExifService.ExtractSearchFields(data, meta.FilePath)
                 LibraryService.Instance.SetExifData(meta.FilePath, fields)
                 meta.DateTaken = fields.DateTaken
+                meta.DateModifiedExif = fields.DateModifiedExif
                 meta.Camera = fields.Camera
                 meta.Lens = fields.Lens
                 meta.Aperture = fields.Aperture
@@ -1764,6 +1851,7 @@ Namespace ViewModels
                 meta.GpsLongitude = fields.GpsLongitude
                 meta.ImageWidth = fields.ImageWidth
                 meta.ImageHeight = fields.ImageHeight
+                meta.ScannedSourceModifiedAt = File.GetLastWriteTime(meta.FilePath).ToString("o")
             Catch
             End Try
         End Sub
@@ -2293,6 +2381,7 @@ Namespace ViewModels
                     ToArray()
 
                 Dim meta = LibraryService.Instance.GetFolderMeta(folderPath)
+                Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
                 For Each file In files
                     Dim item = New ImageItem(file, thumbnailToken)
                     Dim m As LibraryImageMeta = Nothing
@@ -2300,11 +2389,31 @@ Namespace ViewModels
                         item.IsFavorite = m.IsFavorite
                         item.Rating = m.Rating
                         item.Tags = If(m.Tags, New List(Of String)())
+                        ' Nur übernehmen, wenn die Datei sich seit dem letzten EXIF-Scan nicht geändert hat -
+                        ' sonst würde man dauerhaft veraltete Breite/Höhe/EXIF-Daten anzeigen (siehe IsMetaStale).
+                        If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso
+                           IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified) Then
+                            item.ImageWidth = m.ImageWidth.Value
+                            item.ImageHeight = m.ImageHeight.Value
+                            item.ExifDateTaken = ExifService.ParseExifDateTime(m.DateTaken)
+                            item.ExifDateModified = ExifService.ParseExifDateTime(m.DateModifiedExif)
+                            item.ExifCamera = m.Camera
+                            item.ExifIso = m.Iso
+                            item.ExifAperture = m.Aperture
+                        Else
+                            itemsNeedingMetaRefresh.Add(item)
+                        End If
+                    Else
+                        itemsNeedingMetaRefresh.Add(item)
                     End If
                     _allItems.Add(item)
                 Next
 
                 FilterAndSort()
+
+                If itemsNeedingMetaRefresh.Count > 0 Then
+                    QueueBackgroundMetaRefresh(itemsNeedingMetaRefresh, thumbnailToken)
+                End If
 
                 ' Im Ruhezustand (Viewport-Warteschlange leer) füllt sich der Rest des Ordners
                 ' nach und nach mit Thumbnails auf, auch für Bilder, die nie in die Nähe des
@@ -2330,6 +2439,68 @@ Namespace ViewModels
             Catch ex As IOException
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
+        End Sub
+
+        ''' <summary>Lädt Breite/Höhe/EXIF-Daten für Bilder nach, die beim Ordner-Scan noch fehlten oder
+        ''' seit dem letzten Scan geändert wurden - mit begrenzter Parallelität und niedriger Priorität,
+        ''' analog zur bestehenden Hintergrund-Thumbnail-Vorladung. Reihenfolge/Filter werden erst einmal
+        ''' am Ende neu berechnet (kein Re-Sort pro Einzel-Item), damit die Kacheln beim Scrollen nicht
+        ''' springen, während die Daten nach und nach eintreffen.</summary>
+        Private Sub QueueBackgroundMetaRefresh(items As List(Of ImageItem), cancellationToken As CancellationToken)
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Const MetaRefreshStartupDelayMs As Integer = 1500
+            Dim degreeOfParallelism = Math.Max(1, Environment.ProcessorCount \ 2)
+
+            Task.Run(Async Function()
+                         Try
+                             Await Task.Delay(MetaRefreshStartupDelayMs, cancellationToken)
+                         Catch ex As OperationCanceledException
+                             Return
+                         End Try
+
+                         Dim nextIndex = -1
+                         Dim workers As New List(Of Task)()
+                         For w = 1 To degreeOfParallelism
+                             workers.Add(Task.Run(Async Function()
+                                                       Do
+                                                           Dim i = Interlocked.Increment(nextIndex)
+                                                           If i >= items.Count Then Exit Do
+                                                           If cancellationToken.IsCancellationRequested Then Exit Do
+                                                           Dim item = items(i)
+                                                           Try
+                                                               Dim data = ExifService.ReadExif(item.FilePath)
+                                                               Dim fields = ExifService.ExtractSearchFields(data, item.FilePath)
+                                                               LibraryService.Instance.SetExifData(item.FilePath, fields)
+                                                               Dim width = If(fields.ImageWidth, 0)
+                                                               Dim height = If(fields.ImageHeight, 0)
+                                                               Dim exifTaken = ExifService.ParseExifDateTime(fields.DateTaken)
+                                                               Dim exifModified = ExifService.ParseExifDateTime(fields.DateModifiedExif)
+                                                               Dim camera = fields.Camera
+                                                               Dim iso = fields.Iso
+                                                               Dim aperture = fields.Aperture
+                                                               Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                                                                          If cancellationToken.IsCancellationRequested Then Return
+                                                                                                          item.ImageWidth = width
+                                                                                                          item.ImageHeight = height
+                                                                                                          item.ExifDateTaken = exifTaken
+                                                                                                          item.ExifDateModified = exifModified
+                                                                                                          item.ExifCamera = camera
+                                                                                                          item.ExifIso = iso
+                                                                                                          item.ExifAperture = aperture
+                                                                                                      End Sub)
+                                                           Catch
+                                                           End Try
+                                                       Loop
+                                                   End Function))
+                         Next
+                         Await Task.WhenAll(workers)
+
+                         If cancellationToken.IsCancellationRequested Then Return
+                         Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                                    If cancellationToken.IsCancellationRequested Then Return
+                                                                    FilterAndSort()
+                                                                End Sub)
+                     End Function)
         End Sub
 
         Private Function BeginNewFolderThumbnailScope() As CancellationToken
@@ -2469,10 +2640,50 @@ Namespace ViewModels
             Dim contentItems = items.Where(Function(i) Not i.IsParentFolderEntry AndAlso Not i.IsFolder)
 
             Select Case _sortMode
-                Case "Date"
+                Case "FileModifiedAt"
                     Dim sorted = If(_sortAscending,
                                     contentItems.OrderBy(Function(i) i.DateModified).ThenBy(Function(i) i.FileName),
                                     contentItems.OrderByDescending(Function(i) i.DateModified).ThenBy(Function(i) i.FileName))
+                    Return parent.Concat(folders).Concat(sorted)
+                Case "FileCreatedAt"
+                    Dim sorted = If(_sortAscending,
+                                    contentItems.OrderBy(Function(i) i.FileCreatedAt).ThenBy(Function(i) i.FileName),
+                                    contentItems.OrderByDescending(Function(i) i.FileCreatedAt).ThenBy(Function(i) i.FileName))
+                    Return parent.Concat(folders).Concat(sorted)
+                Case "ExifDateTaken"
+                    Dim sorted = If(_sortAscending,
+                                    contentItems.OrderBy(Function(i) i.ExifDateTaken.GetValueOrDefault(DateTime.MinValue)).ThenBy(Function(i) i.FileName),
+                                    contentItems.OrderByDescending(Function(i) i.ExifDateTaken.GetValueOrDefault(DateTime.MinValue)).ThenBy(Function(i) i.FileName))
+                    Return parent.Concat(folders).Concat(sorted)
+                Case "ExifDateModified"
+                    Dim sorted = If(_sortAscending,
+                                    contentItems.OrderBy(Function(i) i.ExifDateModified.GetValueOrDefault(DateTime.MinValue)).ThenBy(Function(i) i.FileName),
+                                    contentItems.OrderByDescending(Function(i) i.ExifDateModified.GetValueOrDefault(DateTime.MinValue)).ThenBy(Function(i) i.FileName))
+                    Return parent.Concat(folders).Concat(sorted)
+                Case "Width"
+                    Dim sorted = If(_sortAscending,
+                                    contentItems.OrderBy(Function(i) i.ImageWidth).ThenBy(Function(i) i.FileName),
+                                    contentItems.OrderByDescending(Function(i) i.ImageWidth).ThenBy(Function(i) i.FileName))
+                    Return parent.Concat(folders).Concat(sorted)
+                Case "Height"
+                    Dim sorted = If(_sortAscending,
+                                    contentItems.OrderBy(Function(i) i.ImageHeight).ThenBy(Function(i) i.FileName),
+                                    contentItems.OrderByDescending(Function(i) i.ImageHeight).ThenBy(Function(i) i.FileName))
+                    Return parent.Concat(folders).Concat(sorted)
+                Case "Camera"
+                    Dim sorted = If(_sortAscending,
+                                    contentItems.OrderBy(Function(i) i.ExifCamera).ThenBy(Function(i) i.FileName),
+                                    contentItems.OrderByDescending(Function(i) i.ExifCamera).ThenBy(Function(i) i.FileName))
+                    Return parent.Concat(folders).Concat(sorted)
+                Case "Iso"
+                    Dim sorted = If(_sortAscending,
+                                    contentItems.OrderBy(Function(i) i.ExifIso.GetValueOrDefault(0)).ThenBy(Function(i) i.FileName),
+                                    contentItems.OrderByDescending(Function(i) i.ExifIso.GetValueOrDefault(0)).ThenBy(Function(i) i.FileName))
+                    Return parent.Concat(folders).Concat(sorted)
+                Case "Aperture"
+                    Dim sorted = If(_sortAscending,
+                                    contentItems.OrderBy(Function(i) i.ExifAperture.GetValueOrDefault(0.0)).ThenBy(Function(i) i.FileName),
+                                    contentItems.OrderByDescending(Function(i) i.ExifAperture.GetValueOrDefault(0.0)).ThenBy(Function(i) i.FileName))
                     Return parent.Concat(folders).Concat(sorted)
                 Case "Size"
                     Dim sorted = If(_sortAscending,

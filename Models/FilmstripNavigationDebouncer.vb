@@ -40,6 +40,18 @@ Namespace Models
         Private _wheelAccumulator As Double = 0.0
         Private ReadOnly _wheelIdleTimer As DispatcherTimer
 
+        ' Momentum-/Kinetic-Scrolling von Touchpads/manchen Mäusen feuert nach dem physischen
+        ' Ende einer Scroll-Geste noch für einige hundert ms weitere, abklingende Wheel-Events mit
+        ' abnehmendem Delta. Der Abstand zwischen zwei solchen Nachläufer-Events überschreitet dabei
+        ' oft _debounceMs (90ms), wodurch der Sofort-Commit-Pfad unten (gedacht für einen bewusst
+        ' isolierten Einzelschritt nach einer echten Pause) jeden Nachläufer fälschlich als neuen
+        ' Schritt committet - das Blättern läuft dadurch spürbar nach. Ein Wheel-Notch darf daher nur
+        ' sofort committen, wenn seit dem VORHERIGEN Wheel-Event (nicht nur seit dem letzten Commit)
+        ' eine echte Pause vergangen ist. Tastatur-Navigation (QueueNext/QueuePrevious) ist davon
+        ' nicht betroffen und bleibt weiterhin bei jedem Einzelschritt sofort reagierend.
+        Private Const WheelFreshGestureThresholdMs As Double = 200
+        Private _lastWheelEventAt As DateTime = DateTime.MinValue
+
         Public Sub New(wrapAround As Boolean, getCurrentIndex As Func(Of Integer), getCount As Func(Of Integer),
                        commit As Func(Of Integer, Task), Optional debounceMs As Integer = 90)
             _wrapAround = wrapAround
@@ -83,21 +95,23 @@ Namespace Models
         ''' bei einer schnellen Geste also mehrfach hintereinander synchron aufgerufen werden.
         Public Sub QueueWheelDelta(deltaY As Double)
             If deltaY = 0 Then Return
+            Dim isFreshGesture = (DateTime.UtcNow - _lastWheelEventAt).TotalMilliseconds >= WheelFreshGestureThresholdMs
+            _lastWheelEventAt = DateTime.UtcNow
             _wheelAccumulator += deltaY
             _wheelIdleTimer.Stop()
             _wheelIdleTimer.Start()
             While Math.Abs(_wheelAccumulator) >= WheelNotchThreshold
                 If _wheelAccumulator > 0 Then
                     _wheelAccumulator -= WheelNotchThreshold
-                    QueueDelta(-1)
+                    QueueDelta(-1, allowImmediateCommit:=isFreshGesture)
                 Else
                     _wheelAccumulator += WheelNotchThreshold
-                    QueueDelta(1)
+                    QueueDelta(1, allowImmediateCommit:=isFreshGesture)
                 End If
             End While
         End Sub
 
-        Private Sub QueueDelta(delta As Integer)
+        Private Sub QueueDelta(delta As Integer, Optional allowImmediateCommit As Boolean = True)
             Dim count = _getCount()
             If count = 0 Then Return
             Dim baseIndex = If(_pendingIndex >= 0, _pendingIndex, _getCurrentIndex())
@@ -119,7 +133,7 @@ Namespace Models
             ' her ist - das deckt sowohl den allerersten Schritt als auch einen isolierten Schritt
             ' nach einer Pause ab. Läuft bereits ein Timer (schnelle Folge-Schritte einer laufenden
             ' Geste), bleibt es beim bisherigen Bündeln über den Debounce-Timer.
-            If Not _timer.IsEnabled AndAlso (DateTime.UtcNow - _lastCommitAt).TotalMilliseconds >= _debounceMs Then
+            If allowImmediateCommit AndAlso Not _timer.IsEnabled AndAlso (DateTime.UtcNow - _lastCommitAt).TotalMilliseconds >= _debounceMs Then
                 Dim idxToCommit = _pendingIndex
                 _pendingIndex = -1
                 _lastCommitAt = DateTime.UtcNow

@@ -83,16 +83,33 @@ Namespace Views
             If gridScroll IsNot Nothing Then
                 AddHandler gridScroll.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
                 AddHandler gridScroll.ScrollChanged, AddressOf OnGalleryScrollChanged
+                gridScroll.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged, RoutingStrategies.Tunnel)
             End If
 
             Dim listScroll = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
             If listScroll IsNot Nothing Then
                 AddHandler listScroll.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
                 AddHandler listScroll.ScrollChanged, AddressOf OnGalleryScrollChanged
+                listScroll.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged, RoutingStrategies.Tunnel)
             End If
 
             _scrollHandlersAttached = True
             QueueViewportThumbnailRefresh()
+        End Sub
+
+        ' Avalonias Standard-ScrollViewer bietet keine Geschwindigkeits-Einstellung - hier wird das
+        ' Wheel-Event abgefangen und der Offset direkt mit einem festen, höheren Pixelbetrag pro
+        ' Notch gesetzt (statt das eingebaute Scrollen zusätzlich laufen zu lassen, was zu doppelter
+        ' Geschwindigkeit führen würde). ~90px/Notch liegt spürbar über dem Avalonia-Standardgefühl.
+        Private Const GalleryWheelScrollStepPx As Double = 90
+
+        Private Sub OnGalleryScrollWheelChanged(sender As Object, e As PointerWheelEventArgs)
+            Dim scrollViewer = TryCast(sender, ScrollViewer)
+            If scrollViewer Is Nothing Then Return
+            Dim maxOffsetY = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height)
+            Dim newOffsetY = Math.Max(0, Math.Min(scrollViewer.Offset.Y - e.Delta.Y * GalleryWheelScrollStepPx, maxOffsetY))
+            scrollViewer.Offset = New Vector(scrollViewer.Offset.X, newOffsetY)
+            e.Handled = True
         End Sub
 
         Private Sub OnGalleryDetachedFromVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
@@ -104,12 +121,14 @@ Namespace Views
             If gridScroll IsNot Nothing Then
                 RemoveHandler gridScroll.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
                 RemoveHandler gridScroll.ScrollChanged, AddressOf OnGalleryScrollChanged
+                gridScroll.RemoveHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged)
             End If
 
             Dim listScroll = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
             If listScroll IsNot Nothing Then
                 RemoveHandler listScroll.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
                 RemoveHandler listScroll.ScrollChanged, AddressOf OnGalleryScrollChanged
+                listScroll.RemoveHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged)
             End If
 
             _scrollHandlersAttached = False

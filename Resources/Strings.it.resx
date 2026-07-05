@@ -12,9 +12,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="0_10_Juni_2026_57bc8a06" xml:space="preserve">
-    <value>0.10 - giugno 2026</value>
-  </data>
   <data name="100_percent_80fe0483" xml:space="preserve">
     <value>100 percento</value>
   </data>
@@ -1720,9 +1717,6 @@
   <data name="Bedingung_hinzuf_gen_0c64f68a" xml:space="preserve">
     <value>+ Aggiungi condizione</value>
   </data>
-  <data name="0_20_Juli_2026_f08172eb" xml:space="preserve">
-    <value>0.20 - luglio 2026</value>
-  </data>
   <data name="ANPASSUNGEN_a344381a" xml:space="preserve">
     <value>REGOLAZIONI</value>
   </data>
@@ -2111,8 +2105,7 @@
   <data name="Suche_fehlgeschlagen_f28916a1" xml:space="preserve">
     <value>Ricerca non riuscita</value>
   </data>
-
-  <data name="0_30_Juli_2026_2d318df2" xml:space="preserve">
-    <value>0.30 - luglio 2026</value>
+  <data name="0_4_0_Juli_2026_2d318df2" xml:space="preserve">
+    <value>0.4.0 - luglio 2026</value>
   </data>
 </root>

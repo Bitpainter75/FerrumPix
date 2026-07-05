@@ -31,6 +31,10 @@ Namespace Services
         Public Property LastGalleryFolder As String = ""
         Public Property ViewerShowFilmstrip As Boolean = True
         Public Property ViewerSlideshowIntervalSeconds As Integer = 3
+        Public Property ViewerOpenFitToWindow As Boolean = True
+        ''' "Always" (immer einpassen, auch kleinere Bilder hochskalieren) oder "OnlyWhenLarger"
+        ''' (nur einpassen, wenn das Bild größer als die Darstellungsfläche ist, sonst 100%).
+        Public Property ViewerFitBehavior As String = "Always"
         Public Property EditorShowFilmstrip As Boolean = True
         Public Property ShowHiddenFolders As Boolean = False
         Public Property ThemeMode As String = "Dark"
@@ -91,6 +95,7 @@ Namespace Services
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
+                settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
                 settings.ApplicationScale = NormalizeApplicationScale(settings.ApplicationScale)
@@ -123,6 +128,7 @@ Namespace Services
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
+                settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
                 settings.ApplicationScale = NormalizeApplicationScale(settings.ApplicationScale)
@@ -147,7 +153,7 @@ Namespace Services
         End Function
 
         Public Shared Function NormalizeGalleryThumbnailMemoryCacheCapacity(value As Integer) As Integer
-            Return Math.Max(50, Math.Min(2500, value))
+            Return Math.Max(50, Math.Min(5000, value))
         End Function
 
         Public Shared Function NormalizeJpgSaveQuality(value As Integer) As Integer
@@ -156,6 +162,15 @@ Namespace Services
 
         Public Shared Function NormalizeViewerSlideshowIntervalSeconds(value As Integer) As Integer
             Return Math.Max(1, Math.Min(30, value))
+        End Function
+
+        Public Shared Function NormalizeViewerFitBehavior(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "OnlyWhenLarger"
+                    Return "OnlyWhenLarger"
+                Case Else
+                    Return "Always"
+            End Select
         End Function
 
         Public Shared Function NormalizeApplicationScale(value As Double) As Double
@@ -197,8 +212,12 @@ Namespace Services
 
         Public Shared Function NormalizeGallerySortMode(value As String) As String
             Select Case If(value, "").Trim()
-                Case "Date", "Size", "Type", "Rating", "Favorite"
+                Case "Size", "Type", "Rating", "Favorite",
+                     "Width", "Height", "FileCreatedAt", "FileModifiedAt", "ExifDateTaken", "ExifDateModified",
+                     "Camera", "Iso", "Aperture"
                     Return value.Trim()
+                Case "Date" ' Alte Sortiereinstellung aus Versionen vor 0.4.0 - Bestandsnutzer nicht stillschweigend auf "Name" zurückfallen lassen.
+                    Return "FileModifiedAt"
                 Case Else
                     Return "Name"
             End Select

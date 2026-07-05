@@ -5,6 +5,7 @@
              xmlns:vm="clr-namespace:FerrumPix.ViewModels"
              xmlns:services="clr-namespace:FerrumPix.Services"
              xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="FerrumPix.Views.EditorView"
              Classes="editor-view"
              Background="{DynamicResource FP.Bg.Root}"
@@ -247,7 +248,8 @@
                                 SizeChanged="OnPreviewCanvasSizeChanged"
                                 PointerPressed="OnSliderPointerPressed"
                                 PointerMoved="OnSliderPointerMoved"
-                                PointerReleased="OnSliderPointerReleased">
+                                PointerReleased="OnSliderPointerReleased"
+                                PointerExited="OnPreviewCanvasPointerExited">
                             <Border x:Name="ImageBackgroundBorder"
                                     Background="{Binding TransparencyBackgroundBrush}"
                                     IsHitTestVisible="False"/>
@@ -470,10 +472,13 @@
                                     </Button>
                                 </StackPanel>
                                 <Button Grid.Column="4" Classes="ghost" Height="28" Padding="8,2" Margin="12,0,0,0" Focusable="False"
+                                        Classes.active="{Binding IsZoomActualActive}"
                                         Click="OnZoomActualClick" ToolTip.Tip="Auf 100 Prozent springen">
                                     <TextBlock Name="ZoomPercentText" Text="100%" Foreground="{DynamicResource FP.Text.Primary}" VerticalAlignment="Center"/>
                                 </Button>
-                                <Button Grid.Column="5" Classes="ghost" Height="28" Padding="8,2" Margin="8,0,0,0" Focusable="False" Click="OnZoomFitClick" ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
+                                <Button Grid.Column="5" Classes="ghost" Height="28" Padding="8,2" Margin="8,0,0,0" Focusable="False"
+                                        Classes.active="{Binding IsZoomFitActive}"
+                                        Click="OnZoomFitClick" ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/26_Anpassen.svg" Width="20" Height="20"/>
                                         <TextBlock Text="Einpassen"/>
@@ -782,6 +787,12 @@
                                         <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="11"/>
                                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding AnnotationShadowStrength}" Margin="6,0"/>
                                         <TextBlock Grid.Column="2" Text="{Binding AnnotationShadowStrength, StringFormat={}{0:F0}%}" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"/>
+                                    </Grid>
+                                    <CheckBox Content="Abgerundet" IsChecked="{Binding AnnotationShadowRounded}" Margin="0,4,0,0" FontSize="11"/>
+                                    <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center" IsVisible="{Binding AnnotationShadowRounded}">
+                                        <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="11"/>
+                                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding AnnotationShadowCornerRadius}" Margin="6,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding AnnotationShadowCornerRadius, StringFormat={}{0:F0}%}" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"/>
                                     </Grid>
                                 </StackPanel>
 
@@ -1649,13 +1660,6 @@
 
                 <Grid Grid.Row="1" Margin="0,7,0,0">
                     <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsLayersTabSelected}">
-                        <TextBlock Grid.Row="0"
-                                   Text="Klicke ins Bild oder nutze die Werkzeugleiste oben."
-                                   Foreground="{DynamicResource FP.Text.Muted}"
-                                   FontSize="11"
-                                   TextWrapping="Wrap"
-                                   IsVisible="{Binding !HasAnnotationChanges}"/>
-
                         <ListBox Grid.Row="1"
                                  Classes="layers-list"
                                  ItemsSource="{Binding TextAnnotations}"
@@ -1802,6 +1806,9 @@
                         <TextBlock Text="{Binding CurrentFileName}" FontSize="12" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding MousePositionText}"
+                                   IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                   Foreground="{DynamicResource FP.Text.Muted}" FontSize="12" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">

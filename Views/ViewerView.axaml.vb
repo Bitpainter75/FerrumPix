@@ -258,6 +258,8 @@ Namespace Views
         End Sub
 
         Private Sub OnImagePointerMoved(sender As Object, e As PointerEventArgs)
+            UpdateMousePositionText(e)
+
             If _isPanningImage Then
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
                 If scrollViewer Is Nothing Then Return
@@ -327,6 +329,23 @@ Namespace Views
             Return vm IsNot Nothing AndAlso vm.CurrentImage IsNot Nothing AndAlso vm.CanEdit AndAlso
                    vm.RotationAngle = 0 AndAlso vm.ScaleX = 1.0
         End Function
+
+        ''' <summary>Läuft unabhängig von Pan/Crop-Dragging bei jeder Mausbewegung über dem Bild, damit
+        ''' die Bildpixel-Koordinate in der Fußleiste immer aktuell ist.</summary>
+        Private Sub UpdateMousePositionText(e As PointerEventArgs)
+            Dim vm = GetVm()
+            Dim image = Me.FindControl(Of Image)("MainImage")
+            If vm Is Nothing OrElse image Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+            Dim norm = NormalizeImagePoint(e.GetPosition(image), image.Bounds.Size)
+            Dim px = CInt(norm.X * vm.CurrentImage.PixelSize.Width)
+            Dim py = CInt(norm.Y * vm.CurrentImage.PixelSize.Height)
+            vm.MousePositionText = $"{px}, {py}"
+        End Sub
+
+        Private Sub OnImagePointerExited(sender As Object, e As PointerEventArgs)
+            Dim vm = GetVm()
+            If vm IsNot Nothing Then vm.MousePositionText = ""
+        End Sub
 
         Private Function NormalizeImagePoint(p As Point, size As Size) As Point
             If size.Width <= 0 OrElse size.Height <= 0 Then Return New Point(0, 0)
@@ -543,8 +562,12 @@ Namespace Views
             If vm.CurrentImage Is Nothing Then Return
 
             Dim displayZoom = Math.Max(0.05, vm.ZoomLevel)
-            Dim imageWidth = vm.CurrentImage.Size.Width * displayZoom
-            Dim imageHeight = vm.CurrentImage.Size.Height * displayZoom
+            ' Auf ganze Geräte-Pixel runden: Border (Schachbrettmuster) und Image werden sonst mit
+            ' fraktionalen Werten unabhängig voneinander gerundet/gesnappt, was am rechten/unteren
+            ' Rand einen ~1-2px durchscheinenden Schachbrett-Rand verursachen kann, auch bei
+            ' komplett opaken Bildern.
+            Dim imageWidth = Math.Round(vm.CurrentImage.Size.Width * displayZoom, MidpointRounding.AwayFromZero)
+            Dim imageHeight = Math.Round(vm.CurrentImage.Size.Height * displayZoom, MidpointRounding.AwayFromZero)
 
             image.Width = imageWidth
             image.Height = imageHeight
@@ -601,8 +624,8 @@ Namespace Views
                 ' völlig undurchsichtigen Bildern in den Letterbox-/Pillarbox-Rändern durchscheinen.
                 Dim scale = Math.Min(vw / iw, vh / ih)
                 image.Stretch = Avalonia.Media.Stretch.Uniform
-                image.Width = iw * scale
-                image.Height = ih * scale
+                image.Width = Math.Round(iw * scale, MidpointRounding.AwayFromZero)
+                image.Height = Math.Round(ih * scale, MidpointRounding.AwayFromZero)
                 image.MaxWidth = vw
                 image.MaxHeight = vh
             End If

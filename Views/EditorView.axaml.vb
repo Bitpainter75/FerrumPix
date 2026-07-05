@@ -122,10 +122,14 @@ Namespace Views
         End Sub
 
         Public Sub OnZoomOutClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then vm.ActiveZoomPreset = ZoomPresetMode.Manual
             SetZoom(_zoomSliderValue - 8)
         End Sub
 
         Public Sub OnZoomInClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then vm.ActiveZoomPreset = ZoomPresetMode.Manual
             SetZoom(_zoomSliderValue + 8)
         End Sub
 
@@ -139,16 +143,28 @@ Namespace Views
             Dim imgW = effectiveSize.Width
             Dim imgH = effectiveSize.Height
             If cw <= 0 OrElse ch <= 0 OrElse imgW <= 0 OrElse imgH <= 0 Then Return
+            vm.ActiveZoomPreset = ZoomPresetMode.Fit
             _panX = 0
             _panY = 0
-            SetZoom(ZoomToSlider(Math.Min(cw / imgW, ch / imgH) * 100.0))
+            Dim fitPct = Math.Min(cw / imgW, ch / imgH) * 100.0
+            If IsOnlyWhenLargerFitBehavior() Then fitPct = Math.Min(fitPct, 100.0)
+            SetZoom(ZoomToSlider(fitPct))
         End Sub
 
         Public Sub OnZoomActualClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then vm.ActiveZoomPreset = ZoomPresetMode.Actual
             _panX = 0
             _panY = 0
             SetZoom(ZoomToSlider(100.0))
         End Sub
+
+        ''' <summary>Liest die gemeinsame Viewer/Editor-Einstellung "Einpassen-Verhalten" - "OnlyWhenLarger"
+        ''' verkleinert größere Bilder auf die Fläche, skaliert kleinere Bilder aber nicht hoch (100%).</summary>
+        Private Function IsOnlyWhenLargerFitBehavior() As Boolean
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            Return String.Equals(mainVm?.Settings?.ViewerFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
+        End Function
 
         Private Async Sub PlacePendingImageAsync(xPercent As Double, yPercent As Double)
             Dim vm = TryCast(DataContext, EditorViewModel)
@@ -218,6 +234,8 @@ Namespace Views
             End While
             If Not isInsideCanvas Then Return
             If e.Delta.Y = 0 Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then vm.ActiveZoomPreset = ZoomPresetMode.Manual
             SetZoom(_zoomSliderValue + If(e.Delta.Y > 0, 6.0, -6.0))
             e.Handled = True
         End Sub
@@ -243,6 +261,8 @@ Namespace Views
                     AddHandler zs.PropertyChanged, Sub(sender As Object, args As Avalonia.AvaloniaPropertyChangedEventArgs)
                                                        If _ignoreSliderChange Then Return
                                                        If args.Property = RoundSlider.ValueProperty Then
+                                                           Dim sliderVm = TryCast(DataContext, EditorViewModel)
+                                                           If sliderVm IsNot Nothing Then sliderVm.ActiveZoomPreset = ZoomPresetMode.Manual
                                                            _zoomSliderValue = zs.Value
                                                            UpdateSliderLayout()
                                                            UpdateZoomDisplay()
@@ -267,7 +287,20 @@ Namespace Views
             Select Case e.PropertyName
                 Case NameOf(EditorViewModel.CurrentImage)
                     _sliderPosition = 0.5
-                    _zoomInitialized = False   ' reset zoom to fit when new image loads
+                    ' Zoom-Modus bleibt über den Bildwechsel erhalten (siehe ActiveZoomPreset) - nur
+                    ' bei Fit wird wie bisher unbedingt neu eingepasst, bei Actual auf 100% gesprungen,
+                    ' bei Manual bleiben Zoom/Pan des Nutzers unverändert stehen.
+                    Dim currentImageVm = TryCast(sender, EditorViewModel)
+                    Select Case If(currentImageVm IsNot Nothing, currentImageVm.ActiveZoomPreset, ZoomPresetMode.Fit)
+                        Case ZoomPresetMode.Fit
+                            _zoomInitialized = False
+                        Case ZoomPresetMode.Actual
+                            _panX = 0
+                            _panY = 0
+                            SetZoom(ZoomToSlider(100.0))
+                        Case Else
+                            ' Manual: _zoomSliderValue/_panX/_panY unverändert lassen
+                    End Select
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.DisplayImage)
                     UpdateSliderLayout()
@@ -370,6 +403,7 @@ Namespace Views
                 _panX = 0
                 _panY = 0
                 Dim fitPct = Math.Min(cw / imgW, ch / imgH) * 100.0
+                If IsOnlyWhenLargerFitBehavior() Then fitPct = Math.Min(fitPct, 100.0)
                 _zoomSliderValue = ZoomToSlider(fitPct)
                 _ignoreSliderChange = True
                 Dim zs = Me.FindControl(Of RoundSlider)("EditorZoomSlider")
@@ -380,8 +414,12 @@ Namespace Views
             End If
 
             Dim scale = SliderToZoom(_zoomSliderValue) / 100.0
-            Dim iw = imgW * scale
-            Dim ih = imgH * scale
+            ' Auf ganze Geräte-Pixel runden: Hintergrund-Border (Schachbrettmuster) und die
+            ' Bild-Controls teilen sich zwar dieselben Variablen, aber fraktionale Werte können beim
+            ' Rendern trotzdem zu einem ~1-2px durchscheinenden Schachbrett-Rand führen, auch bei
+            ' komplett opaken Bildern (siehe analoger Fix in ViewerView.ApplyImageFitMode).
+            Dim iw = Math.Round(imgW * scale, MidpointRounding.AwayFromZero)
+            Dim ih = Math.Round(imgH * scale, MidpointRounding.AwayFromZero)
 
             ' Clamp pan so image stays partially on screen
             Dim maxPanX = Math.Max(0, (iw - cw) / 2.0)
@@ -389,8 +427,8 @@ Namespace Views
             _panX = Math.Max(-maxPanX, Math.Min(maxPanX, _panX))
             _panY = Math.Max(-maxPanY, Math.Min(maxPanY, _panY))
 
-            Dim ix = (cw - iw) / 2.0 + _panX
-            Dim iy = (ch - ih) / 2.0 + _panY
+            Dim ix = Math.Round((cw - iw) / 2.0 + _panX, MidpointRounding.AwayFromZero)
+            Dim iy = Math.Round((ch - ih) / 2.0 + _panY, MidpointRounding.AwayFromZero)
             Dim sliderX = ix + iw * _sliderPosition
 
             Dim backgroundBorder = Me.FindControl(Of Border)("ImageBackgroundBorder")
@@ -645,13 +683,19 @@ Namespace Views
             Dim cursorVm = TryCast(DataContext, EditorViewModel)
             If cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing Then
                 UpdateBrushCursorPreview(e.GetPosition(cursorCanvas), GetDisplayedImageRect(cursorCanvas, cursorVm), cursorVm)
+                UpdateMousePositionText(e.GetPosition(cursorCanvas), GetDisplayedImageRect(cursorCanvas, cursorVm), cursorVm)
             End If
 
             ' Die Ecken der Resize-Griffe und der Rotier-Griff ragen per negativem Margin über die
             ' Bounds des TextOverlay-Borders hinaus (siehe Kommentar in OnSliderPointerPressed) -
             ' Zeigerpositionen dort landen direkt auf diesem Canvas statt auf dem Border, weshalb
             ' der passende Cursor hier zusätzlich zu UpdateTextOverlayHoverCursor gesetzt werden muss.
-            If Not _isPanDragging AndAlso Not _isCropDragging AndAlso Not _isBrushDrawing AndAlso
+            If cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso cursorVm.IsPickingColorFromImage Then
+                ' Muss vor den übrigen Zweigen geprüft werden - sonst überschreibt der ElseIf-Fallback
+                ' unten bei jeder Mausbewegung den einmalig in OnViewModelPropertyChanged gesetzten
+                ' Pipetten-Cursor sofort wieder mit Nothing.
+                cursorCanvas.Cursor = GetPipetteCursor()
+            ElseIf Not _isPanDragging AndAlso Not _isCropDragging AndAlso Not _isBrushDrawing AndAlso
                Not _isRetouching AndAlso Not _isTextDragging AndAlso Not _isDraggingSlider AndAlso Not _isSelectionDragging AndAlso
                cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso
                cursorVm.HasSelectedAnnotation AndAlso IsLayerPlacementTool(cursorVm.CurrentTool) Then
@@ -859,6 +903,25 @@ Namespace Views
                     other.IsExpanded = False
                 End If
             Next
+        End Sub
+
+        ''' <summary>Rechnet die Canvas-Zeigerposition in eine Bildpixel-Koordinate um (für die
+        ''' Fußleisten-Anzeige) - gleiche Umrechnung wie bei der Pipette (rect-relative Position,
+        ''' skaliert auf die echte CurrentImage.PixelSize statt der ggf. verkleinerten Vorschau).</summary>
+        Private Sub UpdateMousePositionText(pointerPos As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel)
+            If vm Is Nothing OrElse vm.CurrentImage Is Nothing OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            If Not imageRect.Contains(pointerPos) Then
+                vm.MousePositionText = ""
+                Return
+            End If
+            Dim px = CInt(Math.Round((pointerPos.X - imageRect.Left) / imageRect.Width * vm.CurrentImage.PixelSize.Width))
+            Dim py = CInt(Math.Round((pointerPos.Y - imageRect.Top) / imageRect.Height * vm.CurrentImage.PixelSize.Height))
+            vm.MousePositionText = $"{px}, {py}"
+        End Sub
+
+        Private Sub OnPreviewCanvasPointerExited(sender As Object, e As PointerEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then vm.MousePositionText = ""
         End Sub
 
         Private Function GetDisplayedImageRect(canvas As Canvas, vm As EditorViewModel) As Avalonia.Rect

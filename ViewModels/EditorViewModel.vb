@@ -140,6 +140,8 @@ Namespace ViewModels
         Private _annotationShadowBlur As Double = 6
         Private _annotationShadowStrength As Double = 100
         Private _annotationShadowColor As String = "#80000000"
+        Private _annotationShadowRounded As Boolean = False
+        Private _annotationShadowCornerRadius As Double = 20
         Private _annotationGlowEnabled As Boolean = False
         Private _annotationGlowBlur As Double = 10
         Private _annotationGlowStrength As Double = 100
@@ -168,6 +170,8 @@ Namespace ViewModels
         Private _newTagText As String = ""
         Private _hasChanges As Boolean
         Private _statusText As String = ""
+        Private _mousePositionText As String = ""
+        Private _activeZoomPreset As ZoomPresetMode = ZoomPresetMode.Fit
         Private _saveQuality As Integer = 90
         Private _exportFormat As String = "JPG"
         Private _histogramImage As Bitmap
@@ -2118,6 +2122,26 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property AnnotationShadowRounded As Boolean
+            Get
+                Return _annotationShadowRounded
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_annotationShadowRounded, value)
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public Property AnnotationShadowCornerRadius As Double
+            Get
+                Return _annotationShadowCornerRadius
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_annotationShadowCornerRadius, Math.Max(0, Math.Min(100, value)))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
         Public Property AnnotationGlowEnabled As Boolean
             Get
                 Return _annotationGlowEnabled
@@ -2582,6 +2606,44 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Bildpixel-Koordinate der Maus über dem Bild, für die Fußleiste - leer, wenn die
+        ''' Maus das Bild nicht berührt.</summary>
+        Public Property MousePositionText As String
+            Get
+                Return _mousePositionText
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_mousePositionText, value)
+            End Set
+        End Property
+
+        ''' <summary>Zuletzt bewusst gewählter Zoom-Modus (Fit/Actual/Manual) - Pixel-/Pan-Mechanik
+        ''' bleibt bewusst im Code-Behind (EditorView.axaml.vb), nur der Modus wandert hierher, damit
+        ''' die Fit/100%-Buttons als aktiv markiert werden können und der Modus bei einem Bildwechsel
+        ''' erhalten bleibt statt immer auf Fit zurückzuspringen.</summary>
+        Public Property ActiveZoomPreset As ZoomPresetMode
+            Get
+                Return _activeZoomPreset
+            End Get
+            Set(value As ZoomPresetMode)
+                Me.RaiseAndSetIfChanged(_activeZoomPreset, value)
+                Me.RaisePropertyChanged(NameOf(IsZoomFitActive))
+                Me.RaisePropertyChanged(NameOf(IsZoomActualActive))
+            End Set
+        End Property
+
+        Public ReadOnly Property IsZoomFitActive As Boolean
+            Get
+                Return _activeZoomPreset = ZoomPresetMode.Fit
+            End Get
+        End Property
+
+        Public ReadOnly Property IsZoomActualActive As Boolean
+            Get
+                Return _activeZoomPreset = ZoomPresetMode.Actual
+            End Get
+        End Property
+
         Public Property SaveQuality As Integer
             Get
                 If _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing Then
@@ -2982,6 +3044,7 @@ Namespace ViewModels
                                                                            PendingInsertKind = ""
                                                                            SelectedAnnotationIndex = -1
                                                                            CurrentTool = parsed
+                                                                           SelectedLayersPanelTab = LayersPanelTab.Tool
                                                                        Finally
                                                                            _overlayNotifySuppressDepth -= 1
                                                                        End Try
@@ -3670,7 +3733,6 @@ Namespace ViewModels
             _hasChanges = True
             RaiseResetButtonStateChanged()
             Await UpdatePreviewAsync()
-            CurrentTool = EditorTool.Adjust
         End Function
 
         Private Async Function ApplyResizeAsync() As Task
@@ -3681,7 +3743,6 @@ Namespace ViewModels
             _hasChanges = True
             RaiseResetButtonStateChanged()
             Await UpdatePreviewAsync()
-            CurrentTool = EditorTool.Adjust
         End Function
 
         Private Async Function ApplyCanvasAsync() As Task
@@ -3692,7 +3753,6 @@ Namespace ViewModels
             _hasChanges = True
             RaiseResetButtonStateChanged()
             Await UpdatePreviewAsync()
-            CurrentTool = EditorTool.Adjust
         End Function
 
         Private Async Function ApplyTransformAsync() As Task
@@ -3706,7 +3766,6 @@ Namespace ViewModels
             _hasChanges = True
             RaiseResetButtonStateChanged()
             Await UpdatePreviewAsync()
-            CurrentTool = EditorTool.Adjust
         End Function
 
         Private Async Function UpdatePreviewAsync() As Task
@@ -5002,6 +5061,8 @@ Namespace ViewModels
                     AnnotationShadowBlur = a.ShadowBlur
                     AnnotationShadowStrength = a.ShadowStrength
                     AnnotationShadowColor = a.ShadowColor
+                    AnnotationShadowRounded = a.ShadowRounded
+                    AnnotationShadowCornerRadius = a.ShadowCornerRadiusPercent
                     AnnotationGlowEnabled = a.GlowEnabled
                     AnnotationGlowBlur = a.GlowBlur
                     AnnotationGlowStrength = a.GlowStrength
@@ -5048,6 +5109,8 @@ Namespace ViewModels
             a.ShadowBlur = CSng(_annotationShadowBlur)
             a.ShadowStrength = CSng(_annotationShadowStrength)
             a.ShadowColor = _annotationShadowColor
+            a.ShadowRounded = _annotationShadowRounded
+            a.ShadowCornerRadiusPercent = CSng(_annotationShadowCornerRadius)
             a.GlowEnabled = _annotationGlowEnabled
             a.GlowBlur = CSng(_annotationGlowBlur)
             a.GlowStrength = CSng(_annotationGlowStrength)

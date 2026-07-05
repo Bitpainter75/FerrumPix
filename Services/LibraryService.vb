@@ -13,6 +13,7 @@ Namespace Services
         Public Property Rating As Integer
         Public Property Tags As New List(Of String)()
         Public Property DateTaken As String = ""
+        Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
         Public Property Lens As String = ""
         Public Property Aperture As Double?
@@ -23,6 +24,11 @@ Namespace Services
         Public Property GpsLongitude As Double?
         Public Property ImageWidth As Integer?
         Public Property ImageHeight As Integer?
+        Public Property FileCreatedAt As String = ""
+        ''' <summary>Dateisystem-LastWriteTime (ISO-8601), das zum Zeitpunkt der letzten erfolgreichen
+        ''' EXIF-Extraktion galt. Dient als Invalidierungs-Schlüssel: stimmt dieser Wert noch mit dem
+        ''' aktuellen Dateisystem-Änderungsdatum überein, müssen EXIF-Daten nicht erneut gelesen werden.</summary>
+        Public Property ScannedSourceModifiedAt As String = ""
     End Class
 
     Public Class LibraryService
@@ -83,7 +89,10 @@ Namespace Services
             ("GpsLatitude", "REAL"),
             ("GpsLongitude", "REAL"),
             ("ImageWidth", "INTEGER"),
-            ("ImageHeight", "INTEGER")
+            ("ImageHeight", "INTEGER"),
+            ("DateModifiedExif", "TEXT"),
+            ("FileCreatedAt", "TEXT"),
+            ("ScannedSourceModifiedAt", "TEXT")
         }
 
         Private Shared Sub EnsureExifColumns(conn As SqliteConnection)
@@ -217,22 +226,39 @@ Namespace Services
         End Sub
 
         ''' <summary>Speichert die durchsuchbaren EXIF-Felder für eine Datei, ohne Favorit/Bewertung/
-        ''' Stichworte anzutasten (partielles Upsert wie bei SetFavorite/SetRating/SetTags).</summary>
+        ''' Stichworte anzutasten (partielles Upsert wie bei SetFavorite/SetRating/SetTags). Liest
+        ''' zusätzlich Dateisystem-Erstellungsdatum und -Änderungsdatum der Datei und schreibt Letzteres
+        ''' als ScannedSourceModifiedAt-Snapshot mit - das ist der Invalidierungs-Schlüssel, der beim
+        ''' nächsten Ordner-Scan entscheidet, ob diese EXIF-Daten noch aktuell sind.</summary>
         Public Sub SetExifData(filePath As String, exif As ExifSearchFields)
             If String.IsNullOrWhiteSpace(filePath) OrElse exif Is Nothing Then Return
+
+            Dim fileCreatedAt = ""
+            Dim scannedSourceModifiedAt = ""
+            Try
+                Dim fi = New FileInfo(filePath)
+                If fi.Exists Then
+                    fileCreatedAt = fi.CreationTime.ToString("o")
+                    scannedSourceModifiedAt = fi.LastWriteTime.ToString("o")
+                End If
+            Catch
+            End Try
+
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight) " &
-                        "VALUES($p,$dateTaken,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,ScannedSourceModifiedAt) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$scannedSourceModifiedAt) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
-                        "DateTaken=excluded.DateTaken, Camera=excluded.Camera, Lens=excluded.Lens, " &
+                        "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
                         "ShutterSpeed=excluded.ShutterSpeed, GpsLatitude=excluded.GpsLatitude, GpsLongitude=excluded.GpsLongitude, " &
-                        "ImageWidth=excluded.ImageWidth, ImageHeight=excluded.ImageHeight"
+                        "ImageWidth=excluded.ImageWidth, ImageHeight=excluded.ImageHeight, " &
+                        "FileCreatedAt=excluded.FileCreatedAt, ScannedSourceModifiedAt=excluded.ScannedSourceModifiedAt"
                     cmd.Parameters.AddWithValue("$p", filePath)
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
+                    cmd.Parameters.AddWithValue("$dateModifiedExif", If(exif.DateModifiedExif, ""))
                     cmd.Parameters.AddWithValue("$camera", If(exif.Camera, ""))
                     cmd.Parameters.AddWithValue("$lens", If(exif.Lens, ""))
                     cmd.Parameters.AddWithValue("$aperture", NullableToDbValue(exif.Aperture))
@@ -243,13 +269,15 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$gpsLon", NullableToDbValue(exif.GpsLongitude))
                     cmd.Parameters.AddWithValue("$width", NullableToDbValue(exif.ImageWidth))
                     cmd.Parameters.AddWithValue("$height", NullableToDbValue(exif.ImageHeight))
+                    cmd.Parameters.AddWithValue("$fileCreatedAt", fileCreatedAt)
+                    cmd.Parameters.AddWithValue("$scannedSourceModifiedAt", scannedSourceModifiedAt)
                     cmd.ExecuteNonQuery()
                 End Using
             End Using
         End Sub
 
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, ScannedSourceModifiedAt"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -267,7 +295,10 @@ Namespace Services
                 .GpsLatitude = If(reader.IsDBNull(11), CType(Nothing, Double?), reader.GetDouble(11)),
                 .GpsLongitude = If(reader.IsDBNull(12), CType(Nothing, Double?), reader.GetDouble(12)),
                 .ImageWidth = If(reader.IsDBNull(13), CType(Nothing, Integer?), reader.GetInt32(13)),
-                .ImageHeight = If(reader.IsDBNull(14), CType(Nothing, Integer?), reader.GetInt32(14))
+                .ImageHeight = If(reader.IsDBNull(14), CType(Nothing, Integer?), reader.GetInt32(14)),
+                .DateModifiedExif = If(reader.IsDBNull(15), "", reader.GetString(15)),
+                .FileCreatedAt = If(reader.IsDBNull(16), "", reader.GetString(16)),
+                .ScannedSourceModifiedAt = If(reader.IsDBNull(17), "", reader.GetString(17))
             }
         End Function
 

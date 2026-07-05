@@ -302,15 +302,6 @@
                                     </Button>
                                     <Button Classes="ghost" HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Stretch" Padding="10,8"
-                                            Command="{Binding SetSortCommand}" CommandParameter="Date">
-                                        <Grid ColumnDefinitions="*,20">
-                                            <TextBlock Text="Datum" VerticalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortDate}"
-                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch" Padding="10,8"
                                             Command="{Binding SetSortCommand}" CommandParameter="Size">
                                         <Grid ColumnDefinitions="*,20">
                                             <TextBlock Text="Dateigröße" VerticalAlignment="Center"/>
@@ -327,6 +318,99 @@
                                                        Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                         </Grid>
                                     </Button>
+
+                                    <Separator Margin="4,6"/>
+                                    <TextBlock Text="DATUM" FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               Margin="10,4,10,4"/>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="FileCreatedAt">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Erstellt (Datei)" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortFileCreatedAt}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="FileModifiedAt">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Geändert (Datei)" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortFileModifiedAt}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="ExifDateTaken">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Aufgenommen (EXIF)" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortExifDateTaken}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="ExifDateModified">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Geändert (EXIF)" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortExifDateModified}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+
+                                    <Separator Margin="4,6"/>
+                                    <TextBlock Text="BILD" FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               Margin="10,4,10,4"/>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Width">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Bildbreite" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortWidth}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Height">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Bildhöhe" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortHeight}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Camera">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Kamera" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortCamera}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Iso">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="ISO" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortIso}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding SetSortCommand}" CommandParameter="Aperture">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Blende" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSortAperture}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+
+                                    <Separator Margin="4,6"/>
                                     <Button Classes="ghost" HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Stretch" Padding="10,8"
                                             Command="{Binding SetSortCommand}" CommandParameter="Rating">
@@ -664,26 +748,18 @@
                                         </Border>
                                         <Border Grid.Row="1" Background="{DynamicResource FP.Bg.Content}" CornerRadius="0,0,8,8" Padding="14,9">
                                             <StackPanel Spacing="7">
-                                                <TextBlock Text="{Binding FileName}"
-                                                           FontSize="13"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <Grid ColumnDefinitions="*,Auto,Auto">
-                                                    <TextBlock Text="{Binding DateText}"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="12"
-                                                               VerticalAlignment="Center"
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding FileName}"
+                                                               FontSize="13"
+                                                               FontWeight="SemiBold"
                                                                TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding FileSizeText}"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="12"
-                                                               VerticalAlignment="Center"/>
-                                                    <Button Grid.Column="2"
+                                                    <Button 
                                                             Classes="favorite-btn"
+                                                            DockPanel.Dock="Right"
                                                             Background="Transparent"
                                                             BorderThickness="0"
                                                             Padding="4,2,0,0"
+                                                            HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             IsVisible="{Binding IsImage}"
                                                             Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -693,6 +769,24 @@
                                                                        Width="20" Height="20"
                                                                        Classes="fav-heart" Classes.active="{Binding IsFavorite}"/>
                                                     </Button>
+                                                </DockPanel>
+                                                <Grid ColumnDefinitions="*,*,Auto">
+                                                    <TextBlock Text="{Binding DateText}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding DimensionsText}"
+                                                               IsVisible="{Binding DimensionsText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding FileSizeText}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"/>
                                                 </Grid>
                                             </StackPanel>
                                         </Border>
@@ -766,7 +860,7 @@
                                             <MenuItem Header="Löschen" Click="OnContextDelete" IsVisible="{Binding CanFileOperationDelete}"/>
                                         </ContextMenu>
                                     </Border.ContextMenu>
-                                    <Grid ColumnDefinitions="76,*,150,90,28" Height="72">
+                                    <Grid ColumnDefinitions="76,*,150,90,90,28" Height="72">
                                         <Border Grid.Column="0"
                                                 Width="56"
                                                 Height="56"
@@ -832,12 +926,16 @@
                                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                                    VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="3"
+                                                   Text="{Binding DimensionsText}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="4"
                                                    Text="{Binding FileSizeText}"
                                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                                    HorizontalAlignment="Right"
                                                    VerticalAlignment="Center"
                                                    Margin="0,0,14,0"/>
-                                        <Button Grid.Column="4"
+                                        <Button Grid.Column="5"
                                                 Classes="favorite-btn"
                                                 Background="Transparent"
                                                 BorderThickness="0"
