@@ -362,7 +362,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_rating, value)
                 Me.RaisePropertyChanged(NameOf(RatingText))
                 If Not String.IsNullOrEmpty(_currentImagePath) Then
-                    LibraryService.Instance.SetRating(_currentImagePath, value)
+                    LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
                 End If
             End Set
         End Property

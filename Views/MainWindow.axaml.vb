@@ -202,9 +202,13 @@ Namespace Views
             Avalonia.Threading.Dispatcher.UIThread.Post(Sub()
                 Dim overlay = Me.FindControl(Of DialogOverlayView)("DialogOverlay")
                 Dim input = overlay?.FindControl(Of TextBox)("DialogInputBox")
+                Dim batchResizeWidth = overlay?.FindControl(Of TextBox)("BatchResizeWidthTextBox")
                 If input IsNot Nothing AndAlso vm.DialogShowsInput Then
                     input.Focus()
                     input.SelectAll()
+                ElseIf batchResizeWidth IsNot Nothing AndAlso vm.DialogShowsBatchResize Then
+                    batchResizeWidth.Focus()
+                    batchResizeWidth.SelectAll()
                 Else
                     Focus()
                 End If

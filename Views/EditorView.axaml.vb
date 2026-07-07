@@ -20,6 +20,7 @@ Imports System.Linq
 Imports System.Collections.Generic
 Imports System.IO
 Imports SkiaSharp
+Imports Svg.Skia
 
 Namespace Views
 
@@ -1015,22 +1016,55 @@ Namespace Views
 
         Private Shared _pipetteCursor As Cursor = Nothing
 
-        ''' Lädt den Pipetten-Mauszeiger (schwarz umrandet/weiß gefüllt für Kontrast auf beliebigem
-        ''' Bildhintergrund, anders als das dunkle Toolbar-Icon) einmalig aus dem gerasterten PNG-Asset
-        ''' und cached ihn - Cursor-Erstellung ist nicht ganz billig und ändert sich nie.
+        ''' Rastert den Pipetten-Mauszeiger einmalig aus dem Outline-SVG-Asset und cached ihn -
+        ''' Cursor-Erstellung ist nicht ganz billig und ändert sich nie.
         Private Shared Function GetPipetteCursor() As Cursor
             If _pipetteCursor Is Nothing Then
                 Try
-                    Dim uri = New Uri("avares://FerrumPix/Assets/Cursors/pipette_cursor.png")
-                    Using stream = Avalonia.Platform.AssetLoader.Open(uri)
-                        Dim bitmap = New Bitmap(stream)
-                        _pipetteCursor = New Cursor(bitmap, New PixelPoint(6, 28))
-                    End Using
+                    _pipetteCursor = CreateCursorFromSvgAsset(
+                        "avares://FerrumPix/Assets/Icons/outline/color-picker.svg",
+                        New PixelPoint(5, 27))
                 Catch
                     _pipetteCursor = New Cursor(StandardCursorType.Cross)
                 End Try
             End If
             Return _pipetteCursor
+        End Function
+
+        Private Shared Function CreateCursorFromSvgAsset(source As String, hotspot As PixelPoint, Optional canvasSize As Integer = 32) As Cursor
+            Dim resolvedSource = SvgIcon.ResolveIconSource(source)
+            Using stream = Avalonia.Platform.AssetLoader.Open(New Uri(resolvedSource))
+                Using svg As New SKSvg()
+                    Dim picture = svg.Load(stream)
+                    If picture Is Nothing Then Throw New InvalidOperationException("Cursor SVG could not be loaded.")
+
+                    Dim bounds = picture.CullRect
+                    If bounds.Width <= 0 OrElse bounds.Height <= 0 Then Throw New InvalidOperationException("Cursor SVG has invalid bounds.")
+
+                    Dim padding = 2.0F
+                    Dim scale = Math.Min((canvasSize - padding * 2) / bounds.Width, (canvasSize - padding * 2) / bounds.Height)
+                    Dim offsetX = (canvasSize - bounds.Width * scale) / 2.0F - bounds.Left * scale
+                    Dim offsetY = (canvasSize - bounds.Height * scale) / 2.0F - bounds.Top * scale
+
+                    Using surface = SKSurface.Create(New SKImageInfo(canvasSize, canvasSize, SKColorType.Bgra8888, SKAlphaType.Premul))
+                        Dim canvas = surface.Canvas
+                        canvas.Clear(SKColors.Transparent)
+                        canvas.Translate(offsetX, offsetY)
+                        canvas.Scale(scale)
+                        canvas.DrawPicture(picture)
+                        canvas.Flush()
+
+                        Using image = surface.Snapshot()
+                            Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                                Using bitmapStream As New MemoryStream(data.ToArray())
+                                    Dim bitmap = New Bitmap(bitmapStream)
+                                    Return New Cursor(bitmap, hotspot)
+                                End Using
+                            End Using
+                        End Using
+                    End Using
+                End Using
+            End Using
         End Function
 
         ''' Pipette: nimmt die Farbe an der Klickposition direkt aus dem aktuell angezeigten

@@ -367,7 +367,7 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowSelectedSvgOverlay As Boolean
             Get
-                Return HasSelectedAnnotation AndAlso String.Equals(SelectedAnnotationKind, "Svg", StringComparison.OrdinalIgnoreCase)
+                Return False
             End Get
         End Property
 
@@ -399,7 +399,7 @@ Namespace ViewModels
         Private Sub LoadAllShapeIcons()
             _allShapeIcons.Clear()
             Try
-                Dim assets = Avalonia.Platform.AssetLoader.GetAssets(New Uri("avares://FerrumPix/Assets/Icons/"), Nothing)
+                Dim assets = Avalonia.Platform.AssetLoader.GetAssets(New Uri("avares://FerrumPix/Assets/Icons/outline/"), Nothing)
                 For Each uri In assets
                     Dim path = uri.ToString()
                     If Not path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) Then Continue For
@@ -569,7 +569,7 @@ Namespace ViewModels
             Dim fileName = IO.Path.GetFileNameWithoutExtension(assetPath)
             Dim m = Text.RegularExpressions.Regex.Match(fileName, "^\d+_(?<rest>.+)$")
             Dim name = If(m.Success, m.Groups("rest").Value, fileName)
-            Return name.Replace("_", " ")
+            Return name.Replace("_", " ").Replace("-", " ")
         End Function
 
         Private Sub RefreshFilteredShapeIcons()
@@ -1167,6 +1167,7 @@ Namespace ViewModels
 
         Public ReadOnly Property CurrentToolLabel As String
             Get
+                Dim selectedKind = NormalizeAnnotationKind(SelectedAnnotationKind)
                 Select Case _currentTool
                     Case EditorTool.Crop : Return "Zuschneiden"
                     Case EditorTool.Resize : Return "Bildgröße"
@@ -1177,7 +1178,15 @@ Namespace ViewModels
                     Case EditorTool.Color : Return "Farbe"
                     Case EditorTool.Transform : Return "Transformieren"
                     Case EditorTool.Retouch : Return "Verwischen"
-                    Case EditorTool.Text : Return "Text und Bild"
+                    Case EditorTool.Text
+                        If selectedKind = "Svg" OrElse selectedKind = "Symbol" OrElse selectedKind = "Rectangle" OrElse
+                           selectedKind = "Ellipse" OrElse selectedKind = "Square" OrElse selectedKind = "Triangle" OrElse
+                           selectedKind = "Cone" OrElse selectedKind = "Pyramid" OrElse selectedKind = "Trapezoid" OrElse
+                           selectedKind = "Diamond" OrElse selectedKind = "Spiral" OrElse selectedKind = "Droplet" OrElse
+                           selectedKind = "SpeechBubble" OrElse selectedKind = "Line" OrElse selectedKind = "Arrow" Then
+                            Return "Formen und Symbole"
+                        End If
+                        Return "Text und Bild"
                     Case EditorTool.Draw : Return "Malen"
                     Case EditorTool.Geometry : Return "Formen und Symbole"
                     Case EditorTool.Insert : Return "Formen und Symbole"
@@ -3120,7 +3129,7 @@ Namespace ViewModels
             Set(value As Integer)
                 Me.RaiseAndSetIfChanged(_rating, value)
                 If Not String.IsNullOrEmpty(_currentImagePath) Then
-                    LibraryService.Instance.SetRating(_currentImagePath, value)
+                    LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
                 End If
             End Set
         End Property

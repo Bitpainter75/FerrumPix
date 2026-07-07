@@ -19,7 +19,7 @@
                         Tag="GeneralSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/01_Allgemein.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/settings.svg" Width="16" Height="16"/>
                         <TextBlock Text="Allgemein"/>
                     </StackPanel>
                 </Button>
@@ -28,7 +28,7 @@
                         Tag="AppearanceSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/03_Aussehen.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/palette.svg" Width="16" Height="16"/>
                         <TextBlock Text="Darstellung"/>
                     </StackPanel>
                 </Button>
@@ -37,7 +37,7 @@
                         Tag="GallerySection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/10_Vorschau.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg" Width="16" Height="16"/>
                         <TextBlock Text="Galerie"/>
                     </StackPanel>
                 </Button>
@@ -46,7 +46,7 @@
                         Tag="ViewerSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/11_Wiedergabe.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg" Width="16" Height="16"/>
                         <TextBlock Text="Betrachter"/>
                     </StackPanel>
                 </Button>
@@ -55,7 +55,7 @@
                         Tag="EditorSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/03_Editor/07_Belichtung.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg" Width="16" Height="16"/>
                         <TextBlock Text="Editor"/>
                     </StackPanel>
                 </Button>
@@ -64,7 +64,7 @@
                         Tag="PerformanceSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/33_Leistung.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/settings-bolt.svg" Width="16" Height="16"/>
                         <TextBlock Text="Leistung"/>
                     </StackPanel>
                 </Button>
@@ -111,7 +111,7 @@
                             </StackPanel>
                             <Button Grid.Column="1" Classes="ghost" Padding="12,7" Click="OnGitHubClick">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/27_Extern.svg" Width="14" Height="14"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="14" Height="14"/>
                                     <TextBlock Text="Öffnen"/>
                                 </StackPanel>
                             </Button>
@@ -422,7 +422,7 @@
                                                    VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <icons:SvgIcon Grid.Column="1"
-                                                       Source="avares://FerrumPix/Assets/Icons/01_Navigation/05_Nach_unten.svg"
+                                                       Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
                                                        Width="16"
                                                        Height="16"
                                                        Margin="10,0,0,0"
@@ -794,7 +794,7 @@
             <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
                 <Button Classes="ghost" Padding="12,8" Command="{Binding ResetCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/05_Dialoge/28_Wiederherstellen.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/history.svg" Width="16" Height="16"/>
                         <TextBlock Text="Auf Standardeinstellungen zurücksetzen"/>
                     </StackPanel>
                 </Button>

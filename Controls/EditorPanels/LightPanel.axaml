@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.LightPanel">
+    <Expander Header="Licht" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="icon-btn"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetLightCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Licht zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="2" Margin="0,8,0,0">
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Belichtung"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                   Value="{Binding Exposure}" Margin="6,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding Exposure, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Helligkeit"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                   Value="{Binding Brightness}" Margin="6,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding Brightness, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Kontrast" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                   Value="{Binding Contrast}" Margin="6,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding Contrast, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Lichter" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                   Value="{Binding Highlights}" Margin="6,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding Highlights, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Tiefen" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                   Value="{Binding ShadowsLevel}" Margin="6,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding ShadowsLevel, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Weiß" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                   Value="{Binding Whites}" Margin="6,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding Whites, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Schwarz" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                   Value="{Binding Blacks}" Margin="6,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding Blacks, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+        </StackPanel>
+    </Expander>
+</UserControl>

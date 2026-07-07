@@ -84,7 +84,7 @@
                                            VerticalAlignment="Center"
                                            TextTrimming="CharacterEllipsis"/>
                                 <icons:SvgIcon Grid.Column="1"
-                                               Source="avares://FerrumPix/Assets/Icons/07_Symbole/23_Pfeil_nach_unten.svg"
+                                               Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
                                                Width="14"
                                                Height="14"
                                                Margin="10,0,0,0"

@@ -297,6 +297,85 @@ Namespace Models
             End Set
         End Property
 
+        Private _exifMetadataSummary As String = ""
+        Public Property ExifMetadataSummary As String
+            Get
+                Return _exifMetadataSummary
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _exifMetadataSummary = value Then Return
+                _exifMetadataSummary = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(CurrentMetadataOverlayText))
+            End Set
+        End Property
+
+        Private _iptcMetadataSummary As String = ""
+        Public Property IptcMetadataSummary As String
+            Get
+                Return _iptcMetadataSummary
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _iptcMetadataSummary = value Then Return
+                _iptcMetadataSummary = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(CurrentMetadataOverlayText))
+            End Set
+        End Property
+
+        Private _xmpMetadataSummary As String = ""
+        Public Property XmpMetadataSummary As String
+            Get
+                Return _xmpMetadataSummary
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _xmpMetadataSummary = value Then Return
+                _xmpMetadataSummary = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(CurrentMetadataOverlayText))
+            End Set
+        End Property
+
+        Private _hoveredMetadataKind As String = ""
+        Public Property HoveredMetadataKind As String
+            Get
+                Return _hoveredMetadataKind
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _hoveredMetadataKind = value Then Return
+                _hoveredMetadataKind = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(CurrentMetadataOverlayTitle))
+                RaisePropertyChanged(NameOf(CurrentMetadataOverlayText))
+            End Set
+        End Property
+
+        Public ReadOnly Property CurrentMetadataOverlayTitle As String
+            Get
+                Select Case HoveredMetadataKind
+                    Case "Exif" : Return "EXIF"
+                    Case "Iptc" : Return "IPTC"
+                    Case "Xmp" : Return "XMP"
+                    Case Else : Return ""
+                End Select
+            End Get
+        End Property
+
+        Public ReadOnly Property CurrentMetadataOverlayText As String
+            Get
+                Select Case HoveredMetadataKind
+                    Case "Exif" : Return ExifMetadataSummary
+                    Case "Iptc" : Return IptcMetadataSummary
+                    Case "Xmp" : Return XmpMetadataSummary
+                    Case Else : Return ""
+                End Select
+            End Get
+        End Property
+
         Private _isSelected As Boolean
         Private _isNavigationSelected As Boolean
 

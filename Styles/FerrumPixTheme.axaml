@@ -603,6 +603,43 @@
     <Style Selector="TextBox.slider-value:focus /template/ Border#PART_BorderElement">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <Style Selector="icons|SliderValueUpDown.slider-value">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="MinHeight" Value="18"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="MinWidth" Value="28"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="Increment" Value="1"/>
+        <Setter Property="FormatString" Value="F0"/>
+    </Style>
+    <Style Selector="icons|SliderValueUpDown.slider-value:focus">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="icons|SliderValueUpDown.slider-value /template/ TextBox#PART_TextBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="2,0"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="icons|SliderValueUpDown.slider-value /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="icons|SliderValueUpDown.slider-value /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
 
     <Style Selector="Slider">
         <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
@@ -860,9 +897,39 @@
         <Setter Property="Opacity" Value="0"/>
         <Setter Property="IsHitTestVisible" Value="False"/>
     </Style>
+    <Style Selector="StackPanel.gallery-meta-badges">
+        <Setter Property="Panel.ZIndex" Value="3"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Border.gallery-metadata-overlay">
+        <Setter Property="Panel.ZIndex" Value="4"/>
+        <Setter Property="Background" Value="#D811161B"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="MaxWidth" Value="190"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="Border.gallery-metadata-overlay.compact">
+        <Setter Property="Padding" Value="6,5"/>
+        <Setter Property="MaxWidth" Value="160"/>
+    </Style>
     <Style Selector="Border.thumb-card:pointerover StackPanel.gallery-hover-actions">
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+    <Style Selector="StackPanel.gallery-rating-actions">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+        <Setter Property="Panel.ZIndex" Value="3"/>
+    </Style>
+    <Style Selector="Border.thumb-card:pointerover StackPanel.gallery-rating-actions">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+    <Style Selector="StackPanel.gallery-rating-actions.compact">
+        <Setter Property="Spacing" Value="0"/>
     </Style>
     <Style Selector="Button.gallery-overlay-btn">
         <Setter Property="Background" Value="#8C0F1318"/>
@@ -870,6 +937,8 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="12"/>
         <Setter Property="Foreground" Value="White"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.gallery-overlay-btn:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="#B81A2028"/>
@@ -880,8 +949,8 @@
         <Setter Property="BorderBrush" Value="#C08E2D2D"/>
     </Style>
     <Style Selector="Border.gallery-meta-pill">
-        <Setter Property="Background" Value="#960F1318"/>
-        <Setter Property="BorderBrush" Value="#66384450"/>
+        <Setter Property="Background" Value="#C010141A"/>
+        <Setter Property="BorderBrush" Value="#8A4C5A69"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="5"/>
         <Setter Property="Padding" Value="4"/>
@@ -1012,17 +1081,11 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="TextElement.Foreground" Value="White"/>
     </Style>
-    <!-- Klasse statt reinem TextBlock-Selektor: Avalonias ToolTip-Popup hängt logisch unter dem
-         Button, ein reiner "TextBlock"-Selektor würde sonst auch den Tooltip-Text transparent färben. -->
-    <Style Selector="Button.selection-badge TextBlock.badge-glyph">
-        <Setter Property="FontSize" Value="11"/>
-        <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="Foreground" Value="Transparent"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
+    <Style Selector="Button.selection-badge icons|SvgIcon.badge-glyph">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Secondary}"/>
     </Style>
-    <Style Selector="Button.selection-badge.active TextBlock.badge-glyph">
-        <Setter Property="Foreground" Value="White"/>
+    <Style Selector="Button.selection-badge.active icons|SvgIcon.badge-glyph">
+        <Setter Property="IconBrush" Value="White"/>
     </Style>
     <Style Selector="Button.favorite-btn:pointerover icons|SvgIcon.fav-heart">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>
@@ -1046,14 +1109,20 @@
     <Style Selector="icons|SvgIcon.fav-heart.active">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
-    <!-- Bewertungssterne: inaktiv = leerer Stern, aktiv = gefüllter Stern in Akzentfarbe -->
-    <Style Selector="Button.star-btn TextBlock">
-        <Setter Property="Text" Value="☆"/>
-        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    <!-- Bewertungssterne: SVG-basiert, aktiv in Akzentfarbe -->
+    <Style Selector="Button.star-btn icons|SvgIcon.rating-star">
+        <Setter Property="IconBrush" Value="#EAEFF5"/>
+        <Setter Property="Opacity" Value="0.92"/>
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="0"
+                              OffsetX="1"
+                              OffsetY="1"
+                              Color="#B0000000"/>
+        </Setter>
     </Style>
-    <Style Selector="Button.star-btn.active TextBlock">
-        <Setter Property="Text" Value="★"/>
-        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+    <Style Selector="Button.star-btn.active icons|SvgIcon.rating-star">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Opacity" Value="1"/>
     </Style>
 
     <!-- Ausgewählte Thumbnail-Karte: oranger Rahmen -->

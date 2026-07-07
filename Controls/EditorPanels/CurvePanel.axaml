@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.CurvePanel">
+    <Grid RowDefinitions="Auto,*">
+        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <icons:SvgIcon
+                    Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier-circle.svg"
+                    Width="14" Height="14" />
+                <TextBlock Text="Tonwertkurve" FontWeight="SemiBold" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Classes="icon-btn"
+                    Width="28"
+                    Height="28"
+                    Padding="0"
+                    Command="{Binding DataContext.ResetCurveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    ToolTip.Tip="Kurve zurücksetzen">
+                <icons:SvgIcon
+                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                    Width="14" Height="14" />
+            </Button>
+        </Grid>
+        <StackPanel Grid.Row="1" Spacing="8" Margin="0,8,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="14">
+                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                        CommandParameter="Rgb" Classes.active="{Binding IsCurveChannelRgb}">
+                    <TextBlock Text="RGB" FontSize="11" />
+                </Button>
+                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                        CommandParameter="Red" Classes.active="{Binding IsCurveChannelRed}">
+                    <TextBlock Text="R" FontSize="11" />
+                </Button>
+                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                        CommandParameter="Green"
+                        Classes.active="{Binding IsCurveChannelGreen}">
+                    <TextBlock Text="G" FontSize="11" />
+                </Button>
+                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                        CommandParameter="Blue"
+                        Classes.active="{Binding IsCurveChannelBlue}">
+                    <TextBlock Text="B" FontSize="11" />
+                </Button>
+                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                        CommandParameter="Luminance"
+                        Classes.active="{Binding IsCurveChannelLuminance}">
+                    <TextBlock Text="L" FontSize="11" />
+                </Button>
+            </StackPanel>
+            <icons:CurveEditor Height="180"
+                               Points="{Binding ActiveCurvePoints}"
+                               HistogramCounts="{Binding ActiveCurveHistogramCounts}"
+                               CurveBrush="{Binding ActiveCurveBrush}"
+                               ToolTip.Tip="Linksklick: Punkt hinzufügen/verschieben. Rechtsklick: Punkt entfernen." />
+        </StackPanel>
+    </Grid>
+</UserControl>

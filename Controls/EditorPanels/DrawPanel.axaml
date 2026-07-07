@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.DrawPanel">
+    <StackPanel Spacing="2">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg"
+                           Width="14" Height="14" />
+            <TextBlock Text="Malen" FontWeight="SemiBold" />
+        </StackPanel>
+        <WrapPanel Margin="0,2,0,0">
+            <Button Classes="ghost insert-option-btn" Width="46" Height="46" Padding="0"
+                    Margin="0,0,6,6"
+                    ToolTip.Tip="Pinsel"
+                    Command="{Binding SetPaintModeCommand}"
+                    CommandParameter="Brush"
+                    Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
+                <icons:SvgIcon
+                    Source="avares://FerrumPix/Assets/Icons/outline/brush.svg"
+                    Width="22" Height="22" />
+            </Button>
+            <Button Classes="ghost insert-option-btn" Width="46" Height="46" Padding="0"
+                    Margin="0,0,6,6"
+                    ToolTip.Tip="Radiergummi"
+                    Command="{Binding SetPaintModeCommand}"
+                    CommandParameter="Eraser"
+                    Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}">
+                <icons:SvgIcon
+                    Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg"
+                    Width="22" Height="22" />
+            </Button>
+            <Button Classes="ghost insert-option-btn" Width="46" Height="46" Padding="0"
+                    Margin="0,0,6,6"
+                    ToolTip.Tip="Verwischen"
+                    Command="{Binding SetPaintModeCommand}"
+                    CommandParameter="Blur"
+                    Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Blur}">
+                <icons:SvgIcon
+                    Source="avares://FerrumPix/Assets/Icons/outline/adjustments-spark.svg"
+                    Width="22" Height="22" />
+            </Button>
+        </WrapPanel>
+        <StackPanel Spacing="2"
+                    IsVisible="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Blur}">
+            <Grid ColumnDefinitions="74,*,Auto,38" VerticalAlignment="Center">
+                <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0.2" Maximum="10"
+                                   Value="{Binding RetouchRadius}" Margin="6,0" />
+                <Button Grid.Column="2"
+                        Classes="icon-btn"
+                        Width="28"
+                        Height="28"
+                        Padding="0"
+                        Margin="6,0,6,0"
+                        Command="{Binding ResetRetouchCommand}"
+                        ToolTip.Tip="Verwischen zurücksetzen">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                        Width="14" Height="14" />
+                </Button>
+                <TextBlock Grid.Column="3"
+                           Text="{Binding RetouchRadius, StringFormat={}{0:F1}%}"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           FontSize="11" />
+            </Grid>
+        </StackPanel>
+        <StackPanel Spacing="2"
+                    IsVisible="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0.2" Maximum="15"
+                                   Value="{Binding BrushSize}" Margin="6,0" />
+                <TextBlock Grid.Column="2"
+                           Text="{Binding BrushSize, StringFormat={}{0:F1}%}"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           FontSize="11" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   Value="{Binding BrushHardness}" Margin="6,0" />
+                <TextBlock Grid.Column="2"
+                           Text="{Binding BrushHardness, StringFormat={}{0:F0}%}"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           FontSize="11" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <TextBlock Text="Deckkraft"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   Value="{Binding BrushOpacity}" Margin="6,0" />
+                <TextBlock Grid.Column="2"
+                           Text="{Binding BrushOpacity, StringFormat={}{0:F0}%}"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           FontSize="11" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+                <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:ColorPickerButton Grid.Column="1"
+                                         SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
+            </Grid>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

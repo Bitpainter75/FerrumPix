@@ -4,6 +4,8 @@ Imports System.Collections
 Imports System.Globalization
 Imports System.Reflection
 Imports System.Text.RegularExpressions
+Imports System.Text
+Imports System.Xml.Linq
 Imports MetadataExtractor
 Imports MetadataExtractor.Formats.Exif
 
@@ -55,6 +57,7 @@ Namespace Services
         Public Property GPS As String = ""
         Public Property Copyright As String = ""
         Public Property Software As String = ""
+        Public Property XmpRating As Integer?
         Public Property ExifTags As New List(Of ExifTag)()
         Public Property IptcTags As New List(Of ExifTag)()
         Public Property XmpTags As New List(Of ExifTag)()
@@ -131,6 +134,7 @@ Namespace Services
                 .GPS = source.GPS,
                 .Copyright = source.Copyright,
                 .Software = source.Software,
+                .XmpRating = source.XmpRating,
                 .ExifTags = source.ExifTags,
                 .IptcTags = source.IptcTags,
                 .XmpTags = source.XmpTags
@@ -247,6 +251,11 @@ Namespace Services
             Return result
         End Function
 
+        Public Shared Function GetXmpRating(data As ExifData) As Integer?
+            If data Is Nothing Then Return Nothing
+            Return data.XmpRating
+        End Function
+
         ''' Liest nur den Bild-Header (SKCodec.Create öffnet die Datei, dekodiert aber keine
         ''' Pixel) - deutlich billiger als ein Volldecode, nur für die Maße gebraucht.
         Public Shared Function ReadImageDimensions(imagePath As String) As (Width As Integer?, Height As Integer?)
@@ -327,7 +336,80 @@ Namespace Services
             Dim tagValue = If(value, "").ToString().Trim()
             If String.IsNullOrWhiteSpace(tagName) OrElse String.IsNullOrWhiteSpace(tagValue) Then Return
             data.XmpTags.Add(New ExifTag(tagName, tagValue))
+            If Not data.XmpRating.HasValue Then
+                Dim rating = TryParseXmpRating(tagName, tagValue)
+                If rating.HasValue Then data.XmpRating = rating
+            End If
         End Sub
+
+        Private Shared Function TryParseXmpRating(tagName As String, tagValue As String) As Integer?
+            Dim normalizedName = If(tagName, "").Trim()
+            If normalizedName.IndexOf("rating", StringComparison.OrdinalIgnoreCase) < 0 Then Return Nothing
+
+            Dim parsed As Integer
+            If Integer.TryParse(If(tagValue, "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed) Then
+                If parsed < 0 Then Return 0
+                Return Math.Max(0, Math.Min(5, parsed))
+            End If
+
+            Dim numericMatch = Regex.Match(If(tagValue, ""), "-?\d+")
+            If numericMatch.Success AndAlso Integer.TryParse(numericMatch.Value, parsed) Then
+                If parsed < 0 Then Return 0
+                Return Math.Max(0, Math.Min(5, parsed))
+            End If
+
+            Return Nothing
+        End Function
+
+        Public Shared Function WriteXmpRatingSidecar(imagePath As String, rating As Integer, createIfMissing As Boolean) As Boolean
+            If String.IsNullOrWhiteSpace(imagePath) Then Return False
+
+            Dim sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+            If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
+            If Not System.IO.File.Exists(sidecarPath) AndAlso Not createIfMissing Then Return False
+
+            Dim xNamespace As XNamespace = "adobe:ns:meta/"
+            Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+            Dim xmpNamespace As XNamespace = "http://ns.adobe.com/xap/1.0/"
+            Dim safeRating = Math.Max(0, Math.Min(5, rating)).ToString(CultureInfo.InvariantCulture)
+
+            Try
+                Dim doc As XDocument
+                If System.IO.File.Exists(sidecarPath) Then
+                    doc = XDocument.Parse(System.IO.File.ReadAllText(sidecarPath, Encoding.UTF8), LoadOptions.PreserveWhitespace)
+                Else
+                    doc = New XDocument(
+                        New XDeclaration("1.0", "utf-8", "yes"),
+                        New XElement(xNamespace + "xmpmeta",
+                            New XAttribute(XNamespace.Xmlns + "x", xNamespace.NamespaceName),
+                            New XElement(rdfNamespace + "RDF",
+                                New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName),
+                                New XElement(rdfNamespace + "Description",
+                                    New XAttribute(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)))))
+                End If
+
+                Dim description = doc.Descendants(rdfNamespace + "Description").FirstOrDefault()
+                If description Is Nothing Then
+                    Dim rdfRoot = doc.Descendants(rdfNamespace + "RDF").FirstOrDefault()
+                    If rdfRoot Is Nothing Then
+                        Dim root = doc.Root
+                        If root Is Nothing Then Return False
+                        rdfRoot = New XElement(rdfNamespace + "RDF", New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName))
+                        root.Add(rdfRoot)
+                    End If
+                    description = New XElement(rdfNamespace + "Description")
+                    rdfRoot.Add(description)
+                End If
+
+                description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
+                description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
+
+                System.IO.File.WriteAllText(sidecarPath, doc.ToString(SaveOptions.DisableFormatting), New UTF8Encoding(False))
+                Return True
+            Catch
+                Return False
+            End Try
+        End Function
 
         Private Shared Function TryGetMemberValue(item As Object, memberName As String) As Object
             If item Is Nothing Then Return Nothing

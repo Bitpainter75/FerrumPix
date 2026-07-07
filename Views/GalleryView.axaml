@@ -32,21 +32,21 @@
                             Command="{Binding NavigateUpCommand}"
                             IsEnabled="{Binding CanNavigateBack}"
                             ToolTip.Tip="Zurück">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/02_Zurueck.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-left.svg"
                                Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="36" Height="36"
                             Command="{Binding NavigateForwardCommand}"
                             IsEnabled="{Binding CanNavigateForward}"
                             ToolTip.Tip="Vorwärts">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/03_Vorwaerts.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg"
                                Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="36" Height="36"
                             Command="{Binding NavigateParentCommand}"
                             IsEnabled="{Binding HasBreadcrumbParent}"
                             ToolTip.Tip="Eine Ebene nach oben">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/04_Nach_oben.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-up.svg"
                                Width="20" Height="20"/>
                     </Button>
                 </StackPanel>
@@ -57,7 +57,7 @@
                             Height="36"
                             Command="{Binding NavigatePicturesCommand}"
                             ToolTip.Tip="Zum Bilder-Ordner">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/01_Home.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/home.svg"
                                        Width="20" Height="20"/>
                     </Button>
                     <Button Classes="ghost"
@@ -95,7 +95,7 @@
                             Height="32"
                             Margin="0,0,12,0">
                         <Grid ColumnDefinitions="Auto,*,Auto">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/21_Suchen.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
                                    Width="16" Height="16" VerticalAlignment="Center" Opacity="0.65"/>
                             <TextBox Grid.Column="1"
                                      Name="GallerySearchBox"
@@ -118,7 +118,7 @@
                                     Command="{Binding ClearSearchCommand}"
                                     IsVisible="{Binding SearchText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                                     ToolTip.Tip="Suche zurücksetzen">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/18_Entfernen.svg"
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
                                                Width="12"
                                                Height="12"
                                                HorizontalAlignment="Center"
@@ -274,7 +274,7 @@
                             </Flyout>
                         </Button.Flyout>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/19_Filter.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/filter.svg"
                                    Width="20" Height="20"/>
                             <TextBlock Text="{Binding FilterLabel}"/>
                         </StackPanel>
@@ -457,7 +457,7 @@
                             </Flyout>
                         </Button.Flyout>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/22_Sortieren.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-sort.svg"
                                    Width="20" Height="20"/>
                             <TextBlock Text="{Binding SortLabel}"
                                        TextTrimming="CharacterEllipsis"/>
@@ -469,20 +469,20 @@
                                 Classes.active="{Binding IsListView}"
                                 Command="{Binding SetViewModeCommand}" CommandParameter="List"
                                 ToolTip.Tip="Listenansicht">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/19_Liste.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/list.svg"
                                    Width="20" Height="20" Opacity="0.78"/>
                         </Button>
                         <Button Classes="icon-btn" Width="36" Height="36"
                                 Classes.active="{Binding IsGridView}"
                                 Command="{Binding SetViewModeCommand}" CommandParameter="Grid"
                                 ToolTip.Tip="Rasteransicht">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/18_Raster.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-grid.svg"
                                    Width="20" Height="20"/>
                         </Button>
                         <Button Classes="icon-btn" Width="36" Height="36"
                                 Click="OnFullscreenClick"
                                 ToolTip.Tip="Vollbild">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/21_Vollbild.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/maximize.svg"
                                    Width="20" Height="20"/>
                         </Button>
                     </StackPanel>
@@ -511,7 +511,7 @@
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
                                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-36,3,0,3">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/21_Suchen.svg"
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
                                                        Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="6,0,0,0"
                                                    VerticalAlignment="Center" FontSize="12"
@@ -525,7 +525,7 @@
                                                 IsVisible="{Binding IsRemovable}"
                                                 Click="OnRemoveVirtualSearchClick"
                                                 ToolTip.Tip="Suche entfernen">
-                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/18_Entfernen.svg"
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
                                                            Width="12"
                                                            Height="12"
                                                            HorizontalAlignment="Center"
@@ -578,7 +578,7 @@
                                           VerticalAlignment="Center"
                                           HorizontalAlignment="Stretch"
                                           Margin="4,4">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/05_Ordner.svg"
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
                                                Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="10,0,0,0"
                                                    VerticalAlignment="Center"
@@ -600,7 +600,7 @@
                             Padding="8,7"
                             Click="OnSettingsClick">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/34_Einstellungen.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/settings.svg"
                                            Width="20" Height="20"/>
                             <TextBlock Text="Einstellungen"
                                        VerticalAlignment="Center"/>
@@ -714,7 +714,7 @@
                                                        IsVisible="{Binding IsImage}"
                                                        Stretch="UniformToFill"
                                                        RenderOptions.BitmapInterpolationMode="MediumQuality"/>
-                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/05_Ordner.svg"
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
                                                                IsVisible="{Binding IsFolder}"
                                                                Width="54" Height="54"
                                                                HorizontalAlignment="Center"
@@ -728,7 +728,7 @@
                                                         VerticalAlignment="Center"
                                                         Click="OnVideoPlayBadgeClick"
                                                         ToolTip.Tip="Abspielen">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/079_Play.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg"
                                                                    Width="22" Height="22"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
@@ -744,7 +744,11 @@
                                                         Margin="8"
                                                         Click="OnSelectionBadgeClick"
                                                         ToolTip.Tip="Auswählen">
-                                                    <TextBlock Classes="badge-glyph" Text="✓"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-check.svg"
+                                                                   Width="12"
+                                                                   Height="12"
+                                                                   Classes="badge-glyph"
+                                                                   IsVisible="{Binding IsSelected}"/>
                                                 </Button>
                                                 <StackPanel Classes="gallery-hover-actions"
                                                             Orientation="Horizontal"
@@ -759,7 +763,7 @@
                                                             IsVisible="{Binding IsImage}"
                                                             Click="OnHoverOpenViewerClick"
                                                             ToolTip.Tip="Im Viewer öffnen">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/11_Auge.svg"
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
                                                                        Width="13"
                                                                        Height="13"
                                                                        IconBrush="White"/>
@@ -771,7 +775,7 @@
                                                             IsVisible="{Binding CanEditFile}"
                                                             Click="OnHoverOpenEditorClick"
                                                             ToolTip.Tip="Anpassen">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/03_Editor/07_Belichtung.svg"
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg"
                                                                        Width="13"
                                                                        Height="13"
                                                                        IconBrush="White"/>
@@ -783,65 +787,135 @@
                                                             IsVisible="{Binding CanFileOperationDelete}"
                                                             Click="OnHoverDeleteClick"
                                                             ToolTip.Tip="Löschen">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/35_Loeschen.svg"
-                                                                       Width="13"
-                                                                       Height="13"
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                                                       Width="14"
+                                                                       Height="14"
                                                                        IconBrush="White"/>
                                                     </Button>
                                                 </StackPanel>
-                                                <StackPanel Classes="gallery-meta-badges"
+                                                <StackPanel Classes="gallery-rating-actions"
                                                             Orientation="Horizontal"
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Bottom"
-                                                            Margin="8"
-                                                            Spacing="4">
-                                                    <Border Classes="gallery-meta-pill"
-                                                            IsVisible="{Binding HasExifMetadata}"
-                                                            ToolTip.Tip="EXIF vorhanden">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/02_EXIF.svg"
-                                                                       Width="11"
-                                                                       Height="11"
-                                                                       IconBrush="White"/>
-                                                    </Border>
-                                                    <Border Classes="gallery-meta-pill"
-                                                            IsVisible="{Binding HasIptcMetadata}"
-                                                            ToolTip.Tip="IPTC vorhanden">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/03_IPTC.svg"
-                                                                       Width="11"
-                                                                       Height="11"
-                                                                       IconBrush="White"/>
-                                                    </Border>
-                                                    <Border Classes="gallery-meta-pill"
-                                                            IsVisible="{Binding HasXmpMetadata}"
-                                                            ToolTip.Tip="XMP vorhanden">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/04_XMP.svg"
-                                                                       Width="11"
-                                                                       Height="11"
-                                                                       IconBrush="White"/>
-                                                    </Border>
+                                                            Margin="8,0,0,8"
+                                                            Spacing="1"
+                                                            IsVisible="{Binding IsImage}">
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                                            Tag="1"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="16" Height="16" />
+                                                    </Button>
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                                            Tag="2"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="16" Height="16" />
+                                                    </Button>
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                                            Tag="3"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="16" Height="16" />
+                                                    </Button>
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                                            Tag="4"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="16" Height="16" />
+                                                    </Button>
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                                            Tag="5"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="16" Height="16" />
+                                                    </Button>
                                                 </StackPanel>
-                                                <Button Classes="favorite-btn image-favorite-btn"
+                                                <StackPanel Orientation="Horizontal"
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Bottom">
+                                                    <StackPanel Classes="gallery-meta-badges"
+                                                            Orientation="Horizontal"
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Bottom"
+                                                            Margin="0,0,20,4"
+                                                            Spacing="4">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/EXIF.svg"
+                                                                   Classes="gallery-meta-icon"
+                                                                   Width="26"
+                                                                   Height="26"
+                                                                   IconBrush="White"
+                                                                   IsVisible="{Binding HasExifMetadata}"
+                                                                   ToolTip.Tip="EXIF vorhanden">
+                                                            <icons:SvgIcon.Effect>
+                                                                <DropShadowEffect BlurRadius="0"
+                                                                                  OffsetX="1"
+                                                                                  OffsetY="1"
+                                                                                  Color="#B0000000"/>
+                                                            </icons:SvgIcon.Effect>
+                                                        </icons:SvgIcon>
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/IPTC.svg"
+                                                                   Classes="gallery-meta-icon"
+                                                                   Width="26"
+                                                                   Height="26"
+                                                                   IconBrush="White"
+                                                                   IsVisible="{Binding HasIptcMetadata}"
+                                                                   ToolTip.Tip="IPTC vorhanden">
+                                                            <icons:SvgIcon.Effect>
+                                                                <DropShadowEffect BlurRadius="0"
+                                                                                  OffsetX="1"
+                                                                                  OffsetY="1"
+                                                                                  Color="#B0000000"/>
+                                                            </icons:SvgIcon.Effect>
+                                                        </icons:SvgIcon>
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/XMP.svg"
+                                                                   Classes="gallery-meta-icon"
+                                                                   Width="26"
+                                                                   Height="26"
+                                                                   IconBrush="White"
+                                                                   IsVisible="{Binding HasXmpMetadata}"
+                                                                   ToolTip.Tip="XMP vorhanden">
+                                                            <icons:SvgIcon.Effect>
+                                                                <DropShadowEffect BlurRadius="0"
+                                                                                  OffsetX="1"
+                                                                                  OffsetY="1"
+                                                                                  Color="#B0000000"/>
+                                                            </icons:SvgIcon.Effect>
+                                                        </icons:SvgIcon>
+                                                    </StackPanel>
+                                                    <Button Classes="favorite-btn image-favorite-btn"
                                                         Width="26"
                                                         Height="26"
                                                         Padding="0"
                                                         HorizontalAlignment="Right"
                                                         VerticalAlignment="Bottom"
-                                                        Margin="0,0,8,8"
+                                                        Margin="0,0,4,4"
                                                         IsVisible="{Binding IsImage}"
                                                         Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         ToolTip.Tip="Favorit">
-                                                    <Grid>
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
-                                                                       Width="20" Height="20"
-                                                                       Classes="fav-heart"
-                                                                       IsVisible="{Binding !IsFavorite}"/>
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
-                                                                       Width="20" Height="20"
-                                                                       Classes="fav-heart active"
-                                                                       IsVisible="{Binding IsFavorite}"/>
-                                                    </Grid>
-                                                </Button>
+                                                        <Grid>
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                                                           Width="20" Height="20"
+                                                                           Classes="fav-heart"
+                                                                           IsVisible="{Binding !IsFavorite}"/>
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                                                           Width="20" Height="20"
+                                                                           Classes="fav-heart active"
+                                                                           IsVisible="{Binding IsFavorite}"/>
+                                                        </Grid>
+                                                    </Button>
+                                                </StackPanel>
                                             </Grid>
                                         </Border>
                                         <Border Grid.Row="1" Background="{DynamicResource FP.Bg.Content}" CornerRadius="0,0,8,8" Padding="14,9">
@@ -956,7 +1030,7 @@
                                                        IsVisible="{Binding IsImage}"
                                                        Stretch="UniformToFill"
                                                        RenderOptions.BitmapInterpolationMode="MediumQuality"/>
-                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/02_Dateibrowser/05_Ordner.svg"
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
                                                                IsVisible="{Binding IsFolder}"
                                                                Width="28" Height="28"
                                                                HorizontalAlignment="Center"
@@ -970,7 +1044,7 @@
                                                         VerticalAlignment="Center"
                                                         Click="OnVideoPlayBadgeClick"
                                                         ToolTip.Tip="Abspielen">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/079_Play.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg"
                                                                    Width="13" Height="13"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
@@ -986,8 +1060,60 @@
                                                         Margin="4"
                                                         Click="OnSelectionBadgeClick"
                                                         ToolTip.Tip="Auswählen">
-                                                    <TextBlock Classes="badge-glyph" Text="✓"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-check.svg"
+                                                                   Width="10"
+                                                                   Height="10"
+                                                                   Classes="badge-glyph"
+                                                                   IsVisible="{Binding IsSelected}"/>
                                                 </Button>
+                                                <StackPanel Classes="gallery-rating-actions compact"
+                                                            Orientation="Horizontal"
+                                                            HorizontalAlignment="Left"
+                                                            VerticalAlignment="Bottom"
+                                                            Margin="4,0,0,4"
+                                                            Spacing="0"
+                                                            IsVisible="{Binding IsImage}">
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                                            Tag="1"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="12" Height="12" />
+                                                    </Button>
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                                            Tag="2"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="12" Height="12" />
+                                                    </Button>
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                                            Tag="3"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="12" Height="12" />
+                                                    </Button>
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                                            Tag="4"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="12" Height="12" />
+                                                    </Button>
+                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                                            Tag="5"
+                                                            Click="OnHoverSetRatingClick">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                       Classes="rating-star"
+                                                                       Width="12" Height="12" />
+                                                    </Button>
+                                                </StackPanel>
                                             </Grid>
                                         </Border>
                                         <StackPanel Grid.Column="1"
@@ -1003,31 +1129,50 @@
                                                             Orientation="Horizontal"
                                                             Spacing="4"
                                                             VerticalAlignment="Center"
-                                                            Margin="8,0,0,0">
-                                                    <Border Classes="gallery-meta-pill compact"
-                                                            IsVisible="{Binding HasExifMetadata}"
-                                                            ToolTip.Tip="EXIF vorhanden">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/02_EXIF.svg"
-                                                                       Width="10"
-                                                                       Height="10"
-                                                                       IconBrush="White"/>
-                                                    </Border>
-                                                    <Border Classes="gallery-meta-pill compact"
-                                                            IsVisible="{Binding HasIptcMetadata}"
-                                                            ToolTip.Tip="IPTC vorhanden">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/03_IPTC.svg"
-                                                                       Width="10"
-                                                                       Height="10"
-                                                                       IconBrush="White"/>
-                                                    </Border>
-                                                    <Border Classes="gallery-meta-pill compact"
-                                                            IsVisible="{Binding HasXmpMetadata}"
-                                                            ToolTip.Tip="XMP vorhanden">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/04_XMP.svg"
-                                                                       Width="10"
-                                                                       Height="10"
-                                                                       IconBrush="White"/>
-                                                    </Border>
+                                                            Margin="0,0,24,0"
+                                                            HorizontalAlignment="Right">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/EXIF.svg"
+                                                                   Classes="gallery-meta-icon compact"
+                                                                   Width="26"
+                                                                   Height="26"
+                                                                   IconBrush="White"
+                                                                   IsVisible="{Binding HasExifMetadata}"
+                                                                   ToolTip.Tip="EXIF vorhanden">
+                                                        <icons:SvgIcon.Effect>
+                                                            <DropShadowEffect BlurRadius="0"
+                                                                              OffsetX="1"
+                                                                              OffsetY="1"
+                                                                              Color="#B0000000"/>
+                                                        </icons:SvgIcon.Effect>
+                                                    </icons:SvgIcon>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/IPTC.svg"
+                                                                   Classes="gallery-meta-icon compact"
+                                                                   Width="26"
+                                                                   Height="26"
+                                                                   IconBrush="White"
+                                                                   IsVisible="{Binding HasIptcMetadata}"
+                                                                   ToolTip.Tip="IPTC vorhanden">
+                                                        <icons:SvgIcon.Effect>
+                                                            <DropShadowEffect BlurRadius="0"
+                                                                              OffsetX="1"
+                                                                              OffsetY="1"
+                                                                              Color="#B0000000"/>
+                                                        </icons:SvgIcon.Effect>
+                                                    </icons:SvgIcon>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/XMP.svg"
+                                                                   Classes="gallery-meta-icon compact"
+                                                                   Width="26"
+                                                                   Height="26"
+                                                                   IconBrush="White"
+                                                                   IsVisible="{Binding HasXmpMetadata}"
+                                                                   ToolTip.Tip="XMP vorhanden">
+                                                        <icons:SvgIcon.Effect>
+                                                            <DropShadowEffect BlurRadius="0"
+                                                                              OffsetX="1"
+                                                                              OffsetY="1"
+                                                                              Color="#B0000000"/>
+                                                        </icons:SvgIcon.Effect>
+                                                    </icons:SvgIcon>
                                                 </StackPanel>
                                             </Grid>
                                             <TextBlock Text="{Binding FilePath}"
@@ -1061,11 +1206,11 @@
                                                 CommandParameter="{Binding}"
                                                 ToolTip.Tip="Favorit">
                                             <Grid>
-                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
                                                                Width="20" Height="20"
                                                                Classes="fav-heart"
                                                                IsVisible="{Binding !IsFavorite}"/>
-                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
                                                                Width="20" Height="20"
                                                                Classes="fav-heart active"
                                                                IsVisible="{Binding IsFavorite}"/>
@@ -1088,14 +1233,14 @@
                     <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding SelectAllCommand}"
                             ToolTip.Tip="Alle auswählen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/15_Ausgewaehlt.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
                                        Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding ClearSelectionCommand}"
                             IsEnabled="{Binding HasSelection}"
                             ToolTip.Tip="Alle abwählen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/16_Nicht_ausgewaehlt.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg"
                                        Width="20" Height="20"/>
                     </Button>
                     <TextBlock
@@ -1132,27 +1277,37 @@
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="1">
-                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=1}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                           Classes="rating-star"
+                                           Width="18" Height="18"/>
                         </Button>
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="2">
-                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=2}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                           Classes="rating-star"
+                                           Width="18" Height="18"/>
                         </Button>
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="3">
-                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=3}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                           Classes="rating-star"
+                                           Width="18" Height="18"/>
                         </Button>
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="4">
-                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=4}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                           Classes="rating-star"
+                                           Width="18" Height="18"/>
                         </Button>
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="5">
-                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=5}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                           Classes="rating-star"
+                                           Width="18" Height="18"/>
                         </Button>
                     </StackPanel>
                 </StackPanel>

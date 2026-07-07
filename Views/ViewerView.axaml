@@ -22,19 +22,19 @@
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding BackToGalleryCommand}"
                             ToolTip.Tip="Zurück zur Galerie">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/01_Home.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/home.svg"
                                        Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding PreviousCommand}"
                             ToolTip.Tip="Vorheriges Bild">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/02_Zurueck.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-left.svg"
                                Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding NextCommand}"
                             ToolTip.Tip="Nächstes Bild">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/03_Vorwaerts.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg"
                                Width="20" Height="20"/>
                     </Button>
                 </StackPanel>
@@ -44,14 +44,14 @@
                             Command="{Binding ToggleSlideshowCommand}"
                             ToolTip.Tip="Diashow starten">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/16_Diashow_starten.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
                             <TextBlock Text="Diashow starten" />
                         </StackPanel>
                     </Button>
                     <Button Classes="ghost" Height="38" Command="{Binding EditCommand}" ToolTip.Tip="Anpassen"
                             IsEnabled="{Binding CanEdit}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/03_Editor/07_Belichtung.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
                             <TextBlock Text="Anpassen" />
                         </StackPanel>
                     </Button>
@@ -61,33 +61,33 @@
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding DeleteCurrentCommand}"
                             ToolTip.Tip="Löschen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/35_Loeschen.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
                                        Width="18" Height="18"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Click="OnToggleFilmstripClick"
                             Classes.active="{Binding ShowFilmstrip}"
                             ToolTip.Tip="Filmstreifen ein- oder ausblenden">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/11_Auge.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
                                        Width="18" Height="18"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Classes.active="{Binding IsInfoSidebarVisible}"
                             Command="{Binding ToggleInfoSidebarCommand}"
                             ToolTip.Tip="Info">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/01_Info.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg"
                                        Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Click="OnSettingsClick"
                             ToolTip.Tip="Einstellungen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/34_Einstellungen.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/settings.svg"
                                        Width="18" Height="18"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Click="OnToggleFullscreenClick"
                             ToolTip.Tip="Vollbild">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/21_Vollbild.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/maximize.svg"
                                Width="20" Height="20"/>
                     </Button>
                 </StackPanel>
@@ -105,7 +105,7 @@
 
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                                 IsVisible="{Binding ShowVideoUnavailableNotice}">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/08_Dateitypen/31_Video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
                         <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
                         <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
                     </StackPanel>
@@ -251,9 +251,6 @@
                         <TextBlock Text="{Binding CurrentFileName}" FontSize="12" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding MousePositionText}"
-                                   IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
-                                   Foreground="{DynamicResource FP.Text.Muted}" FontSize="12" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
@@ -275,53 +272,66 @@
                                 Classes.active="{Binding IsZoomFitActive}"
                                 Command="{Binding ZoomFitCommand}" ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/26_Anpassen.svg" Width="20" Height="20"/>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg" Width="20" Height="20"/>
                                 <TextBlock Text="Einpassen" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2" 
+                            <TextBlock Text="{Binding MousePositionText}" Margin="0,0,20,0"
+                                       IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="12" VerticalAlignment="Center"/>
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center" 
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="1">
-                                <TextBlock FontSize="20" VerticalAlignment="Center"
-                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=1}" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                               Classes="rating-star"
+                                               Width="18" Height="18"
+                                               VerticalAlignment="Center" />
                             </Button>
-                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="2">
-                                <TextBlock FontSize="20" VerticalAlignment="Center"
-                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=2}" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                               Classes="rating-star"
+                                               Width="18" Height="18"
+                                               VerticalAlignment="Center" />
                             </Button>
-                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="3">
-                                <TextBlock FontSize="20" VerticalAlignment="Center"
-                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=3}" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                               Classes="rating-star"
+                                               Width="18" Height="18"
+                                               VerticalAlignment="Center" />
                             </Button>
-                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="4">
-                                <TextBlock FontSize="20" VerticalAlignment="Center"
-                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=4}" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                               Classes="rating-star"
+                                               Width="18" Height="18"
+                                               VerticalAlignment="Center" />
                             </Button>
-                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2"
+                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="5">
-                                <TextBlock FontSize="20" VerticalAlignment="Center"
-                                           Text="{Binding Rating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=5}" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                               Classes="rating-star"
+                                               Width="18" Height="18"
+                                               VerticalAlignment="Center" />
                             </Button>
                             <Button Classes="icon-btn"
                                     Width="24" Height="24" VerticalAlignment="Center"
                                     Command="{Binding ToggleFavoriteCommand}"
                                     ToolTip.Tip="Favorit" Margin="6,0,0,0">
                                 <Grid Width="20" Height="20">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
                                                    Width="20" Height="20"
                                                    Classes="fav-heart"
                                                    IsVisible="{Binding !IsFavorite}" />
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
                                                    Width="20" Height="20"
                                                    Classes="fav-heart active"
                                                    IsVisible="{Binding IsFavorite}" />
@@ -361,7 +371,7 @@
 
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                         IsVisible="{Binding ShowVideoUnavailableNotice}">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/08_Dateitypen/31_Video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
                 <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
                 <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
             </StackPanel>
@@ -386,7 +396,7 @@
                            Tapped="OnVideoViewTapped"/>
             <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                         IsVisible="{Binding ShowVideoUnavailableNotice}">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/08_Dateitypen/31_Video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
                 <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
                 <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
             </StackPanel>
@@ -401,8 +411,8 @@
                             Command="{Binding PlayPauseVideoCommand}"
                             ToolTip.Tip="Play/Pause">
                         <Panel>
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/079_Play.svg" Width="16" Height="16" IsVisible="{Binding !IsVideoPlaying}"/>
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/080_Pause.svg" Width="16" Height="16" IsVisible="{Binding IsVideoPlaying}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg" Width="16" Height="16" IsVisible="{Binding !IsVideoPlaying}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-pause.svg" Width="16" Height="16" IsVisible="{Binding IsVideoPlaying}"/>
                         </Panel>
                     </Button>
                     <icons:RoundSlider Grid.Column="1" Name="VideoSeekSlider" Margin="10,0"
@@ -413,8 +423,8 @@
                             Command="{Binding ToggleVideoMuteCommand}"
                             ToolTip.Tip="Stumm">
                         <Panel Width="16" Height="16">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/06_Einstellungen/09_Audio.svg" Width="16" Height="16" IconBrush="White"/>
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/108_X.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/volume.svg" Width="16" Height="16" IconBrush="White"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
                                            Width="9" Height="9"
                                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                            IconBrush="White"

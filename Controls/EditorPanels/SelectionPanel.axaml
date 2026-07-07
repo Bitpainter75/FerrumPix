@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.SelectionPanel">
+    <StackPanel Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <icons:SvgIcon
+                Source="avares://FerrumPix/Assets/Icons/outline/rectangle.svg"
+                Width="14" Height="14" />
+            <TextBlock Text="Auswahl" FontWeight="SemiBold" />
+        </StackPanel>
+        <TextBlock Text="Rechteck im Bild aufziehen, dann kopieren oder füllen."
+                   Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="11"
+                   TextWrapping="Wrap" />
+        <Button Classes="ghost"
+                HorizontalAlignment="Stretch"
+                Padding="10,6"
+                IsEnabled="{Binding HasActiveSelection}"
+                Command="{Binding CopySelectionCommand}"
+                ToolTip.Tip="Auswahlinhalt als neues, frei verschiebbares Bild-Objekt kopieren">
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                <icons:SvgIcon
+                    Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
+                    Width="16" Height="16" />
+                <TextBlock Text="Kopieren" />
+            </StackPanel>
+        </Button>
+
+        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4,0,0" />
+        <TextBlock Text="Füllen" Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="11" FontWeight="SemiBold" />
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Classes="ghost" Padding="8,4"
+                    Command="{Binding SetAnnotationFillKindCommand}"
+                    CommandParameter="Solid"
+                    Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
+                <TextBlock Text="Vollfarbe" FontSize="11" />
+            </Button>
+            <Button Classes="ghost" Padding="8,4"
+                    Command="{Binding SetAnnotationFillKindCommand}"
+                    CommandParameter="LinearGradient"
+                    Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
+                <TextBlock Text="Verlauf" FontSize="11" />
+            </Button>
+            <Button Classes="ghost" Padding="8,4"
+                    Command="{Binding SetAnnotationFillKindCommand}"
+                    CommandParameter="RadialGradient"
+                    Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
+                <TextBlock Text="Radial" FontSize="11" />
+            </Button>
+        </StackPanel>
+        <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+            <TextBlock Text="Farbe 1" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="11" />
+            <icons:ColorPickerButton Grid.Column="1"
+                                     SelectedColor="{Binding AnnotationFillColorValue, Mode=TwoWay}" />
+        </Grid>
+        <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
+              IsVisible="{Binding ShowGradientFillControls}">
+            <TextBlock Text="Farbe 2" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="11" />
+            <icons:ColorPickerButton Grid.Column="1"
+                                     SelectedColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}" />
+        </Grid>
+        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center"
+              IsVisible="{Binding ShowLinearGradientAngleControl}">
+            <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="11" />
+            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
+                               Value="{Binding AnnotationGradientAngleDegrees}"
+                               Margin="6,0" />
+            <TextBlock Grid.Column="2"
+                       Text="{Binding AnnotationGradientAngleDegrees, StringFormat={}{0:F0}°}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"
+                       HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" />
+        </Grid>
+        <CheckBox Content="Verlauf invertieren"
+                  IsChecked="{Binding AnnotationGradientInverted}" FontSize="11"
+                  IsVisible="{Binding ShowRadialGradientControl}" />
+        <Button Classes="accent"
+                HorizontalAlignment="Stretch"
+                Padding="10,6"
+                IsEnabled="{Binding HasActiveSelection}"
+                Command="{Binding FillSelectionCommand}"
+                ToolTip.Tip="Auswahl mit der gewählten Füllung füllen">
+            <TextBlock Text="Auswahl füllen" HorizontalAlignment="Center" />
+        </Button>
+    </StackPanel>
+</UserControl>

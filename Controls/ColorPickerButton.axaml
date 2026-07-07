@@ -2,8 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.ColorPickerButton">
-    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-        <Button Name="SwatchButton" Classes="ghost" Height="34" Padding="6,4" HorizontalAlignment="Stretch" ToolTip.Tip="Farbe wählen">
+    <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Name="SwatchButton" Classes="ghost" Height="34" Padding="6,4" HorizontalAlignment="Stretch" MinWidth="120" ToolTip.Tip="Farbe wählen">
             <Grid ColumnDefinitions="28,*" ColumnSpacing="8">
                 <Border Name="SwatchBorder" Width="26" Height="22" BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1" CornerRadius="4"/>
                 <TextBlock Grid.Column="1" Name="HexTextBlock" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11" VerticalAlignment="Center"/>
@@ -35,8 +35,9 @@
                 </Flyout>
             </Button.Flyout>
         </Button>
-        <Button Grid.Column="1" Name="EyedropperButton" Classes="icon-btn" Width="30" Height="30" Padding="0" Click="OnEyedropperClick" ToolTip.Tip="Farbe aus dem Bild aufnehmen (Pipette)">
-            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/200_Pipette.svg" Width="15" Height="15"/>
+        <Button Name="EyedropperButton" Classes="ghost" Width="34" Height="34" Padding="0"
+                Click="OnEyedropperClick" ToolTip.Tip="Farbe aus dem Bild aufnehmen (Pipette)">
+            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg" Width="18" Height="18" IconBrush="{DynamicResource FP.Text.Primary}"/>
         </Button>
-    </Grid>
+    </StackPanel>
 </UserControl>

@@ -25,6 +25,9 @@ Namespace Services
         Public Property ImageWidth As Integer?
         Public Property ImageHeight As Integer?
         Public Property FileCreatedAt As String = ""
+        Public Property HasExifMetadata As Boolean
+        Public Property HasIptcMetadata As Boolean
+        Public Property HasXmpMetadata As Boolean
         ''' <summary>Dateisystem-LastWriteTime (ISO-8601), das zum Zeitpunkt der letzten erfolgreichen
         ''' EXIF-Extraktion galt. Dient als Invalidierungs-Schlüssel: stimmt dieser Wert noch mit dem
         ''' aktuellen Dateisystem-Änderungsdatum überein, müssen EXIF-Daten nicht erneut gelesen werden.</summary>
@@ -92,6 +95,9 @@ Namespace Services
             ("ImageHeight", "INTEGER"),
             ("DateModifiedExif", "TEXT"),
             ("FileCreatedAt", "TEXT"),
+            ("HasExifMetadata", "INTEGER NOT NULL DEFAULT 0"),
+            ("HasIptcMetadata", "INTEGER NOT NULL DEFAULT 0"),
+            ("HasXmpMetadata", "INTEGER NOT NULL DEFAULT 0"),
             ("ScannedSourceModifiedAt", "TEXT")
         }
 
@@ -155,7 +161,20 @@ Namespace Services
             End Using
         End Function
 
-        Public Sub SetRating(filePath As String, rating As Integer)
+        Public Function HasXmpMetadata(filePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT HasXmpMetadata FROM ImageMeta WHERE FilePath=$p"
+                    cmd.Parameters.AddWithValue("$p", filePath)
+                    Dim r = cmd.ExecuteScalar()
+                    Return r IsNot Nothing AndAlso Not TypeOf r Is DBNull AndAlso CInt(r) <> 0
+                End Using
+            End Using
+        End Function
+
+        Public Sub SetRating(filePath As String, rating As Integer, Optional syncToXmp As Boolean = False)
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
@@ -167,11 +186,15 @@ Namespace Services
                     cmd.ExecuteNonQuery()
                 End Using
             End Using
+
+            If syncToXmp AndAlso HasXmpMetadata(filePath) Then
+                ExifService.WriteXmpRatingSidecar(filePath, rating, createIfMissing:=True)
+            End If
         End Sub
 
         ''' <summary>Setzt die Bewertung für mehrere Dateien in einer einzigen Transaktion/Verbindung
         ''' (statt einer eigenen Verbindung + eigenem Commit pro Datei) - wichtig bei Mehrfachauswahl.</summary>
-        Public Sub SetRatingForMany(filePaths As IEnumerable(Of String), rating As Integer)
+        Public Sub SetRatingForMany(filePaths As IEnumerable(Of String), rating As Integer, Optional syncToXmp As Boolean = False)
             Dim list = If(filePaths, Enumerable.Empty(Of String)()).Where(Function(p) Not String.IsNullOrWhiteSpace(p)).ToList()
             If list.Count = 0 Then Return
 
@@ -194,6 +217,16 @@ Namespace Services
                     transaction.Commit()
                 End Using
             End Using
+
+            If syncToXmp Then
+                Dim metaByPath = GetMetaForPaths(list)
+                For Each path In list
+                    Dim meta As LibraryImageMeta = Nothing
+                    If metaByPath.TryGetValue(path, meta) AndAlso meta IsNot Nothing AndAlso meta.HasXmpMetadata Then
+                        ExifService.WriteXmpRatingSidecar(path, rating, createIfMissing:=True)
+                    End If
+                Next
+            End If
         End Sub
 
         Public Function GetTags(filePath As String) As List(Of String)
@@ -249,7 +282,11 @@ Namespace Services
         ''' zusätzlich Dateisystem-Erstellungsdatum und -Änderungsdatum der Datei und schreibt Letzteres
         ''' als ScannedSourceModifiedAt-Snapshot mit - das ist der Invalidierungs-Schlüssel, der beim
         ''' nächsten Ordner-Scan entscheidet, ob diese EXIF-Daten noch aktuell sind.</summary>
-        Public Sub SetExifData(filePath As String, exif As ExifSearchFields)
+        Public Sub SetExifData(filePath As String,
+                               exif As ExifSearchFields,
+                               Optional hasExifMetadata As Boolean = False,
+                               Optional hasIptcMetadata As Boolean = False,
+                               Optional hasXmpMetadata As Boolean = False)
             If String.IsNullOrWhiteSpace(filePath) OrElse exif Is Nothing Then Return
 
             Dim fileCreatedAt = ""
@@ -267,14 +304,16 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,ScannedSourceModifiedAt) " &
-                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$scannedSourceModifiedAt) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
                         "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
                         "ShutterSpeed=excluded.ShutterSpeed, GpsLatitude=excluded.GpsLatitude, GpsLongitude=excluded.GpsLongitude, " &
                         "ImageWidth=excluded.ImageWidth, ImageHeight=excluded.ImageHeight, " &
-                        "FileCreatedAt=excluded.FileCreatedAt, ScannedSourceModifiedAt=excluded.ScannedSourceModifiedAt"
+                        "FileCreatedAt=excluded.FileCreatedAt, HasExifMetadata=excluded.HasExifMetadata, " &
+                        "HasIptcMetadata=excluded.HasIptcMetadata, HasXmpMetadata=excluded.HasXmpMetadata, " &
+                        "ScannedSourceModifiedAt=excluded.ScannedSourceModifiedAt"
                     cmd.Parameters.AddWithValue("$p", filePath)
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
                     cmd.Parameters.AddWithValue("$dateModifiedExif", If(exif.DateModifiedExif, ""))
@@ -289,6 +328,9 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$width", NullableToDbValue(exif.ImageWidth))
                     cmd.Parameters.AddWithValue("$height", NullableToDbValue(exif.ImageHeight))
                     cmd.Parameters.AddWithValue("$fileCreatedAt", fileCreatedAt)
+                    cmd.Parameters.AddWithValue("$hasExifMetadata", If(hasExifMetadata, 1, 0))
+                    cmd.Parameters.AddWithValue("$hasIptcMetadata", If(hasIptcMetadata, 1, 0))
+                    cmd.Parameters.AddWithValue("$hasXmpMetadata", If(hasXmpMetadata, 1, 0))
                     cmd.Parameters.AddWithValue("$scannedSourceModifiedAt", scannedSourceModifiedAt)
                     cmd.ExecuteNonQuery()
                 End Using
@@ -296,7 +338,7 @@ Namespace Services
         End Sub
 
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, ScannedSourceModifiedAt"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -317,7 +359,10 @@ Namespace Services
                 .ImageHeight = If(reader.IsDBNull(14), CType(Nothing, Integer?), reader.GetInt32(14)),
                 .DateModifiedExif = If(reader.IsDBNull(15), "", reader.GetString(15)),
                 .FileCreatedAt = If(reader.IsDBNull(16), "", reader.GetString(16)),
-                .ScannedSourceModifiedAt = If(reader.IsDBNull(17), "", reader.GetString(17))
+                .HasExifMetadata = Not reader.IsDBNull(17) AndAlso reader.GetInt32(17) <> 0,
+                .HasIptcMetadata = Not reader.IsDBNull(18) AndAlso reader.GetInt32(18) <> 0,
+                .HasXmpMetadata = Not reader.IsDBNull(19) AndAlso reader.GetInt32(19) <> 0,
+                .ScannedSourceModifiedAt = If(reader.IsDBNull(20), "", reader.GetString(20))
             }
         End Function
 

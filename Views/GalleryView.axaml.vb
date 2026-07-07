@@ -626,6 +626,32 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        Public Sub OnHoverSetRatingClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim item = TryCast(button?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            Dim rating As Integer
+            If button Is Nothing OrElse item Is Nothing OrElse vm Is Nothing Then Return
+            If Not Integer.TryParse(If(button.Tag, "").ToString(), rating) Then Return
+
+            vm.SetItemRating(item, rating)
+            e.Handled = True
+        End Sub
+
+        Public Sub OnMetadataBadgePointerEntered(sender As Object, e As PointerEventArgs)
+            Dim control = TryCast(sender, Control)
+            Dim item = TryCast(control?.DataContext, ImageItem)
+            If item Is Nothing Then Return
+            item.HoveredMetadataKind = If(control?.Tag, "").ToString()
+        End Sub
+
+        Public Sub OnMetadataBadgePointerExited(sender As Object, e As PointerEventArgs)
+            Dim control = TryCast(sender, Control)
+            Dim item = TryCast(control?.DataContext, ImageItem)
+            If item Is Nothing Then Return
+            item.HoveredMetadataKind = ""
+        End Sub
+
         Private Sub ApplyPointerSelection(vm As GalleryViewModel, item As ImageItem, modifiers As KeyModifiers)
             If item Is Nothing OrElse item.IsParentFolderEntry Then Return
             If modifiers.HasFlag(KeyModifiers.Shift) Then

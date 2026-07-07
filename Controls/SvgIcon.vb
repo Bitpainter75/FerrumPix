@@ -18,6 +18,90 @@ Namespace Controls
             AvaloniaProperty.Register(Of SvgIcon, IBrush)(NameOf(IconBrush), New SolidColorBrush(Color.Parse("#D6DCE1")))
 
         Private Shared ReadOnly Cache As New Dictionary(Of String, SvgIconData)()
+        Private Const IconAssetPrefix As String = "/Assets/Icons/"
+        Private Const OutlineAssetBase As String = "avares://FerrumPix/Assets/Icons/outline/"
+        Private Shared ReadOnly LegacyOutlineFileMap As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+            {"01_Home.svg", "home.svg"},
+            {"02_Zurueck.svg", "arrow-left.svg"},
+            {"03_Vorwaerts.svg", "arrow-right.svg"},
+            {"04_Nach_oben.svg", "arrow-up.svg"},
+            {"05_Nach_unten.svg", "arrow-down.svg"},
+            {"07_Pinnnadel.svg", "pin.svg"},
+            {"09_Speichern.svg", "device-floppy.svg"},
+            {"11_Hinzufuegen.svg", "plus.svg"},
+            {"14_Aktualisieren.svg", "refresh.svg"},
+            {"18_Raster.svg", "layout-grid.svg"},
+            {"19_Liste.svg", "layout-list.svg"},
+            {"21_Vollbild.svg", "maximize.svg"},
+            {"26_Anpassen.svg", "zoom-reset.svg"},
+            {"34_Einstellungen.svg", "settings.svg"},
+            {"14_Speichern_unter.svg", "file-export.svg"},
+            {"28_Wiederherstellen.svg", "restore.svg"},
+            {"01_Allgemein.svg", "settings.svg"},
+            {"03_Aussehen.svg", "palette.svg"},
+            {"09_Audio.svg", "volume.svg"},
+            {"10_Vorschau.svg", "photo.svg"},
+            {"11_Wiedergabe.svg", "player-play.svg"},
+            {"33_Leistung.svg", "gauge.svg"},
+            {"05_Ordner.svg", "folder.svg"},
+            {"19_Filter.svg", "filter.svg"},
+            {"21_Suchen.svg", "search.svg"},
+            {"22_Sortieren.svg", "sort-ascending.svg"},
+            {"01_Zuschneiden.svg", "crop.svg"},
+            {"02_Groesse_aendern.svg", "resize.svg"},
+            {"03_Gerade_richten.svg", "rotate-2.svg"},
+            {"05_Kurven.svg", "chart-histogram.svg"},
+            {"07_Belichtung.svg", "exposure.svg"},
+            {"17_Farbmischer.svg", "color-filter.svg"},
+            {"18_Color_Grading.svg", "adjustments-horizontal.svg"},
+            {"24_Klarheit.svg", "sparkles.svg"},
+            {"26_Retusche.svg", "wand.svg"},
+            {"34_Text.svg", "text-size.svg"},
+            {"35_Rahmen.svg", "frame.svg"},
+            {"37_QR_Code.svg", "qrcode.svg"},
+            {"39_Pinsel.svg", "brush.svg"},
+            {"01_Info.svg", "circle-letter-i.svg"},
+            {"02_EXIF.svg", "camera.svg"},
+            {"03_IPTC.svg", "file-description.svg"},
+            {"04_XMP.svg", "file-code.svg"},
+            {"16_Diashow_starten.svg", "slideshow.svg"},
+            {"26_Seitenverhaeltnis.svg", "aspect-ratio.svg"},
+            {"29_Nach_links_drehen.svg", "rotate.svg"},
+            {"30_Nach_rechts_drehen.svg", "rotate-clockwise.svg"},
+            {"31_Horizontal_spiegeln.svg", "flip-horizontal.svg"},
+            {"32_Vertikal_spiegeln.svg", "flip-vertical.svg"},
+            {"35_Loeschen.svg", "trash.svg"},
+            {"02_Herz.svg", "heart.svg"},
+            {"11_Auge.svg", "eye.svg"},
+            {"15_Ausgewaehlt.svg", "check.svg"},
+            {"16_Nicht_ausgewaehlt.svg", "circle.svg"},
+            {"18_Entfernen.svg", "x.svg"},
+            {"23_Pfeil_nach_unten.svg", "arrow-down.svg"},
+            {"27_Extern.svg", "external-link.svg"},
+            {"32_Filter.svg", "filter.svg"},
+            {"005_Rechteck.svg", "rectangle.svg"},
+            {"003_Quadrat.svg", "square.svg"},
+            {"007_Dreieck.svg", "triangle.svg"},
+            {"011_Raute.svg", "diamond.svg"},
+            {"013_Trapez.svg", "rectangle.svg"},
+            {"017_Oval.svg", "oval.svg"},
+            {"018_Halbkreis.svg", "cone.svg"},
+            {"031_Diamant_facette.svg", "diamond.svg"},
+            {"032_Wuerfel.svg", "cube.svg"},
+            {"047_Herz.svg", "heart.svg"},
+            {"048_Sprechblase.svg", "bubble.svg"},
+            {"051_Tropfen.svg", "droplet.svg"},
+            {"053_Spirale.svg", "spiral.svg"},
+            {"061_Stern.svg", "star.svg"},
+            {"077_Bild.svg", "photo.svg"},
+            {"079_Play.svg", "player-play.svg"},
+            {"080_Pause.svg", "player-pause.svg"},
+            {"107_Check.svg", "check.svg"},
+            {"108_X.svg", "x.svg"},
+            {"141_Einfügen.svg", "clipboard-plus.svg"},
+            {"200_Pipette.svg", "color-picker.svg"},
+            {"31_Video.svg", "video.svg"}
+        }
 
         Shared Sub New()
             AffectsRender(Of SvgIcon)(SourceProperty, IconBrushProperty)
@@ -67,17 +151,33 @@ Namespace Controls
             End Using
         End Sub
 
+        Public Shared Function ResolveIconSource(source As String) As String
+            If String.IsNullOrWhiteSpace(source) Then Return source
+            If source.IndexOf("/Assets/Icons/outline/", StringComparison.OrdinalIgnoreCase) >= 0 Then Return source
+
+            Dim iconIndex = source.IndexOf(IconAssetPrefix, StringComparison.OrdinalIgnoreCase)
+            If iconIndex < 0 Then Return source
+
+            Dim relativePath = source.Substring(iconIndex + IconAssetPrefix.Length)
+            Dim fileName = Path.GetFileName(relativePath)
+            Dim mappedFile = Nothing
+            If Not LegacyOutlineFileMap.TryGetValue(fileName, mappedFile) Then Return source
+
+            Return OutlineAssetBase & mappedFile
+        End Function
+
         Private Shared Function GetIcon(source As String) As SvgIconData
+            Dim resolvedSource = ResolveIconSource(source)
             Dim cached As SvgIconData = Nothing
-            If Cache.TryGetValue(source, cached) Then Return cached
+            If Cache.TryGetValue(resolvedSource, cached) Then Return cached
 
             Try
-                Dim uri = New Uri(source)
+                Dim uri = New Uri(resolvedSource)
                 Using stream = AssetLoader.Open(uri)
                     Using reader = New StreamReader(stream)
                         Dim svg = reader.ReadToEnd()
                         Dim icon = ParseSvg(svg)
-                        Cache(source) = icon
+                        Cache(resolvedSource) = icon
                         Return icon
                     End Using
                 End Using

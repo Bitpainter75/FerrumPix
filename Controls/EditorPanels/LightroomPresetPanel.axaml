@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.LightroomPresetPanel">
+    <Expander Header="Lightroom-Preset" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/filter.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="icon-btn"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Click="OnLoadLightroomPresetClick"
+                            ToolTip.Tip="XMP laden">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/circle-plus.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="6" Margin="0,8,0,0">
+            <Button Classes="ghost" Padding="8,5"
+                    HorizontalAlignment="Left"
+                    Click="OnLoadLightroomPresetClick">
+                <TextBlock Text="XMP laden" FontSize="11" />
+            </Button>
+            <ItemsControl ItemsSource="{Binding SavedLightroomPresets}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border CornerRadius="12"
+                                Background="{DynamicResource FP.Bg.Input}"
+                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                BorderThickness="1"
+                                Margin="0,0,6,6"
+                                Padding="8,4">
+                            <Grid ColumnDefinitions="Auto,Auto">
+                                <Button Grid.Column="0"
+                                        Classes="ghost"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="0"
+                                        Click="OnApplySavedLightroomPresetClick">
+                                    <TextBlock Text="{Binding Name}" FontSize="11" />
+                                </Button>
+                                <Button Grid.Column="1"
+                                        Classes="ghost"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="4,0,0,0"
+                                        Click="OnRemoveSavedLightroomPresetClick"
+                                        ToolTip.Tip="Preset entfernen">
+                                    <TextBlock Text="×" FontSize="14"
+                                               Foreground="{DynamicResource FP.Text.Muted}" />
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Expander>
+</UserControl>

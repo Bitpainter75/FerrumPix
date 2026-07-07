@@ -1191,9 +1191,22 @@ Namespace ViewModels
             For Each item In images
                 item.Rating = targetRating
             Next
-            LibraryService.Instance.SetRatingForMany(images.Select(Function(i) i.FilePath), targetRating)
+            LibraryService.Instance.SetRatingForMany(images.Select(Function(i) i.FilePath), targetRating, syncToXmp:=True)
 
             Me.RaisePropertyChanged(NameOf(SelectedRating))
+            If _sortMode = "Rating" Then FilterAndSort()
+        End Sub
+
+        Public Sub SetItemRating(item As ImageItem, rating As Integer)
+            If item Is Nothing OrElse Not item.IsImage Then Return
+            Dim targetRating = If(item.Rating = rating, 0, rating)
+            item.Rating = targetRating
+            LibraryService.Instance.SetRating(item.FilePath, targetRating, syncToXmp:=True)
+
+            If Object.ReferenceEquals(item, _selectedItem) OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item)) Then
+                Me.RaisePropertyChanged(NameOf(SelectedRating))
+            End If
+
             If _sortMode = "Rating" Then FilterAndSort()
         End Sub
 
@@ -1850,7 +1863,15 @@ Namespace ViewModels
             Try
                 Dim data = ExifService.ReadExif(meta.FilePath)
                 Dim fields = ExifService.ExtractSearchFields(data, meta.FilePath)
-                LibraryService.Instance.SetExifData(meta.FilePath, fields)
+                Dim xmpRating = ExifService.GetXmpRating(data)
+                LibraryService.Instance.SetExifData(meta.FilePath,
+                                                   fields,
+                                                   data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0,
+                                                   data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0,
+                                                   data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0)
+                If xmpRating.HasValue Then
+                    LibraryService.Instance.SetRating(meta.FilePath, xmpRating.Value)
+                End If
                 meta.DateTaken = fields.DateTaken
                 meta.DateModifiedExif = fields.DateModifiedExif
                 meta.Camera = fields.Camera
@@ -2409,6 +2430,21 @@ Namespace ViewModels
                         ' sonst würde man dauerhaft veraltete Breite/Höhe/EXIF-Daten anzeigen (siehe IsMetaStale).
                         If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso
                            IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified) Then
+                            Dim needsMetadataFlagBackfill =
+                                Not m.HasExifMetadata AndAlso
+                                Not m.HasIptcMetadata AndAlso
+                                Not m.HasXmpMetadata AndAlso
+                                (Not String.IsNullOrWhiteSpace(m.DateTaken) OrElse
+                                 Not String.IsNullOrWhiteSpace(m.DateModifiedExif) OrElse
+                                 Not String.IsNullOrWhiteSpace(m.Camera) OrElse
+                                 Not String.IsNullOrWhiteSpace(m.Lens) OrElse
+                                 m.Aperture.HasValue OrElse
+                                 m.FocalLengthMm.HasValue OrElse
+                                 m.Iso.HasValue OrElse
+                                 Not String.IsNullOrWhiteSpace(m.ShutterSpeed) OrElse
+                                 m.GpsLatitude.HasValue OrElse
+                                 m.GpsLongitude.HasValue)
+
                             item.ImageWidth = m.ImageWidth.Value
                             item.ImageHeight = m.ImageHeight.Value
                             item.ExifDateTaken = ExifService.ParseExifDateTime(m.DateTaken)
@@ -2416,6 +2452,12 @@ Namespace ViewModels
                             item.ExifCamera = m.Camera
                             item.ExifIso = m.Iso
                             item.ExifAperture = m.Aperture
+                            item.HasExifMetadata = m.HasExifMetadata
+                            item.HasIptcMetadata = m.HasIptcMetadata
+                            item.HasXmpMetadata = m.HasXmpMetadata
+                            If needsMetadataFlagBackfill Then
+                                itemsNeedingMetaRefresh.Add(item)
+                            End If
                         Else
                             itemsNeedingMetaRefresh.Add(item)
                         End If
@@ -2464,7 +2506,7 @@ Namespace ViewModels
         ''' springen, während die Daten nach und nach eintreffen.</summary>
         Private Sub QueueBackgroundMetaRefresh(items As List(Of ImageItem), cancellationToken As CancellationToken)
             If items Is Nothing OrElse items.Count = 0 Then Return
-            Const MetaRefreshStartupDelayMs As Integer = 1500
+            Const MetaRefreshStartupDelayMs As Integer = 250
             Dim degreeOfParallelism = Math.Max(1, Environment.ProcessorCount \ 2)
 
             Task.Run(Async Function()
@@ -2486,7 +2528,15 @@ Namespace ViewModels
                                                            Try
                                                                Dim data = ExifService.ReadExif(item.FilePath)
                                                                Dim fields = ExifService.ExtractSearchFields(data, item.FilePath)
-                                                               LibraryService.Instance.SetExifData(item.FilePath, fields)
+                                                               Dim xmpRating = ExifService.GetXmpRating(data)
+                                                               LibraryService.Instance.SetExifData(item.FilePath,
+                                                                                                  fields,
+                                                                                                  data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0,
+                                                                                                  data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0,
+                                                                                                  data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0)
+                                                               If xmpRating.HasValue Then
+                                                                   LibraryService.Instance.SetRating(item.FilePath, xmpRating.Value)
+                                                               End If
                                                                Dim width = If(fields.ImageWidth, 0)
                                                                Dim height = If(fields.ImageHeight, 0)
                                                                Dim exifTaken = ExifService.ParseExifDateTime(fields.DateTaken)
@@ -2498,6 +2548,7 @@ Namespace ViewModels
                                                                                                           If cancellationToken.IsCancellationRequested Then Return
                                                                                                           item.ImageWidth = width
                                                                                                           item.ImageHeight = height
+                                                                                                          If xmpRating.HasValue Then item.Rating = xmpRating.Value
                                                                                                           item.ExifDateTaken = exifTaken
                                                                                                           item.ExifDateModified = exifModified
                                                                                                           item.ExifCamera = camera
@@ -2506,6 +2557,9 @@ Namespace ViewModels
                                                                                                           item.HasExifMetadata = data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0
                                                                                                           item.HasIptcMetadata = data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0
                                                                                                           item.HasXmpMetadata = data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0
+                                                                                                          item.ExifMetadataSummary = BuildMetadataSummary(If(data?.ExifTags, Nothing), 6)
+                                                                                                          item.IptcMetadataSummary = BuildMetadataSummary(If(data?.IptcTags, Nothing), 6)
+                                                                                                          item.XmpMetadataSummary = BuildMetadataSummary(If(data?.XmpTags, Nothing), 6)
                                                                                                       End Sub)
                                                            Catch
                                                            End Try
@@ -3227,6 +3281,22 @@ Namespace ViewModels
 
         Private Shared ReadOnly BatchConvertExcludedExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".svg"}
         Private Shared ReadOnly BatchImageEditWritableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
+
+        Private Shared Function BuildMetadataSummary(tags As IEnumerable(Of ExifTag), maxItems As Integer) As String
+            Dim entries = If(tags, Enumerable.Empty(Of ExifTag)()).
+                Where(Function(t) t IsNot Nothing AndAlso
+                                  Not String.IsNullOrWhiteSpace(t.Name) AndAlso
+                                  Not String.IsNullOrWhiteSpace(t.Value)).
+                Take(Math.Max(1, maxItems)).
+                Select(Function(t)
+                           Dim name = t.Name.Trim()
+                           Dim value = t.Value.Trim()
+                           If value.Length > 48 Then value = value.Substring(0, 48) & "..."
+                           Return $"{name}: {value}"
+                       End Function).
+                ToList()
+            Return String.Join(Environment.NewLine, entries)
+        End Function
 
         Private Async Sub ResizeSelected()
             Dim targets = GetSelectedEditableImagePaths()

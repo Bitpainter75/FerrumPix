@@ -141,7 +141,7 @@ Namespace Services
             Dim fileName = IO.Path.GetFileNameWithoutExtension(assetPath)
             Dim m = Regex.Match(fileName, "^\d+_(?<rest>.+)$")
             Dim name = If(m.Success, m.Groups("rest").Value, fileName)
-            Return name.Replace("_", " ")
+            Return name.Replace("_", " ").Replace("-", " ")
         End Function
 
         Public ReadOnly Property IconSource As String
@@ -173,7 +173,8 @@ Namespace Services
                     Case "spiral" : Return base & "09_FormenSymbole/053_Spirale.svg"
                     Case "droplet" : Return base & "09_FormenSymbole/051_Tropfen.svg"
                     Case "speechbubble", "speech-bubble", "sprechblase", "bubble" : Return base & "09_FormenSymbole/048_Sprechblase.svg"
-                    Case "brush", "eraser" : Return base & "03_Editor/39_Pinsel.svg"
+                    Case "brush" : Return base & "03_Editor/39_Pinsel.svg"
+                    Case "eraser" : Return "avares://FerrumPix/Assets/Icons/outline/eraser.svg"
                     Case Else : Return base & "09_FormenSymbole/005_Rechteck.svg"
                 End Select
             End Get

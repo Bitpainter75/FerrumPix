@@ -1,0 +1,131 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.LayersHistoryPanel">
+    <Grid Margin="14,10,14,14" RowDefinitions="Auto,*">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4"
+                    IsVisible="{Binding IsLayersTabSelected}">
+            <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                    Command="{Binding DuplicateSelectedAnnotationCommand}"
+                    IsEnabled="{Binding HasSelectedAnnotation}"
+                    ToolTip.Tip="Objekt duplizieren (Strg+D)">
+                <TextBlock Text="⧉" FontSize="13" />
+            </Button>
+            <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                    Command="{Binding MoveSelectedAnnotationUpCommand}"
+                    IsEnabled="{Binding HasSelectedAnnotation}"
+                    ToolTip.Tip="Objekt nach vorne">
+                <TextBlock Text="↑" FontSize="14" />
+            </Button>
+            <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                    Command="{Binding MoveSelectedAnnotationDownCommand}"
+                    IsEnabled="{Binding HasSelectedAnnotation}"
+                    ToolTip.Tip="Objekt nach hinten">
+                <TextBlock Text="↓" FontSize="14" />
+            </Button>
+            <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                    Command="{Binding DeleteSelectedAnnotationCommand}"
+                    IsEnabled="{Binding HasSelectedAnnotation}"
+                    ToolTip.Tip="Objekt löschen (Entf)">
+                <TextBlock Text="×" FontSize="16" Foreground="{DynamicResource FP.Text.Muted}" />
+            </Button>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,7,0,0">
+            <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsLayersTabSelected}">
+                <ListBox Grid.Row="1"
+                         Classes="layers-list"
+                         ItemsSource="{Binding TextAnnotations}"
+                         SelectedIndex="{Binding SelectedAnnotationIndex}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="0"
+                         VerticalAlignment="Stretch"
+                         IsVisible="{Binding HasAnnotationChanges}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border CornerRadius="6"
+                                    Classes="layer-item"
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource FP.Border.Normal}"
+                                    Padding="4,2"
+                                    Margin="0,0,0,2"
+                                    MinHeight="34">
+                                <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                                    <ToggleButton Grid.Column="0"
+                                                  Classes="ghost layer-eye"
+                                                  Width="22"
+                                                  Height="22"
+                                                  Padding="0"
+                                                  IsChecked="{Binding IsVisible, Mode=OneWay}"
+                                                  Command="{Binding DataContext.ToggleAnnotationVisibilityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  CommandParameter="{Binding}"
+                                                  ToolTip.Tip="Objekt ein-/ausblenden">
+                                        <icons:SvgIcon
+                                            Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                                            Width="13" Height="13" />
+                                    </ToggleButton>
+                                    <Border Grid.Column="1"
+                                            Width="18"
+                                            Height="18"
+                                            Margin="4,0,0,0"
+                                            CornerRadius="4"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                                            Background="{DynamicResource FP.Bg.Input}">
+                                        <icons:SvgIcon Source="{Binding IconSource}"
+                                                       Width="11"
+                                                       Height="11"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding LayerLabel}"
+                                               FontSize="11"
+                                               Margin="5,0,0,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center" />
+                                    <Button Grid.Column="3"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="2"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding DataContext.DeleteAnnotationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip.Tip="Objekt löschen">
+                                        <TextBlock Text="×" FontSize="14"
+                                                   Foreground="{DynamicResource FP.Text.Muted}" />
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <ScrollViewer IsVisible="{Binding IsHistoryTabSelected}" VerticalScrollBarVisibility="Auto"
+                          FocusAdorner="{x:Null}">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Zuletzt zuerst"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="11"
+                               TextWrapping="Wrap" />
+                    <ListBox ItemsSource="{Binding HistoryItems}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Padding="0"
+                             IsHitTestVisible="False"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" FontSize="11"
+                                           TextTrimming="CharacterEllipsis" Margin="0,3" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
