@@ -560,7 +560,7 @@
                                   DragDrop.Drop="OnFolderTreeDrop"
                                   SelectionChanged="OnFolderTreeSelectionChanged">
                             <TreeView.ContextMenu>
-                                <ContextMenu>
+                                <ContextMenu MaxHeight="1000">
                                     <MenuItem Name="FolderTreeCreateFolderMenuItem" Header="Neuer Ordner" Click="OnContextCreateFolder"/>
                                     <Separator/>
                                     <MenuItem Name="FolderTreeRenameMenuItem" Header="Umbenennen" Click="OnContextRenameFolder"/>
@@ -646,7 +646,7 @@
                               ContextRequested="OnGalleryAreaContextRequested"
                               Margin="0,0,8,0">
                     <ScrollViewer.ContextMenu>
-                        <ContextMenu>
+                        <ContextMenu MaxHeight="1000">
                             <MenuItem Name="GalleryGridViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                             <MenuItem Name="GalleryGridViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
@@ -656,7 +656,7 @@
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
                                       ContextRequested="OnGalleryAreaContextRequested">
                             <ItemsControl.ContextMenu>
-                            <ContextMenu>
+                            <ContextMenu MaxHeight="1000">
                                 <MenuItem Name="GalleryGridCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                                 <MenuItem Name="GalleryGridPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                             </ContextMenu>
@@ -682,9 +682,9 @@
                                         DragDrop.DragOver="OnItemDragOver"
                                         DragDrop.Drop="OnItemDrop">
                                     <Border.ContextMenu>
-                                        <ContextMenu>
+                                        <ContextMenu MaxHeight="1000">
                                             <MenuItem Name="GridContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
-                                            <MenuItem Name="GridContextEditMenuItem" Header="Im Editor öffnen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
+                                            <MenuItem Name="GridContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
                                             <Separator Name="GridContextTopSeparator"/>
                                             <MenuItem Name="GridContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                                             <MenuItem Name="GridContextRenameMenuItem" Header="Umbenennen" Click="OnContextRename" IsVisible="{Binding CanFileOperationRename}"/>
@@ -692,7 +692,9 @@
                                             <MenuItem Name="GridContextCutMenuItem" Header="Ausschneiden" Click="OnContextCut" IsVisible="{Binding CanFileOperationRename}"/>
                                             <MenuItem Name="GridContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste" IsVisible="{Binding CanFileOperationPasteInto}"/>
                                             <MenuItem Name="GridContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
+                                            <MenuItem Name="GridContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
                                             <MenuItem Name="GridContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
+                                            <MenuItem Name="GridContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
                                             <MenuItem Name="GridContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
                                             <Separator Name="GridContextPathSeparator"/>
                                             <MenuItem Name="GridContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
@@ -744,32 +746,110 @@
                                                         ToolTip.Tip="Auswählen">
                                                     <TextBlock Classes="badge-glyph" Text="✓"/>
                                                 </Button>
+                                                <StackPanel Classes="gallery-hover-actions"
+                                                            Orientation="Horizontal"
+                                                            HorizontalAlignment="Left"
+                                                            VerticalAlignment="Top"
+                                                            Margin="8"
+                                                            Spacing="4">
+                                                    <Button Classes="gallery-overlay-btn"
+                                                            Width="24"
+                                                            Height="24"
+                                                            Padding="0"
+                                                            IsVisible="{Binding IsImage}"
+                                                            Click="OnHoverOpenViewerClick"
+                                                            ToolTip.Tip="Im Viewer öffnen">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/11_Auge.svg"
+                                                                       Width="13"
+                                                                       Height="13"
+                                                                       IconBrush="White"/>
+                                                    </Button>
+                                                    <Button Classes="gallery-overlay-btn"
+                                                            Width="24"
+                                                            Height="24"
+                                                            Padding="0"
+                                                            IsVisible="{Binding CanEditFile}"
+                                                            Click="OnHoverOpenEditorClick"
+                                                            ToolTip.Tip="Anpassen">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/03_Editor/07_Belichtung.svg"
+                                                                       Width="13"
+                                                                       Height="13"
+                                                                       IconBrush="White"/>
+                                                    </Button>
+                                                    <Button Classes="gallery-overlay-btn danger"
+                                                            Width="24"
+                                                            Height="24"
+                                                            Padding="0"
+                                                            IsVisible="{Binding CanFileOperationDelete}"
+                                                            Click="OnHoverDeleteClick"
+                                                            ToolTip.Tip="Löschen">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/35_Loeschen.svg"
+                                                                       Width="13"
+                                                                       Height="13"
+                                                                       IconBrush="White"/>
+                                                    </Button>
+                                                </StackPanel>
+                                                <StackPanel Classes="gallery-meta-badges"
+                                                            Orientation="Horizontal"
+                                                            HorizontalAlignment="Left"
+                                                            VerticalAlignment="Bottom"
+                                                            Margin="8"
+                                                            Spacing="4">
+                                                    <Border Classes="gallery-meta-pill"
+                                                            IsVisible="{Binding HasExifMetadata}"
+                                                            ToolTip.Tip="EXIF vorhanden">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/02_EXIF.svg"
+                                                                       Width="11"
+                                                                       Height="11"
+                                                                       IconBrush="White"/>
+                                                    </Border>
+                                                    <Border Classes="gallery-meta-pill"
+                                                            IsVisible="{Binding HasIptcMetadata}"
+                                                            ToolTip.Tip="IPTC vorhanden">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/03_IPTC.svg"
+                                                                       Width="11"
+                                                                       Height="11"
+                                                                       IconBrush="White"/>
+                                                    </Border>
+                                                    <Border Classes="gallery-meta-pill"
+                                                            IsVisible="{Binding HasXmpMetadata}"
+                                                            ToolTip.Tip="XMP vorhanden">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/04_XMP.svg"
+                                                                       Width="11"
+                                                                       Height="11"
+                                                                       IconBrush="White"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                <Button Classes="favorite-btn image-favorite-btn"
+                                                        Width="26"
+                                                        Height="26"
+                                                        Padding="0"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Bottom"
+                                                        Margin="0,0,8,8"
+                                                        IsVisible="{Binding IsImage}"
+                                                        Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip.Tip="Favorit">
+                                                    <Grid>
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                                       Width="20" Height="20"
+                                                                       Classes="fav-heart"
+                                                                       IsVisible="{Binding !IsFavorite}"/>
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                                       Width="20" Height="20"
+                                                                       Classes="fav-heart active"
+                                                                       IsVisible="{Binding IsFavorite}"/>
+                                                    </Grid>
+                                                </Button>
                                             </Grid>
                                         </Border>
                                         <Border Grid.Row="1" Background="{DynamicResource FP.Bg.Content}" CornerRadius="0,0,8,8" Padding="14,9">
                                             <StackPanel Spacing="7">
-                                                <DockPanel>
-                                                    <TextBlock Text="{Binding FileName}"
-                                                               FontSize="13"
-                                                               FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <Button 
-                                                            Classes="favorite-btn"
-                                                            DockPanel.Dock="Right"
-                                                            Background="Transparent"
-                                                            BorderThickness="0"
-                                                            Padding="4,2,0,0"
-                                                            HorizontalAlignment="Right"
-                                                            VerticalAlignment="Center"
-                                                            IsVisible="{Binding IsImage}"
-                                                            Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                            CommandParameter="{Binding}"
-                                                            ToolTip.Tip="Favorit">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
-                                                                       Width="20" Height="20"
-                                                                       Classes="fav-heart" Classes.active="{Binding IsFavorite}"/>
-                                                    </Button>
-                                                </DockPanel>
+                                                <TextBlock Text="{Binding FileName}"
+                                                           FontSize="13"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"/>
                                                 <Grid ColumnDefinitions="*,*,Auto">
                                                     <TextBlock Text="{Binding DateText}"
                                                                Foreground="{DynamicResource FP.Text.Secondary}"
@@ -806,7 +886,7 @@
                               ContextRequested="OnGalleryAreaContextRequested"
                               Margin="0,0,8,0">
                     <ScrollViewer.ContextMenu>
-                        <ContextMenu>
+                        <ContextMenu MaxHeight="1000">
                             <MenuItem Name="GalleryListViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                             <MenuItem Name="GalleryListViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
@@ -816,7 +896,7 @@
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
                                       ContextRequested="OnGalleryAreaContextRequested">
                             <ItemsControl.ContextMenu>
-                            <ContextMenu>
+                            <ContextMenu MaxHeight="1000">
                                 <MenuItem Name="GalleryListCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                                 <MenuItem Name="GalleryListPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                             </ContextMenu>
@@ -841,9 +921,9 @@
                                         DragDrop.DragOver="OnItemDragOver"
                                         DragDrop.Drop="OnItemDrop">
                                     <Border.ContextMenu>
-                                        <ContextMenu>
+                                        <ContextMenu MaxHeight="1000">
                                             <MenuItem Name="ListContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
-                                            <MenuItem Name="ListContextEditMenuItem" Header="Im Editor öffnen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
+                                            <MenuItem Name="ListContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
                                             <Separator Name="ListContextTopSeparator"/>
                                             <MenuItem Name="ListContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                                             <MenuItem Name="ListContextRenameMenuItem" Header="Umbenennen" Click="OnContextRename" IsVisible="{Binding CanFileOperationRename}"/>
@@ -851,7 +931,9 @@
                                             <MenuItem Name="ListContextCutMenuItem" Header="Ausschneiden" Click="OnContextCut" IsVisible="{Binding CanFileOperationRename}"/>
                                             <MenuItem Name="ListContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste" IsVisible="{Binding CanFileOperationPasteInto}"/>
                                             <MenuItem Name="ListContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
+                                            <MenuItem Name="ListContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
                                             <MenuItem Name="ListContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
+                                            <MenuItem Name="ListContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
                                             <MenuItem Name="ListContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
                                             <Separator Name="ListContextPathSeparator"/>
                                             <MenuItem Name="ListContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
@@ -912,10 +994,42 @@
                                                     VerticalAlignment="Center"
                                                     Spacing="5"
                                                     Margin="4,0,14,0">
-                                            <TextBlock Text="{Binding FileName}"
-                                                       FontSize="13"
-                                                       FontWeight="SemiBold"
-                                                       TextTrimming="CharacterEllipsis"/>
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding FileName}"
+                                                           FontSize="13"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <StackPanel Grid.Column="1"
+                                                            Orientation="Horizontal"
+                                                            Spacing="4"
+                                                            VerticalAlignment="Center"
+                                                            Margin="8,0,0,0">
+                                                    <Border Classes="gallery-meta-pill compact"
+                                                            IsVisible="{Binding HasExifMetadata}"
+                                                            ToolTip.Tip="EXIF vorhanden">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/02_EXIF.svg"
+                                                                       Width="10"
+                                                                       Height="10"
+                                                                       IconBrush="White"/>
+                                                    </Border>
+                                                    <Border Classes="gallery-meta-pill compact"
+                                                            IsVisible="{Binding HasIptcMetadata}"
+                                                            ToolTip.Tip="IPTC vorhanden">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/03_IPTC.svg"
+                                                                       Width="10"
+                                                                       Height="10"
+                                                                       IconBrush="White"/>
+                                                    </Border>
+                                                    <Border Classes="gallery-meta-pill compact"
+                                                            IsVisible="{Binding HasXmpMetadata}"
+                                                            ToolTip.Tip="XMP vorhanden">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/04_XMP.svg"
+                                                                       Width="10"
+                                                                       Height="10"
+                                                                       IconBrush="White"/>
+                                                    </Border>
+                                                </StackPanel>
+                                            </Grid>
                                             <TextBlock Text="{Binding FilePath}"
                                                        Foreground="{DynamicResource FP.Text.Muted}"
                                                        FontSize="11"
@@ -946,9 +1060,16 @@
                                                 Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
                                                 ToolTip.Tip="Favorit">
-                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
-                                                           Width="20" Height="20"
-                                                           Classes="fav-heart" Classes.active="{Binding IsFavorite}"/>
+                                            <Grid>
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                               Width="20" Height="20"
+                                                               Classes="fav-heart"
+                                                               IsVisible="{Binding !IsFavorite}"/>
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                               Width="20" Height="20"
+                                                               Classes="fav-heart active"
+                                                               IsVisible="{Binding IsFavorite}"/>
+                                            </Grid>
                                         </Button>
                                     </Grid>
                                 </Border>
@@ -961,80 +1082,79 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Grid.Column="2" Classes="statusbar" Height="60" Padding="20,0">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto" VerticalAlignment="Center">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center"
-                            IsVisible="{Binding HasSelectedImage}">
-                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
-                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
-                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="1">
-                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=1}"/>
-                    </Button>
-                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
-                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
-                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="2">
-                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=2}"/>
-                    </Button>
-                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
-                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
-                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="3">
-                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=3}"/>
-                    </Button>
-                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
-                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
-                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="4">
-                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=4}"/>
-                    </Button>
-                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
-                            Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
-                            Command="{Binding SetSelectedRatingCommand}" CommandParameter="5">
-                        <TextBlock FontSize="18" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=5}"/>
-                    </Button>
-                </StackPanel>
-
-                <TextBlock Grid.Column="1"
-                           Text="{Binding FooterStatusText}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           FontSize="12"
-                           Margin="16,0,0,0"
-                           VerticalAlignment="Center"/>
-
-                <TextBlock Grid.Column="2"
-                           Text="{Binding StatusText}"
-                           Foreground="{DynamicResource FP.Text.Muted}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"/>
-
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
-                        <Button Classes="icon-btn" Width="34" Height="34"
-                                Command="{Binding SelectAllCommand}"
-                                ToolTip.Tip="Alle auswählen">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/15_Ausgewaehlt.svg"
-                                           Width="20" Height="20"/>
-                        </Button>
-                        <Button Classes="icon-btn" Width="34" Height="34"
-                                Command="{Binding ClearSelectionCommand}"
-                                IsEnabled="{Binding HasSelection}"
-                                ToolTip.Tip="Alle abwählen">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/16_Nicht_ausgewaehlt.svg"
-                                           Width="20" Height="20"/>
-                        </Button>
-                    </StackPanel>
+        <Border Grid.Row="2" Grid.Column="2" Classes="statusbar" Height="60" Padding="20,10">
+            <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
                     <Button Classes="icon-btn" Width="34" Height="34"
-                            Command="{Binding DeleteSelectedCommand}"
-                            IsEnabled="{Binding HasSelection}"
-                            ToolTip.Tip="Löschen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/04_Viewer/35_Loeschen.svg"
+                            Command="{Binding SelectAllCommand}"
+                            ToolTip.Tip="Alle auswählen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/15_Ausgewaehlt.svg"
                                        Width="20" Height="20"/>
                     </Button>
-                    <TextBlock Text="−" Foreground="{DynamicResource FP.Text.Muted}" VerticalAlignment="Center"/>
+                    <Button Classes="icon-btn" Width="34" Height="34"
+                            Command="{Binding ClearSelectionCommand}"
+                            IsEnabled="{Binding HasSelection}"
+                            ToolTip.Tip="Alle abwählen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/16_Nicht_ausgewaehlt.svg"
+                                       Width="20" Height="20"/>
+                    </Button>
+                    <TextBlock
+                               Text="{Binding FooterStatusText}"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               FontSize="12"
+                               Margin="16,0,0,0"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
+                            Command="{Binding DecreaseThumbnailSizeCommand}" ToolTip.Tip="Verkleinern">
+                        <TextBlock Text="−" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
+                    </Button>
                     <icons:RoundSlider Width="136"
                                        Minimum="140"
                                        Maximum="520"
                                        Value="{Binding ThumbnailSize}"
                                        VerticalAlignment="Center"/>
-                    <TextBlock Text="+" Foreground="{DynamicResource FP.Text.Muted}" VerticalAlignment="Center"/>
+                    <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
+                            Command="{Binding IncreaseThumbnailSizeCommand}" ToolTip.Tip="Vergrößern">
+                        <TextBlock Text="+" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Spacing="12" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock 
+                           Text="{Binding StatusText}"
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           VerticalAlignment="Center"/>
+                    <StackPanel  Orientation="Horizontal" Spacing="1" VerticalAlignment="Center"
+                                 IsVisible="{Binding HasSelectedImage}">
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                                Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                Command="{Binding SetSelectedRatingCommand}" CommandParameter="1">
+                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=1}"/>
+                        </Button>
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                                Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                Command="{Binding SetSelectedRatingCommand}" CommandParameter="2">
+                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=2}"/>
+                        </Button>
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                                Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                Command="{Binding SetSelectedRatingCommand}" CommandParameter="3">
+                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=3}"/>
+                        </Button>
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                                Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                Command="{Binding SetSelectedRatingCommand}" CommandParameter="4">
+                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=4}"/>
+                        </Button>
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                                Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                Command="{Binding SetSelectedRatingCommand}" CommandParameter="5">
+                            <TextBlock FontSize="20" Text="{Binding SelectedRating, Converter={StaticResource RatingStarGlyphConverter}, ConverterParameter=5}"/>
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>

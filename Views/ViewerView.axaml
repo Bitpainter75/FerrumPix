@@ -14,7 +14,7 @@
              KeyDown="OnKeyDown"
              PointerReleased="OnGlobalPointerReleased">
 
-    <Grid x:Name="ViewerRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="*,300">
+    <Grid x:Name="ViewerRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="*,320">
 
         <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="toolbar" Height="60" Padding="24,0">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
@@ -48,7 +48,7 @@
                             <TextBlock Text="Diashow starten" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="ghost" Height="38" Command="{Binding EditCommand}" ToolTip.Tip="Im Editor öffnen"
+                    <Button Classes="ghost" Height="38" Command="{Binding EditCommand}" ToolTip.Tip="Anpassen"
                             IsEnabled="{Binding CanEdit}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/03_Editor/07_Belichtung.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
@@ -207,7 +207,7 @@
             </Button>
         </Grid>
 
-        <views:InfoSidebarView Grid.Row="1" Grid.Column="1"/>
+        <views:InfoSidebarView Grid.Row="1" Grid.Column="1" Width="320"/>
 
         <Border Grid.Row="2" Grid.ColumnSpan="2"
                 Background="{DynamicResource FP.Bg.Dark}"
@@ -256,28 +256,27 @@
                                    Foreground="{DynamicResource FP.Text.Muted}" FontSize="12" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <TextBlock Text="Zoom:" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center" Focusable="False"
+                        <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                                 Command="{Binding ZoomOutCommand}" ToolTip.Tip="Verkleinern">
-                            <TextBlock Text="−" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <TextBlock Text="−" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                         </Button>
                         <icons:RoundSlider Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
                                             Value="{Binding ZoomSliderValue, Mode=TwoWay}" VerticalAlignment="Center"/>
-                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center" Focusable="False"
+                        <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                                 Command="{Binding ZoomInCommand}" ToolTip.Tip="Vergrößern">
-                            <TextBlock Text="+" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <TextBlock Text="+" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                         </Button>
-                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="12,0,0,0" Focusable="False"
+                        <Button Classes="ghost" Height="26" Padding="8,2" Margin="12,0,0,0" Focusable="False"
                                 Classes.active="{Binding IsZoomActualActive}"
                                 Command="{Binding ZoomActualCommand}" ToolTip.Tip="Auf 100 Prozent springen">
                             <TextBlock Text="{Binding ZoomText}" Foreground="{DynamicResource FP.Text.Primary}" VerticalAlignment="Center"/>
                         </Button>
-                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="8,0,0,0" Focusable="False"
+                        <Button Classes="ghost" Height="26" Padding="8,2" Margin="8,0,0,0" Focusable="False"
                                 Classes.active="{Binding IsZoomFitActive}"
                                 Command="{Binding ZoomFitCommand}" ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/26_Anpassen.svg" Width="20" Height="20"/>
-                                <TextBlock Text="Einpassen"/>
+                                <TextBlock Text="Einpassen" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -317,9 +316,16 @@
                                     Width="24" Height="24" VerticalAlignment="Center"
                                     Command="{Binding ToggleFavoriteCommand}"
                                     ToolTip.Tip="Favorit" Margin="6,0,0,0">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
-                                               Width="20" Height="20" 
-                                               Classes="fav-heart" Classes.active="{Binding IsFavorite}" />
+                                <Grid Width="20" Height="20">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                   Width="20" Height="20"
+                                                   Classes="fav-heart"
+                                                   IsVisible="{Binding !IsFavorite}" />
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                   Width="20" Height="20"
+                                                   Classes="fav-heart active"
+                                                   IsVisible="{Binding IsFavorite}" />
+                                </Grid>
                             </Button>
                         </StackPanel>
                     </StackPanel>

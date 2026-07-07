@@ -589,6 +589,43 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        Public Sub OnHoverOpenViewerClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim item = TryCast(button?.DataContext, ImageItem)
+            If item Is Nothing Then Return
+
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            vm.SelectOnly(item)
+            _selectionAnchor = item
+            OpenGalleryItem(item)
+            e.Handled = True
+        End Sub
+
+        Public Sub OnHoverOpenEditorClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim item = TryCast(button?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse item Is Nothing OrElse Not item.CanEditFile Then Return
+
+            vm.SelectOnly(item)
+            _selectionAnchor = item
+            vm.OpenSelectedInEditor()
+            e.Handled = True
+        End Sub
+
+        Public Sub OnHoverDeleteClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim item = TryCast(button?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse item Is Nothing Then Return
+
+            vm.SelectOnly(item)
+            _selectionAnchor = item
+            vm.DeleteSelectedCommand.Execute(Nothing)
+            e.Handled = True
+        End Sub
+
         Private Sub ApplyPointerSelection(vm As GalleryViewModel, item As ImageItem, modifiers As KeyModifiers)
             If item Is Nothing OrElse item.IsParentFolderEntry Then Return
             If modifiers.HasFlag(KeyModifiers.Shift) Then
@@ -760,6 +797,28 @@ Namespace Views
             vm?.BatchConvertSelectedCommand.Execute(Nothing)
         End Sub
 
+        Public Sub OnContextResize(sender As Object, e As RoutedEventArgs)
+            Dim item = GetItemFromSender(sender)
+            Dim vm = GetVm()
+            If item IsNot Nothing AndAlso vm IsNot Nothing AndAlso
+               (vm.SelectedItems Is Nothing OrElse Not vm.SelectedItems.Contains(item)) Then
+                vm.SelectOnly(item)
+                _selectionAnchor = item
+            End If
+            vm?.ResizeSelectedCommand.Execute(Nothing)
+        End Sub
+
+        Public Sub OnContextRemoveMetadata(sender As Object, e As RoutedEventArgs)
+            Dim item = GetItemFromSender(sender)
+            Dim vm = GetVm()
+            If item IsNot Nothing AndAlso vm IsNot Nothing AndAlso
+               (vm.SelectedItems Is Nothing OrElse Not vm.SelectedItems.Contains(item)) Then
+                vm.SelectOnly(item)
+                _selectionAnchor = item
+            End If
+            vm?.RemoveMetadataSelectedCommand.Execute(Nothing)
+        End Sub
+
         Public Sub OnContextCreateCollage(sender As Object, e As RoutedEventArgs)
             Dim item = GetItemFromSender(sender)
             Dim vm = GetVm()
@@ -828,6 +887,10 @@ Namespace Views
                               vm.SelectedItems IsNot Nothing AndAlso
                               vm.SelectedItems.Count >= 2 AndAlso
                               vm.SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).Count() >= 2
+            Dim showImageBatchActions = Not isParentEntry AndAlso
+                                        vm IsNot Nothing AndAlso
+                                        vm.SelectedItems IsNot Nothing AndAlso
+                                        vm.SelectedItems.Any(Function(i) i IsNot Nothing AndAlso i.IsImage)
             SetMenuItemVisible(menu, "GridContextOpenMenuItem", showSingleItemActions)
             SetMenuItemVisible(menu, "GridContextEditMenuItem", showSingleItemActions AndAlso item.CanEditFile AndAlso item.IsImage)
             SetMenuControlVisible(menu, "GridContextTopSeparator", showSingleItemActions)
@@ -837,6 +900,9 @@ Namespace Views
             SetMenuItemVisible(menu, "GridContextCutMenuItem", Not isParentEntry AndAlso item.CanFileOperationRename)
             SetMenuItemVisible(menu, "GridContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
             SetMenuItemVisible(menu, "GridContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
+            SetMenuItemVisible(menu, "GridContextResizeMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "GridContextBatchConvertMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "GridContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "GridContextCreateCollageMenuItem", showCollage)
             SetMenuControlVisible(menu, "GridContextPathSeparator", showSingleItemActions)
             SetMenuItemVisible(menu, "GridContextCopyPathMenuItem", showSingleItemActions)
@@ -851,6 +917,9 @@ Namespace Views
             SetMenuItemVisible(menu, "ListContextCutMenuItem", Not isParentEntry AndAlso item.CanFileOperationRename)
             SetMenuItemVisible(menu, "ListContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
             SetMenuItemVisible(menu, "ListContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
+            SetMenuItemVisible(menu, "ListContextResizeMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "ListContextBatchConvertMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "ListContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextCreateCollageMenuItem", showCollage)
             SetMenuControlVisible(menu, "ListContextPathSeparator", showSingleItemActions)
             SetMenuItemVisible(menu, "ListContextCopyPathMenuItem", showSingleItemActions)

@@ -3,6 +3,7 @@ Imports System.Collections.Generic
 Imports System.Collections.ObjectModel
 Imports System.IO
 Imports System.Linq
+Imports System.Text.RegularExpressions
 Imports System.Threading
 Imports System.Threading.Tasks
 Imports System.Windows.Input
@@ -37,11 +38,23 @@ Namespace ViewModels
         Private _sharpness As Double = 0
         Private _noiseReduction As Double = 0
         Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
+        Private _dustScratches As Double = 0
+        Private _haze As Double = 0
+        Private _addNoise As Double = 0
+        Private _structure As Double = 0
+        Private _glow As Double = 0
         Private _vibrance As Double = 0
         Private _vignette As Double = 0
+        Private _vignetteTransition As Double = 55
+        Private _vignetteRoundness As Double = 0
+        Private _vignetteFeather As Double = 70
+        Private _vignetteCenterX As Double = 50
+        Private _vignetteCenterY As Double = 50
         Private _grain As Double = 0
         Private _borderSize As Double = 0
         Private _borderColor As String = "#FFFFFFFF"
+        Private _borderCornerRadius As Double = 0
+        Private _borderEffect As String = "Einfach"
         Private _clarity As Double = 0
         Private ReadOnly _curveRgbPoints As New ObservableCollection(Of Avalonia.Point) From {New Avalonia.Point(0, 0), New Avalonia.Point(255, 255)}
         Private ReadOnly _curveRedPoints As New ObservableCollection(Of Avalonia.Point) From {New Avalonia.Point(0, 0), New Avalonia.Point(255, 255)}
@@ -125,6 +138,7 @@ Namespace ViewModels
         Private _annotationFontFamily As String = "Arial"
         Private _annotationOpacity As Double = 100
         Private _annotationRotation As Double = 0
+        Private _annotationAnchor As String = "BottomRight"
         Private _annotationIsVisible As Boolean = True
         Private _annotationXPercent As Double = 35
         Private _annotationYPercent As Double = 35
@@ -146,6 +160,7 @@ Namespace ViewModels
         Private _annotationGlowBlur As Double = 10
         Private _annotationGlowStrength As Double = 100
         Private _annotationGlowColor As String = "#FFFFFF00"
+        Private _watermarkImagePath As String = ""
         Private _hasActiveSelection As Boolean = False
         Private _selectionXPercent As Double = 0
         Private _selectionYPercent As Double = 0
@@ -194,6 +209,7 @@ Namespace ViewModels
         Private _activePreviewRenders As Integer
         Private _livePreviewEnabled As Boolean = True
         Private _showBeforeImage As Boolean = False
+        Private _comparisonAutoEnabled As Boolean = True
         Private _folderPaths As New List(Of String)()
         Private _currentIndex As Integer = -1
         Private _selectedInfoTab As InfoSidebarTab = InfoSidebarTab.General
@@ -211,7 +227,7 @@ Namespace ViewModels
 
         Public Property FilterPresetOptions As New System.Collections.ObjectModel.ObservableCollection(Of String) From {
             "Keine", "S/W", "Warm", "Kühl", "Fade", "Kontrast", "Sepia", "Matt", "Cross", "Dramatisch", "Weich",
-            "Noir", "Duoton", "Polaroid", "VHS"
+            "Noir", "Duoton", "Polaroid", "VHS", "Bild auf Alt"
         }
 
         Public Property ExportFormatOptions As New ObservableCollection(Of String) From {
@@ -224,6 +240,7 @@ Namespace ViewModels
 
         Public Property FilmstripItems As BulkObservableCollection(Of ImageItem)
         Public Property Tags As ObservableCollection(Of String)
+        Public Property TagSuggestions As ObservableCollection(Of String)
         Public Property HistoryItems As ObservableCollection(Of String)
         Private Shared ReadOnly FallbackFontOptions As IReadOnlyList(Of String) =
             New List(Of String) From {"Arial", "Segoe UI", "DejaVu Sans", "Liberation Sans", "Times New Roman", "Georgia", "Courier New", "Consolas", "Verdana", "Tahoma"}
@@ -251,10 +268,120 @@ Namespace ViewModels
 
         Private ReadOnly _allShapeIcons As New List(Of ShapeIconEntry)()
         Private ReadOnly _filteredShapeIcons As New ObservableCollection(Of ShapeIconEntry)()
+        Private ReadOnly _watermarkPresets As New List(Of WatermarkPresetSettings)()
+        Public ReadOnly Property SavedLightroomPresets As ObservableCollection(Of LightroomPresetSettings) = New ObservableCollection(Of LightroomPresetSettings)()
+        Public ReadOnly Property WatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
+        Private _selectedWatermarkPresetName As String = ""
+        Private _watermarkPresetNameDraft As String = ""
 
         Public ReadOnly Property FilteredShapeIcons As ObservableCollection(Of ShapeIconEntry)
             Get
                 Return _filteredShapeIcons
+            End Get
+        End Property
+
+        Public Property SelectedWatermarkPresetName As String
+            Get
+                Return _selectedWatermarkPresetName
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "").Trim()
+                If normalized = _selectedWatermarkPresetName Then Return
+                Me.RaiseAndSetIfChanged(_selectedWatermarkPresetName, normalized)
+                If Not String.IsNullOrWhiteSpace(normalized) Then
+                    _watermarkPresetNameDraft = normalized
+                    Me.RaisePropertyChanged(NameOf(WatermarkPresetNameDraft))
+                    ApplyWatermarkPreset(normalized)
+                End If
+            End Set
+        End Property
+
+        Public Property WatermarkPresetNameDraft As String
+            Get
+                Return _watermarkPresetNameDraft
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_watermarkPresetNameDraft, If(value, "").Trim())
+            End Set
+        End Property
+
+        Public ReadOnly Property ShowWatermarkPresetControls As Boolean
+            Get
+                Return EffectiveAnnotationKind = "Watermark"
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowWatermarkAnchorControls As Boolean
+            Get
+                Return EffectiveAnnotationKind = "Watermark"
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowFreeAnnotationPositionControls As Boolean
+            Get
+                Return EffectiveAnnotationKind <> "Watermark"
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationPositionMinimum As Double
+            Get
+                Return If(ShowWatermarkAnchorControls, -50, 0)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationPositionMaximum As Double
+            Get
+                Return If(ShowWatermarkAnchorControls, 50, 99)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationXLabel As String
+            Get
+                Return If(ShowWatermarkAnchorControls, "Abst. X", "X")
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationYLabel As String
+            Get
+                Return If(ShowWatermarkAnchorControls, "Abst. Y", "Y")
+            End Get
+        End Property
+
+        Public Property AnnotationAnchor As String
+            Get
+                Return NormalizeAnnotationAnchor(_annotationAnchor)
+            End Get
+            Set(value As String)
+                Dim normalized = NormalizeAnnotationAnchor(value)
+                If String.Equals(_annotationAnchor, normalized, StringComparison.OrdinalIgnoreCase) Then Return
+                Me.RaiseAndSetIfChanged(_annotationAnchor, normalized)
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsWatermarkImageSource As Boolean
+            Get
+                Return EffectiveAnnotationKind = "Watermark" AndAlso Not String.IsNullOrWhiteSpace(_watermarkImagePath)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowSelectedSvgOverlay As Boolean
+            Get
+                Return HasSelectedAnnotation AndAlso String.Equals(SelectedAnnotationKind, "Svg", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectedAnnotationImagePath As String
+            Get
+                If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return ""
+                Return If(_annotations(_selectedAnnotationIndex)?.ImagePath, "")
+            End Get
+        End Property
+
+        Public ReadOnly Property WatermarkSourceSummary As String
+            Get
+                If String.IsNullOrWhiteSpace(_watermarkImagePath) Then Return "Text-Wasserzeichen"
+                Return IO.Path.GetFileName(_watermarkImagePath)
             End Get
         End Property
 
@@ -290,6 +417,154 @@ Namespace ViewModels
             RefreshFilteredShapeIcons()
         End Sub
 
+        Private Sub LoadWatermarkPresets()
+            _watermarkPresets.Clear()
+            WatermarkPresetNames.Clear()
+            For Each preset In AppSettingsService.Load().WatermarkPresets
+                _watermarkPresets.Add(preset)
+                WatermarkPresetNames.Add(preset.Name)
+            Next
+        End Sub
+
+        Private Sub LoadSavedLightroomPresets()
+            SavedLightroomPresets.Clear()
+            For Each preset In AppSettingsService.Load().LightroomPresets
+                SavedLightroomPresets.Add(preset)
+            Next
+        End Sub
+
+        Private Sub PersistSavedLightroomPresets()
+            Dim settings = AppSettingsService.Load()
+            settings.LightroomPresets = SavedLightroomPresets.Select(Function(p) New LightroomPresetSettings With {
+                .Id = p.Id,
+                .Name = p.Name,
+                .Path = p.Path
+            }).ToList()
+            AppSettingsService.Save(settings)
+            LoadSavedLightroomPresets()
+        End Sub
+
+        Private Sub PersistWatermarkPresets()
+            Dim settings = AppSettingsService.Load()
+            settings.WatermarkPresets = _watermarkPresets.Select(Function(p) New WatermarkPresetSettings With {
+                .Id = p.Id,
+                .Name = p.Name,
+                .Text = p.Text,
+                .ImagePath = p.ImagePath,
+                .WidthPercent = p.WidthPercent,
+                .HeightPercent = p.HeightPercent,
+                .RotationDegrees = p.RotationDegrees,
+                .Opacity = p.Opacity,
+                .FontFamily = p.FontFamily,
+                .FontSizePercent = p.FontSizePercent,
+                .FillColor = p.FillColor
+            }).ToList()
+            AppSettingsService.Save(settings)
+            LoadWatermarkPresets()
+        End Sub
+
+        Private Sub RaiseWatermarkUiChanged()
+            Me.RaisePropertyChanged(NameOf(ShowWatermarkPresetControls))
+            Me.RaisePropertyChanged(NameOf(IsWatermarkImageSource))
+            Me.RaisePropertyChanged(NameOf(WatermarkSourceSummary))
+            Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
+            Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
+            Me.RaisePropertyChanged(NameOf(AnnotationPositionMinimum))
+            Me.RaisePropertyChanged(NameOf(AnnotationPositionMaximum))
+            Me.RaisePropertyChanged(NameOf(AnnotationXLabel))
+            Me.RaisePropertyChanged(NameOf(AnnotationYLabel))
+            Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
+            Me.RaisePropertyChanged(NameOf(ShowFontControls))
+            Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
+            Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
+            Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
+            Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+        End Sub
+
+        Private Sub ApplyWatermarkPreset(name As String)
+            Dim preset = _watermarkPresets.FirstOrDefault(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+            If preset Is Nothing Then Return
+
+            _annotationText = If(String.IsNullOrWhiteSpace(preset.Text), "FerrumPix", preset.Text)
+            _watermarkImagePath = If(preset.ImagePath, "")
+            _annotationWidthPercent = Math.Max(5, Math.Min(90, preset.WidthPercent))
+            _annotationHeightPercent = Math.Max(4, Math.Min(90, preset.HeightPercent))
+            _annotationRotation = Math.Max(-180, Math.Min(180, preset.RotationDegrees))
+            _annotationOpacity = Math.Max(0, Math.Min(100, preset.Opacity))
+            _annotationFontFamily = If(String.IsNullOrWhiteSpace(preset.FontFamily), "Arial", preset.FontFamily)
+            _annotationFontSize = Math.Max(1, Math.Min(40, preset.FontSizePercent))
+            _annotationFillColor = NormalizeAvaloniaColor(preset.FillColor, "#FFFFFFFF")
+
+            Me.RaisePropertyChanged(NameOf(AnnotationText))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationRotation))
+            Me.RaisePropertyChanged(NameOf(AnnotationOpacity))
+            Me.RaisePropertyChanged(NameOf(AnnotationFontFamily))
+            Me.RaisePropertyChanged(NameOf(AnnotationFontSize))
+            Me.RaisePropertyChanged(NameOf(AnnotationFontSizePixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillColor))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillColorValue))
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationImagePath))
+            RaiseWatermarkUiChanged()
+            If HasSelectedAnnotation AndAlso EffectiveAnnotationKind = "Watermark" Then SyncSelectedAnnotation()
+        End Sub
+
+        Public Sub SetWatermarkImagePath(path As String)
+            _watermarkImagePath = If(path, "").Trim()
+            If EffectiveAnnotationKind = "Watermark" AndAlso Not String.IsNullOrWhiteSpace(_watermarkImagePath) Then
+                Dim size = GetInitialImageAnnotationSize(_watermarkImagePath)
+                _annotationWidthPercent = size.WidthPercent
+                _annotationHeightPercent = size.HeightPercent
+                Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
+                Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
+                Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+                Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+            End If
+            RaiseWatermarkUiChanged()
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationImagePath))
+            If HasSelectedAnnotation AndAlso EffectiveAnnotationKind = "Watermark" Then SyncSelectedAnnotation()
+        End Sub
+
+        Public Sub ClearWatermarkImagePath()
+            SetWatermarkImagePath("")
+        End Sub
+
+        Public Sub SaveCurrentWatermarkPreset()
+            Dim name = If(_watermarkPresetNameDraft, "").Trim()
+            If String.IsNullOrWhiteSpace(name) Then Return
+
+            Dim existing = _watermarkPresets.FirstOrDefault(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+            If existing Is Nothing Then
+                existing = New WatermarkPresetSettings With {.Id = Guid.NewGuid().ToString("N")}
+                _watermarkPresets.Add(existing)
+            End If
+
+            existing.Name = name
+            existing.Text = If(_annotationText, "")
+            existing.ImagePath = If(_watermarkImagePath, "")
+            existing.WidthPercent = _annotationWidthPercent
+            existing.HeightPercent = _annotationHeightPercent
+            existing.RotationDegrees = _annotationRotation
+            existing.Opacity = _annotationOpacity
+            existing.FontFamily = _annotationFontFamily
+            existing.FontSizePercent = _annotationFontSize
+            existing.FillColor = _annotationFillColor
+            PersistWatermarkPresets()
+            SelectedWatermarkPresetName = name
+        End Sub
+
+        Public Sub DeleteCurrentWatermarkPreset()
+            Dim name = If(_selectedWatermarkPresetName, "").Trim()
+            If String.IsNullOrWhiteSpace(name) Then Return
+            _watermarkPresets.RemoveAll(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+            PersistWatermarkPresets()
+            _selectedWatermarkPresetName = ""
+            Me.RaisePropertyChanged(NameOf(SelectedWatermarkPresetName))
+        End Sub
+
         Private Shared Function FormatIconDisplayName(assetPath As String) As String
             Dim fileName = IO.Path.GetFileNameWithoutExtension(assetPath)
             Dim m = Text.RegularExpressions.Regex.Match(fileName, "^\d+_(?<rest>.+)$")
@@ -309,6 +584,87 @@ Namespace ViewModels
                 _filteredShapeIcons.Add(item)
             Next
         End Sub
+
+        Private Shared Function NormalizeAnnotationAnchor(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "TopLeft", "Top", "TopRight", "Left", "Center", "Right", "BottomLeft", "Bottom", "BottomRight"
+                    Return value.Trim()
+                Case Else
+                    Return "BottomRight"
+            End Select
+        End Function
+
+        Private Shared Function IsAnchoredWatermarkKind(kind As String) As Boolean
+            Return String.Equals(NormalizeAnnotationKind(kind), "Watermark", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        Private Shared Function ComputeAnnotationOriginPercent(kind As String, xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double, anchor As String) As (X As Double, Y As Double)
+            If Not IsAnchoredWatermarkKind(kind) Then
+                Return (xPercent, yPercent)
+            End If
+
+            Select Case NormalizeAnnotationAnchor(anchor)
+                Case "TopLeft"
+                    Return (xPercent, yPercent)
+                Case "Top"
+                    Return ((100.0 - widthPercent) / 2.0 + xPercent, yPercent)
+                Case "TopRight"
+                    Return (100.0 - widthPercent - xPercent, yPercent)
+                Case "Left"
+                    Return (xPercent, (100.0 - heightPercent) / 2.0 + yPercent)
+                Case "Center"
+                    Return ((100.0 - widthPercent) / 2.0 + xPercent, (100.0 - heightPercent) / 2.0 + yPercent)
+                Case "Right"
+                    Return (100.0 - widthPercent - xPercent, (100.0 - heightPercent) / 2.0 + yPercent)
+                Case "BottomLeft"
+                    Return (xPercent, 100.0 - heightPercent - yPercent)
+                Case "Bottom"
+                    Return ((100.0 - widthPercent) / 2.0 + xPercent, 100.0 - heightPercent - yPercent)
+                Case Else
+                    Return (100.0 - widthPercent - xPercent, 100.0 - heightPercent - yPercent)
+            End Select
+        End Function
+
+        Private Shared Function ComputeAnnotationOffsetPercent(kind As String, actualXPercent As Double, actualYPercent As Double, widthPercent As Double, heightPercent As Double, anchor As String) As (X As Double, Y As Double)
+            If Not IsAnchoredWatermarkKind(kind) Then
+                Return (actualXPercent, actualYPercent)
+            End If
+
+            Select Case NormalizeAnnotationAnchor(anchor)
+                Case "TopLeft"
+                    Return (actualXPercent, actualYPercent)
+                Case "Top"
+                    Return (actualXPercent - (100.0 - widthPercent) / 2.0, actualYPercent)
+                Case "TopRight"
+                    Return (100.0 - widthPercent - actualXPercent, actualYPercent)
+                Case "Left"
+                    Return (actualXPercent, actualYPercent - (100.0 - heightPercent) / 2.0)
+                Case "Center"
+                    Return (actualXPercent - (100.0 - widthPercent) / 2.0, actualYPercent - (100.0 - heightPercent) / 2.0)
+                Case "Right"
+                    Return (100.0 - widthPercent - actualXPercent, actualYPercent - (100.0 - heightPercent) / 2.0)
+                Case "BottomLeft"
+                    Return (actualXPercent, 100.0 - heightPercent - actualYPercent)
+                Case "Bottom"
+                    Return (actualXPercent - (100.0 - widthPercent) / 2.0, 100.0 - heightPercent - actualYPercent)
+                Case Else
+                    Return (100.0 - widthPercent - actualXPercent, 100.0 - heightPercent - actualYPercent)
+            End Select
+        End Function
+
+        Private Shared Function ClampAnnotationOffsetPercent(value As Double, anchor As String, isHorizontal As Boolean) As Double
+            Dim normalizedAnchor = NormalizeAnnotationAnchor(anchor)
+            Dim usesCenter = If(isHorizontal,
+                                normalizedAnchor = "Top" OrElse normalizedAnchor = "Center" OrElse normalizedAnchor = "Bottom",
+                                normalizedAnchor = "Left" OrElse normalizedAnchor = "Center" OrElse normalizedAnchor = "Right")
+            If usesCenter Then Return Math.Max(-50, Math.Min(50, value))
+            Return Math.Max(0, Math.Min(50, value))
+        End Function
+
+        Private Function GetCurrentAnnotationDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
+            Dim origin = ComputeAnnotationOriginPercent(EffectiveAnnotationKind, _annotationXPercent, _annotationYPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
+            Return (origin.X, origin.Y, _annotationWidthPercent, _annotationHeightPercent)
+        End Function
 
         Public Property SelectedAnnotationIndex As Integer
             Get
@@ -352,12 +708,21 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
+                Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
+                Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
                 Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
                 Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
                 Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
                 Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
                 Me.RaisePropertyChanged(NameOf(FillColorLabel))
                 Me.RaisePropertyChanged(NameOf(StrokeColorLabel))
+                Me.RaisePropertyChanged(NameOf(AnnotationPositionMinimum))
+                Me.RaisePropertyChanged(NameOf(AnnotationPositionMaximum))
+                Me.RaisePropertyChanged(NameOf(AnnotationXLabel))
+                Me.RaisePropertyChanged(NameOf(AnnotationYLabel))
+                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+                Me.RaisePropertyChanged(NameOf(SelectedAnnotationImagePath))
+                RaiseWatermarkUiChanged()
                 UpdateShapeIconStates()
                 ' Text-/Wasserzeichen-Ebenen werden während der Selektion über das Live-Overlay
                 ' gerendert und dafür im gebackenen Vorschaubild ausgeblendet (siehe GetCurrentAdjustments).
@@ -384,12 +749,19 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
+                Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
+                Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
                 Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
                 Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
                 Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
                 Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
                 Me.RaisePropertyChanged(NameOf(FillColorLabel))
                 Me.RaisePropertyChanged(NameOf(StrokeColorLabel))
+                Me.RaisePropertyChanged(NameOf(AnnotationPositionMinimum))
+                Me.RaisePropertyChanged(NameOf(AnnotationPositionMaximum))
+                Me.RaisePropertyChanged(NameOf(AnnotationXLabel))
+                Me.RaisePropertyChanged(NameOf(AnnotationYLabel))
+                RaiseWatermarkUiChanged()
                 UpdateShapeIconStates()
             End Set
         End Property
@@ -423,7 +795,7 @@ Namespace ViewModels
         Public ReadOnly Property ShowTextContentControls As Boolean
             Get
                 Dim k = EffectiveAnnotationKind
-                Return k = "Text" OrElse k = "Watermark" OrElse k = "QR" OrElse k = "Symbol"
+                Return k = "Text" OrElse k = "QR" OrElse k = "Symbol" OrElse (k = "Watermark" AndAlso Not IsWatermarkImageSource)
             End Get
         End Property
 
@@ -431,7 +803,7 @@ Namespace ViewModels
         Public ReadOnly Property ShowFontControls As Boolean
             Get
                 Dim k = EffectiveAnnotationKind
-                Return k = "Text" OrElse k = "Watermark"
+                Return k = "Text" OrElse (k = "Watermark" AndAlso Not IsWatermarkImageSource)
             End Get
         End Property
 
@@ -439,7 +811,7 @@ Namespace ViewModels
         ''' Bild selbst, keine Füllfarbe dahinter) - dort blendet das Eigenschaften-Panel den Regler aus.
         Public ReadOnly Property ShowFillColorControls As Boolean
             Get
-                Return EffectiveAnnotationKind <> "Image"
+                Return EffectiveAnnotationKind <> "Image" AndAlso Not IsWatermarkImageSource
             End Get
         End Property
 
@@ -540,8 +912,22 @@ Namespace ViewModels
             AnnotationFontFamily = "Arial"
             AnnotationOpacity = 100
             AnnotationRotation = 0
+            _annotationAnchor = "BottomRight"
+            Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
             AnnotationIsVisible = True
-            If normalizedKind = "Text" OrElse normalizedKind = "Watermark" Then
+            If normalizedKind = "Watermark" Then
+                _annotationXPercent = 4
+                _annotationYPercent = 4
+                Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
+                Me.RaisePropertyChanged(NameOf(AnnotationYPercent))
+                ClearWatermarkImagePath()
+                If _watermarkPresets.Count > 0 Then
+                    If String.IsNullOrWhiteSpace(_selectedWatermarkPresetName) Then _selectedWatermarkPresetName = _watermarkPresets(0).Name
+                    Me.RaisePropertyChanged(NameOf(SelectedWatermarkPresetName))
+                    ApplyWatermarkPreset(_selectedWatermarkPresetName)
+                End If
+            End If
+            If normalizedKind = "Text" OrElse (normalizedKind = "Watermark" AndAlso Not IsWatermarkImageSource) Then
                 UpdatePendingTextAnnotationSize()
             End If
         End Sub
@@ -697,7 +1083,7 @@ Namespace ViewModels
                 ' Formate ohne Alphakanal-Unterstützung (z.B. JPEG) können strukturell nie
                 ' transparente Bereiche haben - Schachbrett/Volltonfarbe wäre dort nur an
                 ' Letterbox-/Rundungsrändern fälschlich sichtbar, nie inhaltlich sinnvoll.
-                If Not TransparencyBrushService.CanHaveTransparency(_currentImagePath) Then
+                If Not TransparencyBrushService.HasVisibleTransparency(_currentImagePath) Then
                     Return Avalonia.Media.Brushes.Transparent
                 End If
                 Dim settings = AppSettingsService.Load()
@@ -730,6 +1116,11 @@ Namespace ViewModels
                 If value AndAlso Not wasShowing Then SchedulePreviewUpdate()
             End Set
         End Property
+
+        Public Sub SetComparisonVisibleFromUser(value As Boolean)
+            _comparisonAutoEnabled = value
+            ShowBeforeImage = value
+        End Sub
 
         Public ReadOnly Property CanShowBeforeAfter As Boolean
             Get
@@ -765,6 +1156,9 @@ Namespace ViewModels
                     Me.RaisePropertyChanged(NameOf(DisplayImage))
                 End If
                 Me.RaisePropertyChanged(NameOf(CanShowBeforeAfter))
+                If CanShowBeforeAfter AndAlso _comparisonAutoEnabled AndAlso Not _showBeforeImage Then
+                    ShowBeforeImage = True
+                End If
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 RaiseToolContextProperties()
                 RequestOverlayStateNotify()
@@ -1021,6 +1415,51 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property DustScratches As Double
+            Get
+                Return _dustScratches
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_dustScratches, Math.Max(-100, Math.Min(100, value)), NameOf(DustScratches))
+            End Set
+        End Property
+
+        Public Property Haze As Double
+            Get
+                Return _haze
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_haze, Math.Max(-100, Math.Min(100, value)), NameOf(Haze))
+            End Set
+        End Property
+
+        Public Property AddNoise As Double
+            Get
+                Return _addNoise
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_addNoise, Math.Max(0, Math.Min(100, value)), NameOf(AddNoise))
+            End Set
+        End Property
+
+        Public Property [Structure] As Double
+            Get
+                Return _structure
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_structure, Math.Max(-100, Math.Min(100, value)), NameOf([Structure]))
+            End Set
+        End Property
+
+        Public Property Glow As Double
+            Get
+                Return _glow
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_glow, Math.Max(-100, Math.Min(100, value)), NameOf(Glow))
+            End Set
+        End Property
+
         Public Property Vibrance As Double
             Get
                 Return _vibrance
@@ -1039,6 +1478,51 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property VignetteTransition As Double
+            Get
+                Return _vignetteTransition
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_vignetteTransition, Math.Max(0, Math.Min(100, value)), NameOf(VignetteTransition))
+            End Set
+        End Property
+
+        Public Property VignetteRoundness As Double
+            Get
+                Return _vignetteRoundness
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_vignetteRoundness, Math.Max(-100, Math.Min(100, value)), NameOf(VignetteRoundness))
+            End Set
+        End Property
+
+        Public Property VignetteFeather As Double
+            Get
+                Return _vignetteFeather
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_vignetteFeather, Math.Max(0, Math.Min(100, value)), NameOf(VignetteFeather))
+            End Set
+        End Property
+
+        Public Property VignetteCenterX As Double
+            Get
+                Return _vignetteCenterX
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_vignetteCenterX, Math.Max(0, Math.Min(100, value)), NameOf(VignetteCenterX))
+            End Set
+        End Property
+
+        Public Property VignetteCenterY As Double
+            Get
+                Return _vignetteCenterY
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_vignetteCenterY, Math.Max(0, Math.Min(100, value)), NameOf(VignetteCenterY))
+            End Set
+        End Property
+
         Public Property Grain As Double
             Get
                 Return _grain
@@ -1054,6 +1538,35 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 SetUndoableDouble(_borderSize, Math.Max(0, Math.Min(25, value)), NameOf(BorderSize))
+            End Set
+        End Property
+
+        Public Property BorderCornerRadius As Double
+            Get
+                Return _borderCornerRadius
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_borderCornerRadius, Math.Max(0, Math.Min(100, value)), NameOf(BorderCornerRadius))
+            End Set
+        End Property
+
+        Public ReadOnly Property BorderEffectOptions As IReadOnlyList(Of String)
+            Get
+                Return New String() {"Einfach", "Gestrichelt", "Gezackt"}
+            End Get
+        End Property
+
+        Public Property BorderEffect As String
+            Get
+                Return _borderEffect
+            End Get
+            Set(value As String)
+                Dim normalized = If(String.IsNullOrWhiteSpace(value), "Einfach", value)
+                If String.Equals(_borderEffect, normalized, StringComparison.Ordinal) Then Return
+                CaptureUndoState(NameOf(BorderEffect))
+                Me.RaiseAndSetIfChanged(_borderEffect, normalized)
+                RaiseResetButtonStateChanged()
+                SchedulePreviewUpdate()
             End Set
         End Property
 
@@ -1951,7 +2464,10 @@ Namespace ViewModels
                 Return _annotationXPercent
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationXPercent, ClampAnnotationPositionPercent(value, _annotationWidthPercent))
+                Dim normalized = If(ShowWatermarkAnchorControls,
+                                    ClampAnnotationOffsetPercent(value, _annotationAnchor, True),
+                                    ClampAnnotationPositionPercent(value, _annotationWidthPercent))
+                Me.RaiseAndSetIfChanged(_annotationXPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
                 SyncSelectedAnnotation()
             End Set
@@ -1962,7 +2478,10 @@ Namespace ViewModels
                 Return _annotationYPercent
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationYPercent, ClampAnnotationPositionPercent(value, _annotationHeightPercent))
+                Dim normalized = If(ShowWatermarkAnchorControls,
+                                    ClampAnnotationOffsetPercent(value, _annotationAnchor, False),
+                                    ClampAnnotationPositionPercent(value, _annotationHeightPercent))
+                Me.RaiseAndSetIfChanged(_annotationYPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
                 SyncSelectedAnnotation()
             End Set
@@ -2067,6 +2586,7 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationShadowOffsetX, Math.Max(-20, Math.Min(20, value)))
+                Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -2077,6 +2597,25 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationShadowOffsetY, Math.Max(-20, Math.Min(20, value)))
+                Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public Property AnnotationShadowLightAngle As Double
+            Get
+                Dim shadowAngle = Math.Atan2(_annotationShadowOffsetY, _annotationShadowOffsetX) * 180.0 / Math.PI
+                Return (shadowAngle + 180.0 + 360.0) Mod 360.0
+            End Get
+            Set(value As Double)
+                Dim distance = Math.Sqrt(_annotationShadowOffsetX * _annotationShadowOffsetX + _annotationShadowOffsetY * _annotationShadowOffsetY)
+                If distance < 1 Then distance = 6
+                Dim shadowAngle = (value + 180.0) * Math.PI / 180.0
+                _annotationShadowOffsetX = Math.Max(-20, Math.Min(20, Math.Cos(shadowAngle) * distance))
+                _annotationShadowOffsetY = Math.Max(-20, Math.Min(20, Math.Sin(shadowAngle) * distance))
+                Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetX))
+                Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetY))
+                Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -2436,8 +2975,14 @@ Namespace ViewModels
         Public Sub SetSelectedAnnotationRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
             _annotationWidthPercent = Math.Max(5, Math.Min(90, widthPercent))
             _annotationHeightPercent = Math.Max(4, Math.Min(90, heightPercent))
-            _annotationXPercent = ClampAnnotationPositionPercent(xPercent, _annotationWidthPercent)
-            _annotationYPercent = ClampAnnotationPositionPercent(yPercent, _annotationHeightPercent)
+            If ShowWatermarkAnchorControls Then
+                Dim offset = ComputeAnnotationOffsetPercent(EffectiveAnnotationKind, xPercent, yPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
+                _annotationXPercent = ClampAnnotationOffsetPercent(offset.X, _annotationAnchor, True)
+                _annotationYPercent = ClampAnnotationOffsetPercent(offset.Y, _annotationAnchor, False)
+            Else
+                _annotationXPercent = ClampAnnotationPositionPercent(xPercent, _annotationWidthPercent)
+                _annotationYPercent = ClampAnnotationPositionPercent(yPercent, _annotationHeightPercent)
+            End If
             Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationYPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
@@ -2448,6 +2993,10 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
             SyncSelectedAnnotation()
         End Sub
+
+        Public Function GetSelectedAnnotationDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
+            Return GetCurrentAnnotationDisplayRectPercent()
+        End Function
 
         Public Property AnnotationXPixels As Integer
             Get
@@ -2883,13 +3432,18 @@ Namespace ViewModels
 
         Public ReadOnly Property HasDetailChanges As Boolean
             Get
-                Return _clarity <> 0 OrElse _sharpness <> 0 OrElse _noiseReduction <> 0
+                Return _clarity <> 0 OrElse _sharpness <> 0 OrElse _noiseReduction <> 0 OrElse
+                       _dustScratches <> 0 OrElse _haze <> 0 OrElse _addNoise <> 0 OrElse
+                       _structure <> 0 OrElse _glow <> 0
             End Get
         End Property
 
         Public ReadOnly Property HasEffectsChanges As Boolean
             Get
-                Return _vignette <> 0 OrElse _grain <> 0 OrElse _borderSize <> 0
+                Return _vignette <> 0 OrElse _vignetteTransition <> 55 OrElse _vignetteRoundness <> 0 OrElse
+                       _vignetteFeather <> 70 OrElse _vignetteCenterX <> 50 OrElse _vignetteCenterY <> 50 OrElse
+                       _grain <> 0 OrElse _borderSize <> 0 OrElse _borderCornerRadius <> 0 OrElse
+                       Not String.Equals(_borderEffect, "Einfach", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
@@ -2968,6 +3522,7 @@ Namespace ViewModels
         Public ReadOnly Property MoveSelectedAnnotationUpCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationDownCommand As ICommand
         Public ReadOnly Property AlignSelectedAnnotationCommand As ICommand
+        Public ReadOnly Property ResetCurrentToolCommand As ICommand
         Public ReadOnly Property ResetLightCommand As ICommand
         Public ReadOnly Property ResetColorCommand As ICommand
         Public ReadOnly Property ResetDetailCommand As ICommand
@@ -2976,8 +3531,10 @@ Namespace ViewModels
         Public ReadOnly Property CopySelectionCommand As ICommand
         Public ReadOnly Property FillSelectionCommand As ICommand
         Public ReadOnly Property SetAnnotationFillKindCommand As ICommand
+        Public ReadOnly Property SetAnnotationAnchorCommand As ICommand
         Public ReadOnly Property ResetTransformCommand As ICommand
         Public ReadOnly Property SetFilterPresetCommand As ICommand
+        Public ReadOnly Property ResetFilterCommand As ICommand
         Public ReadOnly Property ExportCommand As ICommand
         Public ReadOnly Property SaveRecipeCommand As ICommand
         Public ReadOnly Property LoadRecipeCommand As ICommand
@@ -2997,8 +3554,11 @@ Namespace ViewModels
             _mainVm = mainVm
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
             Tags = New ObservableCollection(Of String)()
+            TagSuggestions = New ObservableCollection(Of String)(LibraryService.Instance.GetAllTags())
             HistoryItems = New ObservableCollection(Of String)()
             LoadAllShapeIcons()
+            LoadWatermarkPresets()
+            LoadSavedLightroomPresets()
             _previewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(220)}
             AddHandler _previewTimer.Tick, Sub()
                                                _previewTimer.Stop()
@@ -3028,6 +3588,7 @@ Namespace ViewModels
                                                        If Not String.IsNullOrEmpty(_currentImagePath) Then
                                                            LibraryService.Instance.SetTags(_currentImagePath, Tags)
                                                        End If
+                                                       RefreshTagSuggestions()
                                                    End Sub)
 
             RemoveTagCommand = ReactiveCommand.Create(Of String)(Sub(tag)
@@ -3163,6 +3724,10 @@ Namespace ViewModels
             AlignSelectedAnnotationCommand = ReactiveCommand.Create(Of String)(Sub(target)
                                                                                    AlignSelectedAnnotation(target)
                                                                                End Sub)
+            ResetCurrentToolCommand = ReactiveCommand.Create(Sub()
+                                                                 PushUndo()
+                                                                 ResetCurrentToolInternal()
+                                                             End Sub)
             ResetLightCommand = ReactiveCommand.Create(Sub()
                                                            PushUndo()
                                                            ResetLightInternal()
@@ -3185,6 +3750,7 @@ Namespace ViewModels
                                                          End Sub)
             CopySelectionCommand = ReactiveCommand.Create(Sub() CopySelectionToNewObject())
             FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
+            SetAnnotationAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) AnnotationAnchor = anchor)
             SetAnnotationFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationFillKind(kind))
             ResetTransformCommand = ReactiveCommand.Create(Sub()
                                                                PushUndo()
@@ -3194,6 +3760,10 @@ Namespace ViewModels
                                                                           PushUndo()
                                                                           FilterPreset = preset
                                                                       End Sub)
+            ResetFilterCommand = ReactiveCommand.Create(Sub()
+                                                            PushUndo()
+                                                            ResetFilterInternal()
+                                                        End Sub)
             ExportCommand = ReactiveCommand.Create(Sub() ExportImage())
             SaveRecipeCommand = ReactiveCommand.Create(Sub() SaveRecipe())
             LoadRecipeCommand = ReactiveCommand.Create(Sub() LoadRecipe())
@@ -3362,6 +3932,7 @@ Namespace ViewModels
             SelectedInfoTab = InfoSidebarTab.General
             ResetAdjustmentsInternal()
             ClearUndoHistory()
+            ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
             PreviewImage = Nothing
             ComparisonImage = Nothing
             PreparePreviewSource(path)
@@ -3401,6 +3972,7 @@ Namespace ViewModels
             SelectedInfoTab = InfoSidebarTab.General
             ResetAdjustmentsInternal()
             ClearUndoHistory()
+            ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
             PreviewImage = Nothing
             ComparisonImage = Nothing
             PreparePreviewSource(imagePath)
@@ -3493,6 +4065,14 @@ Namespace ViewModels
             For Each tag In LibraryService.Instance.GetTags(imagePath)
                 Tags.Add(tag)
             Next
+            RefreshTagSuggestions()
+        End Sub
+
+        Private Sub RefreshTagSuggestions()
+            TagSuggestions.Clear()
+            For Each tag In LibraryService.Instance.GetAllTags()
+                TagSuggestions.Add(tag)
+            Next
         End Sub
 
         Private Sub LoadFilmstripContext(imagePath As String, Optional allPaths As List(Of String) = Nothing)
@@ -3505,10 +4085,9 @@ Namespace ViewModels
 
             Try
                 If allPaths IsNot Nothing Then
-                    Dim editableExts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico"}
                     _folderPaths = allPaths.
                         Where(Function(p) Not String.IsNullOrEmpty(p)).
-                        Where(Function(p) editableExts.Contains(IO.Path.GetExtension(p).ToLowerInvariant())).
+                        Where(Function(p) CanParticipateInEditorFilmstrip(p)).
                         Distinct(StringComparer.OrdinalIgnoreCase).
                         ToList()
 
@@ -3527,9 +4106,8 @@ Namespace ViewModels
                 Dim folder = IO.Path.GetDirectoryName(imagePath)
                 If String.IsNullOrEmpty(folder) OrElse Not Directory.Exists(folder) Then Return
 
-                Dim exts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico"}
                 _folderPaths = Directory.GetFiles(folder).
-                    Where(Function(f) exts.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
+                    Where(Function(f) CanParticipateInEditorFilmstrip(f)).
                     OrderBy(Function(f) IO.Path.GetFileName(f)).
                     ToList()
 
@@ -3552,6 +4130,16 @@ Namespace ViewModels
                 FilmstripItems(i).IsSelected = (i = _currentIndex)
             Next
         End Sub
+
+        Private Shared Function CanParticipateInEditorFilmstrip(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            If VideoPreviewService.IsSupportedVideo(path) Then Return False
+            If SvgPreviewService.IsSupportedSvg(path) Then Return False
+
+            Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
+            Dim editableExts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico"}
+            Return editableExts.Contains(ext) OrElse RawPreviewService.IsSupportedRaw(path)
+        End Function
 
         Private Sub SchedulePreviewUpdate()
             _hasChanges = True
@@ -3932,10 +4520,22 @@ Namespace ViewModels
                 .Sharpness = CSng(_sharpness),
                 .NoiseReduction = CSng(_noiseReduction),
                 .NoiseReductionMethod = _noiseReductionMethod,
+                .DustScratches = CSng(_dustScratches),
+                .Haze = CSng(_haze),
+                .AddNoise = CSng(_addNoise),
+                .[Structure] = CSng(_structure),
+                .Glow = CSng(_glow),
                 .Vignette = CSng(_vignette),
+                .VignetteTransition = CSng(_vignetteTransition),
+                .VignetteRoundness = CSng(_vignetteRoundness),
+                .VignetteFeather = CSng(_vignetteFeather),
+                .VignetteCenterX = CSng(_vignetteCenterX),
+                .VignetteCenterY = CSng(_vignetteCenterY),
                 .Grain = CSng(_grain),
                 .BorderSize = CSng(_borderSize),
                 .BorderColor = _borderColor,
+                .BorderCornerRadius = CSng(_borderCornerRadius),
+                .BorderEffect = _borderEffect,
                 .Clarity = CSng(_clarity),
                 .CurveRgbPoints = PointsToCurveString(_curveRgbPoints),
                 .CurveRedPoints = PointsToCurveString(_curveRedPoints),
@@ -4131,7 +4731,8 @@ Namespace ViewModels
                     Return "Farbmischer"
                 Case NameOf(Sharpness), NameOf(NoiseReduction), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
                     Return "Details"
-                Case NameOf(Vignette), NameOf(Grain), NameOf(BorderSize), NameOf(BorderColor)
+                Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
+                     NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(Grain), NameOf(BorderSize), NameOf(BorderColor)
                     Return "Effekte"
                 Case NameOf(FilterPreset)
                     Return "Filter"
@@ -4198,10 +4799,22 @@ Namespace ViewModels
             _sharpness = adj.Sharpness
             _noiseReduction = adj.NoiseReduction
             _noiseReductionMethod = adj.NoiseReductionMethod
+            _dustScratches = adj.DustScratches
+            _haze = adj.Haze
+            _addNoise = adj.AddNoise
+            _structure = adj.[Structure]
+            _glow = adj.Glow
             _vignette = adj.Vignette
+            _vignetteTransition = adj.VignetteTransition
+            _vignetteRoundness = adj.VignetteRoundness
+            _vignetteFeather = adj.VignetteFeather
+            _vignetteCenterX = adj.VignetteCenterX
+            _vignetteCenterY = adj.VignetteCenterY
             _grain = adj.Grain
             _borderSize = adj.BorderSize
             _borderColor = If(String.IsNullOrWhiteSpace(adj.BorderColor), "#FFFFFFFF", adj.BorderColor)
+            _borderCornerRadius = adj.BorderCornerRadius
+            _borderEffect = If(String.IsNullOrWhiteSpace(adj.BorderEffect), "Einfach", adj.BorderEffect)
             _clarity = adj.Clarity
             LoadCurvePointsFromString(_curveRgbPoints, adj.CurveRgbPoints)
             LoadCurvePointsFromString(_curveRedPoints, adj.CurveRedPoints)
@@ -4284,12 +4897,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
-            Me.RaisePropertyChanged(NameOf(Vignette))
-            Me.RaisePropertyChanged(NameOf(Grain))
-            Me.RaisePropertyChanged(NameOf(BorderSize))
-            Me.RaisePropertyChanged(NameOf(BorderColor))
-            Me.RaisePropertyChanged(NameOf(BorderColorValue))
-            Me.RaisePropertyChanged(NameOf(BorderColorBrush))
+            RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
             Me.RaisePropertyChanged(NameOf(CropLeft))
             Me.RaisePropertyChanged(NameOf(CropTop))
@@ -4408,12 +5016,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
-            Me.RaisePropertyChanged(NameOf(Vignette))
-            Me.RaisePropertyChanged(NameOf(Grain))
-            Me.RaisePropertyChanged(NameOf(BorderSize))
-            Me.RaisePropertyChanged(NameOf(BorderColor))
-            Me.RaisePropertyChanged(NameOf(BorderColorValue))
-            Me.RaisePropertyChanged(NameOf(BorderColorBrush))
+            RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
             Me.RaisePropertyChanged(NameOf(CropLeft))
             Me.RaisePropertyChanged(NameOf(CropTop))
@@ -4675,6 +5278,10 @@ Namespace ViewModels
             Dim isShape = IsCustomShapeKind(normalizedKind)
             Dim width = If(normalizedKind = "Line" OrElse normalizedKind = "Arrow", 30.0, If(normalizedKind = "QR" OrElse normalizedKind = "Image", 22.0, If(isShape, 22.0, _annotationWidthPercent)))
             Dim height = If(normalizedKind = "Line" OrElse normalizedKind = "Arrow", 16.0, If(normalizedKind = "QR" OrElse normalizedKind = "Symbol" OrElse normalizedKind = "Image", 22.0, If(isShape, 22.0, _annotationHeightPercent)))
+            If normalizedKind = "Watermark" AndAlso Not String.IsNullOrWhiteSpace(_watermarkImagePath) Then
+                width = _annotationWidthPercent
+                height = _annotationHeightPercent
+            End If
             Dim x = Math.Max(-width + 1, Math.Min(100 - 1, xPercent))
             Dim y = Math.Max(-height + 1, Math.Min(100 - 1, yPercent))
             Dim text = If(normalizedKind = "Image" OrElse normalizedKind = "Brush" OrElse normalizedKind = "Eraser",
@@ -4689,7 +5296,7 @@ Namespace ViewModels
             Dim annotation = New ImageAnnotation With {
                 .Kind = normalizedKind,
                 .Text = text,
-                .ImagePath = If(normalizedKind = "Svg", ExtractSvgIconPath(kind), ""),
+                .ImagePath = If(normalizedKind = "Svg", ExtractSvgIconPath(kind), If(normalizedKind = "Watermark", _watermarkImagePath, "")),
                 .XPercent = CSng(x),
                 .YPercent = CSng(y),
                 .WidthPercent = CSng(width),
@@ -4701,6 +5308,7 @@ Namespace ViewModels
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .RotationDegrees = CSng(_annotationRotation),
+                .Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), ""),
                 .IsVisible = _annotationIsVisible,
                 .FillKind = _annotationFillKind,
                 .FillColor2 = _annotationFillColor2,
@@ -4782,6 +5390,9 @@ Namespace ViewModels
         Private Shared Function AnnotationKindToTool(kind As String) As EditorTool
             Select Case NormalizeAnnotationKind(kind)
                 Case "Text", "Image", "QR" : Return EditorTool.Text
+                Case "Watermark" : Return EditorTool.Text
+                Case "Rectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Spiral", "Droplet", "SpeechBubble", "Line", "Arrow", "Symbol", "Svg"
+                    Return EditorTool.Geometry
                 Case "Brush", "Eraser" : Return EditorTool.Draw
                 Case "SelectionFill", "SelectionImage" : Return EditorTool.Selection
                 Case Else : Return EditorTool.Insert
@@ -5021,8 +5632,9 @@ Namespace ViewModels
                                            Optional hitSlopYPercent As Double = 1.5) As Integer
             For i = _annotations.Count - 1 To 0 Step -1
                 Dim a = _annotations(i)
-                If xPercent >= a.XPercent - hitSlopXPercent AndAlso xPercent <= a.XPercent + a.WidthPercent + hitSlopXPercent AndAlso
-                   yPercent >= a.YPercent - hitSlopYPercent AndAlso yPercent <= a.YPercent + a.HeightPercent + hitSlopYPercent Then
+                Dim origin = ComputeAnnotationOriginPercent(a.Kind, a.XPercent, a.YPercent, a.WidthPercent, a.HeightPercent, a.Anchor)
+                If xPercent >= origin.X - hitSlopXPercent AndAlso xPercent <= origin.X + a.WidthPercent + hitSlopXPercent AndAlso
+                   yPercent >= origin.Y - hitSlopYPercent AndAlso yPercent <= origin.Y + a.HeightPercent + hitSlopYPercent Then
                     Return i
                 End If
             Next
@@ -5038,6 +5650,7 @@ Namespace ViewModels
             Try
                 If _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
                     Dim a = _annotations(_selectedAnnotationIndex)
+                    _watermarkImagePath = If(NormalizeAnnotationKind(a.Kind) = "Watermark", a.ImagePath, "")
                     AnnotationText = a.Text
                     AnnotationFillColor = a.FillColor
                     AnnotationStrokeColor = a.StrokeColor
@@ -5046,6 +5659,7 @@ Namespace ViewModels
                     AnnotationFontFamily = a.FontFamily
                     AnnotationOpacity = a.Opacity
                     AnnotationRotation = a.RotationDegrees
+                    _annotationAnchor = NormalizeAnnotationAnchor(a.Anchor)
                     AnnotationIsVisible = a.IsVisible
                     AnnotationXPercent = a.XPercent
                     AnnotationYPercent = a.YPercent
@@ -5058,6 +5672,7 @@ Namespace ViewModels
                     AnnotationShadowEnabled = a.ShadowEnabled
                     AnnotationShadowOffsetX = a.ShadowOffsetXPercent
                     AnnotationShadowOffsetY = a.ShadowOffsetYPercent
+                    Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
                     AnnotationShadowBlur = a.ShadowBlur
                     AnnotationShadowStrength = a.ShadowStrength
                     AnnotationShadowColor = a.ShadowColor
@@ -5067,6 +5682,8 @@ Namespace ViewModels
                     AnnotationGlowBlur = a.GlowBlur
                     AnnotationGlowStrength = a.GlowStrength
                     AnnotationGlowColor = a.GlowColor
+                    Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
+                    RaiseWatermarkUiChanged()
                 End If
             Finally
                 _isLoadingAnnotation = False
@@ -5087,6 +5704,9 @@ Namespace ViewModels
             If normalizedKind <> "Brush" AndAlso normalizedKind <> "Eraser" Then
                 a.Text = _annotationText
             End If
+            If normalizedKind = "Watermark" Then
+                a.ImagePath = _watermarkImagePath
+            End If
             a.FillColor = _annotationFillColor
             a.StrokeColor = _annotationStrokeColor
             a.StrokeWidth = CSng(_annotationStrokeWidth)
@@ -5094,6 +5714,7 @@ Namespace ViewModels
             a.FontFamily = _annotationFontFamily
             a.Opacity = CSng(_annotationOpacity)
             a.RotationDegrees = CSng(_annotationRotation)
+            a.Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             a.IsVisible = _annotationIsVisible
             a.XPercent = CSng(_annotationXPercent)
             a.YPercent = CSng(_annotationYPercent)
@@ -5272,11 +5893,54 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        Private Sub ResetCurrentToolInternal()
+            Select Case _currentTool
+                Case EditorTool.Crop
+                    SetCropValues(0, 0, 0, 0)
+                    _appliedCropLeft = 0
+                    _appliedCropTop = 0
+                    _appliedCropRight = 0
+                    _appliedCropBottom = 0
+                    RaiseResetButtonStateChanged()
+                    SchedulePreviewUpdate()
+                Case EditorTool.Resize
+                    _appliedResizeWidth = 0
+                    _appliedResizeHeight = 0
+                    _hasChanges = True
+                    SetResizeValues(0, 0)
+                Case EditorTool.Rotate, EditorTool.Transform
+                    ResetTransformInternal()
+                Case EditorTool.Adjust
+                    ResetLightInternal()
+                    ResetCurvePoints()
+                    RaiseResetButtonStateChanged()
+                    SchedulePreviewUpdate()
+                Case EditorTool.Color
+                    ResetColorInternal()
+                    ResetHslInternal()
+                Case EditorTool.Effects
+                    ResetDetailInternal()
+                Case EditorTool.Frame
+                    ResetEffectsInternal()
+                Case EditorTool.Filters
+                    ResetFilterInternal()
+                Case EditorTool.Retouch
+                    ResetRetouchInternal()
+                Case Else
+                    ResetAdjustmentsInternal()
+            End Select
+        End Sub
+
         Private Sub ResetDetailInternal()
             _clarity = 0
             _sharpness = 0
             _noiseReduction = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
+            _dustScratches = 0
+            _haze = 0
+            _addNoise = 0
+            _structure = 0
+            _glow = 0
             RaiseDetailPropertiesChanged()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
@@ -5284,17 +5948,44 @@ Namespace ViewModels
 
         Private Sub ResetEffectsInternal()
             _vignette = 0
+            _vignetteTransition = 55
+            _vignetteRoundness = 0
+            _vignetteFeather = 70
+            _vignetteCenterX = 50
+            _vignetteCenterY = 50
             _grain = 0
             _borderSize = 0
+            _borderCornerRadius = 0
+            _borderEffect = "Einfach"
             _borderColor = "#FFFFFFFF"
+            RaiseEffectsPropertiesChanged()
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        Private Sub ResetFilterInternal()
+            _filterPreset = "Keine"
+            _filterStrength = 50
+            Me.RaisePropertyChanged(NameOf(FilterPreset))
+            Me.RaisePropertyChanged(NameOf(FilterStrength))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        Private Sub RaiseEffectsPropertiesChanged()
             Me.RaisePropertyChanged(NameOf(Vignette))
+            Me.RaisePropertyChanged(NameOf(VignetteTransition))
+            Me.RaisePropertyChanged(NameOf(VignetteRoundness))
+            Me.RaisePropertyChanged(NameOf(VignetteFeather))
+            Me.RaisePropertyChanged(NameOf(VignetteCenterX))
+            Me.RaisePropertyChanged(NameOf(VignetteCenterY))
             Me.RaisePropertyChanged(NameOf(Grain))
             Me.RaisePropertyChanged(NameOf(BorderSize))
+            Me.RaisePropertyChanged(NameOf(BorderCornerRadius))
+            Me.RaisePropertyChanged(NameOf(BorderEffect))
             Me.RaisePropertyChanged(NameOf(BorderColor))
             Me.RaisePropertyChanged(NameOf(BorderColorValue))
             Me.RaisePropertyChanged(NameOf(BorderColorBrush))
-            RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
         End Sub
 
         Private Sub ResetRetouchInternal()
@@ -5417,6 +6108,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
+            Me.RaisePropertyChanged(NameOf(DustScratches))
+            Me.RaisePropertyChanged(NameOf(Haze))
+            Me.RaisePropertyChanged(NameOf(AddNoise))
+            Me.RaisePropertyChanged(NameOf([Structure]))
+            Me.RaisePropertyChanged(NameOf(Glow))
             RaiseResetButtonStateChanged()
         End Sub
 
@@ -5492,8 +6188,8 @@ Namespace ViewModels
                Not ImageAdjustments.IsIdentityCurve(adj.CurveGreenPoints) OrElse Not ImageAdjustments.IsIdentityCurve(adj.CurveBluePoints) OrElse
                Not ImageAdjustments.IsIdentityCurve(adj.CurveLuminancePoints) Then Return "Tonwertkurve"
             If adj.HasHslChanges() Then Return "Farbmischer"
-            If adj.Clarity <> 0 OrElse adj.Sharpness <> 0 OrElse adj.NoiseReduction <> 0 Then Return "Details"
-            If adj.Vignette <> 0 OrElse adj.Grain <> 0 OrElse adj.BorderSize <> 0 Then Return "Effekte"
+            If adj.Clarity <> 0 OrElse adj.Sharpness <> 0 OrElse adj.NoiseReduction <> 0 OrElse adj.Grain <> 0 Then Return "Details"
+            If adj.Vignette <> 0 OrElse adj.BorderSize <> 0 Then Return "Vignette/Rahmen"
             If Not String.Equals(adj.FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase) Then Return "Filter"
             Return "Anpassung"
         End Function
@@ -5579,10 +6275,22 @@ Namespace ViewModels
                     $"Sharpness={adj.Sharpness}",
                     $"NoiseReduction={adj.NoiseReduction}",
                     $"NoiseReductionMethod={adj.NoiseReductionMethod}",
+                    $"DustScratches={adj.DustScratches}",
+                    $"Haze={adj.Haze}",
+                    $"AddNoise={adj.AddNoise}",
+                    $"Structure={adj.[Structure]}",
+                    $"Glow={adj.Glow}",
                     $"Vignette={adj.Vignette}",
+                    $"VignetteTransition={adj.VignetteTransition}",
+                    $"VignetteRoundness={adj.VignetteRoundness}",
+                    $"VignetteFeather={adj.VignetteFeather}",
+                    $"VignetteCenterX={adj.VignetteCenterX}",
+                    $"VignetteCenterY={adj.VignetteCenterY}",
                     $"Grain={adj.Grain}",
                     $"BorderSize={adj.BorderSize}",
                     $"BorderColor={adj.BorderColor}",
+                    $"BorderCornerRadius={adj.BorderCornerRadius}",
+                    $"BorderEffect={adj.BorderEffect}",
                     $"Clarity={adj.Clarity}",
                     $"CurveRgbPoints={adj.CurveRgbPoints}",
                     $"CurveRedPoints={adj.CurveRedPoints}",
@@ -5631,7 +6339,7 @@ Namespace ViewModels
                     File.AppendAllLines(RecipePath, adj.RetouchSpots.Select(Function(s) $"RetouchSpot={s.XPercent};{s.YPercent};{s.RadiusPercent}"))
                 End If
                 If adj.Annotations IsNot Nothing Then
-                    File.AppendAllLines(RecipePath, adj.Annotations.Select(Function(a) $"Annotation={Uri.EscapeDataString(a.Kind)};{Uri.EscapeDataString(a.Text)};{Uri.EscapeDataString(a.ImagePath)};{a.XPercent};{a.YPercent};{a.WidthPercent};{a.HeightPercent};{Uri.EscapeDataString(a.FillColor)};{Uri.EscapeDataString(a.StrokeColor)};{a.StrokeWidth};{a.FontSizePercent};{Uri.EscapeDataString(a.FontFamily)};{a.Opacity};{a.RotationDegrees};{a.IsVisible};{a.HardnessPercent};{Uri.EscapeDataString(a.FillKind)};{Uri.EscapeDataString(a.FillColor2)};{a.GradientAngleDegrees};{a.ShadowEnabled};{a.ShadowOffsetXPercent};{a.ShadowOffsetYPercent};{a.ShadowBlur};{Uri.EscapeDataString(a.ShadowColor)};{a.GlowEnabled};{a.GlowBlur};{Uri.EscapeDataString(a.GlowColor)};{a.GradientInverted};{a.GlowStrength};{a.ShadowStrength}"))
+                    File.AppendAllLines(RecipePath, adj.Annotations.Select(Function(a) $"Annotation={Uri.EscapeDataString(a.Kind)};{Uri.EscapeDataString(a.Text)};{Uri.EscapeDataString(a.ImagePath)};{a.XPercent};{a.YPercent};{a.WidthPercent};{a.HeightPercent};{Uri.EscapeDataString(a.FillColor)};{Uri.EscapeDataString(a.StrokeColor)};{a.StrokeWidth};{a.FontSizePercent};{Uri.EscapeDataString(a.FontFamily)};{a.Opacity};{a.RotationDegrees};{a.IsVisible};{a.HardnessPercent};{Uri.EscapeDataString(a.FillKind)};{Uri.EscapeDataString(a.FillColor2)};{a.GradientAngleDegrees};{a.ShadowEnabled};{a.ShadowOffsetXPercent};{a.ShadowOffsetYPercent};{a.ShadowBlur};{Uri.EscapeDataString(a.ShadowColor)};{a.GlowEnabled};{a.GlowBlur};{Uri.EscapeDataString(a.GlowColor)};{a.GradientInverted};{a.GlowStrength};{a.ShadowStrength};{Uri.EscapeDataString(If(a.Anchor, ""))}"))
                 End If
                 StatusText = LocalizationService.T("Bearbeitungsrezept gespeichert")
             Catch ex As Exception
@@ -5662,6 +6370,80 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Rezept konnte nicht geladen werden: ") & ex.Message
             End Try
         End Sub
+
+        Public Sub ApplyLightroomPreset(xmpPath As String)
+            If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
+            Try
+                Dim values = ParseLightroomXmpValues(File.ReadAllText(xmpPath))
+                If values.Count = 0 Then Return
+
+                PushUndo()
+                _suppressUndoCapture = True
+                Try
+                    Dim d As Double
+                    If TryGetXmpDouble(values, "Exposure2012", d) Then Exposure = Math.Max(-100, Math.Min(100, d * 25.0))
+                    If TryGetXmpDouble(values, "Contrast2012", d) Then Contrast = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "Highlights2012", d) Then Highlights = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "Shadows2012", d) Then ShadowsLevel = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "Whites2012", d) Then Whites = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "Blacks2012", d) Then Blacks = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "Clarity2012", d) Then Clarity = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "Texture", d) Then [Structure] = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "Dehaze", d) Then Haze = Math.Max(-100, Math.Min(100, -d))
+                    If TryGetXmpDouble(values, "Vibrance", d) Then Vibrance = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "Saturation", d) Then Saturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "Sharpness", d) Then Sharpness = Math.Max(0, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "LuminanceSmoothing", d) Then NoiseReduction = Math.Max(0, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "GrainAmount", d) Then Grain = Math.Max(0, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "PostCropVignetteAmount", d) Then Vignette = Math.Max(-150, Math.Min(150, -d))
+                Finally
+                    _suppressUndoCapture = False
+                End Try
+
+                StatusText = LocalizationService.T("Lightroom-Preset angewendet")
+                SchedulePreviewUpdate()
+            Catch ex As Exception
+                StatusText = LocalizationService.T("Lightroom-Preset konnte nicht geladen werden: ") & ex.Message
+            End Try
+        End Sub
+
+        Public Sub SaveLightroomPresetToSettings(xmpPath As String)
+            If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
+            Dim normalizedPath = xmpPath.Trim()
+            Dim existing = SavedLightroomPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, StringComparison.OrdinalIgnoreCase))
+            If existing Is Nothing Then
+                SavedLightroomPresets.Add(New LightroomPresetSettings With {
+                    .Id = Guid.NewGuid().ToString("N"),
+                    .Name = IO.Path.GetFileNameWithoutExtension(normalizedPath),
+                    .Path = normalizedPath
+                })
+                PersistSavedLightroomPresets()
+            End If
+        End Sub
+
+        Public Sub RemoveLightroomPresetFromSettings(xmpPath As String)
+            If String.IsNullOrWhiteSpace(xmpPath) Then Return
+            Dim existing = SavedLightroomPresets.FirstOrDefault(Function(p) String.Equals(p.Path, xmpPath.Trim(), StringComparison.OrdinalIgnoreCase))
+            If existing Is Nothing Then Return
+            SavedLightroomPresets.Remove(existing)
+            PersistSavedLightroomPresets()
+        End Sub
+
+        Private Shared Function ParseLightroomXmpValues(text As String) As Dictionary(Of String, String)
+            Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            If String.IsNullOrWhiteSpace(text) Then Return result
+            For Each m As Match In Regex.Matches(text, "(?:crs:)?(?<name>[A-Za-z0-9]+)\s*=\s*""(?<value>[^""]*)""")
+                result(m.Groups("name").Value) = m.Groups("value").Value
+            Next
+            Return result
+        End Function
+
+        Private Shared Function TryGetXmpDouble(values As Dictionary(Of String, String), name As String, ByRef result As Double) As Boolean
+            Dim raw As String = Nothing
+            If Not values.TryGetValue(name, raw) Then Return False
+            raw = raw.Replace("+", "")
+            Return Double.TryParse(raw, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, result)
+        End Function
 
         Private Shared Function HasInvalidFileNameChars(fileName As String) As Boolean
             If String.IsNullOrEmpty(fileName) Then Return True
@@ -5722,6 +6504,7 @@ Namespace ViewModels
                                 .FontFamily = Uri.UnescapeDataString(parts(11)),
                                 .Opacity = opacity,
                                 .RotationDegrees = rotation,
+                                .Anchor = "",
                                 .IsVisible = isVisible,
                                 .HardnessPercent = hardness
                             })
@@ -5759,6 +6542,7 @@ Namespace ViewModels
                                 .FontFamily = Uri.UnescapeDataString(parts(10)),
                                 .Opacity = opacity,
                                 .RotationDegrees = rotation,
+                                .Anchor = "",
                                 .IsVisible = isVisible,
                                 .HardnessPercent = hardness
                             })
@@ -5800,6 +6584,9 @@ Namespace ViewModels
                             Dim shadowStrength As Single
                             If Single.TryParse(parts(29), shadowStrength) Then extra.ShadowStrength = shadowStrength
                         End If
+                        If parts.Length >= 31 Then
+                            extra.Anchor = NormalizeAnnotationAnchor(Uri.UnescapeDataString(parts(30)))
+                        End If
                     End If
                 Case "Exposure" : If Single.TryParse(value, f) Then adj.Exposure = f
                 Case "Brightness" : If Single.TryParse(value, f) Then adj.Brightness = f
@@ -5817,10 +6604,22 @@ Namespace ViewModels
                 Case "NoiseReductionMethod"
                     Dim nrMethod As NoiseReductionMethod
                     If [Enum].TryParse(value, nrMethod) Then adj.NoiseReductionMethod = nrMethod
+                Case "DustScratches" : If Single.TryParse(value, f) Then adj.DustScratches = f
+                Case "Haze" : If Single.TryParse(value, f) Then adj.Haze = f
+                Case "AddNoise" : If Single.TryParse(value, f) Then adj.AddNoise = f
+                Case "Structure" : If Single.TryParse(value, f) Then adj.[Structure] = f
+                Case "Glow" : If Single.TryParse(value, f) Then adj.Glow = f
                 Case "Vignette" : If Single.TryParse(value, f) Then adj.Vignette = f
+                Case "VignetteTransition" : If Single.TryParse(value, f) Then adj.VignetteTransition = f
+                Case "VignetteRoundness" : If Single.TryParse(value, f) Then adj.VignetteRoundness = f
+                Case "VignetteFeather" : If Single.TryParse(value, f) Then adj.VignetteFeather = f
+                Case "VignetteCenterX" : If Single.TryParse(value, f) Then adj.VignetteCenterX = f
+                Case "VignetteCenterY" : If Single.TryParse(value, f) Then adj.VignetteCenterY = f
                 Case "Grain" : If Single.TryParse(value, f) Then adj.Grain = f
                 Case "BorderSize" : If Single.TryParse(value, f) Then adj.BorderSize = f
                 Case "BorderColor" : adj.BorderColor = value
+                Case "BorderCornerRadius" : If Single.TryParse(value, f) Then adj.BorderCornerRadius = f
+                Case "BorderEffect" : adj.BorderEffect = value
                 Case "Clarity" : If Single.TryParse(value, f) Then adj.Clarity = f
                 Case "CurveRgbPoints" : adj.CurveRgbPoints = value
                 Case "CurveRedPoints" : adj.CurveRedPoints = value

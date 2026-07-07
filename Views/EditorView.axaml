@@ -15,7 +15,7 @@
              KeyUp="OnKeyUp"
              PointerReleased="OnGlobalPointerReleased">
 
-    <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="190,*,300,300">
+    <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="190,*,300,320">
 
         <Border Grid.Row="0" Grid.ColumnSpan="4" Classes="toolbar" Height="60" Padding="24,0">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
@@ -478,6 +478,14 @@
                                            StrokeThickness="1.5"
                                            StrokeDashArray="5,3"
                                            IsHitTestVisible="False" />
+                                <icons:SvgIcon Source="{Binding SelectedAnnotationImagePath}"
+                                               IconBrush="{Binding AnnotationFillColorValue}"
+                                               HorizontalAlignment="Stretch"
+                                               VerticalAlignment="Stretch"
+                                               Margin="6"
+                                               Opacity="0.9"
+                                               IsHitTestVisible="False"
+                                               IsVisible="{Binding ShowSelectedSvgOverlay}" />
                                 <TextBox x:Name="TextOverlayEditor"
                                          Classes="overlay-editor"
                                          Text="{Binding AnnotationText}"
@@ -564,7 +572,7 @@
 
         <Border Grid.Row="1" Grid.Column="2" Classes="panel-right">
             <Grid RowDefinitions="Auto,Auto,*">
-                <Grid Grid.Row="0" Margin="14,14,14,0">
+                <Grid Grid.Row="0" Margin="14,14,14,0" ColumnDefinitions="*,Auto">
                     <StackPanel Orientation="Horizontal" Spacing="18">
                         <Button Classes="info-tab" Command="{Binding SetLayersPanelTabCommand}" CommandParameter="Tool"
                                 Classes.active="{Binding IsToolTabSelected}">
@@ -580,6 +588,18 @@
                             <TextBlock Text="Verlauf" />
                         </Button>
                     </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="icon-btn"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding ResetCurrentToolCommand}"
+                            IsVisible="{Binding IsToolTabSelected}"
+                            ToolTip.Tip="Alle Einstellungen dieses Werkzeugs zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/01_Navigation/14_Aktualisieren.svg"
+                            Width="14" Height="14" />
+                    </Button>
                 </Grid>
 
                 <Border Grid.Row="1" Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="14,10,14,0" />
@@ -757,6 +777,16 @@
                                                         Source="avares://FerrumPix/Assets/Icons/03_Editor/37_QR_Code.svg"
                                                         Width="22" Height="22" />
                                                 </Button>
+                                                <Button Classes="ghost insert-option-btn" Width="46" Height="46"
+                                                        Padding="0" Margin="0,0,6,6" ToolTip.Tip="Wasserzeichen"
+                                                        Command="{Binding SetPendingInsertKindCommand}"
+                                                        CommandParameter="Watermark"
+                                                        Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}"
+                                                        Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/077_Bild.svg"
+                                                        Width="22" Height="22" />
+                                                </Button>
                                             </WrapPanel>
                                         </StackPanel>
                                         <StackPanel Spacing="6" IsVisible="{Binding ShowGeometryControls}">
@@ -800,6 +830,49 @@
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Eigenschaften" Foreground="{DynamicResource FP.Text.Secondary}"
                                                FontSize="11" FontWeight="SemiBold" />
+                                    <StackPanel Spacing="6" IsVisible="{Binding ShowWatermarkPresetControls}">
+                                        <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+                                            <TextBlock Text="Vorlage" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <ComboBox Grid.Column="1"
+                                                      Margin="6,0,0,0"
+                                                      ItemsSource="{Binding WatermarkPresetNames}"
+                                                      SelectedItem="{Binding SelectedWatermarkPresetName}"
+                                                      FontSize="11" />
+                                        </Grid>
+                                        <StackPanel Orientation="Vertical" Spacing="6">
+                                            <TextBlock Text="Name" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <TextBox Margin="6,0,0,0"
+                                                     Text="{Binding WatermarkPresetNameDraft}"
+                                                     FontSize="11" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Button Grid.Column="2" Classes="ghost" Padding="8,4" Click="OnWatermarkSavePresetClick">
+                                                <TextBlock Text="Speichern" FontSize="11" />
+                                            </Button>
+                                            <Button Grid.Column="3" Classes="ghost" Padding="8,4" Click="OnWatermarkDeletePresetClick">
+                                                <TextBlock Text="Löschen" FontSize="11" />
+                                            </Button>
+                                        </StackPanel>
+                                        <Grid ColumnDefinitions="74,*,Auto,Auto" ColumnSpacing="6" VerticalAlignment="Center">
+                                            <TextBlock Text="Quelle" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <TextBlock Grid.Column="1"
+                                                       Margin="6,0,0,0"
+                                                       Text="{Binding WatermarkSourceSummary}"
+                                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="11"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <Button Grid.Column="2" Classes="ghost" Padding="8,4" Click="OnWatermarkChooseImageClick">
+                                                <TextBlock Text="Bild…" FontSize="11" />
+                                            </Button>
+                                            <Button Grid.Column="3" Classes="ghost" Padding="8,4" Click="OnWatermarkClearImageClick">
+                                                <TextBlock Text="Text" FontSize="11" />
+                                            </Button>
+                                        </Grid>
+                                    </StackPanel>
                                     <TextBox Text="{Binding AnnotationText}"
                                              Watermark="Text, QR-Inhalt oder Symbol eingeben"
                                              FontSize="12"
@@ -934,12 +1007,90 @@
                                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" />
                                     </Grid>
+                                    <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
+                                          IsVisible="{Binding ShowWatermarkAnchorControls}">
+                                        <TextBlock Text="Anker" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   VerticalAlignment="Center" FontSize="11" />
+                                        <Border Grid.Column="1"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="8"
+                                                Margin="6,0,0,0">
+                                            <Grid Width="84" Height="84" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*" />
+                                                    <RowDefinition Height="*" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Row="0" Grid.Column="0" Classes="anchor-dot" Command="{Binding SetAnnotationAnchorCommand}" CommandParameter="TopLeft">
+                                                    <Grid>
+                                                        <Border Classes="anchor-dot-idle" />
+                                                        <Border Classes="anchor-dot-active" IsVisible="{Binding AnnotationAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=TopLeft}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button Grid.Row="0" Grid.Column="1" Classes="anchor-dot" Command="{Binding SetAnnotationAnchorCommand}" CommandParameter="Top">
+                                                    <Grid>
+                                                        <Border Classes="anchor-dot-idle" />
+                                                        <Border Classes="anchor-dot-active" IsVisible="{Binding AnnotationAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Top}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button Grid.Row="0" Grid.Column="2" Classes="anchor-dot" Command="{Binding SetAnnotationAnchorCommand}" CommandParameter="TopRight">
+                                                    <Grid>
+                                                        <Border Classes="anchor-dot-idle" />
+                                                        <Border Classes="anchor-dot-active" IsVisible="{Binding AnnotationAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=TopRight}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button Grid.Row="1" Grid.Column="0" Classes="anchor-dot" Command="{Binding SetAnnotationAnchorCommand}" CommandParameter="Left">
+                                                    <Grid>
+                                                        <Border Classes="anchor-dot-idle" />
+                                                        <Border Classes="anchor-dot-active" IsVisible="{Binding AnnotationAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Left}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button Grid.Row="1" Grid.Column="1" Classes="anchor-dot" Command="{Binding SetAnnotationAnchorCommand}" CommandParameter="Center">
+                                                    <Grid>
+                                                        <Border Classes="anchor-dot-idle" />
+                                                        <Border Classes="anchor-dot-active" IsVisible="{Binding AnnotationAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Center}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button Grid.Row="1" Grid.Column="2" Classes="anchor-dot" Command="{Binding SetAnnotationAnchorCommand}" CommandParameter="Right">
+                                                    <Grid>
+                                                        <Border Classes="anchor-dot-idle" />
+                                                        <Border Classes="anchor-dot-active" IsVisible="{Binding AnnotationAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Right}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button Grid.Row="2" Grid.Column="0" Classes="anchor-dot" Command="{Binding SetAnnotationAnchorCommand}" CommandParameter="BottomLeft">
+                                                    <Grid>
+                                                        <Border Classes="anchor-dot-idle" />
+                                                        <Border Classes="anchor-dot-active" IsVisible="{Binding AnnotationAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BottomLeft}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button Grid.Row="2" Grid.Column="1" Classes="anchor-dot" Command="{Binding SetAnnotationAnchorCommand}" CommandParameter="Bottom">
+                                                    <Grid>
+                                                        <Border Classes="anchor-dot-idle" />
+                                                        <Border Classes="anchor-dot-active" IsVisible="{Binding AnnotationAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Bottom}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button Grid.Row="2" Grid.Column="2" Classes="anchor-dot" Command="{Binding SetAnnotationAnchorCommand}" CommandParameter="BottomRight">
+                                                    <Grid>
+                                                        <Border Classes="anchor-dot-idle" />
+                                                        <Border Classes="anchor-dot-active" IsVisible="{Binding AnnotationAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BottomRight}" />
+                                                    </Grid>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
                                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                         <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
                                             <Grid ColumnDefinitions="16,*,44">
-                                                <TextBlock Text="X" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                <TextBlock Text="{Binding AnnotationXLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
                                                            VerticalAlignment="Center" FontSize="11" />
-                                                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="99"
+                                                <icons:RoundSlider Grid.Column="1" Minimum="{Binding AnnotationPositionMinimum}" Maximum="{Binding AnnotationPositionMaximum}"
                                                                    Value="{Binding AnnotationXPercent}" Margin="4,0" />
                                                 <TextBlock Grid.Column="2"
                                                            Text="{Binding AnnotationXPixels, StringFormat={}{0}px}"
@@ -948,9 +1099,9 @@
                                                            FontSize="11" />
                                             </Grid>
                                             <Grid Grid.Row="1" ColumnDefinitions="16,*,44">
-                                                <TextBlock Text="Y" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                <TextBlock Text="{Binding AnnotationYLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
                                                            VerticalAlignment="Center" FontSize="11" />
-                                                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="99"
+                                                <icons:RoundSlider Grid.Column="1" Minimum="{Binding AnnotationPositionMinimum}" Maximum="{Binding AnnotationPositionMaximum}"
                                                                    Value="{Binding AnnotationYPercent}" Margin="4,0" />
                                                 <TextBlock Grid.Column="2"
                                                            Text="{Binding AnnotationYPixels, StringFormat={}{0}px}"
@@ -996,6 +1147,18 @@
                                             <icons:ColorPickerButton Grid.Column="1"
                                                                      SelectedColor="{Binding AnnotationShadowColorValue, Mode=TwoWay}" />
 
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Lichtwinkel"
+                                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
+                                                               Value="{Binding AnnotationShadowLightAngle}" Margin="6,0" />
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding AnnotationShadowLightAngle, StringFormat={}{0:F0}°}"
+                                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                       FontSize="11" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Versatz X"
@@ -1061,7 +1224,7 @@
                                         </Grid>
                                     </StackPanel>
 
-                                    <CheckBox Content="Glow" IsChecked="{Binding AnnotationGlowEnabled}"
+                                    <CheckBox Content="Glühen" IsChecked="{Binding AnnotationGlowEnabled}"
                                               Margin="0,6,0,0" FontSize="11" />
                                     <StackPanel Spacing="2" IsVisible="{Binding AnnotationGlowEnabled}">
                                         <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
@@ -1072,7 +1235,7 @@
 
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
-                                            <TextBlock Text="Weichzeichnen"
+                                            <TextBlock Text="Größe"
                                                        Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -1566,10 +1729,8 @@
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Exposure}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Exposure, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Exposure, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Helligkeit"
@@ -1577,63 +1738,48 @@
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Brightness}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding Brightness, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Brightness, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Kontrast" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Contrast}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Contrast, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Contrast, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Lichter" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Highlights}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding Highlights, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Highlights, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Tiefen" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding ShadowsLevel}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding ShadowsLevel, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding ShadowsLevel, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Weiß" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Whites}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Whites, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Whites, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Schwarz" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Blacks}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Blacks, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Blacks, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                     </StackPanel>
                                 </Expander>
@@ -1685,31 +1831,24 @@
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Temperature}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding Temperature, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Temperature, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Tint}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Tint, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Tint, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Dynamik" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Vibrance}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Vibrance, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Vibrance, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
                                             <TextBlock Text="Sättigung"
@@ -1717,11 +1856,8 @@
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Saturation}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding Saturation, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Saturation, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                     </StackPanel>
                                 </Expander>
@@ -1747,7 +1883,7 @@
                                                         Height="28"
                                                         Padding="0"
                                                         Command="{Binding DataContext.ResetDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        ToolTip.Tip="Details zurücksetzen">
+                                                        ToolTip.Tip="Details zurücksetzen: Klarheit, Schärfe, Weichzeichnen, Körnung und Methode">
                                                     <icons:SvgIcon
                                                         Source="avares://FerrumPix/Assets/Icons/01_Navigation/14_Aktualisieren.svg"
                                                         Width="14" Height="14" />
@@ -1761,32 +1897,134 @@
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                                                Value="{Binding Clarity}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Clarity, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Clarity, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
-                                            <TextBlock Text="Schärfe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                            <TextBlock Text="Körnung" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                                               Value="{Binding Grain}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Grain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Staub/Kratzer" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                                               Value="{Binding DustScratches}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding DustScratches, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Dunst" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                                               Value="{Binding Haze}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Haze, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Rauschen" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                                               Value="{Binding AddNoise}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding AddNoise, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Struktur" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                                               Value="{Binding Structure}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Structure, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Glühen" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                                               Value="{Binding Glow}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Glow, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Expander>
+                            </Border>
+
+                            <Border Grid.Row="7" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowDetailAdjustments}">
+                                <Expander Header="Schärfe" IsExpanded="True">
+                                    <Expander.HeaderTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/03_Editor/24_Klarheit.svg"
+                                                        Width="14" Height="14" />
+                                                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1"
+                                                        Classes="icon-btn"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Padding="0"
+                                                        Command="{Binding DataContext.ResetDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        ToolTip.Tip="Schärfe zurücksetzen">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/01_Navigation/14_Aktualisieren.svg"
+                                                        Width="14" Height="14" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </Expander.HeaderTemplate>
+                                    <StackPanel Spacing="2" Margin="0,8,0,0">
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                                                Value="{Binding Sharpness}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding Sharpness, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Sharpness, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
+                                    </StackPanel>
+                                </Expander>
+                            </Border>
+
+                            <Border Grid.Row="8" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowDetailAdjustments}">
+                                <Expander Header="Weichzeichnen" IsExpanded="True">
+                                    <Expander.HeaderTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/03_Editor/24_Klarheit.svg"
+                                                        Width="14" Height="14" />
+                                                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1"
+                                                        Classes="icon-btn"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Padding="0"
+                                                        Command="{Binding DataContext.ResetDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        ToolTip.Tip="Weichzeichnen zurücksetzen">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/01_Navigation/14_Aktualisieren.svg"
+                                                        Width="14" Height="14" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </Expander.HeaderTemplate>
+                                    <StackPanel Spacing="2" Margin="0,8,0,0">
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
-                                            <TextBlock Text="Weichz." Foreground="{DynamicResource FP.Text.Secondary}"
+                                            <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                                                Value="{Binding NoiseReduction}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding NoiseReduction, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding NoiseReduction, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
                                             <TextBlock Text="Methode" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -1805,10 +2043,9 @@
                                 </Expander>
                             </Border>
 
-                            <!-- EFFEKTE (ausklappbar) -->
-                            <Border Grid.Row="7" Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Grid.Row="9" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowFrameAdjustments}">
-                                <Expander Header="Effekte" IsExpanded="True">
+                                <Expander Header="Vignette" IsExpanded="True">
                                     <Expander.HeaderTemplate>
                                         <DataTemplate>
                                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -1835,35 +2072,114 @@
                                     </Expander.HeaderTemplate>
                                     <StackPanel Spacing="2" Margin="0,8,0,0">
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
-                                            <TextBlock Text="Vignette" Foreground="{DynamicResource FP.Text.Secondary}"
+                                            <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
-                                            <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                            <icons:RoundSlider Grid.Column="1" Minimum="-150" Maximum="150"
                                                                Value="{Binding Vignette}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Vignette, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding Vignette, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
-                                            <TextBlock Text="Korn" Foreground="{DynamicResource FP.Text.Secondary}"
+                                            <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                                               Value="{Binding Grain}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Grain, StringFormat={}{0:F0}}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                                               DefaultValue="55"
+                                                               Value="{Binding VignetteTransition}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding VignetteTransition, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
-                                            <TextBlock Text="Rahmen" Foreground="{DynamicResource FP.Text.Secondary}"
+                                            <TextBlock Text="Rundheit" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                                               Value="{Binding VignetteRoundness}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding VignetteRoundness, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Weiche Kante" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                                               DefaultValue="70"
+                                                               Value="{Binding VignetteFeather}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding VignetteFeather, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Mitte X" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                                               DefaultValue="50"
+                                                               Value="{Binding VignetteCenterX}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding VignetteCenterX, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Mitte Y" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                                               DefaultValue="50"
+                                                               Value="{Binding VignetteCenterY}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding VignetteCenterY, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Expander>
+                            </Border>
+
+                            <Border Grid.Row="10" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowFrameAdjustments}">
+                                <Expander Header="Rahmen" IsExpanded="True">
+                                    <Expander.HeaderTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8"
+                                                            VerticalAlignment="Center">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/03_Editor/35_Rahmen.svg"
+                                                        Width="14" Height="14" />
+                                                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1"
+                                                        Classes="icon-btn"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Padding="0"
+                                                        Command="{Binding DataContext.ResetEffectsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        ToolTip.Tip="Rahmen zurücksetzen">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/01_Navigation/14_Aktualisieren.svg"
+                                                        Width="14" Height="14" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </Expander.HeaderTemplate>
+                                    <StackPanel Spacing="2" Margin="0,8,0,0">
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                                                        VerticalAlignment="Center" FontSize="11" />
                                             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="25"
                                                                Value="{Binding BorderSize}" Margin="6,0" />
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding BorderSize, StringFormat={}{0:F0}%}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       FontSize="11" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding BorderSize, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                                            <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                                               Value="{Binding BorderCornerRadius}" Margin="6,0" />
+                                            <TextBox Grid.Column="2" Classes="slider-value"
+                                                     Text="{Binding BorderCornerRadius, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F0}}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+                                            <TextBlock Text="Rahmenart" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <ComboBox Grid.Column="1"
+                                                      ItemsSource="{Binding BorderEffectOptions}"
+                                                      SelectedItem="{Binding BorderEffect}"
+                                                      FontSize="11"
+                                                      Margin="6,0,0,0"
+                                                      DropDownOpened="OnMatchWidthDropDownOpened" />
                                         </Grid>
                                         <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
                                             <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -1871,24 +2187,36 @@
                                             <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
                                                 <icons:ColorPickerButton
                                                     SelectedColor="{Binding BorderColorValue, Mode=TwoWay}" />
-
                                             </StackPanel>
                                         </Grid>
                                     </StackPanel>
                                 </Expander>
                             </Border>
 
-                            <Border Grid.Row="8" Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Grid.Row="11" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowFilterAdjustments}">
                                 <Expander Header="Filter" IsExpanded="True">
                                     <Expander.HeaderTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                <icons:SvgIcon
-                                                    Source="avares://FerrumPix/Assets/Icons/07_Symbole/32_Filter.svg"
-                                                    Width="14" Height="14" />
-                                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                                            </StackPanel>
+                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/07_Symbole/32_Filter.svg"
+                                                        Width="14" Height="14" />
+                                                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1"
+                                                        Classes="icon-btn"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Padding="0"
+                                                        Command="{Binding DataContext.ResetFilterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        ToolTip.Tip="Filter zurücksetzen">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/01_Navigation/14_Aktualisieren.svg"
+                                                        Width="14" Height="14" />
+                                                </Button>
+                                            </Grid>
                                         </DataTemplate>
                                     </Expander.HeaderTemplate>
                                     <StackPanel Spacing="2" Margin="0,8,0,0">
@@ -1973,13 +2301,92 @@
                                                     Command="{Binding SetFilterPresetCommand}" CommandParameter="VHS">
                                                 <TextBlock Text="VHS" FontSize="11" />
                                             </Button>
+                                            <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                                                    Command="{Binding SetFilterPresetCommand}" CommandParameter="Bild auf Alt">
+                                                <TextBlock Text="Bild auf Alt" FontSize="11" />
+                                            </Button>
                                         </WrapPanel>
                                     </StackPanel>
                                 </Expander>
                             </Border>
 
                             <!-- TONWERTKURVE (ausklappbar) -->
-                            <Border Grid.Row="10" Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Grid.Row="12" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowFilterAdjustments}">
+                                <Expander Header="Lightroom-Preset" IsExpanded="True">
+                                    <Expander.HeaderTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/07_Symbole/32_Filter.svg"
+                                                        Width="14" Height="14" />
+                                                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1"
+                                                        Classes="icon-btn"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Padding="0"
+                                                        Click="OnLoadLightroomPresetClick"
+                                                        ToolTip.Tip="XMP laden">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/01_Navigation/11_Hinzufuegen.svg"
+                                                        Width="14" Height="14" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </Expander.HeaderTemplate>
+                                    <StackPanel Spacing="6" Margin="0,8,0,0">
+                                        <Button Classes="ghost" Padding="8,5"
+                                                HorizontalAlignment="Left"
+                                                Click="OnLoadLightroomPresetClick">
+                                            <TextBlock Text="XMP laden" FontSize="11" />
+                                        </Button>
+                                        <ItemsControl ItemsSource="{Binding SavedLightroomPresets}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border CornerRadius="12"
+                                                            Background="{DynamicResource FP.Bg.Input}"
+                                                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                            BorderThickness="1"
+                                                            Margin="0,0,6,6"
+                                                            Padding="8,4">
+                                                        <Grid ColumnDefinitions="Auto,Auto">
+                                                            <Button Grid.Column="0"
+                                                                    Classes="ghost"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    Padding="0"
+                                                                    Click="OnApplySavedLightroomPresetClick">
+                                                                <TextBlock Text="{Binding Name}" FontSize="11" />
+                                                            </Button>
+                                                            <Button Grid.Column="1"
+                                                                    Classes="ghost"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    Padding="4,0,0,0"
+                                                                    Click="OnRemoveSavedLightroomPresetClick"
+                                                                    ToolTip.Tip="Preset entfernen">
+                                                                <TextBlock Text="×" FontSize="14"
+                                                                           Foreground="{DynamicResource FP.Text.Muted}" />
+                                                            </Button>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
+                            </Border>
+
+                            <!-- TONWERTKURVE (ausklappbar) -->
+                            <Border Grid.Row="13" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowLightAdjustments}">
                                 <Grid RowDefinitions="Auto,*">
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -2037,7 +2444,7 @@
                             </Border>
 
                             <!-- COLOR GRADING (ausklappbar) -->
-                            <Border Grid.Row="11" Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Grid.Row="15" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowColorAdjustments}">
                                 <Grid RowDefinitions="Auto,*">
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -2094,7 +2501,7 @@
                                 </Grid>
                             </Border>
 
-                            <Border Grid.Row="12" Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Grid.Row="17" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowTransformAdjustments}">
                                 <Expander Header="Drehen" IsExpanded="True">
                                     <Expander.HeaderTemplate>
@@ -2158,6 +2565,14 @@
                                                   IsChecked="{Binding StraightenExpandCanvas}"
                                                   FontSize="11"
                                                   ToolTip.Tip="Vergrößert die Leinwand beim Ausrichten so, dass keine Bildecken abgeschnitten werden, statt das Bild zum Ausgleich hineinzuzoomen" />
+                                        <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
+                                              IsVisible="{Binding StraightenExpandCanvas}">
+                                            <TextBlock Text="Hintergrund"
+                                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       VerticalAlignment="Center" FontSize="11" />
+                                            <icons:ColorPickerButton Grid.Column="1"
+                                                                     SelectedColor="{Binding CanvasBackgroundColorValue, Mode=TwoWay}" />
+                                        </Grid>
                                         <Grid ColumnDefinitions="*,*">
                                             <Button Classes="ghost" Padding="10,7" Margin="0,0,4,0"
                                                     Command="{Binding FlipHorizontalCommand}">
@@ -2421,7 +2836,7 @@
             </Grid>
         </Border>
 
-        <views:InfoSidebarView Grid.Row="1" Grid.Column="3" />
+        <views:InfoSidebarView Grid.Row="1" Grid.Column="3" Width="320" />
 
         <Border Grid.Row="2"
                 Grid.ColumnSpan="4"
@@ -2473,34 +2888,32 @@
                                    VerticalAlignment="Center" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <TextBlock Text="Zoom:" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" Margin="0,0,4,0" />
-                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center"
+                        <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
                                 Focusable="False"
                                 Click="OnZoomOutClick" ToolTip.Tip="Verkleinern">
-                            <TextBlock Text="−" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}" />
+                            <TextBlock Text="−" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
                         </Button>
                         <icons:RoundSlider Name="EditorZoomSlider" Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
                                            Value="{Binding ZoomSliderValue, Mode=TwoWay}" VerticalAlignment="Center" />
-                        <Button Classes="ghost" Height="28" Padding="6,2" VerticalContentAlignment="Center"
+                        <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
                                 Focusable="False"
                                 Click="OnZoomInClick" ToolTip.Tip="Vergrößern">
-                            <TextBlock Text="+" FontSize="15" Foreground="{DynamicResource FP.Text.Secondary}" />
+                            <TextBlock Text="+" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
                         </Button>
-                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="12,0,0,0" Focusable="False"
+                        <Button Classes="ghost" Height="26" Padding="8,2" Margin="12,0,0,0" Focusable="False"
                                 Classes.active="{Binding IsZoomActualActive}"
                                 Click="OnZoomActualClick" ToolTip.Tip="Auf 100 Prozent springen">
-                            <TextBlock Text="100%" Foreground="{DynamicResource FP.Text.Primary}"
+                            <TextBlock Name="ZoomPercentText" Text="100%" Foreground="{DynamicResource FP.Text.Primary}"
                                        VerticalAlignment="Center" />
                         </Button>
-                        <Button Classes="ghost" Height="28" Padding="8,2" Margin="8,0,0,0" Focusable="False"
+                        <Button Classes="ghost" Height="26" Padding="8,2" Margin="8,0,0,0" Focusable="False"
                                 Classes.active="{Binding IsZoomFitActive}"
                                 Click="OnZoomFitClick"
                                 ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/01_Navigation/26_Anpassen.svg"
                                                Width="20" Height="20" />
-                                <TextBlock Text="Einpassen" />
+                                <TextBlock Text="Einpassen" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -2540,9 +2953,16 @@
                                     Width="24" Height="24" VerticalAlignment="Center"
                                     Command="{Binding ToggleFavoriteCommand}"
                                     ToolTip.Tip="Favorit" Margin="6,0,0,0">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
-                                               Width="20" Height="20" 
-                                               Classes="fav-heart" Classes.active="{Binding IsFavorite}" />
+                                <Grid Width="20" Height="20">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                   Width="20" Height="20"
+                                                   Classes="fav-heart"
+                                                   IsVisible="{Binding !IsFavorite}" />
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/07_Symbole/02_Herz.svg"
+                                                   Width="20" Height="20"
+                                                   Classes="fav-heart active"
+                                                   IsVisible="{Binding IsFavorite}" />
+                                </Grid>
                             </Button>
                         </StackPanel>
                     </StackPanel>

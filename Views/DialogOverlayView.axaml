@@ -43,6 +43,10 @@
                                         Margin="0,16,0,0"
                                         IsVisible="{Binding DialogShowsSearch}"/>
 
+                <views:BatchResizeDialogView Grid.Row="3"
+                                             Margin="0,16,0,0"
+                                             IsVisible="{Binding DialogShowsBatchResize}"/>
+
                 <!-- Speichern unter -->
                 <StackPanel Grid.Row="3"
                             Spacing="14"

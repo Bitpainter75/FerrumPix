@@ -12,6 +12,7 @@ Namespace ViewModels
         BatchRename
         Search
         BatchConvert
+        BatchResize
     End Enum
 
     Public Enum FileConflictChoice
@@ -45,6 +46,14 @@ Namespace ViewModels
         Public Property Ratings As List(Of Integer)
         Public Property Conditions As List(Of SearchCondition)
         Public Property ConditionCombinator As String
+    End Class
+
+    Public Class BatchResizeResult
+        Public Property Width As Integer
+        Public Property Height As Integer
+        Public Property ScalePercent As Integer
+        Public Property LockAspect As Boolean
+        Public Property Interpolation As ResizeInterpolationMode
     End Class
 
 End Namespace

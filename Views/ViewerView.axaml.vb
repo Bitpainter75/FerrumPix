@@ -200,6 +200,7 @@ Namespace Views
         Public Sub OnPointerWheel(sender As Object, e As PointerWheelEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
+            If IsWithinInfoSidebar(e.Source) Then Return
 
             If e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
                 If e.Delta.Y < 0 Then
@@ -213,6 +214,15 @@ Namespace Views
             End If
             e.Handled = True
         End Sub
+
+        Private Function IsWithinInfoSidebar(source As Object) As Boolean
+            Dim ctrl = TryCast(source, Control)
+            While ctrl IsNot Nothing
+                If TypeOf ctrl Is InfoSidebarView Then Return True
+                ctrl = TryCast(ctrl.Parent, Control)
+            End While
+            Return False
+        End Function
 
         Private Sub OnImagePointerPressed(sender As Object, e As PointerPressedEventArgs)
             If Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
@@ -573,8 +583,14 @@ Namespace Views
             image.Height = imageHeight
             image.MaxWidth = Double.PositiveInfinity
             image.MaxHeight = Double.PositiveInfinity
-            scrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto
-            scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            If vm.IsZoomFitActive Then
+                scrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+                scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
+                scrollViewer.Offset = New Vector(0, 0)
+            Else
+                scrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto
+                scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            End If
 
             If Not CanPanImage(vm, scrollViewer) Then
                 _isPanningImage = False

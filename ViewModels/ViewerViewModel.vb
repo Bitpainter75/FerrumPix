@@ -57,6 +57,7 @@ Namespace ViewModels
 
         Public Property FilmstripItems As BulkObservableCollection(Of ImageItem)
         Public Property Tags As ObservableCollection(Of String)
+        Public Property TagSuggestions As ObservableCollection(Of String)
 
         Public ReadOnly Property IsInfoSidebarVisible As Boolean
             Get
@@ -88,7 +89,7 @@ Namespace ViewModels
                 ' Formate ohne Alphakanal-Unterstützung (z.B. JPEG) können strukturell nie
                 ' transparente Bereiche haben - Schachbrett/Volltonfarbe wäre dort nur an
                 ' Letterbox-/Rundungsrändern fälschlich sichtbar, nie inhaltlich sinnvoll.
-                If Not TransparencyBrushService.CanHaveTransparency(_currentImagePath) Then
+                If Not TransparencyBrushService.HasVisibleTransparency(_currentImagePath) Then
                     Return Avalonia.Media.Brushes.Transparent
                 End If
                 ' Im Vollbildmodus soll die tatsächliche Transparenz durchscheinen statt des
@@ -554,6 +555,7 @@ Namespace ViewModels
             _mainVm = mainVm
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
             Tags = New ObservableCollection(Of String)()
+            TagSuggestions = New ObservableCollection(Of String)(LibraryService.Instance.GetAllTags())
 
             _navDebouncer = New FilmstripNavigationDebouncer(wrapAround:=True,
                                                                getCurrentIndex:=Function() _currentIndex,
@@ -602,6 +604,7 @@ Namespace ViewModels
                                                        If Not String.IsNullOrEmpty(_currentImagePath) Then
                                                            LibraryService.Instance.SetTags(_currentImagePath, Tags)
                                                        End If
+                                                       RefreshTagSuggestions()
                                                    End Sub)
             RemoveTagCommand = ReactiveCommand.Create(Of String)(Sub(tag)
                                                                      If Tags.Remove(tag) AndAlso Not String.IsNullOrEmpty(_currentImagePath) Then
@@ -997,6 +1000,7 @@ Namespace ViewModels
             For Each tag In LibraryService.Instance.GetTags(imagePath)
                 Tags.Add(tag)
             Next
+            RefreshTagSuggestions()
 
             If Not loadHistogram Then HistogramImage = Nothing
 
@@ -1016,6 +1020,13 @@ Namespace ViewModels
                                                        End If
                                                    End Sub)
                      End Sub)
+        End Sub
+
+        Private Sub RefreshTagSuggestions()
+            TagSuggestions.Clear()
+            For Each tag In LibraryService.Instance.GetAllTags()
+                TagSuggestions.Add(tag)
+            Next
         End Sub
 
         ''' Lädt das Histogramm für das aktuell offene Bild nach, falls es (weil die Info-Leiste

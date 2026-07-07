@@ -17,6 +17,26 @@ Namespace Services
         Public Property RatingMin As Integer = -1
     End Class
 
+    Public Class WatermarkPresetSettings
+        Public Property Id As String = Guid.NewGuid().ToString("N")
+        Public Property Name As String = ""
+        Public Property Text As String = ""
+        Public Property ImagePath As String = ""
+        Public Property WidthPercent As Double = 24
+        Public Property HeightPercent As Double = 12
+        Public Property RotationDegrees As Double = 0
+        Public Property Opacity As Double = 100
+        Public Property FontFamily As String = "Arial"
+        Public Property FontSizePercent As Double = 6
+        Public Property FillColor As String = "#FFFFFFFF"
+    End Class
+
+    Public Class LightroomPresetSettings
+        Public Property Id As String = Guid.NewGuid().ToString("N")
+        Public Property Name As String = ""
+        Public Property Path As String = ""
+    End Class
+
     Public Class AppSettings
         Public Property GalleryThumbnailSize As Double = 260
         Public Property GalleryViewMode As String = "Grid"
@@ -59,6 +79,8 @@ Namespace Services
         Public Property TransparencyBackgroundColor As String = "#FFFFFFFF"
         Public Property LastBatchRenamePattern As String = "{name}_###"
         Public Property EnableDiagnosticLogging As Boolean = False
+        Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
+        Public Property LightroomPresets As New List(Of LightroomPresetSettings)()
     End Class
 
     Public NotInheritable Class AppSettingsService
@@ -103,6 +125,8 @@ Namespace Services
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
+                settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
+                settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
                 Return settings
             Catch
                 Return New AppSettings()
@@ -136,6 +160,8 @@ Namespace Services
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
+                settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
+                settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
                 Dim json = JsonSerializer.Serialize(settings, New JsonSerializerOptions With {.WriteIndented = True})
                 File.WriteAllText(SettingsPath, json)
                 ThumbnailCacheService.InvalidateSettingsCache()
@@ -323,6 +349,47 @@ Namespace Services
                 })
             Next
             Return result
+        End Function
+
+        Public Shared Function NormalizeWatermarkPresets(value As List(Of WatermarkPresetSettings)) As List(Of WatermarkPresetSettings)
+            Dim result As New List(Of WatermarkPresetSettings)()
+            For Each preset In If(value, New List(Of WatermarkPresetSettings)())
+                If preset Is Nothing Then Continue For
+                Dim name = If(preset.Name, "").Trim()
+                If String.IsNullOrWhiteSpace(name) Then Continue For
+                result.Add(New WatermarkPresetSettings With {
+                    .Id = If(String.IsNullOrWhiteSpace(preset.Id), Guid.NewGuid().ToString("N"), preset.Id),
+                    .Name = name,
+                    .Text = If(preset.Text, "").Trim(),
+                    .ImagePath = NormalizeFolderPath(preset.ImagePath),
+                    .WidthPercent = Math.Max(5, Math.Min(90, preset.WidthPercent)),
+                    .HeightPercent = Math.Max(4, Math.Min(90, preset.HeightPercent)),
+                    .RotationDegrees = Math.Max(-180, Math.Min(180, preset.RotationDegrees)),
+                    .Opacity = Math.Max(0, Math.Min(100, preset.Opacity)),
+                    .FontFamily = If(preset.FontFamily, "Arial").Trim(),
+                    .FontSizePercent = Math.Max(1, Math.Min(40, preset.FontSizePercent)),
+                    .FillColor = NormalizeHexColor(preset.FillColor, "#FFFFFFFF")
+                })
+            Next
+            Return result.OrderBy(Function(p) p.Name, StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
+        Public Shared Function NormalizeLightroomPresets(value As List(Of LightroomPresetSettings)) As List(Of LightroomPresetSettings)
+            Dim result As New List(Of LightroomPresetSettings)()
+            Dim seenPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each preset In If(value, New List(Of LightroomPresetSettings)())
+                If preset Is Nothing Then Continue For
+                Dim presetPath = NormalizeFolderPath(preset.Path)
+                If String.IsNullOrWhiteSpace(presetPath) OrElse Not seenPaths.Add(presetPath) Then Continue For
+                Dim name = If(preset.Name, "").Trim()
+                If String.IsNullOrWhiteSpace(name) Then name = IO.Path.GetFileNameWithoutExtension(presetPath)
+                result.Add(New LightroomPresetSettings With {
+                    .Id = If(String.IsNullOrWhiteSpace(preset.Id), Guid.NewGuid().ToString("N"), preset.Id),
+                    .Name = name,
+                    .Path = presetPath
+                })
+            Next
+            Return result.OrderBy(Function(p) p.Name, StringComparer.OrdinalIgnoreCase).ToList()
         End Function
 
         Public Shared Function NormalizeSearchFavoriteMode(value As String) As String

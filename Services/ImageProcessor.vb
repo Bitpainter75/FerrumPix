@@ -51,6 +51,7 @@ Namespace Services
         Private _fontFamily As String = "Arial"
         Private _opacity As Single = 100
         Private _rotationDegrees As Single = 0
+        Private _anchor As String = ""
         Private _isVisible As Boolean = True
         Private _hardnessPercent As Single = 100
         Private _fillKind As String = "Solid"
@@ -304,6 +305,15 @@ Namespace Services
             End Set
         End Property
 
+        Public Property Anchor As String
+            Get
+                Return _anchor
+            End Get
+            Set(value As String)
+                SetField(_anchor, If(value, ""))
+            End Set
+        End Property
+
         Public Property IsVisible As Boolean
             Get
                 Return _isVisible
@@ -484,6 +494,7 @@ Namespace Services
                 .FontFamily = FontFamily,
                 .Opacity = Opacity,
                 .RotationDegrees = RotationDegrees,
+                .Anchor = Anchor,
                 .IsVisible = IsVisible,
                 .HardnessPercent = HardnessPercent,
                 .FillKind = FillKind,
@@ -526,11 +537,23 @@ Namespace Services
         Public Property Sharpness As Single = 0
         Public Property NoiseReduction As Single = 0
         Public Property NoiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
+        Public Property DustScratches As Single = 0
+        Public Property Haze As Single = 0
+        Public Property AddNoise As Single = 0
+        Public Property [Structure] As Single = 0
+        Public Property Glow As Single = 0
         Public Property Vibrance As Single = 0
         Public Property Vignette As Single = 0
+        Public Property VignetteTransition As Single = 55
+        Public Property VignetteRoundness As Single = 0
+        Public Property VignetteFeather As Single = 70
+        Public Property VignetteCenterX As Single = 50
+        Public Property VignetteCenterY As Single = 50
         Public Property Grain As Single = 0
         Public Property BorderSize As Single = 0
         Public Property BorderColor As String = "#FFFFFFFF"
+        Public Property BorderCornerRadius As Single = 0
+        Public Property BorderEffect As String = "Einfach"
         Public Property Clarity As Single = 0
         Public Property CurveRgbPoints As String = "0,0;255,255"
         Public Property CurveRedPoints As String = "0,0;255,255"
@@ -584,7 +607,12 @@ Namespace Services
             Return Exposure <> 0 OrElse Brightness <> 0 OrElse Contrast <> 0 OrElse
                    Saturation <> 0 OrElse Vibrance <> 0 OrElse Highlights <> 0 OrElse ShadowsLevel <> 0 OrElse
                    Whites <> 0 OrElse Blacks <> 0 OrElse Temperature <> 0 OrElse Tint <> 0 OrElse
-                   Sharpness <> 0 OrElse NoiseReduction <> 0 OrElse Vignette <> 0 OrElse Grain <> 0 OrElse BorderSize <> 0 OrElse Clarity <> 0 OrElse
+                   Sharpness <> 0 OrElse NoiseReduction <> 0 OrElse DustScratches <> 0 OrElse Haze <> 0 OrElse
+                   AddNoise <> 0 OrElse [Structure] <> 0 OrElse Glow <> 0 OrElse Vignette <> 0 OrElse
+                   VignetteTransition <> 55 OrElse VignetteRoundness <> 0 OrElse VignetteFeather <> 70 OrElse
+                   VignetteCenterX <> 50 OrElse VignetteCenterY <> 50 OrElse
+                   Grain <> 0 OrElse BorderSize <> 0 OrElse BorderCornerRadius <> 0 OrElse
+                   Not String.Equals(BorderEffect, "Einfach", StringComparison.OrdinalIgnoreCase) OrElse Clarity <> 0 OrElse
                    Not IsIdentityCurve(CurveRgbPoints) OrElse Not IsIdentityCurve(CurveRedPoints) OrElse
                    Not IsIdentityCurve(CurveGreenPoints) OrElse Not IsIdentityCurve(CurveBluePoints) OrElse
                    Not IsIdentityCurve(CurveLuminancePoints) OrElse HasHslChanges() OrElse
@@ -619,10 +647,22 @@ Namespace Services
                 .Sharpness = Sharpness,
                 .NoiseReduction = NoiseReduction,
                 .NoiseReductionMethod = NoiseReductionMethod,
+                .DustScratches = DustScratches,
+                .Haze = Haze,
+                .AddNoise = AddNoise,
+                .Structure = [Structure],
+                .Glow = Glow,
                 .Vignette = Vignette,
+                .VignetteTransition = VignetteTransition,
+                .VignetteRoundness = VignetteRoundness,
+                .VignetteFeather = VignetteFeather,
+                .VignetteCenterX = VignetteCenterX,
+                .VignetteCenterY = VignetteCenterY,
                 .Grain = Grain,
                 .BorderSize = BorderSize,
                 .BorderColor = BorderColor,
+                .BorderCornerRadius = BorderCornerRadius,
+                .BorderEffect = BorderEffect,
                 .Clarity = Clarity,
                 .CurveRgbPoints = CurveRgbPoints,
                 .CurveRedPoints = CurveRedPoints,
@@ -670,6 +710,59 @@ Namespace Services
             }
         End Function
     End Class
+
+    Friend Module AnnotationLayoutHelpers
+        Private Function ClampPercent(value As Single, min As Single, max As Single) As Single
+            Return Math.Max(min, Math.Min(max, value))
+        End Function
+
+        Friend Function NormalizeAnnotationAnchor(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "TopLeft", "Top", "TopRight", "Left", "Center", "Right", "BottomLeft", "Bottom", "BottomRight"
+                    Return value.Trim()
+                Case Else
+                    Return "BottomRight"
+            End Select
+        End Function
+
+        Friend Function ComputeAnnotationRect(sourceWidth As Integer, sourceHeight As Integer, kind As String, annotation As ImageAnnotation) As SKRect
+            Dim width = Math.Max(1.0F, sourceWidth * ClampPercent(annotation.WidthPercent, 1, 100) / 100.0F)
+            Dim height = Math.Max(1.0F, sourceHeight * ClampPercent(annotation.HeightPercent, 1, 100) / 100.0F)
+            Dim normalizedKind = If(kind, "").Trim().ToLowerInvariant()
+            Dim x As Single
+            Dim y As Single
+
+            If normalizedKind = "watermark" Then
+                Dim offsetX = sourceWidth * ClampPercent(annotation.XPercent, -100, 100) / 100.0F
+                Dim offsetY = sourceHeight * ClampPercent(annotation.YPercent, -100, 100) / 100.0F
+                Select Case NormalizeAnnotationAnchor(annotation.Anchor)
+                    Case "TopLeft"
+                        x = offsetX : y = offsetY
+                    Case "Top"
+                        x = (sourceWidth - width) / 2.0F + offsetX : y = offsetY
+                    Case "TopRight"
+                        x = sourceWidth - width - offsetX : y = offsetY
+                    Case "Left"
+                        x = offsetX : y = (sourceHeight - height) / 2.0F + offsetY
+                    Case "Center"
+                        x = (sourceWidth - width) / 2.0F + offsetX : y = (sourceHeight - height) / 2.0F + offsetY
+                    Case "Right"
+                        x = sourceWidth - width - offsetX : y = (sourceHeight - height) / 2.0F + offsetY
+                    Case "BottomLeft"
+                        x = offsetX : y = sourceHeight - height - offsetY
+                    Case "Bottom"
+                        x = (sourceWidth - width) / 2.0F + offsetX : y = sourceHeight - height - offsetY
+                    Case Else
+                        x = sourceWidth - width - offsetX : y = sourceHeight - height - offsetY
+                End Select
+            Else
+                x = sourceWidth * ClampPercent(annotation.XPercent, -100, 100) / 100.0F
+                y = sourceHeight * ClampPercent(annotation.YPercent, -100, 100) / 100.0F
+            End If
+
+            Return New SKRect(x, y, x + width, y + height)
+        End Function
+    End Module
 
     Public Class ImageProcessor
 
@@ -969,6 +1062,12 @@ Namespace Services
             If adj.Clarity <> 0 Then
                 processed = ReplaceBitmap(processed, ApplyClarity(processed, adj.Clarity / 100.0F))
             End If
+            If adj.[Structure] <> 0 Then
+                processed = ReplaceBitmap(processed, ApplyStructure(processed, adj.[Structure] / 100.0F))
+            End If
+            If adj.Haze <> 0 Then
+                processed = ReplaceBitmap(processed, ApplyHaze(processed, adj.Haze / 100.0F))
+            End If
 
             If adj.NoiseReduction > 0 Then
                 If adj.NoiseReductionMethod = NoiseReductionMethod.Median Then
@@ -977,21 +1076,30 @@ Namespace Services
                     processed = ReplaceBitmap(processed, ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F))
                 End If
             End If
+            If adj.DustScratches <> 0 Then
+                processed = ReplaceBitmap(processed, ApplyDustScratches(processed, adj.DustScratches / 100.0F))
+            End If
+            If adj.Glow <> 0 Then
+                processed = ReplaceBitmap(processed, ApplyImageGlow(processed, adj.Glow / 100.0F))
+            End If
 
             If adj.Sharpness > 0 Then
                 processed = ReplaceBitmap(processed, ApplySharpness(processed, adj.Sharpness / 100.0F))
             End If
 
             If adj.Vignette <> 0 Then
-                processed = ReplaceBitmap(processed, ApplyVignette(processed, adj.Vignette / 100.0F))
+                processed = ReplaceBitmap(processed, ApplyVignette(processed, adj.Vignette / 100.0F, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY))
             End If
 
             If adj.Grain > 0 Then
                 processed = ReplaceBitmap(processed, ApplyGrain(processed, adj.Grain / 100.0F))
             End If
+            If adj.AddNoise > 0 Then
+                processed = ReplaceBitmap(processed, ApplyAddNoise(processed, adj.AddNoise / 100.0F))
+            End If
 
             If adj.BorderSize > 0 Then
-                processed = ReplaceBitmap(processed, ApplyBorder(processed, adj.BorderSize / 100.0F, adj.BorderColor))
+                processed = ReplaceBitmap(processed, ApplyBorder(processed, adj.BorderSize / 100.0F, adj.BorderColor, adj.BorderCornerRadius / 100.0F, adj.BorderEffect))
             End If
 
             Return processed
@@ -1021,7 +1129,10 @@ Namespace Services
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.NoiseReduction, adj.NoiseReductionMethod,
-                adj.Vibrance, adj.Vignette, adj.Grain, adj.BorderSize, adj.BorderColor, adj.Clarity,
+                adj.DustScratches, adj.Haze, adj.AddNoise, adj.[Structure], adj.Glow,
+                adj.Vibrance, adj.Vignette, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather,
+                adj.VignetteCenterX, adj.VignetteCenterY, adj.Grain, adj.BorderSize, adj.BorderColor,
+                adj.BorderCornerRadius, adj.BorderEffect, adj.Clarity,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
                 adj.RedHue, adj.RedSaturation, adj.OrangeHue, adj.OrangeSaturation, adj.YellowHue, adj.YellowSaturation,
                 adj.GreenHue, adj.GreenSaturation, adj.AquaHue, adj.AquaSaturation, adj.BlueHue, adj.BlueSaturation,
@@ -1230,11 +1341,11 @@ Namespace Services
                         Continue For
                     End If
 
-                    Dim x = source.Width * Clamp(annotation.XPercent, -100, 100) / 100.0F
-                    Dim y = source.Height * Clamp(annotation.YPercent, -100, 100) / 100.0F
-                    Dim maxWidth = Math.Max(1.0F, source.Width * Clamp(annotation.WidthPercent, 1, 100) / 100.0F)
-                    Dim maxHeight = Math.Max(1.0F, source.Height * Clamp(annotation.HeightPercent, 1, 100) / 100.0F)
-                    Dim rect = New SKRect(x, y, x + maxWidth, y + maxHeight)
+                    Dim rect = ComputeAnnotationRect(source.Width, source.Height, kind, annotation)
+                    Dim x = rect.Left
+                    Dim y = rect.Top
+                    Dim maxWidth = rect.Width
+                    Dim maxHeight = rect.Height
                     Dim fontSize = Math.Max(8.0F, source.Height * Clamp(annotation.FontSizePercent, 0.5F, 50) / 100.0F)
                     Dim alphaFactor = Clamp(annotation.Opacity, 0, 100) / 100.0F
                     Dim fill = ApplyAlpha(ParseColor(annotation.FillColor, SKColors.White), alphaFactor)
@@ -1298,13 +1409,20 @@ Namespace Services
                 Case "image", "selectionimage"
                     DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth)
                 Case "svg"
-                    DrawSvgAnnotation(canvas, annotation.ImagePath, rect, fill, stroke, strokeWidth)
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawSvgAnnotation(canvas, annotation.ImagePath, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "watermark"
-                    Dim watermark = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
-                    DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily)
+                    If Not String.IsNullOrWhiteSpace(annotation.ImagePath) Then
+                        DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth)
+                    Else
+                        Dim watermark = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
+                        Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    End If
                 Case Else
                     If Not String.IsNullOrWhiteSpace(annotation.Text) Then
-                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily)
+                        Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                     End If
             End Select
         End Sub
@@ -1331,8 +1449,8 @@ Namespace Services
             ' Objektgröße), dass er komplett unter dem später deckend gezeichneten Objekt
             ' verschwand - "Glow wirkungslos"/"Shadow-Stärke ohne Auswirkung".
             Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
-            Dim glowBlurPx = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 0.4F
-            Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * 0.4F
+            Dim glowBlurPx = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 0.8F
+            Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * 0.6F
             Dim offsetX = objSize * annotation.ShadowOffsetXPercent / 100.0F
             Dim offsetY = objSize * annotation.ShadowOffsetYPercent / 100.0F
 
@@ -1426,7 +1544,7 @@ Namespace Services
             End SyncLock
         End Function
 
-        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String)
+        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             If strokeWidth > 0 Then
                 Using strokePaint = New SKPaint With {
                     .Color = stroke,
@@ -1447,6 +1565,10 @@ Namespace Services
                 .IsAntialias = True,
                 .Style = SKPaintStyle.Fill
             }
+                Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
+                If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
+                    fillPaint.Shader = CreateFillGradientShader(bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+                End If
                 DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, fillPaint)
             End Using
         End Sub
@@ -1488,24 +1610,32 @@ Namespace Services
         Private Shared ReadOnly _shapePathCache As New Dictionary(Of String, ShapePathData)()
         Private Shared ReadOnly _shapePathCacheLock As New Object()
 
-        Private Shared Sub DrawSvgAnnotation(canvas As SKCanvas, iconPath As String, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single)
+        Private Shared Sub DrawSvgAnnotation(canvas As SKCanvas, iconPath As String, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             If String.IsNullOrWhiteSpace(iconPath) Then Return
             Dim shape = GetShapePath(iconPath)
             If shape Is Nothing OrElse shape.Path.IsEmpty OrElse shape.Bounds.Width <= 0 OrElse shape.Bounds.Height <= 0 Then Return
 
-            Dim fitRect = FitRectKeepingAspectRatio(rect, CInt(Math.Ceiling(shape.Bounds.Width)), CInt(Math.Ceiling(shape.Bounds.Height)))
-            Dim scaleX = fitRect.Width / shape.Bounds.Width
-            Dim scaleY = fitRect.Height / shape.Bounds.Height
+            Dim scaleX = rect.Width / shape.Bounds.Width
+            Dim scaleY = rect.Height / shape.Bounds.Height
 
             canvas.Save()
-            canvas.Translate(fitRect.Left, fitRect.Top)
+            canvas.Translate(rect.Left, rect.Top)
             canvas.Scale(scaleX, scaleY)
             canvas.Translate(-shape.Bounds.Left, -shape.Bounds.Top)
 
+            Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
             If fill.Alpha > 0 Then
-                Using fillPaint = New SKPaint With {.Color = fill, .Style = SKPaintStyle.Fill, .IsAntialias = True}
-                    canvas.DrawPath(shape.Path, fillPaint)
-                End Using
+                If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
+                    Using shader = CreateFillGradientShader(rect, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+                        Using fillPaint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                            canvas.DrawPath(shape.Path, fillPaint)
+                        End Using
+                    End Using
+                Else
+                    Using fillPaint = New SKPaint With {.Color = fill, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                        canvas.DrawPath(shape.Path, fillPaint)
+                    End Using
+                End If
             End If
             If strokeWidth > 0 Then
                 Dim adjustedStroke = strokeWidth / Math.Max(0.0001F, Math.Min(scaleX, scaleY))
@@ -2228,6 +2358,86 @@ Namespace Services
             End Using
         End Function
 
+        Private Shared Function ApplyStructure(source As SKBitmap, amount As Single) As SKBitmap
+            Return ApplyClarity(source, Clamp(amount, -1, 1) * 0.65F)
+        End Function
+
+        Private Shared Function ApplyHaze(source As SKBitmap, amount As Single) As SKBitmap
+            Dim strength = Clamp(amount, -1, 1)
+            If Math.Abs(strength) <= 0.001F Then Return source
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            For y As Integer = 0 To source.Height - 1
+                For x As Integer = 0 To source.Width - 1
+                    Dim c = source.GetPixel(x, y)
+                    If strength > 0 Then
+                        Dim s = strength * 0.45F
+                        result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + (255 - c.Red) * s),
+                                                          ClampToByte(c.Green + (255 - c.Green) * s),
+                                                          ClampToByte(c.Blue + (255 - c.Blue) * s),
+                                                          c.Alpha))
+                    Else
+                        Dim s = -strength
+                        Dim contrast = 1.0F + s * 0.55F
+                        result.SetPixel(x, y, New SKColor(ClampToByte((c.Red - 128) * contrast + 128 - s * 10),
+                                                          ClampToByte((c.Green - 128) * contrast + 128 - s * 10),
+                                                          ClampToByte((c.Blue - 128) * contrast + 128 - s * 10),
+                                                          c.Alpha))
+                    End If
+                Next
+            Next
+            Return result
+        End Function
+
+        Private Shared Function ApplyImageGlow(source As SKBitmap, amount As Single) As SKBitmap
+            Dim strength = Clamp(amount, -1, 1)
+            If Math.Abs(strength) <= 0.001F Then Return source
+            Using blurred = ApplyNoiseReduction(source, 0.8F)
+                Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+                For y As Integer = 0 To source.Height - 1
+                    For x As Integer = 0 To source.Width - 1
+                        Dim c = source.GetPixel(x, y)
+                        Dim b = blurred.GetPixel(x, y)
+                        If strength > 0 Then
+                            Dim s = strength * 0.55F
+                            result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + b.Red * s),
+                                                              ClampToByte(c.Green + b.Green * s),
+                                                              ClampToByte(c.Blue + b.Blue * s),
+                                                              c.Alpha))
+                        Else
+                            Dim s = -strength * 0.55F
+                            result.SetPixel(x, y, New SKColor(ClampToByte(c.Red - b.Red * s),
+                                                              ClampToByte(c.Green - b.Green * s),
+                                                              ClampToByte(c.Blue - b.Blue * s),
+                                                              c.Alpha))
+                        End If
+                    Next
+                Next
+                Return result
+            End Using
+        End Function
+
+        Private Shared Function ApplyDustScratches(source As SKBitmap, amount As Single) As SKBitmap
+            Dim strength = Clamp(amount, -1, 1)
+            If Math.Abs(strength) <= 0.001F Then Return source
+            If strength > 0 Then Return ApplyMedianBlur(source, strength * 0.75F)
+
+            Dim result = CloneBitmap(source)
+            Dim random = New Random(source.Width * 997 Xor source.Height * 331)
+            Dim count = CInt(Math.Round(source.Width * source.Height / 9000.0 * -strength))
+            Using canvas = New SKCanvas(result)
+                For i = 0 To count - 1
+                    Dim x = random.Next(0, source.Width)
+                    Dim y = random.Next(0, source.Height)
+                    Dim len = random.Next(2, Math.Max(3, CInt(12 + 30 * -strength)))
+                    Dim color = If(random.NextDouble() < 0.5, SKColors.White, SKColors.Black)
+                    Using paint = New SKPaint With {.Color = New SKColor(color.Red, color.Green, color.Blue, CByte(80 + 100 * -strength)), .StrokeWidth = Math.Max(1.0F, 1.5F * -strength), .IsAntialias = True}
+                        canvas.DrawLine(x, y, Math.Min(source.Width - 1, x + len), Math.Min(source.Height - 1, y + random.Next(-2, 3)), paint)
+                    End Using
+                Next
+            End Using
+            Return result
+        End Function
+
         Private Shared Function ApplyCurve(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If ImageAdjustments.IsIdentityCurve(adj.CurveRgbPoints) AndAlso ImageAdjustments.IsIdentityCurve(adj.CurveRedPoints) AndAlso
                ImageAdjustments.IsIdentityCurve(adj.CurveGreenPoints) AndAlso ImageAdjustments.IsIdentityCurve(adj.CurveBluePoints) AndAlso
@@ -2549,6 +2759,13 @@ Namespace Services
                         0.05F, 0.20F, 0.85F, 0, 10,
                         0, 0, 0, 1, 0
                     }
+                Case "bild auf alt", "alt", "antik", "vintage"
+                    matrix = New Single() {
+                        0.78F, 0.26F, 0.08F, 0, 18,
+                        0.18F, 0.74F, 0.10F, 0, 10,
+                        0.06F, 0.18F, 0.62F, 0, 2,
+                        0, 0, 0, 1, 0
+                    }
                 Case Else
                     Return source
             End Select
@@ -2566,26 +2783,46 @@ Namespace Services
             Return result
         End Function
 
-        Private Shared Function ApplyVignette(source As SKBitmap, amount As Single) As SKBitmap
+        Private Shared Function ApplyVignette(source As SKBitmap, amount As Single, transition As Single, roundness As Single, feather As Single, centerXPercent As Single, centerYPercent As Single) As SKBitmap
             Dim strength = Clamp(Math.Abs(amount), 0, 1)
             If strength <= 0 Then Return source
 
             Dim result = CloneBitmap(source)
-            Using canvas = New SKCanvas(result)
-                Dim center = New SKPoint(source.Width / 2.0F, source.Height / 2.0F)
-                Dim radius = CSng(Math.Sqrt(CDbl(source.Width) * source.Width + CDbl(source.Height) * source.Height) / 2.0)
-                Dim edgeColor = If(amount > 0,
-                                   New SKColor(0, 0, 0, ClampToByte(180 * strength)),
-                                   New SKColor(255, 255, 255, ClampToByte(120 * strength)))
-                Using shader = SKShader.CreateRadialGradient(center, radius,
-                                                             New SKColor() {SKColors.Transparent, edgeColor},
-                                                             New Single() {0.55F, 1.0F},
-                                                             SKShaderTileMode.Clamp)
-                    Using paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.SrcOver, .IsAntialias = True}
-                        canvas.DrawRect(New SKRect(0, 0, source.Width, source.Height), paint)
-                    End Using
-                End Using
-            End Using
+
+            Dim cx = source.Width * Clamp(centerXPercent, 0, 100) / 100.0F
+            Dim cy = source.Height * Clamp(centerYPercent, 0, 100) / 100.0F
+            Dim roundedness = Clamp(roundness, -100, 100) / 100.0F
+            Dim radiusX = source.Width * (0.52F - Math.Min(0, roundedness) * 0.18F)
+            Dim radiusY = source.Height * (0.52F + Math.Max(0, roundedness) * 0.18F)
+            Dim inner = 0.2F + Clamp(transition, 0, 100) / 100.0F * 0.55F
+            Dim softness = 0.04F + Clamp(feather, 0, 100) / 100.0F * 0.42F
+            Dim edgeAlpha = If(amount > 0, 255.0F, 220.0F) * strength
+            Dim darken = amount > 0
+
+            For y = 0 To result.Height - 1
+                For x = 0 To result.Width - 1
+                    Dim dx = (x - cx) / Math.Max(1.0F, radiusX)
+                    Dim dy = (y - cy) / Math.Max(1.0F, radiusY)
+                    Dim distance = CSng(Math.Sqrt(dx * dx + dy * dy))
+                    Dim t = Clamp((distance - inner) / softness, 0, 1)
+                    If t <= 0 Then Continue For
+                    t = t * t * (3.0F - 2.0F * t)
+
+                    Dim c = result.GetPixel(x, y)
+                    Dim mix = t * edgeAlpha / 255.0F
+                    If darken Then
+                        result.SetPixel(x, y, New SKColor(ClampToByte(c.Red * (1 - mix)),
+                                                          ClampToByte(c.Green * (1 - mix)),
+                                                          ClampToByte(c.Blue * (1 - mix)),
+                                                          c.Alpha))
+                    Else
+                        result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + (255 - c.Red) * mix),
+                                                          ClampToByte(c.Green + (255 - c.Green) * mix),
+                                                          ClampToByte(c.Blue + (255 - c.Blue) * mix),
+                                                          c.Alpha))
+                    End If
+                Next
+            Next
             Return result
         End Function
 
@@ -2611,20 +2848,85 @@ Namespace Services
             Return result
         End Function
 
-        Private Shared Function ApplyBorder(source As SKBitmap, sizePercent As Single, colorValue As String) As SKBitmap
+        Private Shared Function ApplyAddNoise(source As SKBitmap, amount As Single) As SKBitmap
+            Dim strength = Clamp(amount, 0, 1)
+            If strength <= 0 Then Return source
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim random = New Random(source.Width * 541 Xor source.Height * 877)
+            Dim amplitude = strength * 72.0
+            For y As Integer = 0 To source.Height - 1
+                For x As Integer = 0 To source.Width - 1
+                    Dim c = source.GetPixel(x, y)
+                    Dim noise = (random.NextDouble() * 2.0 - 1.0) * amplitude
+                    result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + noise),
+                                                      ClampToByte(c.Green + noise),
+                                                      ClampToByte(c.Blue + noise),
+                                                      c.Alpha))
+                Next
+            Next
+            Return result
+        End Function
+
+        Private Shared Function ApplyBorder(source As SKBitmap, sizePercent As Single, colorValue As String, cornerRadiusPercent As Single, effect As String) As SKBitmap
             Dim thickness = CInt(Math.Round(Math.Min(source.Width, source.Height) * Clamp(sizePercent, 0, 0.25F)))
             If thickness <= 0 Then Return source
 
             Dim result = CloneBitmap(source)
             Using canvas = New SKCanvas(result)
-                Using paint = New SKPaint With {.Color = ParseColor(colorValue, SKColors.White), .Style = SKPaintStyle.Fill, .IsAntialias = False}
-                    canvas.DrawRect(0, 0, source.Width, thickness, paint)
-                    canvas.DrawRect(0, source.Height - thickness, source.Width, thickness, paint)
-                    canvas.DrawRect(0, 0, thickness, source.Height, paint)
-                    canvas.DrawRect(source.Width - thickness, 0, thickness, source.Height, paint)
+                Dim color = ParseColor(colorValue, SKColors.White)
+                Dim normalized = If(effect, "Einfach").Trim().ToLowerInvariant()
+                Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = thickness, .IsAntialias = True}
+                    If normalized = "gestrichelt" Then
+                        paint.PathEffect = SKPathEffect.CreateDash(New Single() {thickness * 1.4F, thickness * 0.9F}, 0)
+                    End If
+                    Dim inset = thickness / 2.0F
+                    Dim rect = New SKRect(inset, inset, source.Width - inset, source.Height - inset)
+                    Dim radius = Math.Min(source.Width, source.Height) * Clamp(cornerRadiusPercent, 0, 1) * 0.25F
+                    If normalized = "gezackt" Then
+                        Using path = BuildZigZagBorderPath(rect, Math.Max(4, thickness))
+                            canvas.DrawPath(path, paint)
+                        End Using
+                    ElseIf radius > 0 Then
+                        canvas.DrawRoundRect(rect, radius, radius, paint)
+                    Else
+                        canvas.DrawRect(rect, paint)
+                    End If
                 End Using
             End Using
             Return result
+        End Function
+
+        Private Shared Function BuildZigZagBorderPath(rect As SKRect, stepSize As Single) As SKPath
+            Dim path = New SKPath()
+            Dim stepV = Math.Max(4.0F, stepSize)
+            path.MoveTo(rect.Left, rect.Top)
+            Dim x = rect.Left
+            Dim up = True
+            While x < rect.Right
+                x = Math.Min(rect.Right, x + stepV)
+                path.LineTo(x, If(up, rect.Top + stepV * 0.5F, rect.Top))
+                up = Not up
+            End While
+            Dim y = rect.Top
+            While y < rect.Bottom
+                y = Math.Min(rect.Bottom, y + stepV)
+                path.LineTo(If(up, rect.Right - stepV * 0.5F, rect.Right), y)
+                up = Not up
+            End While
+            x = rect.Right
+            While x > rect.Left
+                x = Math.Max(rect.Left, x - stepV)
+                path.LineTo(x, If(up, rect.Bottom - stepV * 0.5F, rect.Bottom))
+                up = Not up
+            End While
+            y = rect.Bottom
+            While y > rect.Top
+                y = Math.Max(rect.Top, y - stepV)
+                path.LineTo(If(up, rect.Left + stepV * 0.5F, rect.Left), y)
+                up = Not up
+            End While
+            path.Close()
+            Return path
         End Function
 
         Private Shared Function Clamp(value As Single, min As Single, max As Single) As Single

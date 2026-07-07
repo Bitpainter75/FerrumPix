@@ -211,6 +211,25 @@ Namespace Services
             End Using
         End Function
 
+        Public Function GetAllTags() As List(Of String)
+            Dim result As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT Tags FROM ImageMeta WHERE Tags<>''"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            If reader.IsDBNull(0) Then Continue While
+                            For Each tag In ParseTags(reader.GetString(0))
+                                result.Add(tag)
+                            Next
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result.OrderBy(Function(t) t, StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
         Public Sub SetTags(filePath As String, tags As IEnumerable(Of String))
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()

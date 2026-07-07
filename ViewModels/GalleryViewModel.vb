@@ -898,7 +898,11 @@ Namespace ViewModels
         Public ReadOnly Property PasteCommand As ICommand
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
         Public ReadOnly Property ExportSelectedCommand As ICommand
+        Public ReadOnly Property ResizeSelectedCommand As ICommand
         Public ReadOnly Property BatchConvertSelectedCommand As ICommand
+        Public ReadOnly Property RemoveMetadataSelectedCommand As ICommand
+        Public ReadOnly Property IncreaseThumbnailSizeCommand As ICommand
+        Public ReadOnly Property DecreaseThumbnailSizeCommand As ICommand
         Public ReadOnly Property SetFilterFavoriteCommand As ICommand
         Public ReadOnly Property SetFilterRatingCommand As ICommand
         Public ReadOnly Property SetFilterTypeCommand As ICommand
@@ -1068,7 +1072,11 @@ Namespace ViewModels
             PasteCommand = ReactiveCommand.Create(Sub() PasteIntoFolder(_currentFolder))
             DuplicateSelectedCommand = ReactiveCommand.Create(Sub() DuplicateSelected())
             ExportSelectedCommand = ReactiveCommand.Create(Sub() ExportSelected())
+            ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
             BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() BatchConvertSelected())
+            RemoveMetadataSelectedCommand = ReactiveCommand.Create(Sub() RemoveMetadataSelected())
+            IncreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize += 24)
+            DecreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize -= 24)
             SetSelectedRatingCommand = ReactiveCommand.Create(Of String)(Sub(r) SetSelectedRating(r))
             SetFilterFavoriteCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterFavorite = v)
             SetFilterRatingCommand = ReactiveCommand.Create(Of String)(Sub(v)
@@ -1580,6 +1588,10 @@ Namespace ViewModels
                                                           item.IsFavorite = If(m IsNot Nothing, m.IsFavorite, False)
                                                           item.Rating = If(m IsNot Nothing, m.Rating, 0)
                                                           item.Tags = If(m IsNot Nothing AndAlso m.Tags IsNot Nothing, m.Tags, New List(Of String)())
+                                                          If m IsNot Nothing Then
+                                                              item.ImageWidth = If(m.ImageWidth, 0)
+                                                              item.ImageHeight = If(m.ImageHeight, 0)
+                                                          End If
                                                           Return item
                                                       End Function).ToList()
 
@@ -2099,7 +2111,9 @@ Namespace ViewModels
                 Dim item = New ImageItem(meta.FilePath, thumbnailToken) With {
                     .IsFavorite = meta.IsFavorite,
                     .Rating = meta.Rating,
-                    .Tags = If(meta.Tags, New List(Of String)())
+                    .Tags = If(meta.Tags, New List(Of String)()),
+                    .ImageWidth = If(meta.ImageWidth, 0),
+                    .ImageHeight = If(meta.ImageHeight, 0)
                 }
                 _allItems.Add(item)
             Next
@@ -2155,7 +2169,9 @@ Namespace ViewModels
                 _allItems.Add(New ImageItem(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName) With {
                     .IsFavorite = meta.IsFavorite,
                     .Rating = meta.Rating,
-                    .Tags = If(meta.Tags, New List(Of String)())
+                    .Tags = If(meta.Tags, New List(Of String)()),
+                    .ImageWidth = If(meta.ImageWidth, 0),
+                    .ImageHeight = If(meta.ImageHeight, 0)
                 })
                 added = True
             Next
@@ -2487,6 +2503,9 @@ Namespace ViewModels
                                                                                                           item.ExifCamera = camera
                                                                                                           item.ExifIso = iso
                                                                                                           item.ExifAperture = aperture
+                                                                                                          item.HasExifMetadata = data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0
+                                                                                                          item.HasIptcMetadata = data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0
+                                                                                                          item.HasXmpMetadata = data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0
                                                                                                       End Sub)
                                                            Catch
                                                            End Try
@@ -3207,6 +3226,91 @@ Namespace ViewModels
         End Sub
 
         Private Shared ReadOnly BatchConvertExcludedExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".svg"}
+        Private Shared ReadOnly BatchImageEditWritableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
+
+        Private Async Sub ResizeSelected()
+            Dim targets = GetSelectedEditableImagePaths()
+            If targets.Count = 0 Then Return
+
+            Dim resize = Await _mainVm.ShowBatchResizeAsync(targets(0))
+            If resize Is Nothing Then Return
+
+            StatusText = "Ändere Bildgröße..."
+            Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
+                Function(source, temp)
+                    Dim width = resize.Width
+                    Dim height = resize.Height
+                    If resize.ScalePercent > 0 Then
+                        Dim size = ImageProcessor.GetImageSize(source)
+                        width = Math.Max(1, CInt(Math.Round(size.Width * resize.ScalePercent / 100.0)))
+                        height = Math.Max(1, CInt(Math.Round(size.Height * resize.ScalePercent / 100.0)))
+                    End If
+                    Dim adj = New ImageAdjustments With {
+                        .ResizeWidth = width,
+                        .ResizeHeight = height,
+                        .LockResizeAspect = resize.LockAspect,
+                        .ResizeInterpolation = resize.Interpolation
+                    }
+                    Return ImageProcessor.SaveImage(source, temp, adj, 95)
+                End Function)
+
+            StatusText = $"{changedCount} von {targets.Count} Datei(en) geändert"
+            RefreshAfterBatchFileRewrite(targets)
+        End Sub
+
+        Private Async Sub RemoveMetadataSelected()
+            Dim targets = GetSelectedEditableImagePaths()
+            If targets.Count = 0 Then Return
+
+            StatusText = "Entferne Metadaten..."
+            Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
+                Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95))
+
+            StatusText = $"{changedCount} von {targets.Count} Datei(en) bereinigt"
+            RefreshAfterBatchFileRewrite(targets)
+        End Sub
+
+        Private Function GetSelectedEditableImagePaths() As List(Of String)
+            Return GetSelectedPaths().
+                Where(Function(p) File.Exists(p) AndAlso BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(p).ToLowerInvariant())).
+                ToList()
+        End Function
+
+        Private Async Function RewriteImagesInPlaceAsync(targets As List(Of String), writer As Func(Of String, String, Boolean)) As Task(Of Integer)
+            Dim changedCount = 0
+            Dim errorMessage As String = Nothing
+            Try
+                Await Task.Run(Sub()
+                    For Each source In targets
+                        Dim ext = IO.Path.GetExtension(source)
+                        Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-{Guid.NewGuid():N}{ext}")
+                        Try
+                            If writer(source, temp) Then
+                                File.Copy(temp, source, True)
+                                changedCount += 1
+                                ExifService.Invalidate(source)
+                            End If
+                        Finally
+                            Try
+                                If File.Exists(temp) Then File.Delete(temp)
+                            Catch
+                            End Try
+                        End Try
+                    Next
+                End Sub)
+            Catch ex As Exception
+                errorMessage = ex.Message
+            End Try
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Bildverarbeitung fehlgeschlagen", errorMessage)
+            Return changedCount
+        End Function
+
+        Private Sub RefreshAfterBatchFileRewrite(paths As IEnumerable(Of String))
+            For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso paths.Contains(i.FilePath, StringComparer.OrdinalIgnoreCase))
+                item.EvictThumbnail()
+            Next
+            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then LoadFolderImages(_currentFolder)
+        End Sub
 
         Private Async Sub BatchConvertSelected()
             Dim targets = GetSelectedPaths().

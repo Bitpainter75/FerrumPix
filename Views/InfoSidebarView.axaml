@@ -33,7 +33,7 @@
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
                 <StackPanel Spacing="18">
-                    <StackPanel Spacing="18" IsVisible="{Binding IsInfoTabGeneral}">
+                    <StackPanel Spacing="18" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
                         <StackPanel Spacing="10">
                             <TextBlock Text="Bild" FontSize="14" FontWeight="SemiBold"/>
                             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
@@ -93,10 +93,13 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBox Text="{Binding NewTagText}"
-                                         Watermark="Stichwort hinzufügen…"
-                                         FontSize="11"
-                                         Padding="8,5"/>
+                                <AutoCompleteBox Text="{Binding NewTagText, Mode=TwoWay}"
+                                                 ItemsSource="{Binding TagSuggestions}"
+                                                 Watermark="Stichwort hinzufügen…"
+                                                 FilterMode="Contains"
+                                                 MinimumPrefixLength="0"
+                                                 FontSize="11"
+                                                 Padding="8,5"/>
                                 <Button Grid.Column="1" Classes="ghost" Padding="10,5" Margin="6,0,0,0"
                                         Command="{Binding AddTagCommand}">
                                     <TextBlock Text="+ Hinzufügen" FontSize="11"/>
@@ -106,7 +109,7 @@
 
                     </StackPanel>
 
-                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabExif}">
+                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabExif}" Margin="0,0,12,0">
                         <TextBlock Text="EXIF" FontSize="14" FontWeight="SemiBold"/>
                         <ItemsControl ItemsSource="{Binding ExifInfo.ExifTags}">
                             <ItemsControl.ItemsPanel>
@@ -127,7 +130,7 @@
                         </ItemsControl>
                     </StackPanel>
 
-                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabIptc}">
+                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabIptc}" Margin="0,0,12,0">
                         <TextBlock Text="IPTC" FontSize="14" FontWeight="SemiBold"/>
                         <ItemsControl ItemsSource="{Binding ExifInfo.IptcTags}">
                             <ItemsControl.ItemsPanel>
@@ -148,7 +151,7 @@
                         </ItemsControl>
                     </StackPanel>
 
-                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabXmp}">
+                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabXmp}" Margin="0,0,12,0">
                         <TextBlock Text="XMP" FontSize="14" FontWeight="SemiBold"/>
                         <ItemsControl ItemsSource="{Binding ExifInfo.XmpTags}">
                             <ItemsControl.ItemsPanel>

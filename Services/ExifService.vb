@@ -103,6 +103,13 @@ Namespace Services
             Return CloneExifData(freshData)
         End Function
 
+        Public Shared Sub Invalidate(imagePath As String)
+            If String.IsNullOrWhiteSpace(imagePath) Then Return
+            SyncLock _cacheLock
+                _cache.Remove(imagePath)
+            End SyncLock
+        End Sub
+
         Private Shared Function CloneExifData(source As ExifData) As ExifData
             Return New ExifData With {
                 .FileName = source.FileName,

@@ -20,6 +20,9 @@ Namespace Controls
         Public Shared ReadOnly ValueProperty As StyledProperty(Of Double) =
             AvaloniaProperty.Register(Of RoundSlider, Double)(NameOf(Value), 0, defaultBindingMode:=BindingMode.TwoWay)
 
+        Public Shared ReadOnly DefaultValueProperty As StyledProperty(Of Double) =
+            AvaloniaProperty.Register(Of RoundSlider, Double)(NameOf(DefaultValue), 0)
+
         Public Shared ReadOnly TrackBrushProperty As StyledProperty(Of IBrush) =
             AvaloniaProperty.Register(Of RoundSlider, IBrush)(NameOf(TrackBrush), New SolidColorBrush(Color.Parse("#26313B")))
 
@@ -89,6 +92,15 @@ Namespace Controls
             End Get
             Set(value As Double)
                 SetValue(ValueProperty, ClampValue(value))
+            End Set
+        End Property
+
+        Public Property DefaultValue As Double
+            Get
+                Return GetValue(DefaultValueProperty)
+            End Get
+            Set(value As Double)
+                SetValue(DefaultValueProperty, value)
             End Set
         End Property
 
@@ -162,6 +174,11 @@ Namespace Controls
         Protected Overrides Sub OnPointerPressed(e As PointerPressedEventArgs)
             MyBase.OnPointerPressed(e)
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
+            If e.ClickCount >= 2 Then
+                Value = ClampValue(DefaultValue)
+                e.Handled = True
+                Return
+            End If
             _isDragging = True
             _dragStartX = e.GetPosition(Me).X
             _dragStartValue = Value
@@ -193,7 +210,7 @@ Namespace Controls
 
         Protected Overrides Sub OnPointerWheelChanged(e As PointerWheelEventArgs)
             MyBase.OnPointerWheelChanged(e)
-            Dim increment = If(WheelIncrement > 0, WheelIncrement, Math.Max(1.0, (Maximum - Minimum) * 0.01))
+            Dim increment = If(WheelIncrement > 0, WheelIncrement, Math.Max(0.1, (Maximum - Minimum) * 0.0025))
             Value = ClampValue(Value + e.Delta.Y * increment)
             e.Handled = True
         End Sub

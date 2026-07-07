@@ -45,6 +45,13 @@ Namespace ViewModels
         Private _dialogSearchRatingMin As Integer = -1
         Private ReadOnly _dialogSearchRatings As New HashSet(Of Integer)()
         Private _dialogSearchConditionCombinator As String = "AND"
+        Private _dialogBatchResizeWidthText As String = ""
+        Private _dialogBatchResizeHeightText As String = ""
+        Private _dialogBatchResizeLockAspect As Boolean = True
+        Private _dialogBatchResizeInterpolation As ResizeInterpolationMode = ResizeInterpolationMode.Bilinear
+        Private _dialogBatchResizeScalePercent As Integer = 0
+        Private _dialogBatchResizeSourceWidth As Integer = 0
+        Private _dialogBatchResizeSourceHeight As Integer = 0
 
         Public Property Gallery As GalleryViewModel
         Public Property Viewer As ViewerViewModel
@@ -686,6 +693,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsFileConflict))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchRename))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSearch))
+                Me.RaisePropertyChanged(NameOf(DialogShowsBatchResize))
                 Me.RaisePropertyChanged(NameOf(DialogShowsStandardMessage))
                 Me.RaisePropertyChanged(NameOf(DialogUsesWideLayout))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
@@ -710,7 +718,8 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.FileConflict AndAlso
                        _dialogKind <> AppDialogKind.BatchRename AndAlso
                        _dialogKind <> AppDialogKind.Search AndAlso
-                       _dialogKind <> AppDialogKind.BatchConvert
+                       _dialogKind <> AppDialogKind.BatchConvert AndAlso
+                       _dialogKind <> AppDialogKind.BatchResize
             End Get
         End Property
 
@@ -740,15 +749,21 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property DialogShowsBatchResize As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.BatchResize
+            End Get
+        End Property
+
         Public ReadOnly Property DialogUsesWideLayout As Boolean
             Get
-                Return DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch
+                Return DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch OrElse DialogShowsBatchResize
             End Get
         End Property
 
         Public ReadOnly Property DialogShowsStandardMessage As Boolean
             Get
-                Return _dialogKind <> AppDialogKind.FileConflict AndAlso _dialogKind <> AppDialogKind.BatchRename AndAlso _dialogKind <> AppDialogKind.Search
+                Return _dialogKind <> AppDialogKind.FileConflict AndAlso _dialogKind <> AppDialogKind.BatchRename AndAlso _dialogKind <> AppDialogKind.Search AndAlso _dialogKind <> AppDialogKind.BatchResize
             End Get
         End Property
 
@@ -776,6 +791,187 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property DialogBatchResizeInterpolationOptions As IReadOnlyList(Of String)
+            Get
+                Return New String() {"Nächstgelegen", "Bilinear", "Bikubisch"}
+            End Get
+        End Property
+
+        Public Property DialogBatchResizeWidthText As String
+            Get
+                Return _dialogBatchResizeWidthText
+            End Get
+            Set(value As String)
+                _dialogBatchResizeScalePercent = 0
+                Dim normalized = NormalizeResizeDimensionText(value)
+                If Me.RaiseAndSetIfChanged(_dialogBatchResizeWidthText, normalized) Then
+                    If _dialogBatchResizeLockAspect Then UpdateDialogBatchResizeHeightFromWidth()
+                End If
+            End Set
+        End Property
+
+        Public Property DialogBatchResizeHeightText As String
+            Get
+                Return _dialogBatchResizeHeightText
+            End Get
+            Set(value As String)
+                _dialogBatchResizeScalePercent = 0
+                Dim normalized = NormalizeResizeDimensionText(value)
+                If Me.RaiseAndSetIfChanged(_dialogBatchResizeHeightText, normalized) Then
+                    If _dialogBatchResizeLockAspect Then UpdateDialogBatchResizeWidthFromHeight()
+                End If
+            End Set
+        End Property
+
+        Public Property DialogBatchResizeLockAspect As Boolean
+            Get
+                Return _dialogBatchResizeLockAspect
+            End Get
+            Set(value As Boolean)
+                If Me.RaiseAndSetIfChanged(_dialogBatchResizeLockAspect, value) AndAlso value Then
+                    If Not String.IsNullOrWhiteSpace(_dialogBatchResizeWidthText) Then
+                        UpdateDialogBatchResizeHeightFromWidth()
+                    ElseIf Not String.IsNullOrWhiteSpace(_dialogBatchResizeHeightText) Then
+                        UpdateDialogBatchResizeWidthFromHeight()
+                    End If
+                End If
+            End Set
+        End Property
+
+        Public Property DialogBatchResizeInterpolationLabel As String
+            Get
+                Select Case _dialogBatchResizeInterpolation
+                    Case ResizeInterpolationMode.Nearest
+                        Return "Nächstgelegen"
+                    Case ResizeInterpolationMode.Bicubic
+                        Return "Bikubisch"
+                    Case Else
+                        Return "Bilinear"
+                End Select
+            End Get
+            Set(value As String)
+                Select Case value
+                    Case "Nächstgelegen"
+                        _dialogBatchResizeInterpolation = ResizeInterpolationMode.Nearest
+                    Case "Bikubisch"
+                        _dialogBatchResizeInterpolation = ResizeInterpolationMode.Bicubic
+                    Case Else
+                        _dialogBatchResizeInterpolation = ResizeInterpolationMode.Bilinear
+                End Select
+                Me.RaisePropertyChanged(NameOf(DialogBatchResizeInterpolationLabel))
+            End Set
+        End Property
+
+        Public Sub SetDialogBatchResizePreset(preset As String)
+            _dialogBatchResizeScalePercent = 0
+            Select Case If(preset, "")
+                Case "Original"
+                    If _dialogBatchResizeSourceWidth > 0 AndAlso _dialogBatchResizeSourceHeight > 0 Then
+                        _dialogBatchResizeWidthText = _dialogBatchResizeSourceWidth.ToString(CultureInfo.InvariantCulture)
+                        _dialogBatchResizeHeightText = _dialogBatchResizeSourceHeight.ToString(CultureInfo.InvariantCulture)
+                    Else
+                        _dialogBatchResizeWidthText = ""
+                        _dialogBatchResizeHeightText = ""
+                    End If
+                Case "75%"
+                    _dialogBatchResizeScalePercent = 75
+                    SetDialogBatchResizeTextsFromScale(_dialogBatchResizeScalePercent)
+                Case "50%"
+                    _dialogBatchResizeScalePercent = 50
+                    SetDialogBatchResizeTextsFromScale(_dialogBatchResizeScalePercent)
+                Case "25%"
+                    _dialogBatchResizeScalePercent = 25
+                    SetDialogBatchResizeTextsFromScale(_dialogBatchResizeScalePercent)
+                Case "UHD"
+                    _dialogBatchResizeWidthText = "3840"
+                    _dialogBatchResizeHeightText = "2160"
+                Case "Full-HD"
+                    _dialogBatchResizeWidthText = "1920"
+                    _dialogBatchResizeHeightText = "1080"
+                Case "SD"
+                    _dialogBatchResizeWidthText = "1280"
+                    _dialogBatchResizeHeightText = "720"
+                Case Else
+                    Dim edge As Integer
+                    If Integer.TryParse(preset, edge) AndAlso edge > 0 Then
+                        _dialogBatchResizeWidthText = edge.ToString(CultureInfo.InvariantCulture)
+                        _dialogBatchResizeHeightText = ""
+                        If _dialogBatchResizeLockAspect Then UpdateDialogBatchResizeHeightFromWidth()
+                    End If
+            End Select
+            RaiseDialogBatchResizeProperties()
+        End Sub
+
+        Private Sub RaiseDialogBatchResizeProperties()
+            Me.RaisePropertyChanged(NameOf(DialogBatchResizeWidthText))
+            Me.RaisePropertyChanged(NameOf(DialogBatchResizeHeightText))
+            Me.RaisePropertyChanged(NameOf(DialogBatchResizeLockAspect))
+            Me.RaisePropertyChanged(NameOf(DialogBatchResizeInterpolationLabel))
+        End Sub
+
+        Private Shared Function NormalizeResizeDimensionText(value As String) As String
+            If String.IsNullOrWhiteSpace(value) Then Return ""
+
+            Dim parsed As Integer
+            If Integer.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed) OrElse
+               Integer.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.CurrentCulture, parsed) Then
+                Return Math.Max(0, Math.Min(50000, parsed)).ToString(CultureInfo.InvariantCulture)
+            End If
+
+            Return ""
+        End Function
+
+        Private Shared Function ParseResizeDimension(value As String) As Integer
+            Dim parsed As Integer
+            If Integer.TryParse(If(value, "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed) OrElse
+               Integer.TryParse(If(value, "").Trim(), NumberStyles.Integer, CultureInfo.CurrentCulture, parsed) Then
+                Return Math.Max(0, Math.Min(50000, parsed))
+            End If
+
+            Return 0
+        End Function
+
+        Private Sub UpdateDialogBatchResizeHeightFromWidth()
+            If _dialogBatchResizeSourceWidth <= 0 OrElse _dialogBatchResizeSourceHeight <= 0 Then Return
+
+            Dim width = ParseResizeDimension(_dialogBatchResizeWidthText)
+            If width <= 0 Then
+                _dialogBatchResizeHeightText = ""
+            Else
+                Dim height = Math.Max(1, CInt(Math.Round(width * _dialogBatchResizeSourceHeight / CDbl(_dialogBatchResizeSourceWidth))))
+                _dialogBatchResizeHeightText = height.ToString(CultureInfo.InvariantCulture)
+            End If
+
+            Me.RaisePropertyChanged(NameOf(DialogBatchResizeHeightText))
+        End Sub
+
+        Private Sub UpdateDialogBatchResizeWidthFromHeight()
+            If _dialogBatchResizeSourceWidth <= 0 OrElse _dialogBatchResizeSourceHeight <= 0 Then Return
+
+            Dim height = ParseResizeDimension(_dialogBatchResizeHeightText)
+            If height <= 0 Then
+                _dialogBatchResizeWidthText = ""
+            Else
+                Dim width = Math.Max(1, CInt(Math.Round(height * _dialogBatchResizeSourceWidth / CDbl(_dialogBatchResizeSourceHeight))))
+                _dialogBatchResizeWidthText = width.ToString(CultureInfo.InvariantCulture)
+            End If
+
+            Me.RaisePropertyChanged(NameOf(DialogBatchResizeWidthText))
+        End Sub
+
+        Private Sub SetDialogBatchResizeTextsFromScale(scalePercent As Integer)
+            If _dialogBatchResizeSourceWidth <= 0 OrElse _dialogBatchResizeSourceHeight <= 0 OrElse scalePercent <= 0 Then
+                _dialogBatchResizeWidthText = ""
+                _dialogBatchResizeHeightText = ""
+                Return
+            End If
+
+            Dim width = Math.Max(1, CInt(Math.Round(_dialogBatchResizeSourceWidth * scalePercent / 100.0)))
+            Dim height = Math.Max(1, CInt(Math.Round(_dialogBatchResizeSourceHeight * scalePercent / 100.0)))
+            _dialogBatchResizeWidthText = width.ToString(CultureInfo.InvariantCulture)
+            _dialogBatchResizeHeightText = height.ToString(CultureInfo.InvariantCulture)
+        End Sub
+
         Public Async Function ShowMessageAsync(titleText As String, messageText As String, Optional confirmText As String = "OK") As Task
             Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "", confirmText, "")
         End Function
@@ -787,6 +983,54 @@ Namespace ViewModels
 
         Public Function ShowInputAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of String)
             Return ShowDialogAsync(kind, titleText, messageText, initialText, confirmText, cancelText)
+        End Function
+
+        Public Async Function ShowBatchResizeAsync(Optional samplePath As String = Nothing) As Task(Of BatchResizeResult)
+            _dialogBatchResizeWidthText = ""
+            _dialogBatchResizeHeightText = ""
+            _dialogBatchResizeLockAspect = True
+            _dialogBatchResizeInterpolation = ResizeInterpolationMode.Bilinear
+            _dialogBatchResizeScalePercent = 0
+            _dialogBatchResizeSourceWidth = 0
+            _dialogBatchResizeSourceHeight = 0
+
+            If Not String.IsNullOrWhiteSpace(samplePath) AndAlso File.Exists(samplePath) Then
+                Try
+                    Dim size = ImageProcessor.GetImageSize(samplePath)
+                    _dialogBatchResizeSourceWidth = size.Width
+                    _dialogBatchResizeSourceHeight = size.Height
+                Catch
+                End Try
+            End If
+
+            RaiseDialogBatchResizeProperties()
+
+            Dim result = Await ShowDialogAsync(AppDialogKind.BatchResize,
+                                               "Bildgröße ändern",
+                                               "Lege Zielgröße und Neuberechnung für die ausgewählten Bilder fest.",
+                                               "",
+                                               "Anwenden",
+                                               "Abbrechen")
+            If result Is Nothing Then Return Nothing
+            Dim width = ParseResizeDimension(_dialogBatchResizeWidthText)
+            Dim height = ParseResizeDimension(_dialogBatchResizeHeightText)
+
+            If _dialogBatchResizeLockAspect AndAlso width > 0 AndAlso height <= 0 AndAlso _dialogBatchResizeSourceWidth > 0 AndAlso _dialogBatchResizeSourceHeight > 0 Then
+                height = Math.Max(1, CInt(Math.Round(width * _dialogBatchResizeSourceHeight / CDbl(_dialogBatchResizeSourceWidth))))
+            End If
+
+            If _dialogBatchResizeLockAspect AndAlso height > 0 AndAlso width <= 0 AndAlso _dialogBatchResizeSourceWidth > 0 AndAlso _dialogBatchResizeSourceHeight > 0 Then
+                width = Math.Max(1, CInt(Math.Round(height * _dialogBatchResizeSourceWidth / CDbl(_dialogBatchResizeSourceHeight))))
+            End If
+
+            If _dialogBatchResizeScalePercent <= 0 AndAlso width <= 0 AndAlso height <= 0 Then Return Nothing
+            Return New BatchResizeResult With {
+                .Width = width,
+                .Height = height,
+                .ScalePercent = _dialogBatchResizeScalePercent,
+                .LockAspect = _dialogBatchResizeLockAspect,
+                .Interpolation = _dialogBatchResizeInterpolation
+            }
         End Function
 
         Public Async Function ShowSearchDialogAsync(initialText As String) As Task(Of SearchDialogResult)
@@ -968,6 +1212,8 @@ Namespace ViewModels
                 CompleteDialog("BatchRename")
             ElseIf DialogShowsSearch Then
                 CompleteDialog("Search")
+            ElseIf DialogShowsBatchResize Then
+                CompleteDialog("BatchResize")
             Else
                 CompleteDialog(DialogInputText)
             End If

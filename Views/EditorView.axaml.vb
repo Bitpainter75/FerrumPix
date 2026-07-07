@@ -166,15 +166,12 @@ Namespace Views
             Return String.Equals(mainVm?.Settings?.ViewerFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
         End Function
 
-        Private Async Sub PlacePendingImageAsync(xPercent As Double, yPercent As Double)
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing Then Return
-
+        Private Async Function PickSingleImagePathAsync(title As String) As Task(Of String)
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
-                If topLevel Is Nothing Then Return
+                If topLevel Is Nothing Then Return Nothing
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
-                    .Title = "Bild auswählen",
+                    .Title = title,
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
                         New FilePickerFileType("Bilder") With {
@@ -182,14 +179,86 @@ Namespace Views
                         }
                     }
                 })
-                Dim file = files?.FirstOrDefault()
-                If file Is Nothing Then Return
-                Dim path = file.Path.LocalPath
+                Return files?.FirstOrDefault()?.Path.LocalPath
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        Private Async Sub PlacePendingImageAsync(xPercent As Double, yPercent As Double)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+
+            Try
+                Dim path = Await PickSingleImagePathAsync("Bild auswählen")
                 If Not String.IsNullOrWhiteSpace(path) Then
                     vm.AddImageAnnotationAt(path, xPercent, yPercent)
                 End If
             Catch
             End Try
+        End Sub
+
+        Public Async Sub OnWatermarkChooseImageClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            Dim path = Await PickSingleImagePathAsync("Wasserzeichen-Bild auswählen")
+            If Not String.IsNullOrWhiteSpace(path) Then vm.SetWatermarkImagePath(path)
+        End Sub
+
+        Public Sub OnWatermarkClearImageClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            vm.ClearWatermarkImagePath()
+        End Sub
+
+        Public Sub OnWatermarkSavePresetClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            vm.SaveCurrentWatermarkPreset()
+        End Sub
+
+        Public Sub OnWatermarkDeletePresetClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            vm.DeleteCurrentWatermarkPreset()
+        End Sub
+
+        Public Async Sub OnLoadLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                    .Title = "Lightroom-Preset laden",
+                    .AllowMultiple = False,
+                    .FileTypeFilter = New List(Of FilePickerFileType) From {
+                        New FilePickerFileType("Lightroom XMP") With {
+                            .Patterns = New String() {"*.xmp"}
+                        }
+                    }
+                })
+                Dim file = files?.FirstOrDefault()
+                If file Is Nothing Then Return
+                vm.SaveLightroomPresetToSettings(file.Path.LocalPath)
+                vm.ApplyLightroomPreset(file.Path.LocalPath)
+            Catch
+            End Try
+        End Sub
+
+        Public Sub OnApplySavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, FerrumPix.Services.LightroomPresetSettings)
+            If vm Is Nothing OrElse preset Is Nothing Then Return
+            vm.ApplyLightroomPreset(preset.Path)
+        End Sub
+
+        Public Sub OnRemoveSavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, FerrumPix.Services.LightroomPresetSettings)
+            If vm Is Nothing OrElse preset Is Nothing Then Return
+            vm.RemoveLightroomPresetFromSettings(preset.Path)
+            e.Handled = True
         End Sub
 
         Public Sub OnPanModeToggleClick(sender As Object, e As RoutedEventArgs)
@@ -210,11 +279,11 @@ Namespace Views
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
             If Not vm.CanShowBeforeAfter Then
-                vm.ShowBeforeImage = False
+                vm.SetComparisonVisibleFromUser(False)
                 UpdateSliderLayout()
                 Return
             End If
-            vm.ShowBeforeImage = Not vm.ShowBeforeImage
+            vm.SetComparisonVisibleFromUser(Not vm.ShowBeforeImage)
             UpdateSliderLayout()
         End Sub
 
@@ -336,11 +405,14 @@ Namespace Views
                      NameOf(EditorViewModel.AnnotationFontFamily),
                      NameOf(EditorViewModel.AnnotationOpacity),
                      NameOf(EditorViewModel.AnnotationRotation),
+                     NameOf(EditorViewModel.AnnotationAnchor),
                      NameOf(EditorViewModel.AnnotationIsVisible),
                      NameOf(EditorViewModel.AnnotationXPercent),
                      NameOf(EditorViewModel.AnnotationYPercent),
                      NameOf(EditorViewModel.AnnotationWidthPercent),
-                     NameOf(EditorViewModel.AnnotationHeightPercent)
+                     NameOf(EditorViewModel.AnnotationHeightPercent),
+                     NameOf(EditorViewModel.SelectedAnnotationImagePath),
+                     NameOf(EditorViewModel.ShowSelectedSvgOverlay)
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.CropLeft),
                      NameOf(EditorViewModel.CropTop),
@@ -1212,10 +1284,11 @@ Namespace Views
                 Return
             End If
 
-            Dim width = iw * vm.AnnotationWidthPercent / 100.0
-            Dim height = ih * vm.AnnotationHeightPercent / 100.0
-            Dim left = ix + iw * vm.AnnotationXPercent / 100.0
-            Dim top = iy + ih * vm.AnnotationYPercent / 100.0
+            Dim rectPercent = vm.GetSelectedAnnotationDisplayRectPercent()
+            Dim width = iw * rectPercent.Width / 100.0
+            Dim height = ih * rectPercent.Height / 100.0
+            Dim left = ix + iw * rectPercent.X / 100.0
+            Dim top = iy + ih * rectPercent.Y / 100.0
 
             Dim reachableRect = ClampOverlayRectToReachable(New Avalonia.Rect(left, top, width, height), New Avalonia.Rect(ix, iy, iw, ih))
             left = reachableRect.Left
@@ -1232,7 +1305,7 @@ Namespace Views
 
             Dim selectedKind = If(vm.SelectedAnnotationKind, "")
             Dim isTextLayer = selectedKind.Equals("Text", StringComparison.OrdinalIgnoreCase) OrElse
-                              selectedKind.Equals("Watermark", StringComparison.OrdinalIgnoreCase)
+                              (selectedKind.Equals("Watermark", StringComparison.OrdinalIgnoreCase) AndAlso vm.ShowTextContentControls)
             overlay.Cursor = If(isTextLayer, New Cursor(StandardCursorType.IBeam), New Cursor(StandardCursorType.SizeAll))
 
             If editor IsNot Nothing Then
@@ -1382,7 +1455,7 @@ Namespace Views
         Private Function IsSelectedAnnotationTextLayer(vm As EditorViewModel) As Boolean
             Dim selectedKind = If(vm.SelectedAnnotationKind, "")
             Return selectedKind.Equals("Text", StringComparison.OrdinalIgnoreCase) OrElse
-                   selectedKind.Equals("Watermark", StringComparison.OrdinalIgnoreCase)
+                   (selectedKind.Equals("Watermark", StringComparison.OrdinalIgnoreCase) AndAlso vm.ShowTextContentControls)
         End Function
 
         ''' Aktualisiert den Cursor des TextOverlay-Borders anhand der Anfasser-Zone unter dem

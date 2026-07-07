@@ -84,7 +84,7 @@ Namespace Models
 
         Public ReadOnly Property CanEditFile As Boolean
             Get
-                Return Not IsVectorFile AndAlso Not IsVideoFile
+                Return Not IsFolder AndAlso Not IsVectorFile AndAlso Not IsVideoFile
             End Get
         End Property
 
@@ -257,6 +257,42 @@ Namespace Models
             Set(value As Double?)
                 If Nullable.Equals(_exifAperture, value) Then Return
                 _exifAperture = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Private _hasExifMetadata As Boolean
+        Public Property HasExifMetadata As Boolean
+            Get
+                Return _hasExifMetadata
+            End Get
+            Set(value As Boolean)
+                If _hasExifMetadata = value Then Return
+                _hasExifMetadata = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Private _hasIptcMetadata As Boolean
+        Public Property HasIptcMetadata As Boolean
+            Get
+                Return _hasIptcMetadata
+            End Get
+            Set(value As Boolean)
+                If _hasIptcMetadata = value Then Return
+                _hasIptcMetadata = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Private _hasXmpMetadata As Boolean
+        Public Property HasXmpMetadata As Boolean
+            Get
+                Return _hasXmpMetadata
+            End Get
+            Set(value As Boolean)
+                If _hasXmpMetadata = value Then Return
+                _hasXmpMetadata = value
                 RaisePropertyChanged()
             End Set
         End Property

@@ -584,6 +584,26 @@
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
 
+    <Style Selector="TextBox.slider-value">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Padding" Value="2,0"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="MinHeight" Value="18"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="MinWidth" Value="28"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="TextBox.slider-value:focus /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+
     <Style Selector="Slider">
         <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="Background" Value="{DynamicResource FP.Border.Normal}"/>
@@ -836,6 +856,40 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderThickness" Value="2"/>
     </Style>
+    <Style Selector="StackPanel.gallery-hover-actions">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="Border.thumb-card:pointerover StackPanel.gallery-hover-actions">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+    <Style Selector="Button.gallery-overlay-btn">
+        <Setter Property="Background" Value="#8C0F1318"/>
+        <Setter Property="BorderBrush" Value="#66384450"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.gallery-overlay-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#B81A2028"/>
+        <Setter Property="BorderBrush" Value="#80536476"/>
+    </Style>
+    <Style Selector="Button.gallery-overlay-btn.danger:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#AA6E1D1D"/>
+        <Setter Property="BorderBrush" Value="#C08E2D2D"/>
+    </Style>
+    <Style Selector="Border.gallery-meta-pill">
+        <Setter Property="Background" Value="#960F1318"/>
+        <Setter Property="BorderBrush" Value="#66384450"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="Padding" Value="4"/>
+    </Style>
+    <Style Selector="Border.gallery-meta-pill.compact">
+        <Setter Property="Padding" Value="3"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
     <Style Selector="Border.card">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
@@ -863,6 +917,23 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Border.adjustment-group Button.icon-btn">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="Border.effect-subgroup">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Margin" Value="0,2,0,8"/>
+    </Style>
+    <Style Selector="TextBlock.subgroup-title">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Margin" Value="0,0,0,5"/>
     </Style>
     <Style Selector="Border.divider">
         <Setter Property="Width" Value="1"/>
@@ -959,13 +1030,22 @@
     <Style Selector="Button.favorite-btn:pointerover icons|SvgIcon.fav-heart.active">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent.Light}"/>
     </Style>
+    <Style Selector="Button.image-favorite-btn">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.image-favorite-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
     <Style Selector="icons|SvgIcon.fav-heart">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Secondary}"/>
     </Style>
     <Style Selector="icons|SvgIcon.fav-heart.active">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
-
     <!-- Bewertungssterne: inaktiv = leerer Stern, aktiv = gefüllter Stern in Akzentfarbe -->
     <Style Selector="Button.star-btn TextBlock">
         <Setter Property="Text" Value="☆"/>
@@ -1029,6 +1109,25 @@
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    </Style>
+    <Style Selector="TextBox.combo-like">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    </Style>
+    <Style Selector="TextBox.combo-like:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="TextBox.combo-like:focus /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="NumericUpDown.combo-like:pointerover">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
