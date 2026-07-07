@@ -73,6 +73,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet) for EXIF data
 - [QRCoder](https://github.com/codebude/QRCoder) for QR code objects
 - [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp) for video thumbnail extraction and playback
+- [Tabler-Icons](https://github.com/tabler/tabler-icons) A set of 6146 free MIT-licensed high-quality SVG icons
 
 ## Installation
 
