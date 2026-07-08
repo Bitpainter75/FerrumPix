@@ -51,7 +51,9 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border CornerRadius="12"
+                        <Border Classes="look-pill"
+                                Classes.active="{Binding IsLastApplied}"
+                                CornerRadius="12"
                                 Background="{DynamicResource FP.Bg.Input}"
                                 BorderBrush="{DynamicResource FP.Border.Normal}"
                                 BorderThickness="1"

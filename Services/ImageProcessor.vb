@@ -9,6 +9,7 @@ Imports SkiaSharp
 Imports Avalonia.Media.Imaging
 Imports Avalonia.Platform
 Imports System.Text.RegularExpressions
+Imports System.Runtime.InteropServices
 Imports QRCoder
 
 Namespace Services
@@ -1053,6 +1054,11 @@ Namespace Services
         End Function
 
         Private Shared Function ApplyColorAdjustments(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If adj.Exposure = 0 AndAlso adj.Temperature = 0 AndAlso adj.Tint = 0 AndAlso adj.Saturation = 0 AndAlso
+               adj.Vibrance = 0 AndAlso adj.Contrast = 0 AndAlso adj.Brightness = 0 Then
+                Return source
+            End If
+
             Dim exposure = CSng(Math.Pow(2.0, adj.Exposure / 100.0 * 4.0))
 
             ' Temperatur: warm = mehr Rot/weniger Blau, kalt = mehr Blau/weniger Rot
@@ -1232,6 +1238,28 @@ Namespace Services
             oldBitmap.Dispose()
             Return newBitmap
         End Function
+
+        ''' Kopiert den rohen Pixelspeicher eines Bgra8888-Bitmaps in ein verwaltetes Byte-Array, damit
+        ''' Pixel-Loops per Array-Index statt über SkiaSharps P/Invoke-lastiges GetPixel/SetPixel
+        ''' laufen können (bei mehreren Millionen Pixeln ein erheblicher Geschwindigkeitsunterschied).
+        ''' Liefert False bei jedem anderen Farbformat - die Pipeline erzeugt Bitmaps praktisch immer
+        ''' als Bgra8888 (siehe DecodeOriented), Aufrufer müssen für diesen seltenen Fall aber weiterhin
+        ''' auf GetPixel/SetPixel zurückfallen können.
+        Private Shared Function TryBorrowBgraBuffer(bmp As SKBitmap, ByRef buffer As Byte(), ByRef stride As Integer) As Boolean
+            buffer = Nothing
+            stride = 0
+            If bmp Is Nothing OrElse bmp.ColorType <> SKColorType.Bgra8888 Then Return False
+            stride = bmp.RowBytes
+            Dim length = stride * bmp.Height
+            If length <= 0 Then Return False
+            buffer = New Byte(length - 1) {}
+            Marshal.Copy(bmp.GetPixels(), buffer, 0, length)
+            Return True
+        End Function
+
+        Private Shared Sub CommitBgraBuffer(bmp As SKBitmap, buffer As Byte())
+            Marshal.Copy(buffer, 0, bmp.GetPixels(), buffer.Length)
+        End Sub
 
         Private Shared Function CloneBitmap(source As SKBitmap) As SKBitmap
             Dim clone = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
@@ -2403,6 +2431,37 @@ Namespace Services
             Dim gWindow As New List(Of Byte)()
             Dim bWindow As New List(Of Byte)()
 
+            Dim srcBuf As Byte() = Nothing
+            Dim stride As Integer = 0
+            If TryBorrowBgraBuffer(source, srcBuf, stride) Then
+                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+                For y As Integer = 0 To h - 1
+                    Dim rowOffset = y * stride
+                    For x As Integer = 0 To w - 1
+                        rWindow.Clear() : gWindow.Clear() : bWindow.Clear()
+                        Dim centerO = rowOffset + x * 4
+                        Dim alpha = srcBuf(centerO + 3)
+                        For yy As Integer = Math.Max(0, y - radius) To Math.Min(h - 1, y + radius)
+                            Dim yyRowOffset = yy * stride
+                            For xx As Integer = Math.Max(0, x - radius) To Math.Min(w - 1, x + radius)
+                                Dim oo = yyRowOffset + xx * 4
+                                bWindow.Add(srcBuf(oo))
+                                gWindow.Add(srcBuf(oo + 1))
+                                rWindow.Add(srcBuf(oo + 2))
+                            Next
+                        Next
+                        rWindow.Sort() : gWindow.Sort() : bWindow.Sort()
+                        Dim mid = rWindow.Count \ 2
+                        dstBuf(centerO) = bWindow(mid)
+                        dstBuf(centerO + 1) = gWindow(mid)
+                        dstBuf(centerO + 2) = rWindow(mid)
+                        dstBuf(centerO + 3) = alpha
+                    Next
+                Next
+                CommitBgraBuffer(result, dstBuf)
+                Return result
+            End If
+
             For y As Integer = 0 To h - 1
                 For x As Integer = 0 To w - 1
                     rWindow.Clear() : gWindow.Clear() : bWindow.Clear()
@@ -2570,17 +2629,39 @@ Namespace Services
             If Not ImageAdjustments.IsIdentityCurve(adj.CurveLuminancePoints) Then
                 Dim lumLut = BuildCurveLut(adj.CurveLuminancePoints)
                 Dim withLuminance = New SKBitmap(result.Width, result.Height, result.ColorType, result.AlphaType)
-                For y As Integer = 0 To result.Height - 1
-                    For x As Integer = 0 To result.Width - 1
-                        Dim c = result.GetPixel(x, y)
-                        Dim h As Double
-                        Dim s As Double
-                        Dim l As Double
-                        RgbToHsl(c.Red, c.Green, c.Blue, h, s, l)
-                        Dim newL = lumLut(ClampToByte(l * 255.0)) / 255.0
-                        withLuminance.SetPixel(x, y, HslToRgb(h, s, newL, c.Alpha))
+
+                Dim srcBuf As Byte() = Nothing
+                Dim stride As Integer = 0
+                If TryBorrowBgraBuffer(result, srcBuf, stride) Then
+                    Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+                    For y As Integer = 0 To result.Height - 1
+                        Dim rowOffset = y * stride
+                        For x As Integer = 0 To result.Width - 1
+                            Dim o = rowOffset + x * 4
+                            Dim h As Double
+                            Dim s As Double
+                            Dim l As Double
+                            RgbToHsl(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), h, s, l)
+                            Dim newL = lumLut(ClampToByte(l * 255.0)) / 255.0
+                            Dim nc = HslToRgb(h, s, newL, srcBuf(o + 3))
+                            dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
+                        Next
                     Next
-                Next
+                    CommitBgraBuffer(withLuminance, dstBuf)
+                Else
+                    For y As Integer = 0 To result.Height - 1
+                        For x As Integer = 0 To result.Width - 1
+                            Dim c = result.GetPixel(x, y)
+                            Dim h As Double
+                            Dim s As Double
+                            Dim l As Double
+                            RgbToHsl(c.Red, c.Green, c.Blue, h, s, l)
+                            Dim newL = lumLut(ClampToByte(l * 255.0)) / 255.0
+                            withLuminance.SetPixel(x, y, HslToRgb(h, s, newL, c.Alpha))
+                        Next
+                    Next
+                End If
+
                 result.Dispose()
                 result = withLuminance
             End If
@@ -2701,24 +2782,44 @@ Namespace Services
             End Try
         End Function
 
+        Private Shared Function ProcessHslPixel(r As Byte, g As Byte, b As Byte, a As Byte, adj As ImageAdjustments) As SKColor
+            Dim h As Double
+            Dim s As Double
+            Dim l As Double
+            RgbToHsl(r, g, b, h, s, l)
+            Dim hueShift As Single = 0
+            Dim satShift As Single = 0
+            GetHslBandAdjustments(h, adj, hueShift, satShift)
+            h = (h + hueShift + 360.0) Mod 360.0
+            s = Math.Max(0.0, Math.Min(1.0, s * (1.0 + satShift / 100.0)))
+            Return HslToRgb(h, s, l, a)
+        End Function
+
         Private Shared Function ApplyHsl(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If Not adj.HasHslChanges() Then Return source
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+
+            Dim srcBuf As Byte() = Nothing
+            Dim stride As Integer = 0
+            If TryBorrowBgraBuffer(source, srcBuf, stride) Then
+                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+                For y As Integer = 0 To source.Height - 1
+                    Dim rowOffset = y * stride
+                    For x As Integer = 0 To source.Width - 1
+                        Dim o = rowOffset + x * 4
+                        Dim nc = ProcessHslPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), adj)
+                        dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
+                    Next
+                Next
+                CommitBgraBuffer(result, dstBuf)
+                Return result
+            End If
+
             For y As Integer = 0 To source.Height - 1
                 For x As Integer = 0 To source.Width - 1
                     Dim c = source.GetPixel(x, y)
-                    Dim h As Double
-                    Dim s As Double
-                    Dim l As Double
-                    RgbToHsl(c.Red, c.Green, c.Blue, h, s, l)
-                    Dim hueShift As Single = 0
-                    Dim satShift As Single = 0
-                    GetHslBandAdjustments(h, adj, hueShift, satShift)
-                    h = (h + hueShift + 360.0) Mod 360.0
-                    s = Math.Max(0.0, Math.Min(1.0, s * (1.0 + satShift / 100.0)))
-                    Dim nc = HslToRgb(h, s, l, c.Alpha)
-                    result.SetPixel(x, y, nc)
+                    result.SetPixel(x, y, ProcessHslPixel(c.Red, c.Green, c.Blue, c.Alpha, adj))
                 Next
             Next
             Return result
@@ -2748,6 +2849,41 @@ Namespace Services
         ''' Färbt Schatten und Lichter getrennt ein (Lightroom-Split-Toning-Konzept): Balance verschiebt
         ''' den Umschlagpunkt zwischen "gilt als Schatten" und "gilt als Licht" auf der Luminanzachse,
         ''' die Sättigungsregler steuern zugleich die Deckkraft der jeweiligen Einfärbung.
+        Private Shared Function ProcessSplitToningPixel(r As Byte, g As Byte, b As Byte, a As Byte, adj As ImageAdjustments,
+                                                         hasShadow As Boolean, hasHighlight As Boolean, pivot As Double) As SKColor
+            Dim h As Double
+            Dim s As Double
+            Dim l As Double
+            RgbToHsl(r, g, b, h, s, l)
+
+            Dim rr As Double = r
+            Dim gg As Double = g
+            Dim bb As Double = b
+
+            If hasShadow Then
+                Dim weight = Math.Max(0.0, Math.Min(1.0, (pivot - l) / pivot))
+                If weight > 0 Then
+                    Dim tint = HslToRgb(adj.SplitToningShadowHue, adj.SplitToningShadowSaturation / 100.0, l, 255)
+                    Dim amount = weight * (adj.SplitToningShadowSaturation / 100.0)
+                    rr += (tint.Red - rr) * amount
+                    gg += (tint.Green - gg) * amount
+                    bb += (tint.Blue - bb) * amount
+                End If
+            End If
+            If hasHighlight Then
+                Dim weight = Math.Max(0.0, Math.Min(1.0, (l - pivot) / (1.0 - pivot)))
+                If weight > 0 Then
+                    Dim tint = HslToRgb(adj.SplitToningHighlightHue, adj.SplitToningHighlightSaturation / 100.0, l, 255)
+                    Dim amount = weight * (adj.SplitToningHighlightSaturation / 100.0)
+                    rr += (tint.Red - rr) * amount
+                    gg += (tint.Green - gg) * amount
+                    bb += (tint.Blue - bb) * amount
+                End If
+            End If
+
+            Return New SKColor(ClampToByte(rr), ClampToByte(gg), ClampToByte(bb), a)
+        End Function
+
         Private Shared Function ApplySplitToning(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim hasShadow = adj.SplitToningShadowSaturation <> 0
             Dim hasHighlight = adj.SplitToningHighlightSaturation <> 0
@@ -2757,40 +2893,27 @@ Namespace Services
             Dim pivot = Math.Max(0.1, Math.Min(0.9, 0.5 - balance * 0.4))
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+
+            Dim srcBuf As Byte() = Nothing
+            Dim stride As Integer = 0
+            If TryBorrowBgraBuffer(source, srcBuf, stride) Then
+                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+                For y As Integer = 0 To source.Height - 1
+                    Dim rowOffset = y * stride
+                    For x As Integer = 0 To source.Width - 1
+                        Dim o = rowOffset + x * 4
+                        Dim nc = ProcessSplitToningPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), adj, hasShadow, hasHighlight, pivot)
+                        dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
+                    Next
+                Next
+                CommitBgraBuffer(result, dstBuf)
+                Return result
+            End If
+
             For y As Integer = 0 To source.Height - 1
                 For x As Integer = 0 To source.Width - 1
                     Dim c = source.GetPixel(x, y)
-                    Dim h As Double
-                    Dim s As Double
-                    Dim l As Double
-                    RgbToHsl(c.Red, c.Green, c.Blue, h, s, l)
-
-                    Dim rr As Double = c.Red
-                    Dim gg As Double = c.Green
-                    Dim bb As Double = c.Blue
-
-                    If hasShadow Then
-                        Dim weight = Math.Max(0.0, Math.Min(1.0, (pivot - l) / pivot))
-                        If weight > 0 Then
-                            Dim tint = HslToRgb(adj.SplitToningShadowHue, adj.SplitToningShadowSaturation / 100.0, l, 255)
-                            Dim amount = weight * (adj.SplitToningShadowSaturation / 100.0)
-                            rr += (tint.Red - rr) * amount
-                            gg += (tint.Green - gg) * amount
-                            bb += (tint.Blue - bb) * amount
-                        End If
-                    End If
-                    If hasHighlight Then
-                        Dim weight = Math.Max(0.0, Math.Min(1.0, (l - pivot) / (1.0 - pivot)))
-                        If weight > 0 Then
-                            Dim tint = HslToRgb(adj.SplitToningHighlightHue, adj.SplitToningHighlightSaturation / 100.0, l, 255)
-                            Dim amount = weight * (adj.SplitToningHighlightSaturation / 100.0)
-                            rr += (tint.Red - rr) * amount
-                            gg += (tint.Green - gg) * amount
-                            bb += (tint.Blue - bb) * amount
-                        End If
-                    End If
-
-                    result.SetPixel(x, y, New SKColor(ClampToByte(rr), ClampToByte(gg), ClampToByte(bb), c.Alpha))
+                    result.SetPixel(x, y, ProcessSplitToningPixel(c.Red, c.Green, c.Blue, c.Alpha, adj, hasShadow, hasHighlight, pivot))
                 Next
             Next
             Return result
@@ -2956,16 +3079,24 @@ Namespace Services
         End Class
 
         Private Shared ReadOnly _cubeLutCache As New Dictionary(Of String, Lut3DData)(StringComparer.OrdinalIgnoreCase)
+        Private Shared ReadOnly _cubeLutCacheLock As New Object()
 
         ''' Lädt und parst eine .cube-3D-LUT-Datei (nur LUT_3D_SIZE wird unterstützt, kein LUT_1D_SIZE,
         ''' Domain wird als 0..1 angenommen). Ergebnis wird pro Dateipfad gecacht, da eine LUT beim
         ''' Ziehen an einem Stärke-Regler sonst bei jedem Preview-Frame neu von der Platte geparst würde.
+        ''' Speicher- (SaveImage) und Vorschau-Rendering (ApplyAdjustments) können diese Methode
+        ''' gleichzeitig von verschiedenen Threads aufrufen, daher SyncLock um das gesamte Dictionary.
         Private Shared Function LoadCubeLut(path As String) As Lut3DData
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return Nothing
 
-            Dim cached As Lut3DData = Nothing
-            If _cubeLutCache.TryGetValue(path, cached) Then Return cached
+            SyncLock _cubeLutCacheLock
+                Dim cached As Lut3DData = Nothing
+                If _cubeLutCache.TryGetValue(path, cached) Then Return cached
+                Return LoadCubeLutUnlocked(path)
+            End SyncLock
+        End Function
 
+        Private Shared Function LoadCubeLutUnlocked(path As String) As Lut3DData
             Dim size As Integer = 0
             Dim values As New List(Of Single)()
             For Each rawLine In File.ReadLines(path)
@@ -3020,6 +3151,35 @@ Namespace Services
             Return c0 + (c1 - c0) * bt
         End Function
 
+        Private Shared Function ProcessCubeLutPixel(r As Byte, g As Byte, b As Byte, a As Byte, table As Single(), size As Integer, maxIndex As Integer, strength As Single) As SKColor
+            Dim rf = r / 255.0F * maxIndex
+            Dim gf = g / 255.0F * maxIndex
+            Dim bf = b / 255.0F * maxIndex
+
+            Dim r0 = CInt(Math.Floor(rf))
+            Dim g0 = CInt(Math.Floor(gf))
+            Dim b0 = CInt(Math.Floor(bf))
+            Dim r1 = Math.Min(maxIndex, r0 + 1)
+            Dim g1 = Math.Min(maxIndex, g0 + 1)
+            Dim b1 = Math.Min(maxIndex, b0 + 1)
+            Dim rt = rf - r0
+            Dim gt = gf - g0
+            Dim bt = bf - b0
+
+            Dim outR = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 0) * 255.0F
+            Dim outG = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 1) * 255.0F
+            Dim outB = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 2) * 255.0F
+
+            If strength >= 0.999F Then
+                Return New SKColor(ClampToByte(outR), ClampToByte(outG), ClampToByte(outB), a)
+            End If
+            Return New SKColor(
+                ClampToByte(r + (outR - r) * strength),
+                ClampToByte(g + (outG - g) * strength),
+                ClampToByte(b + (outB - b) * strength),
+                a)
+        End Function
+
         Private Shared Function ApplyCubeLut(source As SKBitmap, path As String, strength As Single) As SKBitmap
             strength = Clamp(strength, 0, 1)
             If strength <= 0 OrElse String.IsNullOrWhiteSpace(path) Then Return source
@@ -3031,36 +3191,27 @@ Namespace Services
             Dim maxIndex = size - 1
             Dim table = lut.Table
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+
+            Dim srcBuf As Byte() = Nothing
+            Dim stride As Integer = 0
+            If TryBorrowBgraBuffer(source, srcBuf, stride) Then
+                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+                For y = 0 To source.Height - 1
+                    Dim rowOffset = y * stride
+                    For x = 0 To source.Width - 1
+                        Dim o = rowOffset + x * 4
+                        Dim nc = ProcessCubeLutPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), table, size, maxIndex, strength)
+                        dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
+                    Next
+                Next
+                CommitBgraBuffer(result, dstBuf)
+                Return result
+            End If
+
             For y = 0 To source.Height - 1
                 For x = 0 To source.Width - 1
                     Dim c = source.GetPixel(x, y)
-                    Dim rf = c.Red / 255.0F * maxIndex
-                    Dim gf = c.Green / 255.0F * maxIndex
-                    Dim bf = c.Blue / 255.0F * maxIndex
-
-                    Dim r0 = CInt(Math.Floor(rf))
-                    Dim g0 = CInt(Math.Floor(gf))
-                    Dim b0 = CInt(Math.Floor(bf))
-                    Dim r1 = Math.Min(maxIndex, r0 + 1)
-                    Dim g1 = Math.Min(maxIndex, g0 + 1)
-                    Dim b1 = Math.Min(maxIndex, b0 + 1)
-                    Dim rt = rf - r0
-                    Dim gt = gf - g0
-                    Dim bt = bf - b0
-
-                    Dim outR = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 0) * 255.0F
-                    Dim outG = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 1) * 255.0F
-                    Dim outB = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 2) * 255.0F
-
-                    If strength >= 0.999F Then
-                        result.SetPixel(x, y, New SKColor(ClampToByte(outR), ClampToByte(outG), ClampToByte(outB), c.Alpha))
-                    Else
-                        result.SetPixel(x, y, New SKColor(
-                            ClampToByte(c.Red + (outR - c.Red) * strength),
-                            ClampToByte(c.Green + (outG - c.Green) * strength),
-                            ClampToByte(c.Blue + (outB - c.Blue) * strength),
-                            c.Alpha))
-                    End If
+                    result.SetPixel(x, y, ProcessCubeLutPixel(c.Red, c.Green, c.Blue, c.Alpha, table, size, maxIndex, strength))
                 Next
             Next
             Return result
@@ -3084,6 +3235,40 @@ Namespace Services
             Dim softness = 0.04F + Clamp(feather, 0, 100) / 100.0F * 0.42F
             Dim edgeAlpha = If(amount > 0, 255.0F, 220.0F) * strength
             Dim darken = amount > 0
+
+            Dim srcBuf As Byte() = Nothing
+            Dim stride As Integer = 0
+            If TryBorrowBgraBuffer(result, srcBuf, stride) Then
+                Dim dstBuf = CType(srcBuf.Clone(), Byte())
+                For y = 0 To result.Height - 1
+                    Dim rowOffset = y * stride
+                    For x = 0 To result.Width - 1
+                        Dim dx = (x - cx) / Math.Max(1.0F, radiusX)
+                        Dim dy = (y - cy) / Math.Max(1.0F, radiusY)
+                        Dim distance = CSng(Math.Sqrt(dx * dx + dy * dy))
+                        Dim t = Clamp((distance - inner) / softness, 0, 1)
+                        If t <= 0 Then Continue For
+                        t = t * t * (3.0F - 2.0F * t)
+
+                        Dim o = rowOffset + x * 4
+                        Dim bB = srcBuf(o)
+                        Dim gG = srcBuf(o + 1)
+                        Dim rR = srcBuf(o + 2)
+                        Dim mix = t * edgeAlpha / 255.0F
+                        If darken Then
+                            dstBuf(o) = ClampToByte(bB * (1 - mix))
+                            dstBuf(o + 1) = ClampToByte(gG * (1 - mix))
+                            dstBuf(o + 2) = ClampToByte(rR * (1 - mix))
+                        Else
+                            dstBuf(o) = ClampToByte(bB + (255 - bB) * mix)
+                            dstBuf(o + 1) = ClampToByte(gG + (255 - gG) * mix)
+                            dstBuf(o + 2) = ClampToByte(rR + (255 - rR) * mix)
+                        End If
+                    Next
+                Next
+                CommitBgraBuffer(result, dstBuf)
+                Return result
+            End If
 
             For y = 0 To result.Height - 1
                 For x = 0 To result.Width - 1

@@ -13,15 +13,18 @@
                           Margin="6,0,0,0"
                           ItemsSource="{Binding WatermarkPresetNames}"
                           SelectedItem="{Binding SelectedWatermarkPresetName}"
-                          FontSize="11" />
+                          FontSize="11"
+                          HorizontalAlignment="Stretch"
+                          MinWidth="180" />
             </Grid>
-            <StackPanel Orientation="Vertical" Spacing="6">
+            <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
                 <TextBlock Text="Name" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
-                <TextBox Margin="6,0,0,0"
+                <TextBox Grid.Column="1"
+                         Margin="6,0,0,0"
                          Text="{Binding WatermarkPresetNameDraft}"
                          FontSize="11" />
-            </StackPanel>
+            </Grid>
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Grid.Column="2" Classes="ghost" Padding="8,4" Click="OnWatermarkSavePresetClick">
                     <TextBlock Text="Speichern" FontSize="11" />
@@ -72,7 +75,7 @@
             <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="11" />
             <icons:RoundSlider Grid.Column="1" Minimum="8" Maximum="500"
-                               DefaultValue="6"
+                               DefaultValue="8"
                                Value="{Binding AnnotationFontSizePixels}" Margin="0,0" />
             <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                      Value="{Binding AnnotationFontSizePixels, Mode=TwoWay}"
@@ -189,6 +192,7 @@
             <TextBlock Text="Anker" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="11" />
             <Border Grid.Column="1"
+                    HorizontalAlignment="Left"
                     BorderBrush="{DynamicResource FP.Border.Normal}"
                     BorderThickness="1"
                     CornerRadius="8"
@@ -264,7 +268,7 @@
         </Grid>
         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
             <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
-                <Grid ColumnDefinitions="16,*,44">
+                <Grid ColumnDefinitions="Auto,*,44">
                     <TextBlock Text="{Binding AnnotationXLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="{Binding AnnotationPositionMinimum}" Maximum="{Binding AnnotationPositionMaximum}"
@@ -274,7 +278,7 @@
                                              Minimum="0" Maximum="50000" Increment="1"
                                              FormatString="F0" />
                 </Grid>
-                <Grid Grid.Row="1" ColumnDefinitions="16,*,44">
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,44">
                     <TextBlock Text="{Binding AnnotationYLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="{Binding AnnotationPositionMinimum}" Maximum="{Binding AnnotationPositionMaximum}"

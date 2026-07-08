@@ -96,6 +96,9 @@ Namespace ViewModels
         Private _filterStrength As Double = 100
         Private _lutPath As String = ""
         Private _lutStrength As Double = 100
+        Private _lastAppliedFilterPresetName As String = ""
+        Private _lastAppliedLightroomPresetPath As String = ""
+        Private _lastAppliedLutPresetPath As String = ""
         Private _whiteBalance As String = "Wie Aufnahme"
         Private _rotationDegrees As Integer = 0
         Private _straightenDegrees As Double = 0
@@ -279,6 +282,12 @@ Namespace ViewModels
         Private ReadOnly _watermarkPresets As New List(Of WatermarkPresetSettings)()
         Public ReadOnly Property SavedLightroomPresets As ObservableCollection(Of LightroomPresetSettings) = New ObservableCollection(Of LightroomPresetSettings)()
         Public ReadOnly Property SavedLutPresets As ObservableCollection(Of LutPresetSettings) = New ObservableCollection(Of LutPresetSettings)()
+
+        Public ReadOnly Property LastAppliedFilterPresetName As String
+            Get
+                Return _lastAppliedFilterPresetName
+            End Get
+        End Property
         Public ReadOnly Property WatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
         Private _selectedWatermarkPresetName As String = ""
         Private _watermarkPresetNameDraft As String = ""
@@ -402,7 +411,7 @@ Namespace ViewModels
         Public ReadOnly Property WatermarkSourceSummary As String
             Get
                 If String.IsNullOrWhiteSpace(_watermarkImagePath) Then Return "Text-Wasserzeichen"
-                Return IO.Path.GetFileName(_watermarkImagePath)
+                Return "Bild-Wasserzeichen"
             End Get
         End Property
 
@@ -452,6 +461,7 @@ Namespace ViewModels
             For Each preset In AppSettingsService.Load().LightroomPresets
                 SavedLightroomPresets.Add(preset)
             Next
+            SyncLastAppliedLightroomPreset()
         End Sub
 
         Private Sub PersistSavedLightroomPresets()
@@ -469,6 +479,85 @@ Namespace ViewModels
             SavedLutPresets.Clear()
             For Each preset In AppSettingsService.Load().LutPresets
                 SavedLutPresets.Add(preset)
+            Next
+            SyncLastAppliedLutPreset()
+        End Sub
+
+        Private Sub SetLastAppliedFilterPreset(presetName As String)
+            Dim normalized = If(presetName, "").Trim()
+            Dim hasFilter = Not String.IsNullOrWhiteSpace(normalized) AndAlso
+                Not String.Equals(normalized, "Keine", StringComparison.OrdinalIgnoreCase)
+
+            Dim nextFilterPreset = If(hasFilter, normalized, "")
+            If Not String.Equals(_lastAppliedFilterPresetName, nextFilterPreset, StringComparison.Ordinal) Then
+                _lastAppliedFilterPresetName = nextFilterPreset
+                Me.RaisePropertyChanged(NameOf(LastAppliedFilterPresetName))
+            End If
+
+            If hasFilter Then
+                _lastAppliedLightroomPresetPath = ""
+                _lastAppliedLutPresetPath = ""
+                SyncLastAppliedLightroomPreset()
+                SyncLastAppliedLutPreset()
+            End If
+        End Sub
+
+        Private Sub SetLastAppliedLightroomPreset(xmpPath As String)
+            _lastAppliedFilterPresetName = ""
+            Me.RaisePropertyChanged(NameOf(LastAppliedFilterPresetName))
+            _lastAppliedLutPresetPath = ""
+            _lastAppliedLightroomPresetPath = If(xmpPath, "").Trim()
+            SyncLastAppliedLightroomPreset()
+            SyncLastAppliedLutPreset()
+        End Sub
+
+        Private Sub SetLastAppliedLutPreset(cubePath As String)
+            _lastAppliedFilterPresetName = ""
+            Me.RaisePropertyChanged(NameOf(LastAppliedFilterPresetName))
+            _lastAppliedLightroomPresetPath = ""
+            _lastAppliedLutPresetPath = If(cubePath, "").Trim()
+            SyncLastAppliedLightroomPreset()
+            SyncLastAppliedLutPreset()
+        End Sub
+
+        Private Sub ApplyExclusiveFilterPreset(preset As String)
+            Dim normalized = If(String.IsNullOrWhiteSpace(preset), "Keine", preset)
+            ResetFilterInternal()
+
+            _filterPreset = normalized
+            If Not String.Equals(normalized, "Keine", StringComparison.OrdinalIgnoreCase) Then
+                Dim fullStrengthPreset = String.Equals(normalized, "S/W", StringComparison.OrdinalIgnoreCase) OrElse
+                                          String.Equals(normalized, "Sepia", StringComparison.OrdinalIgnoreCase)
+                _filterStrength = If(fullStrengthPreset, 100, 50)
+            End If
+
+            Me.RaisePropertyChanged(NameOf(FilterPreset))
+            Me.RaisePropertyChanged(NameOf(FilterStrength))
+            SetLastAppliedFilterPreset(normalized)
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        Private Sub ClearLastAppliedLook()
+            _lastAppliedFilterPresetName = ""
+            _lastAppliedLightroomPresetPath = ""
+            _lastAppliedLutPresetPath = ""
+            Me.RaisePropertyChanged(NameOf(LastAppliedFilterPresetName))
+            SyncLastAppliedLightroomPreset()
+            SyncLastAppliedLutPreset()
+        End Sub
+
+        Private Sub SyncLastAppliedLightroomPreset()
+            For Each preset In SavedLightroomPresets
+                preset.IsLastApplied = Not String.IsNullOrWhiteSpace(_lastAppliedLightroomPresetPath) AndAlso
+                    String.Equals(preset.Path, _lastAppliedLightroomPresetPath, StringComparison.OrdinalIgnoreCase)
+            Next
+        End Sub
+
+        Private Sub SyncLastAppliedLutPreset()
+            For Each preset In SavedLutPresets
+                preset.IsLastApplied = Not String.IsNullOrWhiteSpace(_lastAppliedLutPresetPath) AndAlso
+                    String.Equals(preset.Path, _lastAppliedLutPresetPath, StringComparison.OrdinalIgnoreCase)
             Next
         End Sub
 
@@ -947,7 +1036,7 @@ Namespace ViewModels
             AnnotationStrokeColor = "#FF000000"
             AnnotationStrokeWidth = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark" OrElse normalizedKind = "QR" OrElse normalizedKind = "Image", 0, 2)
             AnnotationText = GetDefaultAnnotationText(normalizedKind, rawKind)
-            AnnotationFontSize = 6
+            AnnotationFontSize = 4
             AnnotationFontFamily = "Arial"
             AnnotationOpacity = 100
             AnnotationRotation = 0
@@ -2126,6 +2215,7 @@ Namespace ViewModels
                     _filterStrength = If(fullStrengthPreset, 100, 50)
                     Me.RaisePropertyChanged(NameOf(FilterStrength))
                 End If
+                SetLastAppliedFilterPreset(normalized)
                 RaiseResetButtonStateChanged()
                 SchedulePreviewUpdate()
             End Set
@@ -3906,7 +3996,7 @@ Namespace ViewModels
                                                            End Sub)
             SetFilterPresetCommand = ReactiveCommand.Create(Of String)(Sub(preset)
                                                                           PushUndo()
-                                                                          FilterPreset = preset
+                                                                          ApplyExclusiveFilterPreset(preset)
                                                                       End Sub)
             ResetFilterCommand = ReactiveCommand.Create(Sub()
                                                             PushUndo()
@@ -4321,10 +4411,14 @@ Namespace ViewModels
             Return k = "Text" OrElse k = "Watermark"
         End Function
 
-        Private Function UsesRenderedSelectionOverlay(kind As String) As Boolean
-            Select Case NormalizeAnnotationKind(kind)
-                Case "Text", "Watermark", "Brush", "Eraser"
+        Private Function UsesRenderedSelectionOverlay(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing Then Return False
+
+            Select Case NormalizeAnnotationKind(annotation.Kind)
+                Case "Text", "Brush", "Eraser"
                     Return False
+                Case "Watermark"
+                    Return Not String.IsNullOrWhiteSpace(annotation.ImagePath)
                 Case Else
                     Return True
             End Select
@@ -4335,8 +4429,8 @@ Namespace ViewModels
         Private Function ComputesOverlayHidesSelection() As Boolean
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
             If _currentTool <> EditorTool.Text AndAlso _currentTool <> EditorTool.Insert AndAlso _currentTool <> EditorTool.Geometry AndAlso _currentTool <> EditorTool.Selection Then Return False
-            Dim selectedKind = _annotations(_selectedAnnotationIndex).Kind
-            Return IsTextualAnnotationKind(selectedKind) OrElse UsesRenderedSelectionOverlay(selectedKind)
+            Dim selected = _annotations(_selectedAnnotationIndex)
+            Return IsTextualAnnotationKind(selected.Kind) OrElse UsesRenderedSelectionOverlay(selected)
         End Function
 
         ''' Versucht, die Annotationen synchron auf dem bereits gecachten Base-Bitmap neu zu
@@ -4645,7 +4739,7 @@ Namespace ViewModels
             Try
                 StatusText = LocalizationService.T("Wird gespeichert…")
                 Dim adj = GetCurrentAdjustments()
-                Dim ok = ImageProcessor.SaveImage(_currentImagePath, targetPath, adj, targetQuality)
+                Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(_currentImagePath, targetPath, adj, targetQuality))
                 If ok Then
                     StatusText = If(saveAs,
                                     $"{LocalizationService.T("Gespeichert als")} {IO.Path.GetFileName(targetPath)}",
@@ -5988,7 +6082,7 @@ Namespace ViewModels
                 Return
             End If
 
-            If Not UsesRenderedSelectionOverlay(annotation.Kind) Then
+            If Not UsesRenderedSelectionOverlay(annotation) Then
                 SelectedAnnotationOverlayImage = Nothing
                 Return
             End If
@@ -6253,6 +6347,7 @@ Namespace ViewModels
             _filterStrength = 50
             _lutPath = ""
             _lutStrength = 100
+            ClearLastAppliedLook()
             Me.RaisePropertyChanged(NameOf(FilterPreset))
             Me.RaisePropertyChanged(NameOf(FilterStrength))
             Me.RaisePropertyChanged(NameOf(LutPath))
@@ -6550,7 +6645,8 @@ Namespace ViewModels
 
             ExportFormat = saveAsResult.Format
             Dim targetPath = IO.Path.Combine(dir, cleanBaseName & saveAsResult.Extension)
-            Dim ok = ImageProcessor.SaveImage(_currentImagePath, targetPath, GetCurrentAdjustments(), saveAsResult.JpgQuality)
+            Dim adjForExport = GetCurrentAdjustments()
+            Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(_currentImagePath, targetPath, adjForExport, saveAsResult.JpgQuality))
             StatusText = If(ok,
                             $"{LocalizationService.T("Exportiert:")} {IO.Path.GetFileName(targetPath)}",
                             LocalizationService.T("Export fehlgeschlagen"))
@@ -6680,6 +6776,7 @@ Namespace ViewModels
                 If values.Count = 0 Then Return
 
                 PushUndo()
+                ResetFilterInternal()
                 _suppressUndoCapture = True
                 Try
                     Dim d As Double
@@ -6749,6 +6846,7 @@ Namespace ViewModels
                 End Try
 
                 RaiseExtendedAdjustmentProperties()
+                SetLastAppliedLightroomPreset(xmpPath)
                 StatusText = LocalizationService.T("Lightroom-Preset angewendet")
                 SchedulePreviewUpdate()
             Catch ex As Exception
@@ -6774,8 +6872,12 @@ Namespace ViewModels
             If String.IsNullOrWhiteSpace(xmpPath) Then Return
             Dim existing = SavedLightroomPresets.FirstOrDefault(Function(p) String.Equals(p.Path, xmpPath.Trim(), StringComparison.OrdinalIgnoreCase))
             If existing Is Nothing Then Return
+            If String.Equals(_lastAppliedLightroomPresetPath, existing.Path, StringComparison.OrdinalIgnoreCase) Then
+                _lastAppliedLightroomPresetPath = ""
+            End If
             SavedLightroomPresets.Remove(existing)
             PersistSavedLightroomPresets()
+            SyncLastAppliedLightroomPreset()
         End Sub
 
         ''' MatchCasing.CaseInsensitive ist auf Linux/macOS nötig - Directory.EnumerateFiles matcht
@@ -6804,6 +6906,7 @@ Namespace ViewModels
         Public Sub ApplyLutPreset(cubePath As String)
             If String.IsNullOrWhiteSpace(cubePath) OrElse Not File.Exists(cubePath) Then Return
             PushUndo()
+            ResetFilterInternal()
             _suppressUndoCapture = True
             Try
                 LutPath = cubePath
@@ -6811,6 +6914,7 @@ Namespace ViewModels
             Finally
                 _suppressUndoCapture = False
             End Try
+            SetLastAppliedLutPreset(cubePath)
             StatusText = LocalizationService.T("LUT angewendet")
             SchedulePreviewUpdate()
         End Sub
@@ -6833,8 +6937,12 @@ Namespace ViewModels
             If String.IsNullOrWhiteSpace(cubePath) Then Return
             Dim existing = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, cubePath.Trim(), StringComparison.OrdinalIgnoreCase))
             If existing Is Nothing Then Return
+            If String.Equals(_lastAppliedLutPresetPath, existing.Path, StringComparison.OrdinalIgnoreCase) Then
+                _lastAppliedLutPresetPath = ""
+            End If
             SavedLutPresets.Remove(existing)
             PersistSavedLutPresets()
+            SyncLastAppliedLutPreset()
         End Sub
 
         Public Sub ImportLutPresetsFromFolder(folderPath As String)

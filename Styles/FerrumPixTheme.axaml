@@ -1020,6 +1020,9 @@
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="10,6"/>
     </Style>
+    <Style Selector="Border.look-pill.active">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
     <Style Selector="Border.preview-frame">
         <Setter Property="Background" Value="#0B0F13"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>

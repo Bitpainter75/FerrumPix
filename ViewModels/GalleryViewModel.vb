@@ -2444,64 +2444,81 @@ Namespace ViewModels
 
                 Dim meta = LibraryService.Instance.GetFolderMeta(folderPath)
                 Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
-                For Each file In files
-                    Dim item = New ImageItem(file, thumbnailToken)
-                    Dim m As LibraryImageMeta = Nothing
-                    If meta.TryGetValue(file, m) Then
-                        item.IsFavorite = m.IsFavorite
-                        item.Rating = m.Rating
-                        item.Tags = If(m.Tags, New List(Of String)())
-                        ' Nur übernehmen, wenn die Datei sich seit dem letzten EXIF-Scan nicht geändert hat -
-                        ' sonst würde man dauerhaft veraltete Breite/Höhe/EXIF-Daten anzeigen (siehe IsMetaStale).
-                        If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso
-                           IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified) Then
-                            Dim needsMetadataFlagBackfill =
-                                Not m.HasExifMetadata AndAlso
-                                Not m.HasIptcMetadata AndAlso
-                                Not m.HasXmpMetadata AndAlso
-                                (Not String.IsNullOrWhiteSpace(m.DateTaken) OrElse
-                                 Not String.IsNullOrWhiteSpace(m.DateModifiedExif) OrElse
-                                 Not String.IsNullOrWhiteSpace(m.Camera) OrElse
-                                 Not String.IsNullOrWhiteSpace(m.Lens) OrElse
-                                 m.Aperture.HasValue OrElse
-                                 m.FocalLengthMm.HasValue OrElse
-                                 m.Iso.HasValue OrElse
-                                 Not String.IsNullOrWhiteSpace(m.ShutterSpeed) OrElse
-                                 m.GpsLatitude.HasValue OrElse
-                                 m.GpsLongitude.HasValue)
 
-                            ''' Einmalige Selbstheilung für Katalog-Einträge aus einer Version vor den
-                            ''' ExifSummary/IptcSummary/XmpSummary-Spalten: Flag ist gesetzt, aber der
-                            ''' Zusammenfassungstext fehlt noch - ohne diesen Nachtrag bliebe das
-                            ''' Metadaten-Hover-Overlay für Alt-Einträge dauerhaft leer.
-                            Dim needsSummaryBackfill =
-                                (m.HasExifMetadata AndAlso String.IsNullOrEmpty(m.ExifSummary)) OrElse
-                                (m.HasIptcMetadata AndAlso String.IsNullOrEmpty(m.IptcSummary)) OrElse
-                                (m.HasXmpMetadata AndAlso String.IsNullOrEmpty(m.XmpSummary))
+                ''' New ImageItem(...) stößt pro Datei einen synchronen FileInfo-Stat-Aufruf an
+                ''' (EnsureFileInfoLoaded) - bei Ordnern mit vielen Bildern (oder Netzwerk-/USB-
+                ''' Freigaben mit hoher Latenz je Stat-Aufruf) summiert sich das spürbar. Da jedes
+                ''' Element hier unabhängig von den anderen ist und noch an keine UI-gebundene
+                ''' Collection angehängt wurde, kann der Aufbau gefahrlos parallelisiert werden;
+                ''' erst der abschließende _allItems.Add(...)-Durchlauf läuft wieder sequenziell in
+                ''' fester Reihenfolge auf dem UI-Thread.
+                Dim results = New ImageItem(files.Length - 1) {}
+                Dim needsRefreshFlags = New Boolean(files.Length - 1) {}
+                Parallel.For(0, files.Length,
+                    Sub(i As Integer)
+                        Dim file = files(i)
+                        Dim item = New ImageItem(file, thumbnailToken)
+                        Dim needsRefresh = False
+                        Dim m As LibraryImageMeta = Nothing
+                        If meta.TryGetValue(file, m) Then
+                            item.IsFavorite = m.IsFavorite
+                            item.Rating = m.Rating
+                            item.Tags = If(m.Tags, New List(Of String)())
+                            ' Nur übernehmen, wenn die Datei sich seit dem letzten EXIF-Scan nicht geändert hat -
+                            ' sonst würde man dauerhaft veraltete Breite/Höhe/EXIF-Daten anzeigen (siehe IsMetaStale).
+                            If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso
+                               IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified) Then
+                                Dim needsMetadataFlagBackfill =
+                                    Not m.HasExifMetadata AndAlso
+                                    Not m.HasIptcMetadata AndAlso
+                                    Not m.HasXmpMetadata AndAlso
+                                    (Not String.IsNullOrWhiteSpace(m.DateTaken) OrElse
+                                     Not String.IsNullOrWhiteSpace(m.DateModifiedExif) OrElse
+                                     Not String.IsNullOrWhiteSpace(m.Camera) OrElse
+                                     Not String.IsNullOrWhiteSpace(m.Lens) OrElse
+                                     m.Aperture.HasValue OrElse
+                                     m.FocalLengthMm.HasValue OrElse
+                                     m.Iso.HasValue OrElse
+                                     Not String.IsNullOrWhiteSpace(m.ShutterSpeed) OrElse
+                                     m.GpsLatitude.HasValue OrElse
+                                     m.GpsLongitude.HasValue)
 
-                            item.ImageWidth = m.ImageWidth.Value
-                            item.ImageHeight = m.ImageHeight.Value
-                            item.ExifDateTaken = ExifService.ParseExifDateTime(m.DateTaken)
-                            item.ExifDateModified = ExifService.ParseExifDateTime(m.DateModifiedExif)
-                            item.ExifCamera = m.Camera
-                            item.ExifIso = m.Iso
-                            item.ExifAperture = m.Aperture
-                            item.HasExifMetadata = m.HasExifMetadata
-                            item.HasIptcMetadata = m.HasIptcMetadata
-                            item.HasXmpMetadata = m.HasXmpMetadata
-                            item.ExifMetadataSummary = m.ExifSummary
-                            item.IptcMetadataSummary = m.IptcSummary
-                            item.XmpMetadataSummary = m.XmpSummary
-                            If needsMetadataFlagBackfill OrElse needsSummaryBackfill Then
-                                itemsNeedingMetaRefresh.Add(item)
+                                ''' Einmalige Selbstheilung für Katalog-Einträge aus einer Version vor den
+                                ''' ExifSummary/IptcSummary/XmpSummary-Spalten: Flag ist gesetzt, aber der
+                                ''' Zusammenfassungstext fehlt noch - ohne diesen Nachtrag bliebe das
+                                ''' Metadaten-Hover-Overlay für Alt-Einträge dauerhaft leer.
+                                Dim needsSummaryBackfill =
+                                    (m.HasExifMetadata AndAlso String.IsNullOrEmpty(m.ExifSummary)) OrElse
+                                    (m.HasIptcMetadata AndAlso String.IsNullOrEmpty(m.IptcSummary)) OrElse
+                                    (m.HasXmpMetadata AndAlso String.IsNullOrEmpty(m.XmpSummary))
+
+                                item.ImageWidth = m.ImageWidth.Value
+                                item.ImageHeight = m.ImageHeight.Value
+                                item.ExifDateTaken = ExifService.ParseExifDateTime(m.DateTaken)
+                                item.ExifDateModified = ExifService.ParseExifDateTime(m.DateModifiedExif)
+                                item.ExifCamera = m.Camera
+                                item.ExifIso = m.Iso
+                                item.ExifAperture = m.Aperture
+                                item.HasExifMetadata = m.HasExifMetadata
+                                item.HasIptcMetadata = m.HasIptcMetadata
+                                item.HasXmpMetadata = m.HasXmpMetadata
+                                item.ExifMetadataSummary = m.ExifSummary
+                                item.IptcMetadataSummary = m.IptcSummary
+                                item.XmpMetadataSummary = m.XmpSummary
+                                needsRefresh = needsMetadataFlagBackfill OrElse needsSummaryBackfill
+                            Else
+                                needsRefresh = True
                             End If
                         Else
-                            itemsNeedingMetaRefresh.Add(item)
+                            needsRefresh = True
                         End If
-                    Else
-                        itemsNeedingMetaRefresh.Add(item)
-                    End If
-                    _allItems.Add(item)
+                        results(i) = item
+                        needsRefreshFlags(i) = needsRefresh
+                    End Sub)
+
+                For i = 0 To results.Length - 1
+                    _allItems.Add(results(i))
+                    If needsRefreshFlags(i) Then itemsNeedingMetaRefresh.Add(results(i))
                 Next
 
                 FilterAndSort()

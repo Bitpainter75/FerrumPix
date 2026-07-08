@@ -1,5 +1,6 @@
 Imports System
 Imports System.Collections.Generic
+Imports System.ComponentModel
 Imports System.Globalization
 Imports System.IO
 Imports System.Linq
@@ -32,15 +33,47 @@ Namespace Services
     End Class
 
     Public Class LightroomPresetSettings
+        Implements INotifyPropertyChanged
+
         Public Property Id As String = Guid.NewGuid().ToString("N")
         Public Property Name As String = ""
         Public Property Path As String = ""
+
+        Private _isLastApplied As Boolean
+        Public Property IsLastApplied As Boolean
+            Get
+                Return _isLastApplied
+            End Get
+            Set(value As Boolean)
+                If _isLastApplied = value Then Return
+                _isLastApplied = value
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(IsLastApplied)))
+            End Set
+        End Property
+
+        Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
     End Class
 
     Public Class LutPresetSettings
+        Implements INotifyPropertyChanged
+
         Public Property Id As String = Guid.NewGuid().ToString("N")
         Public Property Name As String = ""
         Public Property Path As String = ""
+
+        Private _isLastApplied As Boolean
+        Public Property IsLastApplied As Boolean
+            Get
+                Return _isLastApplied
+            End Get
+            Set(value As Boolean)
+                If _isLastApplied = value Then Return
+                _isLastApplied = value
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(IsLastApplied)))
+            End Set
+        End Property
+
+        Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
     End Class
 
     Public Class AppSettings

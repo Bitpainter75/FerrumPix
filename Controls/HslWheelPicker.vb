@@ -97,6 +97,7 @@ Namespace Controls
         Protected Overrides Sub OnPointerPressed(e As PointerPressedEventArgs)
             MyBase.OnPointerPressed(e)
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
+            e.Pointer.Capture(Me)
             SelectBandFromPoint(e.GetPosition(Me))
             e.Handled = True
         End Sub
@@ -106,6 +107,11 @@ Namespace Controls
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
             SelectBandFromPoint(e.GetPosition(Me))
             e.Handled = True
+        End Sub
+
+        Protected Overrides Sub OnPointerReleased(e As PointerReleasedEventArgs)
+            MyBase.OnPointerReleased(e)
+            If e.Pointer.Captured Is Me Then e.Pointer.Capture(Nothing)
         End Sub
 
         Private Sub SelectBandFromPoint(point As Point)

@@ -10,6 +10,7 @@ Namespace Converters
 
         Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
             If value Is Nothing OrElse parameter Is Nothing Then Return False
+            If Not TypeOf value Is AppMode Then Return False
             Dim mode = CType(value, AppMode)
             Dim parsed As AppMode
             If [Enum].TryParse(parameter.ToString(), parsed) Then
@@ -76,9 +77,11 @@ Namespace Converters
             Dim parts = If(parameter?.ToString(), "").Split("|"c)
             If parts.Length <> 3 Then Return 0.0
 
-            Dim minimum = Double.Parse(parts(0), CultureInfo.InvariantCulture)
-            Dim maximum = Double.Parse(parts(1), CultureInfo.InvariantCulture)
-            Dim width = Double.Parse(parts(2), CultureInfo.InvariantCulture)
+            Dim minimum, maximum, width As Double
+            If Not Double.TryParse(parts(0), NumberStyles.Float, CultureInfo.InvariantCulture, minimum) Then Return 0.0
+            If Not Double.TryParse(parts(1), NumberStyles.Float, CultureInfo.InvariantCulture, maximum) Then Return 0.0
+            If Not Double.TryParse(parts(2), NumberStyles.Float, CultureInfo.InvariantCulture, width) Then Return 0.0
+            If maximum <= minimum Then Return 0.0
             Dim current = If(TypeOf value Is Double, CDbl(value), minimum)
             Dim ratio = Math.Max(0, Math.Min(1, (current - minimum) / (maximum - minimum)))
             Return width * ratio
@@ -96,10 +99,12 @@ Namespace Converters
             Dim parts = If(parameter?.ToString(), "").Split("|"c)
             If parts.Length <> 4 Then Return 0.0
 
-            Dim minimum = Double.Parse(parts(0), CultureInfo.InvariantCulture)
-            Dim maximum = Double.Parse(parts(1), CultureInfo.InvariantCulture)
-            Dim width = Double.Parse(parts(2), CultureInfo.InvariantCulture)
-            Dim thumbSize = Double.Parse(parts(3), CultureInfo.InvariantCulture)
+            Dim minimum, maximum, width, thumbSize As Double
+            If Not Double.TryParse(parts(0), NumberStyles.Float, CultureInfo.InvariantCulture, minimum) Then Return 0.0
+            If Not Double.TryParse(parts(1), NumberStyles.Float, CultureInfo.InvariantCulture, maximum) Then Return 0.0
+            If Not Double.TryParse(parts(2), NumberStyles.Float, CultureInfo.InvariantCulture, width) Then Return 0.0
+            If Not Double.TryParse(parts(3), NumberStyles.Float, CultureInfo.InvariantCulture, thumbSize) Then Return 0.0
+            If maximum <= minimum Then Return 0.0
             Dim current = If(TypeOf value Is Double, CDbl(value), minimum)
             Dim ratio = Math.Max(0, Math.Min(1, (current - minimum) / (maximum - minimum)))
             Return width * ratio - thumbSize / 2.0

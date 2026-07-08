@@ -45,70 +45,86 @@
             </Grid>
             <WrapPanel>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Keine}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Keine">
                     <TextBlock Text="Keine" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=S/W}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="S/W">
                     <TextBlock Text="S/W" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Warm}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Warm">
                     <TextBlock Text="Warm" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Kühl}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Kühl">
                     <TextBlock Text="Kühl" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Fade}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Fade">
                     <TextBlock Text="Fade" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Kontrast}"
                         Command="{Binding SetFilterPresetCommand}"
                         CommandParameter="Kontrast">
                     <TextBlock Text="Kontrast" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Sepia}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Sepia">
                     <TextBlock Text="Sepia" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Matt}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Matt">
                     <TextBlock Text="Matt" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Cross}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Cross">
                     <TextBlock Text="Cross" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Dramatisch}"
                         Command="{Binding SetFilterPresetCommand}"
                         CommandParameter="Dramatisch">
                     <TextBlock Text="Dramatisch" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Weich}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Weich">
                     <TextBlock Text="Weich" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Noir}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Noir">
                     <TextBlock Text="Noir" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Duoton}"
                         Command="{Binding SetFilterPresetCommand}"
                         CommandParameter="Duoton">
                     <TextBlock Text="Duoton" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Polaroid}"
                         Command="{Binding SetFilterPresetCommand}"
                         CommandParameter="Polaroid">
                     <TextBlock Text="Polaroid" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=VHS}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="VHS">
                     <TextBlock Text="VHS" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Alt}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Alt">
                     <TextBlock Text="Alt" FontSize="11" />
                 </Button>

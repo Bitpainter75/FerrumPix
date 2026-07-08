@@ -353,6 +353,19 @@ Namespace Views
             _filmstripController.Reset()
         End Sub
 
+        ''' EditorViewModel lebt für die gesamte App-Laufzeit (eine Instanz, wiederverwendet bei
+        ''' jedem Wechsel Galerie/Editor), während für jeden Editor-Aufruf eine neue EditorView
+        ''' erzeugt wird (ViewLocator.Build -> Activator.CreateInstance). Ohne dieses Abmelden
+        ''' würde die langlebige VM über den PropertyChanged-Delegate jede alte View-Instanz für
+        ''' immer am Leben halten (Memory-Leak, wächst mit jedem Galerie<->Editor-Wechsel).
+        Protected Overrides Sub OnDetachedFromVisualTree(e As Avalonia.VisualTreeAttachmentEventArgs)
+            MyBase.OnDetachedFromVisualTree(e)
+            If _currentVm IsNot Nothing Then
+                RemoveHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+                _currentVm = Nothing
+            End If
+        End Sub
+
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             Select Case e.PropertyName
                 Case NameOf(EditorViewModel.CurrentImage)
