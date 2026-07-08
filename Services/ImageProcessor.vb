@@ -936,7 +936,9 @@ Namespace Services
             ' Schattengröße >100% lässt den (um seine Mitte skalierten) Schatten übers Objekt hinauswachsen;
             ' der Wachstumsrand wird über die größere Objektkante bemessen, damit auf keiner Achse abgeschnitten wird.
             Dim shadowGrow = If(renderAnnotation.ShadowEnabled, Math.Max(objW, objH) * Math.Max(0.0F, Clamp(renderAnnotation.ShadowSizePercent, 10, 400) / 100.0F - 1.0F) * 0.5F, 0.0F)
-            Dim glowPad = If(renderAnnotation.GlowEnabled, objSize * Clamp(renderAnnotation.GlowBlur, 0, 100) / 100.0F * 2.4F, 0.0F)
+            ' Faktor 1.7 deckt die Glow-Reichweite (Dilate + Blur, siehe DrawAnnotationEffects: ~1.5x objSize
+            ' bei Maximalwert) mit etwas Reserve ab; muss mit ComputeSelectedOverlayImageMargin übereinstimmen.
+            Dim glowPad = If(renderAnnotation.GlowEnabled, objSize * Clamp(renderAnnotation.GlowBlur, 0, 100) / 100.0F * 1.7F, 0.0F)
             Dim shadowPad = If(renderAnnotation.ShadowEnabled, objSize * Clamp(renderAnnotation.ShadowBlur, 0, 100) / 100.0F * 1.8F + shadowGrow, 0.0F)
             Dim offsetX = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetXPercent / 100.0F, 0.0F)
             Dim offsetY = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetYPercent / 100.0F, 0.0F)
@@ -1596,7 +1598,14 @@ Namespace Services
             ' Objektgröße), dass er komplett unter dem später deckend gezeichneten Objekt
             ' verschwand - "Glow wirkungslos"/"Shadow-Stärke ohne Auswirkung".
             Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
-            Dim glowBlurPx = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 0.8F
+            ' Glühen als echtes AUSSEN-Glühen: die Silhouette wird per Dilate nach außen vergrößert und
+            ' erst danach weich gezeichnet. Ein reiner (großer) Gauß-Blur verteilt die Glow-Energie so
+            ' dünn, dass außerhalb des Objekts fast nichts sichtbar bleibt ("Glühen bleibt in den
+            ' Objektgrenzen") - mit Dilate reicht das Glühen sichtbar und deckend über die Kante hinaus.
+            Dim glowReach = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 1.5F
+            Dim glowDilate = Math.Max(0, CInt(Math.Round(glowReach * 0.5F)))
+            Dim glowSigma = Math.Max(0.1F, glowReach * 0.17F)
+            Dim glowMaskReach = glowDilate + 3.0F * glowSigma
             Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * 0.6F
             Dim offsetX = objSize * annotation.ShadowOffsetXPercent / 100.0F
             Dim offsetY = objSize * annotation.ShadowOffsetYPercent / 100.0F
@@ -1606,7 +1615,7 @@ Namespace Services
             Dim maskWidth = canvasWidth
             Dim maskHeight = canvasHeight
             If Math.Abs(annotation.RotationDegrees) <= 0.01F Then
-                Dim pad = Math.Max(glowBlurPx, shadowBlurPx) * 3.0F + Math.Max(Math.Abs(offsetX), Math.Abs(offsetY)) + 4.0F
+                Dim pad = Math.Max(glowMaskReach, shadowBlurPx * 3.0F) + Math.Max(Math.Abs(offsetX), Math.Abs(offsetY)) + 4.0F
                 maskLeft = Math.Max(0, CInt(Math.Floor(rect.Left - pad)))
                 maskTop = Math.Max(0, CInt(Math.Floor(rect.Top - pad)))
                 Dim maskRight = Math.Min(canvasWidth, CInt(Math.Ceiling(rect.Right + pad)))
@@ -1624,11 +1633,29 @@ Namespace Services
 
                 If annotation.GlowEnabled Then
                     Dim glowColor = ApplyAlpha(ParseColor(annotation.GlowColor, SKColors.Yellow), alphaFactor * Clamp(annotation.GlowStrength, 0, 100) / 100.0F)
+                    ' Silhouette einfärben -> nach außen vergrößern (Dilate) -> weichzeichnen. Als
+                    ' verkettete ImageFilter, damit das Glühen sichtbar über die Objektkante hinausreicht.
                     Using glowColorFilter = SKColorFilter.CreateBlendMode(glowColor, SKBlendMode.SrcIn)
-                        Using glowMaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(0.1F, glowBlurPx))
-                            Using paint = New SKPaint With {.ColorFilter = glowColorFilter, .MaskFilter = glowMaskFilter, .BlendMode = SKBlendMode.Plus}
-                                canvas.DrawBitmap(mask, maskLeft, maskTop, paint)
-                            End Using
+                        Using coloredFilter = SKImageFilter.CreateColorFilter(glowColorFilter)
+                            Dim spreadFilter As SKImageFilter = coloredFilter
+                            Dim dilatedOwned As SKImageFilter = Nothing
+                            Try
+                                If glowDilate > 0 Then
+                                    dilatedOwned = SKImageFilter.CreateDilate(glowDilate, glowDilate, coloredFilter)
+                                    spreadFilter = dilatedOwned
+                                End If
+                                Using glowImageFilter = SKImageFilter.CreateBlur(glowSigma, glowSigma, spreadFilter)
+                                    ' Bewusst SrcOver statt additiv (Plus): Das Overlay zeichnet das Glühen auf
+                                    ' Transparenz (Plus und SrcOver liefern dort dasselbe) und blendet es dann per
+                                    ' SrcOver übers Foto - beim gebackenen Bild würde Plus die Glow-Farbe hingegen
+                                    ' aufs Foto ADDIEREN und dadurch auswaschen. SrcOver macht beide Pfade gleich kräftig.
+                                    Using paint = New SKPaint With {.ImageFilter = glowImageFilter, .BlendMode = SKBlendMode.SrcOver}
+                                        canvas.DrawBitmap(mask, maskLeft, maskTop, paint)
+                                    End Using
+                                End Using
+                            Finally
+                                dilatedOwned?.Dispose()
+                            End Try
                         End Using
                     End Using
                 End If

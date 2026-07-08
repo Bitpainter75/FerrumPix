@@ -196,8 +196,10 @@ Namespace Services
                 End Using
             End Using
 
+            ' Bewertung nur in eine BEREITS vorhandene XMP-Sidecar zurückschreiben, aber keine neue
+            ' Sidecar-Datei nur wegen einer Sternebewertung anlegen (createIfMissing:=False).
             If syncToXmp AndAlso HasXmpMetadata(filePath) Then
-                ExifService.WriteXmpRatingSidecar(filePath, rating, createIfMissing:=True)
+                ExifService.WriteXmpRatingSidecar(filePath, rating, createIfMissing:=False)
             End If
         End Sub
 
@@ -232,7 +234,8 @@ Namespace Services
                 For Each path In list
                     Dim meta As LibraryImageMeta = Nothing
                     If metaByPath.TryGetValue(path, meta) AndAlso meta IsNot Nothing AndAlso meta.HasXmpMetadata Then
-                        ExifService.WriteXmpRatingSidecar(path, rating, createIfMissing:=True)
+                        ' Keine neue Sidecar nur wegen Bewertung anlegen - nur vorhandene aktualisieren.
+                        ExifService.WriteXmpRatingSidecar(path, rating, createIfMissing:=False)
                     End If
                 Next
             End If

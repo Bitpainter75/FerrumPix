@@ -1381,7 +1381,8 @@ Namespace Views
             Dim objSize = Math.Max(1.0, Math.Min(width, height))
             ' Muss exakt der Padding-Formel in ImageProcessor.RenderAnnotationOverlay entsprechen.
             Dim shadowGrow = If(vm.AnnotationShadowEnabled, Math.Max(width, height) * Math.Max(0.0, vm.AnnotationShadowSize / 100.0 - 1.0) * 0.5, 0.0)
-            Dim glowPad = If(vm.AnnotationGlowEnabled, objSize * vm.AnnotationGlowBlur / 100.0 * 2.4, 0.0)
+            ' Faktor 1.7 muss mit ImageProcessor.RenderAnnotationOverlay (Glow-Dilate+Blur-Reichweite) übereinstimmen.
+            Dim glowPad = If(vm.AnnotationGlowEnabled, objSize * vm.AnnotationGlowBlur / 100.0 * 1.7, 0.0)
             Dim shadowPad = If(vm.AnnotationShadowEnabled, objSize * vm.AnnotationShadowBlur / 100.0 * 1.8 + shadowGrow, 0.0)
             Dim offsetX = If(vm.AnnotationShadowEnabled, objSize * vm.AnnotationShadowOffsetX / 100.0, 0.0)
             Dim offsetY = If(vm.AnnotationShadowEnabled, objSize * vm.AnnotationShadowOffsetY / 100.0, 0.0)
