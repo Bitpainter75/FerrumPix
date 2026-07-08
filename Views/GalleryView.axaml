@@ -510,7 +510,8 @@
                                   SelectionChanged="OnVirtualTreeSelectionChanged">
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-36,3,0,3">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-36,3,0,3"
+                                          ContextRequested="OnSearchNodeContextRequested">
                                         <Grid.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Bearbeiten"

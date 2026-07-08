@@ -504,6 +504,13 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ' Kein Kontextmenü für den festen "Neue Suche"-Knoten (nicht bearbeit-/entfernbar) - würde
+        ' sonst als leeres Popup erscheinen, da beide Einträge auf IsRemovable ausgeblendet sind.
+        Private Sub OnSearchNodeContextRequested(sender As Object, e As ContextRequestedEventArgs)
+            Dim node = TryCast(TryCast(sender, Control)?.DataContext, VirtualNavigationNode)
+            If node Is Nothing OrElse Not node.IsRemovable Then e.Handled = True
+        End Sub
+
         ' sender ist je nach Auslöser ein Button (X-Symbol, im Visual Tree - DataContext erbt normal) oder
         ' ein MenuItem (im ContextMenu-Popup, eigener Visual Tree). Für das MenuItem den Knoten über das
         ' PlacementTarget des Menüs auflösen (analog GetItemFromSender), da MenuItem.DataContext hier nicht
