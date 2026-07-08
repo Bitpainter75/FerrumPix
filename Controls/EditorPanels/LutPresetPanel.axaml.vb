@@ -9,65 +9,65 @@ Imports FerrumPix.ViewModels
 
 Namespace Controls.EditorPanels
 
-    Public Class LightroomPresetPanel
+    Public Class LutPresetPanel
         Inherits UserControl
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
         End Sub
 
-        Public Async Sub OnLoadLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnLoadLutPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
-                    .Title = "Lightroom-Preset laden",
+                    .Title = "LUT laden",
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
-                        New FilePickerFileType("Lightroom XMP") With {
-                            .Patterns = New String() {"*.xmp"}
+                        New FilePickerFileType("3D-LUT (.cube)") With {
+                            .Patterns = New String() {"*.cube"}
                         }
                     }
                 })
                 Dim file = files?.FirstOrDefault()
                 If file Is Nothing Then Return
-                vm.SaveLightroomPresetToSettings(file.Path.LocalPath)
-                vm.ApplyLightroomPreset(file.Path.LocalPath)
+                vm.SaveLutPresetToSettings(file.Path.LocalPath)
+                vm.ApplyLutPreset(file.Path.LocalPath)
             Catch
             End Try
         End Sub
 
-        Public Async Sub OnLoadLightroomFolderClick(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnLoadLutFolderClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
-                    .Title = "Ordner mit Lightroom-Presets wählen",
+                    .Title = "Ordner mit LUTs wählen",
                     .AllowMultiple = False
                 })
                 Dim folder = folders?.FirstOrDefault()
                 If folder Is Nothing Then Return
-                vm.ImportLightroomPresetsFromFolder(folder.Path.LocalPath)
+                vm.ImportLutPresetsFromFolder(folder.Path.LocalPath)
             Catch
             End Try
         End Sub
 
-        Public Sub OnApplySavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Sub OnApplySavedLutPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LightroomPresetSettings)
+            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LutPresetSettings)
             If vm Is Nothing OrElse preset Is Nothing Then Return
-            vm.ApplyLightroomPreset(preset.Path)
+            vm.ApplyLutPreset(preset.Path)
         End Sub
 
-        Public Sub OnRemoveSavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Sub OnRemoveSavedLutPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LightroomPresetSettings)
+            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LutPresetSettings)
             If vm Is Nothing OrElse preset Is Nothing Then Return
-            vm.RemoveLightroomPresetFromSettings(preset.Path)
+            vm.RemoveLutPresetFromSettings(preset.Path)
             e.Handled = True
         End Sub
     End Class

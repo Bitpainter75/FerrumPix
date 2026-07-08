@@ -109,8 +109,8 @@
                     <TextBlock Text="VHS" FontSize="11" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetFilterPresetCommand}" CommandParameter="Bild auf Alt">
-                    <TextBlock Text="Bild auf Alt" FontSize="11" />
+                        Command="{Binding SetFilterPresetCommand}" CommandParameter="Alt">
+                    <TextBlock Text="Alt" FontSize="11" />
                 </Button>
             </WrapPanel>
         </StackPanel>

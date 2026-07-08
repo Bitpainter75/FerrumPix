@@ -1009,7 +1009,7 @@ Namespace ViewModels
                          Dim histogram As Bitmap = Nothing
                          If loadHistogram Then histogram = ImageProcessor.BuildHistogramImage(imagePath, 240, 120)
                          Dim exifForSearch = ExifService.ExtractSearchFields(info, imagePath)
-                         LibraryService.Instance.SetExifData(imagePath, exifForSearch)
+                         LibraryService.Instance.SyncExifData(imagePath, exifForSearch, ExifService.BuildCatalogSummary(info))
 
                          Dispatcher.UIThread.Post(Sub()
                                                        If token <> _infoPanelLoadToken Then Return

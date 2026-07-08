@@ -577,6 +577,11 @@ Namespace Services
         Public Property PurpleSaturation As Single = 0
         Public Property MagentaHue As Single = 0
         Public Property MagentaSaturation As Single = 0
+        Public Property SplitToningShadowHue As Single = 0
+        Public Property SplitToningShadowSaturation As Single = 0
+        Public Property SplitToningHighlightHue As Single = 0
+        Public Property SplitToningHighlightSaturation As Single = 0
+        Public Property SplitToningBalance As Single = 0
         Public Property RotationDegrees As Integer = 0
         Public Property StraightenDegrees As Single = 0
         Public Property StraightenExpandCanvas As Boolean = False
@@ -597,6 +602,8 @@ Namespace Services
         Public Property CanvasBackgroundColor As String = "#FF000000"
         Public Property FilterPreset As String = "Keine"
         Public Property FilterStrength As Single = 100
+        Public Property LutPath As String = ""
+        Public Property LutStrength As Single = 100
         Public Property RetouchSpots As New System.Collections.Generic.List(Of RetouchSpot)()
         Public Property Annotations As New System.Collections.Generic.List(Of ImageAnnotation)()
 
@@ -622,7 +629,9 @@ Namespace Services
                    CropRightPercent <> 0 OrElse CropBottomPercent <> 0 OrElse ResizeWidth > 0 OrElse ResizeHeight > 0 OrElse
                    CanvasWidth > 0 OrElse CanvasHeight > 0 OrElse
                    RetouchSpots.Count > 0 OrElse Annotations.Count > 0 OrElse
-                   Not String.Equals(FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase)
+                   Not String.Equals(FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase) OrElse
+                   Not String.IsNullOrWhiteSpace(LutPath) OrElse
+                   SplitToningShadowSaturation <> 0 OrElse SplitToningHighlightSaturation <> 0
         End Function
 
         Public Function HasHslChanges() As Boolean
@@ -686,6 +695,11 @@ Namespace Services
                 .PurpleSaturation = PurpleSaturation,
                 .MagentaHue = MagentaHue,
                 .MagentaSaturation = MagentaSaturation,
+                .SplitToningShadowHue = SplitToningShadowHue,
+                .SplitToningShadowSaturation = SplitToningShadowSaturation,
+                .SplitToningHighlightHue = SplitToningHighlightHue,
+                .SplitToningHighlightSaturation = SplitToningHighlightSaturation,
+                .SplitToningBalance = SplitToningBalance,
                 .RotationDegrees = RotationDegrees,
                 .StraightenDegrees = StraightenDegrees,
                 .StraightenExpandCanvas = StraightenExpandCanvas,
@@ -706,6 +720,8 @@ Namespace Services
                 .CanvasBackgroundColor = CanvasBackgroundColor,
                 .FilterPreset = FilterPreset,
                 .FilterStrength = FilterStrength,
+                .LutPath = LutPath,
+                .LutStrength = LutStrength,
                 .RetouchSpots = RetouchSpots.Select(Function(s) s.Clone()).ToList(),
                 .Annotations = Annotations.Select(Function(a) a.Clone()).ToList()
             }
@@ -1058,7 +1074,9 @@ Namespace Services
             processed = ReplaceBitmap(processed, ApplyTonalLUT(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCurve(processed, adj))
             processed = ReplaceBitmap(processed, ApplyHsl(processed, adj))
+            processed = ReplaceBitmap(processed, ApplySplitToning(processed, adj))
             processed = ReplaceBitmap(processed, ApplyFilterPreset(processed, adj.FilterPreset, adj.FilterStrength / 100.0F))
+            processed = ReplaceBitmap(processed, ApplyCubeLut(processed, adj.LutPath, adj.LutStrength / 100.0F))
 
             If adj.Clarity <> 0 Then
                 processed = ReplaceBitmap(processed, ApplyClarity(processed, adj.Clarity / 100.0F))
@@ -1138,11 +1156,13 @@ Namespace Services
                 adj.RedHue, adj.RedSaturation, adj.OrangeHue, adj.OrangeSaturation, adj.YellowHue, adj.YellowSaturation,
                 adj.GreenHue, adj.GreenSaturation, adj.AquaHue, adj.AquaSaturation, adj.BlueHue, adj.BlueSaturation,
                 adj.PurpleHue, adj.PurpleSaturation, adj.MagentaHue, adj.MagentaSaturation,
+                adj.SplitToningShadowHue, adj.SplitToningShadowSaturation,
+                adj.SplitToningHighlightHue, adj.SplitToningHighlightSaturation, adj.SplitToningBalance,
                 adj.RotationDegrees, adj.StraightenDegrees, adj.StraightenExpandCanvas, adj.FlipHorizontal, adj.FlipVertical,
                 adj.CropLeftPercent, adj.CropTopPercent, adj.CropRightPercent, adj.CropBottomPercent,
                 adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeInterpolation,
                 adj.CanvasWidth, adj.CanvasHeight, adj.LockCanvasAspect, adj.CanvasAnchor, adj.CanvasBackgroundColor,
-                adj.FilterPreset, adj.FilterStrength,
+                adj.FilterPreset, adj.FilterStrength, adj.LutPath, adj.LutStrength,
                 String.Join(";", adj.RetouchSpots.Select(Function(s) $"{s.XPercent},{s.YPercent},{s.RadiusPercent}"))
             })
         End Function
@@ -1611,23 +1631,33 @@ Namespace Services
         Private Shared ReadOnly _shapePathCache As New Dictionary(Of String, ShapePathData)()
         Private Shared ReadOnly _shapePathCacheLock As New Object()
 
+        ''' Skaliert wie SvgIcon.vb (uniform/"contain", zentriert anhand der eigenen Bounds) statt
+        ''' pro Achse getrennt zu strecken - sonst weicht das gebackene Rendering bei nicht-quadratischen
+        ''' Ziel-Rects (jedes nicht-quadratische Foto) sichtbar von der Live-Vorschau ab.
         Private Shared Sub DrawSvgAnnotation(canvas As SKCanvas, iconPath As String, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             If String.IsNullOrWhiteSpace(iconPath) Then Return
             Dim shape = GetShapePath(iconPath)
             If shape Is Nothing OrElse shape.Path.IsEmpty OrElse shape.Bounds.Width <= 0 OrElse shape.Bounds.Height <= 0 Then Return
 
-            Dim scaleX = rect.Width / shape.Bounds.Width
-            Dim scaleY = rect.Height / shape.Bounds.Height
+            Dim uniformScale = Math.Min(rect.Width / shape.Bounds.Width, rect.Height / shape.Bounds.Height)
+            Dim fittedWidth = shape.Bounds.Width * uniformScale
+            Dim fittedHeight = shape.Bounds.Height * uniformScale
+            Dim offsetX = rect.Left + (rect.Width - fittedWidth) / 2.0F
+            Dim offsetY = rect.Top + (rect.Height - fittedHeight) / 2.0F
 
             canvas.Save()
-            canvas.Translate(rect.Left, rect.Top)
-            canvas.Scale(scaleX, scaleY)
+            canvas.Translate(offsetX, offsetY)
+            canvas.Scale(uniformScale, uniformScale)
             canvas.Translate(-shape.Bounds.Left, -shape.Bounds.Top)
 
             Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
             If fill.Alpha > 0 Then
                 If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
-                    Using shader = CreateFillGradientShader(rect, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+                    ''' shape.Bounds statt rect: der Canvas ist an dieser Stelle bereits in den lokalen
+                    ''' Pfad-Koordinatenraum transformiert (s.o.), der Shader muss im selben Koordinatenraum
+                    ''' wie der gezeichnete Pfad definiert werden, sonst landet der Verlauf weit außerhalb
+                    ''' des sichtbaren Bereichs und wirkt wie eine einfarbige Füllung.
+                    Using shader = CreateFillGradientShader(shape.Bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
                         Using fillPaint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
                             canvas.DrawPath(shape.Path, fillPaint)
                         End Using
@@ -1639,7 +1669,7 @@ Namespace Services
                 End If
             End If
             If strokeWidth > 0 Then
-                Dim adjustedStroke = strokeWidth / Math.Max(0.0001F, Math.Min(scaleX, scaleY))
+                Dim adjustedStroke = strokeWidth / Math.Max(0.0001F, uniformScale)
                 Using strokePaint = New SKPaint With {
                     .Color = stroke,
                     .Style = SKPaintStyle.Stroke,
@@ -2337,9 +2367,10 @@ Namespace Services
             Return result
         End Function
 
-        Private Shared Function ApplyClarity(source As SKBitmap, amount As Single) As SKBitmap
-            Dim sigma = 2.0F + Math.Abs(amount) * 5.0F
-            Using blurred = ApplyNoiseReduction(source, sigma / 8.0F)
+        ''' Gemeinsamer Unsharp-Mask-artiger Lokalkontrast-Kern für Clarity/Structure - Unterschied
+        ''' zwischen beiden Reglern ist ausschließlich blurSigma (Frequenzband) und strengthMultiplier.
+        Private Shared Function ApplyLocalContrast(source As SKBitmap, blurSigma As Single, amount As Single, strengthMultiplier As Single) As SKBitmap
+            Using blurred = ApplyNoiseReduction(source, blurSigma / 8.0F)
                 Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
                 For y As Integer = 0 To source.Height - 1
                     For x As Integer = 0 To source.Width - 1
@@ -2349,9 +2380,9 @@ Namespace Services
                         ' ausgewertet - da Byte vorzeichenlos ist, wirft VB im Checked-Kontext eine
                         ' OverflowException, sobald der weichgezeichnete Pixel heller ist als das
                         ' Original (b.Red > c.Red), was in praktisch jedem Foto ständig vorkommt.
-                        Dim r = ClampToByte(CInt(c.Red) + (CInt(c.Red) - CInt(b.Red)) * amount * 1.6F)
-                        Dim g = ClampToByte(CInt(c.Green) + (CInt(c.Green) - CInt(b.Green)) * amount * 1.6F)
-                        Dim bl = ClampToByte(CInt(c.Blue) + (CInt(c.Blue) - CInt(b.Blue)) * amount * 1.6F)
+                        Dim r = ClampToByte(CInt(c.Red) + (CInt(c.Red) - CInt(b.Red)) * amount * strengthMultiplier)
+                        Dim g = ClampToByte(CInt(c.Green) + (CInt(c.Green) - CInt(b.Green)) * amount * strengthMultiplier)
+                        Dim bl = ClampToByte(CInt(c.Blue) + (CInt(c.Blue) - CInt(b.Blue)) * amount * strengthMultiplier)
                         result.SetPixel(x, y, New SKColor(r, g, bl, c.Alpha))
                     Next
                 Next
@@ -2359,8 +2390,18 @@ Namespace Services
             End Using
         End Function
 
+        Private Shared Function ApplyClarity(source As SKBitmap, amount As Single) As SKBitmap
+            Dim sigma = 2.0F + Math.Abs(amount) * 5.0F
+            Return ApplyLocalContrast(source, sigma, amount, 1.6F)
+        End Function
+
+        ''' Anders als Clarity (breiter, mit der Stärke wachsender Mitteltonkontrast-Radius): Structure
+        ''' arbeitet auf einem festen, kleinen Blur-Radius (feine Textur/Detailkontrast) - vorher rief
+        ''' diese Funktion nur ApplyClarity mit abgeschwächter Stärke auf und war dadurch visuell nicht
+        ''' von Clarity unterscheidbar, nur schwächer.
         Private Shared Function ApplyStructure(source As SKBitmap, amount As Single) As SKBitmap
-            Return ApplyClarity(source, Clamp(amount, -1, 1) * 0.65F)
+            Dim clamped = Clamp(amount, -1, 1)
+            Return ApplyLocalContrast(source, 1.2F, clamped, 2.4F)
         End Function
 
         Private Shared Function ApplyHaze(source As SKBitmap, amount As Single) As SKBitmap
@@ -2647,6 +2688,57 @@ Namespace Services
             End Select
         End Sub
 
+        ''' Färbt Schatten und Lichter getrennt ein (Lightroom-Split-Toning-Konzept): Balance verschiebt
+        ''' den Umschlagpunkt zwischen "gilt als Schatten" und "gilt als Licht" auf der Luminanzachse,
+        ''' die Sättigungsregler steuern zugleich die Deckkraft der jeweiligen Einfärbung.
+        Private Shared Function ApplySplitToning(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            Dim hasShadow = adj.SplitToningShadowSaturation <> 0
+            Dim hasHighlight = adj.SplitToningHighlightSaturation <> 0
+            If Not hasShadow AndAlso Not hasHighlight Then Return source
+
+            Dim balance = Clamp(adj.SplitToningBalance, -100, 100) / 100.0
+            Dim pivot = Math.Max(0.1, Math.Min(0.9, 0.5 - balance * 0.4))
+
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            For y As Integer = 0 To source.Height - 1
+                For x As Integer = 0 To source.Width - 1
+                    Dim c = source.GetPixel(x, y)
+                    Dim h As Double
+                    Dim s As Double
+                    Dim l As Double
+                    RgbToHsl(c.Red, c.Green, c.Blue, h, s, l)
+
+                    Dim rr As Double = c.Red
+                    Dim gg As Double = c.Green
+                    Dim bb As Double = c.Blue
+
+                    If hasShadow Then
+                        Dim weight = Math.Max(0.0, Math.Min(1.0, (pivot - l) / pivot))
+                        If weight > 0 Then
+                            Dim tint = HslToRgb(adj.SplitToningShadowHue, adj.SplitToningShadowSaturation / 100.0, l, 255)
+                            Dim amount = weight * (adj.SplitToningShadowSaturation / 100.0)
+                            rr += (tint.Red - rr) * amount
+                            gg += (tint.Green - gg) * amount
+                            bb += (tint.Blue - bb) * amount
+                        End If
+                    End If
+                    If hasHighlight Then
+                        Dim weight = Math.Max(0.0, Math.Min(1.0, (l - pivot) / (1.0 - pivot)))
+                        If weight > 0 Then
+                            Dim tint = HslToRgb(adj.SplitToningHighlightHue, adj.SplitToningHighlightSaturation / 100.0, l, 255)
+                            Dim amount = weight * (adj.SplitToningHighlightSaturation / 100.0)
+                            rr += (tint.Red - rr) * amount
+                            gg += (tint.Green - gg) * amount
+                            bb += (tint.Blue - bb) * amount
+                        End If
+                    End If
+
+                    result.SetPixel(x, y, New SKColor(ClampToByte(rr), ClampToByte(gg), ClampToByte(bb), c.Alpha))
+                Next
+            Next
+            Return result
+        End Function
+
         Private Shared Function ApplyFilterPreset(source As SKBitmap, preset As String, strength As Single) As SKBitmap
             If String.IsNullOrWhiteSpace(preset) OrElse String.Equals(preset, "Keine", StringComparison.OrdinalIgnoreCase) Then
                 Return source
@@ -2720,12 +2812,11 @@ Namespace Services
                         0, 0, 0, 1, 0
                     }
                 Case "weich"
-                    matrix = New Single() {
-                        1.0F, 0.025F, 0.025F, 0, 6,
-                        0.025F, 1.0F, 0.025F, 0, 6,
-                        0.025F, 0.025F, 1.0F, 0, 6,
-                        0, 0, 0, 1, 0
-                    }
+                    ''' Echte räumliche Unschärfe statt nur einer Farbmatrix - eine Farbmatrix wirkt
+                    ''' pro Pixel und kann strukturell nicht weichzeichnen (das war vorher hier nur ein
+                    ''' minimaler Weißabgleich/Aufhellungs-Trick, sah "Weich" praktisch identisch zu
+                    ''' "Matt"/"Fade").
+                    Return ApplySoftFocusBlur(source, strength)
                 Case "noir"
                     matrix = New Single() {
                         0.404F, 0.792F, 0.154F, 0, -38,
@@ -2784,8 +2875,145 @@ Namespace Services
             Return result
         End Function
 
+        ''' Blendet eine leicht gaußgeweichzeichnete Kopie über das scharfe Original - der Radius
+        ''' bleibt bewusst klein/fest ("leicht"), die Stärke steuert nur die Überblend-Deckkraft.
+        Private Shared Function ApplySoftFocusBlur(source As SKBitmap, strength As Single) As SKBitmap
+            strength = Clamp(strength, 0, 1)
+            If strength <= 0 Then Return source
+            Using blurred = ApplyNoiseReduction(source, 0.3F)
+                Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+                Using canvas = New SKCanvas(result)
+                    canvas.DrawBitmap(source, 0, 0)
+                    Using paint = New SKPaint With {.Color = New SKColor(255, 255, 255, ClampToByte(255 * strength))}
+                        canvas.DrawBitmap(blurred, 0, 0, paint)
+                    End Using
+                End Using
+                Return result
+            End Using
+        End Function
+
+        Private Class Lut3DData
+            Public Property Size As Integer
+            ''' Flach abgelegt, R am schnellsten laufend (Standard-.cube-Reihenfolge): Index = (b*Size*Size + g*Size + r)*3 + Kanal.
+            Public Property Table As Single()
+        End Class
+
+        Private Shared ReadOnly _cubeLutCache As New Dictionary(Of String, Lut3DData)(StringComparer.OrdinalIgnoreCase)
+
+        ''' Lädt und parst eine .cube-3D-LUT-Datei (nur LUT_3D_SIZE wird unterstützt, kein LUT_1D_SIZE,
+        ''' Domain wird als 0..1 angenommen). Ergebnis wird pro Dateipfad gecacht, da eine LUT beim
+        ''' Ziehen an einem Stärke-Regler sonst bei jedem Preview-Frame neu von der Platte geparst würde.
+        Private Shared Function LoadCubeLut(path As String) As Lut3DData
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return Nothing
+
+            Dim cached As Lut3DData = Nothing
+            If _cubeLutCache.TryGetValue(path, cached) Then Return cached
+
+            Dim size As Integer = 0
+            Dim values As New List(Of Single)()
+            For Each rawLine In File.ReadLines(path)
+                Dim line = rawLine.Trim()
+                If line.Length = 0 OrElse line.StartsWith("#") Then Continue For
+                If line.StartsWith("LUT_3D_SIZE", StringComparison.OrdinalIgnoreCase) Then
+                    Dim parts = line.Split({" "c, ControlChars.Tab}, StringSplitOptions.RemoveEmptyEntries)
+                    If parts.Length >= 2 Then Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, size)
+                    Continue For
+                End If
+                If Not Char.IsDigit(line(0)) AndAlso line(0) <> "-"c AndAlso line(0) <> "+"c AndAlso line(0) <> "."c Then Continue For
+
+                Dim comps = line.Split({" "c, ControlChars.Tab}, StringSplitOptions.RemoveEmptyEntries)
+                If comps.Length < 3 Then Continue For
+                Dim r, g, b As Single
+                If Single.TryParse(comps(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, r) AndAlso
+                   Single.TryParse(comps(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, g) AndAlso
+                   Single.TryParse(comps(2), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, b) Then
+                    values.Add(r)
+                    values.Add(g)
+                    values.Add(b)
+                End If
+            Next
+
+            If size < 2 OrElse values.Count <> size * size * size * 3 Then Return Nothing
+
+            Dim data = New Lut3DData With {.Size = size, .Table = values.ToArray()}
+            _cubeLutCache(path) = data
+            Return data
+        End Function
+
+        Private Shared Function LutChannel(table As Single(), size As Integer, r As Integer, g As Integer, b As Integer, channel As Integer) As Single
+            Return table((b * size * size + g * size + r) * 3 + channel)
+        End Function
+
+        Private Shared Function TrilinearChannel(table As Single(), size As Integer, r0 As Integer, r1 As Integer, g0 As Integer, g1 As Integer, b0 As Integer, b1 As Integer, rt As Single, gt As Single, bt As Single, channel As Integer) As Single
+            Dim c000 = LutChannel(table, size, r0, g0, b0, channel)
+            Dim c100 = LutChannel(table, size, r1, g0, b0, channel)
+            Dim c010 = LutChannel(table, size, r0, g1, b0, channel)
+            Dim c110 = LutChannel(table, size, r1, g1, b0, channel)
+            Dim c001 = LutChannel(table, size, r0, g0, b1, channel)
+            Dim c101 = LutChannel(table, size, r1, g0, b1, channel)
+            Dim c011 = LutChannel(table, size, r0, g1, b1, channel)
+            Dim c111 = LutChannel(table, size, r1, g1, b1, channel)
+
+            Dim c00 = c000 + (c100 - c000) * rt
+            Dim c10 = c010 + (c110 - c010) * rt
+            Dim c01 = c001 + (c101 - c001) * rt
+            Dim c11 = c011 + (c111 - c011) * rt
+            Dim c0 = c00 + (c10 - c00) * gt
+            Dim c1 = c01 + (c11 - c01) * gt
+            Return c0 + (c1 - c0) * bt
+        End Function
+
+        Private Shared Function ApplyCubeLut(source As SKBitmap, path As String, strength As Single) As SKBitmap
+            strength = Clamp(strength, 0, 1)
+            If strength <= 0 OrElse String.IsNullOrWhiteSpace(path) Then Return source
+
+            Dim lut = LoadCubeLut(path)
+            If lut Is Nothing Then Return source
+
+            Dim size = lut.Size
+            Dim maxIndex = size - 1
+            Dim table = lut.Table
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            For y = 0 To source.Height - 1
+                For x = 0 To source.Width - 1
+                    Dim c = source.GetPixel(x, y)
+                    Dim rf = c.Red / 255.0F * maxIndex
+                    Dim gf = c.Green / 255.0F * maxIndex
+                    Dim bf = c.Blue / 255.0F * maxIndex
+
+                    Dim r0 = CInt(Math.Floor(rf))
+                    Dim g0 = CInt(Math.Floor(gf))
+                    Dim b0 = CInt(Math.Floor(bf))
+                    Dim r1 = Math.Min(maxIndex, r0 + 1)
+                    Dim g1 = Math.Min(maxIndex, g0 + 1)
+                    Dim b1 = Math.Min(maxIndex, b0 + 1)
+                    Dim rt = rf - r0
+                    Dim gt = gf - g0
+                    Dim bt = bf - b0
+
+                    Dim outR = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 0) * 255.0F
+                    Dim outG = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 1) * 255.0F
+                    Dim outB = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 2) * 255.0F
+
+                    If strength >= 0.999F Then
+                        result.SetPixel(x, y, New SKColor(ClampToByte(outR), ClampToByte(outG), ClampToByte(outB), c.Alpha))
+                    Else
+                        result.SetPixel(x, y, New SKColor(
+                            ClampToByte(c.Red + (outR - c.Red) * strength),
+                            ClampToByte(c.Green + (outG - c.Green) * strength),
+                            ClampToByte(c.Blue + (outB - c.Blue) * strength),
+                            c.Alpha))
+                    End If
+                Next
+            Next
+            Return result
+        End Function
+
         Private Shared Function ApplyVignette(source As SKBitmap, amount As Single, transition As Single, roundness As Single, feather As Single, centerXPercent As Single, centerYPercent As Single) As SKBitmap
-            Dim strength = Clamp(Math.Abs(amount), 0, 1)
+            ''' Obergrenze 1.5 statt 1 - der Stärke-Regler in EffectsPanel.axaml geht bis ±150, was hier
+            ''' zu amount=±1.5 wird (amount/100 im Aufrufer). Bei Clamp(...,0,1) hatte das letzte Drittel
+            ''' des Reglerwegs (100..150) keinerlei sichtbaren Effekt mehr (toter Reglerbereich).
+            Dim strength = Clamp(Math.Abs(amount), 0, 1.5)
             If strength <= 0 Then Return source
 
             Dim result = CloneBitmap(source)
@@ -2876,22 +3104,55 @@ Namespace Services
             Using canvas = New SKCanvas(result)
                 Dim color = ParseColor(colorValue, SKColors.White)
                 Dim normalized = If(effect, "Einfach").Trim().ToLowerInvariant()
+                Dim radius = Math.Min(source.Width, source.Height) * Clamp(cornerRadiusPercent, 0, 1) * 0.25F
+
+                If normalized = "doppelt" Then
+                    ''' Zwei dünne konzentrische Linien mit Lücke dazwischen (klassischer Passepartout-Look)
+                    ''' statt einer einzelnen Linie in voller Stärke.
+                    Dim thinWidth = Math.Max(1.0F, thickness * 0.35F)
+                    Dim gap = thickness * 0.6F
+                    Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = thinWidth, .IsAntialias = True}
+                        Dim outerInset = thinWidth / 2.0F
+                        Dim outerRect = New SKRect(outerInset, outerInset, source.Width - outerInset, source.Height - outerInset)
+                        Dim innerRect = New SKRect(outerInset + gap, outerInset + gap, source.Width - outerInset - gap, source.Height - outerInset - gap)
+                        If radius > 0 Then
+                            canvas.DrawRoundRect(outerRect, radius, radius, paint)
+                            canvas.DrawRoundRect(innerRect, Math.Max(0.0F, radius - gap), Math.Max(0.0F, radius - gap), paint)
+                        Else
+                            canvas.DrawRect(outerRect, paint)
+                            canvas.DrawRect(innerRect, paint)
+                        End If
+                    End Using
+                    Return result
+                End If
+
                 Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = thickness, .IsAntialias = True}
-                    If normalized = "gestrichelt" Then
-                        paint.PathEffect = SKPathEffect.CreateDash(New Single() {thickness * 1.4F, thickness * 0.9F}, 0)
-                    End If
+                    Select Case normalized
+                        Case "gestrichelt"
+                            paint.PathEffect = SKPathEffect.CreateDash(New Single() {thickness * 1.4F, thickness * 0.9F}, 0)
+                        Case "punktiert"
+                            ''' Sehr kurzes "An"-Segment + runde Stroke-Caps rendert als Punktreihe statt Striche.
+                            paint.StrokeCap = SKStrokeCap.Round
+                            paint.PathEffect = SKPathEffect.CreateDash(New Single() {0.01F, thickness * 1.3F}, 0)
+                    End Select
                     Dim inset = thickness / 2.0F
                     Dim rect = New SKRect(inset, inset, source.Width - inset, source.Height - inset)
-                    Dim radius = Math.Min(source.Width, source.Height) * Clamp(cornerRadiusPercent, 0, 1) * 0.25F
-                    If normalized = "gezackt" Then
-                        Using path = BuildZigZagBorderPath(rect, Math.Max(4, thickness))
-                            canvas.DrawPath(path, paint)
-                        End Using
-                    ElseIf radius > 0 Then
-                        canvas.DrawRoundRect(rect, radius, radius, paint)
-                    Else
-                        canvas.DrawRect(rect, paint)
-                    End If
+                    Select Case normalized
+                        Case "gezackt"
+                            Using path = BuildZigZagBorderPath(rect, Math.Max(4, thickness))
+                                canvas.DrawPath(path, paint)
+                            End Using
+                        Case "wellig"
+                            Using path = BuildWavyBorderPath(rect, Math.Max(6, thickness * 1.5F))
+                                canvas.DrawPath(path, paint)
+                            End Using
+                        Case Else
+                            If radius > 0 Then
+                                canvas.DrawRoundRect(rect, radius, radius, paint)
+                            Else
+                                canvas.DrawRect(rect, paint)
+                            End If
+                    End Select
                 End Using
             End Using
             Return result
@@ -2925,6 +3186,52 @@ Namespace Services
                 y = Math.Max(rect.Top, y - stepV)
                 path.LineTo(If(up, rect.Left + stepV * 0.5F, rect.Left), y)
                 up = Not up
+            End While
+            path.Close()
+            Return path
+        End Function
+
+        ''' Geschwungene/muschelförmige Randlinie: wie BuildZigZagBorderPath aufgebaut (vier Kanten,
+        ''' abwechselnd nach außen/innen ausschlagend), aber mit QuadTo-Bögen statt geraden LineTo-
+        ''' Segmenten - ergibt einen weichen Wellenrand statt scharfer Zacken.
+        Private Shared Function BuildWavyBorderPath(rect As SKRect, stepSize As Single) As SKPath
+            Dim path = New SKPath()
+            Dim stepV = Math.Max(6.0F, stepSize)
+            Dim amp = stepV * 0.35F
+
+            path.MoveTo(rect.Left, rect.Top)
+            Dim x = rect.Left
+            Dim outward = True
+            While x < rect.Right
+                Dim nx = Math.Min(rect.Right, x + stepV)
+                Dim midX = (x + nx) / 2.0F
+                path.QuadTo(midX, rect.Top + If(outward, -amp, amp), nx, rect.Top)
+                x = nx
+                outward = Not outward
+            End While
+            Dim y = rect.Top
+            While y < rect.Bottom
+                Dim ny = Math.Min(rect.Bottom, y + stepV)
+                Dim midY = (y + ny) / 2.0F
+                path.QuadTo(rect.Right + If(outward, amp, -amp), midY, rect.Right, ny)
+                y = ny
+                outward = Not outward
+            End While
+            x = rect.Right
+            While x > rect.Left
+                Dim nx = Math.Max(rect.Left, x - stepV)
+                Dim midX = (x + nx) / 2.0F
+                path.QuadTo(midX, rect.Bottom + If(outward, amp, -amp), nx, rect.Bottom)
+                x = nx
+                outward = Not outward
+            End While
+            y = rect.Bottom
+            While y > rect.Top
+                Dim ny = Math.Max(rect.Top, y - stepV)
+                Dim midY = (y + ny) / 2.0F
+                path.QuadTo(rect.Left + If(outward, -amp, amp), midY, rect.Left, ny)
+                y = ny
+                outward = Not outward
             End While
             path.Close()
             Return path

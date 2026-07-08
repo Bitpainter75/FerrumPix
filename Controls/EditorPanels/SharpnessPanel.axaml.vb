@@ -3,7 +3,7 @@ Imports Avalonia.Markup.Xaml
 
 Namespace Controls.EditorPanels
 
-    Public Class DetailsPanel
+    Public Class SharpnessPanel
         Inherits UserControl
 
         Public Sub New()

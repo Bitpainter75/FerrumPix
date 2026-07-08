@@ -22,6 +22,8 @@ Namespace ViewModels
         Private _selectedItem As ImageItem
         Private _thumbnailSize As Double = 260
         Private _statusText As String = LocalizationService.T("Willkommen bei FerrumPix")
+        Private _hoveredMetadataTitle As String = ""
+        Private _hoveredMetadataText As String = ""
         Private _searchText As String = ""
         Private _sortMode As String = "Name"
         Private _sortAscending As Boolean = True
@@ -210,6 +212,26 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_statusText, value)
+            End Set
+        End Property
+
+        ''' Für das Gallery-weite Metadaten-Hover-Overlay (rechts oben im Gallery-Fenster, nicht am
+        ''' Thumbnail) - wird von OnMetadataBadgePointerEntered/-Exited in GalleryView.axaml.vb gesetzt.
+        Public Property HoveredMetadataTitle As String
+            Get
+                Return _hoveredMetadataTitle
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_hoveredMetadataTitle, value)
+            End Set
+        End Property
+
+        Public Property HoveredMetadataText As String
+            Get
+                Return _hoveredMetadataText
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_hoveredMetadataText, value)
             End Set
         End Property
 
@@ -1864,11 +1886,11 @@ Namespace ViewModels
                 Dim data = ExifService.ReadExif(meta.FilePath)
                 Dim fields = ExifService.ExtractSearchFields(data, meta.FilePath)
                 Dim xmpRating = ExifService.GetXmpRating(data)
-                LibraryService.Instance.SetExifData(meta.FilePath,
-                                                   fields,
-                                                   data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0,
-                                                   data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0,
-                                                   data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0)
+                Dim catalogSummary = ExifService.BuildCatalogSummary(data)
+                Dim exifSummary = catalogSummary.ExifSummary
+                Dim iptcSummary = catalogSummary.IptcSummary
+                Dim xmpSummary = catalogSummary.XmpSummary
+                LibraryService.Instance.SyncExifData(meta.FilePath, fields, catalogSummary)
                 If xmpRating.HasValue Then
                     LibraryService.Instance.SetRating(meta.FilePath, xmpRating.Value)
                 End If
@@ -1884,6 +1906,9 @@ Namespace ViewModels
                 meta.GpsLongitude = fields.GpsLongitude
                 meta.ImageWidth = fields.ImageWidth
                 meta.ImageHeight = fields.ImageHeight
+                meta.ExifSummary = exifSummary
+                meta.IptcSummary = iptcSummary
+                meta.XmpSummary = xmpSummary
                 meta.ScannedSourceModifiedAt = File.GetLastWriteTime(meta.FilePath).ToString("o")
             Catch
             End Try
@@ -2445,6 +2470,15 @@ Namespace ViewModels
                                  m.GpsLatitude.HasValue OrElse
                                  m.GpsLongitude.HasValue)
 
+                            ''' Einmalige Selbstheilung für Katalog-Einträge aus einer Version vor den
+                            ''' ExifSummary/IptcSummary/XmpSummary-Spalten: Flag ist gesetzt, aber der
+                            ''' Zusammenfassungstext fehlt noch - ohne diesen Nachtrag bliebe das
+                            ''' Metadaten-Hover-Overlay für Alt-Einträge dauerhaft leer.
+                            Dim needsSummaryBackfill =
+                                (m.HasExifMetadata AndAlso String.IsNullOrEmpty(m.ExifSummary)) OrElse
+                                (m.HasIptcMetadata AndAlso String.IsNullOrEmpty(m.IptcSummary)) OrElse
+                                (m.HasXmpMetadata AndAlso String.IsNullOrEmpty(m.XmpSummary))
+
                             item.ImageWidth = m.ImageWidth.Value
                             item.ImageHeight = m.ImageHeight.Value
                             item.ExifDateTaken = ExifService.ParseExifDateTime(m.DateTaken)
@@ -2455,7 +2489,10 @@ Namespace ViewModels
                             item.HasExifMetadata = m.HasExifMetadata
                             item.HasIptcMetadata = m.HasIptcMetadata
                             item.HasXmpMetadata = m.HasXmpMetadata
-                            If needsMetadataFlagBackfill Then
+                            item.ExifMetadataSummary = m.ExifSummary
+                            item.IptcMetadataSummary = m.IptcSummary
+                            item.XmpMetadataSummary = m.XmpSummary
+                            If needsMetadataFlagBackfill OrElse needsSummaryBackfill Then
                                 itemsNeedingMetaRefresh.Add(item)
                             End If
                         Else
@@ -2529,11 +2566,14 @@ Namespace ViewModels
                                                                Dim data = ExifService.ReadExif(item.FilePath)
                                                                Dim fields = ExifService.ExtractSearchFields(data, item.FilePath)
                                                                Dim xmpRating = ExifService.GetXmpRating(data)
-                                                               LibraryService.Instance.SetExifData(item.FilePath,
-                                                                                                  fields,
-                                                                                                  data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0,
-                                                                                                  data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0,
-                                                                                                  data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0)
+                                                               Dim catalogSummary = ExifService.BuildCatalogSummary(data)
+                                                               Dim hasExif = catalogSummary.HasExifMetadata
+                                                               Dim hasIptc = catalogSummary.HasIptcMetadata
+                                                               Dim hasXmp = catalogSummary.HasXmpMetadata
+                                                               Dim exifSummary = catalogSummary.ExifSummary
+                                                               Dim iptcSummary = catalogSummary.IptcSummary
+                                                               Dim xmpSummary = catalogSummary.XmpSummary
+                                                               LibraryService.Instance.SyncExifData(item.FilePath, fields, catalogSummary)
                                                                If xmpRating.HasValue Then
                                                                    LibraryService.Instance.SetRating(item.FilePath, xmpRating.Value)
                                                                End If
@@ -2554,12 +2594,12 @@ Namespace ViewModels
                                                                                                           item.ExifCamera = camera
                                                                                                           item.ExifIso = iso
                                                                                                           item.ExifAperture = aperture
-                                                                                                          item.HasExifMetadata = data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0
-                                                                                                          item.HasIptcMetadata = data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0
-                                                                                                          item.HasXmpMetadata = data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0
-                                                                                                          item.ExifMetadataSummary = BuildMetadataSummary(If(data?.ExifTags, Nothing), 6)
-                                                                                                          item.IptcMetadataSummary = BuildMetadataSummary(If(data?.IptcTags, Nothing), 6)
-                                                                                                          item.XmpMetadataSummary = BuildMetadataSummary(If(data?.XmpTags, Nothing), 6)
+                                                                                                          item.HasExifMetadata = hasExif
+                                                                                                          item.HasIptcMetadata = hasIptc
+                                                                                                          item.HasXmpMetadata = hasXmp
+                                                                                                          item.ExifMetadataSummary = exifSummary
+                                                                                                          item.IptcMetadataSummary = iptcSummary
+                                                                                                          item.XmpMetadataSummary = xmpSummary
                                                                                                       End Sub)
                                                            Catch
                                                            End Try
@@ -3281,22 +3321,6 @@ Namespace ViewModels
 
         Private Shared ReadOnly BatchConvertExcludedExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".svg"}
         Private Shared ReadOnly BatchImageEditWritableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
-
-        Private Shared Function BuildMetadataSummary(tags As IEnumerable(Of ExifTag), maxItems As Integer) As String
-            Dim entries = If(tags, Enumerable.Empty(Of ExifTag)()).
-                Where(Function(t) t IsNot Nothing AndAlso
-                                  Not String.IsNullOrWhiteSpace(t.Name) AndAlso
-                                  Not String.IsNullOrWhiteSpace(t.Value)).
-                Take(Math.Max(1, maxItems)).
-                Select(Function(t)
-                           Dim name = t.Name.Trim()
-                           Dim value = t.Value.Trim()
-                           If value.Length > 48 Then value = value.Substring(0, 48) & "..."
-                           Return $"{name}: {value}"
-                       End Function).
-                ToList()
-            Return String.Join(Environment.NewLine, entries)
-        End Function
 
         Private Async Sub ResizeSelected()
             Dim targets = GetSelectedEditableImagePaths()

@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
-             x:Class="FerrumPix.Controls.EditorPanels.LightroomPresetPanel">
-    <Expander Header="Lightroom-Preset" IsExpanded="True">
+             x:Class="FerrumPix.Controls.EditorPanels.LutPresetPanel">
+    <Expander Header="LUT (.cube)" IsExpanded="True">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -17,8 +17,8 @@
                             Width="28"
                             Height="28"
                             Padding="0"
-                            Click="OnLoadLightroomPresetClick"
-                            ToolTip.Tip="XMP laden">
+                            Click="OnLoadLutPresetClick"
+                            ToolTip.Tip="LUT laden">
                         <icons:SvgIcon
                             Source="avares://FerrumPix/Assets/Icons/outline/circle-plus.svg"
                             Width="14" Height="14" />
@@ -32,18 +32,30 @@
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         BorderBrush="{DynamicResource FP.Accent}"
-                        Click="OnLoadLightroomPresetClick">
-                    <TextBlock Text="XMP laden" FontSize="11" />
+                        Click="OnLoadLutPresetClick">
+                    <TextBlock Text="LUT laden" FontSize="11" />
                 </Button>
                 <Button Grid.Column="1" Classes="ghost" Padding="8,5"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         BorderBrush="{DynamicResource FP.Accent}"
-                        Click="OnLoadLightroomFolderClick">
+                        Click="OnLoadLutFolderClick">
                     <TextBlock Text="Ordner laden" FontSize="11" />
                 </Button>
             </Grid>
-            <ItemsControl ItemsSource="{Binding SavedLightroomPresets}">
+            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center"
+                  IsVisible="{Binding HasLutApplied}">
+                <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   Value="{Binding LutStrength}" Margin="6,0" />
+                <TextBlock Grid.Column="2"
+                           Text="{Binding LutStrength, StringFormat={}{0:F0}}"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           FontSize="11" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding SavedLutPresets}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel />
@@ -63,7 +75,7 @@
                                         Background="Transparent"
                                         BorderThickness="0"
                                         Padding="0"
-                                        Click="OnApplySavedLightroomPresetClick">
+                                        Click="OnApplySavedLutPresetClick">
                                     <TextBlock Text="{Binding Name}" FontSize="11" />
                                 </Button>
                                 <Button Grid.Column="1"
@@ -71,7 +83,7 @@
                                         Background="Transparent"
                                         BorderThickness="0"
                                         Padding="4,0,0,0"
-                                        Click="OnRemoveSavedLightroomPresetClick"
+                                        Click="OnRemoveSavedLutPresetClick"
                                         ToolTip.Tip="Preset entfernen">
                                     <TextBlock Text="×" FontSize="14"
                                                Foreground="{DynamicResource FP.Text.Muted}" />

@@ -1093,7 +1093,12 @@ Namespace ViewModels
             _dialogBatchRenameExifCache.Clear()
             Await Task.Run(Sub()
                 For Each p In _dialogBatchRenamePaths
-                    If IO.File.Exists(p) Then _dialogBatchRenameExifCache(p) = ExifService.ReadExif(p)
+                    If Not IO.File.Exists(p) Then Continue For
+                    Dim data = ExifService.ReadExif(p)
+                    _dialogBatchRenameExifCache(p) = data
+                    ' Dieser Lesevorgang war ohnehin fällig (Muster-Vorschau) - direkt mit dem
+                    ' Katalog-Eintrag abgleichen, statt die Gelegenheit ungenutzt verstreichen zu lassen.
+                    LibraryService.Instance.SyncExifData(p, ExifService.ExtractSearchFields(data, p), ExifService.BuildCatalogSummary(data))
                 Next
             End Sub)
 
@@ -1499,12 +1504,20 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' Bei Dateien (nicht Ordnern) wird nur der Basisname ohne Endung im Eingabefeld angezeigt -
+        ''' die Endung wird nach der Eingabe automatisch wieder angehängt, damit sie beim Umbenennen
+        ''' nicht versehentlich mit überschrieben/entfernt werden kann.
         Public Async Sub RequestRenamePath(itemPath As String, Optional afterRename As Action(Of String) = Nothing)
             If String.IsNullOrEmpty(itemPath) OrElse Not (IO.File.Exists(itemPath) OrElse IO.Directory.Exists(itemPath)) Then Return
             If Not FileOperationPolicy.CanRename(itemPath) Then Return
             Dim oldName = IO.Path.GetFileName(itemPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
-            Dim newName = Await ShowInputAsync(AppDialogKind.Rename, "Umbenennen", "Neuen Namen eingeben", oldName, "Umbenennen", "Abbrechen")
-            If String.IsNullOrWhiteSpace(newName) OrElse String.Equals(newName, oldName, StringComparison.Ordinal) Then Return
+            Dim isDirectory = IO.Directory.Exists(itemPath)
+            Dim extension = If(isDirectory, "", IO.Path.GetExtension(oldName))
+            Dim baseName = If(isDirectory, oldName, IO.Path.GetFileNameWithoutExtension(oldName))
+            Dim promptMessage = If(String.IsNullOrEmpty(extension), "Neuen Namen eingeben", $"Neuen Namen eingeben ({extension})")
+            Dim newBaseName = Await ShowInputAsync(AppDialogKind.Rename, "Umbenennen", promptMessage, baseName, "Umbenennen", "Abbrechen")
+            If String.IsNullOrWhiteSpace(newBaseName) OrElse String.Equals(newBaseName, baseName, StringComparison.Ordinal) Then Return
+            Dim newName = newBaseName & extension
 
             Dim errorMessage As String = Nothing
             Try

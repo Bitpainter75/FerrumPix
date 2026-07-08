@@ -23,6 +23,13 @@ Namespace Views
         End Sub
 
         Private Sub OnDialogLoaded(sender As Object, e As RoutedEventArgs)
+            FocusWidthField()
+        End Sub
+
+        ''' "BatchResizeWidthTextBox" liegt in dieser UserControl-eigenen NameScope - ein Aufruf
+        ''' von außen (z.B. DialogOverlayView.FindControl) findet den Namen nicht, deshalb muss der
+        ''' Fokus über diese öffentliche Methode gesetzt werden, jedes Mal wenn der Dialog geöffnet wird.
+        Public Sub FocusWidthField()
             Dim widthBox = Me.FindControl(Of TextBox)("BatchResizeWidthTextBox")
             If widthBox Is Nothing Then Return
 

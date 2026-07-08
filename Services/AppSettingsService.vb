@@ -37,6 +37,12 @@ Namespace Services
         Public Property Path As String = ""
     End Class
 
+    Public Class LutPresetSettings
+        Public Property Id As String = Guid.NewGuid().ToString("N")
+        Public Property Name As String = ""
+        Public Property Path As String = ""
+    End Class
+
     Public Class AppSettings
         Public Property GalleryThumbnailSize As Double = 260
         Public Property GalleryViewMode As String = "Grid"
@@ -81,6 +87,7 @@ Namespace Services
         Public Property EnableDiagnosticLogging As Boolean = False
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
         Public Property LightroomPresets As New List(Of LightroomPresetSettings)()
+        Public Property LutPresets As New List(Of LutPresetSettings)()
     End Class
 
     Public NotInheritable Class AppSettingsService
@@ -127,6 +134,7 @@ Namespace Services
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
                 settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
+                settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Return settings
             Catch
                 Return New AppSettings()
@@ -162,6 +170,7 @@ Namespace Services
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
                 settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
+                settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Dim json = JsonSerializer.Serialize(settings, New JsonSerializerOptions With {.WriteIndented = True})
                 File.WriteAllText(SettingsPath, json)
                 ThumbnailCacheService.InvalidateSettingsCache()
@@ -384,6 +393,24 @@ Namespace Services
                 Dim name = If(preset.Name, "").Trim()
                 If String.IsNullOrWhiteSpace(name) Then name = IO.Path.GetFileNameWithoutExtension(presetPath)
                 result.Add(New LightroomPresetSettings With {
+                    .Id = If(String.IsNullOrWhiteSpace(preset.Id), Guid.NewGuid().ToString("N"), preset.Id),
+                    .Name = name,
+                    .Path = presetPath
+                })
+            Next
+            Return result.OrderBy(Function(p) p.Name, StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
+        Public Shared Function NormalizeLutPresets(value As List(Of LutPresetSettings)) As List(Of LutPresetSettings)
+            Dim result As New List(Of LutPresetSettings)()
+            Dim seenPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each preset In If(value, New List(Of LutPresetSettings)())
+                If preset Is Nothing Then Continue For
+                Dim presetPath = NormalizeFolderPath(preset.Path)
+                If String.IsNullOrWhiteSpace(presetPath) OrElse Not seenPaths.Add(presetPath) Then Continue For
+                Dim name = If(preset.Name, "").Trim()
+                If String.IsNullOrWhiteSpace(name) Then name = IO.Path.GetFileNameWithoutExtension(presetPath)
+                result.Add(New LutPresetSettings With {
                     .Id = If(String.IsNullOrWhiteSpace(preset.Id), Guid.NewGuid().ToString("N"), preset.Id),
                     .Name = name,
                     .Path = presetPath

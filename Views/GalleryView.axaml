@@ -646,7 +646,7 @@
                               ContextRequested="OnGalleryAreaContextRequested"
                               Margin="0,0,8,0">
                     <ScrollViewer.ContextMenu>
-                        <ContextMenu MaxHeight="1000">
+                        <ContextMenu>
                             <MenuItem Name="GalleryGridViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                             <MenuItem Name="GalleryGridViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
@@ -656,7 +656,7 @@
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
                                       ContextRequested="OnGalleryAreaContextRequested">
                             <ItemsControl.ContextMenu>
-                            <ContextMenu MaxHeight="1000">
+                            <ContextMenu>
                                 <MenuItem Name="GalleryGridCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                                 <MenuItem Name="GalleryGridPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                             </ContextMenu>
@@ -682,7 +682,7 @@
                                         DragDrop.DragOver="OnItemDragOver"
                                         DragDrop.Drop="OnItemDrop">
                                     <Border.ContextMenu>
-                                        <ContextMenu MaxHeight="1000">
+                                        <ContextMenu>
                                             <MenuItem Name="GridContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
                                             <MenuItem Name="GridContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
                                             <Separator Name="GridContextTopSeparator"/>
@@ -849,49 +849,76 @@
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Bottom"
                                                             Margin="0,0,20,4"
-                                                            Spacing="4">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/EXIF.svg"
-                                                                   Classes="gallery-meta-icon"
-                                                                   Width="26"
-                                                                   Height="26"
-                                                                   IconBrush="White"
-                                                                   IsVisible="{Binding HasExifMetadata}"
-                                                                   ToolTip.Tip="EXIF vorhanden">
-                                                            <icons:SvgIcon.Effect>
-                                                                <DropShadowEffect BlurRadius="0"
-                                                                                  OffsetX="1"
-                                                                                  OffsetY="1"
-                                                                                  Color="#B0000000"/>
-                                                            </icons:SvgIcon.Effect>
-                                                        </icons:SvgIcon>
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/IPTC.svg"
-                                                                   Classes="gallery-meta-icon"
-                                                                   Width="26"
-                                                                   Height="26"
-                                                                   IconBrush="White"
-                                                                   IsVisible="{Binding HasIptcMetadata}"
-                                                                   ToolTip.Tip="IPTC vorhanden">
-                                                            <icons:SvgIcon.Effect>
-                                                                <DropShadowEffect BlurRadius="0"
-                                                                                  OffsetX="1"
-                                                                                  OffsetY="1"
-                                                                                  Color="#B0000000"/>
-                                                            </icons:SvgIcon.Effect>
-                                                        </icons:SvgIcon>
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/XMP.svg"
-                                                                   Classes="gallery-meta-icon"
-                                                                   Width="26"
-                                                                   Height="26"
-                                                                   IconBrush="White"
-                                                                   IsVisible="{Binding HasXmpMetadata}"
-                                                                   ToolTip.Tip="XMP vorhanden">
-                                                            <icons:SvgIcon.Effect>
-                                                                <DropShadowEffect BlurRadius="0"
-                                                                                  OffsetX="1"
-                                                                                  OffsetY="1"
-                                                                                  Color="#B0000000"/>
-                                                            </icons:SvgIcon.Effect>
-                                                        </icons:SvgIcon>
+                                                            Spacing="0">
+                                                        <Border Width="32" Height="32"
+                                                                Background="Transparent"
+                                                                IsVisible="{Binding HasExifMetadata}"
+                                                                Tag="Exif"
+                                                                PointerEntered="OnMetadataBadgePointerEntered"
+                                                                PointerExited="OnMetadataBadgePointerExited"
+                                                                ToolTip.Tip="EXIF vorhanden">
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/EXIF.svg"
+                                                                       Classes="gallery-meta-icon"
+                                                                       Width="26"
+                                                                       Height="26"
+                                                                       IconBrush="White"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Bottom"
+                                                                       IsHitTestVisible="False">
+                                                                <icons:SvgIcon.Effect>
+                                                                    <DropShadowEffect BlurRadius="6"
+                                                                                      OffsetX="0"
+                                                                                      OffsetY="1"
+                                                                                      Color="#B0000000"/>
+                                                                </icons:SvgIcon.Effect>
+                                                            </icons:SvgIcon>
+                                                        </Border>
+                                                        <Border Width="32" Height="32"
+                                                                Background="Transparent"
+                                                                IsVisible="{Binding HasIptcMetadata}"
+                                                                Tag="Iptc"
+                                                                PointerEntered="OnMetadataBadgePointerEntered"
+                                                                PointerExited="OnMetadataBadgePointerExited"
+                                                                ToolTip.Tip="IPTC vorhanden">
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/IPTC.svg"
+                                                                       Classes="gallery-meta-icon"
+                                                                       Width="26"
+                                                                       Height="26"
+                                                                       IconBrush="White"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Bottom"
+                                                                       IsHitTestVisible="False">
+                                                                <icons:SvgIcon.Effect>
+                                                                    <DropShadowEffect BlurRadius="6"
+                                                                                      OffsetX="0"
+                                                                                      OffsetY="1"
+                                                                                      Color="#B0000000"/>
+                                                                </icons:SvgIcon.Effect>
+                                                            </icons:SvgIcon>
+                                                        </Border>
+                                                        <Border Width="32" Height="32"
+                                                                Background="Transparent"
+                                                                IsVisible="{Binding HasXmpMetadata}"
+                                                                Tag="Xmp"
+                                                                PointerEntered="OnMetadataBadgePointerEntered"
+                                                                PointerExited="OnMetadataBadgePointerExited"
+                                                                ToolTip.Tip="XMP vorhanden">
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/XMP.svg"
+                                                                       Classes="gallery-meta-icon"
+                                                                       Width="26"
+                                                                       Height="26"
+                                                                       IconBrush="White"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Bottom"
+                                                                       IsHitTestVisible="False">
+                                                                <icons:SvgIcon.Effect>
+                                                                    <DropShadowEffect BlurRadius="6"
+                                                                                      OffsetX="0"
+                                                                                      OffsetY="1"
+                                                                                      Color="#B0000000"/>
+                                                                </icons:SvgIcon.Effect>
+                                                            </icons:SvgIcon>
+                                                        </Border>
                                                     </StackPanel>
                                                     <Button Classes="favorite-btn image-favorite-btn"
                                                         Width="26"
@@ -960,7 +987,7 @@
                               ContextRequested="OnGalleryAreaContextRequested"
                               Margin="0,0,8,0">
                     <ScrollViewer.ContextMenu>
-                        <ContextMenu MaxHeight="1000">
+                        <ContextMenu>
                             <MenuItem Name="GalleryListViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                             <MenuItem Name="GalleryListViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
@@ -970,7 +997,7 @@
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
                                       ContextRequested="OnGalleryAreaContextRequested">
                             <ItemsControl.ContextMenu>
-                            <ContextMenu MaxHeight="1000">
+                            <ContextMenu>
                                 <MenuItem Name="GalleryListCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                                 <MenuItem Name="GalleryListPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                             </ContextMenu>
@@ -995,7 +1022,7 @@
                                         DragDrop.DragOver="OnItemDragOver"
                                         DragDrop.Drop="OnItemDrop">
                                     <Border.ContextMenu>
-                                        <ContextMenu MaxHeight="1000">
+                                        <ContextMenu>
                                             <MenuItem Name="ListContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
                                             <MenuItem Name="ListContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
                                             <Separator Name="ListContextTopSeparator"/>
@@ -1139,8 +1166,8 @@
                                                                    IsVisible="{Binding HasExifMetadata}"
                                                                    ToolTip.Tip="EXIF vorhanden">
                                                         <icons:SvgIcon.Effect>
-                                                            <DropShadowEffect BlurRadius="0"
-                                                                              OffsetX="1"
+                                                            <DropShadowEffect BlurRadius="6"
+                                                                              OffsetX="0"
                                                                               OffsetY="1"
                                                                               Color="#B0000000"/>
                                                         </icons:SvgIcon.Effect>
@@ -1153,8 +1180,8 @@
                                                                    IsVisible="{Binding HasIptcMetadata}"
                                                                    ToolTip.Tip="IPTC vorhanden">
                                                         <icons:SvgIcon.Effect>
-                                                            <DropShadowEffect BlurRadius="0"
-                                                                              OffsetX="1"
+                                                            <DropShadowEffect BlurRadius="6"
+                                                                              OffsetX="0"
                                                                               OffsetY="1"
                                                                               Color="#B0000000"/>
                                                         </icons:SvgIcon.Effect>
@@ -1167,8 +1194,8 @@
                                                                    IsVisible="{Binding HasXmpMetadata}"
                                                                    ToolTip.Tip="XMP vorhanden">
                                                         <icons:SvgIcon.Effect>
-                                                            <DropShadowEffect BlurRadius="0"
-                                                                              OffsetX="1"
+                                                            <DropShadowEffect BlurRadius="6"
+                                                                              OffsetX="0"
                                                                               OffsetY="1"
                                                                               Color="#B0000000"/>
                                                         </icons:SvgIcon.Effect>
@@ -1224,6 +1251,26 @@
                         <Border Height="{Binding BottomSpacerHeight}"/>
                     </StackPanel>
                 </ScrollViewer>
+
+                <Border Classes="gallery-metadata-overlay"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,32,64,0"
+                        MaxWidth="340"
+                        ZIndex="50"
+                        IsHitTestVisible="False"
+                        IsVisible="{Binding HoveredMetadataTitle, Converter={StaticResource StringNotEmptyToBoolConverter}}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding HoveredMetadataTitle}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
+                        <TextBlock Text="{Binding HoveredMetadataText}"
+                                   FontSize="11"
+                                   Foreground="White"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
 

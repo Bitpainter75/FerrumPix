@@ -611,7 +611,7 @@
                                   FocusAdorner="{x:Null}"
                                   IsVisible="{Binding IsToolTabSelected}">
                         <Grid x:Name="AdjustmentsStackPanel"
-                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                               ColumnDefinitions="*"
                               Margin="14,10,14,10"
                               HorizontalAlignment="Stretch">
@@ -656,6 +656,16 @@
                                 <panels:DetailsPanel />
                             </Border>
 
+                            <Border Grid.Row="7" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowDetailAdjustments}">
+                                <panels:SharpnessPanel />
+                            </Border>
+
+                            <Border Grid.Row="8" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowDetailAdjustments}">
+                                <panels:SoftenPanel />
+                            </Border>
+
                             <Border Grid.Row="9" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowFrameAdjustments}">
                                 <panels:EffectsPanel />
@@ -672,6 +682,11 @@
                                 <panels:LightroomPresetPanel />
                             </Border>
 
+                            <Border Grid.Row="18" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowFilterAdjustments}">
+                                <panels:LutPresetPanel />
+                            </Border>
+
                             <!-- TONWERTKURVE (ausklappbar) -->
                             <Border Grid.Row="13" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowLightAdjustments}">
@@ -682,6 +697,11 @@
                             <Border Grid.Row="15" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowColorAdjustments}">
                                 <panels:HslPanel />
+                            </Border>
+
+                            <Border Grid.Row="19" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowColorAdjustments}">
+                                <panels:SplitToningPanel />
                             </Border>
 
                             <Border Grid.Row="17" Classes="adjustment-group" Margin="0,7,0,0"

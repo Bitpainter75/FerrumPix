@@ -34,6 +34,11 @@ Namespace ViewModels
         Private _blacks As Double = 0
         Private _temperature As Double = 0
         Private _tint As Double = 0
+        Private _splitToningShadowHue As Double = 0
+        Private _splitToningShadowSaturation As Double = 0
+        Private _splitToningHighlightHue As Double = 0
+        Private _splitToningHighlightSaturation As Double = 0
+        Private _splitToningBalance As Double = 0
         Private _exposure As Double = 0
         Private _sharpness As Double = 0
         Private _noiseReduction As Double = 0
@@ -88,6 +93,8 @@ Namespace ViewModels
         Private ReadOnly _retouchSpots As New List(Of RetouchSpot)()
         Private _filterPreset As String = "Keine"
         Private _filterStrength As Double = 100
+        Private _lutPath As String = ""
+        Private _lutStrength As Double = 100
         Private _whiteBalance As String = "Wie Aufnahme"
         Private _rotationDegrees As Integer = 0
         Private _straightenDegrees As Double = 0
@@ -227,7 +234,7 @@ Namespace ViewModels
 
         Public Property FilterPresetOptions As New System.Collections.ObjectModel.ObservableCollection(Of String) From {
             "Keine", "S/W", "Warm", "Kühl", "Fade", "Kontrast", "Sepia", "Matt", "Cross", "Dramatisch", "Weich",
-            "Noir", "Duoton", "Polaroid", "VHS", "Bild auf Alt"
+            "Noir", "Duoton", "Polaroid", "VHS", "Alt"
         }
 
         Public Property ExportFormatOptions As New ObservableCollection(Of String) From {
@@ -270,6 +277,7 @@ Namespace ViewModels
         Private ReadOnly _filteredShapeIcons As New ObservableCollection(Of ShapeIconEntry)()
         Private ReadOnly _watermarkPresets As New List(Of WatermarkPresetSettings)()
         Public ReadOnly Property SavedLightroomPresets As ObservableCollection(Of LightroomPresetSettings) = New ObservableCollection(Of LightroomPresetSettings)()
+        Public ReadOnly Property SavedLutPresets As ObservableCollection(Of LutPresetSettings) = New ObservableCollection(Of LutPresetSettings)()
         Public ReadOnly Property WatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
         Private _selectedWatermarkPresetName As String = ""
         Private _watermarkPresetNameDraft As String = ""
@@ -442,6 +450,24 @@ Namespace ViewModels
             }).ToList()
             AppSettingsService.Save(settings)
             LoadSavedLightroomPresets()
+        End Sub
+
+        Private Sub LoadSavedLutPresets()
+            SavedLutPresets.Clear()
+            For Each preset In AppSettingsService.Load().LutPresets
+                SavedLutPresets.Add(preset)
+            Next
+        End Sub
+
+        Private Sub PersistSavedLutPresets()
+            Dim settings = AppSettingsService.Load()
+            settings.LutPresets = SavedLutPresets.Select(Function(p) New LutPresetSettings With {
+                .Id = p.Id,
+                .Name = p.Name,
+                .Path = p.Path
+            }).ToList()
+            AppSettingsService.Save(settings)
+            LoadSavedLutPresets()
         End Sub
 
         Private Sub PersistWatermarkPresets()
@@ -1373,6 +1399,51 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property SplitToningShadowHue As Double
+            Get
+                Return _splitToningShadowHue
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_splitToningShadowHue, Math.Max(0, Math.Min(360, value)), NameOf(SplitToningShadowHue))
+            End Set
+        End Property
+
+        Public Property SplitToningShadowSaturation As Double
+            Get
+                Return _splitToningShadowSaturation
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_splitToningShadowSaturation, Math.Max(0, Math.Min(100, value)), NameOf(SplitToningShadowSaturation))
+            End Set
+        End Property
+
+        Public Property SplitToningHighlightHue As Double
+            Get
+                Return _splitToningHighlightHue
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_splitToningHighlightHue, Math.Max(0, Math.Min(360, value)), NameOf(SplitToningHighlightHue))
+            End Set
+        End Property
+
+        Public Property SplitToningHighlightSaturation As Double
+            Get
+                Return _splitToningHighlightSaturation
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_splitToningHighlightSaturation, Math.Max(0, Math.Min(100, value)), NameOf(SplitToningHighlightSaturation))
+            End Set
+        End Property
+
+        Public Property SplitToningBalance As Double
+            Get
+                Return _splitToningBalance
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_splitToningBalance, Math.Max(-100, Math.Min(100, value)), NameOf(SplitToningBalance))
+            End Set
+        End Property
+
         Public Property Exposure As Double
             Get
                 Return _exposure
@@ -1561,7 +1632,7 @@ Namespace ViewModels
 
         Public ReadOnly Property BorderEffectOptions As IReadOnlyList(Of String)
             Get
-                Return New String() {"Einfach", "Gestrichelt", "Gezackt"}
+                Return New String() {"Einfach", "Gestrichelt", "Gezackt", "Doppelt", "Punktiert", "Wellig"}
             End Get
         End Property
 
@@ -2040,6 +2111,36 @@ Namespace ViewModels
             Set(value As Double)
                 SetUndoableDouble(_filterStrength, Math.Max(0, Math.Min(100, value)), NameOf(FilterStrength))
             End Set
+        End Property
+
+        Public Property LutPath As String
+            Get
+                Return _lutPath
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "")
+                If String.Equals(_lutPath, normalized, StringComparison.Ordinal) Then Return
+                CaptureUndoState(NameOf(LutPath))
+                Me.RaiseAndSetIfChanged(_lutPath, normalized)
+                Me.RaisePropertyChanged(NameOf(HasLutApplied))
+                RaiseResetButtonStateChanged()
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property LutStrength As Double
+            Get
+                Return _lutStrength
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_lutStrength, Math.Max(0, Math.Min(100, value)), NameOf(LutStrength))
+            End Set
+        End Property
+
+        Public ReadOnly Property HasLutApplied As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(_lutPath)
+            End Get
         End Property
 
         Public Property CropLeft As Double
@@ -3439,6 +3540,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' Split-Toning ist im Werkzeug "Farbe" eine eigene Gruppe unterhalb des HSL-Farbmischers,
+        ''' technisch aber unabhängig von HasColorChanges/HasHslChanges - deshalb ein eigener Dirty-State.
+        Public ReadOnly Property HasSplitToningChanges As Boolean
+            Get
+                Return _splitToningShadowSaturation <> 0 OrElse _splitToningHighlightSaturation <> 0 OrElse
+                       _splitToningBalance <> 0
+            End Get
+        End Property
+
         Public ReadOnly Property HasDetailChanges As Boolean
             Get
                 Return _clarity <> 0 OrElse _sharpness <> 0 OrElse _noiseReduction <> 0 OrElse
@@ -3550,6 +3660,7 @@ Namespace ViewModels
         Public ReadOnly Property ResetCurveCommand As ICommand
         Public ReadOnly Property SetCurveChannelCommand As ICommand
         Public ReadOnly Property ResetHslCommand As ICommand
+        Public ReadOnly Property ResetSplitToningCommand As ICommand
         Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
         Public ReadOnly Property SetInfoTabCommand As ICommand
         Public ReadOnly Property SetLayersPanelTabCommand As ICommand
@@ -3568,6 +3679,7 @@ Namespace ViewModels
             LoadAllShapeIcons()
             LoadWatermarkPresets()
             LoadSavedLightroomPresets()
+            LoadSavedLutPresets()
             _previewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(220)}
             AddHandler _previewTimer.Tick, Sub()
                                                _previewTimer.Stop()
@@ -3792,6 +3904,10 @@ Namespace ViewModels
                                                          PushUndo()
                                                          ResetHslInternal()
                                                      End Sub)
+            ResetSplitToningCommand = ReactiveCommand.Create(Sub()
+                                                                  PushUndo()
+                                                                  ResetSplitToningInternal()
+                                                              End Sub)
 
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub()
                                                                    If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
@@ -4040,7 +4156,8 @@ Namespace ViewModels
             ' Nebenläufig persistieren, damit das im Editor geöffnete Bild ab jetzt über EXIF
             ' durchsuchbar ist - blockiert nicht die UI.
             Dim exifForSearch = ExifService.ExtractSearchFields(data, imagePath)
-            Task.Run(Sub() LibraryService.Instance.SetExifData(imagePath, exifForSearch))
+            Dim catalogSummary = ExifService.BuildCatalogSummary(data)
+            Task.Run(Sub() LibraryService.Instance.SyncExifData(imagePath, exifForSearch, catalogSummary))
 
             Return data
         End Function
@@ -4567,6 +4684,11 @@ Namespace ViewModels
                 .PurpleSaturation = CSng(_purpleSaturation),
                 .MagentaHue = CSng(_magentaHue),
                 .MagentaSaturation = CSng(_magentaSaturation),
+                .SplitToningShadowHue = CSng(_splitToningShadowHue),
+                .SplitToningShadowSaturation = CSng(_splitToningShadowSaturation),
+                .SplitToningHighlightHue = CSng(_splitToningHighlightHue),
+                .SplitToningHighlightSaturation = CSng(_splitToningHighlightSaturation),
+                .SplitToningBalance = CSng(_splitToningBalance),
                 .RotationDegrees = If(forPreview, _rotationDegrees, _appliedRotationDegrees),
                 .StraightenDegrees = CSng(If(forPreview, _straightenDegrees, _appliedStraightenDegrees)),
                 .StraightenExpandCanvas = If(forPreview, _straightenExpandCanvas, _appliedStraightenExpandCanvas),
@@ -4587,6 +4709,8 @@ Namespace ViewModels
                 .CanvasBackgroundColor = _canvasBackgroundColor,
                 .FilterPreset = _filterPreset,
                 .FilterStrength = CSng(_filterStrength),
+                .LutPath = _lutPath,
+                .LutStrength = CSng(_lutStrength),
                 .RetouchSpots = _retouchSpots.Select(Function(s) s.Clone()).ToList(),
                 .Annotations = _annotations.Select(Function(a) a.Clone()).ToList()
             }
@@ -4846,6 +4970,11 @@ Namespace ViewModels
             _purpleSaturation = adj.PurpleSaturation
             _magentaHue = adj.MagentaHue
             _magentaSaturation = adj.MagentaSaturation
+            _splitToningShadowHue = adj.SplitToningShadowHue
+            _splitToningShadowSaturation = adj.SplitToningShadowSaturation
+            _splitToningHighlightHue = adj.SplitToningHighlightHue
+            _splitToningHighlightSaturation = adj.SplitToningHighlightSaturation
+            _splitToningBalance = adj.SplitToningBalance
             _rotationDegrees = adj.RotationDegrees
             _straightenDegrees = adj.StraightenDegrees
             _straightenExpandCanvas = adj.StraightenExpandCanvas
@@ -4879,6 +5008,8 @@ Namespace ViewModels
             _canvasBackgroundColor = If(String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor), "#FF000000", adj.CanvasBackgroundColor)
             _filterPreset = adj.FilterPreset
             _filterStrength = If(adj.FilterStrength <= 0, 100, adj.FilterStrength)
+            _lutPath = adj.LutPath
+            _lutStrength = If(adj.LutStrength <= 0, 100, adj.LutStrength)
             _retouchSpots.Clear()
             If adj.RetouchSpots IsNot Nothing Then
                 For Each spot In adj.RetouchSpots
@@ -4925,6 +5056,9 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundBrush))
             Me.RaisePropertyChanged(NameOf(FilterPreset))
             Me.RaisePropertyChanged(NameOf(FilterStrength))
+            Me.RaisePropertyChanged(NameOf(LutPath))
+            Me.RaisePropertyChanged(NameOf(LutStrength))
+            Me.RaisePropertyChanged(NameOf(HasLutApplied))
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
             RaiseCropPropertiesChanged()
@@ -4961,6 +5095,11 @@ Namespace ViewModels
             _blacks = 0
             _temperature = 0
             _tint = 0
+            _splitToningShadowHue = 0
+            _splitToningShadowSaturation = 0
+            _splitToningHighlightHue = 0
+            _splitToningHighlightSaturation = 0
+            _splitToningBalance = 0
             _exposure = 0
             _sharpness = 0
             _noiseReduction = 0
@@ -5005,6 +5144,8 @@ Namespace ViewModels
             _canvasBackgroundColor = "#FF000000"
             _filterPreset = "Keine"
             _filterStrength = 100
+            _lutPath = ""
+            _lutStrength = 100
             _retouchSpots.Clear()
             _annotations.Clear()
             _selectedAnnotationIndex = -1
@@ -5044,6 +5185,9 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundBrush))
             Me.RaisePropertyChanged(NameOf(FilterPreset))
             Me.RaisePropertyChanged(NameOf(FilterStrength))
+            Me.RaisePropertyChanged(NameOf(LutPath))
+            Me.RaisePropertyChanged(NameOf(LutStrength))
+            Me.RaisePropertyChanged(NameOf(HasLutApplied))
             RaiseCropPropertiesChanged()
             RaiseResetButtonStateChanged()
             PreviewImage = Nothing
@@ -5902,6 +6046,23 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' Eigene Gruppe im Werkzeug "Farbe" (unterhalb des HSL-Farbmischers) - wird sowohl vom
+        ''' eigenen Reset-Icon der Split-Toning-Gruppe als auch vom "Farbe"-Tool-Reset aufgerufen.
+        Private Sub ResetSplitToningInternal()
+            _splitToningShadowHue = 0
+            _splitToningShadowSaturation = 0
+            _splitToningHighlightHue = 0
+            _splitToningHighlightSaturation = 0
+            _splitToningBalance = 0
+            Me.RaisePropertyChanged(NameOf(SplitToningShadowHue))
+            Me.RaisePropertyChanged(NameOf(SplitToningShadowSaturation))
+            Me.RaisePropertyChanged(NameOf(SplitToningHighlightHue))
+            Me.RaisePropertyChanged(NameOf(SplitToningHighlightSaturation))
+            Me.RaisePropertyChanged(NameOf(SplitToningBalance))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
         Private Sub ResetCurrentToolInternal()
             Select Case _currentTool
                 Case EditorTool.Crop
@@ -5927,6 +6088,7 @@ Namespace ViewModels
                 Case EditorTool.Color
                     ResetColorInternal()
                     ResetHslInternal()
+                    ResetSplitToningInternal()
                 Case EditorTool.Effects
                     ResetDetailInternal()
                 Case EditorTool.Frame
@@ -5972,11 +6134,28 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' Setzt neben den eigentlichen Filter-Werten (FilterPreset/FilterStrength) auch alle Werte
+        ''' zurück, die ApplyLightroomPreset schreibt (Light/Color/Detail/Effects/HSL/Split-Toning/
+        ''' Tonwertkurve) sowie die angewendete LUT - Lightroom-Presets und LUTs werden im selben Tab
+        ''' angewendet, daher muss der "Filter zurücksetzen"-Button auch sie rückgängig machen können.
         Private Sub ResetFilterInternal()
             _filterPreset = "Keine"
             _filterStrength = 50
+            _lutPath = ""
+            _lutStrength = 100
             Me.RaisePropertyChanged(NameOf(FilterPreset))
             Me.RaisePropertyChanged(NameOf(FilterStrength))
+            Me.RaisePropertyChanged(NameOf(LutPath))
+            Me.RaisePropertyChanged(NameOf(LutStrength))
+            Me.RaisePropertyChanged(NameOf(HasLutApplied))
+            ResetLightInternal()
+            ResetColorInternal()
+            ResetDetailInternal()
+            ResetEffectsInternal()
+            ResetHslInternal()
+            ResetSplitToningInternal()
+            ResetCurvePoints()
+            RaiseExtendedAdjustmentProperties()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -6133,6 +6312,8 @@ Namespace ViewModels
                 NameOf(AquaHue), NameOf(AquaSaturation), NameOf(BlueHue), NameOf(BlueSaturation),
                 NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(MagentaHue), NameOf(MagentaSaturation),
                 NameOf(ActiveHslHue), NameOf(ActiveHslSaturation),
+                NameOf(SplitToningShadowHue), NameOf(SplitToningShadowSaturation),
+                NameOf(SplitToningHighlightHue), NameOf(SplitToningHighlightSaturation), NameOf(SplitToningBalance),
                 NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)}
                 Me.RaisePropertyChanged(name)
             Next
@@ -6383,7 +6564,8 @@ Namespace ViewModels
         Public Sub ApplyLightroomPreset(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
             Try
-                Dim values = ParseLightroomXmpValues(File.ReadAllText(xmpPath))
+                Dim xmpText = File.ReadAllText(xmpPath)
+                Dim values = ParseLightroomXmpValues(xmpText)
                 If values.Count = 0 Then Return
 
                 PushUndo()
@@ -6405,10 +6587,57 @@ Namespace ViewModels
                     If TryGetXmpDouble(values, "LuminanceSmoothing", d) Then NoiseReduction = Math.Max(0, Math.Min(100, d))
                     If TryGetXmpDouble(values, "GrainAmount", d) Then Grain = Math.Max(0, Math.Min(100, d))
                     If TryGetXmpDouble(values, "PostCropVignetteAmount", d) Then Vignette = Math.Max(-150, Math.Min(150, -d))
+
+                    ''' crs:Tint ist wie beim Regler eine relative Grün/Magenta-Verschiebung, daher
+                    ''' 1:1 übernehmbar. crs:Temperature/crs:WhiteBalance dagegen NICHT: Lightroom
+                    ''' speichert dort einen absoluten Kelvin-Wert (z.B. 5500) bzw. "As Shot"/"Custom",
+                    ''' während der Temperatur-Regler dieser App eine relative ±100-Verschiebung ist -
+                    ''' ohne die kamera-/aufnahmespezifische Referenztemperatur wäre jede Übernahme
+                    ''' falsch (würde bei praktisch jedem Preset auf den Anschlag springen).
+                    If TryGetXmpDouble(values, "Tint", d) Then Tint = Math.Max(-100, Math.Min(100, d))
+
+                    If TryGetXmpDouble(values, "HueAdjustmentRed", d) Then RedHue = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SaturationAdjustmentRed", d) Then RedSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "HueAdjustmentOrange", d) Then OrangeHue = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SaturationAdjustmentOrange", d) Then OrangeSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "HueAdjustmentYellow", d) Then YellowHue = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SaturationAdjustmentYellow", d) Then YellowSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "HueAdjustmentGreen", d) Then GreenHue = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SaturationAdjustmentGreen", d) Then GreenSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "HueAdjustmentAqua", d) Then AquaHue = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SaturationAdjustmentAqua", d) Then AquaSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "HueAdjustmentBlue", d) Then BlueHue = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SaturationAdjustmentBlue", d) Then BlueSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "HueAdjustmentPurple", d) Then PurpleHue = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SaturationAdjustmentPurple", d) Then PurpleSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "HueAdjustmentMagenta", d) Then MagentaHue = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SaturationAdjustmentMagenta", d) Then MagentaSaturation = Math.Max(-100, Math.Min(100, d))
+
+                    ''' crs:SplitToning*Hue ist bereits 0..360, *Saturation 0..100 - beides deckungsgleich
+                    ''' mit den Split-Toning-Reglern dieser App, keine Skalierung nötig. Balance ist bei
+                    ''' beiden Systemen -100..100.
+                    If TryGetXmpDouble(values, "SplitToningShadowHue", d) Then SplitToningShadowHue = Math.Max(0, Math.Min(360, d))
+                    If TryGetXmpDouble(values, "SplitToningShadowSaturation", d) Then SplitToningShadowSaturation = Math.Max(0, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SplitToningHighlightHue", d) Then SplitToningHighlightHue = Math.Max(0, Math.Min(360, d))
+                    If TryGetXmpDouble(values, "SplitToningHighlightSaturation", d) Then SplitToningHighlightSaturation = Math.Max(0, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "SplitToningBalance", d) Then SplitToningBalance = Math.Max(-100, Math.Min(100, d))
+
+                    ''' Tonwertkurven liegen als verschachtelte rdf:Seq/rdf:li-Listen vor, nicht als
+                    ''' einfache Attribute - der Attribut-Regex oben kann sie nicht erfassen, daher eine
+                    ''' eigene, gezielte Extraktion je Kurven-Element.
+                    Dim rgbCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012")
+                    If rgbCurve IsNot Nothing Then LoadCurvePointsFromString(_curveRgbPoints, rgbCurve)
+                    Dim redCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Red")
+                    If redCurve IsNot Nothing Then LoadCurvePointsFromString(_curveRedPoints, redCurve)
+                    Dim greenCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Green")
+                    If greenCurve IsNot Nothing Then LoadCurvePointsFromString(_curveGreenPoints, greenCurve)
+                    Dim blueCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Blue")
+                    If blueCurve IsNot Nothing Then LoadCurvePointsFromString(_curveBluePoints, blueCurve)
                 Finally
                     _suppressUndoCapture = False
                 End Try
 
+                RaiseExtendedAdjustmentProperties()
                 StatusText = LocalizationService.T("Lightroom-Preset angewendet")
                 SchedulePreviewUpdate()
             Catch ex As Exception
@@ -6438,10 +6667,87 @@ Namespace ViewModels
             PersistSavedLightroomPresets()
         End Sub
 
+        ''' MatchCasing.CaseInsensitive ist auf Linux/macOS nötig - Directory.EnumerateFiles matcht
+        ''' das Suchmuster dort standardmäßig case-sensitiv, ".XMP"/".Cube" (nicht unüblich bei
+        ''' exportierten Presets/LUT-Packs) würden sonst stillschweigend übersprungen.
+        Private Shared ReadOnly CaseInsensitiveFileSearch As New EnumerationOptions With {
+            .RecurseSubdirectories = True,
+            .MatchCasing = MatchCasing.CaseInsensitive
+        }
+
+        Public Sub ImportLightroomPresetsFromFolder(folderPath As String)
+            If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
+            Dim count = 0
+            Try
+                For Each file In Directory.EnumerateFiles(folderPath, "*.xmp", CaseInsensitiveFileSearch)
+                    SaveLightroomPresetToSettings(file)
+                    count += 1
+                Next
+            Catch
+            End Try
+            StatusText = If(count > 0,
+                             LocalizationService.T("Presets importiert: ") & count.ToString(),
+                             LocalizationService.T("Keine XMP-Dateien im Ordner gefunden"))
+        End Sub
+
+        Public Sub ApplyLutPreset(cubePath As String)
+            If String.IsNullOrWhiteSpace(cubePath) OrElse Not File.Exists(cubePath) Then Return
+            PushUndo()
+            _suppressUndoCapture = True
+            Try
+                LutPath = cubePath
+                LutStrength = 100
+            Finally
+                _suppressUndoCapture = False
+            End Try
+            StatusText = LocalizationService.T("LUT angewendet")
+            SchedulePreviewUpdate()
+        End Sub
+
+        Public Sub SaveLutPresetToSettings(cubePath As String)
+            If String.IsNullOrWhiteSpace(cubePath) OrElse Not File.Exists(cubePath) Then Return
+            Dim normalizedPath = cubePath.Trim()
+            Dim existing = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, StringComparison.OrdinalIgnoreCase))
+            If existing Is Nothing Then
+                SavedLutPresets.Add(New LutPresetSettings With {
+                    .Id = Guid.NewGuid().ToString("N"),
+                    .Name = IO.Path.GetFileNameWithoutExtension(normalizedPath),
+                    .Path = normalizedPath
+                })
+                PersistSavedLutPresets()
+            End If
+        End Sub
+
+        Public Sub RemoveLutPresetFromSettings(cubePath As String)
+            If String.IsNullOrWhiteSpace(cubePath) Then Return
+            Dim existing = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, cubePath.Trim(), StringComparison.OrdinalIgnoreCase))
+            If existing Is Nothing Then Return
+            SavedLutPresets.Remove(existing)
+            PersistSavedLutPresets()
+        End Sub
+
+        Public Sub ImportLutPresetsFromFolder(folderPath As String)
+            If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
+            Dim count = 0
+            Try
+                For Each file In Directory.EnumerateFiles(folderPath, "*.cube", CaseInsensitiveFileSearch)
+                    SaveLutPresetToSettings(file)
+                    count += 1
+                Next
+            Catch
+            End Try
+            StatusText = If(count > 0,
+                             LocalizationService.T("LUTs importiert: ") & count.ToString(),
+                             LocalizationService.T("Keine .cube-Dateien im Ordner gefunden"))
+        End Sub
+
         Private Shared Function ParseLightroomXmpValues(text As String) As Dictionary(Of String, String)
             Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
             If String.IsNullOrWhiteSpace(text) Then Return result
-            For Each m As Match In Regex.Matches(text, "(?:crs:)?(?<name>[A-Za-z0-9]+)\s*=\s*""(?<value>[^""]*)""")
+            ''' Nur "crs:"-Attribute (Camera Raw Settings) - ohne den Namespace-Zwang würde jedes
+            ''' andere XMP-Attribut mit gleichem lokalen Namen (z.B. xmp:CreatorTool, photoshop:...)
+            ''' denselben Dictionary-Key überschreiben und crs:-Werte stillschweigend verfälschen.
+            For Each m As Match In Regex.Matches(text, "crs:(?<name>[A-Za-z0-9]+)\s*=\s*""(?<value>[^""]*)""")
                 result(m.Groups("name").Value) = m.Groups("value").Value
             Next
             Return result
@@ -6452,6 +6758,28 @@ Namespace ViewModels
             If Not values.TryGetValue(name, raw) Then Return False
             raw = raw.Replace("+", "")
             Return Double.TryParse(raw, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, result)
+        End Function
+
+        ''' Extrahiert eine crs:ToneCurvePV2012[Red|Green|Blue]-Punktliste (rdf:Seq aus rdf:li-Einträgen
+        ''' "x, y") und liefert sie im gleichen "x,y;x,y;..."-Format, das LoadCurvePointsFromString erwartet.
+        ''' Nothing wenn das Element fehlt oder keine gültigen Punkte enthält.
+        Private Shared Function ParseLightroomCurvePoints(text As String, elementName As String) As String
+            Dim blockMatch = Regex.Match(text, $"<crs:{elementName}>(?<body>.*?)</crs:{elementName}>", RegexOptions.Singleline)
+            If Not blockMatch.Success Then Return Nothing
+
+            Dim points As New List(Of String)()
+            For Each liMatch As Match In Regex.Matches(blockMatch.Groups("body").Value, "<rdf:li>(?<point>[^<]*)</rdf:li>")
+                Dim parts = liMatch.Groups("point").Value.Split(","c)
+                If parts.Length <> 2 Then Continue For
+                Dim px As Double
+                Dim py As Double
+                If Double.TryParse(parts(0).Trim(), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, px) AndAlso
+                   Double.TryParse(parts(1).Trim(), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, py) Then
+                    points.Add(px.ToString(Globalization.CultureInfo.InvariantCulture) & "," & py.ToString(Globalization.CultureInfo.InvariantCulture))
+                End If
+            Next
+            If points.Count < 2 Then Return Nothing
+            Return String.Join(";", points)
         End Function
 
         Private Shared Function HasInvalidFileNameChars(fileName As String) As Boolean

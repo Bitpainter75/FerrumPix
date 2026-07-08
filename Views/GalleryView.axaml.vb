@@ -641,15 +641,36 @@ Namespace Views
         Public Sub OnMetadataBadgePointerEntered(sender As Object, e As PointerEventArgs)
             Dim control = TryCast(sender, Control)
             Dim item = TryCast(control?.DataContext, ImageItem)
-            If item Is Nothing Then Return
-            item.HoveredMetadataKind = If(control?.Tag, "").ToString()
+            Dim vm = GetVm()
+            If item Is Nothing OrElse vm Is Nothing Then Return
+
+            Dim kind = If(control?.Tag, "").ToString()
+            item.HoveredMetadataKind = kind
+            Select Case kind
+                Case "Exif"
+                    vm.HoveredMetadataTitle = "EXIF"
+                    vm.HoveredMetadataText = item.ExifMetadataSummary
+                Case "Iptc"
+                    vm.HoveredMetadataTitle = "IPTC"
+                    vm.HoveredMetadataText = item.IptcMetadataSummary
+                Case "Xmp"
+                    vm.HoveredMetadataTitle = "XMP"
+                    vm.HoveredMetadataText = item.XmpMetadataSummary
+                Case Else
+                    vm.HoveredMetadataTitle = ""
+                    vm.HoveredMetadataText = ""
+            End Select
         End Sub
 
         Public Sub OnMetadataBadgePointerExited(sender As Object, e As PointerEventArgs)
             Dim control = TryCast(sender, Control)
             Dim item = TryCast(control?.DataContext, ImageItem)
-            If item Is Nothing Then Return
-            item.HoveredMetadataKind = ""
+            Dim vm = GetVm()
+            If item IsNot Nothing Then item.HoveredMetadataKind = ""
+            If vm IsNot Nothing Then
+                vm.HoveredMetadataTitle = ""
+                vm.HoveredMetadataText = ""
+            End If
         End Sub
 
         Private Sub ApplyPointerSelection(vm As GalleryViewModel, item As ImageItem, modifiers As KeyModifiers)
@@ -917,6 +938,8 @@ Namespace Views
                                         vm IsNot Nothing AndAlso
                                         vm.SelectedItems IsNot Nothing AndAlso
                                         vm.SelectedItems.Any(Function(i) i IsNot Nothing AndAlso i.IsImage)
+            Dim showResize = showImageBatchActions AndAlso
+                              vm.SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).All(Function(i) Not i.IsRawFile)
             SetMenuItemVisible(menu, "GridContextOpenMenuItem", showSingleItemActions)
             SetMenuItemVisible(menu, "GridContextEditMenuItem", showSingleItemActions AndAlso item.CanEditFile AndAlso item.IsImage)
             SetMenuControlVisible(menu, "GridContextTopSeparator", showSingleItemActions)
@@ -926,7 +949,7 @@ Namespace Views
             SetMenuItemVisible(menu, "GridContextCutMenuItem", Not isParentEntry AndAlso item.CanFileOperationRename)
             SetMenuItemVisible(menu, "GridContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
             SetMenuItemVisible(menu, "GridContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
-            SetMenuItemVisible(menu, "GridContextResizeMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "GridContextResizeMenuItem", showResize)
             SetMenuItemVisible(menu, "GridContextBatchConvertMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "GridContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "GridContextCreateCollageMenuItem", showCollage)
@@ -943,7 +966,7 @@ Namespace Views
             SetMenuItemVisible(menu, "ListContextCutMenuItem", Not isParentEntry AndAlso item.CanFileOperationRename)
             SetMenuItemVisible(menu, "ListContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
             SetMenuItemVisible(menu, "ListContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
-            SetMenuItemVisible(menu, "ListContextResizeMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "ListContextResizeMenuItem", showResize)
             SetMenuItemVisible(menu, "ListContextBatchConvertMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextCreateCollageMenuItem", showCollage)

@@ -5,6 +5,7 @@ Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Platform
 Imports Avalonia.Threading
+Imports Avalonia.VisualTree
 Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
 Imports System.Linq
@@ -199,20 +200,55 @@ Namespace Views
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If vm Is Nothing OrElse Not vm.IsDialogOpen Then Return
 
-            Avalonia.Threading.Dispatcher.UIThread.Post(Sub()
+            Dim applyFocus = Sub()
                 Dim overlay = Me.FindControl(Of DialogOverlayView)("DialogOverlay")
                 Dim input = overlay?.FindControl(Of TextBox)("DialogInputBox")
-                Dim batchResizeWidth = overlay?.FindControl(Of TextBox)("BatchResizeWidthTextBox")
+                ' "BatchResizeWidthTextBox" liegt in der eigenen NameScope von BatchResizeDialogView -
+                ' FindControl auf dem Overlay findet es nicht, deshalb über die UserControl selbst fokussieren.
+                Dim batchResizeView = overlay?.FindControl(Of BatchResizeDialogView)("BatchResizeDialog")
                 If input IsNot Nothing AndAlso vm.DialogShowsInput Then
                     input.Focus()
                     input.SelectAll()
-                ElseIf batchResizeWidth IsNot Nothing AndAlso vm.DialogShowsBatchResize Then
-                    batchResizeWidth.Focus()
-                    batchResizeWidth.SelectAll()
+                ElseIf batchResizeView IsNot Nothing AndAlso vm.DialogShowsBatchResize Then
+                    batchResizeView.FocusWidthField()
                 Else
                     Focus()
                 End If
-            End Sub, Avalonia.Threading.DispatcherPriority.Loaded)
+            End Sub
+
+            ' Doppelt geplant (Loaded + Background), da ein aus dem Kontextmenü geöffneter Dialog
+            ' sonst gegen den Fokus-Rückgabe-Mechanismus des schließenden Popups verlieren kann.
+            Avalonia.Threading.Dispatcher.UIThread.Post(applyFocus, Avalonia.Threading.DispatcherPriority.Loaded)
+            Avalonia.Threading.Dispatcher.UIThread.Post(applyFocus, Avalonia.Threading.DispatcherPriority.Background)
+        End Sub
+
+        ''' KeyboardNavigation.TabNavigation="Cycle" allein reicht nicht, weil sich die fokussierbaren
+        ''' Elemente über mehrere verschachtelte UserControls (BatchResizeDialogView usw.) verteilen und
+        ''' Avalonia die Tab-Suche dann in die Gallery dahinter eskalieren lässt. Deshalb wird der Fokus
+        ''' hier manuell auf die fokussierbaren Nachfahren des DialogOverlay begrenzt.
+        Private Sub CycleDialogFocus(backwards As Boolean)
+            Dim overlay = Me.FindControl(Of DialogOverlayView)("DialogOverlay")
+            If overlay Is Nothing Then Return
+
+            Dim focusables = overlay.GetVisualDescendants().
+                OfType(Of Control)().
+                Where(Function(c) c.Focusable AndAlso c.IsEffectivelyEnabled AndAlso c.IsEffectivelyVisible).
+                ToList()
+            If focusables.Count = 0 Then Return
+
+            Dim current = TryCast(TopLevel.GetTopLevel(Me)?.FocusManager?.GetFocusedElement(), Control)
+            Dim index = If(current IsNot Nothing, focusables.IndexOf(current), -1)
+
+            Dim nextIndex As Integer
+            If index < 0 Then
+                nextIndex = If(backwards, focusables.Count - 1, 0)
+            Else
+                nextIndex = index + If(backwards, -1, 1)
+                If nextIndex < 0 Then nextIndex = focusables.Count - 1
+                If nextIndex >= focusables.Count Then nextIndex = 0
+            End If
+
+            focusables(nextIndex).Focus()
         End Sub
 
         Private Sub WireWindowChrome()
@@ -302,6 +338,9 @@ Namespace Views
                         e.Handled = True
                     Case Key.Return, Key.Enter
                         vm.ConfirmDialog()
+                        e.Handled = True
+                    Case Key.Tab
+                        CycleDialogFocus(e.KeyModifiers.HasFlag(KeyModifiers.Shift))
                         e.Handled = True
                     Case Else
                         e.Handled = False

@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.DetailsPanel">
-    <StackPanel Spacing="7">
         <Expander Header="Details" IsExpanded="True">
             <Expander.HeaderTemplate>
                 <DataTemplate>
@@ -87,90 +86,4 @@
                 </Grid>
             </StackPanel>
         </Expander>
-
-        <Expander Header="Schärfe" IsExpanded="True">
-            <Expander.HeaderTemplate>
-                <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
-                                Width="14" Height="14" />
-                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                        </StackPanel>
-                        <Button Grid.Column="1"
-                                Classes="icon-btn"
-                                Width="28"
-                                Height="28"
-                                Padding="0"
-                                Command="{Binding DataContext.ResetDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                ToolTip.Tip="Schärfe zurücksetzen">
-                            <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                Width="14" Height="14" />
-                        </Button>
-                    </Grid>
-                </DataTemplate>
-            </Expander.HeaderTemplate>
-            <StackPanel Spacing="2" Margin="0,8,0,0">
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
-                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding Sharpness}" Margin="6,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Sharpness, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-            </StackPanel>
-        </Expander>
-
-        <Expander Header="Weichzeichnen" IsExpanded="True">
-            <Expander.HeaderTemplate>
-                <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
-                                Width="14" Height="14" />
-                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                        </StackPanel>
-                        <Button Grid.Column="1"
-                                Classes="icon-btn"
-                                Width="28"
-                                Height="28"
-                                Padding="0"
-                                Command="{Binding DataContext.ResetDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                ToolTip.Tip="Weichzeichnen zurücksetzen">
-                            <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                Width="14" Height="14" />
-                        </Button>
-                    </Grid>
-                </DataTemplate>
-            </Expander.HeaderTemplate>
-            <StackPanel Spacing="2" Margin="0,8,0,0">
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
-                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding NoiseReduction}" Margin="6,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding NoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
-                    <TextBlock Text="Methode" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
-                    <ComboBox Name="NoiseReductionMethodComboBox"
-                              Grid.Column="1"
-                              ItemsSource="{Binding NoiseReductionMethodOptions}"
-                              SelectedItem="{Binding NoiseReductionMethodLabel}"
-                              FontSize="11"
-                              Margin="6,0,0,0"
-                              HorizontalAlignment="Stretch"
-                              DropDownOpened="OnMatchWidthDropDownOpened"
-                              ToolTip.Tip="Gaussian: gleichmäßiges Weichzeichnen. Median: kantenerhaltend, echte Rauschunterdrückung." />
-                </Grid>
-            </StackPanel>
-        </Expander>
-    </StackPanel>
 </UserControl>

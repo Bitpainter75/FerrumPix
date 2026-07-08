@@ -2,6 +2,7 @@ Imports System
 Imports System.Collections.Generic
 Imports System.Collections
 Imports System.Globalization
+Imports System.Linq
 Imports System.Reflection
 Imports System.Text.RegularExpressions
 Imports System.Text
@@ -35,6 +36,18 @@ Namespace Services
             Me.Name = name
             Me.Value = value
         End Sub
+    End Class
+
+    ''' Katalog-Flags/Zusammenfassungen, die LibraryService.SyncExifData zusätzlich zu den
+    ''' durchsuchbaren Feldern (ExifSearchFields) braucht - gebündelt, damit nicht jeder Aufrufer
+    ''' (Viewer/Editor/Gallery) dieselbe Auswertung von ExifTags/IptcTags/XmpTags dupliziert.
+    Public Class ExifCatalogSummary
+        Public Property HasExifMetadata As Boolean
+        Public Property HasIptcMetadata As Boolean
+        Public Property HasXmpMetadata As Boolean
+        Public Property ExifSummary As String = ""
+        Public Property IptcSummary As String = ""
+        Public Property XmpSummary As String = ""
     End Class
 
     Public Class ExifData
@@ -249,6 +262,33 @@ Namespace Services
             result.ImageHeight = If(dimensions.Height, ParseLeadingInt(data.ImageHeight))
 
             Return result
+        End Function
+
+        Public Shared Function BuildCatalogSummary(data As ExifData) As ExifCatalogSummary
+            Return New ExifCatalogSummary With {
+                .HasExifMetadata = data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0,
+                .HasIptcMetadata = data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0,
+                .HasXmpMetadata = data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0,
+                .ExifSummary = BuildMetadataSummary(If(data?.ExifTags, Nothing), 6),
+                .IptcSummary = BuildMetadataSummary(If(data?.IptcTags, Nothing), 6),
+                .XmpSummary = BuildMetadataSummary(If(data?.XmpTags, Nothing), 6)
+            }
+        End Function
+
+        Public Shared Function BuildMetadataSummary(tags As IEnumerable(Of ExifTag), maxItems As Integer) As String
+            Dim entries = If(tags, Enumerable.Empty(Of ExifTag)()).
+                Where(Function(t) t IsNot Nothing AndAlso
+                                  Not String.IsNullOrWhiteSpace(t.Name) AndAlso
+                                  Not String.IsNullOrWhiteSpace(t.Value)).
+                Take(Math.Max(1, maxItems)).
+                Select(Function(t)
+                           Dim name = t.Name.Trim()
+                           Dim value = t.Value.Trim()
+                           If value.Length > 48 Then value = value.Substring(0, 48) & "..."
+                           Return $"{name}: {value}"
+                       End Function).
+                ToList()
+            Return String.Join(Environment.NewLine, entries)
         End Function
 
         Public Shared Function GetXmpRating(data As ExifData) As Integer?

@@ -603,7 +603,8 @@
     <Style Selector="TextBox.slider-value:focus /template/ Border#PART_BorderElement">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
-    <Style Selector="icons|SliderValueUpDown.slider-value">
+    <!-- 1. Haupt-Style: Gilt für NumericUpDown, aber NUR mit der Klasse .slider-value -->
+    <Style Selector="NumericUpDown.slider-value">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
@@ -611,34 +612,38 @@
         <Setter Property="CornerRadius" Value="3"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="FontSize" Value="10"/>
-        <Setter Property="MinHeight" Value="18"/>
-        <Setter Property="Height" Value="18"/>
-        <Setter Property="Width" Value="28"/>
-        <Setter Property="MinWidth" Value="28"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        <Setter Property="TextAlignment" Value="Right"/>
-        <Setter Property="Increment" Value="1"/>
-        <Setter Property="FormatString" Value="F0"/>
+        <Setter Property="MinHeight" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="MinWidth" Value="34"/>
     </Style>
-    <Style Selector="icons|SliderValueUpDown.slider-value:focus">
+
+    <!-- 2. Fokus-Zustand -->
+    <Style Selector="NumericUpDown.slider-value:focus-within">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
-    <Style Selector="icons|SliderValueUpDown.slider-value /template/ TextBox#PART_TextBox">
+
+    <!-- 3. Das eigentliche Textfeld im Template stylen -->
+    <Style Selector="NumericUpDown.slider-value /template/ TextBox#PART_TextBox">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="2,0"/>
-        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="Padding" Value="2,0,2,0"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
         <Setter Property="HorizontalContentAlignment" Value="Right"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
-    <Style Selector="icons|SliderValueUpDown.slider-value /template/ RepeatButton#PART_DecreaseButton">
+
+    <!-- 4. Buttons im Template unsichtbar machen -->
+    <Style Selector="NumericUpDown.slider-value /template/ Button#PART_DecreaseButton">
         <Setter Property="IsVisible" Value="False"/>
+        <Setter Property="Width" Value="0"/>
     </Style>
-    <Style Selector="icons|SliderValueUpDown.slider-value /template/ RepeatButton#PART_IncreaseButton">
+    <Style Selector="NumericUpDown.slider-value /template/ Button#PART_IncreaseButton">
         <Setter Property="IsVisible" Value="False"/>
+        <Setter Property="Width" Value="0"/>
     </Style>
 
     <Style Selector="Slider">

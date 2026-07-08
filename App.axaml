@@ -13,6 +13,7 @@
         <conv:RatingThresholdConverter x:Key="RatingThresholdConverter"/>
         <conv:RatingStarGlyphConverter x:Key="RatingStarGlyphConverter"/>
         <conv:BoolToWidthConverter x:Key="BoolToWidthConverter"/>
+        <conv:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter"/>
     </Application.Resources>
     <Application.Styles>
         <FluentTheme>
