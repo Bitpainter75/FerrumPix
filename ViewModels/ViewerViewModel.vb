@@ -580,19 +580,19 @@ Namespace ViewModels
                                                            IsFitToWindow = False
                                                            ZoomLevel = 1.0
                                                        End Sub)
-            EditCommand = ReactiveCommand.Create(Sub()
-                                                     If Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                         _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
-                                                     End If
-                                                 End Sub)
-            OpenEditorToolCommand = ReactiveCommand.Create(Of String)(Sub(toolName)
-                                                                          If String.IsNullOrEmpty(_currentImagePath) Then Return
-                                                                          _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
-                                                                          Dim parsed As EditorTool
-                                                                          If [Enum].TryParse(toolName, parsed) Then
-                                                                              _mainVm.Editor.CurrentTool = parsed
-                                                                          End If
-                                                                      End Sub)
+            EditCommand = ReactiveCommand.CreateFromTask(Async Function()
+                                                             If Not String.IsNullOrEmpty(_currentImagePath) Then
+                                                                 Await _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
+                                                             End If
+                                                         End Function)
+            OpenEditorToolCommand = ReactiveCommand.CreateFromTask(Of String)(Async Function(toolName)
+                                                                                  If String.IsNullOrEmpty(_currentImagePath) Then Return
+                                                                                  Await _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
+                                                                                  Dim parsed As EditorTool
+                                                                                  If [Enum].TryParse(toolName, parsed) AndAlso _mainVm.Editor IsNot Nothing Then
+                                                                                      _mainVm.Editor.CurrentTool = parsed
+                                                                                  End If
+                                                                              End Function)
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub()
                                                                    If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
                                                                    _mainVm.Settings.ViewerInfoSidebarExpanded = Not _mainVm.Settings.ViewerInfoSidebarExpanded

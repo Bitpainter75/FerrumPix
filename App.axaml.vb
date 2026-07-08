@@ -33,7 +33,7 @@ Public Class App
                 If Avalonia.Threading.Dispatcher.UIThread.CheckAccess() Then
                     LibVLCSharp.Shared.Core.Initialize()
                 Else
-                    Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(Sub() LibVLCSharp.Shared.Core.Initialize()).Wait()
+                    Avalonia.Threading.Dispatcher.UIThread.Invoke(Sub() LibVLCSharp.Shared.Core.Initialize(), Avalonia.Threading.DispatcherPriority.Send)
                 End If
                 Return True
             Catch

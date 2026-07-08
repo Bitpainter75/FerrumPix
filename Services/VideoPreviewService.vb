@@ -213,42 +213,41 @@ Namespace Services
             End SyncLock
 
             Dim created As HeadlessVideoSurface = Nothing
-            Dim task = Dispatcher.UIThread.InvokeAsync(Sub()
-                                                            SyncLock _createLock
-                                                                If _instance IsNot Nothing Then
-                                                                    created = _instance
-                                                                    Return
-                                                                End If
-                                                                Dim videoView As New LibVLCSharp.Avalonia.VideoView()
-                                                                ' KEINE extreme Off-Screen-Position verwenden (z.B. -32000,-32000):
-                                                                ' manche Fenstermanager (u.a. KWin) respektieren das nicht und
-                                                                ' klemmen das Fenster stattdessen sichtbar in eine Bildschirmecke -
-                                                                ' zusätzlich kann das transiente PositionChanged-Ereignisse
-                                                                ' auslösen, die versehentlich als Hauptfenster-Position gespeichert
-                                                                ' werden. Stattdessen eine normale, immer gültige On-Screen-Position
-                                                                ' (0,0) mit Opacity 0 und 1x1px - unsichtbar unabhängig vom
-                                                                ' Fenstermanager-Verhalten.
-                                                                Dim window As New Window() With {
-                                                                    .Width = 1,
-                                                                    .Height = 1,
-                                                                    .Opacity = 0,
-                                                                    .SystemDecorations = SystemDecorations.None,
-                                                                    .ShowInTaskbar = False,
-                                                                    .CanResize = False,
-                                                                    .ShowActivated = False,
-                                                                    .Topmost = False,
-                                                                    .WindowStartupLocation = WindowStartupLocation.Manual,
-                                                                    .Position = New PixelPoint(0, 0),
-                                                                    .Content = videoView
-                                                                }
-                                                                Dim player As New MediaPlayer(libVlc)
-                                                                videoView.MediaPlayer = player
-                                                                window.Show()
-                                                                created = New HeadlessVideoSurface(player)
-                                                                _instance = created
-                                                            End SyncLock
-                                                        End Sub)
-            task.Wait()
+            Dispatcher.UIThread.Invoke(Sub()
+                                           SyncLock _createLock
+                                               If _instance IsNot Nothing Then
+                                                   created = _instance
+                                                   Return
+                                               End If
+                                               Dim videoView As New LibVLCSharp.Avalonia.VideoView()
+                                               ' KEINE extreme Off-Screen-Position verwenden (z.B. -32000,-32000):
+                                               ' manche Fenstermanager (u.a. KWin) respektieren das nicht und
+                                               ' klemmen das Fenster stattdessen sichtbar in eine Bildschirmecke -
+                                               ' zusätzlich kann das transiente PositionChanged-Ereignisse
+                                               ' auslösen, die versehentlich als Hauptfenster-Position gespeichert
+                                               ' werden. Stattdessen eine normale, immer gültige On-Screen-Position
+                                               ' (0,0) mit Opacity 0 und 1x1px - unsichtbar unabhängig vom
+                                               ' Fenstermanager-Verhalten.
+                                               Dim window As New Window() With {
+                                                   .Width = 1,
+                                                   .Height = 1,
+                                                   .Opacity = 0,
+                                                   .SystemDecorations = SystemDecorations.None,
+                                                   .ShowInTaskbar = False,
+                                                   .CanResize = False,
+                                                   .ShowActivated = False,
+                                                   .Topmost = False,
+                                                   .WindowStartupLocation = WindowStartupLocation.Manual,
+                                                   .Position = New PixelPoint(0, 0),
+                                                   .Content = videoView
+                                               }
+                                               Dim player As New MediaPlayer(libVlc)
+                                               videoView.MediaPlayer = player
+                                               window.Show()
+                                               created = New HeadlessVideoSurface(player)
+                                               _instance = created
+                                           End SyncLock
+                                       End Sub, DispatcherPriority.Send)
             Return created
         End Function
 

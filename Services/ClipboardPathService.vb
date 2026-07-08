@@ -95,21 +95,25 @@ Namespace Services
             ' Fallback für Zwischenablageninhalte, bei denen DataFormat.File nicht verfügbar ist -
             ' etwa ältere/abweichende MIME-Angebote mancher Programme.
             Try
-                Dim formats = Await clipboard.GetFormatsAsync()
-                For Each dataFormatName In {"x-special/gnome-copied-files", "text/uri-list", "text/plain", "TEXT", DataFormats.Text}
-                    If formats IsNot Nothing AndAlso Not formats.Contains(dataFormatName) Then Continue For
-                    Dim data = Await clipboard.GetDataAsync(dataFormatName)
-                    Dim parsed = ParsePathText(DataToText(data))
-                    If parsed.Paths.Count > 0 Then
-                        parsed.ClipboardWasReadable = True
-                        Return parsed
+                Dim formats = Await clipboard.GetDataFormatsAsync()
+                For Each dataFormatName In {"x-special/gnome-copied-files", "text/uri-list", "text/plain", "TEXT", DataFormat.Text.Identifier}
+                    If formats IsNot Nothing AndAlso Not formats.Any(Function(f) String.Equals(f.Identifier, dataFormatName, StringComparison.OrdinalIgnoreCase)) Then Continue For
+                    If String.Equals(dataFormatName, DataFormat.Text.Identifier, StringComparison.Ordinal) OrElse
+                       String.Equals(dataFormatName, "text/plain", StringComparison.OrdinalIgnoreCase) OrElse
+                       String.Equals(dataFormatName, "TEXT", StringComparison.OrdinalIgnoreCase) Then
+                        Dim textData = Await clipboard.TryGetTextAsync()
+                        Dim parsed = ParsePathText(textData)
+                        If parsed.Paths.Count > 0 Then
+                            parsed.ClipboardWasReadable = True
+                            Return parsed
+                        End If
                     End If
                 Next
             Catch
             End Try
 
             Try
-                Dim text = Await clipboard.GetTextAsync()
+                Dim text = Await clipboard.TryGetTextAsync()
                 Dim parsed = ParsePathText(text)
                 parsed.ClipboardWasReadable = True
                 Return parsed

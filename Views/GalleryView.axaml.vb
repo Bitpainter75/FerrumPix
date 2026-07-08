@@ -21,6 +21,9 @@ Namespace Views
     Public Class GalleryView
         Inherits UserControl
 
+        Private Shared ReadOnly FerrumPixPathsFormat As DataFormat(Of String) =
+            DataFormat.CreateStringApplicationFormat("FerrumPixPaths")
+
         Private _initialSelectionDone As Boolean = False
         Private _dragStartPoint As Avalonia.Point
         Private _dragStartItem As ImageItem
@@ -754,11 +757,11 @@ Namespace Views
                            New List(Of String) From {dragItem.FilePath})
             _dragStartItem = Nothing
 
-            Dim data = New DataObject()
-            data.Set("FerrumPixPaths", paths)
+            Dim data = New DataTransfer()
+            data.Add(DataTransferItem.Create(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
             _isDragging = True
             Try
-                Await DragDrop.DoDragDrop(e, data, DragDropEffects.Move Or DragDropEffects.Copy)
+                Await DragDrop.DoDragDropAsync(e, data, DragDropEffects.Move Or DragDropEffects.Copy)
             Finally
                 _isDragging = False
             End Try
@@ -1181,9 +1184,10 @@ Namespace Views
 
         Private Function GetDraggedPaths(e As DragEventArgs) As List(Of String)
             Try
-                Dim internal = TryCast(e.Data.Get("FerrumPixPaths"), IEnumerable(Of String))
-                If internal IsNot Nothing Then
+                Dim internal = e.DataTransfer.TryGetValue(FerrumPixPathsFormat)
+                If Not String.IsNullOrWhiteSpace(internal) Then
                     Return internal.
+                        Split({ControlChars.Cr, ControlChars.Lf}, StringSplitOptions.RemoveEmptyEntries).
                         Where(Function(p) Not String.IsNullOrEmpty(p)).
                         Distinct(StringComparer.OrdinalIgnoreCase).
                         ToList()

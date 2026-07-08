@@ -992,7 +992,8 @@ Namespace ViewModels
                         Dim brush As New Avalonia.Media.RadialGradientBrush With {
                             .Center = New Avalonia.RelativePoint(0.5, 0.5, Avalonia.RelativeUnit.Relative),
                             .GradientOrigin = New Avalonia.RelativePoint(0.5, 0.5, Avalonia.RelativeUnit.Relative),
-                            .Radius = 0.5
+                            .RadiusX = New Avalonia.RelativeScalar(0.5, Avalonia.RelativeUnit.Relative),
+                            .RadiusY = New Avalonia.RelativeScalar(0.5, Avalonia.RelativeUnit.Relative)
                         }
                         brush.GradientStops.Add(New Avalonia.Media.GradientStop(startColor, 0))
                         brush.GradientStops.Add(New Avalonia.Media.GradientStop(endColor, 1))

@@ -2907,11 +2907,11 @@ Namespace ViewModels
             End If
         End Sub
 
-        Public Sub OpenSelectedInEditor()
+        Public Async Sub OpenSelectedInEditor()
             Dim image = GetSelectedImageItems().FirstOrDefault(Function(i) i.CanEditFile)
             If image IsNot Nothing Then
-                _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList(),
-                                          cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
+                Await _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList(),
+                                                cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
             End If
         End Sub
 
