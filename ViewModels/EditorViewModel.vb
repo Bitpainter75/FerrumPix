@@ -223,6 +223,9 @@ Namespace ViewModels
         Private _showBeforeImage As Boolean = False
         Private _comparisonAutoEnabled As Boolean = True
         Private _folderPaths As New List(Of String)()
+        ' Cache-Scope für die Filmstreifen-Thumbnails (Suchlisten-Scope statt je Ursprungsordner) - siehe ViewerViewModel.
+        Private _thumbCacheScopeId As String = Nothing
+        Private _thumbCacheScopeName As String = Nothing
         Private _currentIndex As Integer = -1
         Private _selectedInfoTab As InfoSidebarTab = InfoSidebarTab.General
         Private _selectedLayersPanelTab As LayersPanelTab = LayersPanelTab.Tool
@@ -4095,7 +4098,7 @@ Namespace ViewModels
         Public Async Function BackToViewerAsync() As Task
             If Not Await ConfirmSaveBeforeLeavingAsync("den Editor verlässt") Then Return
             If Not String.IsNullOrEmpty(_currentImagePath) Then
-                _mainVm.Viewer.OpenImage(_currentImagePath, _folderPaths.ToList())
+                _mainVm.Viewer.OpenImage(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
                 _mainVm.CurrentMode = AppMode.Viewer
             Else
                 _mainVm.CurrentMode = AppMode.Viewer
@@ -4215,7 +4218,7 @@ Namespace ViewModels
             Dim ignored = OpenImageAsync(imagePath, allPaths)
         End Sub
 
-        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing) As Task(Of Boolean)
+        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing) As Task(Of Boolean)
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return False
             If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
@@ -4229,6 +4232,9 @@ Namespace ViewModels
             PreviewImage = Nothing
             ComparisonImage = Nothing
             PreparePreviewSource(imagePath)
+            ' Scope nur bei expliziter Pfadliste (z.B. Suchliste) wirksam, sonst normaler Ordner-Cache.
+            _thumbCacheScopeId = If(allPaths IsNot Nothing, cacheScopeId, Nothing)
+            _thumbCacheScopeName = If(allPaths IsNot Nothing, cacheScopeName, Nothing)
             If allPaths IsNot Nothing Then
                 LoadFilmstripContext(imagePath, allPaths)
             Else
@@ -4345,7 +4351,7 @@ Namespace ViewModels
                         Distinct(StringComparer.OrdinalIgnoreCase).
                         ToList()
 
-                    FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path)))
+                    FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)))
 
                     _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
                     If _currentIndex < 0 Then _currentIndex = 0

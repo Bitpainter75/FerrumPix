@@ -41,6 +41,10 @@ Namespace ViewModels
         Private _slideshowTimer As Timer
         Private _slideshowIntervalMs As Double = 3000
         Private _folderPaths As New List(Of String)()
+        ' Cache-Scope für die Filmstreifen-Thumbnails (bei Suchlisten die Suchlisten-Scope, sonst Nothing),
+        ' damit nicht je Ursprungsordner der Treffer ein eigener Cache-Ordner entsteht.
+        Private _thumbCacheScopeId As String = Nothing
+        Private _thumbCacheScopeName As String = Nothing
         Private ReadOnly _navDebouncer As FilmstripNavigationDebouncer
         Private _isFitToWindow As Boolean = True
         Private _activeZoomPreset As ZoomPresetMode = ZoomPresetMode.Fit
@@ -578,12 +582,12 @@ Namespace ViewModels
                                                        End Sub)
             EditCommand = ReactiveCommand.Create(Sub()
                                                      If Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                         _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList())
+                                                         _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
                                                      End If
                                                  End Sub)
             OpenEditorToolCommand = ReactiveCommand.Create(Of String)(Sub(toolName)
                                                                           If String.IsNullOrEmpty(_currentImagePath) Then Return
-                                                                          _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList())
+                                                                          _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
                                                                           Dim parsed As EditorTool
                                                                           If [Enum].TryParse(toolName, parsed) Then
                                                                               _mainVm.Editor.CurrentTool = parsed
@@ -637,9 +641,13 @@ Namespace ViewModels
             ToggleVideoMuteCommand = ReactiveCommand.Create(Sub() IsVideoMuted = Not IsVideoMuted)
         End Sub
 
-        Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing)
+        Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             If Not File.Exists(imagePath) Then Return
 
+            ' Scope nur wirksam, wenn eine explizite Pfadliste (z.B. Suchliste) übergeben wurde; beim
+            ' Öffnen aus einem echten Ordner (allPaths=Nothing) gilt der normale ordnerbasierte Cache.
+            _thumbCacheScopeId = If(allPaths IsNot Nothing, cacheScopeId, Nothing)
+            _thumbCacheScopeName = If(allPaths IsNot Nothing, cacheScopeName, Nothing)
             _currentImagePath = imagePath
             CurrentImagePath = imagePath
             CurrentFileName = IO.Path.GetFileName(imagePath)
@@ -683,7 +691,7 @@ Namespace ViewModels
         ' Viewer per Ziehgeste ausgewählten Bildausschnitt als Vorschlag.
         Public Async Sub OpenCropInEditor(cropLeft As Double, cropTop As Double, cropRight As Double, cropBottom As Double)
             If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
-            Await _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList())
+            Await _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
             If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
             _mainVm.Editor.CurrentTool = EditorTool.Crop
             _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
@@ -894,7 +902,7 @@ Namespace ViewModels
             Next
             FilmstripItems.ReplaceAll(_folderPaths.
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
-                Select(Function(p) ImageItem.CreateLightweight(p)))
+                Select(Function(p) ImageItem.CreateLightweight(p, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)))
             MarkCurrentFilmstripItem()
             Dim itemsSnapshot = FilmstripItems.ToList()
             Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)

@@ -243,19 +243,19 @@ Namespace ViewModels
             Return Await Editor.ConfirmSaveBeforeLeavingAsync(actionDescription)
         End Function
 
-        Public Async Sub OpenImageInViewer(imagePath As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional bypassEditorPrompt As Boolean = False)
+        Public Async Sub OpenImageInViewer(imagePath As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional bypassEditorPrompt As Boolean = False, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             If CurrentMode = AppMode.Editor AndAlso Not bypassEditorPrompt Then
                 If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
             End If
-            Viewer.OpenImage(imagePath, allPaths)
+            Viewer.OpenImage(imagePath, allPaths, cacheScopeId, cacheScopeName)
             CurrentMode = AppMode.Viewer
         End Sub
 
-        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing) As Task
+        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing) As Task
             If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmEditorLeaveAsync("ein anderes Bild zu öffnen") Then Return
             End If
-            Dim opened = Await Editor.OpenImageAsync(path, allPaths)
+            Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName)
             If Not opened Then Return
             CurrentMode = AppMode.Editor
         End Function
@@ -301,7 +301,8 @@ Namespace ViewModels
         Public Async Sub EnterFullscreen()
             If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso Gallery.SelectedItem.IsImage Then
                 _previousModeBeforeFullscreen = AppMode.Gallery
-                OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) i.IsImage).Select(Function(i) i.FilePath).ToList())
+                OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) i.IsImage).Select(Function(i) i.FilePath).ToList(),
+                                  cacheScopeId:=Gallery.CurrentThumbnailCacheScopeId, cacheScopeName:=Gallery.CurrentThumbnailCacheScopeName)
             ElseIf CurrentMode = AppMode.Editor AndAlso Not String.IsNullOrEmpty(Editor.CurrentImagePath) Then
                 If Not Await ConfirmEditorLeaveAsync("den Vollbildmodus zu öffnen") Then Return
                 _previousModeBeforeFullscreen = AppMode.Editor

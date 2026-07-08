@@ -2880,10 +2880,28 @@ Namespace ViewModels
             End Select
         End Function
 
+        ''' Cache-Scope der aktuell angezeigten Ansicht - bei Suchlisten die Suchlisten-Scope, damit
+        ''' Viewer/Editor (Filmstreifen) die Thumbnails im selben Suchlisten-Cache ablegen statt neue
+        ''' Cache-Ordner je Ursprungsordner der Treffer anzulegen. Bei normalen Ordnern Nothing.
+        Public ReadOnly Property CurrentThumbnailCacheScopeId As String
+            Get
+                If _isVirtualFolder AndAlso _selectedSearchNode IsNot Nothing Then Return GetSearchListCacheScopeId(_selectedSearchNode.Id)
+                Return Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property CurrentThumbnailCacheScopeName As String
+            Get
+                If _isVirtualFolder AndAlso _selectedSearchNode IsNot Nothing Then Return "Suchliste: " & _selectedSearchNode.Name
+                Return Nothing
+            End Get
+        End Property
+
         Public Sub OpenSelectedInViewer()
             Dim images = GetSelectedImageItems()
             If images.Count > 0 Then
-                _mainVm.OpenImageInViewer(images(0).FilePath, Items.Where(Function(i) i.IsImage).Select(Function(i) i.FilePath).ToList())
+                _mainVm.OpenImageInViewer(images(0).FilePath, Items.Where(Function(i) i.IsImage).Select(Function(i) i.FilePath).ToList(),
+                                          cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
             ElseIf SelectedItem IsNot Nothing AndAlso SelectedItem.IsParentFolderEntry Then
                 NavigateToParent()
             End If
@@ -2892,7 +2910,8 @@ Namespace ViewModels
         Public Sub OpenSelectedInEditor()
             Dim image = GetSelectedImageItems().FirstOrDefault(Function(i) i.CanEditFile)
             If image IsNot Nothing Then
-                _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList())
+                _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList(),
+                                          cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
             End If
         End Sub
 
