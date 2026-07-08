@@ -24,6 +24,7 @@ Namespace ViewModels
         Private _currentImage As Bitmap
         Private _previewImage As Bitmap
         Private _comparisonImage As Bitmap
+        Private _selectedAnnotationOverlayImage As Bitmap
         Private _currentTool As EditorTool = EditorTool.Crop
         Private _brightness As Double = 0
         Private _contrast As Double = 0
@@ -375,8 +376,20 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowSelectedSvgOverlay As Boolean
             Get
-                Return False
+                Return _selectedAnnotationOverlayImage IsNot Nothing
             End Get
+        End Property
+
+        Public Property SelectedAnnotationOverlayImage As Bitmap
+            Get
+                Return _selectedAnnotationOverlayImage
+            End Get
+            Set(value As Bitmap)
+                Dim previous = _selectedAnnotationOverlayImage
+                Me.RaiseAndSetIfChanged(_selectedAnnotationOverlayImage, value)
+                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
+            End Set
         End Property
 
         Public ReadOnly Property SelectedAnnotationImagePath As String
@@ -746,8 +759,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(AnnotationPositionMaximum))
                 Me.RaisePropertyChanged(NameOf(AnnotationXLabel))
                 Me.RaisePropertyChanged(NameOf(AnnotationYLabel))
-                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationImagePath))
+                UpdateSelectedAnnotationOverlayPreview()
                 RaiseWatermarkUiChanged()
                 UpdateShapeIconStates()
                 ' Text-/Wasserzeichen-Ebenen werden während der Selektion über das Live-Overlay
@@ -938,6 +951,13 @@ Namespace ViewModels
             AnnotationFontFamily = "Arial"
             AnnotationOpacity = 100
             AnnotationRotation = 0
+            Dim defaultSize = GetDefaultAnnotationSizePercent(normalizedKind, rawKind)
+            _annotationWidthPercent = defaultSize.WidthPercent
+            _annotationHeightPercent = defaultSize.HeightPercent
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
             _annotationAnchor = "BottomRight"
             Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
             AnnotationIsVisible = True
@@ -1000,6 +1020,12 @@ Namespace ViewModels
         Public ReadOnly Property IsPaintToolSelected As Boolean
             Get
                 Return _currentTool = EditorTool.Draw OrElse _currentTool = EditorTool.Retouch
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGeometryToolSelected As Boolean
+            Get
+                Return _currentTool = EditorTool.Geometry OrElse _currentTool = EditorTool.Insert
             End Get
         End Property
 
@@ -3157,7 +3183,7 @@ Namespace ViewModels
                 Return _straightenDegrees
             End Get
             Set(value As Double)
-                Dim clamped = Math.Max(-45, Math.Min(45, value))
+                Dim clamped = Math.Max(-180, Math.Min(180, value))
                 If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_straightenDegrees, clamped)
                 RaiseResetButtonStateChanged()
@@ -4294,12 +4320,22 @@ Namespace ViewModels
             Return k = "Text" OrElse k = "Watermark"
         End Function
 
+        Private Function UsesRenderedSelectionOverlay(kind As String) As Boolean
+            Select Case NormalizeAnnotationKind(kind)
+                Case "Text", "Watermark", "Brush", "Eraser"
+                    Return False
+                Case Else
+                    Return True
+            End Select
+        End Function
+
         ''' Ob das selektierte Text-/Wasserzeichen-Objekt aktuell per Live-Overlay dargestellt wird
         ''' und deshalb im gebackenen Vorschaubild ausgeblendet werden muss (siehe GetCurrentAdjustments).
         Private Function ComputesOverlayHidesSelection() As Boolean
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
-            If _currentTool <> EditorTool.Text AndAlso _currentTool <> EditorTool.Insert Then Return False
-            Return IsTextualAnnotationKind(_annotations(_selectedAnnotationIndex).Kind)
+            If _currentTool <> EditorTool.Text AndAlso _currentTool <> EditorTool.Insert AndAlso _currentTool <> EditorTool.Geometry AndAlso _currentTool <> EditorTool.Selection Then Return False
+            Dim selectedKind = _annotations(_selectedAnnotationIndex).Kind
+            Return IsTextualAnnotationKind(selectedKind) OrElse UsesRenderedSelectionOverlay(selectedKind)
         End Function
 
         ''' Versucht, die Annotationen synchron auf dem bereits gecachten Base-Bitmap neu zu
@@ -5428,9 +5464,9 @@ Namespace ViewModels
         Public Sub AddAnnotationAt(kind As String, xPercent As Double, yPercent As Double)
             PushUndo()
             Dim normalizedKind = NormalizeAnnotationKind(kind)
-            Dim isShape = IsCustomShapeKind(normalizedKind)
-            Dim width = If(normalizedKind = "Line" OrElse normalizedKind = "Arrow", 30.0, If(normalizedKind = "QR" OrElse normalizedKind = "Image", 22.0, If(isShape, 22.0, _annotationWidthPercent)))
-            Dim height = If(normalizedKind = "Line" OrElse normalizedKind = "Arrow", 16.0, If(normalizedKind = "QR" OrElse normalizedKind = "Symbol" OrElse normalizedKind = "Image", 22.0, If(isShape, 22.0, _annotationHeightPercent)))
+            Dim defaultSize = GetDefaultAnnotationSizePercent(normalizedKind, kind)
+            Dim width = defaultSize.WidthPercent
+            Dim height = defaultSize.HeightPercent
             If normalizedKind = "Watermark" AndAlso Not String.IsNullOrWhiteSpace(_watermarkImagePath) Then
                 width = _annotationWidthPercent
                 height = _annotationHeightPercent
@@ -5473,6 +5509,24 @@ Namespace ViewModels
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
+
+        Private Function GetDefaultAnnotationSizePercent(normalizedKind As String, rawKind As String) As (WidthPercent As Double, HeightPercent As Double)
+            Select Case normalizedKind
+                Case "Line", "Arrow"
+                    Return (30.0, 16.0)
+                Case "QR", "Image", "Symbol", "Rectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Spiral", "Droplet", "SpeechBubble"
+                    Return (22.0, 22.0)
+                Case "Svg"
+                    Dim aspect = ImageProcessor.TryGetSvgAspectRatio(ExtractSvgIconPath(rawKind))
+                    Dim baseSize = 22.0
+                    If aspect >= 1.0 Then
+                        Return (baseSize, Math.Max(5.0, baseSize / aspect))
+                    End If
+                    Return (Math.Max(5.0, baseSize * aspect), baseSize)
+                Case Else
+                    Return (_annotationWidthPercent, _annotationHeightPercent)
+            End Select
+        End Function
 
         Public Sub AddImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
@@ -5557,6 +5611,7 @@ Namespace ViewModels
             If normalized.StartsWith("symbol:", StringComparison.OrdinalIgnoreCase) Then Return "Symbol"
             If normalized.StartsWith("svg:", StringComparison.OrdinalIgnoreCase) Then Return "Svg"
             Select Case normalized
+                Case "svg" : Return "Svg"
                 Case "selectionfill" : Return "SelectionFill"
                 Case "selectionimage" : Return "SelectionImage"
                 Case "rectangle", "rect", "rechteck" : Return "Rectangle"
@@ -5890,8 +5945,37 @@ Namespace ViewModels
             a.GlowStrength = CSng(_annotationGlowStrength)
             a.GlowColor = _annotationGlowColor
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
+            UpdateSelectedAnnotationOverlayPreview()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
+        End Sub
+
+        Private Sub UpdateSelectedAnnotationOverlayPreview()
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then
+                SelectedAnnotationOverlayImage = Nothing
+                Return
+            End If
+
+            Dim annotation = _annotations(_selectedAnnotationIndex)
+            If annotation Is Nothing OrElse Not annotation.IsVisible Then
+                SelectedAnnotationOverlayImage = Nothing
+                Return
+            End If
+
+            If Not UsesRenderedSelectionOverlay(annotation.Kind) Then
+                SelectedAnnotationOverlayImage = Nothing
+                Return
+            End If
+
+            Dim previewSource = GetPreviewSource()
+            Dim pixelWidth = 256
+            Dim pixelHeight = 256
+            If previewSource IsNot Nothing Then
+                pixelWidth = Math.Max(48, CInt(Math.Round(previewSource.Width * Math.Max(0.01, annotation.WidthPercent) / 100.0)))
+                pixelHeight = Math.Max(48, CInt(Math.Round(previewSource.Height * Math.Max(0.01, annotation.HeightPercent) / 100.0)))
+            End If
+
+            SelectedAnnotationOverlayImage = ImageProcessor.RenderAnnotationOverlay(annotation.Clone(), pixelWidth, pixelHeight)
         End Sub
 
         Private Shared Function ParseAvaloniaColorOrDefault(value As String, fallback As Avalonia.Media.Color) As Avalonia.Media.Color
@@ -6339,6 +6423,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowExportAdjustments))
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
             Me.RaisePropertyChanged(NameOf(IsPaintToolSelected))
+            Me.RaisePropertyChanged(NameOf(IsGeometryToolSelected))
         End Sub
 
         Private Sub SetPaintMode(mode As String)

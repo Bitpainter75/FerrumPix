@@ -1312,6 +1312,7 @@ Namespace Views
             Dim overlay = Me.FindControl(Of Border)("TextOverlay")
             Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
             Dim frame = Me.FindControl(Of Rectangle)("TextOverlayFrame")
+            Dim overlayImage = Me.FindControl(Of Image)("SelectedAnnotationOverlayImage")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If overlay Is Nothing OrElse vm Is Nothing OrElse Not IsLayerPlacementTool(vm.CurrentTool) OrElse Not vm.HasSelectedAnnotation Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
@@ -1336,6 +1337,9 @@ Namespace Views
             overlay.RenderTransform = New RotateTransform(vm.AnnotationRotation)
             overlay.IsVisible = True
             If frame IsNot Nothing Then frame.Stroke = New SolidColorBrush(ParseAvaloniaColor(vm.AnnotationStrokeColor, Colors.White))
+            If overlayImage IsNot Nothing Then
+                overlayImage.Margin = ComputeSelectedOverlayImageMargin(vm, width, height)
+            End If
 
             Dim selectedKind = If(vm.SelectedAnnotationKind, "")
             Dim isTextLayer = selectedKind.Equals("Text", StringComparison.OrdinalIgnoreCase) OrElse
@@ -1355,6 +1359,26 @@ Namespace Views
                 editor.Foreground = New SolidColorBrush(ParseAvaloniaColor(vm.AnnotationFillColor, Colors.White))
             End If
         End Sub
+
+        Private Shared Function ComputeSelectedOverlayImageMargin(vm As EditorViewModel, width As Double, height As Double) As Thickness
+            If vm Is Nothing OrElse width <= 0 OrElse height <= 0 OrElse Not vm.ShowSelectedSvgOverlay Then
+                Return New Thickness(0)
+            End If
+
+            Dim objSize = Math.Max(1.0, Math.Min(width, height))
+            Dim glowPad = If(vm.AnnotationGlowEnabled, objSize * vm.AnnotationGlowBlur / 100.0 * 2.4, 0.0)
+            Dim shadowPad = If(vm.AnnotationShadowEnabled, objSize * vm.AnnotationShadowBlur / 100.0 * 1.8, 0.0)
+            Dim offsetX = If(vm.AnnotationShadowEnabled, objSize * vm.AnnotationShadowOffsetX / 100.0, 0.0)
+            Dim offsetY = If(vm.AnnotationShadowEnabled, objSize * vm.AnnotationShadowOffsetY / 100.0, 0.0)
+            Dim effectPad = Math.Max(glowPad, shadowPad)
+
+            Dim leftPad = 4.0 + effectPad + Math.Max(0.0, -offsetX)
+            Dim rightPad = 4.0 + effectPad + Math.Max(0.0, offsetX)
+            Dim topPad = 4.0 + effectPad + Math.Max(0.0, -offsetY)
+            Dim bottomPad = 4.0 + effectPad + Math.Max(0.0, offsetY)
+
+            Return New Thickness(-leftPad, -topPad, -rightPad, -bottomPad)
+        End Function
 
         Private Shared Function IsLayerPlacementTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Text OrElse tool = EditorTool.Geometry OrElse tool = EditorTool.Insert OrElse tool = EditorTool.Selection

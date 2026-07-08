@@ -28,43 +28,43 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Lichter Ton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
-                                   Value="{Binding SplitToningHighlightHue}" Margin="6,0" />
+                                   Value="{Binding SplitToningHighlightHue}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding SplitToningHighlightHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Lichter Sätt." Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding SplitToningHighlightSaturation}" Margin="6,0" />
+                                   Value="{Binding SplitToningHighlightSaturation}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding SplitToningHighlightSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Schatten Ton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
-                                   Value="{Binding SplitToningShadowHue}" Margin="6,0" />
+                                   Value="{Binding SplitToningShadowHue}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding SplitToningShadowHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Schatten Sätt." Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding SplitToningShadowSaturation}" Margin="6,0" />
+                                   Value="{Binding SplitToningShadowSaturation}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding SplitToningShadowSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Balance" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                   Value="{Binding SplitToningBalance}" Margin="6,0" />
+                                   Value="{Binding SplitToningBalance}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding SplitToningBalance, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>

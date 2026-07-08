@@ -889,6 +889,66 @@ Namespace Services
             End Try
         End Function
 
+        Public Shared Function RenderAnnotationOverlay(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer) As Bitmap
+            If annotation Is Nothing Then Return Nothing
+
+            Dim width = Math.Max(1, pixelWidth)
+            Dim height = Math.Max(1, pixelHeight)
+            Dim renderAnnotation = annotation.Clone()
+            renderAnnotation.RotationDegrees = 0
+
+            Dim approxObjectSize = CSng(Math.Max(1, Math.Min(width, height)))
+            Dim glowPad = If(renderAnnotation.GlowEnabled, approxObjectSize * Clamp(renderAnnotation.GlowBlur, 0, 100) / 100.0F * 2.4F, 0.0F)
+            Dim shadowPad = If(renderAnnotation.ShadowEnabled, approxObjectSize * Clamp(renderAnnotation.ShadowBlur, 0, 100) / 100.0F * 1.8F, 0.0F)
+            Dim offsetX = If(renderAnnotation.ShadowEnabled, approxObjectSize * renderAnnotation.ShadowOffsetXPercent / 100.0F, 0.0F)
+            Dim offsetY = If(renderAnnotation.ShadowEnabled, approxObjectSize * renderAnnotation.ShadowOffsetYPercent / 100.0F, 0.0F)
+            Dim effectPad = Math.Max(glowPad, shadowPad)
+            Dim leftPad = 4.0F + effectPad + Math.Max(0.0F, -offsetX)
+            Dim rightPad = 4.0F + effectPad + Math.Max(0.0F, offsetX)
+            Dim topPad = 4.0F + effectPad + Math.Max(0.0F, -offsetY)
+            Dim bottomPad = 4.0F + effectPad + Math.Max(0.0F, offsetY)
+
+            If leftPad + rightPad >= width Then
+                leftPad = 2.0F
+                rightPad = 2.0F
+            End If
+            If topPad + bottomPad >= height Then
+                topPad = 2.0F
+                bottomPad = 2.0F
+            End If
+
+            Dim rect = SKRect.Create(leftPad, topPad, Math.Max(1.0F, width - leftPad - rightPad), Math.Max(1.0F, height - topPad - bottomPad))
+            Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
+            Dim x = rect.Left
+            Dim y = rect.Top
+            Dim maxWidth = rect.Width
+            Dim fontSize = Math.Max(8.0F, height * Clamp(renderAnnotation.FontSizePercent, 0.5F, 50) / 100.0F)
+            Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
+            Dim fill = ApplyAlpha(ParseColor(renderAnnotation.FillColor, SKColors.White), alphaFactor)
+            Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
+            Dim strokeWidth = Math.Max(1.0F, renderAnnotation.StrokeWidth)
+
+            Using bitmap = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(bitmap)
+                    canvas.Clear(SKColors.Transparent)
+                    If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
+                        DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, width, height)
+                    End If
+                    DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+                End Using
+
+                Return ToAvaloniaBitmap(bitmap)
+            End Using
+        End Function
+
+        Public Shared Function TryGetSvgAspectRatio(iconPath As String) As Double
+            If String.IsNullOrWhiteSpace(iconPath) Then Return 1.0
+
+            Dim shape = GetShapePath(iconPath)
+            If shape Is Nothing OrElse shape.Bounds.Width <= 0 OrElse shape.Bounds.Height <= 0 Then Return 1.0
+            Return Math.Max(0.01, shape.Bounds.Width / shape.Bounds.Height)
+        End Function
+
         Public Shared Function ApplyGeometryAdjustments(sourcePath As String, adj As ImageAdjustments) As Bitmap
             Using original = DecodeOriented(sourcePath)
                 If original Is Nothing Then Return Nothing
@@ -1639,15 +1699,12 @@ Namespace Services
             Dim shape = GetShapePath(iconPath)
             If shape Is Nothing OrElse shape.Path.IsEmpty OrElse shape.Bounds.Width <= 0 OrElse shape.Bounds.Height <= 0 Then Return
 
-            Dim uniformScale = Math.Min(rect.Width / shape.Bounds.Width, rect.Height / shape.Bounds.Height)
-            Dim fittedWidth = shape.Bounds.Width * uniformScale
-            Dim fittedHeight = shape.Bounds.Height * uniformScale
-            Dim offsetX = rect.Left + (rect.Width - fittedWidth) / 2.0F
-            Dim offsetY = rect.Top + (rect.Height - fittedHeight) / 2.0F
+            Dim scaleX = rect.Width / shape.Bounds.Width
+            Dim scaleY = rect.Height / shape.Bounds.Height
 
             canvas.Save()
-            canvas.Translate(offsetX, offsetY)
-            canvas.Scale(uniformScale, uniformScale)
+            canvas.Translate(rect.Left, rect.Top)
+            canvas.Scale(scaleX, scaleY)
             canvas.Translate(-shape.Bounds.Left, -shape.Bounds.Top)
 
             Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
@@ -1669,7 +1726,7 @@ Namespace Services
                 End If
             End If
             If strokeWidth > 0 Then
-                Dim adjustedStroke = strokeWidth / Math.Max(0.0001F, uniformScale)
+                Dim adjustedStroke = strokeWidth / Math.Max(0.0001F, Math.Min(scaleX, scaleY))
                 Using strokePaint = New SKPaint With {
                     .Color = stroke,
                     .Style = SKPaintStyle.Stroke,

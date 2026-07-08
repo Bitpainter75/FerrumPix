@@ -294,7 +294,7 @@
                             ToolTip.Tip="Formen und Symbole"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Insert"
-                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Insert}">
+                            Classes.active="{Binding IsGeometryToolSelected}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/cube.svg"
                                            Width="18" Height="18" />
@@ -479,14 +479,13 @@
                                            StrokeThickness="1.5"
                                            StrokeDashArray="5,3"
                                            IsHitTestVisible="False" />
-                                <icons:SvgIcon Source="{Binding SelectedAnnotationImagePath}"
-                                               IconBrush="{Binding AnnotationFillColorValue}"
-                                               HorizontalAlignment="Stretch"
-                                               VerticalAlignment="Stretch"
-                                               Margin="6"
-                                               Opacity="0.9"
-                                               IsHitTestVisible="False"
-                                               IsVisible="{Binding ShowSelectedSvgOverlay}" />
+                                <Image x:Name="SelectedAnnotationOverlayImage"
+                                       Source="{Binding SelectedAnnotationOverlayImage}"
+                                       HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Stretch"
+                                       Stretch="Fill"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding ShowSelectedSvgOverlay}" />
                                 <TextBox x:Name="TextOverlayEditor"
                                          Classes="overlay-editor"
                                          Text="{Binding AnnotationText}"

@@ -32,16 +32,16 @@
                       HorizontalAlignment="Stretch"
                       FontSize="11"
                       DropDownOpened="OnMatchWidthDropDownOpened" />
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding FilterStrength}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding FilterStrength, StringFormat={}{0:F0}}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="100"
+                                   Value="{Binding FilterStrength}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FilterStrength, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
             </Grid>
             <WrapPanel>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"

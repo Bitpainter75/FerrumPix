@@ -72,11 +72,12 @@
             <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="11" />
             <icons:RoundSlider Grid.Column="1" Minimum="8" Maximum="500"
-                               Value="{Binding AnnotationFontSizePixels}" Margin="6,0" />
-            <TextBlock Grid.Column="2"
-                       Text="{Binding AnnotationFontSizePixels, StringFormat={}{0}px}"
-                       Foreground="{DynamicResource FP.Text.Secondary}"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" />
+                               DefaultValue="6"
+                               Value="{Binding AnnotationFontSizePixels}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationFontSizePixels, Mode=TwoWay}"
+                                     Minimum="8" Maximum="500" Increment="1"
+                                     FormatString="F0" />
         </Grid>
         <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowFillColorControls}">
@@ -123,17 +124,18 @@
                     SelectedColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}" />
             </StackPanel>
         </Grid>
-        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center"
+        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowLinearGradientAngleControl}">
             <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="11" />
             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
+                               DefaultValue="0"
                                Value="{Binding AnnotationGradientAngleDegrees}"
-                               Margin="6,0" />
-            <TextBlock Grid.Column="2"
-                       Text="{Binding AnnotationGradientAngleDegrees, StringFormat={}{0:F0}°}"
-                       Foreground="{DynamicResource FP.Text.Secondary}"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" />
+                               Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationGradientAngleDegrees, Mode=TwoWay}"
+                                     Minimum="0" Maximum="360" Increment="1"
+                                     FormatString="F0" />
         </Grid>
         <CheckBox Content="Verlauf invertieren"
                   IsChecked="{Binding AnnotationGradientInverted}" FontSize="11"
@@ -147,37 +149,40 @@
                     SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
             </StackPanel>
         </Grid>
-        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center"
+        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowStrokeWidthControls}">
             <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="50"
-                               Value="{Binding AnnotationStrokeWidth}" Margin="6,0" />
-            <TextBlock Grid.Column="2"
-                       Text="{Binding AnnotationStrokeWidth, StringFormat={}{0:F0}}"
-                       Foreground="{DynamicResource FP.Text.Secondary}"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" />
+                               DefaultValue="0"
+                               Value="{Binding AnnotationStrokeWidth}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationStrokeWidth, Mode=TwoWay}"
+                                     Minimum="0" Maximum="50" Increment="1"
+                                     FormatString="F0" />
         </Grid>
-        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
             <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="11" />
             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                               Value="{Binding AnnotationOpacity}" Margin="6,0" />
-            <TextBlock Grid.Column="2"
-                       Text="{Binding AnnotationOpacity, StringFormat={}{0:F0}%}"
-                       Foreground="{DynamicResource FP.Text.Secondary}"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" />
+                               DefaultValue="100"
+                               Value="{Binding AnnotationOpacity}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationOpacity, Mode=TwoWay}"
+                                     Minimum="0" Maximum="100" Increment="1"
+                                     FormatString="F0" />
         </Grid>
-        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
             <TextBlock Text="Drehung" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="11" />
             <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
-                               Value="{Binding AnnotationRotation}" WheelIncrement="0.1"
-                               DragIncrement="0.1" Margin="6,0" />
-            <TextBlock Grid.Column="2"
-                       Text="{Binding AnnotationRotation, StringFormat={}{0:F1}°}"
-                       Foreground="{DynamicResource FP.Text.Secondary}"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" />
+                               DefaultValue="0"
+                               Value="{Binding AnnotationRotation}" WheelIncrement="0.01"
+                               DragIncrement="0.01" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationRotation, Mode=TwoWay}"
+                                     Minimum="-180" Maximum="180" Increment="0.01"
+                                     FormatString="F2" />
         </Grid>
         <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowWatermarkAnchorControls}">
@@ -263,23 +268,21 @@
                     <TextBlock Text="{Binding AnnotationXLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="{Binding AnnotationPositionMinimum}" Maximum="{Binding AnnotationPositionMaximum}"
-                                       Value="{Binding AnnotationXPercent}" Margin="4,0" />
-                    <TextBlock Grid.Column="2"
-                               Text="{Binding AnnotationXPixels, StringFormat={}{0}px}"
-                               Foreground="{DynamicResource FP.Text.Secondary}"
-                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                               FontSize="11" />
+                                       Value="{Binding AnnotationXPercent}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationXPixels, Mode=TwoWay}"
+                                             Minimum="0" Maximum="50000" Increment="1"
+                                             FormatString="F0" />
                 </Grid>
                 <Grid Grid.Row="1" ColumnDefinitions="16,*,44">
                     <TextBlock Text="{Binding AnnotationYLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="{Binding AnnotationPositionMinimum}" Maximum="{Binding AnnotationPositionMaximum}"
-                                       Value="{Binding AnnotationYPercent}" Margin="4,0" />
-                    <TextBlock Grid.Column="2"
-                               Text="{Binding AnnotationYPixels, StringFormat={}{0}px}"
-                               Foreground="{DynamicResource FP.Text.Secondary}"
-                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                               FontSize="11" />
+                                       Value="{Binding AnnotationYPercent}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationYPixels, Mode=TwoWay}"
+                                             Minimum="0" Maximum="50000" Increment="1"
+                                             FormatString="F0" />
                 </Grid>
             </Grid>
             <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="6">
@@ -288,24 +291,22 @@
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="5" Maximum="90"
                                        Value="{Binding AnnotationWidthPercent}"
-                                       Margin="4,0" />
-                    <TextBlock Grid.Column="2"
-                               Text="{Binding AnnotationWidthPixels, StringFormat={}{0}px}"
-                               Foreground="{DynamicResource FP.Text.Secondary}"
-                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                               FontSize="11" />
+                                       Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationWidthPixels, Mode=TwoWay}"
+                                             Minimum="1" Maximum="50000" Increment="1"
+                                             FormatString="F0" />
                 </Grid>
                 <Grid Grid.Row="1" ColumnDefinitions="16,*,44">
                     <TextBlock Text="H" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="4" Maximum="90"
                                        Value="{Binding AnnotationHeightPercent}"
-                                       Margin="4,0" />
-                    <TextBlock Grid.Column="2"
-                               Text="{Binding AnnotationHeightPixels, StringFormat={}{0}px}"
-                               Foreground="{DynamicResource FP.Text.Secondary}"
-                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                               FontSize="11" />
+                                       Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationHeightPixels, Mode=TwoWay}"
+                                             Minimum="1" Maximum="50000" Increment="1"
+                                             FormatString="F0" />
                 </Grid>
             </Grid>
         </Grid>
@@ -318,79 +319,79 @@
                 <icons:ColorPickerButton Grid.Column="1"
                                          SelectedColor="{Binding AnnotationShadowColorValue, Mode=TwoWay}" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Lichtwinkel"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
-                                   Value="{Binding AnnotationShadowLightAngle}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding AnnotationShadowLightAngle, StringFormat={}{0:F0}°}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="225"
+                                   Value="{Binding AnnotationShadowLightAngle}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationShadowLightAngle, Mode=TwoWay}"
+                                         Minimum="0" Maximum="360" Increment="1"
+                                         FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Versatz X"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-20" Maximum="20"
-                                   Value="{Binding AnnotationShadowOffsetX}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding AnnotationShadowOffsetX, StringFormat={}{0:F0}}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="2"
+                                   Value="{Binding AnnotationShadowOffsetX}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationShadowOffsetX, Mode=TwoWay}"
+                                         Minimum="-20" Maximum="20" Increment="1"
+                                         FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Versatz Y"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-20" Maximum="20"
-                                   Value="{Binding AnnotationShadowOffsetY}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding AnnotationShadowOffsetY, StringFormat={}{0:F0}}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="2"
+                                   Value="{Binding AnnotationShadowOffsetY}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationShadowOffsetY, Mode=TwoWay}"
+                                         Minimum="-20" Maximum="20" Increment="1"
+                                         FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Weichzeichnen"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding AnnotationShadowBlur}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding AnnotationShadowBlur, StringFormat={}{0:F0}}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="6"
+                                   Value="{Binding AnnotationShadowBlur}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationShadowBlur, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding AnnotationShadowStrength}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding AnnotationShadowStrength, StringFormat={}{0:F0}%}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="100"
+                                   Value="{Binding AnnotationShadowStrength}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationShadowStrength, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
             </Grid>
             <CheckBox Content="Abgerundet" IsChecked="{Binding AnnotationShadowRounded}"
                       Margin="0,4,0,0" FontSize="11" />
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center"
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
                   IsVisible="{Binding AnnotationShadowRounded}">
                 <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   DefaultValue="20"
                                    Value="{Binding AnnotationShadowCornerRadius}"
-                                   Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding AnnotationShadowCornerRadius, StringFormat={}{0:F0}%}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationShadowCornerRadius, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
             </Grid>
         </StackPanel>
         <CheckBox Content="Glühen" IsChecked="{Binding AnnotationGlowEnabled}"
@@ -402,28 +403,28 @@
                 <icons:ColorPickerButton Grid.Column="1"
                                          SelectedColor="{Binding AnnotationGlowColorValue, Mode=TwoWay}" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Größe"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding AnnotationGlowBlur}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding AnnotationGlowBlur, StringFormat={}{0:F0}}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="10"
+                                   Value="{Binding AnnotationGlowBlur}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationGlowBlur, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding AnnotationGlowStrength}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding AnnotationGlowStrength, StringFormat={}{0:F0}%}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="100"
+                                   Value="{Binding AnnotationGlowStrength}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationGlowStrength, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
             </Grid>
         </StackPanel>
     </StackPanel>

@@ -1,13 +1,21 @@
 Imports Avalonia.Controls
 Imports Avalonia.Input
+Imports Avalonia.Styling
 
 Namespace Controls
 
     Public Class SliderValueUpDown
         Inherits NumericUpDown
 
+        Protected Overrides ReadOnly Property StyleKeyOverride As Type
+            Get
+                Return GetType(NumericUpDown)
+            End Get
+        End Property
+
         Public Sub New()
             Increment = 1D
+            FormatString = "F0"
         End Sub
 
         Protected Overrides Sub OnKeyDown(e As KeyEventArgs)

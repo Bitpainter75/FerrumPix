@@ -29,55 +29,55 @@
                 </DataTemplate>
             </Expander.HeaderTemplate>
             <StackPanel Spacing="2" Margin="0,8,0,0">
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-150" Maximum="150"
-                                       Value="{Binding Vignette}" Margin="6,0" />
+                                       Value="{Binding Vignette}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding Vignette, Mode=TwoWay}" Minimum="-150" Maximum="150" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="55"
-                                       Value="{Binding VignetteTransition}" Margin="6,0" />
+                                       Value="{Binding VignetteTransition}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding VignetteTransition, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Rundheit" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       Value="{Binding VignetteRoundness}" Margin="6,0" />
+                                       Value="{Binding VignetteRoundness}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding VignetteRoundness, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Weiche Kante" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="70"
-                                       Value="{Binding VignetteFeather}" Margin="6,0" />
+                                       Value="{Binding VignetteFeather}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding VignetteFeather, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Mitte X" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="50"
-                                       Value="{Binding VignetteCenterX}" Margin="6,0" />
+                                       Value="{Binding VignetteCenterX}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding VignetteCenterX, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Mitte Y" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="50"
-                                       Value="{Binding VignetteCenterY}" Margin="6,0" />
+                                       Value="{Binding VignetteCenterY}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding VignetteCenterY, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
@@ -110,19 +110,19 @@
                 </DataTemplate>
             </Expander.HeaderTemplate>
             <StackPanel Spacing="2" Margin="0,8,0,0">
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="25"
-                                       Value="{Binding BorderSize}" Margin="6,0" />
+                                       Value="{Binding BorderSize}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding BorderSize, Mode=TwoWay}" Minimum="0" Maximum="25" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding BorderCornerRadius}" Margin="6,0" />
+                                       Value="{Binding BorderCornerRadius}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding BorderCornerRadius, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>

@@ -48,17 +48,17 @@
                     </StackPanel>
                 </Button>
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Ausrichten"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
-                <icons:RoundSlider Grid.Column="1" Minimum="-45" Maximum="45"
-                                   Value="{Binding StraightenDegrees}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding StraightenDegrees, StringFormat={}{0:F1}}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
+                                   DefaultValue="0"
+                                   Value="{Binding StraightenDegrees}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding StraightenDegrees, Mode=TwoWay}"
+                                         Minimum="-180" Maximum="180" Increment="0.01"
+                                         FormatString="F2" />
             </Grid>
             <CheckBox Content="Leinwand automatisch vergrößern"
                       IsChecked="{Binding StraightenExpandCanvas}"

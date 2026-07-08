@@ -63,17 +63,18 @@
             <icons:ColorPickerButton Grid.Column="1"
                                      SelectedColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}" />
         </Grid>
-        <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center"
+        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowLinearGradientAngleControl}">
             <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="11" />
             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
+                               DefaultValue="0"
                                Value="{Binding AnnotationGradientAngleDegrees}"
-                               Margin="6,0" />
-            <TextBlock Grid.Column="2"
-                       Text="{Binding AnnotationGradientAngleDegrees, StringFormat={}{0:F0}°}"
-                       Foreground="{DynamicResource FP.Text.Secondary}"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" />
+                               Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationGradientAngleDegrees, Mode=TwoWay}"
+                                     Minimum="0" Maximum="360" Increment="1"
+                                     FormatString="F0" />
         </Grid>
         <CheckBox Content="Verlauf invertieren"
                   IsChecked="{Binding AnnotationGradientInverted}" FontSize="11"

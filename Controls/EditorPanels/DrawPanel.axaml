@@ -42,11 +42,12 @@
         </WrapPanel>
         <StackPanel Spacing="2"
                     IsVisible="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Blur}">
-            <Grid ColumnDefinitions="74,*,Auto,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,Auto,44" VerticalAlignment="Center">
                 <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0.2" Maximum="10"
-                                   Value="{Binding RetouchRadius}" Margin="6,0" />
+                                   DefaultValue="3"
+                                   Value="{Binding RetouchRadius}" Margin="0,0" />
                 <Button Grid.Column="2"
                         Classes="icon-btn"
                         Width="28"
@@ -59,48 +60,47 @@
                         Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
                         Width="14" Height="14" />
                 </Button>
-                <TextBlock Grid.Column="3"
-                           Text="{Binding RetouchRadius, StringFormat={}{0:F1}%}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                <icons:SliderValueUpDown Grid.Column="3" Classes="slider-value"
+                                         Value="{Binding RetouchRadius, Mode=TwoWay}"
+                                         Minimum="0.2" Maximum="10" Increment="0.01"
+                                         FormatString="F2" />
             </Grid>
         </StackPanel>
         <StackPanel Spacing="2"
                     IsVisible="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0.2" Maximum="15"
-                                   Value="{Binding BrushSize}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding BrushSize, StringFormat={}{0:F1}%}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="2"
+                                   Value="{Binding BrushSize}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding BrushSize, Mode=TwoWay}"
+                                         Minimum="0.2" Maximum="15" Increment="0.01"
+                                         FormatString="F2" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding BrushHardness}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding BrushHardness, StringFormat={}{0:F0}%}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="100"
+                                   Value="{Binding BrushHardness}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding BrushHardness, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,38" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Deckkraft"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding BrushOpacity}" Margin="6,0" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding BrushOpacity, StringFormat={}{0:F0}%}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" />
+                                   DefaultValue="100"
+                                   Value="{Binding BrushOpacity}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding BrushOpacity, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
             </Grid>
             <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
                 <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
