@@ -1545,6 +1545,43 @@ Namespace ViewModels
             Return True
         End Function
 
+        ''' Öffnet den Such-Overlay-Dialog vorbelegt mit den Parametern einer bereits gespeicherten
+        ''' Suchliste, übernimmt die Änderungen auf denselben Eintrag (gleiche Id) und startet die
+        ''' Suche neu. Aufgerufen aus dem Kontextmenü der Sidebar-Suchliste.
+        Public Async Sub EditVirtualSearchNode(node As VirtualNavigationNode)
+            If node Is Nothing OrElse Not String.Equals(node.Kind, "SavedSearch", StringComparison.Ordinal) Then Return
+            Dim existing = _savedSearches.FirstOrDefault(Function(s) String.Equals(s.Id, node.Id, StringComparison.OrdinalIgnoreCase))
+            If existing Is Nothing Then Return
+
+            Dim result = Await _mainVm.ShowSearchDialogAsync(existing.TextQuery, existing)
+            If result Is Nothing Then Return
+
+            existing.Name = result.Name
+            existing.TextQuery = result.TextQuery
+            existing.RootFolder = result.RootFolder
+            existing.IncludeSubfolders = result.IncludeSubfolders
+            existing.FavoriteMode = result.FavoriteMode
+            existing.RatingMin = result.RatingMin
+            existing.Ratings = If(result.Ratings, New List(Of Integer)())
+            existing.Conditions = If(result.Conditions, New List(Of SearchCondition)())
+            existing.ConditionCombinator = If(result.ConditionCombinator, "AND")
+            ' Zwischengespeicherte Treffer verwerfen - sie können durch die geänderten Parameter veraltet sein.
+            existing.Results = New List(Of String)()
+            ThumbnailCacheService.DeleteSearchListCache(existing.Id)
+            SaveSearches()
+
+            ' VirtualNavigationNode hat kein INotifyPropertyChanged - den Baumknoten daher ersetzen,
+            ' damit u.a. der geänderte Name in der Sidebar erscheint.
+            Dim newNode = CreateSavedSearchNode(existing)
+            Dim index = SearchTree.IndexOf(node)
+            If index >= 0 Then
+                SearchTree(index) = newNode
+            Else
+                SearchTree.Add(newNode)
+            End If
+            OpenSavedSearch(newNode)
+        End Sub
+
         Private Sub OpenSavedSearch(node As VirtualNavigationNode)
             If node Is Nothing Then Return
             If Not String.IsNullOrWhiteSpace(node.RootFolder) AndAlso Not Directory.Exists(node.RootFolder) Then

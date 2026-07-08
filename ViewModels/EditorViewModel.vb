@@ -167,6 +167,7 @@ Namespace ViewModels
         Private _annotationShadowColor As String = "#80000000"
         Private _annotationShadowRounded As Boolean = False
         Private _annotationShadowCornerRadius As Double = 20
+        Private _annotationShadowSize As Double = 100
         Private _annotationGlowEnabled As Boolean = False
         Private _annotationGlowBlur As Double = 10
         Private _annotationGlowStrength As Double = 100
@@ -2812,7 +2813,7 @@ Namespace ViewModels
                 Return _annotationShadowOffsetX
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationShadowOffsetX, Math.Max(-20, Math.Min(20, value)))
+                Me.RaiseAndSetIfChanged(_annotationShadowOffsetX, Math.Max(-100, Math.Min(100, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
                 SyncSelectedAnnotation()
             End Set
@@ -2823,7 +2824,7 @@ Namespace ViewModels
                 Return _annotationShadowOffsetY
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationShadowOffsetY, Math.Max(-20, Math.Min(20, value)))
+                Me.RaiseAndSetIfChanged(_annotationShadowOffsetY, Math.Max(-100, Math.Min(100, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
                 SyncSelectedAnnotation()
             End Set
@@ -2838,8 +2839,8 @@ Namespace ViewModels
                 Dim distance = Math.Sqrt(_annotationShadowOffsetX * _annotationShadowOffsetX + _annotationShadowOffsetY * _annotationShadowOffsetY)
                 If distance < 1 Then distance = 6
                 Dim shadowAngle = (value + 180.0) * Math.PI / 180.0
-                _annotationShadowOffsetX = Math.Max(-20, Math.Min(20, Math.Cos(shadowAngle) * distance))
-                _annotationShadowOffsetY = Math.Max(-20, Math.Min(20, Math.Sin(shadowAngle) * distance))
+                _annotationShadowOffsetX = Math.Max(-100, Math.Min(100, Math.Cos(shadowAngle) * distance))
+                _annotationShadowOffsetY = Math.Max(-100, Math.Min(100, Math.Sin(shadowAngle) * distance))
                 Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetX))
                 Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetY))
                 Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
@@ -2904,6 +2905,16 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationShadowCornerRadius, Math.Max(0, Math.Min(100, value)))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public Property AnnotationShadowSize As Double
+            Get
+                Return _annotationShadowSize
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_annotationShadowSize, Math.Max(25, Math.Min(300, value)))
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -6006,6 +6017,7 @@ Namespace ViewModels
                     AnnotationShadowColor = a.ShadowColor
                     AnnotationShadowRounded = a.ShadowRounded
                     AnnotationShadowCornerRadius = a.ShadowCornerRadiusPercent
+                    AnnotationShadowSize = a.ShadowSizePercent
                     AnnotationGlowEnabled = a.GlowEnabled
                     AnnotationGlowBlur = a.GlowBlur
                     AnnotationGlowStrength = a.GlowStrength
@@ -6060,6 +6072,7 @@ Namespace ViewModels
             a.ShadowColor = _annotationShadowColor
             a.ShadowRounded = _annotationShadowRounded
             a.ShadowCornerRadiusPercent = CSng(_annotationShadowCornerRadius)
+            a.ShadowSizePercent = CSng(_annotationShadowSize)
             a.GlowEnabled = _annotationGlowEnabled
             a.GlowBlur = CSng(_annotationGlowBlur)
             a.GlowStrength = CSng(_annotationGlowStrength)
@@ -6082,9 +6095,19 @@ Namespace ViewModels
                 Return
             End If
 
+            ' Text-/Wasserzeichen-Objekte werden während der Selektion durch die editierbare Live-Textbox
+            ' gezeichnet, laufen also normalerweise nicht über das gerenderte Overlay. Bei aktivem Schatten/
+            ' Glow rendern wir aber trotzdem einen Effekt-Halo OHNE die Glyphen, der HINTER der Textbox liegt -
+            ' sonst wären Schatten/Glow im Editiermodus komplett unsichtbar (im gebackenen Bild sind sie
+            ' vorhanden, während der Selektion aber ausgeblendet).
+            Dim effectsOnly = False
             If Not UsesRenderedSelectionOverlay(annotation) Then
-                SelectedAnnotationOverlayImage = Nothing
-                Return
+                If IsTextualAnnotationKind(annotation.Kind) AndAlso (annotation.ShadowEnabled OrElse annotation.GlowEnabled) Then
+                    effectsOnly = True
+                Else
+                    SelectedAnnotationOverlayImage = Nothing
+                    Return
+                End If
             End If
 
             Dim previewSource = GetPreviewSource()
@@ -6095,7 +6118,7 @@ Namespace ViewModels
                 pixelHeight = Math.Max(48, CInt(Math.Round(previewSource.Height * Math.Max(0.01, annotation.HeightPercent) / 100.0)))
             End If
 
-            SelectedAnnotationOverlayImage = ImageProcessor.RenderAnnotationOverlay(annotation.Clone(), pixelWidth, pixelHeight)
+            SelectedAnnotationOverlayImage = ImageProcessor.RenderAnnotationOverlay(annotation.Clone(), pixelWidth, pixelHeight, effectsOnly)
         End Sub
 
         Private Shared Function ParseAvaloniaColorOrDefault(value As String, fallback As Avalonia.Media.Color) As Avalonia.Media.Color

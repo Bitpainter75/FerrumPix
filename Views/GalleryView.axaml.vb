@@ -150,7 +150,34 @@ Namespace Views
             QueueViewportThumbnailRefresh()
 
             If _initialSelectionDone Then Return
-            If vm Is Nothing OrElse vm.InitialFolderNode Is Nothing Then Return
+            If vm Is Nothing Then Return
+
+            ' Kommen wir aus Viewer/Editor in eine aktive Suchliste zurück, hat der ContentControl die
+            ' GalleryView neu instanziiert (_initialSelectionDone ist am neuen Objekt wieder False). Dann
+            ' darf NICHT der letzte Ordner im Baum selektiert werden - das würde OnFolderTreeSelectionChanged
+            ' auslösen und aus der Suchliste heraus in den Ordner navigieren. Stattdessen die Suchlisten-
+            ' Auswahl im Suchbaum wiederherstellen (mit _clearingNavigationSelection, damit die Suche nicht
+            ' neu gestartet wird).
+            If vm.IsVirtualFolder AndAlso vm.SelectedSearchNode IsNot Nothing Then
+                _initialSelectionDone = True
+                Dim searchNode = vm.SelectedSearchNode
+                Dispatcher.UIThread.Post(Sub()
+                    Dim searchTree = Me.FindControl(Of TreeView)("SearchTreeView")
+                    If searchTree IsNot Nothing Then
+                        _clearingNavigationSelection = True
+                        Try
+                            searchTree.SelectedItem = searchNode
+                            BringTreeItemIntoView(searchTree, searchNode)
+                        Finally
+                            _clearingNavigationSelection = False
+                        End Try
+                    End If
+                    If vm.SelectedItem IsNot Nothing Then ScrollToSelectedItem()
+                End Sub, DispatcherPriority.Loaded)
+                Return
+            End If
+
+            If vm.InitialFolderNode Is Nothing Then Return
             _initialSelectionDone = True
             Dispatcher.UIThread.Post(Sub()
                 Dim tree = Me.FindControl(Of TreeView)("FolderTreeView")
@@ -468,11 +495,30 @@ Namespace Views
         End Sub
 
         Public Sub OnRemoveVirtualSearchClick(sender As Object, e As RoutedEventArgs)
-            Dim button = TryCast(sender, Button)
-            Dim node = TryCast(button?.DataContext, VirtualNavigationNode)
-            GetVm()?.RemoveVirtualSearchNode(node)
+            GetVm()?.RemoveVirtualSearchNode(GetVirtualNodeFromSender(sender))
             e.Handled = True
         End Sub
+
+        Public Sub OnEditVirtualSearchClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.EditVirtualSearchNode(GetVirtualNodeFromSender(sender))
+            e.Handled = True
+        End Sub
+
+        ' sender ist je nach Auslöser ein Button (X-Symbol, im Visual Tree - DataContext erbt normal) oder
+        ' ein MenuItem (im ContextMenu-Popup, eigener Visual Tree). Für das MenuItem den Knoten über das
+        ' PlacementTarget des Menüs auflösen (analog GetItemFromSender), da MenuItem.DataContext hier nicht
+        ' zuverlässig vom Item-Template erbt.
+        Private Function GetVirtualNodeFromSender(sender As Object) As VirtualNavigationNode
+            Dim direct = TryCast(TryCast(sender, Control)?.DataContext, VirtualNavigationNode)
+            If direct IsNot Nothing Then Return direct
+            Dim menuItem = TryCast(sender, MenuItem)
+            If menuItem IsNot Nothing Then
+                Dim menu = TryCast(menuItem.Parent, ContextMenu)
+                Dim target = TryCast(menu?.PlacementTarget, Control)
+                Return TryCast(target?.DataContext, VirtualNavigationNode)
+            End If
+            Return Nothing
+        End Function
 
         Private Sub OnFolderTreePointerPressedTunnel(sender As Object, e As PointerPressedEventArgs)
             Dim properties = e.GetCurrentPoint(Nothing).Properties

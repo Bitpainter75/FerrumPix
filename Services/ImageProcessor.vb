@@ -67,6 +67,7 @@ Namespace Services
         Private _shadowColor As String = "#80000000"
         Private _shadowRounded As Boolean = False
         Private _shadowCornerRadiusPercent As Single = 20
+        Private _shadowSizePercent As Single = 100
         Private _glowEnabled As Boolean = False
         Private _glowBlur As Single = 10
         Private _glowStrength As Single = 100
@@ -444,6 +445,17 @@ Namespace Services
             End Set
         End Property
 
+        ''' Größe des Schattens in Prozent der Objektgröße. 100 = genau Objektgröße, >100 lässt den
+        ''' Schatten (um seine Mitte skaliert) über das Objekt hinauswachsen, <100 verkleinert ihn.
+        Public Property ShadowSizePercent As Single
+            Get
+                Return _shadowSizePercent
+            End Get
+            Set(value As Single)
+                SetField(_shadowSizePercent, value)
+            End Set
+        End Property
+
         Public Property GlowEnabled As Boolean
             Get
                 Return _glowEnabled
@@ -511,6 +523,7 @@ Namespace Services
                 .ShadowColor = ShadowColor,
                 .ShadowRounded = ShadowRounded,
                 .ShadowCornerRadiusPercent = ShadowCornerRadiusPercent,
+                .ShadowSizePercent = ShadowSizePercent,
                 .GlowEnabled = GlowEnabled,
                 .GlowBlur = GlowBlur,
                 .GlowStrength = GlowStrength,
@@ -890,40 +903,63 @@ Namespace Services
             End Try
         End Function
 
-        Public Shared Function RenderAnnotationOverlay(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer) As Bitmap
-            If annotation Is Nothing Then Return Nothing
+        ' Obergrenze für die interne Renderauflösung des Auswahl-Overlays. Das Bitmap wird ohnehin
+        ' per Stretch="Fill" auf die Bildschirmgröße skaliert, daher genügt eine gedeckelte Auflösung.
+        ' Wichtig für die Performance: RenderAnnotationOverlay wird bei JEDER Schatten-/Glow-Slider-
+        ' Änderung neu aufgerufen (siehe EditorViewModel.SyncSelectedAnnotation) und das Bitmap wächst
+        ' um den (bei großem Blur erheblichen) Effekt-Rand - ohne Deckelung würden mehrere hundert MB
+        ' pro Slider-Tick auf dem UI-Thread alloziert.
+        Private Const MaxOverlayRenderDim As Single = 720.0F
 
-            Dim width = Math.Max(1, pixelWidth)
-            Dim height = Math.Max(1, pixelHeight)
+        ''' effectsOnly: zeichnet NUR Schatten/Glow (die Silhouette des Objekts als weichen Halo),
+        ''' nicht das Objekt selbst. Für Text-/Wasserzeichen-Objekte, deren Glyphen während der
+        ''' Selektion von der editierbaren Live-Textbox gezeichnet werden - der Halo liegt dahinter,
+        ''' sodass Schatten/Glow auch im Editiermodus sichtbar sind (siehe UpdateSelectedAnnotationOverlayPreview).
+        Public Shared Function RenderAnnotationOverlay(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer, Optional effectsOnly As Boolean = False) As Bitmap
+            If annotation Is Nothing Then Return Nothing
+            If effectsOnly AndAlso Not annotation.ShadowEnabled AndAlso Not annotation.GlowEnabled Then Return Nothing
+
             Dim renderAnnotation = annotation.Clone()
             renderAnnotation.RotationDegrees = 0
 
-            Dim approxObjectSize = CSng(Math.Max(1, Math.Min(width, height)))
-            Dim glowPad = If(renderAnnotation.GlowEnabled, approxObjectSize * Clamp(renderAnnotation.GlowBlur, 0, 100) / 100.0F * 2.4F, 0.0F)
-            Dim shadowPad = If(renderAnnotation.ShadowEnabled, approxObjectSize * Clamp(renderAnnotation.ShadowBlur, 0, 100) / 100.0F * 1.8F, 0.0F)
-            Dim offsetX = If(renderAnnotation.ShadowEnabled, approxObjectSize * renderAnnotation.ShadowOffsetXPercent / 100.0F, 0.0F)
-            Dim offsetY = If(renderAnnotation.ShadowEnabled, approxObjectSize * renderAnnotation.ShadowOffsetYPercent / 100.0F, 0.0F)
+            ' Interne Objektauflösung (gedeckelt, Seitenverhältnis erhalten). Alle Effekt-Ränder werden
+            ' proportional zu objSize berechnet, daher bleiben die Verhältnisse - und damit die Deckung
+            ' mit ComputeSelectedOverlayImageMargin in der View - unabhängig von dieser Skalierung gleich.
+            Dim requestedLongest = CSng(Math.Max(1, Math.Max(pixelWidth, pixelHeight)))
+            Dim renderScale = If(requestedLongest > MaxOverlayRenderDim, MaxOverlayRenderDim / requestedLongest, 1.0F)
+            Dim objW = Math.Max(1, CInt(Math.Round(Math.Max(1, pixelWidth) * renderScale)))
+            Dim objH = Math.Max(1, CInt(Math.Round(Math.Max(1, pixelHeight) * renderScale)))
+
+            ' Padding EXAKT wie ComputeSelectedOverlayImageMargin (EditorView.axaml.vb), damit das
+            ' gerenderte Objekt deckungsgleich mit der Overlay-Border liegt.
+            Dim objSize = CSng(Math.Max(1, Math.Min(objW, objH)))
+            ' Schattengröße >100% lässt den (um seine Mitte skalierten) Schatten übers Objekt hinauswachsen;
+            ' der Wachstumsrand wird über die größere Objektkante bemessen, damit auf keiner Achse abgeschnitten wird.
+            Dim shadowGrow = If(renderAnnotation.ShadowEnabled, Math.Max(objW, objH) * Math.Max(0.0F, Clamp(renderAnnotation.ShadowSizePercent, 10, 400) / 100.0F - 1.0F) * 0.5F, 0.0F)
+            Dim glowPad = If(renderAnnotation.GlowEnabled, objSize * Clamp(renderAnnotation.GlowBlur, 0, 100) / 100.0F * 2.4F, 0.0F)
+            Dim shadowPad = If(renderAnnotation.ShadowEnabled, objSize * Clamp(renderAnnotation.ShadowBlur, 0, 100) / 100.0F * 1.8F + shadowGrow, 0.0F)
+            Dim offsetX = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetXPercent / 100.0F, 0.0F)
+            Dim offsetY = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetYPercent / 100.0F, 0.0F)
             Dim effectPad = Math.Max(glowPad, shadowPad)
             Dim leftPad = 4.0F + effectPad + Math.Max(0.0F, -offsetX)
             Dim rightPad = 4.0F + effectPad + Math.Max(0.0F, offsetX)
             Dim topPad = 4.0F + effectPad + Math.Max(0.0F, -offsetY)
             Dim bottomPad = 4.0F + effectPad + Math.Max(0.0F, offsetY)
 
-            If leftPad + rightPad >= width Then
-                leftPad = 2.0F
-                rightPad = 2.0F
-            End If
-            If topPad + bottomPad >= height Then
-                topPad = 2.0F
-                bottomPad = 2.0F
-            End If
+            ' Das Bitmap um die Effekt-Ränder VERGRÖSSERN (nicht das Objekt hineinschrumpfen): so wird
+            ' der Schatten/Glow nie an der Bitmap-Kante abgeschnitten - im Gegensatz zum gebackenen Bild,
+            ' das ins ganze Foto ausbluten kann - und die Padding-Formel bleibt mit der View identisch.
+            ' Damit entfällt auch der frühere "Reset auf 2px"-Notausgang, der bei flachen/breiten Objekten
+            ' (Effekt-Rand > Objektgröße) die Auswahl-Vorschau komplett von der gebackenen Ansicht abweichen ließ.
+            Dim width = objW + CInt(Math.Ceiling(leftPad + rightPad))
+            Dim height = objH + CInt(Math.Ceiling(topPad + bottomPad))
 
-            Dim rect = SKRect.Create(leftPad, topPad, Math.Max(1.0F, width - leftPad - rightPad), Math.Max(1.0F, height - topPad - bottomPad))
+            Dim rect = SKRect.Create(leftPad, topPad, objW, objH)
             Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
             Dim x = rect.Left
             Dim y = rect.Top
             Dim maxWidth = rect.Width
-            Dim fontSize = Math.Max(8.0F, height * Clamp(renderAnnotation.FontSizePercent, 0.5F, 50) / 100.0F)
+            Dim fontSize = Math.Max(8.0F, objH * Clamp(renderAnnotation.FontSizePercent, 0.5F, 50) / 100.0F)
             Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
             Dim fill = ApplyAlpha(ParseColor(renderAnnotation.FillColor, SKColors.White), alphaFactor)
             Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
@@ -935,7 +971,9 @@ Namespace Services
                     If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
                         DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, width, height)
                     End If
-                    DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+                    If Not effectsOnly Then
+                        DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+                    End If
                 End Using
 
                 Return ToAvaloniaBitmap(bitmap)
@@ -1616,10 +1654,21 @@ Namespace Services
                             shadowSource = roundedShadowMask
                         End If
 
+                        ' Schattengröße: um die Objektmitte skalieren, sodass der Schatten über das Objekt
+                        ' hinauswachsen (oder schrumpfen) kann. Der Blur-Radius wird durch den Skalierungs-
+                        ' faktor geteilt, weil die anschließende Canvas-Skalierung ihn wieder hochmultipliziert -
+                        ' so bleibt die Weichzeichnung unabhängig von der gewählten Größe.
+                        Dim shadowScale = Clamp(annotation.ShadowSizePercent, 10, 400) / 100.0F
                         Using shadowColorFilter = SKColorFilter.CreateBlendMode(shadowColor, SKBlendMode.SrcIn)
-                            Using shadowMaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(0.1F, shadowBlurPx))
+                            Using shadowMaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(0.1F, shadowBlurPx / shadowScale))
                                 Using paint = New SKPaint With {.ColorFilter = shadowColorFilter, .MaskFilter = shadowMaskFilter}
-                                    canvas.DrawBitmap(shadowSource, maskLeft + offsetX, maskTop + offsetY, paint)
+                                    canvas.Save()
+                                    ' Versatz unskaliert (außerhalb der Skalierung angewandt), Skalierung um die Objektmitte.
+                                    canvas.Translate(rect.MidX + offsetX, rect.MidY + offsetY)
+                                    canvas.Scale(shadowScale, shadowScale)
+                                    canvas.Translate(-rect.MidX, -rect.MidY)
+                                    canvas.DrawBitmap(shadowSource, maskLeft, maskTop, paint)
+                                    canvas.Restore()
                                 End Using
                             End Using
                         End Using

@@ -29,24 +29,24 @@
                     <TextBlock Text="Versatz X"
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-20" Maximum="20"
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        DefaultValue="2"
                                        Value="{Binding AnnotationShadowOffsetX}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AnnotationShadowOffsetX, Mode=TwoWay}"
-                                             Minimum="-20" Maximum="20" Increment="1"
+                                             Minimum="-100" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Versatz Y"
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="11" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-20" Maximum="20"
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        DefaultValue="2"
                                        Value="{Binding AnnotationShadowOffsetY}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AnnotationShadowOffsetY, Mode=TwoWay}"
-                                             Minimum="-20" Maximum="20" Increment="1"
+                                             Minimum="-100" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
@@ -70,6 +70,17 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AnnotationShadowStrength, Mode=TwoWay}"
                                              Minimum="0" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="11" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="25" Maximum="300"
+                                       DefaultValue="100"
+                                       Value="{Binding AnnotationShadowSize}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationShadowSize, Mode=TwoWay}"
+                                             Minimum="25" Maximum="300" Increment="1"
                                              FormatString="F0" />
                 </Grid>
                 <CheckBox Content="Abgerundet" IsChecked="{Binding AnnotationShadowRounded}"

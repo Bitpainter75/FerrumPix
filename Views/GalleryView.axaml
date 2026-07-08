@@ -511,6 +511,16 @@
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
                                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-36,3,0,3">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Bearbeiten"
+                                                          IsVisible="{Binding IsRemovable}"
+                                                          Click="OnEditVirtualSearchClick"/>
+                                                <MenuItem Header="Entfernen"
+                                                          IsVisible="{Binding IsRemovable}"
+                                                          Click="OnRemoveVirtualSearchClick"/>
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
                                                        Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="6,0,0,0"

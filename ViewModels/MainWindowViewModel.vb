@@ -1033,23 +1033,44 @@ Namespace ViewModels
             }
         End Function
 
-        Public Async Function ShowSearchDialogAsync(initialText As String) As Task(Of SearchDialogResult)
-            DialogSearchName = ""
-            DialogSearchText = If(initialText, "").Trim()
-            DialogSearchRootFolder = ""
-            DialogSearchIncludeSubfolders = True
-            DialogSearchFavoriteMode = "Any"
-            DialogSearchRatingMin = -1
+        ''' prefill: Ist eine bestehende Suchliste angegeben, wird der Dialog mit deren Parametern
+        ''' vorbelegt (Bearbeiten-Modus) statt mit den Standardwerten (Neuanlage).
+        Public Async Function ShowSearchDialogAsync(initialText As String, Optional prefill As SearchListEntry = Nothing) As Task(Of SearchDialogResult)
+            Dim isEdit = prefill IsNot Nothing
             _dialogSearchRatings.Clear()
-            RaiseDialogSearchRatingState()
             DialogSearchConditions.Clear()
-            DialogSearchConditionCombinator = "AND"
+            If isEdit Then
+                DialogSearchName = If(prefill.Name, "")
+                DialogSearchText = If(prefill.TextQuery, "").Trim()
+                DialogSearchRootFolder = If(prefill.RootFolder, "")
+                DialogSearchIncludeSubfolders = prefill.IncludeSubfolders
+                DialogSearchFavoriteMode = If(prefill.FavoriteMode, "Any")
+                DialogSearchRatingMin = -1
+                For Each r In If(prefill.Ratings, New List(Of Integer)())
+                    _dialogSearchRatings.Add(r)
+                Next
+                For Each c In If(prefill.Conditions, New List(Of SearchCondition)())
+                    DialogSearchConditions.Add(New SearchCondition With {.Field = c.Field, .Operator = c.Operator, .Value = c.Value})
+                Next
+                DialogSearchConditionCombinator = If(prefill.ConditionCombinator, "AND")
+            Else
+                DialogSearchName = ""
+                DialogSearchText = If(initialText, "").Trim()
+                DialogSearchRootFolder = ""
+                DialogSearchIncludeSubfolders = True
+                DialogSearchFavoriteMode = "Any"
+                DialogSearchRatingMin = -1
+                DialogSearchConditionCombinator = "AND"
+            End If
+            RaiseDialogSearchRatingState()
 
             Dim result = Await ShowDialogAsync(AppDialogKind.Search,
-                                               "Suchen",
-                                               "Lege Suchparameter fest. Die Suche wird im Bereich Suchen gespeichert.",
+                                               If(isEdit, "Suche bearbeiten", "Suchen"),
+                                               If(isEdit,
+                                                  "Passe die Suchparameter an. Die Änderungen werden im Bereich Suchen gespeichert.",
+                                                  "Lege Suchparameter fest. Die Suche wird im Bereich Suchen gespeichert."),
                                                "",
-                                               "Suchen",
+                                               If(isEdit, "Speichern", "Suchen"),
                                                "Abbrechen")
             If result Is Nothing Then Return Nothing
 
