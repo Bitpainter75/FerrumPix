@@ -4,7 +4,7 @@
 
 FerrumPix is a desktop photo management and editing application for Linux and Windows, built with [Avalonia UI](https://avaloniaui.net/) and VB.NET.
 
-> **Status:** Actively in development. Further details will follow once the project reaches a suitable maturity level.
+> **Status:** Active development, but already feature-rich in the core areas gallery, viewer, editor, and settings. The current focus is less on basic functionality and more on stabilization, UX refinement, and structural cleanup as the application grows.
 
 ## Features
 
@@ -37,16 +37,16 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 <img src="Screenshots/Editor_Resize.png" />
 
 **Editor** (non-destructive, with undo/redo)
-- Crop (with presets), resize, rotate/straighten (with auto canvas expand), flip, canvas resize with anchor picker
+- Crop (with presets), image resize, rotate/straighten (with auto canvas expand), flip, and canvas resize with anchor picker
 - Adjust: exposure, brightness, contrast, highlights/shadows, whites/blacks, tone curve (RGB + individual channels)
-- Color: white balance, temperature/tint, vibrance/saturation, and an 8-band HSL color mixer — pick a color band on a color wheel, then dial in its hue/saturation with a shared pair of sliders
-- Filters: 15 presets (B&W, Warm, Cool, Fade, Contrast, Sepia, Matte, Cross, Dramatic, Soft, Noir, Duotone, Polaroid, VHS, …) with a strength slider
-- Details: clarity, sharpening, noise reduction (Gaussian/median)
-- Effects/Frame: vignette, grain, border with color picker
+- Color: white balance, temperature/tint, vibrance/saturation, split toning, and an 8-band HSL color mixer — pick a color band on a color wheel, then dial in its hue/saturation with a shared pair of sliders
+- Filters: built-in filter presets with a strength slider, plus Lightroom XMP preset import and `.cube` LUT support
+- Details: clarity, sharpening, softening/noise reduction (Gaussian/median), structure, haze, glow, grain/noise, and dust/scratch style effects
+- Effects/Frame: vignette and border/frame controls with color picker and rounded-corner support
 - Paint tool: brush, eraser, and a blur/retouch brush, each with size/hardness/opacity
 - Rectangle selection tool: drag a selection on the image, then copy it into a new movable object (also via Ctrl+C/Ctrl+V, repeatable paste) or fill it with a solid color or linear/radial gradient (gradient direction/invert supported)
-- Insert objects: text, watermark, shapes (rectangle, ellipse, square, triangle, cone, pyramid, trapezoid, diamond, spiral, droplet, speech bubble, line, arrow), symbols, images, and QR codes
-- Per-object properties: fill (solid or gradient) and stroke color/width, opacity, rotation, position/size, plus drop shadow and glow effects (color, offset, blur, strength) — edited live directly on the canvas or via the sliders
+- Insert objects: text, watermark, shapes (rectangle, ellipse, square, triangle, cone, pyramid, trapezoid, diamond, spiral, droplet, speech bubble, line, arrow), symbols/SVGs, images, and QR codes
+- Per-object properties: fill (solid or gradient), stroke color/width, opacity, rotation, position/size, anchor handling, plus separate shadow and glow controls (color, offset, blur, strength, corner radius where applicable) — edited live directly on the canvas or via the sliders
 - Objects panel: reorder (front/back), duplicate, show/hide, delete, drag-handles for move/resize/rotate on canvas
 - Central color picker (color wheel, hex input, recent colors) with a built-in eyedropper to sample any color straight from the image
 - Before/after comparison slider, save/load non-destructive edit recipes
@@ -87,7 +87,7 @@ All packages are self-contained — they bundle the .NET runtime, so no separate
 Compiling the project (as opposed to just running a pre-built package) requires the [.NET SDK 10](https://dotnet.microsoft.com/) or newer.
 
 ```bash
-dotnet build FerrumPix.vbproj
+dotnet build FerrumPix.sln
 dotnet run --project FerrumPix.vbproj
 ```
 
