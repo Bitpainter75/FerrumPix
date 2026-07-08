@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.AnnotationShadowPanel">
+    <Expander Header="Schatten" IsExpanded="True">
+        <StackPanel Spacing="2" Margin="0,8,0,0">
+            <CheckBox Content="Aktiv" IsChecked="{Binding AnnotationShadowEnabled}"
+                      FontSize="11" />
+            <StackPanel Spacing="2" IsVisible="{Binding AnnotationShadowEnabled}">
+                <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+                    <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="11" />
+                    <icons:ColorPickerButton Grid.Column="1"
+                                             SelectedColor="{Binding AnnotationShadowColorValue, Mode=TwoWay}" />
+                </Grid>
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Lichtwinkel"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="11" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
+                                       DefaultValue="225"
+                                       Value="{Binding AnnotationShadowLightAngle}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationShadowLightAngle, Mode=TwoWay}"
+                                             Minimum="0" Maximum="360" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Versatz X"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="11" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-20" Maximum="20"
+                                       DefaultValue="2"
+                                       Value="{Binding AnnotationShadowOffsetX}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationShadowOffsetX, Mode=TwoWay}"
+                                             Minimum="-20" Maximum="20" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Versatz Y"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="11" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-20" Maximum="20"
+                                       DefaultValue="2"
+                                       Value="{Binding AnnotationShadowOffsetY}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationShadowOffsetY, Mode=TwoWay}"
+                                             Minimum="-20" Maximum="20" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Weichzeichnen"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="6"
+                                       Value="{Binding AnnotationShadowBlur}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationShadowBlur, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="11" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="100"
+                                       Value="{Binding AnnotationShadowStrength}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationShadowStrength, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <CheckBox Content="Abgerundet" IsChecked="{Binding AnnotationShadowRounded}"
+                          Margin="0,4,0,0" FontSize="11" />
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding AnnotationShadowRounded}">
+                    <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="11" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="20"
+                                       Value="{Binding AnnotationShadowCornerRadius}"
+                                       Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationShadowCornerRadius, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Expander>
+</UserControl>

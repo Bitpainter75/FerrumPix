@@ -1180,6 +1180,7 @@ Namespace ViewModels
                        _currentTool <> EditorTool.Resize AndAlso
                        _currentTool <> EditorTool.Rotate AndAlso
                        _currentTool <> EditorTool.Transform AndAlso
+                       _currentTool <> EditorTool.Selection AndAlso
                        _currentTool <> EditorTool.Text AndAlso
                        _currentTool <> EditorTool.Draw AndAlso
                        _currentTool <> EditorTool.Geometry AndAlso
@@ -4439,11 +4440,30 @@ Namespace ViewModels
         Private Sub InvalidatePreviewWork()
             Interlocked.Increment(_previewRequestId)
             Dim oldCts = Interlocked.Exchange(_previewRenderCts, Nothing)
-            If oldCts IsNot Nothing Then
-                oldCts.Cancel()
-                oldCts.Dispose()
-            End If
+            CancelAndDisposePreviewCts(oldCts)
         End Sub
+
+        Private Shared Sub CancelAndDisposePreviewCts(cts As CancellationTokenSource)
+            If cts Is Nothing Then Return
+
+            Try
+                cts.Cancel()
+            Catch ex As ObjectDisposedException
+            End Try
+
+            Try
+                cts.Dispose()
+            Catch ex As ObjectDisposedException
+            End Try
+        End Sub
+
+        Private Shared Function IsIgnorablePreviewException(ex As Exception) As Boolean
+            If TypeOf ex Is OperationCanceledException OrElse TypeOf ex Is TaskCanceledException OrElse TypeOf ex Is ObjectDisposedException Then
+                Return True
+            End If
+
+            Return ex.Message.IndexOf("CancellationTokenSource has been disposed", StringComparison.OrdinalIgnoreCase) >= 0
+        End Function
 
         Private Sub RegisterPreviewRenderStart()
             Interlocked.Increment(_previewRequestId)
@@ -4532,19 +4552,17 @@ Namespace ViewModels
             Dim requestId = _previewRequestId
             Dim adj = GetCurrentAdjustments(forPreview:=True)
             Dim cts = New CancellationTokenSource()
+            Dim token = cts.Token
             Dim oldCts = Interlocked.Exchange(_previewRenderCts, cts)
-            If oldCts IsNot Nothing Then
-                oldCts.Cancel()
-                oldCts.Dispose()
-            End If
+            CancelAndDisposePreviewCts(oldCts)
 
             Try
                 StatusText = "Vorschau wird berechnet…"
                 Dim needsComparison = _showBeforeImage
                 Dim result = Await Task.Run(Function()
-                                                cts.Token.ThrowIfCancellationRequested()
+                                                token.ThrowIfCancellationRequested()
                                                 Dim previewBmp = ImageProcessor.ApplyAdjustments(previewSource, adj)
-                                                cts.Token.ThrowIfCancellationRequested()
+                                                token.ThrowIfCancellationRequested()
                                                 ' Das Vorher/Nachher-Vergleichsbild wird nur berechnet, wenn der
                                                 ' Vorher/Nachher-Regler gerade sichtbar ist (ShowBeforeImage) - sonst
                                                 ' wäre das bei jedem einzelnen Live-Vorschau-Frame verschwendete Arbeit.
@@ -4553,9 +4571,9 @@ Namespace ViewModels
                                                     comparisonBmp = ImageProcessor.ApplyGeometryAdjustments(previewSource, adj)
                                                 End If
                                                 Return New PreviewRenderResult(previewBmp, comparisonBmp)
-                                            End Function, cts.Token)
+                                            End Function, token)
 
-                If cts.IsCancellationRequested OrElse requestId <> _previewRequestId Then
+                If token.IsCancellationRequested OrElse requestId <> _previewRequestId Then
                     result.Dispose()
                     Return
                 End If
@@ -4569,13 +4587,21 @@ Namespace ViewModels
                 result.Dispose()
             Catch ex As OperationCanceledException
             Catch ex As Exception
-                StatusText = "Vorschau-Fehler: " & ex.Message
-                LogPreviewError(ex)
+                If IsIgnorablePreviewException(ex) Then
+                    If requestId <> _previewRequestId OrElse _previewPending Then
+                        StatusText = "Vorschau wird aktualisiert..."
+                    Else
+                        StatusText = "Vorschau bereit"
+                    End If
+                Else
+                    StatusText = "Vorschau bereit"
+                    LogPreviewError(ex)
+                End If
             Finally
                 If ReferenceEquals(_previewRenderCts, cts) Then
                     _previewRenderCts = Nothing
                 End If
-                cts.Dispose()
+                CancelAndDisposePreviewCts(cts)
                 RegisterPreviewRenderEnd()
             End Try
         End Function

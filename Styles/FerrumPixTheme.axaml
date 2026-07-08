@@ -1008,20 +1008,6 @@
     <Style Selector="Border.adjustment-group Button.icon-btn">
         <Setter Property="IsVisible" Value="False"/>
     </Style>
-    <Style Selector="Border.effect-subgroup">
-        <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="Padding" Value="10,8"/>
-        <Setter Property="Margin" Value="0,2,0,8"/>
-    </Style>
-    <Style Selector="TextBlock.subgroup-title">
-        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="FontSize" Value="12"/>
-        <Setter Property="Margin" Value="0,0,0,5"/>
-    </Style>
     <Style Selector="Border.divider">
         <Setter Property="Width" Value="1"/>
         <Setter Property="Background" Value="{DynamicResource FP.Border.Normal}"/>

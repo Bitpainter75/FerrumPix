@@ -610,7 +610,7 @@
                                   FocusAdorner="{x:Null}"
                                   IsVisible="{Binding IsToolTabSelected}">
                         <Grid x:Name="AdjustmentsStackPanel"
-                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                               ColumnDefinitions="*"
                               Margin="14,10,14,10"
                               HorizontalAlignment="Stretch">
@@ -627,6 +627,16 @@
                             <Border Grid.Row="16" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowAnnotationProperties}">
                                 <panels:AnnotationPropertiesPanel />
+                            </Border>
+
+                            <Border Grid.Row="17" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowAnnotationProperties}">
+                                <panels:AnnotationShadowPanel />
+                            </Border>
+
+                            <Border Grid.Row="18" Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowAnnotationProperties}">
+                                <panels:AnnotationGlowPanel />
                             </Border>
 
                             <Border Grid.Row="2" Classes="adjustment-group" Margin="0,7,0,0"
@@ -681,7 +691,7 @@
                                 <panels:LightroomPresetPanel />
                             </Border>
 
-                            <Border Grid.Row="18" Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Grid.Row="20" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowFilterAdjustments}">
                                 <panels:LutPresetPanel />
                             </Border>
@@ -703,7 +713,7 @@
                                 <panels:SplitToningPanel />
                             </Border>
 
-                            <Border Grid.Row="17" Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Grid.Row="19" Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowTransformAdjustments}">
                                 <panels:TransformPanel />
                             </Border>
