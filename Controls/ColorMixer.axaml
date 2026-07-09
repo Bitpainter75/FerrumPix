@@ -47,12 +47,12 @@
                        Foreground="{DynamicResource FP.Text.Secondary}" />
 
             <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                <Button Name="SwapButton" Classes="icon-btn" Width="30" Height="30" Padding="0"
+                <Button Name="SwapButton" Classes="icon-btn group-action" Width="30" Height="30" Padding="0"
                         Click="OnSwapClick">
                     <TextBlock Text="⇄" FontSize="{DynamicResource FP.Glyph.Large}"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Button>
-                <Button Name="EyedropperButton" Classes="icon-btn" Width="30" Height="30" Padding="0"
+                <Button Name="EyedropperButton" Classes="icon-btn group-action" Width="30" Height="30" Padding="0"
                         Click="OnEyedropperClick"
                         ToolTip.Tip="Farbe aus dem Bild aufnehmen (Pipette)">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg"

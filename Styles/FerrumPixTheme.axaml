@@ -1033,7 +1033,10 @@
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="0"/>
     </Style>
-    <Style Selector="Border.adjustment-group Button.icon-btn">
+    <!-- Blendet die Zurücksetzen-Buttons in den Expander-Köpfen aus; zurückgesetzt wird zentral über
+         den Knopf in der Panel-Kopfzeile. Buttons, die zum Inhalt einer Gruppe gehören statt sie
+         zurückzusetzen (z.B. Tauschen und Pipette im Farbmischer), tragen "group-action". -->
+    <Style Selector="Border.adjustment-group Button.icon-btn:not(.group-action)">
         <Setter Property="IsVisible" Value="False"/>
     </Style>
     <Style Selector="Border.divider">

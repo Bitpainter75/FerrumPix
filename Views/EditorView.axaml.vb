@@ -647,6 +647,25 @@ Namespace Views
                 Return
             End If
 
+            ' Die Resize-/Rotier-Griffe ragen per Margin über die Bounds des TextOverlay-Borders hinaus,
+            ' daher landen Klicks genau darauf hier auf dem Canvas statt auf dem Border - Griff-Erkennung
+            ' deshalb zusätzlich hier prüfen. Das muss vor den werkzeugspezifischen Zweigen geschehen:
+            ' das Auswahl-Werkzeug zieht sonst einen neuen Rahmen auf, statt den Griff zu greifen (die
+            ' Griffe sind unter ihm sichtbar, weil Selection zu IsLayerPlacementTool gehört).
+            ' Bei verstecktem Overlay liefert GetTextOverlayRect ein leeres Rechteck im Canvas-Ursprung,
+            ' dessen Griffpunkte ein Klick oben links zufällig träfe - daher die IsVisible-Prüfung.
+            If vm IsNot Nothing AndAlso vm.HasSelectedAnnotation Then
+                Dim overlayForHandles = Me.FindControl(Of Border)("TextOverlay")
+                If overlayForHandles IsNot Nothing AndAlso overlayForHandles.IsVisible Then
+                    Dim handleRect = GetTextOverlayRect()
+                    Dim handleMode = GetTextDragMode(e.GetPosition(canvas), handleRect, vm.AnnotationRotation)
+                    If handleMode <> TextDragMode.None AndAlso handleMode <> TextDragMode.Move Then
+                        OnTextOverlayPointerPressed(overlayForHandles, e)
+                        Return
+                    End If
+                End If
+            End If
+
             If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Crop Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
@@ -733,21 +752,6 @@ Namespace Views
                 e.Pointer.Capture(canvas)
                 e.Handled = True
                 Return
-            End If
-
-            If vm IsNot Nothing AndAlso vm.HasSelectedAnnotation Then
-                ' Die Resize-/Rotier-Griffe ragen per Margin über die Bounds des TextOverlay-Borders hinaus,
-                ' daher landen Klicks genau darauf hier auf dem Canvas statt auf dem Border - Griff-Erkennung
-                ' deshalb zusätzlich hier prüfen, bevor ein Klick als "Objekt selektieren/anlegen" interpretiert wird.
-                Dim overlayForHandles = Me.FindControl(Of Border)("TextOverlay")
-                If overlayForHandles IsNot Nothing Then
-                    Dim handleRect = GetTextOverlayRect()
-                    Dim handleMode = GetTextDragMode(e.GetPosition(canvas), handleRect, vm.AnnotationRotation)
-                    If handleMode <> TextDragMode.None AndAlso handleMode <> TextDragMode.Move Then
-                        OnTextOverlayPointerPressed(overlayForHandles, e)
-                        Return
-                    End If
-                End If
             End If
 
             If vm IsNot Nothing Then
@@ -1140,6 +1144,22 @@ Namespace Views
                     Using surface = SKSurface.Create(New SKImageInfo(canvasSize, canvasSize, SKColorType.Bgra8888, SKAlphaType.Premul))
                         Dim canvas = surface.Canvas
                         canvas.Clear(SKColors.Transparent)
+
+                        ' Die Kontur-Icons bestehen aus dünnen dunklen Linien und verschwinden als Mauszeiger
+                        ' über dunklem Bildinhalt. Deshalb liegt darunter eine geweitete weiße Silhouette des
+                        ' Icons: erst die Zeichnung um HaloRadius aufdicken, dann komplett weiß einfärben.
+                        Const haloRadius As Single = 2.0F
+                        Using haloPaint As New SKPaint()
+                            haloPaint.ImageFilter = SKImageFilter.CreateColorFilter(
+                                SKColorFilter.CreateBlendMode(SKColors.White, SKBlendMode.SrcIn),
+                                SKImageFilter.CreateDilate(haloRadius, haloRadius))
+                            canvas.SaveLayer(haloPaint)
+                            canvas.Translate(offsetX, offsetY)
+                            canvas.Scale(scale)
+                            canvas.DrawPicture(picture)
+                            canvas.Restore()
+                        End Using
+
                         canvas.Translate(offsetX, offsetY)
                         canvas.Scale(scale)
                         canvas.DrawPicture(picture)
@@ -1586,33 +1606,46 @@ Namespace Views
         Private Const RotateHandleDistance As Double = 28
         Private Const RotateHandleHitRadius As Double = 12
 
-        Private Function GetRotateHandlePoint(rect As Avalonia.Rect, rotationDegrees As Double) As Avalonia.Point
-            Dim centerX = rect.Left + rect.Width / 2.0
-            Dim centerY = rect.Top + rect.Height / 2.0
-            Dim localY = -(rect.Height / 2.0 + RotateHandleDistance)
-            Dim rad = rotationDegrees * Math.PI / 180.0
-            Dim rotatedX = -localY * Math.Sin(rad)
-            Dim rotatedY = localY * Math.Cos(rad)
-            Return New Avalonia.Point(centerX + rotatedX, centerY + rotatedY)
+        ''' <summary>Dreht einen Punkt um <paramref name="center"/>. Positive Winkel drehen im
+        ''' Uhrzeigersinn - dieselbe Richtung wie die RotateTransform des Overlays.</summary>
+        Private Shared Function RotatePoint(point As Avalonia.Point, center As Avalonia.Point, degrees As Double) As Avalonia.Point
+            If degrees = 0 Then Return point
+            Dim rad = degrees * Math.PI / 180.0
+            Dim cosR = Math.Cos(rad)
+            Dim sinR = Math.Sin(rad)
+            Dim dx = point.X - center.X
+            Dim dy = point.Y - center.Y
+            Return New Avalonia.Point(center.X + dx * cosR - dy * sinR,
+                                      center.Y + dx * sinR + dy * cosR)
         End Function
 
+        ''' <summary>
+        ''' Ordnet einer Zeigerposition die Anfasser-Zone des Objekts zu. Das Overlay wird per
+        ''' RenderTransform um seinen Mittelpunkt gedreht, während Canvas.Left/Top und Width/Height
+        ''' ungedreht bleiben - <paramref name="rect"/> ist also das ungedrehte Rechteck. Der Zeiger
+        ''' wird deshalb um denselben Winkel zurückgedreht; danach liegen alle Zonen wieder
+        ''' achsenparallel und die Prüfung stimmt mit dem überein, was auf dem Bild zu sehen ist.
+        ''' </summary>
         Private Function GetTextDragMode(point As Avalonia.Point, rect As Avalonia.Rect, rotationDegrees As Double) As TextDragMode
             If rect.Width < 4 OrElse rect.Height < 4 Then Return TextDragMode.None
 
-            Dim rotateHandle = GetRotateHandlePoint(rect, rotationDegrees)
-            Dim rdx = point.X - rotateHandle.X
-            Dim rdy = point.Y - rotateHandle.Y
+            Dim center = rect.Center
+            Dim local = RotatePoint(point, center, -rotationDegrees)
+
+            Dim rotateHandle = New Avalonia.Point(center.X, rect.Top - RotateHandleDistance)
+            Dim rdx = local.X - rotateHandle.X
+            Dim rdy = local.Y - rotateHandle.Y
             If Math.Sqrt(rdx * rdx + rdy * rdy) <= RotateHandleHitRadius Then Return TextDragMode.Rotate
 
             Const hitSlop As Double = 14
             Dim hitRect = rect.Inflate(hitSlop)
-            If Not hitRect.Contains(point) Then Return TextDragMode.None
+            If Not hitRect.Contains(local) Then Return TextDragMode.None
 
             Const handleSize As Double = 16
-            Dim nearLeft = Math.Abs(point.X - rect.Left) <= handleSize
-            Dim nearRight = Math.Abs(point.X - rect.Right) <= handleSize
-            Dim nearTop = Math.Abs(point.Y - rect.Top) <= handleSize
-            Dim nearBottom = Math.Abs(point.Y - rect.Bottom) <= handleSize
+            Dim nearLeft = Math.Abs(local.X - rect.Left) <= handleSize
+            Dim nearRight = Math.Abs(local.X - rect.Right) <= handleSize
+            Dim nearTop = Math.Abs(local.Y - rect.Top) <= handleSize
+            Dim nearBottom = Math.Abs(local.Y - rect.Bottom) <= handleSize
 
             If nearLeft AndAlso nearTop Then Return TextDragMode.TopLeft
             If nearRight AndAlso nearTop Then Return TextDragMode.TopRight
@@ -1622,7 +1655,7 @@ Namespace Views
             If nearRight Then Return TextDragMode.Right
             If nearTop Then Return TextDragMode.Top
             If nearBottom Then Return TextDragMode.Bottom
-            If Not rect.Contains(point) Then Return TextDragMode.None
+            If Not rect.Contains(local) Then Return TextDragMode.None
             Return TextDragMode.Move
         End Function
 
@@ -1719,17 +1752,21 @@ Namespace Views
                 right = left + width
                 bottom = top + height
             Else
+                ' Die Kanten des Rechtecks liegen im ungedrehten Raum, die Zeigerbewegung kommt aus dem
+                ' Canvas. Ohne Rückdrehung schöbe das Ziehen am rechten Rand eines gekippten Objekts
+                ' dessen Kante schräg - siehe GetTextDragMode.
+                Dim localDelta = RotatePoint(New Avalonia.Point(dx, dy), New Avalonia.Point(0, 0), -vm.AnnotationRotation)
                 Select Case _textDragMode
                     Case TextDragMode.Left, TextDragMode.TopLeft, TextDragMode.BottomLeft
-                        left = Math.Min(right - minSize, left + dx)
+                        left = Math.Min(right - minSize, left + localDelta.X)
                     Case TextDragMode.Right, TextDragMode.TopRight, TextDragMode.BottomRight
-                        right = Math.Max(left + minSize, right + dx)
+                        right = Math.Max(left + minSize, right + localDelta.X)
                 End Select
                 Select Case _textDragMode
                     Case TextDragMode.Top, TextDragMode.TopLeft, TextDragMode.TopRight
-                        top = Math.Min(bottom - minSize, top + dy)
+                        top = Math.Min(bottom - minSize, top + localDelta.Y)
                     Case TextDragMode.Bottom, TextDragMode.BottomLeft, TextDragMode.BottomRight
-                        bottom = Math.Max(top + minSize, bottom + dy)
+                        bottom = Math.Max(top + minSize, bottom + localDelta.Y)
                 End Select
 
                 Dim isQr = String.Equals(vm.EffectiveAnnotationKind, "QR", StringComparison.OrdinalIgnoreCase)
@@ -1761,6 +1798,22 @@ Namespace Views
                             right = centerX + targetWidth / 2.0
                     End Select
                 End If
+                ' Gedreht wird um den Mittelpunkt des Rechtecks. Wächst es an einer Kante, wandert der
+                ' Mittelpunkt - und mit ihm erscheint die gegenüberliegende, im Rechteck unveränderte
+                ' Kante an einer neuen Stelle auf dem Bild. Das Rechteck wird deshalb um genau den
+                ' Betrag nachgeschoben, den diese Mittelpunktsverschiebung durch die Drehung erzeugt:
+                ' t = (C_alt - C_neu) - Rot(C_alt - C_neu). Bei Rotation 0 ist t null.
+                If vm.AnnotationRotation <> 0 Then
+                    Dim oldCenter = _textDragInitialRect.Center
+                    Dim shift = New Avalonia.Point(oldCenter.X - (left + right) / 2.0,
+                                                   oldCenter.Y - (top + bottom) / 2.0)
+                    Dim rotatedShift = RotatePoint(shift, New Avalonia.Point(0, 0), vm.AnnotationRotation)
+                    left += shift.X - rotatedShift.X
+                    right += shift.X - rotatedShift.X
+                    top += shift.Y - rotatedShift.Y
+                    bottom += shift.Y - rotatedShift.Y
+                End If
+
                 HideTextSnapGuides()
             End If
 
