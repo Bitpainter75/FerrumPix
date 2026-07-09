@@ -362,28 +362,28 @@ Namespace ViewModels
         Public ReadOnly Property AnnotationXSliderMinimum As Double
             Get
                 If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseWidth() * GetAnnotationPositionMinimumPercent(_annotationWidthPercent) / 100.0)
-                Return Math.Round(GetBaseWidth() * GetAnnotationOffsetMinimumPercent(_annotationAnchor, True) / 100.0)
+                Return Math.Round(GetBaseWidth() * -AnnotationOffsetLimitPercent / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationXSliderMaximum As Double
             Get
                 If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseWidth() * (100.0 - AnnotationMinVisiblePercent) / 100.0)
-                Return Math.Round(GetBaseWidth() * 50.0 / 100.0)
+                Return Math.Round(GetBaseWidth() * AnnotationOffsetLimitPercent / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationYSliderMinimum As Double
             Get
                 If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseHeight() * GetAnnotationPositionMinimumPercent(_annotationHeightPercent) / 100.0)
-                Return Math.Round(GetBaseHeight() * GetAnnotationOffsetMinimumPercent(_annotationAnchor, False) / 100.0)
+                Return Math.Round(GetBaseHeight() * -AnnotationOffsetLimitPercent / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationYSliderMaximum As Double
             Get
                 If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseHeight() * (100.0 - AnnotationMinVisiblePercent) / 100.0)
-                Return Math.Round(GetBaseHeight() * 50.0 / 100.0)
+                Return Math.Round(GetBaseHeight() * AnnotationOffsetLimitPercent / 100.0)
             End Get
         End Property
 
@@ -716,8 +716,8 @@ Namespace ViewModels
             Dim baseWidth = Math.Max(1, GetBaseWidth())
             Dim baseHeight = Math.Max(1, GetBaseHeight())
             _annotationAnchor = NormalizeAnnotationAnchor(preset.Anchor)
-            _annotationXPercent = Math.Max(0.0, Math.Min(50.0, preset.OffsetXPixels / CDbl(baseWidth) * 100.0))
-            _annotationYPercent = Math.Max(0.0, Math.Min(50.0, preset.OffsetYPixels / CDbl(baseHeight) * 100.0))
+            _annotationXPercent = ClampAnnotationOffsetPercent(preset.OffsetXPixels / CDbl(baseWidth) * 100.0)
+            _annotationYPercent = ClampAnnotationOffsetPercent(preset.OffsetYPixels / CDbl(baseHeight) * 100.0)
             _annotationWidthPercent = Math.Max(1.0, Math.Min(100.0, preset.WidthPixels / CDbl(baseWidth) * 100.0))
             _annotationHeightPercent = Math.Max(1.0, Math.Min(100.0, preset.HeightPixels / CDbl(baseHeight) * 100.0))
             _annotationRotation = Math.Max(-180, Math.Min(180, preset.RotationDegrees))
@@ -898,21 +898,11 @@ Namespace ViewModels
             End Select
         End Function
 
-        Private Shared Function ClampAnnotationOffsetPercent(value As Double, anchor As String, isHorizontal As Boolean) As Double
-            Dim normalizedAnchor = NormalizeAnnotationAnchor(anchor)
-            Dim usesCenter = If(isHorizontal,
-                                normalizedAnchor = "Top" OrElse normalizedAnchor = "Center" OrElse normalizedAnchor = "Bottom",
-                                normalizedAnchor = "Left" OrElse normalizedAnchor = "Center" OrElse normalizedAnchor = "Right")
-            If usesCenter Then Return Math.Max(-50, Math.Min(50, value))
-            Return Math.Max(0, Math.Min(50, value))
-        End Function
+        ' Negative Abstände schieben das Wasserzeichen über die verankerte Kante hinaus (angeschnitten).
+        Private Const AnnotationOffsetLimitPercent As Double = 50.0
 
-        Private Shared Function GetAnnotationOffsetMinimumPercent(anchor As String, isHorizontal As Boolean) As Double
-            Dim normalizedAnchor = NormalizeAnnotationAnchor(anchor)
-            Dim usesCenter = If(isHorizontal,
-                                normalizedAnchor = "Top" OrElse normalizedAnchor = "Center" OrElse normalizedAnchor = "Bottom",
-                                normalizedAnchor = "Left" OrElse normalizedAnchor = "Center" OrElse normalizedAnchor = "Right")
-            Return If(usesCenter, -50.0, 0.0)
+        Private Shared Function ClampAnnotationOffsetPercent(value As Double) As Double
+            Return Math.Max(-AnnotationOffsetLimitPercent, Math.Min(AnnotationOffsetLimitPercent, value))
         End Function
 
         Private Function GetCurrentAnnotationDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
@@ -2820,7 +2810,7 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Dim normalized = If(ShowWatermarkAnchorControls,
-                                    ClampAnnotationOffsetPercent(value, _annotationAnchor, True),
+                                    ClampAnnotationOffsetPercent(value),
                                     ClampAnnotationPositionPercent(value, _annotationWidthPercent))
                 Me.RaiseAndSetIfChanged(_annotationXPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
@@ -2835,7 +2825,7 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Dim normalized = If(ShowWatermarkAnchorControls,
-                                    ClampAnnotationOffsetPercent(value, _annotationAnchor, False),
+                                    ClampAnnotationOffsetPercent(value),
                                     ClampAnnotationPositionPercent(value, _annotationHeightPercent))
                 Me.RaiseAndSetIfChanged(_annotationYPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
@@ -3368,8 +3358,8 @@ Namespace ViewModels
             _annotationHeightPercent = Math.Max(4, Math.Min(90, heightPercent))
             If ShowWatermarkAnchorControls Then
                 Dim offset = ComputeAnnotationOffsetPercent(EffectiveAnnotationKind, xPercent, yPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
-                _annotationXPercent = ClampAnnotationOffsetPercent(offset.X, _annotationAnchor, True)
-                _annotationYPercent = ClampAnnotationOffsetPercent(offset.Y, _annotationAnchor, False)
+                _annotationXPercent = ClampAnnotationOffsetPercent(offset.X)
+                _annotationYPercent = ClampAnnotationOffsetPercent(offset.Y)
             Else
                 _annotationXPercent = ClampAnnotationPositionPercent(xPercent, _annotationWidthPercent)
                 _annotationYPercent = ClampAnnotationPositionPercent(yPercent, _annotationHeightPercent)
@@ -5976,10 +5966,10 @@ Namespace ViewModels
                 height = _annotationHeightPercent
             End If
             Dim x = If(normalizedKind = "Watermark",
-                       ClampAnnotationOffsetPercent(_annotationXPercent, _annotationAnchor, True),
+                       ClampAnnotationOffsetPercent(_annotationXPercent),
                        Math.Max(-width + 1, Math.Min(100 - 1, xPercent)))
             Dim y = If(normalizedKind = "Watermark",
-                       ClampAnnotationOffsetPercent(_annotationYPercent, _annotationAnchor, False),
+                       ClampAnnotationOffsetPercent(_annotationYPercent),
                        Math.Max(-height + 1, Math.Min(100 - 1, yPercent)))
             Dim storedX = PercentXToPixels(x)
             Dim storedY = PercentYToPixels(y)

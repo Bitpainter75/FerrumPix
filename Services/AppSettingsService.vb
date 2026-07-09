@@ -189,10 +189,23 @@ Namespace Services
                 settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Return settings
+            Catch ex As JsonException
+                ' Kaputte Datei: der nächste Save() überschriebe sie mit Standardwerten. Vorher zur
+                ' Seite legen, damit Presets und gespeicherte Suchen von Hand zu retten sind.
+                BackupUnreadableSettings()
+                Return New AppSettings()
             Catch
                 Return New AppSettings()
             End Try
         End Function
+
+        Private Shared Sub BackupUnreadableSettings()
+            Try
+                If Not File.Exists(SettingsPath) Then Return
+                File.Move(SettingsPath, SettingsPath & ".corrupt", overwrite:=True)
+            Catch
+            End Try
+        End Sub
 
         Public Shared Sub Save(settings As AppSettings)
             Try
@@ -233,7 +246,13 @@ Namespace Services
                 settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Dim json = JsonSerializer.Serialize(settings, New JsonSerializerOptions With {.WriteIndented = True})
-                File.WriteAllText(SettingsPath, json)
+                ' Nicht direkt in settings.json schreiben: Save() läuft bei jedem Häkchen im Dialog,
+                ' und ein Absturz mitten im Schreiben hinterließe eine abgeschnittene Datei. Load()
+                ' würde die beim nächsten Start als unlesbar verwerfen - samt Wasserzeichen-Presets,
+                ' gespeicherten Suchen und Theme. Erst vollständig danebenschreiben, dann ersetzen.
+                Dim tempPath = SettingsPath & ".tmp"
+                File.WriteAllText(tempPath, json)
+                File.Move(tempPath, SettingsPath, overwrite:=True)
                 ThumbnailCacheService.InvalidateSettingsCache()
             Catch
             End Try
@@ -466,8 +485,8 @@ Namespace Services
                     .Name = name,
                     .Text = If(preset.Text, "").Trim(),
                     .ImagePath = NormalizeFolderPath(preset.ImagePath),
-                    .OffsetXPixels = Math.Max(0, Math.Min(100000, preset.OffsetXPixels)),
-                    .OffsetYPixels = Math.Max(0, Math.Min(100000, preset.OffsetYPixels)),
+                    .OffsetXPixels = Math.Max(-100000, Math.Min(100000, preset.OffsetXPixels)),
+                    .OffsetYPixels = Math.Max(-100000, Math.Min(100000, preset.OffsetYPixels)),
                     .WidthPixels = Math.Max(1, Math.Min(100000, preset.WidthPixels)),
                     .HeightPixels = Math.Max(1, Math.Min(100000, preset.HeightPixels)),
                     .Anchor = NormalizeAnnotationAnchorName(preset.Anchor),

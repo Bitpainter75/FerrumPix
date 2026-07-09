@@ -272,6 +272,7 @@ Namespace ViewModels
             End If
             If CurrentMode <> AppMode.Settings Then
                 _previousModeBeforeSettings = CurrentMode
+                Settings?.BeginEditSession()
             End If
             Settings?.RefreshThumbnailCacheFolders()
             CurrentMode = AppMode.Settings

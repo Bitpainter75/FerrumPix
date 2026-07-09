@@ -106,6 +106,21 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
+                                <TextBlock Text="Homepage" FontSize="12"/>
+                                <TextBlock Text="https://ferrumpix.app" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Click="OnHomepageClick">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="14" Height="14"/>
+                                    <TextBlock Text="Öffnen"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
                                 <TextBlock Text="GitHub Repository" FontSize="12"/>
                                 <TextBlock Text="https://github.com/Bitpainter75/FerrumPix" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
                             </StackPanel>
@@ -354,22 +369,17 @@
                     </StackPanel>
                 </Border>
 
-                <Border x:Name="InterfaceSection" Classes="section">
+                <!-- Einziger Inhalt ist die Anwendungsskalierung, die nur auf Avalonias X11-Backend
+                     wirkt (siehe IsApplicationScaleSupported). Unter Windows bliebe sonst eine
+                     Überschrift über einem leeren Kasten stehen. -->
+                <Border x:Name="InterfaceSection" Classes="section" IsVisible="{Binding IsApplicationScaleSupported}">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Oberfläche" FontSize="15" FontWeight="SemiBold"/>
                             <TextBlock Text="Steuert die Darstellung der Oberfläche und die sichtbaren Bedienelemente." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
                         </StackPanel>
 
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2">
-                                <TextBlock Text="Navigationspfad anzeigen" FontSize="12"/>
-                                <TextBlock Text="Zeigt den Navigationspfad über der Dateiliste an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowBreadcrumbs}" OnContent="" OffContent="" VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <StackPanel Spacing="14" IsVisible="{Binding IsApplicationScaleSupported}">
+                        <StackPanel Spacing="14">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Anwendungsskalierung" FontSize="12"/>

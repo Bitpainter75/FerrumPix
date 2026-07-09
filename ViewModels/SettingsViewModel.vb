@@ -19,13 +19,11 @@ Namespace ViewModels
         Private ReadOnly _appSettings As AppSettings
         Private _themeMode As String = "Dark"
         Private _accentColor As String = "#F08A1A"
-        Private _showBreadcrumbs As Boolean = True
         Private _thumbnailQuality As Integer = 82
         Private _thumbnailMemoryCacheCapacity As Integer = 250
         Private _jpgSaveQuality As Integer = 90
         Private _preserveMetadataOnSave As Boolean = True
         Private _thumbnailCacheEnabled As Boolean = True
-        Private _cacheSizeMb As Integer = 512
         Private _viewerOpenFitToWindow As Boolean = True
         Private _viewerFitBehavior As String = "Always"
         Private _showHiddenFolders As Boolean = False
@@ -54,10 +52,6 @@ Namespace ViewModels
 
         Private _savedThemeMode As String = "Dark"
         Private _savedAccentColor As String = "#F08A1A"
-        Private _savedTabBar As Boolean = True
-        Private _savedBreadcrumbs As Boolean = True
-        Private _savedRounded As Boolean = False
-        Private _savedDensity As String = "Komfortabel"
         Private _savedViewerOpenFitToWindow As Boolean = True
         Private _savedViewerFitBehavior As String = "Always"
         Private _savedThumbnailQuality As Integer = 82
@@ -211,15 +205,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public Property ShowBreadcrumbs As Boolean
-            Get
-                Return _showBreadcrumbs
-            End Get
-            Set(value As Boolean)
-                Me.RaiseAndSetIfChanged(_showBreadcrumbs, value)
-            End Set
-        End Property
-
         Public Property ThumbnailQuality As Integer
             Get
                 Return _thumbnailQuality
@@ -278,15 +263,6 @@ Namespace ViewModels
                 If _preserveMetadataOnSave = value Then Return
                 Me.RaiseAndSetIfChanged(_preserveMetadataOnSave, value)
                 SavePerformanceSettings()
-            End Set
-        End Property
-
-        Public Property CacheSizeMb As Integer
-            Get
-                Return _cacheSizeMb
-            End Get
-            Set(value As Integer)
-                Me.RaiseAndSetIfChanged(_cacheSizeMb, value)
             End Set
         End Property
 
@@ -769,7 +745,6 @@ Namespace ViewModels
         Public ReadOnly Property ResetCommand As ICommand
         Public ReadOnly Property ApplyCommand As ICommand
         Public ReadOnly Property CancelCommand As ICommand
-        Public ReadOnly Property SetDensityCommand As ICommand
         Public ReadOnly Property SetThemeModeCommand As ICommand
         Public ReadOnly Property SetAccentColorCommand As ICommand
         Public ReadOnly Property SetStartupImageModeCommand As ICommand
@@ -883,10 +858,18 @@ Namespace ViewModels
             Me.New(Nothing)
         End Sub
 
+        ''' Muss beim Öffnen des Dialogs aufgerufen werden. Alle Setter schreiben sofort durch, und
+        ''' "Abbrechen" spielt den Schnappschuss über genau diese Setter zurück. Ohne ein Neu-Erfassen
+        ''' beim Öffnen stammt der Schnappschuss noch vom Programmstart bzw. vom letzten "Speichern" -
+        ''' Abbrechen würde dann auch alles zurückdrehen, was zwischenzeitlich außerhalb des Dialogs
+        ''' verstellt wurde (Info-Leiste in Viewer/Editor, Ansichtsmodus der Galerie usw.).
+        Public Sub BeginEditSession()
+            SnapshotSettings()
+        End Sub
+
         Private Sub SnapshotSettings()
             _savedThemeMode = _themeMode
             _savedAccentColor = _accentColor
-            _savedBreadcrumbs = _showBreadcrumbs
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
             _savedViewerFitBehavior = _viewerFitBehavior
             _savedThumbnailQuality = _thumbnailQuality
@@ -916,7 +899,6 @@ Namespace ViewModels
         Private Sub RestoreSnapshot()
             ThemeMode = _savedThemeMode
             AccentColor = _savedAccentColor
-            ShowBreadcrumbs = _savedBreadcrumbs
             ViewerOpenFitToWindow = _savedViewerOpenFitToWindow
             ViewerFitBehavior = _savedViewerFitBehavior
             ThumbnailQuality = _savedThumbnailQuality
@@ -966,7 +948,6 @@ Namespace ViewModels
         Private Sub ResetToDefaults()
             ThemeMode = "Dark"
             AccentColor = "#F08A1A"
-            ShowBreadcrumbs = True
             ViewerOpenFitToWindow = True
             ViewerFitBehavior = "Always"
             StartupImageMode = "Viewer"
@@ -975,7 +956,6 @@ Namespace ViewModels
             ThumbnailMemoryCacheCapacity = 250
             JpgSaveQuality = 90
             PreserveMetadataOnSave = True
-            CacheSizeMb = 512
             ShowHiddenFolders = False
             GalleryShowFolders = True
             GalleryShowParentFolder = True

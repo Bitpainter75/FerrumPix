@@ -60,15 +60,24 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        Public Sub OnHomepageClick(sender As Object, e As RoutedEventArgs)
+            OpenExternalUrl("https://ferrumpix.app")
+            e.Handled = True
+        End Sub
+
         Public Sub OnGitHubClick(sender As Object, e As RoutedEventArgs)
+            OpenExternalUrl("https://github.com/Bitpainter75/FerrumPix")
+            e.Handled = True
+        End Sub
+
+        Private Shared Sub OpenExternalUrl(url As String)
             Try
                 Process.Start(New ProcessStartInfo With {
-                    .FileName = "https://github.com/Bitpainter75/FerrumPix",
+                    .FileName = url,
                     .UseShellExecute = True
                 })
             Catch
             End Try
-            e.Handled = True
         End Sub
 
         Public Shadows Sub OnKeyDown(sender As Object, e As KeyEventArgs)

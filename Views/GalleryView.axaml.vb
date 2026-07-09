@@ -74,6 +74,7 @@ Namespace Views
 
         Private Sub OnGalleryAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
             Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
+            RestoreFolderTreeSelectionAfterRecreation()
 
             If _scrollHandlersAttached Then
                 QueueViewportThumbnailRefresh()
@@ -538,6 +539,20 @@ Namespace Views
             ElseIf properties.IsLeftButtonPressed Then
                 _folderTreeContextNode = Nothing
             End If
+        End Sub
+
+        ' Der ContentControl in MainWindow baut die GalleryView bei jedem Moduswechsel neu auf (z.B.
+        ' Galerie -> Einstellungen -> Galerie). Das ViewModel überlebt und kennt den Ordner weiterhin,
+        ' die frisch erzeugte TreeView startet aber ohne SelectedItem - ohne dieses Nachziehen bliebe
+        ' der aktive Ordner im Baum unmarkiert. Bei aktiver Suchliste (virtueller Ordner) hat die
+        ' Auswahl im Ordnerbaum nichts zu suchen.
+        Private Sub RestoreFolderTreeSelectionAfterRecreation()
+            Dispatcher.UIThread.Post(
+                Sub()
+                    Dim vm = GetVm()
+                    If vm Is Nothing OrElse vm.IsVirtualFolder OrElse vm.SelectedFolderNode Is Nothing Then Return
+                    RestoreFolderTreeSelection(Me.FindControl(Of TreeView)("FolderTreeView"), vm)
+                End Sub, DispatcherPriority.Background)
         End Sub
 
         Private Sub RestoreFolderTreeSelection(sender As Object, vm As GalleryViewModel)
