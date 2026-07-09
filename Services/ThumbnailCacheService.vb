@@ -70,6 +70,95 @@ Namespace Services
         ' Per-session debounce: each cache scope is registered in the root index at most once
         Private Shared ReadOnly _registeredFolderIds As New ConcurrentDictionary(Of String, Boolean)()
 
+        ''' <summary>
+        ''' Die Dateinamen eines Cache-Ordners, nach dem Bild-Hash gruppiert - einmal je Ordner und Sitzung
+        ''' eingelesen. Ohne das durchliefen <see cref="DeleteStaleCacheFiles"/> und
+        ''' <see cref="FindAnyCachedThumbnail"/> den Ordner je Vorschaubild einmal komplett. Beim ersten
+        ''' Befüllen wächst er dabei mit, was den Aufbau eines Ordners quadratisch machte: 5.000 Bilder
+        ''' bedeuteten 5.000 Verzeichnisdurchläufe über bis zu 5.000 Einträge.
+        '''
+        ''' Das Verzeichnis ist eine Beschleunigung, keine Wahrheit. Fehlt ihm ein Eintrag, bleibt
+        ''' höchstens eine veraltete Datei liegen oder ein brauchbares Vorschaubild wird neu erzeugt -
+        ''' nie entsteht ein falsches Bild. Ob eine Cache-Datei wirklich da ist, entscheidet weiterhin
+        ''' File.Exists in LoadCached.
+        ''' </summary>
+        Private NotInheritable Class FolderFileIndex
+            ' Mehrere Vorschaubild-Worker arbeiten gleichzeitig am selben Ordner.
+            Private ReadOnly _lock As New Object()
+            Private ReadOnly _byImageHash As New Dictionary(Of String, List(Of String))(StringComparer.OrdinalIgnoreCase)
+            Private _loaded As Boolean
+
+            ''' Alle Dateinamen zu einem Bild-Hash (in aller Regel null oder einer).
+            Public Function GetNames(folderCachePath As String, imageHash As String) As List(Of String)
+                SyncLock _lock
+                    EnsureLoadedLocked(folderCachePath)
+                    Dim names As List(Of String) = Nothing
+                    If Not _byImageHash.TryGetValue(imageHash, names) Then Return New List(Of String)()
+                    Return New List(Of String)(names)
+                End SyncLock
+            End Function
+
+            Public Sub Add(folderCachePath As String, imageHash As String, fileName As String)
+                SyncLock _lock
+                    EnsureLoadedLocked(folderCachePath)
+                    Dim names As List(Of String) = Nothing
+                    If Not _byImageHash.TryGetValue(imageHash, names) Then
+                        names = New List(Of String)()
+                        _byImageHash(imageHash) = names
+                    End If
+                    If Not names.Contains(fileName, StringComparer.OrdinalIgnoreCase) Then names.Add(fileName)
+                End SyncLock
+            End Sub
+
+            Public Sub Remove(imageHash As String, fileName As String)
+                SyncLock _lock
+                    Dim names As List(Of String) = Nothing
+                    If Not _byImageHash.TryGetValue(imageHash, names) Then Return
+                    names.RemoveAll(Function(n) String.Equals(n, fileName, StringComparison.OrdinalIgnoreCase))
+                    If names.Count = 0 Then _byImageHash.Remove(imageHash)
+                End SyncLock
+            End Sub
+
+            Private Sub EnsureLoadedLocked(folderCachePath As String)
+                If _loaded Then Return
+                _loaded = True
+                If Not Directory.Exists(folderCachePath) Then Return
+                Try
+                    For Each path In Directory.EnumerateFiles(folderCachePath, "*.jpg", SearchOption.TopDirectoryOnly)
+                        Dim fileName = IO.Path.GetFileName(path)
+                        ' Der Bild-Hash steht vor dem ersten "_" (siehe cacheFileName in CreateOrUpdate).
+                        Dim separator = fileName.IndexOf("_"c)
+                        If separator <= 0 Then Continue For
+                        Dim hash = fileName.Substring(0, separator)
+                        Dim names As List(Of String) = Nothing
+                        If Not _byImageHash.TryGetValue(hash, names) Then
+                            names = New List(Of String)()
+                            _byImageHash(hash) = names
+                        End If
+                        names.Add(fileName)
+                    Next
+                Catch ex As Exception
+                    ' Ein unvollständiges Verzeichnis kostet höchstens ein paar liegengebliebene Dateien.
+                    DiagnosticLogService.LogException("ThumbnailCache.IndexFolder", ex)
+                End Try
+            End Sub
+        End Class
+
+        Private Shared ReadOnly _folderFileIndexes As New ConcurrentDictionary(Of String, FolderFileIndex)()
+
+        ' Ein Ordner mit 5.000 Vorschaubildern kostet gut ein Megabyte an Dateinamen. Wer sich durch ein
+        ' ganzes Archiv klickt, sammelt sie sonst bis zum Programmende an. Beim Überschreiten wird
+        ' pauschal geleert statt verdrängt: ein weggeworfenes Verzeichnis wird beim nächsten Bedarf neu
+        ' eingelesen, mehr passiert nicht.
+        Private Const MaxCachedFolderIndexes As Integer = 32
+
+        Private Shared Function GetFolderFileIndex(folderId As String) As FolderFileIndex
+            If _folderFileIndexes.Count >= MaxCachedFolderIndexes AndAlso Not _folderFileIndexes.ContainsKey(folderId) Then
+                _folderFileIndexes.Clear()
+            End If
+            Return _folderFileIndexes.GetOrAdd(folderId, Function(id) New FolderFileIndex())
+        End Function
+
         ' Der Wurzel-Index wird aus mehreren Threads fortgeschrieben: Vorschaubild-Threads melden neue
         ' Ordner an, während GetFolderCaches im Hintergrund die Kennzahlen nachträgt. Jedes
         ' Lesen-Ändern-Schreiben läuft deshalb unter diesem Schloss.
@@ -160,7 +249,7 @@ Namespace Services
                 End If
 
                 If Not allowStale Then Return Nothing
-                Dim staleCachePath = FindAnyCachedThumbnail(folderCachePath, imageHash)
+                Dim staleCachePath = FindAnyCachedThumbnail(folderId, folderCachePath, imageHash)
                 If Not String.IsNullOrEmpty(staleCachePath) Then
                     cancellationToken.ThrowIfCancellationRequested()
                     Using stream = File.OpenRead(staleCachePath)
@@ -201,10 +290,11 @@ Namespace Services
                 Directory.CreateDirectory(folderCachePath)
                 ' Register the folder in the root index once per session (not per thumbnail)
                 EnsureFolderRegistered(folderId, folderDisplayPath)
-                DeleteStaleCacheFiles(folderCachePath, imageHash, cacheFileName)
+                DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
                 cancellationToken.ThrowIfCancellationRequested()
 
                 If TryWriteCacheFile(filePath, cachePath, quality, isStillWanted) AndAlso File.Exists(cachePath) Then
+                    GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
                     cancellationToken.ThrowIfCancellationRequested()
                     Using stream = File.OpenRead(cachePath)
                         Return New Bitmap(stream)
@@ -221,6 +311,7 @@ Namespace Services
 
         Public Shared Function DeleteAllCaches() As Integer
             _registeredFolderIds.Clear()
+            _folderFileIndexes.Clear()
             InvalidateSettingsCache()
             If Not Directory.Exists(CacheRoot) Then Return 0
             Try
@@ -247,6 +338,8 @@ Namespace Services
                 Directory.Delete(folderCachePath, True)
                 RemoveFolderFromRootIndex(cacheId)
                 _registeredFolderIds.TryRemove(cacheId, Nothing)
+                ' Sonst zeigte das Namensverzeichnis auf Dateien, die es nicht mehr gibt.
+                _folderFileIndexes.TryRemove(cacheId, Nothing)
                 Return count
             Catch
                 Return 0
@@ -497,33 +590,40 @@ Namespace Services
             Return Nothing
         End Function
 
-        Private Shared Sub DeleteStaleCacheFiles(folderCachePath As String, imageHash As String, currentCacheFileName As String)
-            If Not Directory.Exists(folderCachePath) Then Return
-
-            Dim imagePrefix = imageHash & "_"
-            For Each stale In Directory.GetFiles(folderCachePath, imagePrefix & "*.jpg", SearchOption.TopDirectoryOnly)
+        ''' Löscht die Vorschaubilder desselben Originals, die zu einem anderen Änderungszeitpunkt, einer
+        ''' anderen Größe oder Qualität gehören. Beim erstmaligen Befüllen eines Ordners - dem Fall, der
+        ''' früher quadratisch war - findet das Verzeichnis nichts und es passiert kein Dateizugriff.
+        Private Shared Sub DeleteStaleCacheFiles(folderId As String, folderCachePath As String, imageHash As String, currentCacheFileName As String)
+            Dim index = GetFolderFileIndex(folderId)
+            For Each staleName In index.GetNames(folderCachePath, imageHash)
+                If String.Equals(staleName, currentCacheFileName, StringComparison.OrdinalIgnoreCase) Then Continue For
                 Try
-                    If Not String.Equals(IO.Path.GetFileName(stale), currentCacheFileName, StringComparison.OrdinalIgnoreCase) Then File.Delete(stale)
-                Catch
+                    File.Delete(IO.Path.Combine(folderCachePath, staleName))
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("ThumbnailCache.DeleteStale", ex)
                 End Try
+                index.Remove(imageHash, staleName)
             Next
         End Sub
 
-        Private Shared Function FindAnyCachedThumbnail(folderCachePath As String, imageHash As String) As String
-            If Not Directory.Exists(folderCachePath) Then Return Nothing
-            Try
-                Return Directory.GetFiles(folderCachePath, imageHash & "_*.jpg", SearchOption.TopDirectoryOnly).
-                    OrderByDescending(Function(p)
-                                          Try
-                                              Return File.GetLastWriteTimeUtc(p)
-                                          Catch
-                                              Return DateTime.MinValue
-                                          End Try
-                                      End Function).
-                    FirstOrDefault()
-            Catch
-                Return Nothing
-            End Try
+        ''' Irgendein vorhandenes Vorschaubild desselben Originals - veraltet, aber sofort anzeigbar,
+        ''' während im Hintergrund das aktuelle erzeugt wird. Gestattet werden nur die wenigen Kandidaten
+        ''' aus dem Namensverzeichnis, nicht der ganze Ordner.
+        Private Shared Function FindAnyCachedThumbnail(folderId As String, folderCachePath As String, imageHash As String) As String
+            Dim names = GetFolderFileIndex(folderId).GetNames(folderCachePath, imageHash)
+            If names.Count = 0 Then Return Nothing
+
+            Return names.
+                Select(Function(n) IO.Path.Combine(folderCachePath, n)).
+                Where(Function(p) File.Exists(p)).
+                OrderByDescending(Function(p)
+                                      Try
+                                          Return File.GetLastWriteTimeUtc(p)
+                                      Catch
+                                          Return DateTime.MinValue
+                                      End Try
+                                  End Function).
+                FirstOrDefault()
         End Function
 
         Private Shared Function GetFolderCachePathById(folderId As String) As String

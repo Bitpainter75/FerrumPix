@@ -241,7 +241,7 @@ Namespace ViewModels
                     Return
                 End If
                 If IO.File.Exists(sourcePath) Then
-                    Gallery.OpenFolderForImage(sourcePath)
+                    Await Gallery.OpenFolderForImage(sourcePath)
                 ElseIf IO.Directory.Exists(sourcePath) Then
                     Gallery.SetInitialFolderNodeForPath(sourcePath)
                     Gallery.NavigateToFolder(sourcePath)
@@ -279,7 +279,8 @@ Namespace ViewModels
         Private Sub OpenInitialImage(imagePath As String)
             Select Case AppSettingsService.Load().StartupImageMode
                 Case "Gallery"
-                    Gallery.OpenFolderForImage(imagePath)
+                    ' Beim Programmstart: das Laden läuft an, die Auswahl setzt sich, sobald es fertig ist.
+                    Dim ignored = Gallery.OpenFolderForImage(imagePath)
                     CurrentMode = AppMode.Gallery
                 Case "Editor"
                     If SvgPreviewService.IsSupportedSvg(imagePath) Then

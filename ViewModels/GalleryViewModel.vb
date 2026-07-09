@@ -1367,6 +1367,10 @@ Namespace ViewModels
         End Function
 
         Public Sub NavigateToFolder(folderPath As String)
+            Dim ignored = NavigateToFolderAsync(folderPath)
+        End Sub
+
+        Public Function NavigateToFolderAsync(folderPath As String) As Task
             CancelActiveSearch()
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) AndAlso _currentFolder <> folderPath Then
                 _historyBack.Push(_currentFolder)
@@ -1376,8 +1380,8 @@ Namespace ViewModels
             End If
             ClearVirtualFolderState()
             CurrentFolder = folderPath
-            LoadFolderImages(folderPath)
-        End Sub
+            Return LoadFolderImagesAsync(folderPath)
+        End Function
 
         Public Sub LoadCurrentFolder()
             If _isVirtualFolder Then
@@ -1387,13 +1391,14 @@ Namespace ViewModels
             End If
         End Sub
 
-        Public Sub OpenFolderForImage(imagePath As String)
+        ''' Muss das Laden abwarten: die Auswahl greift auf Items zu, die erst danach stehen.
+        Public Async Function OpenFolderForImage(imagePath As String) As Task
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return
             Dim folder = IO.Path.GetDirectoryName(imagePath)
             If String.IsNullOrEmpty(folder) Then Return
 
             SetInitialFolderNodeForPath(folder)
-            NavigateToFolder(folder)
+            Await NavigateToFolderAsync(folder)
             Dim item = Items.FirstOrDefault(Function(i) String.Equals(i.FilePath, imagePath, StringComparison.OrdinalIgnoreCase))
             If item IsNot Nothing Then
                 SelectOnly(item)
@@ -1401,7 +1406,7 @@ Namespace ViewModels
                 SelectedItem = Nothing
             End If
             If SelectedItem IsNot Nothing Then RaiseEvent RequestScrollToItem(Me, EventArgs.Empty)
-        End Sub
+        End Function
 
         Public Function SelectImageInCurrentView(imagePath As String) As Boolean
             If String.IsNullOrEmpty(imagePath) Then Return False
@@ -2217,6 +2222,12 @@ Namespace ViewModels
 
         Private ReadOnly _imageExtensions As String() = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico", ".svg", ".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2", ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
 
+        ''' <summary>
+        ''' Freier Speicherplatz des Laufwerks, auf dem der aktuelle Ordner liegt. Läuft im Hintergrund:
+        ''' DriveInfo.GetDrives() zählt unter Linux jeden Mountpoint auf, und ein toter NFS-Mount blockiert
+        ''' bereits in IsReady. Aufgerufen wird die Methode nicht nur beim Ordnerwechsel, sondern über
+        ''' SyncFolderItems nach jeder Dateioperation und jedem Watcher-Ereignis.
+        ''' </summary>
         Private Sub UpdateStorageInfo()
             If _isVirtualFolder OrElse String.IsNullOrEmpty(_currentFolder) Then
                 StorageFreeText = ""
@@ -2224,18 +2235,27 @@ Namespace ViewModels
                 Return
             End If
 
+            Dim folder = _currentFolder
+            Dim ignored = Task.Run(Sub()
+                                       Dim info = ReadStorageInfo(folder)
+                                       Dispatcher.UIThread.Post(Sub()
+                                                                    ' Inzwischen woanders? Dann gehört die Zahl nicht mehr hierher.
+                                                                    If Not String.Equals(NormalizePath(folder), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then Return
+                                                                    StorageFreeText = info.FreeText
+                                                                    StorageFillPercent = info.FillPercent
+                                                                End Sub, DispatcherPriority.Background)
+                                   End Sub)
+        End Sub
+
+        Private Shared Function ReadStorageInfo(folderPath As String) As (FreeText As String, FillPercent As Double)
             Try
-                Dim drive = DriveInfo.GetDrives().
+                Dim drive = GetCachedDrives().
                     Where(Function(d) d.IsReady AndAlso
-                          _currentFolder.StartsWith(d.RootDirectory.FullName, StringComparison.OrdinalIgnoreCase)).
+                          folderPath.StartsWith(d.RootDirectory.FullName, StringComparison.OrdinalIgnoreCase)).
                     OrderByDescending(Function(d) d.RootDirectory.FullName.Length).
                     FirstOrDefault()
 
-                If drive Is Nothing Then
-                    StorageFreeText = ""
-                    StorageFillPercent = 0
-                    Return
-                End If
+                If drive Is Nothing Then Return ("", 0)
 
                 Dim freeGb = drive.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0)
                 Dim totalGb = drive.TotalSize / (1024.0 * 1024.0 * 1024.0)
@@ -2252,14 +2272,30 @@ Namespace ViewModels
                     totalStr = CInt(Math.Round(totalGb)).ToString() & " GB"
                 End If
 
-                StorageFreeText = $"{freeStr} von {totalStr} frei"
-                StorageFillPercent = Math.Max(0, Math.Min(100,
-                    (drive.TotalSize - drive.AvailableFreeSpace) / CDbl(drive.TotalSize) * 100))
+                Return ($"{freeStr} von {totalStr} frei",
+                        Math.Max(0, Math.Min(100, (drive.TotalSize - drive.AvailableFreeSpace) / CDbl(drive.TotalSize) * 100)))
             Catch
-                StorageFreeText = ""
-                StorageFillPercent = 0
+                Return ("", 0)
             End Try
-        End Sub
+        End Function
+
+        ''' Die Liste der Laufwerke ändert sich selten, ihre Ermittlung ist teuer (jeder Mountpoint wird
+        ''' angefasst). Die Kennzahlen je Laufwerk - freier Platz, Gesamtgröße - liest DriveInfo dagegen bei
+        ''' jedem Zugriff frisch, der Cache macht die Anzeige also nicht veraltet.
+        Private Shared _cachedDrives As DriveInfo() = Nothing
+        Private Shared _cachedDrivesAt As Long = 0
+        Private Const DriveCacheLifetimeMs As Long = 30_000
+
+        Private Shared Function GetCachedDrives() As DriveInfo()
+            Dim now = Environment.TickCount64
+            Dim cached = _cachedDrives
+            If cached IsNot Nothing AndAlso now - Volatile.Read(_cachedDrivesAt) < DriveCacheLifetimeMs Then Return cached
+
+            Dim drives = DriveInfo.GetDrives()
+            _cachedDrives = drives
+            Volatile.Write(_cachedDrivesAt, now)
+            Return drives
+        End Function
 
         Private Sub DoToggleFavorite(item As ImageItem)
             If item Is Nothing OrElse item.IsFolder Then Return
@@ -2317,7 +2353,25 @@ Namespace ViewModels
             End Sub, DispatcherPriority.Background)
         End Sub
 
+        ''' Startet das Laden und kehrt zurück. Kein Async Sub: eine Ausnahme aus einem Async Sub erreicht
+        ''' keinen Aufrufer und beendet den Prozess - LoadFolderImagesAsync fängt deshalb selbst alles ab.
         Private Sub LoadFolderImages(folderPath As String)
+            Dim ignored = LoadFolderImagesAsync(folderPath)
+        End Sub
+
+        ''' <summary>
+        ''' Liest einen Ordner ein. Alles, was sofort sichtbar sein muss - Suche abbrechen, Sammlungen
+        ''' leeren, Beobachter umhängen - passiert synchron auf dem UI-Thread; das Aufzählen des
+        ''' Verzeichnisses, die Katalogabfrage und der Aufbau der ImageItem-Objekte laufen im Hintergrund.
+        ''' Vorher stand das Fenster still, bis alles fertig war: auf einer Netzwerkfreigabe oder einem
+        ''' schlafenden USB-Laufwerk sekundenlang.
+        '''
+        ''' Der Abbruch-Token stammt aus BeginNewFolderThumbnailScope und wird vom nächsten Ordner-Laden
+        ''' storniert. Zwei schnelle Klicks im Baum dürfen sonst dazu führen, dass die langsamere Antwort
+        ''' die schnellere überschreibt - deshalb wird beim Eintreffen sowohl der Token als auch der
+        ''' inzwischen aktuelle Ordner geprüft.
+        ''' </summary>
+        Public Async Function LoadFolderImagesAsync(folderPath As String) As Task
             CancelActiveSearch()
             ClearVirtualFolderState()
             Dim thumbnailToken = BeginNewFolderThumbnailScope()
@@ -2334,64 +2388,90 @@ Namespace ViewModels
             End If
 
             SetupWatcher(folderPath)
+            StatusText = LocalizationService.T("Ordner wird gelesen...")
 
+            Dim scan As FolderScanResult
             Try
-                If _showFolders Then
-                    If _showParentFolder Then
-                        Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
-                        If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso Directory.Exists(parentPath) Then
-                            _allItems.Add(ImageItem.CreateParentFolderEntry(parentPath))
-                        End If
-                    End If
-
-                    Dim directories = Directory.GetDirectories(folderPath).
-                        Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
-                        OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase).
-                        ToArray()
-
-                    For Each folder In directories
-                        _allItems.Add(ImageItem.FromFolder(folder))
-                    Next
-                End If
-
-                Dim files = Directory.GetFiles(folderPath).
-                    Where(Function(f) _imageExtensions.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
-                    ToArray()
-
-                Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
-                _allItems.AddRange(BuildFileItems(files, folderPath, thumbnailToken, itemsNeedingMetaRefresh))
-
-                FilterAndSort()
-
-                If itemsNeedingMetaRefresh.Count > 0 Then
-                    QueueBackgroundMetaRefresh(itemsNeedingMetaRefresh, thumbnailToken)
-                End If
-
-                ' Im Ruhezustand (Viewport-Warteschlange leer) füllt sich der Rest des Ordners
-                ' nach und nach mit Thumbnails auf, auch für Bilder, die nie in die Nähe des
-                ' sichtbaren Bereichs gescrollt werden. Mit niedrigerer Priorität eingereiht, damit
-                ' die erste Viewport-Anfrage (Input-Priorität) beim Öffnen des Ordners nicht durch
-                ' hunderte Hintergrund-Jobs ausgebremst wird. Zusätzlich verzögert gestartet (statt
-                ' sofort), damit der anfängliche CPU-Ausschlag nicht mit dem ersten Aufbau/Rendern
-                ' der Gallery und dem Laden der sichtbaren Viewport-Thumbnails zusammenfällt - deren
-                ' Vorrang bleibt davon unberührt, da sie über eine separate, garantiert freie
-                ' Worker-Kapazität laufen (siehe ImageItem.MaxConcurrentBackgroundJobs).
-                Const BackgroundThumbnailStartupDelayMs As Integer = 1500
-                Dim itemsSnapshot = _allItems.ToList()
-                Task.Run(Async Function()
-                             Try
-                                 Await Task.Delay(BackgroundThumbnailStartupDelayMs, thumbnailToken)
-                             Catch ex As OperationCanceledException
-                                 Return
-                             End Try
-                             Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
-                         End Function)
+                scan = Await Task.Run(Function() ScanFolder(folderPath, thumbnailToken), thumbnailToken)
+            Catch ex As OperationCanceledException
+                Return
             Catch ex As UnauthorizedAccessException
                 StatusText = LocalizationService.T("Zugriff verweigert")
+                Return
             Catch ex As IOException
                 StatusText = LocalizationService.T("Fehler beim Laden")
+                Return
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.LoadFolder", ex)
+                StatusText = LocalizationService.T("Fehler beim Laden")
+                Return
             End Try
-        End Sub
+
+            ' Ein zwischenzeitlicher Ordnerwechsel macht dieses Ergebnis wertlos.
+            If thumbnailToken.IsCancellationRequested Then Return
+            If Not String.Equals(NormalizePath(folderPath), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then Return
+
+            _allItems.AddRange(scan.Items)
+            FilterAndSort()
+
+            If scan.NeedsMetaRefresh.Count > 0 Then
+                QueueBackgroundMetaRefresh(scan.NeedsMetaRefresh, thumbnailToken)
+            End If
+
+            ' Im Ruhezustand (Viewport-Warteschlange leer) füllt sich der Rest des Ordners
+            ' nach und nach mit Thumbnails auf, auch für Bilder, die nie in die Nähe des
+            ' sichtbaren Bereichs gescrollt werden. Mit niedrigerer Priorität eingereiht, damit
+            ' die erste Viewport-Anfrage (Input-Priorität) beim Öffnen des Ordners nicht durch
+            ' hunderte Hintergrund-Jobs ausgebremst wird. Zusätzlich verzögert gestartet (statt
+            ' sofort), damit der anfängliche CPU-Ausschlag nicht mit dem ersten Aufbau/Rendern
+            ' der Gallery und dem Laden der sichtbaren Viewport-Thumbnails zusammenfällt - deren
+            ' Vorrang bleibt davon unberührt, da sie über eine separate, garantiert freie
+            ' Worker-Kapazität laufen (siehe ImageItem.MaxConcurrentBackgroundJobs).
+            Const BackgroundThumbnailStartupDelayMs As Integer = 1500
+            Dim itemsSnapshot = _allItems.ToList()
+            Dim ignoredPreload = Task.Run(Async Function()
+                                              Try
+                                                  Await Task.Delay(BackgroundThumbnailStartupDelayMs, thumbnailToken)
+                                              Catch ex As OperationCanceledException
+                                                  Return
+                                              End Try
+                                              Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
+                                          End Function)
+        End Function
+
+        ''' Das Ergebnis eines Ordner-Durchlaufs, fertig zum Einfüllen auf dem UI-Thread.
+        Private Structure FolderScanResult
+            Public Items As List(Of ImageItem)
+            Public NeedsMetaRefresh As List(Of ImageItem)
+        End Structure
+
+        ''' Läuft im Hintergrund. Berührt nur lesend Felder des ViewModels und keine gebundene Collection.
+        Private Function ScanFolder(folderPath As String, thumbnailToken As CancellationToken) As FolderScanResult
+            Dim items As New List(Of ImageItem)()
+
+            If _showFolders Then
+                If _showParentFolder Then
+                    Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
+                    If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso Directory.Exists(parentPath) Then
+                        items.Add(ImageItem.CreateParentFolderEntry(parentPath))
+                    End If
+                End If
+
+                For Each folder In Directory.GetDirectories(folderPath).
+                    Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
+                    OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase)
+
+                    items.Add(ImageItem.FromFolder(folder))
+                Next
+            End If
+
+            thumbnailToken.ThrowIfCancellationRequested()
+
+            Dim needsMetaRefresh As New List(Of ImageItem)()
+            items.AddRange(BuildFileItems(EnumerateImageFiles(folderPath), folderPath, thumbnailToken, needsMetaRefresh))
+
+            Return New FolderScanResult With {.Items = items, .NeedsMetaRefresh = needsMetaRefresh}
+        End Function
 
         ''' <summary>Lädt Breite/Höhe/EXIF-Daten für Bilder nach, die beim Ordner-Scan noch fehlten oder
         ''' seit dem letzten Scan geändert wurden - mit begrenzter Parallelität und niedriger Priorität,
@@ -2524,23 +2604,21 @@ Namespace ViewModels
                     Next
                 End If
 
-                Dim files = Directory.GetFiles(folderPath).
-                    Where(Function(f) _imageExtensions.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
-                    ToArray()
+                Dim files = EnumerateImageFiles(folderPath)
 
-                ' Nur für neue Dateien ein ImageItem bauen - der Konstruktor kostet je Datei einen Stat-Aufruf.
-                Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f)).ToArray()
+                ' Nur für neue Dateien ein ImageItem bauen.
+                Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f.FullName)).ToArray()
                 Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
                 Dim newItems = BuildFileItems(newFiles, folderPath, thumbnailToken, itemsNeedingMetaRefresh)
                 Dim newItemsByPath = newItems.ToDictionary(Function(i) i.FilePath, StringComparer.OrdinalIgnoreCase)
 
                 For Each file In files
                     Dim keptFile As ImageItem = Nothing
-                    If existing.TryGetValue(file, keptFile) Then
+                    If existing.TryGetValue(file.FullName, keptFile) Then
                         rebuilt.Add(keptFile)
                     Else
                         Dim added As ImageItem = Nothing
-                        If newItemsByPath.TryGetValue(file, added) Then rebuilt.Add(added)
+                        If newItemsByPath.TryGetValue(file.FullName, added) Then rebuilt.Add(added)
                     End If
                 Next
 
@@ -2569,10 +2647,20 @@ Namespace ViewModels
             If SelectedItem IsNot Nothing AndAlso Not survivors.Contains(SelectedItem) Then SelectedItem = Nothing
         End Sub
 
+        ''' <summary>Zählt die Bilddateien eines Ordners auf. DirectoryInfo statt Directory: die gelieferten
+        ''' FileInfo-Objekte tragen Größe und Zeitstempel bereits aus dem Verzeichniseintrag, sodass für sie
+        ''' kein eigener Stat-Aufruf mehr nötig ist (siehe ImageItem.FromFileInfo).</summary>
+        Private Function EnumerateImageFiles(folderPath As String) As FileInfo()
+            Return New DirectoryInfo(folderPath).
+                EnumerateFiles().
+                Where(Function(f) _imageExtensions.Contains(f.Extension.ToLowerInvariant())).
+                ToArray()
+        End Function
+
         ''' <summary>Erzeugt die ImageItem-Objekte für eine Dateiliste und übernimmt die im Katalog
         ''' gespeicherten Metadaten. Trägt Elemente, deren Katalogeintrag fehlt oder veraltet ist, in
         ''' <paramref name="itemsNeedingMetaRefresh"/> ein.</summary>
-        Private Function BuildFileItems(files As String(),
+        Private Function BuildFileItems(files As FileInfo(),
                                         folderPath As String,
                                         thumbnailToken As CancellationToken,
                                         itemsNeedingMetaRefresh As List(Of ImageItem)) As List(Of ImageItem)
@@ -2580,19 +2668,18 @@ Namespace ViewModels
 
             Dim meta = LibraryService.Instance.GetFolderMeta(folderPath)
 
-                ''' New ImageItem(...) stößt pro Datei einen synchronen FileInfo-Stat-Aufruf an
-                ''' (EnsureFileInfoLoaded) - bei Ordnern mit vielen Bildern (oder Netzwerk-/USB-
-                ''' Freigaben mit hoher Latenz je Stat-Aufruf) summiert sich das spürbar. Da jedes
-                ''' Element hier unabhängig von den anderen ist und noch an keine UI-gebundene
-                ''' Collection angehängt wurde, kann der Aufbau gefahrlos parallelisiert werden;
-                ''' erst der abschließende _allItems.Add(...)-Durchlauf läuft wieder sequenziell in
-                ''' fester Reihenfolge auf dem UI-Thread.
+                ''' Die FileInfo-Objekte kommen fertig befüllt aus DirectoryInfo.EnumerateFiles (siehe
+                ''' ImageItem.FromFileInfo) - der frühere Weg über New ImageItem(pfad) stieß je Datei einen
+                ''' zusätzlichen Stat-Aufruf an, was sich bei Ordnern mit vielen Bildern und erst recht auf
+                ''' Netzwerk-/USB-Freigaben summierte. Da jedes Element hier unabhängig von den anderen ist
+                ''' und noch an keine UI-gebundene Collection angehängt wurde, läuft der Aufbau parallel;
+                ''' erst der abschließende Durchlauf unten geht wieder sequenziell in fester Reihenfolge.
                 Dim results = New ImageItem(files.Length - 1) {}
                 Dim needsRefreshFlags = New Boolean(files.Length - 1) {}
                 Parallel.For(0, files.Length,
                     Sub(i As Integer)
-                        Dim file = files(i)
-                        Dim item = New ImageItem(file, thumbnailToken)
+                        Dim file = files(i).FullName
+                        Dim item = ImageItem.FromFileInfo(files(i), thumbnailToken)
                         Dim needsRefresh = False
                         Dim m As LibraryImageMeta = Nothing
                         If meta.TryGetValue(file, m) Then

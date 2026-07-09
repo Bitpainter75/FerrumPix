@@ -147,11 +147,41 @@ Namespace Services
         Private Shared ReadOnly SettingsPath As String =
             Path.Combine(SettingsDirectory, "settings.json")
 
+        ''' Der zuletzt bekannte, bereits normalisierte Stand als JSON. Load() liest daraus statt von der
+        ''' Platte: die Einstellungen werden an 34 Stellen abgefragt, unter anderem aus Vorschaubild-Threads.
+        Private Shared ReadOnly _cacheLock As New Object()
+        Private Shared _cachedJson As String = Nothing
+
+        ''' Geschrieben wird verzögert und zusammengefasst. Sonst löst jeder Ordnerklick (CurrentFolder ->
+        ''' SaveLastGalleryFolder) und jedes Häkchen im Dialog ein vollständiges Serialisieren samt
+        ''' Temporärdatei und Umbenennen aus. Flush() erzwingt das Schreiben - beim Programmende und immer
+        ''' dann, wenn ein Verlust der letzten Sekunde nicht hinnehmbar wäre.
+        Private Const WriteDebounceMs As Integer = 1500
+        Private Shared ReadOnly _writeLock As New Object()
+        Private Shared _pendingJson As String = Nothing
+        Private Shared _flushTimer As Timers.Timer = Nothing
+
+        Shared Sub New()
+            AddHandler AppDomain.CurrentDomain.ProcessExit, Sub(sender As Object, e As EventArgs) Flush()
+        End Sub
+
         Public Shared Function Load() As AppSettings
             Try
-                If Not File.Exists(SettingsPath) Then Return New AppSettings()
+                Dim json As String
+                Dim readError As Exception = Nothing
+                SyncLock _cacheLock
+                    If _cachedJson Is Nothing Then _cachedJson = ReadSettingsJson(readError)
+                    json = _cachedJson
+                End SyncLock
 
-                Dim json = File.ReadAllText(SettingsPath)
+                ' Erst protokollieren, wenn _cachedJson steht: DiagnosticLogService.LogException fragt
+                ' seinerseits Load() nach EnableDiagnosticLogging. Aus ReadSettingsJson heraus zu
+                ' protokollieren liefe deshalb in eine Endlosrekursion - SyncLock ist reentrant und
+                ' hielte sie nicht auf.
+                If readError IsNot Nothing Then DiagnosticLogService.LogException("Settings.Read", readError)
+
+                If String.IsNullOrEmpty(json) Then Return New AppSettings()
+
                 Dim settings = JsonSerializer.Deserialize(Of AppSettings)(json)
                 If settings Is Nothing Then Return New AppSettings()
 
@@ -196,9 +226,23 @@ Namespace Services
                 ' Kaputte Datei: der nächste Save() überschriebe sie mit Standardwerten. Vorher zur
                 ' Seite legen, damit Presets und gespeicherte Suchen von Hand zu retten sind.
                 BackupUnreadableSettings()
+                SyncLock _cacheLock
+                    _cachedJson = ""
+                End SyncLock
                 Return New AppSettings()
             Catch
                 Return New AppSettings()
+            End Try
+        End Function
+
+        ''' Liest die Datei roh. Protokolliert selbst nichts - siehe Load().
+        Private Shared Function ReadSettingsJson(ByRef readError As Exception) As String
+            Try
+                If Not File.Exists(SettingsPath) Then Return ""
+                Return File.ReadAllText(SettingsPath)
+            Catch ex As Exception
+                readError = ex
+                Return ""
             End Try
         End Function
 
@@ -250,16 +294,65 @@ Namespace Services
                 settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Dim json = JsonSerializer.Serialize(settings, New JsonSerializerOptions With {.WriteIndented = True})
-                ' Nicht direkt in settings.json schreiben: Save() läuft bei jedem Häkchen im Dialog,
-                ' und ein Absturz mitten im Schreiben hinterließe eine abgeschnittene Datei. Load()
-                ' würde die beim nächsten Start als unlesbar verwerfen - samt Wasserzeichen-Presets,
-                ' gespeicherten Suchen und Theme. Erst vollständig danebenschreiben, dann ersetzen.
+
+                ' Der neue Stand gilt ab sofort für alle Leser; auf die Platte geht er gesammelt.
+                SyncLock _cacheLock
+                    _cachedJson = json
+                End SyncLock
+                ThumbnailCacheService.InvalidateSettingsCache()
+                ScheduleWrite(json)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.Save", ex)
+            End Try
+        End Sub
+
+        Private Shared Sub ScheduleWrite(json As String)
+            SyncLock _writeLock
+                _pendingJson = json
+                If _flushTimer Is Nothing Then
+                    _flushTimer = New Timers.Timer(WriteDebounceMs) With {.AutoReset = False}
+                    AddHandler _flushTimer.Elapsed, Sub(sender As Object, e As Timers.ElapsedEventArgs) Flush()
+                End If
+                _flushTimer.Stop()
+                _flushTimer.Start()
+            End SyncLock
+        End Sub
+
+        ''' <summary>Schreibt einen ausstehenden Stand sofort auf die Platte. Wird beim Programmende gerufen
+        ''' (ProcessExit) und darf jederzeit zusätzlich aufgerufen werden - ohne ausstehende Änderung tut sie
+        ''' nichts.</summary>
+        Public Shared Sub Flush()
+            Dim json As String
+            SyncLock _writeLock
+                json = _pendingJson
+                _pendingJson = Nothing
+                _flushTimer?.Stop()
+            End SyncLock
+            If json Is Nothing Then Return
+
+            Try
+                Directory.CreateDirectory(SettingsDirectory)
+                ' Nicht direkt in settings.json schreiben: ein Absturz mitten im Schreiben hinterließe eine
+                ' abgeschnittene Datei. Load() würde die beim nächsten Start als unlesbar verwerfen - samt
+                ' Wasserzeichen-Presets, gespeicherten Suchen und Theme. Erst vollständig danebenschreiben,
+                ' dann ersetzen.
                 Dim tempPath = SettingsPath & ".tmp"
                 File.WriteAllText(tempPath, json)
                 File.Move(tempPath, SettingsPath, overwrite:=True)
-                ThumbnailCacheService.InvalidateSettingsCache()
-            Catch
+            Catch ex As Exception
+                ' Volle Platte, fehlende Rechte: früher fiel das lautlos unter den Tisch und der Nutzer
+                ' glaubte, seine Einstellung sei gespeichert.
+                DiagnosticLogService.LogException("Settings.Flush", ex)
             End Try
+        End Sub
+
+        ''' <summary>Ändert genau ein paar Felder und speichert. Ersetzt das fünfzehnmal kopierte
+        ''' Load()-ändern-Save()-Muster.</summary>
+        Public Shared Sub Update(mutate As Action(Of AppSettings))
+            If mutate Is Nothing Then Return
+            Dim settings = Load()
+            mutate(settings)
+            Save(settings)
         End Sub
 
         Public Shared Function NormalizeThumbnailSize(value As Double) As Double
@@ -565,22 +658,18 @@ Namespace Services
         End Function
 
         Public Shared Sub SaveGalleryThumbnailSize(value As Double)
-            Dim settings = Load()
-            settings.GalleryThumbnailSize = value
-            Save(settings)
+            Update(Sub(s) s.GalleryThumbnailSize = value)
         End Sub
 
         Public Shared Sub SaveGalleryViewMode(value As String)
-            Dim settings = Load()
-            settings.GalleryViewMode = NormalizeGalleryViewMode(value)
-            Save(settings)
+            Update(Sub(s) s.GalleryViewMode = NormalizeGalleryViewMode(value))
         End Sub
 
         Public Shared Sub SaveGallerySort(sortMode As String, sortAscending As Boolean)
-            Dim settings = Load()
-            settings.GallerySortMode = sortMode
-            settings.GallerySortAscending = sortAscending
-            Save(settings)
+            Update(Sub(s)
+                       s.GallerySortMode = sortMode
+                       s.GallerySortAscending = sortAscending
+                   End Sub)
         End Sub
 
         Public Shared Function NormalizeGalleryFilterFavorite(value As String) As String
@@ -600,37 +689,31 @@ Namespace Services
         End Function
 
         Public Shared Sub SaveGalleryFilters(favorite As String, ratings As IEnumerable(Of Integer), fileType As String)
-            Dim settings = Load()
-            settings.GalleryFilterFavorite = NormalizeGalleryFilterFavorite(favorite)
-            settings.GalleryFilterRatings = NormalizeGalleryFilterRatings(If(ratings, Enumerable.Empty(Of Integer)()).ToList())
-            settings.GalleryFilterFileType = NormalizeGalleryFilterFileType(fileType)
-            Save(settings)
+            Update(Sub(s)
+                       s.GalleryFilterFavorite = NormalizeGalleryFilterFavorite(favorite)
+                       s.GalleryFilterRatings = NormalizeGalleryFilterRatings(If(ratings, Enumerable.Empty(Of Integer)()).ToList())
+                       s.GalleryFilterFileType = NormalizeGalleryFilterFileType(fileType)
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveGalleryStartupFolderMode(mode As String)
-            Dim settings = Load()
-            settings.GalleryStartupFolderMode = mode
-            Save(settings)
+            Update(Sub(s) s.GalleryStartupFolderMode = mode)
         End Sub
 
         Public Shared Sub SaveLastGalleryFolder(folderPath As String)
-            Dim settings = Load()
-            settings.LastGalleryFolder = folderPath
-            Save(settings)
+            Update(Sub(s) s.LastGalleryFolder = folderPath)
         End Sub
 
         Public Shared Sub SaveJpgSaveQuality(value As Integer)
-            Dim settings = Load()
-            settings.JpgSaveQuality = value
-            Save(settings)
+            Update(Sub(s) s.JpgSaveQuality = value)
         End Sub
 
         Public Shared Sub SaveLastBatchRenameSettings(pattern As String, start As Integer, stepValue As Integer)
-            Dim settings = Load()
-            settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(pattern)
-            settings.LastBatchRenameStart = NormalizeBatchRenameStart(start)
-            settings.LastBatchRenameStep = NormalizeBatchRenameStep(stepValue)
-            Save(settings)
+            Update(Sub(s)
+                       s.LastBatchRenamePattern = NormalizeBatchRenamePattern(pattern)
+                       s.LastBatchRenameStart = NormalizeBatchRenameStart(start)
+                       s.LastBatchRenameStep = NormalizeBatchRenameStep(stepValue)
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveLastBatchRenamePattern(value As String)
@@ -639,40 +722,34 @@ Namespace Services
         End Sub
 
         Public Shared Sub SaveLastBatchResizeSettings(width As Integer, height As Integer, scalePercent As Integer, lockAspect As Boolean, interpolation As ResizeInterpolationMode)
-            Dim settings = Load()
-            settings.LastBatchResizeWidth = NormalizeBatchResizeDimension(width)
-            settings.LastBatchResizeHeight = NormalizeBatchResizeDimension(height)
-            settings.LastBatchResizeScalePercent = NormalizeBatchResizeScalePercent(scalePercent)
-            settings.LastBatchResizeLockAspect = lockAspect
-            settings.LastBatchResizeInterpolation = interpolation.ToString()
-            Save(settings)
+            Update(Sub(s)
+                       s.LastBatchResizeWidth = NormalizeBatchResizeDimension(width)
+                       s.LastBatchResizeHeight = NormalizeBatchResizeDimension(height)
+                       s.LastBatchResizeScalePercent = NormalizeBatchResizeScalePercent(scalePercent)
+                       s.LastBatchResizeLockAspect = lockAspect
+                       s.LastBatchResizeInterpolation = interpolation.ToString()
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveLastWatermarkPresetName(value As String)
-            Dim settings = Load()
-            settings.LastWatermarkPresetName = NormalizePresetName(value)
-            Save(settings)
+            Update(Sub(s) s.LastWatermarkPresetName = NormalizePresetName(value))
         End Sub
 
         Public Shared Sub SaveViewerSlideshowIntervalSeconds(value As Integer)
-            Dim settings = Load()
-            settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(value)
-            Save(settings)
+            Update(Sub(s) s.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(value))
         End Sub
 
         Public Shared Sub SaveEditorInfoSidebarExpanded(value As Boolean)
-            Dim settings = Load()
-            settings.EditorInfoSidebarExpanded = value
-            Save(settings)
+            Update(Sub(s) s.EditorInfoSidebarExpanded = value)
         End Sub
 
         Public Shared Sub SaveMainWindowPlacement(left As Integer, top As Integer, width As Double, height As Double)
-            Dim settings = Load()
-            settings.MainWindowLeft = left
-            settings.MainWindowTop = top
-            settings.MainWindowWidth = NormalizeWindowDimension(width, settings.MainWindowWidth)
-            settings.MainWindowHeight = NormalizeWindowDimension(height, settings.MainWindowHeight)
-            Save(settings)
+            Update(Sub(s)
+                       s.MainWindowLeft = left
+                       s.MainWindowTop = top
+                       s.MainWindowWidth = NormalizeWindowDimension(width, s.MainWindowWidth)
+                       s.MainWindowHeight = NormalizeWindowDimension(height, s.MainWindowHeight)
+                   End Sub)
         End Sub
     End Class
 

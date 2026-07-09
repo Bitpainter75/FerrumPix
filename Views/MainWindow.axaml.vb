@@ -171,6 +171,8 @@ Namespace Views
                 If WindowState = WindowState.Normal Then
                     AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
                 End If
+                ' Einstellungen werden entprellt geschrieben; beim Schließen darf nichts ausstehen.
+                AppSettingsService.Flush()
                 Return
             End If
 
@@ -194,6 +196,7 @@ Namespace Views
             If WindowState = WindowState.Normal Then
                 AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
             End If
+            AppSettingsService.Flush()
         End Sub
 
         Private Sub ApplyLocalization()

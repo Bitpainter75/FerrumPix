@@ -558,6 +558,28 @@ Namespace Models
             _thumbnailCacheScopeName = thumbnailCacheScopeName
         End Sub
 
+        ''' <summary>Wie der Konstruktor, nimmt Größe und Zeitstempel aber aus einem FileInfo, das der
+        ''' Aufrufer bereits hat. DirectoryInfo.EnumerateFiles liefert diese Objekte fertig befüllt aus dem
+        ''' Verzeichniseintrag - unter Windows direkt aus FindNextFile, unter Linux ohne zweite
+        ''' Pfadauflösung. Der übliche Weg über New FileInfo(pfad) kostet dagegen einen zusätzlichen
+        ''' Systemaufruf je Datei, und davon gibt es beim Öffnen eines Ordners so viele wie Bilder.</summary>
+        Public Shared Function FromFileInfo(info As FileInfo, thumbnailCancellationToken As CancellationToken) As ImageItem
+            Dim item = New ImageItem()
+            item.InitializePath(info.FullName, False)
+            Try
+                item.FileSize = info.Length
+                item.DateModified = info.LastWriteTime
+                item.FileCreatedAt = info.CreationTime
+            Catch
+                item.FileSize = 0
+                item.DateModified = DateTime.MinValue
+                item.FileCreatedAt = DateTime.MinValue
+            End Try
+            item._fileInfoLoaded = True
+            item._thumbnailCancellationToken = thumbnailCancellationToken
+            Return item
+        End Function
+
         Public Shared Function CreateLightweight(filePath As String,
                                                  Optional thumbnailCancellationToken As CancellationToken = Nothing,
                                                  Optional thumbnailCacheScopeId As String = Nothing,
