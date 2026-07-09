@@ -13,7 +13,7 @@
                 Padding="14">
             <StackPanel Spacing="10">
                 <TextBlock Text="Datei im Zielordner" FontWeight="SemiBold"/>
-                <TextBlock Text="bereits vorhanden" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11"/>
+                <TextBlock Text="bereits vorhanden" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
                 <Border Height="150" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
                     <Image Source="{Binding DialogExistingFile.Preview}" Stretch="UniformToFill"/>
                 </Border>
@@ -37,7 +37,7 @@
                 Padding="14">
             <StackPanel Spacing="10">
                 <TextBlock Text="Datei, die kopiert/verschoben wird" FontWeight="SemiBold"/>
-                <TextBlock Text="neue Datei" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11"/>
+                <TextBlock Text="neue Datei" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
                 <Border Height="150" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
                     <Image Source="{Binding DialogIncomingFile.Preview}" Stretch="UniformToFill"/>
                 </Border>
@@ -58,7 +58,7 @@
         <StackPanel Grid.Row="1" Spacing="8">
             <TextBlock Text="Neue Datei umbenennen"
                        Foreground="{DynamicResource FP.Text.Secondary}"
-                       FontSize="12"/>
+                       FontSize="{DynamicResource FP.Font.Body}"/>
             <TextBox Text="{Binding DialogConflictRenameText, Mode=TwoWay}"
                      MinHeight="36"/>
         </StackPanel>

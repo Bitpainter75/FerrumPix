@@ -2,98 +2,75 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.InsertPanel">
-    <StackPanel Spacing="2">
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <icons:SvgIcon
-                Source="avares://FerrumPix/Assets/Icons/outline/square-rounded-plus.svg"
-                Width="14" Height="14" />
-            <TextBlock Text="Einfügen" FontWeight="SemiBold" />
+    <StackPanel Spacing="7">
+        <StackPanel Spacing="6" Margin="0,2,0,6">
+            <Expander Header="Farbmischer" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/color-swatch.svg"
+                                Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <!-- Die Beschriftungen wechseln mit dem Objekttyp: beim QR-Code heißt die Füllfarbe
+                     "Hintergrund" und die Konturfarbe "Vordergrund" (siehe FillColorLabel/StrokeColorLabel). -->
+                <icons:ColorMixer Margin="0,8,0,0"
+                                  FillColor="{Binding AnnotationFillColorValue, Mode=TwoWay}"
+                                  StrokeColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}"
+                                  SecondaryFillColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}"
+                                  FillLabel="{Binding FillColorLabel}"
+                                  StrokeLabel="{Binding StrokeColorLabel}"
+                                  ShowFill="{Binding ShowFillColorControls}"
+                                  ShowSecondaryFill="{Binding ShowGradientFillControls}" />
+            </Expander>
         </StackPanel>
-        <TextBlock
-            Text="Wähle unten einen Objekttyp aus und klicke dann ins Bild, um ihn dort zu platzieren."
-            Foreground="{DynamicResource FP.Text.Muted}"
-            FontSize="11"
-            TextWrapping="Wrap" />
+
         <StackPanel Spacing="10">
-            <StackPanel Spacing="6" IsVisible="{Binding ShowTextInsertControls}">
-                <TextBlock Text="Text und Bild"
-                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11"
-                           FontWeight="SemiBold" />
-                <WrapPanel>
-                    <Button Classes="ghost insert-option-btn" Width="46" Height="46"
-                            Padding="0" Margin="0,0,6,6" ToolTip.Tip="Text"
-                            Command="{Binding SetPendingInsertKindCommand}"
-                            CommandParameter="Text"
-                            Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}"
-                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/text-size.svg"
-                            Width="22" Height="22" />
-                    </Button>
-                    <Button Classes="ghost insert-option-btn" Width="46" Height="46"
-                            Padding="0" Margin="0,0,6,6"
-                            ToolTip.Tip="Bild"
-                            Command="{Binding SetPendingInsertKindCommand}"
-                            CommandParameter="Image"
-                            Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}"
-                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
-                            Width="22" Height="22" />
-                    </Button>
-                    <Button Classes="ghost insert-option-btn" Width="46" Height="46"
-                            Padding="0" Margin="0,0,6,6" ToolTip.Tip="QR"
-                            Command="{Binding SetPendingInsertKindCommand}"
-                            CommandParameter="QR"
-                            Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}"
-                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/qrcode.svg"
-                            Width="22" Height="22" />
-                    </Button>
-                    <Button Classes="ghost insert-option-btn" Width="46" Height="46"
-                            Padding="0" Margin="0,0,6,6" ToolTip.Tip="Wasserzeichen"
-                            Command="{Binding SetPendingInsertKindCommand}"
-                            CommandParameter="Watermark"
-                            Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}"
-                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rubber-stamp.svg"
-                            Width="22" Height="22" />
-                    </Button>
-                </WrapPanel>
-            </StackPanel>
-            <StackPanel Spacing="6" IsVisible="{Binding ShowGeometryControls}">
-                <TextBlock Text="Formen und Symbole"
-                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11"
-                           FontWeight="SemiBold" />
-                <TextBox
-                    Text="{Binding ShapeIconSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    Watermark="Symbol suchen…"
-                    FontSize="11" />
-                <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding FilteredShapeIcons}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Classes="ghost insert-option-btn compact"
-                                        ToolTip.Tip="{Binding DisplayName}"
-                                        Command="{Binding DataContext.SetPendingInsertKindCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding PendingKind}"
-                                        Classes.active="{Binding IsPending}"
-                                        Classes.selected-kind="{Binding IsSelectedKind}">
-                                    <icons:SvgIcon Source="{Binding IconPath}" Width="16"
-                                                   Height="16" />
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </StackPanel>
+            <!-- Text, Bild, QR und Wasserzeichen stehen jetzt einzeln in der Werkzeugleiste links. -->
+            <Expander Header="Formen und Symbole" IsExpanded="True"
+                      IsVisible="{Binding ShowGeometryControls}">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/components.svg"
+                                Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="6" Margin="0,8,0,0">
+                    <TextBox
+                        Text="{Binding ShapeIconSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Watermark="Symbol suchen…"
+                        FontSize="{DynamicResource FP.Font.Small}" />
+                    <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding FilteredShapeIcons}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="ghost insert-option-btn compact"
+                                            ToolTip.Tip="{Binding DisplayName}"
+                                            Command="{Binding DataContext.SetPendingInsertKindCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding PendingKind}"
+                                            Classes.active="{Binding IsPending}"
+                                            Classes.selected-kind="{Binding IsSelectedKind}">
+                                        <icons:SvgIcon Source="{Binding IconPath}" Width="16"
+                                                       Height="16" />
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </Expander>
         </StackPanel>
     </StackPanel>
 </UserControl>

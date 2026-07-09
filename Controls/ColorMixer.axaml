@@ -1,0 +1,86 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.ColorMixer">
+    <StackPanel Spacing="10">
+
+        <!-- Füllung und Kontur überlappen wie in klassischen Malprogrammen; das angeklickte Feld
+             bestimmt, welche Farbe das Rad darunter bearbeitet. Beim QR-Code heißen die beiden
+             "Hintergrund" und "Vordergrund" - die Beschriftungen kommen von außen. -->
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+            <Panel Width="60" Height="52" VerticalAlignment="Center">
+                <Border Name="StrokeSwatch"
+                        Width="34" Height="34"
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        CornerRadius="4"
+                        BorderThickness="2"
+                        BorderBrush="{DynamicResource FP.Border.Strong}"
+                        Cursor="Hand"
+                        PointerPressed="OnStrokeSwatchPressed" />
+                <Border Name="FillSwatch"
+                        Width="34" Height="34"
+                        HorizontalAlignment="Left" VerticalAlignment="Top"
+                        CornerRadius="4"
+                        BorderThickness="2"
+                        BorderBrush="{DynamicResource FP.Border.Strong}"
+                        Cursor="Hand"
+                        PointerPressed="OnFillSwatchPressed" />
+            </Panel>
+
+            <Border Grid.Column="1"
+                    Name="SecondarySwatch"
+                    Width="34" Height="34"
+                    Margin="10,0,0,0"
+                    VerticalAlignment="Center"
+                    CornerRadius="17"
+                    BorderThickness="2"
+                    BorderBrush="{DynamicResource FP.Border.Strong}"
+                    Cursor="Hand"
+                    PointerPressed="OnSecondarySwatchPressed" />
+
+            <TextBlock Grid.Column="2"
+                       Name="ActiveSlotLabel"
+                       Margin="12,0,0,0"
+                       VerticalAlignment="Center"
+                       FontSize="{DynamicResource FP.Font.Small}"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource FP.Text.Secondary}" />
+
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <Button Name="SwapButton" Classes="icon-btn" Width="30" Height="30" Padding="0"
+                        Click="OnSwapClick">
+                    <TextBlock Text="⇄" FontSize="{DynamicResource FP.Glyph.Large}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
+                <Button Name="EyedropperButton" Classes="icon-btn" Width="30" Height="30" Padding="0"
+                        Click="OnEyedropperClick"
+                        ToolTip.Tip="Farbe aus dem Bild aufnehmen (Pipette)">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg"
+                                   Width="16" Height="16"
+                                   IconBrush="{DynamicResource FP.Text.Primary}" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <icons:ColorWheel Name="Wheel"
+                          Width="168" Height="168"
+                          HorizontalAlignment="Center" />
+
+        <Grid ColumnDefinitions="60,*,44" VerticalAlignment="Center">
+            <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+            <icons:RoundSlider Grid.Column="1" Name="AlphaSlider"
+                               Minimum="0" Maximum="100"
+                               DefaultValue="100"
+                               DragIncrement="1" WheelIncrement="1"
+                               Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Name="AlphaValue" Classes="slider-value"
+                                     Minimum="0" Maximum="100" Increment="1"
+                                     FormatString="F0" />
+        </Grid>
+
+        <TextBox Name="HexTextBox" Watermark="#AARRGGBB"
+                 FontSize="{DynamicResource FP.Font.Small}" Padding="8,5" />
+
+    </StackPanel>
+</UserControl>

@@ -9,18 +9,18 @@
             <StackPanel Spacing="7">
                 <TextBlock Text="Namensvorlage"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           FontSize="12"/>
+                           FontSize="{DynamicResource FP.Font.Body}"/>
                 <TextBox Text="{Binding DialogBatchRenamePattern, Mode=TwoWay}"
                          MinHeight="36"/>
                 <TextBlock Text="Platzhalter: #, ###, {name}, {date:yyyyMMdd}, {datetaken:yyyyMMdd}, {width}, {height}, {camera}, {iso}, {aperture}, {focal}"
                            Foreground="{DynamicResource FP.Text.Muted}"
-                           FontSize="11"
+                           FontSize="{DynamicResource FP.Font.Small}"
                            TextWrapping="Wrap"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Spacing="7">
                 <TextBlock Text="Startwert"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           FontSize="12"/>
+                           FontSize="{DynamicResource FP.Font.Body}"/>
                 <NumericUpDown Classes="combo-like"
                                Value="{Binding DialogBatchRenameStart, Mode=TwoWay}"
                                Minimum="0"
@@ -31,7 +31,7 @@
             <StackPanel Grid.Column="2" Spacing="7">
                 <TextBlock Text="Schrittweite"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           FontSize="12"/>
+                           FontSize="{DynamicResource FP.Font.Body}"/>
                 <NumericUpDown Classes="combo-like"
                                Value="{Binding DialogBatchRenameStep, Mode=TwoWay}"
                                Minimum="1"

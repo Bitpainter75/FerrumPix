@@ -1486,7 +1486,8 @@ Namespace ViewModels
             Dim height = ExtractLeadingNumberText(exif?.ImageHeight)
             Dim iso = ExtractLeadingNumberText(exif?.ISO)
             Dim aperture = ExtractLeadingNumberText(exif?.Aperture)
-            Dim focal = ExtractLeadingNumberText(exif?.FocalLength)
+            ' Kleinbild-Äquivalent bevorzugen: "28" im Dateinamen sagt mehr als die "4" einer Handyoptik.
+            Dim focal = ExtractLeadingNumberText(ExifService.GetComparableFocalLength(exif))
             Dim dateTakenRaw = If(exif?.DateTaken, "")
             Dim dateTaken = DateTime.MinValue
             Dim dateTakenParsed = Not String.IsNullOrWhiteSpace(dateTakenRaw) AndAlso

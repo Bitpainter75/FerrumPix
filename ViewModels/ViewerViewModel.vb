@@ -718,6 +718,10 @@ Namespace ViewModels
                     Using preview = SvgPreviewService.ExtractPreview(_currentImagePath)
                         bmp = If(preview IsNot Nothing, New Bitmap(preview), Nothing)
                     End Using
+                ElseIf IcoPreviewService.IsSupportedIco(_currentImagePath) Then
+                    Using preview = IcoPreviewService.ExtractPreview(_currentImagePath)
+                        bmp = If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                    End Using
                 Else
                     bmp = ImageOrientationService.LoadOrientedAvaloniaBitmap(_currentImagePath)
                 End If

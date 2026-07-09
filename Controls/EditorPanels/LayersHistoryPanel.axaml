@@ -9,25 +9,25 @@
                     Command="{Binding DuplicateSelectedAnnotationCommand}"
                     IsEnabled="{Binding HasSelectedAnnotation}"
                     ToolTip.Tip="Objekt duplizieren (Strg+D)">
-                <TextBlock Text="⧉" FontSize="13" />
+                <TextBlock Text="⧉" FontSize="{DynamicResource FP.Glyph.Medium}" />
             </Button>
             <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                     Command="{Binding MoveSelectedAnnotationUpCommand}"
                     IsEnabled="{Binding HasSelectedAnnotation}"
                     ToolTip.Tip="Objekt nach vorne">
-                <TextBlock Text="↑" FontSize="14" />
+                <TextBlock Text="↑" FontSize="{DynamicResource FP.Glyph.Large}" />
             </Button>
             <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                     Command="{Binding MoveSelectedAnnotationDownCommand}"
                     IsEnabled="{Binding HasSelectedAnnotation}"
                     ToolTip.Tip="Objekt nach hinten">
-                <TextBlock Text="↓" FontSize="14" />
+                <TextBlock Text="↓" FontSize="{DynamicResource FP.Glyph.Large}" />
             </Button>
             <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                     Command="{Binding DeleteSelectedAnnotationCommand}"
                     IsEnabled="{Binding HasSelectedAnnotation}"
                     ToolTip.Tip="Objekt löschen (Entf)">
-                <TextBlock Text="×" FontSize="16" Foreground="{DynamicResource FP.Text.Muted}" />
+                <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.XLarge}" Foreground="{DynamicResource FP.Text.Muted}" />
             </Button>
         </StackPanel>
 
@@ -82,7 +82,7 @@
                                     </Border>
                                     <TextBlock Grid.Column="2"
                                                Text="{Binding LayerLabel}"
-                                               FontSize="11"
+                                               FontSize="{DynamicResource FP.Font.Small}"
                                                Margin="5,0,0,0"
                                                TextTrimming="CharacterEllipsis"
                                                VerticalAlignment="Center" />
@@ -94,7 +94,7 @@
                                             Command="{Binding DataContext.DeleteAnnotationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}"
                                             ToolTip.Tip="Objekt löschen">
-                                        <TextBlock Text="×" FontSize="14"
+                                        <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.Large}"
                                                    Foreground="{DynamicResource FP.Text.Muted}" />
                                     </Button>
                                 </Grid>
@@ -109,7 +109,7 @@
                 <StackPanel Spacing="6">
                     <TextBlock Text="Zuletzt zuerst"
                                Foreground="{DynamicResource FP.Text.Muted}"
-                               FontSize="11"
+                               FontSize="{DynamicResource FP.Font.Small}"
                                TextWrapping="Wrap" />
                     <ListBox ItemsSource="{Binding HistoryItems}"
                              Background="Transparent"
@@ -119,7 +119,7 @@
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="11"
+                                <TextBlock Text="{Binding}" FontSize="{DynamicResource FP.Font.Small}"
                                            TextTrimming="CharacterEllipsis" Margin="0,3" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>

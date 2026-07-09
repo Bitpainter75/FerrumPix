@@ -31,19 +31,19 @@
             <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
                 <TextBlock Text="Weißabgleich"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" TextWrapping="NoWrap" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="NoWrap" />
                 <ComboBox Grid.Column="1"
                           ItemsSource="{Binding WhiteBalanceOptions}"
                           SelectedItem="{Binding WhiteBalance}"
                           HorizontalAlignment="Stretch"
-                          FontSize="11"
+                          FontSize="{DynamicResource FP.Font.Small}"
                           Margin="6,0,0,0"
                           DropDownOpened="OnMatchWidthDropDownOpened" />
             </Grid>
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Temperatur"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding Temperature}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -51,7 +51,7 @@
             </Grid>
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding Tint}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -59,7 +59,7 @@
             </Grid>
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Dynamik" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding Vibrance}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -68,7 +68,7 @@
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Sättigung"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding Saturation}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"

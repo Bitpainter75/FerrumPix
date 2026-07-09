@@ -110,6 +110,8 @@ Namespace Services
         Public Property PreserveMetadataOnSave As Boolean = True
         Public Property EditorInfoSidebarExpanded As Boolean = True
         Public Property ViewerInfoSidebarExpanded As Boolean = True
+        ''' Ganzzahliger Versatz auf alle Text-Schriftgrößen (siehe FontScaleService). 0 = Auslieferung.
+        Public Property FontSizeOffset As Integer = 0
         Public Property ApplicationScale As Double = 1.0
         Public Property ApplicationScaleScreen As String = "HDMI-A-1"
         Public Property MainWindowLeft As Integer = -1
@@ -172,6 +174,7 @@ Namespace Services
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
+                settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
                 settings.ApplicationScale = NormalizeApplicationScale(settings.ApplicationScale)
                 settings.ApplicationScaleScreen = NormalizeApplicationScaleScreen(settings.ApplicationScaleScreen)
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
@@ -229,6 +232,7 @@ Namespace Services
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
+                settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
                 settings.ApplicationScale = NormalizeApplicationScale(settings.ApplicationScale)
                 settings.ApplicationScaleScreen = NormalizeApplicationScaleScreen(settings.ApplicationScaleScreen)
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
@@ -320,6 +324,12 @@ Namespace Services
                 Case Else
                     Return "Always"
             End Select
+        End Function
+
+        ' Untergrenze -1: die kleinste Schrift der Oberfläche ist 9px (FP.Font.Label), bei -2 wäre sie
+        ' 7px und damit unlesbar. Nach oben ist reichlich Luft, die Layouts sind flexibel.
+        Public Shared Function NormalizeFontSizeOffset(value As Integer) As Integer
+            Return Math.Max(-1, Math.Min(6, value))
         End Function
 
         Public Shared Function NormalizeApplicationScale(value As Double) As Double

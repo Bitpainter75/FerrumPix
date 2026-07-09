@@ -25,13 +25,104 @@ Namespace Services
         Median
     End Enum
 
+    Public Structure StrokePoint
+        Public ReadOnly X As Single
+        Public ReadOnly Y As Single
+
+        Public Sub New(x As Single, y As Single)
+            Me.X = x
+            Me.Y = y
+        End Sub
+    End Structure
+
+    ''' <summary>
+    ''' Ein zusammenhängender Pinsel- oder Radiergummi-Zug in Bildpixeln.
+    '''
+    ''' Bewusst unveränderlich: ein einmal gezeichneter Zug ändert sich nie mehr. Dadurch dürfen
+    ''' Undo-Schnappschüsse und ImageAnnotation.Clone dieselbe Instanz weiterreichen, statt die Punkte
+    ''' zu kopieren - vorher lag jeder Strich als Zeichenkette im Text-Feld der Ebene und landete
+    ''' vollständig in jedem nachfolgenden Undo-Eintrag.
+    ''' </summary>
+    Public NotInheritable Class BrushStroke
+        Private ReadOnly _points As StrokePoint()
+
+        Public Sub New(points As IEnumerable(Of StrokePoint))
+            _points = If(points, Enumerable.Empty(Of StrokePoint)()).ToArray()
+        End Sub
+
+        Public ReadOnly Property Points As IReadOnlyList(Of StrokePoint)
+            Get
+                Return _points
+            End Get
+        End Property
+
+        Public Function Scale(scaleX As Single, scaleY As Single) As BrushStroke
+            Return New BrushStroke(_points.Select(Function(p) New StrokePoint(p.X * scaleX, p.Y * scaleY)))
+        End Function
+    End Class
+
+    ''' <summary>
+    ''' Das Textformat der Züge - Striche mit ";" getrennt, Punkte mit " ", Koordinaten mit ",".
+    ''' Es lebt nur noch in der Rezeptdatei; im Arbeitsspeicher stehen die Punkte als BrushStroke.
+    ''' Dadurch bleiben bestehende .fpxedit-Dateien unverändert lesbar.
+    ''' </summary>
+    Public NotInheritable Class BrushStrokeCodec
+        Private Sub New()
+        End Sub
+
+        Public Shared Function Serialize(strokes As IEnumerable(Of BrushStroke)) As String
+            If strokes Is Nothing Then Return ""
+            Return String.Join(";", strokes.
+                Where(Function(s) s IsNot Nothing AndAlso s.Points.Count > 0).
+                Select(Function(s) String.Join(" ", s.Points.Select(
+                    Function(p) $"{p.X.ToString("F3", Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString("F3", Globalization.CultureInfo.InvariantCulture)}"))))
+        End Function
+
+        Public Shared Function Parse(text As String) As List(Of BrushStroke)
+            Dim result As New List(Of BrushStroke)()
+            If String.IsNullOrWhiteSpace(text) Then Return result
+
+            For Each strokeText In text.Split(";"c)
+                Dim points As New List(Of StrokePoint)()
+                For Each token In strokeText.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
+                    Dim parts = token.Split(","c)
+                    If parts.Length <> 2 Then Continue For
+                    Dim x As Single
+                    Dim y As Single
+                    If Single.TryParse(parts(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, x) AndAlso
+                       Single.TryParse(parts(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, y) Then
+                        points.Add(New StrokePoint(x, y))
+                    End If
+                Next
+                If points.Count > 0 Then result.Add(New BrushStroke(points))
+            Next
+            Return result
+        End Function
+    End Class
+
     Public Class RetouchSpot
         Public Property XPixels As Single
         Public Property YPixels As Single
         Public Property RadiusPixels As Single
 
+        ''' Klonquelle in Bildpixeln: von hier wird die Textur kopiert. Ein negativer Wert bedeutet
+        ''' "kein Quellpunkt gesetzt" - dann greift der Ringmittelwert-Rückfall in ApplyRetouch, der
+        ''' die Umgebung des Ziels mittelt. Ältere Rezepte kennen die Felder nicht und landen darüber
+        ''' automatisch im alten Verhalten.
+        Public Property SourceXPixels As Single = -1
+        Public Property SourceYPixels As Single = -1
+
+        Public ReadOnly Property HasCloneSource As Boolean
+            Get
+                Return SourceXPixels >= 0 AndAlso SourceYPixels >= 0
+            End Get
+        End Property
+
         Public Function Clone() As RetouchSpot
-            Return New RetouchSpot With {.XPixels = XPixels, .YPixels = YPixels, .RadiusPixels = RadiusPixels}
+            Return New RetouchSpot With {
+                .XPixels = XPixels, .YPixels = YPixels, .RadiusPixels = RadiusPixels,
+                .SourceXPixels = SourceXPixels, .SourceYPixels = SourceYPixels
+            }
         End Function
     End Class
 
@@ -72,6 +163,10 @@ Namespace Services
         Private _glowBlur As Single = 10
         Private _glowStrength As Single = 100
         Private _glowColor As String = "#FFFFFF00"
+
+        ''' Nur bei Kind "Brush"/"Eraser" befüllt. Kein PropertyChanged: die Liste wächst ausschließlich
+        ''' beim Malen, und die Vorschau wird dabei ohnehin explizit angestoßen.
+        Public Property Strokes As New List(Of BrushStroke)()
 
         Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
 
@@ -492,6 +587,8 @@ Namespace Services
             End Set
         End Property
 
+        ''' Strokes wird flach kopiert: die Liste ist neu, die Striche darin werden geteilt. Das ist
+        ''' zulässig, weil BrushStroke unveränderlich ist, und hält Undo-Schnappschüsse klein.
         Public Function Clone() As ImageAnnotation
             Return New ImageAnnotation With {
                 .Kind = Kind,
@@ -527,7 +624,8 @@ Namespace Services
                 .GlowEnabled = GlowEnabled,
                 .GlowBlur = GlowBlur,
                 .GlowStrength = GlowStrength,
-                .GlowColor = GlowColor
+                .GlowColor = GlowColor,
+                .Strokes = New List(Of BrushStroke)(Strokes)
             }
         End Function
 
@@ -822,6 +920,8 @@ Namespace Services
         ''' als Schreibziel zu berühren (Speichern schreibt immer in eine neue Zieldatei).
         Private Shared Function OpenSourceStream(path As String) As Stream
             If RawPreviewService.IsSupportedRaw(path) Then Return RawPreviewService.ExtractPreview(path)
+            ' ICO ist ein Container, den SkiaSharp nicht kennt - hier als PNG hereingereicht.
+            If IcoPreviewService.IsSupportedIco(path) Then Return IcoPreviewService.ExtractPreview(path)
             Return File.OpenRead(path)
         End Function
 
@@ -1382,6 +1482,19 @@ Namespace Services
             Return result
         End Function
 
+        ' Weiche Kante der Retusche-Scheibe: bis 55% des Radius voll deckend, danach linear auslaufend.
+        ' Entspricht der früheren Formel edge = (radius - d) / (radius * 0.45).
+        Private Shared ReadOnly RetouchFeatherStops As Single() = {0.0F, 0.55F, 1.0F}
+
+        ''' <summary>
+        ''' Retuschiert die gesetzten Punkte. Punkte mit Klonquelle kopieren die Textur von dort
+        ''' herüber; Punkte ohne Quelle mitteln - wie früher - einen Ring um das Ziel und blenden die
+        ''' Mischfarbe ein. Gemalt wird beides über Skia-Shader statt Pixel für Pixel: bei Radius 50
+        ''' ersetzt das rund 10.000 SetPixel-Aufrufe je Punkt durch einen DrawCircle.
+        '''
+        ''' Gelesen wird stets aus <paramref name="source"/>, dem unretuschierten Bild. Sonst zöge ein
+        ''' Zug, dessen Quelle über bereits geklonte Stellen läuft, seine eigenen Kopien mit.
+        ''' </summary>
         Private Shared Function ApplyRetouch(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If adj.RetouchSpots Is Nothing OrElse adj.RetouchSpots.Count = 0 Then Return source
 
@@ -1393,45 +1506,84 @@ Namespace Services
                 scaleY = source.Height / CSng(adj.SourceHeightPixels)
             End If
             Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
-            For Each spot In adj.RetouchSpots
-                Dim cx = CInt(Math.Round(Clamp(spot.XPixels * scaleX, 0, source.Width)))
-                Dim cy = CInt(Math.Round(Clamp(spot.YPixels * scaleY, 0, source.Height)))
-                Dim radius = Math.Max(1, CInt(Math.Round(Clamp(spot.RadiusPixels * radiusScale, 1, Math.Max(source.Width, source.Height)))))
-                Dim sampleRadius = radius * 2
 
-                Dim sr As Long = 0
-                Dim sg As Long = 0
-                Dim sb As Long = 0
-                Dim sa As Long = 0
-                Dim count As Integer = 0
-                For yy As Integer = Math.Max(0, cy - sampleRadius) To Math.Min(source.Height - 1, cy + sampleRadius)
-                    For xx As Integer = Math.Max(0, cx - sampleRadius) To Math.Min(source.Width - 1, cx + sampleRadius)
-                        Dim d = Math.Sqrt((xx - cx) * (xx - cx) + (yy - cy) * (yy - cy))
-                        If d >= radius * 1.25 AndAlso d <= sampleRadius Then
-                            Dim c = source.GetPixel(xx, yy)
-                            sr += c.Red : sg += c.Green : sb += c.Blue : sa += c.Alpha
-                            count += 1
-                        End If
-                    Next
+            Using canvas = New SKCanvas(result)
+                For Each spot In adj.RetouchSpots
+                    Dim cx = Clamp(spot.XPixels * scaleX, 0, source.Width)
+                    Dim cy = Clamp(spot.YPixels * scaleY, 0, source.Height)
+                    Dim radius = Clamp(spot.RadiusPixels * radiusScale, 1, Math.Max(source.Width, source.Height))
+
+                    If spot.HasCloneSource Then
+                        Dim sx = Clamp(spot.SourceXPixels * scaleX, 0, source.Width)
+                        Dim sy = Clamp(spot.SourceYPixels * scaleY, 0, source.Height)
+                        DrawCloneStamp(canvas, source, cx, cy, sx, sy, radius)
+                    Else
+                        Dim fill = AverageSurroundingColor(source, cx, cy, radius)
+                        If fill.HasValue Then DrawSoftDisc(canvas, cx, cy, radius, fill.Value)
+                    End If
                 Next
-                If count = 0 Then Continue For
+            End Using
+            Return result
+        End Function
 
-                Dim fill = New SKColor(CByte(sr \ count), CByte(sg \ count), CByte(sb \ count), CByte(sa \ count))
-                For yy As Integer = Math.Max(0, cy - radius) To Math.Min(source.Height - 1, cy + radius)
-                    For xx As Integer = Math.Max(0, cx - radius) To Math.Min(source.Width - 1, cx + radius)
-                        Dim d = Math.Sqrt((xx - cx) * (xx - cx) + (yy - cy) * (yy - cy))
-                        If d <= radius Then
-                            Dim edge = Math.Min(1.0, Math.Max(0.0, (radius - d) / Math.Max(1.0, radius * 0.45)))
-                            Dim original = result.GetPixel(xx, yy)
-                            Dim r = ClampToByte(original.Red * (1.0 - edge) + fill.Red * edge)
-                            Dim g = ClampToByte(original.Green * (1.0 - edge) + fill.Green * edge)
-                            Dim b = ClampToByte(original.Blue * (1.0 - edge) + fill.Blue * edge)
-                            result.SetPixel(xx, yy, New SKColor(r, g, b, original.Alpha))
-                        End If
-                    Next
+        ''' Kopiert eine weich auslaufende Scheibe von (sx, sy) nach (cx, cy). Der Bitmap-Shader wird
+        ''' um den Versatz verschoben, ein Radial-Verlauf liefert per DstIn die Kantenmaske.
+        Private Shared Sub DrawCloneStamp(canvas As SKCanvas, source As SKBitmap,
+                                          cx As Single, cy As Single, sx As Single, sy As Single, radius As Single)
+            Dim offset = SKMatrix.CreateTranslation(cx - sx, cy - sy)
+            Using bitmapShader = SKShader.CreateBitmap(source, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, offset)
+                Using mask = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
+                                                           {SKColors.White, SKColors.White, SKColors.Transparent},
+                                                           RetouchFeatherStops, SKShaderTileMode.Clamp)
+                    Using masked = SKShader.CreateCompose(bitmapShader, mask, SKBlendMode.DstIn)
+                        Using paint = New SKPaint With {.Shader = masked, .IsAntialias = True}
+                            canvas.DrawCircle(cx, cy, radius, paint)
+                        End Using
+                    End Using
+                End Using
+            End Using
+        End Sub
+
+        Private Shared Sub DrawSoftDisc(canvas As SKCanvas, cx As Single, cy As Single, radius As Single, fill As SKColor)
+            Using shader = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
+                                                         {fill, fill, fill.WithAlpha(0)},
+                                                         RetouchFeatherStops, SKShaderTileMode.Clamp)
+                Using paint = New SKPaint With {.Shader = shader, .IsAntialias = True}
+                    canvas.DrawCircle(cx, cy, radius, paint)
+                End Using
+            End Using
+        End Sub
+
+        ''' Mittelt den Ring zwischen dem 1,25- und dem 2-fachen Radius um das Ziel - der Rückfall,
+        ''' wenn keine Klonquelle gesetzt wurde. Liefert Nothing, wenn der Ring komplett außerhalb
+        ''' des Bildes liegt.
+        Private Shared Function AverageSurroundingColor(source As SKBitmap, cx As Single, cy As Single, radius As Single) As SKColor?
+            Dim inner = radius * 1.25F
+            Dim outer = radius * 2.0F
+            Dim innerSq = inner * inner
+            Dim outerSq = outer * outer
+
+            Dim icx = CInt(Math.Round(cx))
+            Dim icy = CInt(Math.Round(cy))
+            Dim reach = CInt(Math.Ceiling(outer))
+
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
+            Dim count As Integer = 0
+            For yy = Math.Max(0, icy - reach) To Math.Min(source.Height - 1, icy + reach)
+                Dim dy = CSng(yy - icy)
+                Dim dySq = dy * dy
+                For xx = Math.Max(0, icx - reach) To Math.Min(source.Width - 1, icx + reach)
+                    Dim dx = CSng(xx - icx)
+                    Dim dSq = dx * dx + dySq
+                    If dSq >= innerSq AndAlso dSq <= outerSq Then
+                        Dim c = source.GetPixel(xx, yy)
+                        sr += c.Red : sg += c.Green : sb += c.Blue : sa += c.Alpha
+                        count += 1
+                    End If
                 Next
             Next
-            Return result
+            If count = 0 Then Return Nothing
+            Return New SKColor(CByte(sr \ count), CByte(sg \ count), CByte(sb \ count), CByte(sa \ count))
         End Function
 
         Private Shared Function ApplyResize(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
@@ -1504,28 +1656,6 @@ Namespace Services
             Return normalized = "brush" OrElse normalized = "eraser"
         End Function
 
-        Private Shared Function ScaleBrushPoints(pointsText As String, scaleX As Single, scaleY As Single) As String
-            If String.IsNullOrWhiteSpace(pointsText) Then Return pointsText
-
-            Dim strokes As New List(Of String)()
-            For Each strokeText In pointsText.Split(";"c)
-                Dim points As New List(Of String)()
-                For Each token In strokeText.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
-                    Dim parts = token.Split(","c)
-                    If parts.Length <> 2 Then Continue For
-                    Dim x As Single
-                    Dim y As Single
-                    If Single.TryParse(parts(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, x) AndAlso
-                       Single.TryParse(parts(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, y) Then
-                        points.Add($"{(x * scaleX).ToString(Globalization.CultureInfo.InvariantCulture)},{(y * scaleY).ToString(Globalization.CultureInfo.InvariantCulture)}")
-                    End If
-                Next
-                If points.Count > 0 Then strokes.Add(String.Join(" ", points))
-            Next
-
-            Return String.Join(";", strokes)
-        End Function
-
         Private Shared Function ScaleAnnotationForSource(annotation As ImageAnnotation, scaleX As Single, scaleY As Single) As ImageAnnotation
             If annotation Is Nothing Then Return Nothing
             If Math.Abs(scaleX - 1.0F) < 0.0001F AndAlso Math.Abs(scaleY - 1.0F) < 0.0001F Then Return annotation
@@ -1539,7 +1669,7 @@ Namespace Services
             scaled.FontSizePixels *= uniformScale
             scaled.StrokeWidth *= uniformScale
             If IsPaintKind(scaled.Kind) Then
-                scaled.Text = ScaleBrushPoints(scaled.Text, scaleX, scaleY)
+                scaled.Strokes = scaled.Strokes.Select(Function(s) s.Scale(scaleX, scaleY)).ToList()
             End If
             Return scaled
         End Function
@@ -1570,7 +1700,7 @@ Namespace Services
                         Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
                         Dim strokeWidth = Math.Max(1.0F, Clamp(renderAnnotation.StrokeWidth, 1, Math.Max(source.Width, source.Height)))
                         Dim isEraser = annotation.Kind.Trim().ToLowerInvariant() = "eraser"
-                        DrawBrushStroke(paintCanvas, renderAnnotation.Text, source.Width, source.Height, stroke, strokeWidth, renderAnnotation.HardnessPercent, isEraser)
+                        DrawBrushStroke(paintCanvas, renderAnnotation.Strokes, source.Width, source.Height, stroke, strokeWidth, renderAnnotation.HardnessPercent, isEraser)
                     Next
                 End Using
             End If
@@ -2270,8 +2400,8 @@ Namespace Services
         ''' gesammelt, statt für jeden eine eigene Ebene anzulegen) sind im Punktestring per ";"
         ''' getrennt und werden hier als eigenständige Teilpfade (je ein eigenes MoveTo) gezeichnet -
         ''' eine einzige durchgehende Linie würde sie sonst fälschlich miteinander verbinden.
-        Private Shared Sub DrawBrushStroke(canvas As SKCanvas, pointsText As String, width As Integer, height As Integer, stroke As SKColor, strokeWidth As Single, hardnessPercent As Single, isEraser As Boolean)
-            If String.IsNullOrWhiteSpace(pointsText) Then Return
+        Private Shared Sub DrawBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, stroke As SKColor, strokeWidth As Single, hardnessPercent As Single, isEraser As Boolean)
+            If strokes Is Nothing Then Return
 
             Dim resolvedStrokeWidth = Math.Max(1.0F, strokeWidth)
             Dim hardness = Clamp(hardnessPercent, 0, 100) / 100.0F
@@ -2288,24 +2418,18 @@ Namespace Services
                 If isEraser Then paint.BlendMode = SKBlendMode.Clear
                 If blurSigma > 0.05F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, blurSigma)
 
-                For Each strokeText In pointsText.Split(";"c)
-                    Dim points As New List(Of SKPoint)()
-                    For Each token In strokeText.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
-                        Dim parts = token.Split(","c)
-                        If parts.Length <> 2 Then Continue For
-                        Dim x As Single
-                        Dim y As Single
-                        If Single.TryParse(parts(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, x) AndAlso
-                           Single.TryParse(parts(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, y) Then
-                            points.Add(New SKPoint(Clamp(x, 0, width), Clamp(y, 0, height)))
-                        End If
-                    Next
-                    If points.Count < 2 Then Continue For
+                For Each brushStroke In strokes
+                    If brushStroke Is Nothing OrElse brushStroke.Points.Count < 2 Then Continue For
 
                     Using path = New SKPath()
-                        path.MoveTo(points(0))
-                        For i As Integer = 1 To points.Count - 1
-                            path.LineTo(points(i))
+                        For i As Integer = 0 To brushStroke.Points.Count - 1
+                            Dim p = brushStroke.Points(i)
+                            Dim target = New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height))
+                            If i = 0 Then
+                                path.MoveTo(target)
+                            Else
+                                path.LineTo(target)
+                            End If
                         Next
                         canvas.DrawPath(path, paint)
                     End Using

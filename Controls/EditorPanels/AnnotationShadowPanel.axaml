@@ -3,20 +3,30 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.AnnotationShadowPanel">
     <Expander Header="Schatten" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/shadow.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                </StackPanel>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
             <CheckBox Content="Aktiv" IsChecked="{Binding AnnotationShadowEnabled}"
-                      FontSize="11" />
+                      FontSize="{DynamicResource FP.Font.Small}" />
             <StackPanel Spacing="2" IsVisible="{Binding AnnotationShadowEnabled}">
                 <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
                     <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:ColorPickerButton Grid.Column="1"
                                              SelectedColor="{Binding AnnotationShadowColorValue, Mode=TwoWay}" />
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Lichtwinkel"
                                Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
                                        DefaultValue="225"
                                        Value="{Binding AnnotationShadowLightAngle}" Margin="0,0" />
@@ -28,7 +38,7 @@
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Versatz X"
                                Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        DefaultValue="2"
                                        Value="{Binding AnnotationShadowOffsetX}" Margin="0,0" />
@@ -40,7 +50,7 @@
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Versatz Y"
                                Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        DefaultValue="2"
                                        Value="{Binding AnnotationShadowOffsetY}" Margin="0,0" />
@@ -52,7 +62,7 @@
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Weichzeichnen"
                                Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="6"
                                        Value="{Binding AnnotationShadowBlur}" Margin="0,0" />
@@ -63,7 +73,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="100"
                                        Value="{Binding AnnotationShadowStrength}" Margin="0,0" />
@@ -74,7 +84,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="25" Maximum="300"
                                        DefaultValue="100"
                                        Value="{Binding AnnotationShadowSize}" Margin="0,0" />
@@ -84,11 +94,11 @@
                                              FormatString="F0" />
                 </Grid>
                 <CheckBox Content="Abgerundet" IsChecked="{Binding AnnotationShadowRounded}"
-                          Margin="0,4,0,0" FontSize="11" />
+                          Margin="0,4,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
                       IsVisible="{Binding AnnotationShadowRounded}">
                     <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="20"
                                        Value="{Binding AnnotationShadowCornerRadius}"

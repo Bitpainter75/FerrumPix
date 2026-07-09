@@ -3,20 +3,30 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.AnnotationGlowPanel">
     <Expander Header="Glühen" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                </StackPanel>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
             <CheckBox Content="Aktiv" IsChecked="{Binding AnnotationGlowEnabled}"
-                      FontSize="11" />
+                      FontSize="{DynamicResource FP.Font.Small}" />
             <StackPanel Spacing="2" IsVisible="{Binding AnnotationGlowEnabled}">
                 <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
                     <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:ColorPickerButton Grid.Column="1"
                                              SelectedColor="{Binding AnnotationGlowColorValue, Mode=TwoWay}" />
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Größe"
                                Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="10"
                                        Value="{Binding AnnotationGlowBlur}" Margin="0,0" />
@@ -27,7 +37,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="100"
                                        Value="{Binding AnnotationGlowStrength}" Margin="0,0" />

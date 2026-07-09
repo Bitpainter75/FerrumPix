@@ -6,6 +6,7 @@ Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Text.Json
 Imports System.Threading
+Imports System.Threading.Tasks
 Imports Avalonia.Media.Imaging
 Imports SkiaSharp
 
@@ -69,6 +70,11 @@ Namespace Services
         ' Per-session debounce: each cache scope is registered in the root index at most once
         Private Shared ReadOnly _registeredFolderIds As New ConcurrentDictionary(Of String, Boolean)()
 
+        ' Der Wurzel-Index wird aus mehreren Threads fortgeschrieben: Vorschaubild-Threads melden neue
+        ' Ordner an, während GetFolderCaches im Hintergrund die Kennzahlen nachträgt. Jedes
+        ' Lesen-Ändern-Schreiben läuft deshalb unter diesem Schloss.
+        Private Shared ReadOnly _rootIndexLock As New Object()
+
         Private Class ThumbnailCacheRootIndex
             Public Property Folders As New List(Of ThumbnailCacheFolderIndexEntry)()
         End Class
@@ -77,6 +83,14 @@ Namespace Services
             Public Property Id As String
             Public Property FolderPath As String
             Public Property LastSeenUtc As DateTime
+
+            ''' Zwischengespeicherte Kennzahlen des Cache-Ordners. StatsStampUtc hält den
+            ''' Änderungszeitpunkt des Ordners fest, zu dem sie ermittelt wurden: solange er sich nicht
+            ''' bewegt hat, wurde keine Datei angelegt oder gelöscht und die Zahlen gelten weiter.
+            ''' Ein einziger Verzeichnis-Stat ersetzt so das Abklappern jeder Vorschaudatei.
+            Public Property ThumbnailCount As Integer = -1
+            Public Property SizeBytes As Long = 0
+            Public Property StatsStampUtc As DateTime = DateTime.MinValue
         End Class
 
         Private Shared Sub GetCachedSettings(ByRef enabled As Boolean, ByRef quality As Integer)
@@ -244,54 +258,85 @@ Namespace Services
             Return DeleteFolderCacheById("searchlist_" & searchListId)
         End Function
 
+        ''' <summary>
+        ''' Kennzahlen aller Cache-Ordner. Gezählt wird nur, wenn sich ein Ordner seit der letzten
+        ''' Erhebung verändert hat - erkennbar an seinem Änderungszeitpunkt, den das Dateisystem
+        ''' fortschreibt, sobald ein Eintrag hinzukommt oder verschwindet. Im Normalfall kostet die
+        ''' Abfrage damit einen Stat je Ordner statt einen je Vorschaubild.
+        '''
+        ''' Läuft potenziell lange (beim ersten Mal oder nach vielen neuen Vorschaubildern) und gehört
+        ''' deshalb nicht auf den UI-Thread - siehe GetFolderCachesAsync.
+        ''' </summary>
         Public Shared Function GetFolderCaches() As List(Of ThumbnailCacheFolderInfo)
             Dim result As New List(Of ThumbnailCacheFolderInfo)()
             If Not Directory.Exists(CacheRoot) Then Return result
 
-            ' Build root index from registered folders + any unregistered dirs on disk
+            ' Bekannte Ordner aus dem Index, dazu alle Verzeichnisse auf der Platte, die (noch) nicht
+            ' darin stehen. Der Index wird hier nur gelesen; geschrieben wird erst am Ende, gesammelt.
             Dim rootIndex = LoadRootIndex()
-            Dim knownIds = New HashSet(Of String)(rootIndex.Folders.Select(Function(f) f.Id), StringComparer.OrdinalIgnoreCase)
+            Dim entries = rootIndex.Folders.
+                Where(Function(f) f IsNot Nothing AndAlso Not String.IsNullOrEmpty(f.Id)).
+                ToDictionary(Function(f) f.Id, Function(f) f, StringComparer.OrdinalIgnoreCase)
+
             For Each folderCachePath In Directory.GetDirectories(CacheRoot)
                 Dim folderId = IO.Path.GetFileName(folderCachePath)
-                If Not knownIds.Contains(folderId) Then
-                    rootIndex.Folders.Add(New ThumbnailCacheFolderIndexEntry With {
+                If Not entries.ContainsKey(folderId) Then
+                    entries(folderId) = New ThumbnailCacheFolderIndexEntry With {
                         .Id = folderId,
                         .FolderPath = "",
                         .LastSeenUtc = DateTime.UtcNow
-                    })
+                    }
                 End If
             Next
 
-            For Each folder In rootIndex.Folders
+            Dim freshStats As New Dictionary(Of String, (Count As Integer, SizeBytes As Long, StampUtc As DateTime))(StringComparer.OrdinalIgnoreCase)
+
+            For Each folder In entries.Values
                 Try
-                    If String.IsNullOrEmpty(folder.Id) Then Continue For
                     Dim folderCachePath = IO.Path.Combine(CacheRoot, folder.Id)
                     If Not Directory.Exists(folderCachePath) Then Continue For
 
-                    Dim jpgs = Directory.GetFiles(folderCachePath, "*.jpg", SearchOption.TopDirectoryOnly)
-                    Dim sizeBytes = jpgs.Sum(Function(p)
-                                                 Try
-                                                     Return New FileInfo(p).Length
-                                                 Catch
-                                                     Return 0L
-                                                 End Try
-                                             End Function)
+                    Dim stamp = Directory.GetLastWriteTimeUtc(folderCachePath)
+                    If folder.ThumbnailCount < 0 OrElse folder.StatsStampUtc <> stamp Then
+                        Dim count = 0
+                        Dim sizeBytes = 0L
+                        ' EnumerateFiles statt GetFiles + New FileInfo(pfad): die zurückgegebenen
+                        ' FileInfo-Objekte sind bereits aus dem Verzeichniseintrag befüllt, die Größe
+                        ' kostet also keinen zweiten Zugriff je Datei.
+                        For Each file In New DirectoryInfo(folderCachePath).EnumerateFiles("*.jpg", SearchOption.TopDirectoryOnly)
+                            count += 1
+                            Try
+                                sizeBytes += file.Length
+                            Catch
+                            End Try
+                        Next
+                        folder.ThumbnailCount = count
+                        folder.SizeBytes = sizeBytes
+                        folder.StatsStampUtc = stamp
+                        freshStats(folder.Id) = (count, sizeBytes, stamp)
+                    End If
 
                     result.Add(New ThumbnailCacheFolderInfo With {
                         .CacheId = folder.Id,
                         .FolderPath = folder.FolderPath,
-                        .ThumbnailCount = jpgs.Length,
-                        .SizeBytes = sizeBytes,
+                        .ThumbnailCount = folder.ThumbnailCount,
+                        .SizeBytes = folder.SizeBytes,
                         .Exists = Not String.IsNullOrEmpty(folder.FolderPath) AndAlso Directory.Exists(folder.FolderPath)
                     })
                 Catch
                 End Try
             Next
 
+            MergeFolderStats(freshStats)
+
             Return result.
                 OrderByDescending(Function(i) i.SizeBytes).
                 ThenBy(Function(i) i.DisplayName, StringComparer.CurrentCultureIgnoreCase).
                 ToList()
+        End Function
+
+        Public Shared Function GetFolderCachesAsync() As Task(Of List(Of ThumbnailCacheFolderInfo))
+            Return Task.Run(Function() GetFolderCaches())
         End Function
 
         Private Shared Function TryWriteCacheFile(filePath As String, cachePath As String, quality As Integer, Optional isStillWanted As Func(Of Boolean) = Nothing) As Boolean
@@ -375,6 +420,9 @@ Namespace Services
             If SvgPreviewService.IsSupportedSvg(filePath) Then
                 Return SvgPreviewService.ExtractPreview(filePath, CacheWidth)
             End If
+            If IcoPreviewService.IsSupportedIco(filePath) Then
+                Return IcoPreviewService.ExtractPreview(filePath)
+            End If
             If VideoPreviewService.IsSupportedVideo(filePath) Then
                 Return VideoPreviewService.ExtractPreview(filePath, CacheWidth)
             End If
@@ -422,6 +470,11 @@ Namespace Services
                     End Using
                 ElseIf SvgPreviewService.IsSupportedSvg(filePath) Then
                     Using preview = SvgPreviewService.ExtractPreview(filePath, CacheWidth)
+                        cancellationToken.ThrowIfCancellationRequested()
+                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
+                    End Using
+                ElseIf IcoPreviewService.IsSupportedIco(filePath) Then
+                    Using preview = IcoPreviewService.ExtractPreview(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
                     End Using
@@ -507,30 +560,59 @@ Namespace Services
             If String.IsNullOrEmpty(folderId) OrElse String.IsNullOrEmpty(folderPath) Then Return
             Try
                 Directory.CreateDirectory(CacheRoot)
-                Dim rootIndex = LoadRootIndex()
-                Dim entry = rootIndex.Folders.FirstOrDefault(Function(i) String.Equals(i.Id, folderId, StringComparison.OrdinalIgnoreCase))
-                If entry Is Nothing Then
-                    rootIndex.Folders.Add(New ThumbnailCacheFolderIndexEntry With {
-                        .Id = folderId,
-                        .FolderPath = folderPath,
-                        .LastSeenUtc = DateTime.UtcNow
-                    })
-                Else
-                    entry.FolderPath = folderPath
-                    entry.LastSeenUtc = DateTime.UtcNow
-                End If
-                SaveRootIndex(rootIndex)
+                SyncLock _rootIndexLock
+                    Dim rootIndex = LoadRootIndex()
+                    Dim entry = rootIndex.Folders.FirstOrDefault(Function(i) String.Equals(i.Id, folderId, StringComparison.OrdinalIgnoreCase))
+                    If entry Is Nothing Then
+                        rootIndex.Folders.Add(New ThumbnailCacheFolderIndexEntry With {
+                            .Id = folderId,
+                            .FolderPath = folderPath,
+                            .LastSeenUtc = DateTime.UtcNow
+                        })
+                    Else
+                        entry.FolderPath = folderPath
+                        entry.LastSeenUtc = DateTime.UtcNow
+                    End If
+                    SaveRootIndex(rootIndex)
+                End SyncLock
             Catch
             End Try
         End Sub
 
         Private Shared Sub RemoveFolderFromRootIndex(folderId As String)
             Try
-                Dim rootIndex = LoadRootIndex()
-                rootIndex.Folders = rootIndex.Folders.
-                    Where(Function(i) Not String.Equals(i.Id, folderId, StringComparison.OrdinalIgnoreCase)).
-                    ToList()
-                SaveRootIndex(rootIndex)
+                SyncLock _rootIndexLock
+                    Dim rootIndex = LoadRootIndex()
+                    rootIndex.Folders = rootIndex.Folders.
+                        Where(Function(i) Not String.Equals(i.Id, folderId, StringComparison.OrdinalIgnoreCase)).
+                        ToList()
+                    SaveRootIndex(rootIndex)
+                End SyncLock
+            Catch
+            End Try
+        End Sub
+
+        ''' Trägt die frisch gezählten Kennzahlen nach. Bewusst getrennt vom Zählen selbst: der Index
+        ''' wird nur für den kurzen Lesen-Ändern-Schreiben-Abschnitt gesperrt, nicht für den langen
+        ''' Verzeichnisdurchlauf.
+        Private Shared Sub MergeFolderStats(stats As Dictionary(Of String, (Count As Integer, SizeBytes As Long, StampUtc As DateTime)))
+            If stats Is Nothing OrElse stats.Count = 0 Then Return
+            Try
+                Directory.CreateDirectory(CacheRoot)
+                SyncLock _rootIndexLock
+                    Dim rootIndex = LoadRootIndex()
+                    For Each pair In stats
+                        Dim entry = rootIndex.Folders.FirstOrDefault(Function(i) String.Equals(i.Id, pair.Key, StringComparison.OrdinalIgnoreCase))
+                        If entry Is Nothing Then
+                            entry = New ThumbnailCacheFolderIndexEntry With {.Id = pair.Key, .FolderPath = "", .LastSeenUtc = DateTime.UtcNow}
+                            rootIndex.Folders.Add(entry)
+                        End If
+                        entry.ThumbnailCount = pair.Value.Count
+                        entry.SizeBytes = pair.Value.SizeBytes
+                        entry.StatsStampUtc = pair.Value.StampUtc
+                    Next
+                    SaveRootIndex(rootIndex)
+                End SyncLock
             Catch
             End Try
         End Sub
@@ -546,10 +628,15 @@ Namespace Services
             Return New ThumbnailCacheRootIndex()
         End Function
 
+        ''' Erst vollständig danebenschreiben, dann ersetzen: ein Abbruch mitten im Schreiben ließe
+        ''' sonst eine abgeschnittene Indexdatei zurück, die LoadRootIndex verwerfen müsste - womit
+        ''' sämtliche Ordnerzuordnungen verloren wären.
         Private Shared Sub SaveRootIndex(rootIndex As ThumbnailCacheRootIndex)
             Try
                 Directory.CreateDirectory(CacheRoot)
-                File.WriteAllText(RootIndexPath, JsonSerializer.Serialize(rootIndex, JsonOptions), Encoding.UTF8)
+                Dim tempPath = RootIndexPath & ".tmp"
+                File.WriteAllText(tempPath, JsonSerializer.Serialize(rootIndex, JsonOptions), Encoding.UTF8)
+                File.Move(tempPath, RootIndexPath, overwrite:=True)
             Catch
             End Try
         End Sub

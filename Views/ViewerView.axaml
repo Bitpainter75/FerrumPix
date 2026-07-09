@@ -99,15 +99,15 @@
                 <Grid>
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                                 IsVisible="{Binding HasNoMedia}">
-                        <TextBlock Text="Kein Bild geöffnet" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Wähle ein Bild aus der Galerie" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Kein Bild geöffnet" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Wähle ein Bild aus der Galerie" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                                 IsVisible="{Binding ShowVideoUnavailableNotice}">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
-                        <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
-                        <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <ScrollViewer Name="ImageScrollViewer"
@@ -158,7 +158,7 @@
                                         <TextBlock Name="CropSelectionSizeBadgeText"
                                                    Text=""
                                                    Foreground="White"
-                                                   FontSize="11"
+                                                   FontSize="{DynamicResource FP.Font.Small}"
                                                    FontWeight="SemiBold"/>
                                     </Border>
                                 </Border>
@@ -248,20 +248,20 @@
 
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding CurrentFileName}" FontSize="12" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                                 Command="{Binding ZoomOutCommand}" ToolTip.Tip="Verkleinern">
-                            <TextBlock Text="−" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
+                            <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                         </Button>
                         <icons:RoundSlider Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
                                             Value="{Binding ZoomSliderValue, Mode=TwoWay}" VerticalAlignment="Center"/>
                         <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                                 Command="{Binding ZoomInCommand}" ToolTip.Tip="Vergrößern">
-                            <TextBlock Text="+" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
+                            <TextBlock Text="+" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                         </Button>
                         <Button Classes="ghost" Height="26" Padding="8,2" Margin="12,0,0,0" Focusable="False"
                                 Classes.active="{Binding IsZoomActualActive}"
@@ -281,7 +281,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                             <TextBlock Text="{Binding MousePositionText}" Margin="0,0,20,0"
                                        IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
-                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="12" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center" 
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="1">
@@ -372,8 +372,8 @@
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                         IsVisible="{Binding ShowVideoUnavailableNotice}">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
-                <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
-                <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+                <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
+                <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
             </StackPanel>
 
         </Grid>
@@ -397,8 +397,8 @@
             <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                         IsVisible="{Binding ShowVideoUnavailableNotice}">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
-                <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
-                <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+                <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
+                <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
             </StackPanel>
             <Border Grid.Row="1"
                     IsVisible="{Binding IsVideoPlaybackAvailable}"
@@ -418,7 +418,7 @@
                     <icons:RoundSlider Grid.Column="1" Name="VideoSeekSlider" Margin="10,0"
                                        Minimum="0" Maximum="{Binding VideoDurationSeconds}"
                                        Value="{Binding VideoPositionSeconds, Mode=OneWay}"/>
-                    <TextBlock Grid.Column="2" Text="{Binding VideoTimeText}" Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Grid.Column="2" Text="{Binding VideoTimeText}" Foreground="White" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <Button Grid.Column="3" Classes="icon-btn" Width="32" Height="32"
                             Command="{Binding ToggleVideoMuteCommand}"
                             ToolTip.Tip="Stumm">

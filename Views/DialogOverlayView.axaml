@@ -18,7 +18,7 @@
                 Padding="22">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
                 <TextBlock Text="{Binding DialogTitle}"
-                           FontSize="18"
+                           FontSize="{DynamicResource FP.Font.Heading}"
                            FontWeight="SemiBold"/>
                 <TextBlock Grid.Row="1"
                            Text="{Binding DialogMessage}"

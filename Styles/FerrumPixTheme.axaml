@@ -3,6 +3,28 @@
         xmlns:icons="clr-namespace:FerrumPix.Controls">
 
     <Styles.Resources>
+        <FontFamily x:Key="FP.Font.Family">Segoe UI, Cantarell, DejaVu Sans, sans-serif</FontFamily>
+
+        <!-- Schriftgrößen für Text. Eine App-weite Vergrößerung ist eine Änderung an diesen neun
+             Zahlen - vorher standen sie 418-mal in den AXAML-Dateien. -->
+        <x:Double x:Key="FP.Font.Label">9</x:Double>
+        <x:Double x:Key="FP.Font.Caption">10</x:Double>
+        <x:Double x:Key="FP.Font.Small">11</x:Double>
+        <x:Double x:Key="FP.Font.Body">12</x:Double>
+        <x:Double x:Key="FP.Font.ItemTitle">13</x:Double>
+        <x:Double x:Key="FP.Font.Subtitle">14</x:Double>
+        <x:Double x:Key="FP.Font.Title">15</x:Double>
+        <x:Double x:Key="FP.Font.Heading">18</x:Double>
+        <x:Double x:Key="FP.Font.Display">24</x:Double>
+
+        <!-- Symbolzeichen (×, −, +, ↑, ↓, □, ⧉) in Fenster- und Schließen-Schaltflächen. Sie sind
+             Grafik, keine Typografie, und dürfen bei einer Schriftvergrößerung nicht mitwachsen -
+             sonst sprengen sie ihre Schaltflächen. -->
+        <x:Double x:Key="FP.Glyph.Small">10</x:Double>
+        <x:Double x:Key="FP.Glyph.Medium">13</x:Double>
+        <x:Double x:Key="FP.Glyph.Large">14</x:Double>
+        <x:Double x:Key="FP.Glyph.XLarge">16</x:Double>
+
         <SolidColorBrush x:Key="FP.Bg.Root" Color="#0B0E11"/>
         <SolidColorBrush x:Key="FP.Bg.Dark" Color="#0E1216"/>
         <SolidColorBrush x:Key="FP.Bg.Panel" Color="#11161B"/>
@@ -80,31 +102,31 @@
     <Style Selector="Window">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Root}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
-        <Setter Property="FontFamily" Value="Segoe UI, Cantarell, DejaVu Sans, sans-serif"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FP.Font.Family}"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
     </Style>
 
     <Style Selector="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
     </Style>
     <Style Selector="TextBlock.secondary">
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
-        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Small}"/>
     </Style>
     <Style Selector="TextBlock.muted">
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>
-        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Caption}"/>
     </Style>
     <Style Selector="TextBlock.section-header">
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>
-        <Setter Property="FontSize" Value="9"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Label}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Margin" Value="10,10,10,4"/>
         <Setter Property="LetterSpacing" Value="1.3"/>
     </Style>
     <Style Selector="TextBlock.brand">
-        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Heading}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
     </Style>
@@ -123,7 +145,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="14,8"/>
         <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -463,6 +485,12 @@
     <Style Selector="Button.tool-btn-row.active icons|SvgIcon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- Nach dem Platzieren wird PendingInsertKind geleert, der Knopf verliert also seinen
+         Aktiv-Rahmen. Solange das erzeugte Objekt ausgewählt ist, bleibt sein Werkzeug wenigstens am
+         eingefärbten Symbol erkennbar - dasselbe Signal wie bei den Knöpfen im Einfügen-Panel. -->
+    <Style Selector="Button.tool-btn-row.selected-kind icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
     <Style Selector="Button.winchr">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -591,7 +619,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="3"/>
         <Setter Property="Padding" Value="2,0"/>
-        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Caption}"/>
         <Setter Property="MinHeight" Value="18"/>
         <Setter Property="Height" Value="18"/>
         <Setter Property="Width" Value="28"/>
@@ -611,7 +639,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="3"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Caption}"/>
         <Setter Property="MinHeight" Value="24"/>
         <Setter Property="Height" Value="24"/>
         <Setter Property="Width" Value="44"/>
@@ -819,7 +847,7 @@
         <Setter Property="MinHeight" Value="34"/>
         <Setter Property="MinWidth" Value="208"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
     </Style>
     <Style Selector="MenuItem:pointerover">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
@@ -859,7 +887,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="8,4"/>
         <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Small}"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="MaxWidth" Value="260"/>
     </Style>
@@ -1145,7 +1173,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="10,6"/>
         <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
         <Setter Property="MinHeight" Value="0"/>
     </Style>
     <Style Selector="ComboBox:pointerover /template/ Border#Background">
@@ -1181,7 +1209,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
@@ -1192,7 +1220,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="Padding" Value="10,6"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -1372,7 +1400,7 @@
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="14,5,10,2"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
         <Setter Property="Template">
             <ControlTemplate>
@@ -1409,7 +1437,7 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Arrow"/>
     </Style>

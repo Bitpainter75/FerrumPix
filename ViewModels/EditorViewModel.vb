@@ -93,6 +93,17 @@ Namespace ViewModels
         Private _brushOpacity As Double = 100
         Private _isEraserMode As Boolean = False
         Private ReadOnly _retouchSpots As New List(Of RetouchSpot)()
+        ' Klonquelle in Prozent der Bildkante; negativ = nicht gesetzt. Der Versatz zwischen Quelle und
+        ' erstem gesetzten Punkt wird gemerkt und für den restlichen Zug beibehalten ("aligned"), damit
+        ' beim Ziehen ein zusammenhängender Bildausschnitt herüberwandert statt derselbe Fleck.
+        Private _cloneSourceXPercent As Double = -1
+        Private _cloneSourceYPercent As Double = -1
+        Private _cloneOffsetXPixels As Double = 0
+        Private _cloneOffsetYPixels As Double = 0
+        Private _hasCloneOffset As Boolean = False
+        ' Beide Mal-Modi setzen dieselben RetouchSpots; der Stempel hängt ihnen eine Klonquelle an,
+        ' das Verwischen nicht. Deshalb ein Schalter statt eines zweiten EditorTool-Werts.
+        Private _isCloneMode As Boolean = False
         Private _filterPreset As String = "Keine"
         Private _filterStrength As Double = 100
         Private _lutPath As String = ""
@@ -689,6 +700,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
             Me.RaisePropertyChanged(NameOf(ShowFontControls))
             Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
+            Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
+            Me.RaisePropertyChanged(NameOf(ShowStrokeColorPicker))
             Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
             Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
             Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
@@ -926,7 +939,7 @@ Namespace ViewModels
                 End If
                 _selectedAnnotationIndex = clamped
                 If clamped >= 0 Then
-                    PendingInsertKind = ""
+                    PendingInsertKind = PlacementKindForAnnotation(_annotations(clamped))
                     Dim targetTool = AnnotationKindToTool(_annotations(clamped).Kind)
                     If targetTool <> _currentTool Then
                         _overlayNotifySuppressDepth += 1
@@ -946,12 +959,16 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
                 Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationKind))
+                Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
+                Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
+                Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
+                Me.RaisePropertyChanged(NameOf(ShowStrokeColorPicker))
                 Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
                 Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
@@ -988,11 +1005,16 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(v) Then SeedAnnotationDefaultsForKind(v)
                 Me.RaisePropertyChanged(NameOf(PendingInsertKind))
                 Me.RaisePropertyChanged(NameOf(HasPendingInsertKind))
+                ' Der Objekttyp benennt beim Ebenen-Werkzeug den ersten Tab (siehe InsertKindLabel).
+                Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
+                Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
+                Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
+                Me.RaisePropertyChanged(NameOf(ShowStrokeColorPicker))
                 Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
                 Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
@@ -1062,6 +1084,20 @@ Namespace ViewModels
         Public ReadOnly Property ShowGradientFillControls As Boolean
             Get
                 Return ShowFillColorControls AndAlso Not String.Equals(_annotationFillKind, "Solid", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' Beim QR-Code stehen Hintergrund (Füllfarbe) und Vordergrund (Konturfarbe) im Farbmischer.
+        ''' Die Farbfelder im Eigenschaften-Panel wären dann eine zweite Stelle für dieselben Werte.
+        Public ReadOnly Property ShowFillColorPicker As Boolean
+            Get
+                Return ShowFillColorControls AndAlso EffectiveAnnotationKind <> "QR"
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowStrokeColorPicker As Boolean
+            Get
+                Return EffectiveAnnotationKind <> "QR"
             End Get
         End Property
 
@@ -1215,18 +1251,21 @@ Namespace ViewModels
 
         Public ReadOnly Property SelectedPaintMode As String
             Get
-                If _currentTool = EditorTool.Retouch Then Return "Blur"
+                If _currentTool = EditorTool.Retouch Then Return If(_isCloneMode, "Clone", "Blur")
                 If _currentTool = EditorTool.Draw AndAlso _isEraserMode Then Return "Eraser"
                 If _currentTool = EditorTool.Draw Then Return "Brush"
                 Return ""
             End Get
         End Property
 
-        Public ReadOnly Property IsPaintToolSelected As Boolean
+        ''' True, wenn das Stempel-Werkzeug aktiv ist (klont von einer Quelle) statt des
+        ''' Verwischen-Werkzeugs (mittelt die Umgebung).
+        Public ReadOnly Property IsCloneMode As Boolean
             Get
-                Return _currentTool = EditorTool.Draw OrElse _currentTool = EditorTool.Retouch
+                Return _currentTool = EditorTool.Retouch AndAlso _isCloneMode
             End Get
         End Property
+
 
         Public ReadOnly Property IsGeometryToolSelected As Boolean
             Get
@@ -1418,41 +1457,79 @@ Namespace ViewModels
                     ShowBeforeImage = True
                 End If
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
+                Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 RaiseToolContextProperties()
                 RequestOverlayStateNotify()
             End Set
         End Property
 
+        ''' <summary>
+        ''' Beschriftet den ersten Tab des rechten Panels. Die Namen sind wörtlich die der
+        ''' Werkzeugleiste - dort steht "Details" für EditorTool.Effects und "Effekte und Rahmen" für
+        ''' EditorTool.Frame, nicht umgekehrt.
+        ''' </summary>
         Public ReadOnly Property CurrentToolLabel As String
             Get
-                Dim selectedKind = NormalizeAnnotationKind(SelectedAnnotationKind)
                 Select Case _currentTool
                     Case EditorTool.Crop : Return "Zuschneiden"
                     Case EditorTool.Resize : Return "Bildgröße"
                     Case EditorTool.Rotate : Return "Drehen"
                     Case EditorTool.Adjust : Return "Anpassen"
-                    Case EditorTool.Filters : Return "Filter"
-                    Case EditorTool.Effects : Return "Effekte"
                     Case EditorTool.Color : Return "Farbe"
+                    Case EditorTool.Effects : Return "Details"
+                    Case EditorTool.Frame : Return "Effekte und Rahmen"
+                    Case EditorTool.Filters : Return "Filter"
                     Case EditorTool.Transform : Return "Transformieren"
-                    Case EditorTool.Retouch : Return "Verwischen"
-                    Case EditorTool.Text
-                        If selectedKind = "Svg" OrElse selectedKind = "Symbol" OrElse selectedKind = "Rectangle" OrElse
-                           selectedKind = "Ellipse" OrElse selectedKind = "Square" OrElse selectedKind = "Triangle" OrElse
-                           selectedKind = "Cone" OrElse selectedKind = "Pyramid" OrElse selectedKind = "Trapezoid" OrElse
-                           selectedKind = "Diamond" OrElse selectedKind = "Spiral" OrElse selectedKind = "Droplet" OrElse
-                           selectedKind = "SpeechBubble" OrElse selectedKind = "Line" OrElse selectedKind = "Arrow" Then
-                            Return "Formen und Symbole"
-                        End If
-                        Return "Text und Bild"
-                    Case EditorTool.Draw : Return "Malen"
-                    Case EditorTool.Geometry : Return "Formen und Symbole"
-                    Case EditorTool.Insert : Return "Formen und Symbole"
                     Case EditorTool.Selection : Return "Auswahl"
+                    Case EditorTool.Retouch : Return If(_isCloneMode, "Stempel", "Verwischen")
+                    Case EditorTool.Draw : Return If(_isEraserMode, "Radiergummi", "Pinsel")
+                    Case EditorTool.Geometry, EditorTool.Insert : Return "Formen und Symbole"
+                    Case EditorTool.Text : Return InsertKindLabel()
                     Case Else : Return "Werkzeug"
                 End Select
             End Get
         End Property
+
+        ''' <summary>Das Symbol des aktiven Werkzeugs, damit die Gruppenüberschrift im rechten Panel
+        ''' dasselbe zeigt wie sein Eintrag in der Werkzeugleiste.</summary>
+        Public ReadOnly Property CurrentToolIconSource As String
+            Get
+                Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
+                Select Case _currentTool
+                    Case EditorTool.Selection : Return base & "rectangle.svg"
+                    Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", "adjustments-spark.svg")
+                    Case EditorTool.Draw : Return base & If(_isEraserMode, "eraser.svg", "brush.svg")
+                    Case EditorTool.Geometry, EditorTool.Insert : Return base & "cube.svg"
+                    Case EditorTool.Text
+                        Select Case NormalizeAnnotationKind(If(String.IsNullOrEmpty(_pendingInsertKind), SelectedAnnotationKind, _pendingInsertKind))
+                            Case "Image" : Return base & "photo.svg"
+                            Case "QR" : Return base & "qrcode.svg"
+                            Case "Watermark" : Return base & "copyright.svg"
+                            Case Else : Return base & "text-size.svg"
+                        End Select
+                    Case Else : Return base & "square-rounded-plus.svg"
+                End Select
+            End Get
+        End Property
+
+        ''' Das Ebenen-Werkzeug bedient fünf Einträge der Werkzeugleiste. Welcher gemeint ist, sagt der
+        ''' scharfgestellte Objekttyp - und nach dem Platzieren die Art des ausgewählten Objekts.
+        Private Function InsertKindLabel() As String
+            ' Vor dem Normalisieren prüfen: NormalizeAnnotationKind("") liefert "Text", was hier
+            ' fälschlich das Text-Werkzeug anzeigen würde, obwohl gar nichts gewählt ist.
+            Dim raw = If(String.IsNullOrEmpty(_pendingInsertKind), SelectedAnnotationKind, _pendingInsertKind)
+            If String.IsNullOrWhiteSpace(raw) Then Return "Einfügen"
+
+            Select Case NormalizeAnnotationKind(raw)
+                Case "Image" : Return "Bild"
+                Case "QR" : Return "QR-Code"
+                Case "Watermark" : Return "Wasserzeichen"
+                Case "Text" : Return "Text"
+                Case Else
+                    ' Formen, Symbole, Linien und Pfeile werden ebenfalls über dieses Werkzeug gesetzt.
+                    Return "Formen und Symbole"
+            End Select
+        End Function
 
         Public ReadOnly Property ShowHistogramAdjustments As Boolean
             Get
@@ -1526,11 +1603,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property ShowTextInsertControls As Boolean
-            Get
-                Return _currentTool = EditorTool.Text
-            End Get
-        End Property
 
         Public ReadOnly Property ShowGeometryControls As Boolean
             Get
@@ -2252,6 +2324,73 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public ReadOnly Property HasCloneSource As Boolean
+            Get
+                Return _cloneSourceXPercent >= 0 AndAlso _cloneSourceYPercent >= 0
+            End Get
+        End Property
+
+        Public ReadOnly Property CloneSourceXPercent As Double
+            Get
+                Return _cloneSourceXPercent
+            End Get
+        End Property
+
+        Public ReadOnly Property CloneSourceYPercent As Double
+            Get
+                Return _cloneSourceYPercent
+            End Get
+        End Property
+
+        Public ReadOnly Property RetouchHintText As String
+            Get
+                If Not IsCloneMode Then Return "Mittelt die Umgebung des Ziels und blendet sie weich ein."
+                If HasCloneSource Then Return "Quelle gesetzt - Ziehen kopiert die Textur von dort."
+                Return "Alt+Klick ins Bild setzt zuerst die Quelle, aus der kopiert wird."
+            End Get
+        End Property
+
+        ''' Setzt den Punkt, von dem geklont wird (Alt+Klick). Der gemerkte Versatz wird verworfen und
+        ''' beim nächsten gesetzten Punkt neu bestimmt.
+        Public Sub SetCloneSource(xPercent As Double, yPercent As Double)
+            _cloneSourceXPercent = Math.Max(0, Math.Min(100, xPercent))
+            _cloneSourceYPercent = Math.Max(0, Math.Min(100, yPercent))
+            _hasCloneOffset = False
+            RaiseCloneSourceProperties()
+        End Sub
+
+        Public Sub ClearCloneSource()
+            If Not HasCloneSource Then Return
+            _cloneSourceXPercent = -1
+            _cloneSourceYPercent = -1
+            _hasCloneOffset = False
+            RaiseCloneSourceProperties()
+        End Sub
+
+        ''' Liefert die Bildstelle in Prozent, aus der ein Retusche-Punkt an (xPercent, yPercent)
+        ''' kopieren würde - solange noch kein Versatz feststeht, ist das der gesetzte Quellpunkt
+        ''' selbst. IsValid ist False, wenn keine Quelle gesetzt ist oder die Abtaststelle aus dem
+        ''' Bild gewandert ist; dann greift der Ringmittelwert.
+        Public Function GetCloneSamplePercent(xPercent As Double, yPercent As Double) As (X As Double, Y As Double, IsValid As Boolean)
+            If Not IsCloneMode OrElse Not HasCloneSource Then Return (0, 0, False)
+            If Not _hasCloneOffset Then Return (_cloneSourceXPercent, _cloneSourceYPercent, True)
+
+            Dim baseWidth = Math.Max(1, GetBaseWidth())
+            Dim baseHeight = Math.Max(1, GetBaseHeight())
+            Dim sourceX = PercentXToPixels(xPercent) - _cloneOffsetXPixels
+            Dim sourceY = PercentYToPixels(yPercent) - _cloneOffsetYPixels
+            If sourceX < 0 OrElse sourceY < 0 OrElse sourceX > baseWidth OrElse sourceY > baseHeight Then Return (0, 0, False)
+
+            Return (sourceX / baseWidth * 100.0, sourceY / baseHeight * 100.0, True)
+        End Function
+
+        Private Sub RaiseCloneSourceProperties()
+            Me.RaisePropertyChanged(NameOf(HasCloneSource))
+            Me.RaisePropertyChanged(NameOf(CloneSourceXPercent))
+            Me.RaisePropertyChanged(NameOf(CloneSourceYPercent))
+            Me.RaisePropertyChanged(NameOf(RetouchHintText))
+        End Sub
+
         Public Property BrushSize As Double
             Get
                 Return _brushSize
@@ -2291,6 +2430,8 @@ Namespace ViewModels
                 ' Umschalten zwischen Pinsel und Radiergummi beendet die laufende Mal-Sitzung (siehe
                 ' AddBrushStroke) - der nächste Strich landet auf einer neuen Ebene.
                 _activeStrokeAnnotation = Nothing
+                Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
+                Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
                 Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
                 Me.RaisePropertyChanged(NameOf(IsSmudgePaintMode))
@@ -2857,6 +2998,18 @@ Namespace ViewModels
                 Return _annotationWidthPercent
             End Get
             Set(value As Double)
+                If EffectiveAnnotationKind = "QR" Then
+                    Dim baseWidth = GetBaseWidth()
+                    Dim baseHeight = GetBaseHeight()
+                    If baseWidth > 0 AndAlso baseHeight > 0 Then
+                        Dim sizePixels = Math.Max(1.0, baseWidth * Math.Max(5, Math.Min(90, value)) / 100.0)
+                        _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / baseWidth * 100.0))
+                        _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / baseHeight * 100.0))
+                        RaiseAnnotationSizeChanged()
+                        SyncSelectedAnnotation()
+                        Return
+                    End If
+                End If
                 Me.RaiseAndSetIfChanged(_annotationWidthPercent, Math.Max(5, Math.Min(90, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMinimum))
@@ -2871,6 +3024,18 @@ Namespace ViewModels
                 Return _annotationHeightPercent
             End Get
             Set(value As Double)
+                If EffectiveAnnotationKind = "QR" Then
+                    Dim baseWidth = GetBaseWidth()
+                    Dim baseHeight = GetBaseHeight()
+                    If baseWidth > 0 AndAlso baseHeight > 0 Then
+                        Dim sizePixels = Math.Max(1.0, baseHeight * Math.Max(4, Math.Min(90, value)) / 100.0)
+                        _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / baseWidth * 100.0))
+                        _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / baseHeight * 100.0))
+                        RaiseAnnotationSizeChanged()
+                        SyncSelectedAnnotation()
+                        Return
+                    End If
+                End If
                 Me.RaiseAndSetIfChanged(_annotationHeightPercent, Math.Max(4, Math.Min(90, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMinimum))
@@ -3356,6 +3521,17 @@ Namespace ViewModels
         Public Sub SetSelectedAnnotationRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
             _annotationWidthPercent = Math.Max(5, Math.Min(90, widthPercent))
             _annotationHeightPercent = Math.Max(4, Math.Min(90, heightPercent))
+            If EffectiveAnnotationKind = "QR" Then
+                Dim baseWidth = GetBaseWidth()
+                Dim baseHeight = GetBaseHeight()
+                If baseWidth > 0 AndAlso baseHeight > 0 Then
+                    Dim widthPixels = baseWidth * _annotationWidthPercent / 100.0
+                    Dim heightPixels = baseHeight * _annotationHeightPercent / 100.0
+                    Dim sizePixels = Math.Max(1.0, Math.Min(widthPixels, heightPixels))
+                    _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / baseWidth * 100.0))
+                    _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / baseHeight * 100.0))
+                End If
+            End If
             If ShowWatermarkAnchorControls Then
                 Dim offset = ComputeAnnotationOffsetPercent(EffectiveAnnotationKind, xPercent, yPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
                 _annotationXPercent = ClampAnnotationOffsetPercent(offset.X)
@@ -3374,6 +3550,18 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
             RaiseAnnotationPositionControlProperties()
             SyncSelectedAnnotation()
+        End Sub
+
+        Private Sub RaiseAnnotationSizeChanged()
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMinimum))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMaximum))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMinimum))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMaximum))
+            RaiseAnnotationPositionControlProperties()
         End Sub
 
         Public Sub SetSelectedAnnotationRectPixels(xPixels As Double, yPixels As Double, widthPixels As Double, heightPixels As Double)
@@ -3811,12 +3999,13 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' _cropLeft.._cropBottom sind der noch nicht angewendete Beschnitt, gemessen am aktuell
+        ''' ANGEZEIGTEN (also bereits beschnittenen) Bild. Ein offener Beschnitt liegt genau dann vor,
+        ''' wenn eine der vier Kanten von Null abweicht.
         Public ReadOnly Property HasCropChanges As Boolean
             Get
-                Return Math.Abs(_cropLeft - _appliedCropLeft) > 0.0001 OrElse
-                       Math.Abs(_cropTop - _appliedCropTop) > 0.0001 OrElse
-                       Math.Abs(_cropRight - _appliedCropRight) > 0.0001 OrElse
-                       Math.Abs(_cropBottom - _appliedCropBottom) > 0.0001
+                Return _cropLeft > 0.0001 OrElse _cropTop > 0.0001 OrElse
+                       _cropRight > 0.0001 OrElse _cropBottom > 0.0001
             End Get
         End Property
 
@@ -3945,6 +4134,13 @@ Namespace ViewModels
         Public ReadOnly Property ApplyTransformCommand As ICommand
         Public ReadOnly Property ResetCropCommand As ICommand
         Public ReadOnly Property SetCropPresetCommand As ICommand
+        ''' Wird ausgelöst, wenn sich die Maße des angezeigten Bildes geändert haben (z.B. nach dem
+        ''' Zuschneiden). Die View passt daraufhin Zoom und Schwenk neu ein - genauso wie beim Laden
+        ''' eines anderen Bildes.
+        Public Event ImageGeometryChanged As EventHandler
+
+        Public ReadOnly Property SelectInsertToolCommand As ICommand
+        Public ReadOnly Property ClearCloneSourceCommand As ICommand
         Public ReadOnly Property ResetResizeCommand As ICommand
         Public ReadOnly Property SetResizePresetCommand As ICommand
         Public ReadOnly Property ResetCanvasCommand As ICommand
@@ -4037,6 +4233,26 @@ Namespace ViewModels
                                                                  End Sub)
 
             SetToolCommand = ReactiveCommand.Create(Of String)(Sub(toolName)
+                                                                   Dim normalizedToolName = If(toolName, "").Trim().ToLowerInvariant()
+
+                                                                   Select Case normalizedToolName
+                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "blur", "verwischen", "clone", "stempel"
+                                                                           SetPaintMode(toolName)
+                                                                           Return
+                                                                       Case "text", "image", "bild", "qr", "qrcode", "qr-code", "watermark", "wasserzeichen"
+                                                                           _overlayNotifySuppressDepth += 1
+                                                                           Try
+                                                                               SelectedAnnotationIndex = -1
+                                                                               CurrentTool = EditorTool.Text
+                                                                               PendingInsertKind = NormalizeAnnotationKind(toolName)
+                                                                               SelectedLayersPanelTab = LayersPanelTab.Tool
+                                                                           Finally
+                                                                               _overlayNotifySuppressDepth -= 1
+                                                                           End Try
+                                                                           NotifyAnnotationOverlayStateChanged()
+                                                                           Return
+                                                                   End Select
+
                                                                    Dim parsed As EditorTool
                                                                    If [Enum].TryParse(toolName, parsed) Then
                                                                        _overlayNotifySuppressDepth += 1
@@ -4049,11 +4265,22 @@ Namespace ViewModels
                                                                            _overlayNotifySuppressDepth -= 1
                                                                        End Try
                                                                        NotifyAnnotationOverlayStateChanged()
+                                                                       Return
                                                                    End If
                                                                End Sub)
             SetPaintModeCommand = ReactiveCommand.Create(Of String)(Sub(mode)
                                                                         SetPaintMode(mode)
                                                                     End Sub)
+            ' Für die Werkzeugleiste: Werkzeug wechseln UND den Objekttyp scharfstellen. SetToolCommand
+            ' allein genügt nicht, weil es PendingInsertKind bewusst leert - und SetPendingInsertKind
+            ' allein nicht, weil es das Werkzeug nicht wechselt.
+            SelectInsertToolCommand = ReactiveCommand.Create(Of String)(Sub(kind)
+                                                                           If String.IsNullOrEmpty(kind) Then Return
+                                                                           CurrentTool = EditorTool.Text
+                                                                           SelectedAnnotationIndex = -1
+                                                                           PendingInsertKind = kind
+                                                                       End Sub)
+
             SetPendingInsertKindCommand = ReactiveCommand.Create(Of String)(Sub(kind)
                                                                                 If String.IsNullOrEmpty(kind) Then Return
                                                                                 If PendingInsertKind = kind Then
@@ -4187,6 +4414,8 @@ Namespace ViewModels
                                                              PushUndo()
                                                              ResetRetouchInternal()
                                                          End Sub)
+            ' Löst nur die Quelle - bereits gesetzte Punkte behalten ihre und bleiben unverändert.
+            ClearCloneSourceCommand = ReactiveCommand.Create(Sub() ClearCloneSource())
             CopySelectionCommand = ReactiveCommand.Create(Sub() CopySelectionToNewObject())
             FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
             SetAnnotationAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) AnnotationAnchor = anchor)
@@ -4798,16 +5027,44 @@ Namespace ViewModels
             Await UpdatePreviewAsync()
         End Sub
 
+        ''' <summary>
+        ''' Bäckt den offenen Beschnitt in den angewendeten hinein. Weil _appliedCrop* am Original
+        ''' gemessen wird, _crop* aber am angezeigten (bereits beschnittenen) Bild, werden die neuen
+        ''' Kanten in den verbleibenden Ausschnitt hineingerechnet - erst dadurch lässt sich mehrfach
+        ''' hintereinander zuschneiden. Danach ist der offene Beschnitt leer: das Auswahlrechteck legt
+        ''' sich wieder um das ganze (neue) Bild, statt im alten Maßstab stehen zu bleiben.
+        ''' </summary>
         Private Async Function ApplyCropAsync() As Task
             If Not HasCropChanges Then Return
             PushUndo()
-            _appliedCropLeft = _cropLeft
-            _appliedCropTop = _cropTop
-            _appliedCropRight = _cropRight
-            _appliedCropBottom = _cropBottom
+
+            Dim remainingWidth = 1.0 - (_appliedCropLeft + _appliedCropRight) / 100.0
+            Dim remainingHeight = 1.0 - (_appliedCropTop + _appliedCropBottom) / 100.0
+
+            _appliedCropLeft += _cropLeft * remainingWidth
+            _appliedCropRight += _cropRight * remainingWidth
+            _appliedCropTop += _cropTop * remainingHeight
+            _appliedCropBottom += _cropBottom * remainingHeight
+
+            _cropLeft = 0
+            _cropTop = 0
+            _cropRight = 0
+            _cropBottom = 0
+            Me.RaisePropertyChanged(NameOf(CropLeft))
+            Me.RaisePropertyChanged(NameOf(CropTop))
+            Me.RaisePropertyChanged(NameOf(CropRight))
+            Me.RaisePropertyChanged(NameOf(CropBottom))
+            Me.RaisePropertyChanged(NameOf(EffectiveImageWidthPixels))
+            Me.RaisePropertyChanged(NameOf(EffectiveImageHeightPixels))
+            RaiseCropPropertiesChanged()
+
             _hasChanges = True
             RaiseResetButtonStateChanged()
             Await UpdatePreviewAsync()
+
+            ' Das Bild hat eine neue Größe - Zoom und Schwenk müssen sich neu einpassen, sonst bleibt
+            ' der Ausschnitt im Maßstab des alten Bildes stehen.
+            RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
         End Function
 
         Private Async Function ApplyResizeAsync() As Task
@@ -5170,7 +5427,9 @@ Namespace ViewModels
             Select Case previousTool
                 Case EditorTool.Crop
                     If HasCropChanges Then
-                        SetCropValues(_appliedCropLeft, _appliedCropTop, _appliedCropRight, _appliedCropBottom)
+                        ' Nicht bestätigter Beschnitt wird verworfen: der offene Beschnitt geht auf Null
+                        ' zurück, der bereits angewendete bleibt unangetastet.
+                        SetCropValues(0, 0, 0, 0)
                         reverted = True
                     End If
                 Case EditorTool.Resize
@@ -5355,10 +5614,12 @@ Namespace ViewModels
             _appliedStraightenExpandCanvas = adj.StraightenExpandCanvas
             _appliedFlipH = adj.FlipHorizontal
             _appliedFlipV = adj.FlipVertical
-            _cropLeft = adj.CropLeftPercent
-            _cropTop = adj.CropTopPercent
-            _cropRight = adj.CropRightPercent
-            _cropBottom = adj.CropBottomPercent
+            ' Der geladene Beschnitt ist bereits angewendet; der offene Beschnitt startet leer, sonst
+            ' läge das Auswahlrechteck sofort wieder im Maßstab des unbeschnittenen Originals.
+            _cropLeft = 0
+            _cropTop = 0
+            _cropRight = 0
+            _cropBottom = 0
             _appliedCropLeft = adj.CropLeftPercent
             _appliedCropTop = adj.CropTopPercent
             _appliedCropRight = adj.CropRightPercent
@@ -5631,6 +5892,7 @@ Namespace ViewModels
         Private Sub RaiseEditorUiStateChanged()
             Me.RaisePropertyChanged(NameOf(CurrentTool))
             Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
+            Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
             RaiseToolContextProperties()
             Me.RaisePropertyChanged(NameOf(PendingInsertKind))
             Me.RaisePropertyChanged(NameOf(HasPendingInsertKind))
@@ -5831,15 +6093,36 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>Maße des aktuell angezeigten Bildes, also nach dem bereits angewendeten Beschnitt.
+        ''' Bezugsgröße für das Auswahlrechteck, die Größenanzeige und die Pixel-Eingabefelder.</summary>
+        Public ReadOnly Property EffectiveImageWidthPixels As Integer
+            Get
+                Dim width = GetBaseWidth()
+                If width <= 0 Then Return 0
+                Dim remaining = 1.0 - (_appliedCropLeft + _appliedCropRight) / 100.0
+                Return Math.Max(1, CInt(Math.Round(width * Math.Max(0.01, remaining))))
+            End Get
+        End Property
+
+        Public ReadOnly Property EffectiveImageHeightPixels As Integer
+            Get
+                Dim height = GetBaseHeight()
+                If height <= 0 Then Return 0
+                Dim remaining = 1.0 - (_appliedCropTop + _appliedCropBottom) / 100.0
+                Return Math.Max(1, CInt(Math.Round(height * Math.Max(0.01, remaining))))
+            End Get
+        End Property
+
+        ''' Maße nach dem angewendeten UND dem noch offenen Beschnitt - das, was ein "Anwenden" ergäbe.
         Private Function GetCroppedWidth() As Integer
-            Dim width = GetBaseWidth()
+            Dim width = EffectiveImageWidthPixels
             If width <= 0 Then Return 0
             Dim remaining = 1.0 - (_cropLeft + _cropRight) / 100.0
             Return Math.Max(1, CInt(Math.Round(width * Math.Max(0.01, remaining))))
         End Function
 
         Private Function GetCroppedHeight() As Integer
-            Dim height = GetBaseHeight()
+            Dim height = EffectiveImageHeightPixels
             If height <= 0 Then Return 0
             Dim remaining = 1.0 - (_cropTop + _cropBottom) / 100.0
             Return Math.Max(1, CInt(Math.Round(height * Math.Max(0.01, remaining))))
@@ -5858,9 +6141,12 @@ Namespace ViewModels
             RaiseResetButtonStateChanged()
         End Sub
 
+        ''' Die Pixel-Eingabefelder des Zuschneiden-Panels beziehen sich auf das angezeigte Bild, nicht
+        ''' auf das Original - sonst könnte man nach einem Beschnitt eine Breite eintippen, die größer
+        ''' als das sichtbare Bild ist.
         Private Sub SetCropSizePixels(widthPixels As Integer, heightPixels As Integer)
-            Dim baseWidth = GetBaseWidth()
-            Dim baseHeight = GetBaseHeight()
+            Dim baseWidth = EffectiveImageWidthPixels
+            Dim baseHeight = EffectiveImageHeightPixels
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return
 
             Dim leftPx = CInt(Math.Round(baseWidth * _cropLeft / 100.0))
@@ -5961,6 +6247,15 @@ Namespace ViewModels
             Dim defaultSize = GetDefaultAnnotationSizePercent(normalizedKind, kind)
             Dim width = defaultSize.WidthPercent
             Dim height = defaultSize.HeightPercent
+            If normalizedKind = "QR" Then
+                Dim baseWidth = GetBaseWidth()
+                Dim baseHeight = GetBaseHeight()
+                If baseWidth > 0 AndAlso baseHeight > 0 Then
+                    Dim sizePixels = Math.Max(1.0, Math.Min(PercentXToPixels(width), PercentYToPixels(height)))
+                    width = sizePixels / baseWidth * 100.0
+                    height = sizePixels / baseHeight * 100.0
+                End If
+            End If
             If normalizedKind = "Watermark" Then
                 width = _annotationWidthPercent
                 height = _annotationHeightPercent
@@ -6108,6 +6403,21 @@ Namespace ViewModels
             End Select
         End Function
 
+        Private Shared Function PlacementKindForAnnotation(annotation As ImageAnnotation) As String
+            If annotation Is Nothing Then Return ""
+
+            Dim normalized = NormalizeAnnotationKind(annotation.Kind)
+            Select Case normalized
+                Case "Text", "Image", "QR", "Watermark", "Rectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Spiral", "Droplet", "SpeechBubble", "Line", "Arrow", "Symbol"
+                    Return normalized
+                Case "Svg"
+                    If Not String.IsNullOrWhiteSpace(annotation.ImagePath) Then Return "Svg:" & annotation.ImagePath
+                    Return "Svg"
+                Case Else
+                    Return ""
+            End Select
+        End Function
+
         Private Shared Function NormalizeAnnotationKind(kind As String) As String
             Dim normalized = If(kind, "").Trim().ToLowerInvariant()
             If normalized.StartsWith("symbol:", StringComparison.OrdinalIgnoreCase) Then Return "Symbol"
@@ -6192,7 +6502,7 @@ Namespace ViewModels
             Dim minY = Math.Max(0, pixelPoints.Min(Function(p) p.Y))
             Dim maxX = Math.Min(GetBaseWidth(), pixelPoints.Max(Function(p) p.X))
             Dim maxY = Math.Min(GetBaseHeight(), pixelPoints.Max(Function(p) p.Y))
-            Dim pointText = String.Join(" ", pixelPoints.Select(Function(p) $"{p.X.ToString("F3", Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString("F3", Globalization.CultureInfo.InvariantCulture)}"))
+            Dim newStroke = New BrushStroke(pixelPoints.Select(Function(p) New StrokePoint(CSng(p.X), CSng(p.Y))))
 
             Dim expectedKind = If(isEraser, "Eraser", "Brush")
             Dim canAppend = _activeStrokeAnnotation IsNot Nothing AndAlso
@@ -6206,7 +6516,7 @@ Namespace ViewModels
                 Dim unionMinY = Math.Min(existing.YPixels, CSng(minY))
                 Dim unionMaxX = Math.Max(existing.XPixels + existing.WidthPixels, CSng(maxX))
                 Dim unionMaxY = Math.Max(existing.YPixels + existing.HeightPixels, CSng(maxY))
-                existing.Text = existing.Text & ";" & pointText
+                existing.Strokes.Add(newStroke)
                 existing.XPixels = unionMinX
                 existing.YPixels = unionMinY
                 existing.WidthPixels = Math.Max(1, unionMaxX - unionMinX)
@@ -6216,7 +6526,8 @@ Namespace ViewModels
                 Dim height = Math.Max(1, maxY - minY)
                 Dim newAnnotation = New ImageAnnotation With {
                     .Kind = expectedKind,
-                    .Text = pointText,
+                    .Text = "",
+                    .Strokes = New List(Of BrushStroke) From {newStroke},
                     .XPixels = CSng(minX),
                     .YPixels = CSng(minY),
                     .WidthPixels = CSng(width),
@@ -6411,11 +6722,8 @@ Namespace ViewModels
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             CaptureUndoState("TextAnnotation")
             Dim a = _annotations(_selectedAnnotationIndex)
-            ' Bei Pinsel-/Radiergummi-Ebenen enthält a.Text die per ";" getrennten Strichpfade
-            ' (siehe AddBrushStroke), die dort direkt am Modell wachsen, ohne je durch
-            ' _annotationText zu laufen. Ein Rücksynchronisieren von _annotationText (das nur die
-            ' beim Anlegen der Ebene geladene Momentaufnahme des ERSTEN Strichs enthält) würde
-            ' spätere Striche verwerfen, z.B. beim Ein-/Ausblenden der Ebene (AnnotationIsVisible).
+            ' Pinsel- und Radiergummi-Ebenen haben keinen Text: ihre Züge liegen in a.Strokes. Das
+            ' Text-Feld bleibt bei ihnen leer, damit nicht der Textpuffer des Editors hineinläuft.
             Dim normalizedKind = NormalizeAnnotationKind(a.Kind)
             If normalizedKind <> "Brush" AndAlso normalizedKind <> "Eraser" Then
                 a.Text = _annotationText
@@ -6610,14 +6918,54 @@ Namespace ViewModels
             SetCropValues(left, top, right, bottom)
         End Sub
 
+        ''' captureUndo=True markiert den Beginn eines Zuges (Mausklick), False die Zwischenpunkte
+        ''' beim Ziehen.
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
+            ' Der Stempel braucht eine Quelle. Ohne sie würde er stillschweigend zum Verwischen -
+            ' der Nutzer soll stattdessen erst Alt+Klick machen (siehe RetouchHintText).
+            If IsCloneMode AndAlso Not HasCloneSource Then Return
             If captureUndo Then PushUndo()
-            _retouchSpots.Add(New RetouchSpot With {
-                .XPixels = CSng(Math.Max(0, Math.Min(GetBaseWidth(), PercentXToPixels(xPercent)))),
-                .YPixels = CSng(Math.Max(0, Math.Min(GetBaseHeight(), PercentYToPixels(yPercent)))),
+
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            Dim targetX = Math.Max(0, Math.Min(baseWidth, PercentXToPixels(xPercent)))
+            Dim targetY = Math.Max(0, Math.Min(baseHeight, PercentYToPixels(yPercent)))
+
+            Dim spot = New RetouchSpot With {
+                .XPixels = CSng(targetX),
+                .YPixels = CSng(targetY),
                 .RadiusPixels = CSng(_retouchRadius)
-            })
-            AddHistoryEntry("Verwischen")
+            }
+
+            If IsCloneMode AndAlso HasCloneSource Then
+                ' Der Versatz entsteht beim ersten Punkt nach dem Setzen der Quelle und bleibt dann
+                ' stehen - so wandert beim Ziehen ein zusammenhängender Ausschnitt mit.
+                If Not _hasCloneOffset Then
+                    _cloneOffsetXPixels = targetX - PercentXToPixels(_cloneSourceXPercent)
+                    _cloneOffsetYPixels = targetY - PercentYToPixels(_cloneSourceYPercent)
+                    _hasCloneOffset = True
+                End If
+
+                Dim sourceX = targetX - _cloneOffsetXPixels
+                Dim sourceY = targetY - _cloneOffsetYPixels
+                ' Wandert die Quelle beim Ziehen aus dem Bild, bleibt der Punkt ohne Quelle und fällt
+                ' auf den Ringmittelwert zurück, statt an der Bildkante Pixel zu wiederholen.
+                If sourceX >= 0 AndAlso sourceY >= 0 AndAlso sourceX <= baseWidth AndAlso sourceY <= baseHeight Then
+                    spot.SourceXPixels = CSng(sourceX)
+                    spot.SourceYPixels = CSng(sourceY)
+                End If
+            End If
+
+            _retouchSpots.Add(spot)
+            ' Retusche hat das Dokument bisher nicht als geändert markiert: UpdatePreview() setzt
+            ' _hasChanges nicht, und AddRetouchSpot lief nie über SchedulePreviewUpdate. Wer nur
+            ' retuschierte und den Editor verließ, wurde nicht gefragt und verlor die Arbeit.
+            _hasChanges = True
+
+            ' Nur der Zugbeginn schreibt in die Historie - die Zwischenpunkte eines Zuges würden sonst
+            ' die 30 Einträge fluten. Gerendert wird weiterhin bei jedem Punkt: Retusche ist direkte
+            ' Manipulation und muss auch bei abgeschalteter Live-Vorschau sofort sichtbar sein.
+            If captureUndo Then AddHistoryEntry(If(IsCloneMode, "Stempeln", "Verwischen"))
             UpdatePreview()
         End Sub
 
@@ -6790,6 +7138,7 @@ Namespace ViewModels
         Private Sub ResetRetouchInternal()
             _retouchRadius = 24.0
             _retouchSpots.Clear()
+            ClearCloneSource()
             Me.RaisePropertyChanged(NameOf(RetouchRadius))
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
@@ -6941,34 +7290,53 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFrameAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowFilterAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowRetouchAdjustments))
+            Me.RaisePropertyChanged(NameOf(IsCloneMode))
+            Me.RaisePropertyChanged(NameOf(RetouchHintText))
             Me.RaisePropertyChanged(NameOf(ShowSelectionAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowDrawControls))
             Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
-            Me.RaisePropertyChanged(NameOf(ShowTextInsertControls))
             Me.RaisePropertyChanged(NameOf(ShowGeometryControls))
             Me.RaisePropertyChanged(NameOf(ShowTransformAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowExportAdjustments))
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
-            Me.RaisePropertyChanged(NameOf(IsPaintToolSelected))
             Me.RaisePropertyChanged(NameOf(IsGeometryToolSelected))
         End Sub
 
         Private Sub SetPaintMode(mode As String)
             Dim normalized = If(mode, "").Trim().ToLowerInvariant()
-            Select Case normalized
-                Case "brush", "pinsel"
-                    CurrentTool = EditorTool.Draw
-                    IsEraserMode = False
-                Case "eraser", "radiergummi"
-                    CurrentTool = EditorTool.Draw
-                    IsEraserMode = True
-                Case "blur", "verwischen"
-                    CurrentTool = EditorTool.Retouch
-                Case Else
-                    CurrentTool = EditorTool.Draw
-                    IsEraserMode = False
-            End Select
+            _overlayNotifySuppressDepth += 1
+            Try
+                PendingInsertKind = ""
+                SelectedAnnotationIndex = -1
+
+                Select Case normalized
+                    Case "brush", "pinsel"
+                        CurrentTool = EditorTool.Draw
+                        IsEraserMode = False
+                    Case "eraser", "radiergummi"
+                        CurrentTool = EditorTool.Draw
+                        IsEraserMode = True
+                    Case "blur", "verwischen"
+                        _isCloneMode = False
+                        CurrentTool = EditorTool.Retouch
+                    Case "clone", "stempel"
+                        _isCloneMode = True
+                        CurrentTool = EditorTool.Retouch
+                    Case Else
+                        CurrentTool = EditorTool.Draw
+                        IsEraserMode = False
+                End Select
+                SelectedLayersPanelTab = LayersPanelTab.Tool
+            Finally
+                _overlayNotifySuppressDepth -= 1
+            End Try
+            NotifyAnnotationOverlayStateChanged()
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
+            Me.RaisePropertyChanged(NameOf(IsCloneMode))
+            ' Verwischen <-> Stempel wechselt das Werkzeug nicht, wohl aber seinen Namen.
+            Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
+            Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
+            RaiseCloneSourceProperties()
         End Sub
 
         Private Sub AddHistoryEntry(label As String)
@@ -7059,6 +7427,16 @@ Namespace ViewModels
                             LocalizationService.T("Export fehlgeschlagen"))
         End Sub
 
+        ''' Pinsel- und Radiergummi-Ebenen tragen ihre Züge im Arbeitsspeicher als BrushStroke-Liste.
+        ''' In der Rezeptdatei stehen sie weiterhin als Zeichenkette im Text-Feld - so bleiben bereits
+        ''' gespeicherte .fpxedit-Dateien unverändert lesbar und schreibbar.
+        Private Shared Function AnnotationRecipeText(a As ImageAnnotation) As String
+            If a Is Nothing Then Return ""
+            Dim kind = NormalizeAnnotationKind(a.Kind)
+            If kind = "Brush" OrElse kind = "Eraser" Then Return BrushStrokeCodec.Serialize(a.Strokes)
+            Return a.Text
+        End Function
+
         Private Sub SaveRecipe()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             Try
@@ -7140,10 +7518,10 @@ Namespace ViewModels
                 }
                 File.WriteAllLines(RecipePath, lines)
                 If adj.RetouchSpots IsNot Nothing Then
-                    File.AppendAllLines(RecipePath, adj.RetouchSpots.Select(Function(s) $"RetouchSpot={s.XPixels};{s.YPixels};{s.RadiusPixels}"))
+                    File.AppendAllLines(RecipePath, adj.RetouchSpots.Select(Function(s) $"RetouchSpot={s.XPixels};{s.YPixels};{s.RadiusPixels};{s.SourceXPixels};{s.SourceYPixels}"))
                 End If
                 If adj.Annotations IsNot Nothing Then
-                    File.AppendAllLines(RecipePath, adj.Annotations.Select(Function(a) $"Annotation={Uri.EscapeDataString(a.Kind)};{Uri.EscapeDataString(a.Text)};{Uri.EscapeDataString(a.ImagePath)};{a.XPixels};{a.YPixels};{a.WidthPixels};{a.HeightPixels};{Uri.EscapeDataString(a.FillColor)};{Uri.EscapeDataString(a.StrokeColor)};{a.StrokeWidth};{a.FontSizePixels};{Uri.EscapeDataString(a.FontFamily)};{a.Opacity};{a.RotationDegrees};{a.IsVisible};{a.HardnessPercent};{Uri.EscapeDataString(a.FillKind)};{Uri.EscapeDataString(a.FillColor2)};{a.GradientAngleDegrees};{a.ShadowEnabled};{a.ShadowOffsetXPercent};{a.ShadowOffsetYPercent};{a.ShadowBlur};{Uri.EscapeDataString(a.ShadowColor)};{a.GlowEnabled};{a.GlowBlur};{Uri.EscapeDataString(a.GlowColor)};{a.GradientInverted};{a.GlowStrength};{a.ShadowStrength};{Uri.EscapeDataString(If(a.Anchor, ""))}"))
+                    File.AppendAllLines(RecipePath, adj.Annotations.Select(Function(a) $"Annotation={Uri.EscapeDataString(a.Kind)};{Uri.EscapeDataString(AnnotationRecipeText(a))};{Uri.EscapeDataString(a.ImagePath)};{a.XPixels};{a.YPixels};{a.WidthPixels};{a.HeightPixels};{Uri.EscapeDataString(a.FillColor)};{Uri.EscapeDataString(a.StrokeColor)};{a.StrokeWidth};{a.FontSizePixels};{Uri.EscapeDataString(a.FontFamily)};{a.Opacity};{a.RotationDegrees};{a.IsVisible};{a.HardnessPercent};{Uri.EscapeDataString(a.FillKind)};{Uri.EscapeDataString(a.FillColor2)};{a.GradientAngleDegrees};{a.ShadowEnabled};{a.ShadowOffsetXPercent};{a.ShadowOffsetYPercent};{a.ShadowBlur};{Uri.EscapeDataString(a.ShadowColor)};{a.GlowEnabled};{a.GlowBlur};{Uri.EscapeDataString(a.GlowColor)};{a.GradientInverted};{a.GlowStrength};{a.ShadowStrength};{Uri.EscapeDataString(If(a.Anchor, ""))};{a.ShadowRounded};{a.ShadowCornerRadiusPercent};{a.ShadowSizePercent}"))
                 End If
                 StatusText = LocalizationService.T("Bearbeitungsrezept gespeichert")
             Catch ex As Exception
@@ -7424,12 +7802,23 @@ Namespace ViewModels
             Select Case key
                 Case "RetouchSpot"
                     Dim parts = value.Split(";"c)
-                    If parts.Length = 3 Then
+                    If parts.Length >= 3 Then
                         Dim x As Single
                         Dim y As Single
                         Dim r As Single
                         If Single.TryParse(parts(0), x) AndAlso Single.TryParse(parts(1), y) AndAlso Single.TryParse(parts(2), r) Then
-                            adj.RetouchSpots.Add(New RetouchSpot With {.XPixels = x, .YPixels = y, .RadiusPixels = r})
+                            Dim spot = New RetouchSpot With {.XPixels = x, .YPixels = y, .RadiusPixels = r}
+                            ' Rezepte vor dem Klonstempel haben nur drei Felder - die Quelle bleibt dann
+                            ' auf -1 und der Punkt verhält sich wie früher (Ringmittelwert).
+                            If parts.Length >= 5 Then
+                                Dim sx As Single
+                                Dim sy As Single
+                                If Single.TryParse(parts(3), sx) AndAlso Single.TryParse(parts(4), sy) Then
+                                    spot.SourceXPixels = sx
+                                    spot.SourceYPixels = sy
+                                End If
+                            End If
+                            adj.RetouchSpots.Add(spot)
                         End If
                     End If
                 Case "Annotation"
@@ -7452,9 +7841,18 @@ Namespace ViewModels
                             Single.TryParse(parts(13), rotation)
                             Boolean.TryParse(parts(14), isVisible)
                             Single.TryParse(parts(15), hardness)
+                            Dim loadedKind = Uri.UnescapeDataString(parts(0))
+                            Dim loadedText = Uri.UnescapeDataString(parts(1))
+                            Dim normalizedLoadedKind = NormalizeAnnotationKind(loadedKind)
+                            ' Bei Mal-Ebenen steckt im Text-Feld die serialisierte Punktliste - sie wandert
+                            ' in Strokes, das Text-Feld bleibt leer (siehe AnnotationRecipeText).
+                            Dim isPaintLayer = normalizedLoadedKind = "Brush" OrElse normalizedLoadedKind = "Eraser"
+                            Dim loadedStrokes = If(isPaintLayer, BrushStrokeCodec.Parse(loadedText), New List(Of BrushStroke)())
+
                             adj.Annotations.Add(New ImageAnnotation With {
-                                .Kind = Uri.UnescapeDataString(parts(0)),
-                                .Text = Uri.UnescapeDataString(parts(1)),
+                                .Kind = loadedKind,
+                                .Text = If(isPaintLayer, "", loadedText),
+                                .Strokes = loadedStrokes,
                                 .ImagePath = Uri.UnescapeDataString(parts(2)),
                                 .XPixels = x,
                                 .YPixels = y,
@@ -7549,6 +7947,16 @@ Namespace ViewModels
                         End If
                         If parts.Length >= 31 Then
                             extra.Anchor = NormalizeAnnotationAnchor(Uri.UnescapeDataString(parts(30)))
+                        End If
+                        ' Rezepte vor der abgerundeten/skalierbaren Schatten-Version kennen diese drei
+                        ' Felder nicht - dann gelten die Klassendefaults (eckig, Radius 20%, Größe 100%).
+                        If parts.Length >= 34 Then
+                            Dim shadowRounded As Boolean
+                            Dim shadowCornerRadius As Single
+                            Dim shadowSize As Single
+                            If Boolean.TryParse(parts(31), shadowRounded) Then extra.ShadowRounded = shadowRounded
+                            If Single.TryParse(parts(32), shadowCornerRadius) Then extra.ShadowCornerRadiusPercent = shadowCornerRadius
+                            If Single.TryParse(parts(33), shadowSize) Then extra.ShadowSizePercent = shadowSize
                         End If
                     End If
                 Case "Exposure" : If Single.TryParse(value, f) Then adj.Exposure = f

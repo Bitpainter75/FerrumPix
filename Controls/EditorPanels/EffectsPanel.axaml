@@ -31,7 +31,7 @@
             <StackPanel Spacing="2" Margin="0,8,0,0">
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-150" Maximum="150"
                                        Value="{Binding Vignette}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -39,7 +39,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="55"
                                        Value="{Binding VignetteTransition}" Margin="0,0" />
@@ -48,7 +48,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Rundheit" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        Value="{Binding VignetteRoundness}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -56,7 +56,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Weiche Kante" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="70"
                                        Value="{Binding VignetteFeather}" Margin="0,0" />
@@ -65,7 +65,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Mitte X" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="50"
                                        Value="{Binding VignetteCenterX}" Margin="0,0" />
@@ -74,7 +74,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Mitte Y" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="50"
                                        Value="{Binding VignetteCenterY}" Margin="0,0" />
@@ -112,7 +112,7 @@
             <StackPanel Spacing="2" Margin="0,8,0,0">
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="25"
                                        Value="{Binding BorderSize}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -120,7 +120,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        Value="{Binding BorderCornerRadius}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -128,17 +128,17 @@
                 </Grid>
                 <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
                     <TextBlock Text="Rahmenart" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <ComboBox Grid.Column="1"
                               ItemsSource="{Binding BorderEffectOptions}"
                               SelectedItem="{Binding BorderEffect}"
-                              FontSize="11"
+                              FontSize="{DynamicResource FP.Font.Small}"
                               Margin="6,0,0,0"
                               DropDownOpened="OnMatchWidthDropDownOpened" />
                 </Grid>
                 <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
                     <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
                         <icons:ColorPickerButton
                             SelectedColor="{Binding BorderColorValue, Mode=TwoWay}" />

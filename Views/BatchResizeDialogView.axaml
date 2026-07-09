@@ -7,39 +7,39 @@
             <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
                     <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <TextBox Name="BatchResizeWidthTextBox"
                              Classes="combo-like"
                              Grid.Column="1"
                              Text="{Binding DialogBatchResizeWidthText, Mode=TwoWay}"
                              Margin="6,0,0,0"
-                             FontSize="11" />
+                             FontSize="{DynamicResource FP.Font.Small}" />
                     <TextBlock Grid.Column="2" Text="px"
                                Foreground="{DynamicResource FP.Text.Secondary}"
-                               Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11" />
+                               Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 </Grid>
                 <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
                     <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <TextBox Classes="combo-like"
                              Grid.Column="1"
                              Text="{Binding DialogBatchResizeHeightText, Mode=TwoWay}"
                              Margin="6,0,0,0"
-                             FontSize="11" />
+                             FontSize="{DynamicResource FP.Font.Small}" />
                     <TextBlock Grid.Column="2" Text="px"
                                Foreground="{DynamicResource FP.Text.Secondary}"
-                               Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11" />
+                               Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 </Grid>
                 <CheckBox Content="Seitenverhältnis beibehalten"
-                          IsChecked="{Binding DialogBatchResizeLockAspect}" FontSize="11" />
+                          IsChecked="{Binding DialogBatchResizeLockAspect}" FontSize="{DynamicResource FP.Font.Small}" />
                 <Grid ColumnDefinitions="90,*" VerticalAlignment="Center">
                     <TextBlock Text="Neuberechnung"
                                Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                     <ComboBox Grid.Column="1"
                               ItemsSource="{Binding DialogBatchResizeInterpolationOptions}"
                               SelectedItem="{Binding DialogBatchResizeInterpolationLabel}"
-                              FontSize="11"
+                              FontSize="{DynamicResource FP.Font.Small}"
                               Margin="6,0,0,0"
                               HorizontalAlignment="Stretch" />
                 </Grid>
@@ -48,52 +48,52 @@
 
         <Border Classes="adjustment-group">
             <StackPanel Spacing="8">
-                <TextBlock Text="Vorgaben" FontWeight="SemiBold" FontSize="12" />
+                <TextBlock Text="Vorgaben" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" />
                 <WrapPanel>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="Original">
-                        <TextBlock Text="Original" FontSize="11" />
+                        <TextBlock Text="Original" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="75%">
-                        <TextBlock Text="75%" FontSize="11" />
+                        <TextBlock Text="75%" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="50%">
-                        <TextBlock Text="50%" FontSize="11" />
+                        <TextBlock Text="50%" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="25%">
-                        <TextBlock Text="25%" FontSize="11" />
+                        <TextBlock Text="25%" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="UHD">
-                        <TextBlock Text="UHD" FontSize="11" />
+                        <TextBlock Text="UHD" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="Full-HD">
-                        <TextBlock Text="Full-HD" FontSize="11" />
+                        <TextBlock Text="Full-HD" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="SD">
-                        <TextBlock Text="SD" FontSize="11" />
+                        <TextBlock Text="SD" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="1500">
-                        <TextBlock Text="1500" FontSize="11" />
+                        <TextBlock Text="1500" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="1000">
-                        <TextBlock Text="1000" FontSize="11" />
+                        <TextBlock Text="1000" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="800">
-                        <TextBlock Text="800" FontSize="11" />
+                        <TextBlock Text="800" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="500">
-                        <TextBlock Text="500" FontSize="11" />
+                        <TextBlock Text="500" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="256">
-                        <TextBlock Text="256" FontSize="11" />
+                        <TextBlock Text="256" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="128">
-                        <TextBlock Text="128" FontSize="11" />
+                        <TextBlock Text="128" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="64">
-                        <TextBlock Text="64" FontSize="11" />
+                        <TextBlock Text="64" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="32">
-                        <TextBlock Text="32" FontSize="11" />
+                        <TextBlock Text="32" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                 </WrapPanel>
             </StackPanel>

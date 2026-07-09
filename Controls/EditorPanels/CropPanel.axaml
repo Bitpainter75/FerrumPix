@@ -2,30 +2,34 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.CropPanel">
-    <Grid RowDefinitions="Auto,*">
-        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <icons:SvgIcon
-                    Source="avares://FerrumPix/Assets/Icons/outline/crop.svg"
-                    Width="14" Height="14" />
-                <TextBlock Text="Zuschneiden" FontWeight="SemiBold" />
-            </StackPanel>
-            <Button Grid.Column="1"
-                    Classes="icon-btn"
-                    Width="28"
-                    Height="28"
-                    Padding="0"
-                    Command="{Binding DataContext.ResetCropCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    ToolTip.Tip="Ausschnitt zurücksetzen">
-                <icons:SvgIcon
-                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                    Width="14" Height="14" />
-            </Button>
-        </Grid>
-        <StackPanel Grid.Row="1" Spacing="8" Margin="0,8,0,0">
+    <Expander Header="Zuschneiden" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/crop.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="icon-btn"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetCropCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Ausschnitt zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="8" Margin="0,8,0,0">
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Links" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="95"
                                    DefaultValue="0"
                                    Value="{Binding CropLeft}" Margin="0,0" />
@@ -36,7 +40,7 @@
             </Grid>
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Oben" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="95"
                                    DefaultValue="0"
                                    Value="{Binding CropTop}" Margin="0,0" />
@@ -47,7 +51,7 @@
             </Grid>
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Rechts" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="95"
                                    DefaultValue="0"
                                    Value="{Binding CropRight}" Margin="0,0" />
@@ -58,7 +62,7 @@
             </Grid>
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Unten" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="95"
                                    DefaultValue="0"
                                    Value="{Binding CropBottom}" Margin="0,0" />
@@ -69,49 +73,49 @@
             </Grid>
             <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <NumericUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding CropWidthPixels}" Minimum="1"
-                               Maximum="50000" Increment="1" Margin="6,0,0,0" FontSize="11" />
+                               Maximum="50000" Increment="1" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11" />
+                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             </Grid>
             <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <NumericUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding CropHeightPixels}" Minimum="1"
-                               Maximum="50000" Increment="1" Margin="6,0,0,0" FontSize="11" />
+                               Maximum="50000" Increment="1" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11" />
+                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             </Grid>
             <WrapPanel>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetCropPresetCommand}"
                         CommandParameter="Original">
-                    <TextBlock Text="Original" FontSize="11" />
+                    <TextBlock Text="Original" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetCropPresetCommand}" CommandParameter="1:1">
-                    <TextBlock Text="1:1" FontSize="11" />
+                    <TextBlock Text="1:1" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetCropPresetCommand}" CommandParameter="4:3">
-                    <TextBlock Text="4:3" FontSize="11" />
+                    <TextBlock Text="4:3" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetCropPresetCommand}" CommandParameter="3:2">
-                    <TextBlock Text="3:2" FontSize="11" />
+                    <TextBlock Text="3:2" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetCropPresetCommand}" CommandParameter="16:9">
-                    <TextBlock Text="16:9" FontSize="11" />
+                    <TextBlock Text="16:9" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetCropPresetCommand}" CommandParameter="9:16">
-                    <TextBlock Text="9:16" FontSize="11" />
+                    <TextBlock Text="9:16" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </WrapPanel>
             <Button Classes="accent"
@@ -129,5 +133,5 @@
                 </StackPanel>
             </Button>
         </StackPanel>
-    </Grid>
+    </Expander>
 </UserControl>

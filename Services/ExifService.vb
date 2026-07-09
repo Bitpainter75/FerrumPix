@@ -59,6 +59,10 @@ Namespace Services
         Public Property Camera As String = ""
         Public Property Lens As String = ""
         Public Property FocalLength As String = ""
+        ''' Kleinbild-Äquivalent (EXIF-Tag "FocalLengthIn35mmFilm"). Bei Handykameras ist die echte
+        ''' Brennweite (4,2 mm) für sich genommen nichtssagend - erst der Äquivalentwert (28 mm) ist
+        ''' mit dem eines Objektivs vergleichbar.
+        Public Property FocalLength35mm As String = ""
         Public Property Aperture As String = ""
         Public Property ShutterSpeed As String = ""
         Public Property ISO As String = ""
@@ -136,6 +140,7 @@ Namespace Services
                 .Camera = source.Camera,
                 .Lens = source.Lens,
                 .FocalLength = source.FocalLength,
+                .FocalLength35mm = source.FocalLength35mm,
                 .Aperture = source.Aperture,
                 .ShutterSpeed = source.ShutterSpeed,
                 .ISO = source.ISO,
@@ -192,6 +197,7 @@ Namespace Services
                 If exifSub IsNot Nothing Then
                     data.DateTaken = GetTagDesc(exifSub, ExifSubIfdDirectory.TagDateTimeOriginal)
                     data.FocalLength = GetTagDesc(exifSub, ExifSubIfdDirectory.TagFocalLength)
+                    data.FocalLength35mm = GetTagDesc(exifSub, ExifSubIfdDirectory.Tag35MMFilmEquivFocalLength)
                     data.Aperture = GetTagDesc(exifSub, ExifSubIfdDirectory.TagFNumber)
                     data.ShutterSpeed = GetTagDesc(exifSub, ExifSubIfdDirectory.TagExposureTime)
                     data.ISO = GetTagDesc(exifSub, ExifSubIfdDirectory.TagIsoEquivalent)
@@ -246,7 +252,7 @@ Namespace Services
             result.Lens = data.Lens
             result.ShutterSpeed = data.ShutterSpeed
             result.Aperture = ParseLeadingDouble(data.Aperture)
-            result.FocalLengthMm = ParseLeadingDouble(data.FocalLength)
+            result.FocalLengthMm = ParseLeadingDouble(GetComparableFocalLength(data))
             result.Iso = ParseLeadingInt(data.ISO)
 
             If Not String.IsNullOrWhiteSpace(data.GPS) Then
@@ -308,6 +314,16 @@ Namespace Services
             Catch
                 Return (Nothing, Nothing)
             End Try
+        End Function
+
+        ''' <summary>Die Brennweite, mit der sich Bilder verschiedener Kameras vergleichen lassen:
+        ''' das Kleinbild-Äquivalent, falls die Kamera es liefert, sonst die echte Brennweite. Ohne das
+        ''' sortierten Handybilder mit 4,2 mm zwischen echten Ultraweitwinkeln, obwohl sie einem 28er
+        ''' entsprechen. Der Rohwert bleibt in ExifData.FocalLength und in der EXIF-Liste sichtbar.</summary>
+        Public Shared Function GetComparableFocalLength(data As ExifData) As String
+            If data Is Nothing Then Return ""
+            If Not String.IsNullOrWhiteSpace(data.FocalLength35mm) Then Return data.FocalLength35mm
+            Return data.FocalLength
         End Function
 
         Private Shared Function ParseLeadingDouble(text As String) As Double?

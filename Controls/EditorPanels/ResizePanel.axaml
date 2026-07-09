@@ -2,57 +2,61 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.ResizePanel">
-    <Grid RowDefinitions="Auto,*">
-        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <icons:SvgIcon
-                    Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg"
-                    Width="14" Height="14" />
-                <TextBlock Text="Bildgröße" FontWeight="SemiBold" />
-            </StackPanel>
-            <Button Grid.Column="1"
-                    Classes="icon-btn"
-                    Width="28"
-                    Height="28"
-                    Padding="0"
-                    Command="{Binding DataContext.ResetResizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    ToolTip.Tip="Größe zurücksetzen">
-                <icons:SvgIcon
-                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                    Width="14" Height="14" />
-            </Button>
-        </Grid>
-        <StackPanel Grid.Row="1" Spacing="8" Margin="0,8,0,0">
+    <Expander Header="Bildgröße" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="icon-btn"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetResizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Größe zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="8" Margin="0,8,0,0">
             <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <NumericUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding ResizeWidth}" Minimum="0" Maximum="50000"
-                               Increment="10" Margin="6,0,0,0" FontSize="11" />
+                               Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11" />
+                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             </Grid>
             <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <NumericUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding ResizeHeight}" Minimum="0" Maximum="50000"
-                               Increment="10" Margin="6,0,0,0" FontSize="11" />
+                               Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11" />
+                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             </Grid>
             <CheckBox Content="Seitenverhältnis beibehalten"
-                      IsChecked="{Binding LockResizeAspect}" FontSize="11" />
+                      IsChecked="{Binding LockResizeAspect}" FontSize="{DynamicResource FP.Font.Small}" />
             <Grid ColumnDefinitions="90,*" VerticalAlignment="Center">
                 <TextBlock Text="Neuberechnung"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <ComboBox Grid.Column="1"
                           ItemsSource="{Binding ResizeInterpolationOptions}"
                           SelectedItem="{Binding ResizeInterpolationLabel}"
-                          FontSize="11"
+                          FontSize="{DynamicResource FP.Font.Small}"
                           Margin="6,0,0,0"
                           HorizontalAlignment="Stretch"
                           DropDownOpened="OnMatchWidthDropDownOpened"
@@ -62,64 +66,64 @@
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}"
                         CommandParameter="Original">
-                    <TextBlock Text="Original" FontSize="11" />
+                    <TextBlock Text="Original" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="75%">
-                    <TextBlock Text="75%" FontSize="11" />
+                    <TextBlock Text="75%" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="50%">
-                    <TextBlock Text="50%" FontSize="11" />
+                    <TextBlock Text="50%" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="25%">
-                    <TextBlock Text="25%" FontSize="11" />
+                    <TextBlock Text="25%" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="UHD">
-                    <TextBlock Text="UHD" FontSize="11" />
+                    <TextBlock Text="UHD" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}"
                         CommandParameter="Full-HD">
-                    <TextBlock Text="Full-HD" FontSize="11" />
+                    <TextBlock Text="Full-HD" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="SD">
-                    <TextBlock Text="SD" FontSize="11" />
+                    <TextBlock Text="SD" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="1500">
-                    <TextBlock Text="1500" FontSize="11" />
+                    <TextBlock Text="1500" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="1000">
-                    <TextBlock Text="1000" FontSize="11" />
+                    <TextBlock Text="1000" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="800">
-                    <TextBlock Text="800" FontSize="11" />
+                    <TextBlock Text="800" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="500">
-                    <TextBlock Text="500" FontSize="11" />
+                    <TextBlock Text="500" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="256">
-                    <TextBlock Text="256" FontSize="11" />
+                    <TextBlock Text="256" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="128">
-                    <TextBlock Text="128" FontSize="11" />
+                    <TextBlock Text="128" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="64">
-                    <TextBlock Text="64" FontSize="11" />
+                    <TextBlock Text="64" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetResizePresetCommand}" CommandParameter="32">
-                    <TextBlock Text="32" FontSize="11" />
+                    <TextBlock Text="32" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </WrapPanel>
             <Button Classes="accent"
@@ -137,57 +141,67 @@
                 </StackPanel>
             </Button>
             <Separator Margin="0,4" />
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="Leinwand" Foreground="{DynamicResource FP.Text.Secondary}"
-                           FontSize="11" VerticalAlignment="Center" />
-                <Button Grid.Column="1"
-                        Classes="icon-btn"
-                        Width="26"
-                        Height="26"
-                        Padding="0"
-                        Command="{Binding DataContext.ResetCanvasCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        ToolTip.Tip="Leinwand zurücksetzen">
-                    <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                        Width="13" Height="13" />
-                </Button>
-            </Grid>
-            <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
-                <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
-                <NumericUpDown Classes="combo-like" Grid.Column="1"
-                               Value="{Binding CanvasWidth}" Minimum="0" Maximum="50000"
-                               Increment="10" Margin="6,0,0,0" FontSize="11" />
-                <TextBlock Grid.Column="2" Text="px"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11" />
-            </Grid>
-            <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
-                <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
-                <NumericUpDown Classes="combo-like" Grid.Column="1"
-                               Value="{Binding CanvasHeight}" Minimum="0" Maximum="50000"
-                               Increment="10" Margin="6,0,0,0" FontSize="11" />
-                <TextBlock Grid.Column="2" Text="px"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11" />
-            </Grid>
-            <CheckBox Content="Seitenverhältnis beibehalten"
-                      IsChecked="{Binding LockCanvasAspect}" FontSize="11" />
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
-                <TextBlock Text="Hintergrund"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
-                <icons:ColorPickerButton Grid.Column="1"
-                                         SelectedColor="{Binding CanvasBackgroundColorValue, Mode=TwoWay}" />
-            </Grid>
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
-                <TextBlock Text="Position" Foreground="{DynamicResource FP.Text.Secondary}"
-                           FontSize="11" VerticalAlignment="Top" Margin="0,10,0,0" />
-                <Border Grid.Column="1" BorderBrush="{DynamicResource FP.Border.Normal}"
-                        BorderThickness="1" CornerRadius="6" Padding="12,10"
-                        HorizontalAlignment="Left">
-                    <Grid Width="72" Height="72">
+            <Expander Header="Leinwand" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/layout.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn"
+                                    Width="26"
+                                    Height="26"
+                                    Padding="0"
+                                    Command="{Binding DataContext.ResetCanvasCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Leinwand zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="13" Height="13" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="8" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
+                        <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <NumericUpDown Classes="combo-like" Grid.Column="1"
+                                       Value="{Binding CanvasWidth}" Minimum="0" Maximum="50000"
+                                       Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
+                        <TextBlock Grid.Column="2" Text="px"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
+                        <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <NumericUpDown Classes="combo-like" Grid.Column="1"
+                                       Value="{Binding CanvasHeight}" Minimum="0" Maximum="50000"
+                                       Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
+                        <TextBlock Grid.Column="2" Text="px"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Grid>
+                    <CheckBox Content="Seitenverhältnis beibehalten"
+                              IsChecked="{Binding LockCanvasAspect}" FontSize="{DynamicResource FP.Font.Small}" />
+                    <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+                        <TextBlock Text="Hintergrund"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:ColorPickerButton Grid.Column="1"
+                                                 SelectedColor="{Binding CanvasBackgroundColorValue, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+                        <TextBlock Text="Position" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Top" Margin="0,10,0,0" />
+                        <Border Grid.Column="1" BorderBrush="{DynamicResource FP.Border.Normal}"
+                                BorderThickness="1" CornerRadius="6" Padding="12,10"
+                                HorizontalAlignment="Left">
+                            <Grid Width="72" Height="72">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*" />
@@ -281,23 +295,25 @@
                                         IsVisible="{Binding CanvasAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BottomRight}" />
                             </Grid>
                         </Button>
+                            </Grid>
+                        </Border>
                     </Grid>
-                </Border>
-            </Grid>
-            <Button Classes="accent"
-                    HorizontalAlignment="Stretch"
-                    Padding="10,6"
-                    Command="{Binding ApplyCanvasCommand}"
-                    IsEnabled="{Binding HasCanvasSizeChanges}"
-                    ToolTip.Tip="Leinwandgröße auf die Vorschau anwenden">
-                <StackPanel Orientation="Horizontal" Spacing="6"
-                            HorizontalAlignment="Center">
-                    <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/frame.svg"
-                        Width="16" Height="16" />
-                    <TextBlock Text="Leinwandgröße anwenden" />
+                    <Button Classes="accent"
+                            HorizontalAlignment="Stretch"
+                            Padding="10,6"
+                            Command="{Binding ApplyCanvasCommand}"
+                            IsEnabled="{Binding HasCanvasSizeChanges}"
+                            ToolTip.Tip="Leinwandgröße auf die Vorschau anwenden">
+                        <StackPanel Orientation="Horizontal" Spacing="6"
+                                    HorizontalAlignment="Center">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/frame.svg"
+                                Width="16" Height="16" />
+                            <TextBlock Text="Leinwandgröße anwenden" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
-            </Button>
+            </Expander>
         </StackPanel>
-    </Grid>
+    </Expander>
 </UserControl>

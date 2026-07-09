@@ -15,7 +15,6 @@ Namespace ViewModels
         Inherits ViewModelBase
 
         Private ReadOnly _mainVm As MainWindowViewModel
-        Private _selectedSection As SettingsSection = SettingsSection.Appearance
         Private ReadOnly _appSettings As AppSettings
         Private _themeMode As String = "Dark"
         Private _accentColor As String = "#F08A1A"
@@ -38,6 +37,7 @@ Namespace ViewModels
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _startupImageMode As String = "Viewer"
         Private _languageMode As String = "System"
+        Private _fontSizeOffset As Integer = 0
         Private _applicationScale As Double = 1.0
         Private _applicationScaleScreen As String = "HDMI-A-1"
         Private _runningApplicationScale As Double = 1.0
@@ -49,6 +49,8 @@ Namespace ViewModels
         Private _transparencyBackgroundMode As String = "Checkerboard"
         Private _transparencyBackgroundColor As String = "#FFFFFFFF"
         Private _enableDiagnosticLogging As Boolean = False
+        Private _isThumbnailCacheRefreshing As Boolean = False
+        Private _isThumbnailCacheRefreshQueued As Boolean = False
 
         Private _savedThemeMode As String = "Dark"
         Private _savedAccentColor As String = "#F08A1A"
@@ -71,20 +73,12 @@ Namespace ViewModels
         Private _savedViewerInfoSidebarExpanded As Boolean = True
         Private _savedStartupImageMode As String = "Viewer"
         Private _savedLanguageMode As String = "System"
+        Private _savedFontSizeOffset As Integer = 0
         Private _savedApplicationScale As Double = 1.0
         Private _savedApplicationScaleScreen As String = "HDMI-A-1"
         Private _savedVideoHardwareAcceleration As Boolean = False
         Private _savedTransparencyBackgroundMode As String = "Checkerboard"
         Private _savedTransparencyBackgroundColor As String = "#FFFFFFFF"
-
-        Public Property SelectedSection As SettingsSection
-            Get
-                Return _selectedSection
-            End Get
-            Set(value As SettingsSection)
-                Me.RaiseAndSetIfChanged(_selectedSection, value)
-            End Set
-        End Property
 
         Public Property ThemeMode As String
             Get
@@ -332,6 +326,44 @@ Namespace ViewModels
                 SaveLanguageSettings()
                 _mainVm?.RefreshLocalization()
             End Set
+        End Property
+
+        ''' <summary>Verschiebt alle Text-Schriftgrößen der Oberfläche um ganze Stufen. Wirkt sofort und
+        ''' ohne Neustart, weil FontScaleService die FP.Font.*-Ressourcen zur Laufzeit austauscht - anders
+        ''' als ApplicationScalePercent, das die gesamte Oberfläche skaliert und ein X11-Backend sowie
+        ''' einen Neustart braucht.</summary>
+        Public Property FontSizeOffset As Integer
+            Get
+                Return _fontSizeOffset
+            End Get
+            Set(value As Integer)
+                value = AppSettingsService.NormalizeFontSizeOffset(value)
+                If _fontSizeOffset = value Then Return
+                Me.RaiseAndSetIfChanged(_fontSizeOffset, value)
+                Me.RaisePropertyChanged(NameOf(FontSizeOffsetText))
+                FontScaleService.Apply(value)
+                SaveAppearanceSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property FontSizeOffsetText As String
+            Get
+                If _fontSizeOffset = 0 Then Return "Standard"
+                If _fontSizeOffset > 0 Then Return $"+{_fontSizeOffset}"
+                Return _fontSizeOffset.ToString(CultureInfo.InvariantCulture)
+            End Get
+        End Property
+
+        Public ReadOnly Property FontSizeOffsetMinimum As Double
+            Get
+                Return AppSettingsService.NormalizeFontSizeOffset(Integer.MinValue)
+            End Get
+        End Property
+
+        Public ReadOnly Property FontSizeOffsetMaximum As Double
+            Get
+                Return AppSettingsService.NormalizeFontSizeOffset(Integer.MaxValue)
+            End Get
         End Property
 
         Public Property ApplicationScalePercent As Double
@@ -741,7 +773,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public ReadOnly Property NavigateSectionCommand As ICommand
         Public ReadOnly Property ResetCommand As ICommand
         Public ReadOnly Property ApplyCommand As ICommand
         Public ReadOnly Property CancelCommand As ICommand
@@ -761,6 +792,7 @@ Namespace ViewModels
 
         Public ReadOnly Property ThumbnailCacheSummaryText As String
             Get
+                If _isThumbnailCacheRefreshing Then Return "Cache wird ermittelt…"
                 If ThumbnailCacheFolders Is Nothing OrElse ThumbnailCacheFolders.Count = 0 Then Return "Kein Vorschaubild-Cache vorhanden."
                 Dim count = ThumbnailCacheFolders.Sum(Function(i) i.ThumbnailCount)
                 Dim size = ThumbnailCacheFolders.Sum(Function(i) i.SizeBytes)
@@ -776,6 +808,7 @@ Namespace ViewModels
             _accentColor = _appSettings.AccentColor
             _startupImageMode = _appSettings.StartupImageMode
             _languageMode = _appSettings.LanguageMode
+            _fontSizeOffset = AppSettingsService.NormalizeFontSizeOffset(_appSettings.FontSizeOffset)
             _applicationScale = _appSettings.ApplicationScale
             _applicationScaleScreen = _appSettings.ApplicationScaleScreen
             ParseRunningApplicationScale(_runningApplicationScale, _runningApplicationScaleScreen)
@@ -802,12 +835,6 @@ Namespace ViewModels
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
             _enableDiagnosticLogging = _appSettings.EnableDiagnosticLogging
             FolderNode.ShowHiddenFolders = _showHiddenFolders
-            NavigateSectionCommand = ReactiveCommand.Create(Of String)(Sub(s)
-                                                                           Dim parsed As SettingsSection
-                                                                           If [Enum].TryParse(s, parsed) Then
-                                                                               SelectedSection = parsed
-                                                                           End If
-                                                                       End Sub)
             ResetCommand = ReactiveCommand.Create(Sub() ResetToDefaults())
             ApplyCommand = ReactiveCommand.Create(Sub()
                                                      SnapshotSettings()
@@ -850,6 +877,7 @@ Namespace ViewModels
                                                                         _mainVm?.Gallery?.LoadCurrentFolder()
                                                                     End Sub)
             ApplyTheme(_themeMode, _accentColor)
+            FontScaleService.Apply(_fontSizeOffset)
             LocalizationService.LanguageMode = _languageMode
             SnapshotSettings()
         End Sub
@@ -892,6 +920,7 @@ Namespace ViewModels
             _savedVideoHardwareAcceleration = _videoHardwareAcceleration
             _savedTransparencyBackgroundMode = _transparencyBackgroundMode
             _savedTransparencyBackgroundColor = _transparencyBackgroundColor
+            _savedFontSizeOffset = _fontSizeOffset
             _savedApplicationScale = _applicationScale
             _savedApplicationScaleScreen = _applicationScaleScreen
         End Sub
@@ -921,6 +950,7 @@ Namespace ViewModels
             VideoHardwareAcceleration = _savedVideoHardwareAcceleration
             TransparencyBackgroundMode = _savedTransparencyBackgroundMode
             TransparencyBackgroundColor = _savedTransparencyBackgroundColor
+            FontSizeOffset = _savedFontSizeOffset
             ApplicationScalePercent = _savedApplicationScale * 100.0
             ApplicationScaleScreen = _savedApplicationScaleScreen
         End Sub
@@ -970,6 +1000,7 @@ Namespace ViewModels
             VideoHardwareAcceleration = False
             TransparencyBackgroundMode = "Checkerboard"
             TransparencyBackgroundColor = "#FFFFFFFF"
+            FontSizeOffset = 0
             ApplicationScalePercent = 100.0
             ApplicationScaleScreen = "HDMI-A-1"
         End Sub
@@ -978,6 +1009,7 @@ Namespace ViewModels
             Dim settings = AppSettingsService.Load()
             settings.ThemeMode = _themeMode
             settings.AccentColor = _accentColor
+            settings.FontSizeOffset = _fontSizeOffset
             AppSettingsService.Save(settings)
         End Sub
 
@@ -1065,12 +1097,35 @@ Namespace ViewModels
             AppSettingsService.Save(settings)
         End Sub
 
-        Public Sub RefreshThumbnailCacheFolders()
-            ThumbnailCacheFolders.Clear()
-            For Each item In Services.ThumbnailCacheService.GetFolderCaches()
-                ThumbnailCacheFolders.Add(item)
-            Next
+        ''' Ermittelt die Cache-Kennzahlen im Hintergrund. Beim ersten Mal - und immer, wenn seither
+        ''' Vorschaubilder dazugekommen sind - muss ThumbnailCacheService dafür Dateien zählen; das darf
+        ''' den Dialog nicht am Öffnen hindern.
+        Public Async Sub RefreshThumbnailCacheFolders()
+            ' Läuft schon eine Erhebung, wird die neue Anforderung vorgemerkt statt verworfen: sonst
+            ' zeigte die Liste nach dem Löschen eines Ordners noch das Ergebnis von davor.
+            If _isThumbnailCacheRefreshing Then
+                _isThumbnailCacheRefreshQueued = True
+                Return
+            End If
+
+            _isThumbnailCacheRefreshing = True
             Me.RaisePropertyChanged(NameOf(ThumbnailCacheSummaryText))
+            Try
+                Do
+                    _isThumbnailCacheRefreshQueued = False
+                    Dim folders = Await Services.ThumbnailCacheService.GetFolderCachesAsync()
+                    ThumbnailCacheFolders.Clear()
+                    For Each item In folders
+                        ThumbnailCacheFolders.Add(item)
+                    Next
+                Loop While _isThumbnailCacheRefreshQueued
+            Catch
+                ' Ein Async Sub reicht Ausnahmen an niemanden weiter - unbehandelt beendet das die App.
+                ThumbnailCacheFolders.Clear()
+            Finally
+                _isThumbnailCacheRefreshing = False
+                Me.RaisePropertyChanged(NameOf(ThumbnailCacheSummaryText))
+            End Try
         End Sub
 
         Private Shared Function FormatBytes(bytes As Long) As String
@@ -1274,17 +1329,5 @@ Namespace ViewModels
             Return $"#{color.R:X2}{color.G:X2}{color.B:X2}"
         End Function
     End Class
-
-    Public Enum SettingsSection
-        Appearance
-        Display
-        Thumbnails
-        Viewer
-        Editor
-        FileAssociations
-        Performance
-        Advanced
-        About
-    End Enum
 
 End Namespace

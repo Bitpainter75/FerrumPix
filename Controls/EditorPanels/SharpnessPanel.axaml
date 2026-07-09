@@ -29,7 +29,7 @@
         <StackPanel Spacing="2" Margin="0,8,0,0">
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                    Value="{Binding Sharpness}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"

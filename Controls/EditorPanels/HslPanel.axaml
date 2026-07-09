@@ -2,37 +2,41 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.HslPanel">
-    <Grid RowDefinitions="Auto,*">
-        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <icons:SvgIcon
-                    Source="avares://FerrumPix/Assets/Icons/outline/color-filter.svg"
-                    Width="14" Height="14" />
-                <TextBlock Text="Farbmischer" FontWeight="SemiBold" />
-            </StackPanel>
-            <Button Grid.Column="1"
-                    Classes="icon-btn"
-                    Width="28"
-                    Height="28"
-                    Padding="0"
-                    Command="{Binding DataContext.ResetHslCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    ToolTip.Tip="Farbmischer zurücksetzen">
-                <icons:SvgIcon
-                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                    Width="14" Height="14" />
-            </Button>
-        </Grid>
-        <StackPanel Grid.Row="1" Spacing="8" Margin="0,8,0,0">
+    <Expander Header="Farbmischer" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/color-filter.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="icon-btn"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetHslCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Farbmischer zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="8" Margin="0,8,0,0">
             <icons:HslWheelPicker SelectedBand="{Binding SelectedHslBand, Mode=TwoWay}"
                                   Width="150" Height="150"
                                   HorizontalAlignment="Center" />
             <TextBlock Text="{Binding SelectedHslBandLabel}"
                        FontWeight="SemiBold"
-                       FontSize="12"
+                       FontSize="{DynamicResource FP.Font.Body}"
                        HorizontalAlignment="Center" />
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    DefaultValue="0"
                                    Value="{Binding ActiveHslHue}" Margin="0,0" />
@@ -44,7 +48,7 @@
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Sättigung"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    DefaultValue="0"
                                    Value="{Binding ActiveHslSaturation}" Margin="0,0" />
@@ -54,5 +58,5 @@
                                          FormatString="F0" />
             </Grid>
         </StackPanel>
-    </Grid>
+    </Expander>
 </UserControl>

@@ -13,7 +13,7 @@
             IsVisible="{Binding IsInfoSidebarVisible}">
         <Grid RowDefinitions="Auto,*" RowSpacing="14">
             <StackPanel Spacing="0">
-                <TextBlock Text="Info" FontSize="15" FontWeight="SemiBold"/>
+                <TextBlock Text="Info" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
                 <StackPanel Orientation="Horizontal" Spacing="18" Margin="0,14,0,0">
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="General" Classes.active="{Binding IsInfoTabGeneral}">
                         <TextBlock Text="Allgemein"/>
@@ -35,7 +35,7 @@
                 <StackPanel Spacing="18">
                     <StackPanel Spacing="18" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
                         <StackPanel Spacing="10">
-                            <TextBlock Text="Bild" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
                                 <TextBlock Text="Abmessungen" Foreground="{DynamicResource FP.Text.Muted}"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
@@ -55,7 +55,7 @@
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
 
                         <StackPanel Spacing="10">
-                            <TextBlock Text="Histogramm" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Histogramm" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <Border Height="92" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
                                 <Image Source="{Binding HistogramImage}"
                                        Stretch="Fill"
@@ -66,7 +66,7 @@
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
 
                         <StackPanel Spacing="10">
-                            <TextBlock Text="Stichwörter" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Stichwörter" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <ItemsControl ItemsSource="{Binding Tags}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -79,12 +79,12 @@
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <TextBlock Text="{Binding}"
                                                            Foreground="{DynamicResource FP.Text.Secondary}"
-                                                           VerticalAlignment="Center" FontSize="11"/>
+                                                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"/>
                                                 <Button Background="Transparent" BorderThickness="0" Padding="0"
                                                         VerticalAlignment="Center"
                                                         Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}">
-                                                    <TextBlock Text="×" FontSize="13"
+                                                    <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.Medium}"
                                                                Foreground="{DynamicResource FP.Text.Muted}"/>
                                                 </Button>
                                             </StackPanel>
@@ -98,11 +98,11 @@
                                                  Watermark="Stichwort hinzufügen…"
                                                  FilterMode="Contains"
                                                  MinimumPrefixLength="0"
-                                                 FontSize="11"
+                                                 FontSize="{DynamicResource FP.Font.Small}"
                                                  Padding="8,5"/>
                                 <Button Grid.Column="1" Classes="ghost" Padding="10,5" Margin="6,0,0,0"
                                         Command="{Binding AddTagCommand}">
-                                    <TextBlock Text="+ Hinzufügen" FontSize="11"/>
+                                    <TextBlock Text="+ Hinzufügen" FontSize="{DynamicResource FP.Font.Small}"/>
                                 </Button>
                             </Grid>
                         </StackPanel>
@@ -110,7 +110,7 @@
                     </StackPanel>
 
                     <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabExif}" Margin="0,0,12,0">
-                        <TextBlock Text="EXIF" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="EXIF" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                         <ItemsControl ItemsSource="{Binding ExifInfo.ExifTags}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -131,7 +131,7 @@
                     </StackPanel>
 
                     <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabIptc}" Margin="0,0,12,0">
-                        <TextBlock Text="IPTC" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="IPTC" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                         <ItemsControl ItemsSource="{Binding ExifInfo.IptcTags}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -152,7 +152,7 @@
                     </StackPanel>
 
                     <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabXmp}" Margin="0,0,12,0">
-                        <TextBlock Text="XMP" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="XMP" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                         <ItemsControl ItemsSource="{Binding ExifInfo.XmpTags}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>

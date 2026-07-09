@@ -51,7 +51,7 @@
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Ausrichten"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
                                    DefaultValue="0"
                                    Value="{Binding StraightenDegrees}" Margin="0,0" />
@@ -62,13 +62,13 @@
             </Grid>
             <CheckBox Content="Leinwand automatisch vergrößern"
                       IsChecked="{Binding StraightenExpandCanvas}"
-                      FontSize="11"
+                      FontSize="{DynamicResource FP.Font.Small}"
                       ToolTip.Tip="Vergrößert die Leinwand beim Ausrichten so, dass keine Bildecken abgeschnitten werden, statt das Bild zum Ausgleich hineinzuzoomen" />
             <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
                   IsVisible="{Binding StraightenExpandCanvas}">
                 <TextBlock Text="Hintergrund"
                            Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:ColorPickerButton Grid.Column="1"
                                          SelectedColor="{Binding CanvasBackgroundColorValue, Mode=TwoWay}" />
             </Grid>

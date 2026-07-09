@@ -2,58 +2,67 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.AnnotationPropertiesPanel">
-    <StackPanel Spacing="10">
-        <TextBlock Text="Eigenschaften" Foreground="{DynamicResource FP.Text.Secondary}"
-                   FontSize="11" FontWeight="SemiBold" />
-        <StackPanel Spacing="6" IsVisible="{Binding ShowWatermarkPresetControls}">
+    <Expander Header="Eigenschaften" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/settings-2.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                </StackPanel>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="10" Margin="0,8,0,0">
+            <StackPanel Spacing="6" IsVisible="{Binding ShowWatermarkPresetControls}">
             <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
                 <TextBlock Text="Vorlage" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <ComboBox Grid.Column="1"
                           Margin="6,0,0,0"
                           ItemsSource="{Binding WatermarkPresetNames}"
                           SelectedItem="{Binding SelectedWatermarkPresetName}"
-                          FontSize="11"
+                          FontSize="{DynamicResource FP.Font.Small}"
                           HorizontalAlignment="Stretch" />
             </Grid>
             <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
                 <TextBlock Text="Name" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBox Grid.Column="1"
                          Margin="6,0,0,0"
                          Text="{Binding WatermarkPresetNameDraft}"
                          HorizontalAlignment="Stretch"
-                         FontSize="11" />
+                         FontSize="{DynamicResource FP.Font.Small}" />
             </Grid>
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Grid.Column="2" Classes="ghost" Padding="8,4" Click="OnWatermarkSavePresetClick">
-                    <TextBlock Text="Speichern" FontSize="11" />
+                    <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Grid.Column="3" Classes="ghost" Padding="8,4" Click="OnWatermarkDeletePresetClick">
-                    <TextBlock Text="Löschen" FontSize="11" />
+                    <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </StackPanel>
             <Grid ColumnDefinitions="74,*,Auto,Auto" ColumnSpacing="6" VerticalAlignment="Center">
                 <TextBlock Text="Quelle" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="1"
                            Margin="6,0,0,0"
                            Text="{Binding WatermarkSourceSummary}"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center"
-                           FontSize="11"
+                           FontSize="{DynamicResource FP.Font.Small}"
                            TextTrimming="CharacterEllipsis" />
                 <Button Grid.Column="2" Classes="ghost" Padding="8,4" Click="OnWatermarkChooseImageClick">
-                    <TextBlock Text="Bild…" FontSize="11" />
+                    <TextBlock Text="Bild…" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Grid.Column="3" Classes="ghost" Padding="8,4" Click="OnWatermarkClearImageClick">
-                    <TextBlock Text="Text" FontSize="11" />
+                    <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </Grid>
         </StackPanel>
         <TextBox Text="{Binding AnnotationText}"
                  Watermark="Text, QR-Inhalt oder Symbol eingeben"
-                 FontSize="12"
+                 FontSize="{DynamicResource FP.Font.Body}"
                  AcceptsReturn="True"
                  TextWrapping="Wrap"
                  MaxHeight="70"
@@ -61,11 +70,11 @@
         <Grid ColumnDefinitions="74,*" VerticalAlignment="Center"
               IsVisible="{Binding ShowFontControls}">
             <TextBlock Text="Schrift" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <ComboBox Grid.Column="1"
                       ItemsSource="{Binding AnnotationFontOptions}"
                       SelectedItem="{Binding AnnotationFontFamily}"
-                      FontSize="11"
+                      FontSize="{DynamicResource FP.Font.Small}"
                       Margin="6,0,0,0"
                       HorizontalAlignment="Stretch"
                       DropDownOpened="OnMatchWidthDropDownOpened" />
@@ -73,7 +82,7 @@
         <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowFontControls}">
             <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <icons:RoundSlider Grid.Column="1" Minimum="8" Maximum="500"
                                DefaultValue="8"
                                Value="{Binding AnnotationFontSizePixels}" Margin="0,0" />
@@ -82,11 +91,12 @@
                                      Minimum="8" Maximum="500" Increment="1"
                                      FormatString="F0" />
         </Grid>
+        <!-- Beim QR-Code werden Hintergrund und Vordergrund über den Farbmischer gesetzt. -->
         <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
-              IsVisible="{Binding ShowFillColorControls}">
+              IsVisible="{Binding ShowFillColorPicker}">
             <TextBlock Text="{Binding FillColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
                 <icons:ColorPickerButton
                     SelectedColor="{Binding AnnotationFillColorValue, Mode=TwoWay}" />
@@ -95,33 +105,33 @@
         <Grid ColumnDefinitions="74,*" VerticalAlignment="Center"
               IsVisible="{Binding ShowFillColorControls}">
             <TextBlock Text="Füllart" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
                         Margin="6,0,0,0">
                 <Button Classes="ghost" Padding="8,4"
                         Command="{Binding SetAnnotationFillKindCommand}"
                         CommandParameter="Solid"
                         Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
-                    <TextBlock Text="Vollfarbe" FontSize="11" />
+                    <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,4"
                         Command="{Binding SetAnnotationFillKindCommand}"
                         CommandParameter="LinearGradient"
                         Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
-                    <TextBlock Text="Verlauf" FontSize="11" />
+                    <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,4"
                         Command="{Binding SetAnnotationFillKindCommand}"
                         CommandParameter="RadialGradient"
                         Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
-                    <TextBlock Text="Radial" FontSize="11" />
+                    <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </StackPanel>
         </Grid>
         <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowGradientFillControls}">
             <TextBlock Text="Verlauf bis" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
                 <icons:ColorPickerButton
                     SelectedColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}" />
@@ -130,7 +140,7 @@
         <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowLinearGradientAngleControl}">
             <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
                                DefaultValue="0"
                                Value="{Binding AnnotationGradientAngleDegrees}"
@@ -141,12 +151,13 @@
                                      FormatString="F0" />
         </Grid>
         <CheckBox Content="Verlauf invertieren"
-                  IsChecked="{Binding AnnotationGradientInverted}" FontSize="11"
+                  IsChecked="{Binding AnnotationGradientInverted}" FontSize="{DynamicResource FP.Font.Small}"
                   IsVisible="{Binding ShowRadialGradientControl}" />
-        <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+        <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
+              IsVisible="{Binding ShowStrokeColorPicker}">
             <TextBlock Text="{Binding StrokeColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
                 <icons:ColorPickerButton
                     SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
@@ -155,7 +166,7 @@
         <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowStrokeWidthControls}">
             <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="50"
                                DefaultValue="0"
                                Value="{Binding AnnotationStrokeWidth}" Margin="0,0" />
@@ -166,7 +177,7 @@
         </Grid>
         <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
             <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                DefaultValue="100"
                                Value="{Binding AnnotationOpacity}" Margin="0,0" />
@@ -177,7 +188,7 @@
         </Grid>
         <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
             <TextBlock Text="Drehung" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
                                DefaultValue="0"
                                Value="{Binding AnnotationRotation}" WheelIncrement="0.01"
@@ -190,7 +201,7 @@
         <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowWatermarkAnchorControls}">
             <TextBlock Text="Anker" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="11" />
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <Border Grid.Column="1"
                     HorizontalAlignment="Left"
                     BorderBrush="{DynamicResource FP.Border.Normal}"
@@ -269,7 +280,7 @@
         <StackPanel Spacing="6">
             <Grid ColumnDefinitions="74,*,44">
                 <TextBlock Text="{Binding AnnotationXLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1"
                                    Minimum="{Binding AnnotationXSliderMinimum}"
                                    Maximum="{Binding AnnotationXSliderMaximum}"
@@ -286,7 +297,7 @@
             </Grid>
             <Grid ColumnDefinitions="74,*,44">
                 <TextBlock Text="{Binding AnnotationYLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1"
                                    Minimum="{Binding AnnotationYSliderMinimum}"
                                    Maximum="{Binding AnnotationYSliderMaximum}"
@@ -303,7 +314,7 @@
             </Grid>
             <Grid ColumnDefinitions="74,*,44">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1"
                                    Minimum="{Binding AnnotationWidthSliderMinimum}"
                                    Maximum="{Binding AnnotationWidthSliderMaximum}"
@@ -320,7 +331,7 @@
             </Grid>
             <Grid ColumnDefinitions="74,*,44">
                 <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="11" />
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1"
                                    Minimum="{Binding AnnotationHeightSliderMinimum}"
                                    Maximum="{Binding AnnotationHeightSliderMaximum}"
@@ -335,6 +346,7 @@
                                          Increment="1"
                                          FormatString="F0" />
             </Grid>
+            </StackPanel>
         </StackPanel>
-    </StackPanel>
+    </Expander>
 </UserControl>

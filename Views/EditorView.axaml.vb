@@ -346,10 +346,12 @@ Namespace Views
         Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)
             If _currentVm IsNot Nothing Then
                 RemoveHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+                RemoveHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
             End If
             _currentVm = TryCast(DataContext, EditorViewModel)
             If _currentVm IsNot Nothing Then
                 AddHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+                AddHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
             End If
             _filmstripController.Reset()
         End Sub
@@ -363,29 +365,38 @@ Namespace Views
             MyBase.OnDetachedFromVisualTree(e)
             If _currentVm IsNot Nothing Then
                 RemoveHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+                RemoveHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
                 _currentVm = Nothing
             End If
+        End Sub
+
+        ''' Das angezeigte Bild hat neue Maße - entweder weil ein anderes geladen wurde oder weil ein
+        ''' Beschnitt angewendet wurde. Der Zoom-Modus bleibt dabei erhalten (siehe ActiveZoomPreset):
+        ''' bei Fit wird neu eingepasst, bei Actual auf 100% gesprungen, bei Manual bleiben Zoom und
+        ''' Schwenk des Nutzers stehen.
+        Private Sub ResetZoomForNewGeometry(vm As EditorViewModel)
+            Select Case If(vm IsNot Nothing, vm.ActiveZoomPreset, ZoomPresetMode.Fit)
+                Case ZoomPresetMode.Fit
+                    _zoomInitialized = False
+                Case ZoomPresetMode.Actual
+                    _panX = 0
+                    _panY = 0
+                    SetZoom(ZoomToSlider(100.0))
+                Case Else
+                    ' Manual: _zoomSliderValue/_panX/_panY unverändert lassen
+            End Select
+            UpdateSliderLayout()
+        End Sub
+
+        Private Sub OnEditorImageGeometryChanged(sender As Object, e As EventArgs)
+            ResetZoomForNewGeometry(TryCast(sender, EditorViewModel))
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             Select Case e.PropertyName
                 Case NameOf(EditorViewModel.CurrentImage)
                     _sliderPosition = 0.5
-                    ' Zoom-Modus bleibt über den Bildwechsel erhalten (siehe ActiveZoomPreset) - nur
-                    ' bei Fit wird wie bisher unbedingt neu eingepasst, bei Actual auf 100% gesprungen,
-                    ' bei Manual bleiben Zoom/Pan des Nutzers unverändert stehen.
-                    Dim currentImageVm = TryCast(sender, EditorViewModel)
-                    Select Case If(currentImageVm IsNot Nothing, currentImageVm.ActiveZoomPreset, ZoomPresetMode.Fit)
-                        Case ZoomPresetMode.Fit
-                            _zoomInitialized = False
-                        Case ZoomPresetMode.Actual
-                            _panX = 0
-                            _panY = 0
-                            SetZoom(ZoomToSlider(100.0))
-                        Case Else
-                            ' Manual: _zoomSliderValue/_panX/_panY unverändert lassen
-                    End Select
-                    UpdateSliderLayout()
+                    ResetZoomForNewGeometry(TryCast(sender, EditorViewModel))
                 Case NameOf(EditorViewModel.DisplayImage)
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.ShowBeforeImage)
@@ -679,6 +690,16 @@ Namespace Views
                 Dim pos = ClampPointToRect(e.GetPosition(canvas), imageRect)
                 Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                 Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
+
+                ' Alt+Klick setzt nur die Quelle des Stempels und beginnt keinen Zug - wie in Photoshop
+                ' und GIMP. Beim Verwischen gibt es keine Quelle, dort bleibt der Modifikator wirkungslos.
+                If vm.IsCloneMode AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Alt) Then
+                    vm.SetCloneSource(xPct, yPct)
+                    UpdateCloneSourceMarker(pos, imageRect, vm)
+                    e.Handled = True
+                    Return
+                End If
+
                 vm.AddRetouchSpot(xPct, yPct)
                 _lastRetouchPoint = New Avalonia.Point(xPct, yPct)
                 _isRetouching = True
@@ -731,9 +752,14 @@ Namespace Views
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
                         e.Handled = True
                         Return
+                    ElseIf vm.HasSelectedAnnotation Then
+                        vm.SelectedAnnotationIndex = -1
+                        If IsLayerPlacementTool(vm.CurrentTool) Then
+                            e.Handled = True
+                            Return
+                        End If
                     ElseIf Not String.IsNullOrEmpty(vm.PendingInsertKind) Then
                         Dim pendingKind = vm.PendingInsertKind
-                        vm.PendingInsertKind = ""
                         If pendingKind = "Image" Then
                             PlacePendingImageAsync(xPct, yPct)
                         Else
@@ -742,12 +768,6 @@ Namespace Views
                         End If
                         e.Handled = True
                         Return
-                    ElseIf vm.HasSelectedAnnotation Then
-                        vm.SelectedAnnotationIndex = -1
-                        If IsLayerPlacementTool(vm.CurrentTool) Then
-                            e.Handled = True
-                            Return
-                        End If
                     ElseIf IsLayerPlacementTool(vm.CurrentTool) Then
                         e.Handled = True
                         Return
@@ -925,7 +945,7 @@ Namespace Views
             line.StrokeThickness = Math.Max(1.0, vm.BrushSize * scale)
             If isEraser Then
                 line.Stroke = New SolidColorBrush(Colors.White)
-                line.StrokeDashArray = New Avalonia.Collections.AvaloniaList(Of Double) From {4, 3}
+                line.StrokeDashArray = Nothing
                 line.Opacity = 0.85
             Else
                 line.Stroke = vm.AnnotationStrokeBrush
@@ -953,6 +973,42 @@ Namespace Views
             cursor.Height = diameter
             Canvas.SetLeft(cursor, position.X - diameter / 2.0)
             Canvas.SetTop(cursor, position.Y - diameter / 2.0)
+
+            UpdateCloneSourceMarker(position, imageRect, vm)
+        End Sub
+
+        ''' Zeichnet den gestrichelten Ring an der Stelle, aus der gerade kopiert wird. Vor dem ersten
+        ''' Punkt eines Zuges ist das der per Alt+Klick gesetzte Quellpunkt; danach wandert er im
+        ''' gemerkten Versatz mit dem Zeiger mit, damit sichtbar ist, was übertragen wird.
+        Private Sub UpdateCloneSourceMarker(position As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel)
+            Dim marker = Me.FindControl(Of Ellipse)("CloneSourceMarker")
+            If marker Is Nothing Then Return
+
+            If vm Is Nothing OrElse Not vm.IsCloneMode OrElse Not vm.HasCloneSource OrElse
+               imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then
+                marker.IsVisible = False
+                Return
+            End If
+
+            Dim xPct = (position.X - imageRect.Left) / imageRect.Width * 100.0
+            Dim yPct = (position.Y - imageRect.Top) / imageRect.Height * 100.0
+            Dim sample = vm.GetCloneSamplePercent(xPct, yPct)
+            If Not sample.IsValid Then
+                marker.IsVisible = False
+                Return
+            End If
+
+            Dim scale = 1.0
+            If vm.CurrentImage IsNot Nothing AndAlso vm.CurrentImage.PixelSize.Width > 0 AndAlso vm.CurrentImage.PixelSize.Height > 0 Then
+                scale = Math.Min(imageRect.Width / vm.CurrentImage.PixelSize.Width, imageRect.Height / vm.CurrentImage.PixelSize.Height)
+            End If
+            Dim diameter = Math.Max(4.0, vm.RetouchRadius * 2.0 * scale)
+
+            marker.IsVisible = True
+            marker.Width = diameter
+            marker.Height = diameter
+            Canvas.SetLeft(marker, imageRect.Left + sample.X / 100.0 * imageRect.Width - diameter / 2.0)
+            Canvas.SetTop(marker, imageRect.Top + sample.Y / 100.0 * imageRect.Height - diameter / 2.0)
         End Sub
 
         Private Sub UpdateCropOverlayVisibility()
@@ -1216,8 +1272,10 @@ Namespace Views
                 Return
             End If
 
-            Dim width = CInt(Math.Round(Math.Max(1, cropRect.Width / imageRect.Width * vm.CurrentImage.PixelSize.Width)))
-            Dim height = CInt(Math.Round(Math.Max(1, cropRect.Height / imageRect.Height * vm.CurrentImage.PixelSize.Height)))
+            ' Bezugsgröße ist das angezeigte, also bereits beschnittene Bild - nicht das Original,
+            ' sonst zeigte die Plakette nach einem Beschnitt zu große Maße an.
+            Dim width = CInt(Math.Round(Math.Max(1, cropRect.Width / imageRect.Width * vm.EffectiveImageWidthPixels)))
+            Dim height = CInt(Math.Round(Math.Max(1, cropRect.Height / imageRect.Height * vm.EffectiveImageHeightPixels)))
             badge.Text = $"{width} × {height} px"
         End Sub
 
@@ -1638,15 +1696,33 @@ Namespace Views
                         bottom = Math.Max(top + minSize, bottom + dy)
                 End Select
 
-                Dim keepAspect = (e.KeyModifiers.HasFlag(KeyModifiers.Shift) OrElse String.Equals(vm.EffectiveAnnotationKind, "Image", StringComparison.OrdinalIgnoreCase)) AndAlso
+                Dim isQr = String.Equals(vm.EffectiveAnnotationKind, "QR", StringComparison.OrdinalIgnoreCase)
+                Dim keepAspect = (e.KeyModifiers.HasFlag(KeyModifiers.Shift) OrElse
+                                  String.Equals(vm.EffectiveAnnotationKind, "Image", StringComparison.OrdinalIgnoreCase) OrElse
+                                  isQr) AndAlso
                                  _textDragAspect > 0 AndAlso IsTextCornerMode(_textDragMode)
                 If keepAspect Then
-                    Dim targetHeight = Math.Max(minSize, (right - left) / _textDragAspect)
+                    Dim aspect = If(isQr, 1.0, _textDragAspect)
+                    Dim targetHeight = Math.Max(minSize, (right - left) / aspect)
                     Select Case _textDragMode
                         Case TextDragMode.TopLeft, TextDragMode.TopRight
                             top = bottom - targetHeight
                         Case TextDragMode.BottomLeft, TextDragMode.BottomRight
                             bottom = top + targetHeight
+                    End Select
+                End If
+                If isQr AndAlso Not IsTextCornerMode(_textDragMode) Then
+                    Select Case _textDragMode
+                        Case TextDragMode.Left, TextDragMode.Right
+                            Dim targetHeight = Math.Max(minSize, right - left)
+                            Dim centerY = (top + bottom) / 2.0
+                            top = centerY - targetHeight / 2.0
+                            bottom = centerY + targetHeight / 2.0
+                        Case TextDragMode.Top, TextDragMode.Bottom
+                            Dim targetWidth = Math.Max(minSize, bottom - top)
+                            Dim centerX = (left + right) / 2.0
+                            left = centerX - targetWidth / 2.0
+                            right = centerX + targetWidth / 2.0
                     End Select
                 End If
                 HideTextSnapGuides()

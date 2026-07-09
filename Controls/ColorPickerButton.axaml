@@ -6,14 +6,14 @@
         <Button Name="SwatchButton" Classes="ghost" Height="34" Padding="6,4" HorizontalAlignment="Stretch" MinWidth="120" ToolTip.Tip="Farbe wählen">
             <Grid ColumnDefinitions="28,*" ColumnSpacing="8">
                 <Border Name="SwatchBorder" Width="26" Height="22" BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1" CornerRadius="4"/>
-                <TextBlock Grid.Column="1" Name="HexTextBlock" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="11" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Name="HexTextBlock" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center"/>
             </Grid>
             <Button.Flyout>
                 <Flyout Placement="Bottom">
                     <Border Background="{DynamicResource FP.Bg.Panel}" BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6" Padding="10">
                         <StackPanel Spacing="2" Width="230">
                             <ColorPicker Name="InnerColorPicker" ColorModel="Rgba" HorizontalAlignment="Stretch"/>
-                            <TextBox Name="HexTextBox" Watermark="#AARRGGBB" FontSize="11"/>
+                            <TextBox Name="HexTextBox" Watermark="#AARRGGBB" FontSize="{DynamicResource FP.Font.Small}"/>
                             <ItemsControl Name="RecentColorsList">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>

@@ -40,9 +40,9 @@
                                        Width="20" Height="20" />
                     </Button>
                     <StackPanel Margin="26,0,0,0" VerticalAlignment="Center" >
-                        <TextBlock Text="{Binding CurrentFileName}" FontSize="14" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold" />
                         <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   FontSize="10" />
+                                   FontSize="{DynamicResource FP.Font.Caption}" />
                     </StackPanel>
                 </StackPanel>
 
@@ -156,7 +156,7 @@
         <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8">
             <ScrollViewer VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
                 <StackPanel Spacing="2">
-                    <TextBlock Text="TRANSFORMIEREN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="10"
+                    <TextBlock Text="TRANSFORMIEREN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,0,0,4" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Zuschneiden"
@@ -166,7 +166,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/crop.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Zuschneiden" FontSize="12" />
+                            <TextBlock Text="Zuschneiden" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -177,7 +177,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Bildgröße" FontSize="12" />
+                            <TextBlock Text="Bildgröße" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -188,11 +188,11 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Drehen" FontSize="12" />
+                            <TextBlock Text="Drehen" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
 
-                    <TextBlock Text="ANPASSUNGEN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="10"
+                    <TextBlock Text="ANPASSUNGEN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,10,0,4" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Anpassen"
@@ -202,7 +202,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Anpassen" FontSize="12" />
+                            <TextBlock Text="Anpassen" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -213,11 +213,11 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-filter.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Farbe" FontSize="12" />
+                            <TextBlock Text="Farbe" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
 
-                    <TextBlock Text="DETAILS UND EFFEKTE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="10"
+                    <TextBlock Text="DETAILS UND EFFEKTE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,10,0,4" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Details"
@@ -227,7 +227,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Details" FontSize="12" />
+                            <TextBlock Text="Details" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -238,7 +238,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/frame.svg" Width="18"
                                            Height="18" />
-                            <TextBlock Text="Effekte und Rahmen" FontSize="12" />
+                            <TextBlock Text="Effekte und Rahmen" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -249,10 +249,13 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/palette.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Filter" FontSize="12" />
+                            <TextBlock Text="Filter" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
-                    <TextBlock Text="AUSWAHL" Foreground="{DynamicResource FP.Text.Muted}" FontSize="10"
+                    <!-- Die Werkzeuge stehen hier einzeln, statt hinter den Sammelknöpfen "Text und Bild"
+                         und "Malen" zu liegen: ein Klick wählt direkt das Werkzeug, mit dem gearbeitet
+                         wird. Die zugehörigen Panels rechts zeigen nur noch dessen Einstellungen. -->
+                    <TextBlock Text="WERKZEUGE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,10,0,4" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Auswahl"
@@ -262,34 +265,96 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rectangle.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Auswahl" FontSize="12" />
+                            <TextBlock Text="Auswahl" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
 
-                    <TextBlock Text="EINFÜGEN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="10"
-                               FontWeight="SemiBold" Margin="10,10,0,4" />
                     <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Text und Bild"
+                            ToolTip.Tip="Text"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Text"
-                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Text}">
+                            Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}"
+                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/text-size.svg" Width="18"
-                                           Height="18" />
-                            <TextBlock Text="Text und Bild" FontSize="12" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/text-size.svg" Width="18" Height="18" />
+                            <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Malen"
+                            ToolTip.Tip="Bild"
                             Command="{Binding SetToolCommand}"
-                            CommandParameter="Draw"
-                            Classes.active="{Binding IsPaintToolSelected}">
+                            CommandParameter="Image"
+                            Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}"
+                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg" Width="18"
-                                           Height="18" />
-                            <TextBlock Text="Malen" FontSize="12" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg" Width="18" Height="18" />
+                            <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="QR-Code"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="QR"
+                            Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}"
+                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/qrcode.svg" Width="18" Height="18" />
+                            <TextBlock Text="QR-Code" FontSize="{DynamicResource FP.Font.Body}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Wasserzeichen"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Watermark"
+                            Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}"
+                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copyright.svg" Width="18" Height="18" />
+                            <TextBlock Text="Wasserzeichen" FontSize="{DynamicResource FP.Font.Body}" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Pinsel"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Brush"
+                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg" Width="18" Height="18" />
+                            <TextBlock Text="Pinsel" FontSize="{DynamicResource FP.Font.Body}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Radiergummi"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Eraser"
+                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg" Width="18" Height="18" />
+                            <TextBlock Text="Radiergummi" FontSize="{DynamicResource FP.Font.Body}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Verwischen"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Blur"
+                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Blur}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-spark.svg" Width="18" Height="18" />
+                            <TextBlock Text="Verwischen" FontSize="{DynamicResource FP.Font.Body}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Stempel (Alt+Klick setzt die Quelle)"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Clone"
+                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Clone}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rubber-stamp.svg" Width="18" Height="18" />
+                            <TextBlock Text="Stempel" FontSize="{DynamicResource FP.Font.Body}" />
+                        </StackPanel>
+                    </Button>
+
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Formen und Symbole"
                             Command="{Binding SetToolCommand}"
@@ -298,7 +363,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/cube.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Formen und Symbole" FontSize="12" />
+                            <TextBlock Text="Formen und Symbole" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -310,9 +375,9 @@
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                             IsVisible="{Binding CurrentImage, Converter={x:Static ObjectConverters.IsNull}}">
                     <TextBlock Text="Kein Bild zum Bearbeiten" Foreground="{DynamicResource FP.Text.Muted}"
-                               FontSize="14" HorizontalAlignment="Center" />
+                               FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center" />
                     <TextBlock Text="Öffne ein Bild aus dem Betrachter" Foreground="{DynamicResource FP.Text.Muted}"
-                               FontSize="11" HorizontalAlignment="Center" />
+                               FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center" />
                 </StackPanel>
 
                 <Grid RowDefinitions="*,Auto"
@@ -372,10 +437,10 @@
                             </StackPanel>
                         </Border>
                         <Border x:Name="BeforeLabel" Background="#262933" CornerRadius="6" Padding="10,5">
-                            <TextBlock Text="Vorher" FontSize="11" Foreground="White" />
+                            <TextBlock Text="Vorher" FontSize="{DynamicResource FP.Font.Small}" Foreground="White" />
                         </Border>
                         <Border x:Name="AfterLabel" Background="#262933" CornerRadius="6" Padding="10,5">
-                            <TextBlock Text="Nachher" FontSize="11" Foreground="White" />
+                            <TextBlock Text="Nachher" FontSize="{DynamicResource FP.Font.Small}" Foreground="White" />
                         </Border>
                         <Border x:Name="CropOverlay"
                                 BorderThickness="0"
@@ -416,7 +481,7 @@
                                     <TextBlock x:Name="CropSizeBadgeText"
                                                Text=""
                                                Foreground="White"
-                                               FontSize="11"
+                                               FontSize="{DynamicResource FP.Font.Small}"
                                                FontWeight="SemiBold" />
                                 </Border>
                                 <Border Width="16" Height="16" CornerRadius="8"
@@ -506,7 +571,7 @@
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Top"
                                         Margin="0,-30,0,0">
-                                    <TextBlock x:Name="TextSizeBadgeText" Text="" Foreground="White" FontSize="11"
+                                    <TextBlock x:Name="TextSizeBadgeText" Text="" Foreground="White" FontSize="{DynamicResource FP.Font.Small}"
                                                FontWeight="SemiBold" />
                                 </Border>
                                 <Border Width="1" Height="20" Background="{DynamicResource FP.Accent}"
@@ -565,6 +630,13 @@
                                  IsHitTestVisible="False"
                                  Stroke="{DynamicResource FP.Accent}"
                                  StrokeThickness="1.5" />
+                        <!-- Zeigt beim Klonen, von welcher Stelle die Textur kopiert wird. -->
+                        <Ellipse x:Name="CloneSourceMarker"
+                                 IsVisible="False"
+                                 IsHitTestVisible="False"
+                                 Stroke="{DynamicResource FP.Accent}"
+                                 StrokeThickness="1.5"
+                                 StrokeDashArray="3,3" />
                     </Canvas>
                 </Grid>
             </Grid>
@@ -770,24 +842,24 @@
 
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding CurrentFileName}" FontSize="12" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   FontSize="12" VerticalAlignment="Center" />
+                                   FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   FontSize="12" VerticalAlignment="Center" />
+                                   FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
                                 Focusable="False"
                                 Click="OnZoomOutClick" ToolTip.Tip="Verkleinern">
-                            <TextBlock Text="−" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
+                            <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
                         </Button>
                         <icons:RoundSlider Name="EditorZoomSlider" Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
                                            Value="{Binding ZoomSliderValue, Mode=TwoWay}" VerticalAlignment="Center" />
                         <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
                                 Focusable="False"
                                 Click="OnZoomInClick" ToolTip.Tip="Vergrößern">
-                            <TextBlock Text="+" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
+                            <TextBlock Text="+" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
                         </Button>
                         <Button Classes="ghost" Height="26" Padding="8,2" Margin="12,0,0,0" Focusable="False"
                                 Classes.active="{Binding IsZoomActualActive}"
@@ -810,7 +882,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                             <TextBlock Text="{Binding MousePositionText}"
                                        IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
-                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="12"
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}"
                                        VerticalAlignment="Center" Margin="0,0,20,0" />
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center" 
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"

@@ -75,12 +75,12 @@
                     </Button>
                     <TextBlock Text="›"
                                Foreground="{DynamicResource FP.Text.Muted}"
-                               FontSize="11"
+                               FontSize="{DynamicResource FP.Font.Small}"
                                VerticalAlignment="Center"
                                IsVisible="{Binding HasBreadcrumbParent}"/>
                     <TextBlock Text="{Binding CurrentFolderName}"
                                Foreground="{DynamicResource FP.Text.Primary}"
-                               FontSize="12"
+                               FontSize="{DynamicResource FP.Font.Body}"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
@@ -135,7 +135,7 @@
                                 <StackPanel Spacing="1" MinWidth="248">
 
                                         <!-- FAVORITEN -->
-                                        <TextBlock Text="FAVORITEN" FontSize="10" FontWeight="SemiBold"
+                                        <TextBlock Text="FAVORITEN" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource FP.Text.Muted}"
                                                    Margin="10,8,10,4"/>
                                         <Button Classes="ghost" HorizontalAlignment="Stretch"
@@ -160,7 +160,7 @@
                                         <Separator Margin="4,6"/>
 
                                         <!-- BEWERTUNG -->
-                                        <TextBlock Text="BEWERTUNG" FontSize="10" FontWeight="SemiBold"
+                                        <TextBlock Text="BEWERTUNG" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource FP.Text.Muted}"
                                                    Margin="10,4,10,4"/>
                                         <Button Classes="ghost" HorizontalAlignment="Stretch"
@@ -230,7 +230,7 @@
                                         <Separator Margin="4,6"/>
 
                                         <!-- DATEITYP -->
-                                        <TextBlock Text="DATEITYP" FontSize="10" FontWeight="SemiBold"
+                                        <TextBlock Text="DATEITYP" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource FP.Text.Muted}"
                                                    Margin="10,4,10,4"/>
                                         <Button Classes="ghost" HorizontalAlignment="Stretch"
@@ -288,7 +288,7 @@
                             <Flyout Placement="BottomEdgeAlignedLeft"
                                     VerticalOffset="2">
                                 <StackPanel Spacing="1" MinWidth="188">
-                                    <TextBlock Text="SORTIEREN NACH" FontSize="10" FontWeight="SemiBold"
+                                    <TextBlock Text="SORTIEREN NACH" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                Margin="10,8,10,4"/>
                                     <Button Classes="ghost" HorizontalAlignment="Stretch"
@@ -320,7 +320,7 @@
                                     </Button>
 
                                     <Separator Margin="4,6"/>
-                                    <TextBlock Text="DATUM" FontSize="10" FontWeight="SemiBold"
+                                    <TextBlock Text="DATUM" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                Margin="10,4,10,4"/>
                                     <Button Classes="ghost" HorizontalAlignment="Stretch"
@@ -361,7 +361,7 @@
                                     </Button>
 
                                     <Separator Margin="4,6"/>
-                                    <TextBlock Text="BILD" FontSize="10" FontWeight="SemiBold"
+                                    <TextBlock Text="BILD" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                Margin="10,4,10,4"/>
                                     <Button Classes="ghost" HorizontalAlignment="Stretch"
@@ -432,7 +432,7 @@
 
                                     <Separator Margin="4,6"/>
 
-                                    <TextBlock Text="REIHENFOLGE" FontSize="10" FontWeight="SemiBold"
+                                    <TextBlock Text="REIHENFOLGE" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                Margin="10,4,10,4"/>
                                     <Button Classes="ghost" HorizontalAlignment="Stretch"
@@ -497,7 +497,7 @@
                             Spacing="6"
                             ClipToBounds="True">
                     <Grid ColumnDefinitions="*" Margin="0,0,14,8">
-                        <TextBlock Text="Suchen" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="Suchen" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                     </Grid>
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto"
@@ -525,7 +525,7 @@
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
                                                        Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="6,0,0,0"
-                                                   VerticalAlignment="Center" FontSize="12"
+                                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <Button Grid.Column="2"
                                                 Classes="ghost"
@@ -555,7 +555,7 @@
                       RowDefinitions="Auto,*"
                       ClipToBounds="True">
                     <Grid ColumnDefinitions="*" Margin="0,0,14,8">
-                        <TextBlock Text="Ordner" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="Ordner" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                     </Grid>
                     <ScrollViewer Grid.Row="1"
                                   HorizontalScrollBarVisibility="Disabled"
@@ -594,7 +594,7 @@
                                         <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="10,0,0,0"
                                                    VerticalAlignment="Center"
                                                    HorizontalAlignment="Stretch"
-                                                   FontSize="12"
+                                                   FontSize="{DynamicResource FP.Font.Body}"
                                                    TextTrimming="CharacterEllipsis"
                                                    ToolTip.Tip="{Binding FullPath}"/>
                                     </Grid>
@@ -619,7 +619,7 @@
                     </Button>
                     <TextBlock Text="{Binding StorageFreeText}"
                                Foreground="{DynamicResource FP.Text.Muted}"
-                               FontSize="10"/>
+                               FontSize="{DynamicResource FP.Font.Caption}"/>
                     <ProgressBar Value="{Binding StorageFillPercent}"
                                  Minimum="0" Maximum="100"
                                  Height="4"
@@ -646,8 +646,8 @@
             <Grid>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
                             IsVisible="{Binding CurrentFolder, Converter={x:Static ObjectConverters.IsNull}}">
-                    <TextBlock Text="Kein Ordner geöffnet" Foreground="{DynamicResource FP.Text.Muted}" FontSize="14" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Wähle einen Ordner in der Sidebar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="11" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Kein Ordner geöffnet" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Wähle einen Ordner in der Sidebar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <ScrollViewer x:Name="GalleryGridScrollViewer"
@@ -960,25 +960,25 @@
                                         <Border Grid.Row="1" Background="{DynamicResource FP.Bg.Content}" CornerRadius="0,0,8,8" Padding="14,9">
                                             <StackPanel Spacing="7">
                                                 <TextBlock Text="{Binding FileName}"
-                                                           FontSize="13"
+                                                           FontSize="{DynamicResource FP.Font.ItemTitle}"
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis"/>
                                                 <Grid ColumnDefinitions="*,*,Auto">
                                                     <TextBlock Text="{Binding DateText}"
                                                                Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="12"
+                                                               FontSize="{DynamicResource FP.Font.Body}"
                                                                VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding DimensionsText}"
                                                                IsVisible="{Binding DimensionsText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                                                                Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="12"
+                                                               FontSize="{DynamicResource FP.Font.Body}"
                                                                VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Grid.Column="2"
                                                                Text="{Binding FileSizeText}"
                                                                Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="12"
+                                                               FontSize="{DynamicResource FP.Font.Body}"
                                                                VerticalAlignment="Center"/>
                                                 </Grid>
                                             </StackPanel>
@@ -1162,7 +1162,7 @@
                                                     Margin="4,0,14,0">
                                             <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{Binding FileName}"
-                                                           FontSize="13"
+                                                           FontSize="{DynamicResource FP.Font.ItemTitle}"
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis"/>
                                                 <StackPanel Grid.Column="1"
@@ -1217,7 +1217,7 @@
                                             </Grid>
                                             <TextBlock Text="{Binding FilePath}"
                                                        Foreground="{DynamicResource FP.Text.Muted}"
-                                                       FontSize="11"
+                                                       FontSize="{DynamicResource FP.Font.Small}"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="2"
@@ -1275,11 +1275,11 @@
                         IsVisible="{Binding HoveredMetadataTitle, Converter={StaticResource StringNotEmptyToBoolConverter}}">
                     <StackPanel Spacing="6">
                         <TextBlock Text="{Binding HoveredMetadataTitle}"
-                                   FontSize="13"
+                                   FontSize="{DynamicResource FP.Font.ItemTitle}"
                                    FontWeight="SemiBold"
                                    Foreground="White"/>
                         <TextBlock Text="{Binding HoveredMetadataText}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource FP.Font.Small}"
                                    Foreground="White"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
@@ -1306,7 +1306,7 @@
                     <TextBlock
                                Text="{Binding FooterStatusText}"
                                Foreground="{DynamicResource FP.Text.Secondary}"
-                               FontSize="12"
+                               FontSize="{DynamicResource FP.Font.Body}"
                                Margin="16,0,0,0"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -1314,7 +1314,7 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                             Command="{Binding DecreaseThumbnailSizeCommand}" ToolTip.Tip="Verkleinern">
-                        <TextBlock Text="−" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                     </Button>
                     <icons:RoundSlider Width="136"
                                        Minimum="140"
@@ -1323,7 +1323,7 @@
                                        VerticalAlignment="Center"/>
                     <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                             Command="{Binding IncreaseThumbnailSizeCommand}" ToolTip.Tip="Vergrößern">
-                        <TextBlock Text="+" FontSize="14" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="+" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                     </Button>
                 </StackPanel>
                 

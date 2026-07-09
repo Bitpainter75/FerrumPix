@@ -16,7 +16,7 @@
             <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Collage erstellen"
-                               FontSize="18"
+                               FontSize="{DynamicResource FP.Font.Heading}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource FP.Text.Primary}"/>
                     <TextBlock Text="Die ausgewählten Bilder werden als Collage im aktuellen Ordner gespeichert."
@@ -59,7 +59,7 @@
                             </Grid>
                         </Border>
                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
-                            <TextBlock Text="Zoom" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="12"/>
+                            <TextBlock Text="Zoom" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"/>
                             <icons:RoundSlider Grid.Column="1"
                                                Minimum="0.25"
                                                Maximum="4"
@@ -68,7 +68,7 @@
                                        Text="{Binding CollagePreviewZoom, StringFormat={}{0:P0}}"
                                        Foreground="{DynamicResource FP.Text.Secondary}"
                                        VerticalAlignment="Center"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource FP.Font.Body}"
                                        MinWidth="42"
                                        TextAlignment="Right"/>
                             <Button Grid.Column="3" Classes="ghost" Padding="10,4" Click="OnFitPreviewClick" ToolTip.Tip="Vorschau einpassen">
@@ -102,7 +102,7 @@
                         <TextBlock Grid.Row="2" Grid.Column="1"
                                    Text="Klicke in der Vorschau auf ein Bild, um es als Hero festzulegen."
                                    Foreground="{DynamicResource FP.Text.Muted}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource FP.Font.Small}"
                                    IsVisible="{Binding IsCollageHeroMode}"
                                    TextWrapping="Wrap"/>
 
@@ -284,7 +284,7 @@
                                                          HorizontalAlignment="Stretch"/>
                                             <TextBox Text="{Binding CollageBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                      Watermark="#AARRGGBB"
-                                                     FontSize="12"/>
+                                                     FontSize="{DynamicResource FP.Font.Body}"/>
                                         </StackPanel>
                                     </Border>
                                 </Flyout>
