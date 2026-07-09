@@ -66,20 +66,6 @@ Namespace ViewModels
             "WEBP"
         }
         Public ReadOnly Property DialogBatchRenamePreview As ObservableCollection(Of BatchRenamePreviewItem) = New ObservableCollection(Of BatchRenamePreviewItem)()
-        Public ReadOnly Property DialogSearchFavoriteOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {
-            "Any",
-            "Only",
-            "Not"
-        }
-        Public ReadOnly Property DialogSearchRatingOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {
-            "Alle",
-            "Nicht bewertet",
-            "1+ Sterne",
-            "2+ Sterne",
-            "3+ Sterne",
-            "4+ Sterne",
-            "5 Sterne"
-        }
         Public ReadOnly Property DialogWatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
 
         Public Property CurrentMode As AppMode
@@ -89,10 +75,6 @@ Namespace ViewModels
             Set(value As AppMode)
                 Dim previousMode = _currentMode
                 Me.RaiseAndSetIfChanged(_currentMode, value)
-                Me.RaisePropertyChanged(NameOf(IsGalleryMode))
-                Me.RaisePropertyChanged(NameOf(IsViewerMode))
-                Me.RaisePropertyChanged(NameOf(IsEditorMode))
-                Me.RaisePropertyChanged(NameOf(IsSettingsMode))
                 Me.RaisePropertyChanged(NameOf(CurrentContent))
                 Me.RaisePropertyChanged(NameOf(TitleSuffix))
                 Me.RaisePropertyChanged(NameOf(IsFullscreenViewer))
@@ -148,30 +130,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property IsGalleryMode As Boolean
-            Get
-                Return _currentMode = AppMode.Gallery
-            End Get
-        End Property
-
-        Public ReadOnly Property IsViewerMode As Boolean
-            Get
-                Return _currentMode = AppMode.Viewer
-            End Get
-        End Property
-
-        Public ReadOnly Property IsEditorMode As Boolean
-            Get
-                Return _currentMode = AppMode.Editor
-            End Get
-        End Property
-
-        Public ReadOnly Property IsSettingsMode As Boolean
-            Get
-                Return _currentMode = AppMode.Settings
-            End Get
-        End Property
-
         Public ReadOnly Property TitleSuffix As String
             Get
                 Select Case _currentMode
@@ -207,11 +165,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property NavigateGalleryCommand As ICommand
-        Public ReadOnly Property NavigateViewerCommand As ICommand
-        Public ReadOnly Property NavigateEditorCommand As ICommand
-        Public ReadOnly Property NavigateSettingsCommand As ICommand
-        Public ReadOnly Property EnterFullscreenCommand As ICommand
         Public ReadOnly Property DialogConfirmCommand As ICommand
         Public ReadOnly Property DialogCancelCommand As ICommand
         Public ReadOnly Property DialogSkipCommand As ICommand
@@ -223,14 +176,6 @@ Namespace ViewModels
             Viewer = New ViewerViewModel(Me)
             Editor = New EditorViewModel(Me)
 
-            NavigateGalleryCommand = ReactiveCommand.Create(Sub() CurrentMode = AppMode.Gallery)
-            NavigateViewerCommand = ReactiveCommand.Create(Sub() CurrentMode = AppMode.Viewer)
-            NavigateEditorCommand = ReactiveCommand.Create(Sub()
-                                                               Editor?.ResetTransientUiState()
-                                                               CurrentMode = AppMode.Editor
-                                                           End Sub)
-            NavigateSettingsCommand = ReactiveCommand.Create(Sub() OpenSettings())
-            EnterFullscreenCommand = ReactiveCommand.Create(Sub() EnterFullscreen())
             DialogConfirmCommand = ReactiveCommand.Create(Sub() ConfirmDialog())
             DialogCancelCommand = ReactiveCommand.Create(Sub() CancelDialog())
             DialogSkipCommand = ReactiveCommand.Create(Sub() SkipDialog())
@@ -620,12 +565,6 @@ Namespace ViewModels
             RaiseDialogSearchRatingState()
         End Sub
 
-        Public ReadOnly Property IsDialogSearchFavoriteAny As Boolean
-            Get
-                Return _dialogSearchFavoriteMode = "Any"
-            End Get
-        End Property
-
         Public ReadOnly Property IsDialogSearchFavoriteOnly As Boolean
             Get
                 Return _dialogSearchFavoriteMode = "Only"
@@ -703,7 +642,6 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsSearch))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchResize))
                 Me.RaisePropertyChanged(NameOf(DialogShowsWatermarkPreset))
-                Me.RaisePropertyChanged(NameOf(DialogShowsStandardMessage))
                 Me.RaisePropertyChanged(NameOf(DialogUsesWideLayout))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
             End Set
@@ -774,16 +712,6 @@ Namespace ViewModels
         Public ReadOnly Property DialogUsesWideLayout As Boolean
             Get
                 Return DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch OrElse DialogShowsBatchResize
-            End Get
-        End Property
-
-        Public ReadOnly Property DialogShowsStandardMessage As Boolean
-            Get
-                Return _dialogKind <> AppDialogKind.FileConflict AndAlso
-                       _dialogKind <> AppDialogKind.BatchRename AndAlso
-                       _dialogKind <> AppDialogKind.Search AndAlso
-                       _dialogKind <> AppDialogKind.BatchResize AndAlso
-                       _dialogKind <> AppDialogKind.WatermarkPreset
             End Get
         End Property
 
@@ -1342,7 +1270,6 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseDialogSearchFavoriteState()
-            Me.RaisePropertyChanged(NameOf(IsDialogSearchFavoriteAny))
             Me.RaisePropertyChanged(NameOf(IsDialogSearchFavoriteOnly))
             Me.RaisePropertyChanged(NameOf(IsDialogSearchFavoriteNot))
         End Sub

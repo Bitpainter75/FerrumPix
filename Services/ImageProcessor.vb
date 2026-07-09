@@ -61,45 +61,6 @@ Namespace Services
         End Function
     End Class
 
-    ''' <summary>
-    ''' Das Textformat der Züge - Striche mit ";" getrennt, Punkte mit " ", Koordinaten mit ",".
-    ''' Es lebt nur noch in der Rezeptdatei; im Arbeitsspeicher stehen die Punkte als BrushStroke.
-    ''' Dadurch bleiben bestehende .fpxedit-Dateien unverändert lesbar.
-    ''' </summary>
-    Public NotInheritable Class BrushStrokeCodec
-        Private Sub New()
-        End Sub
-
-        Public Shared Function Serialize(strokes As IEnumerable(Of BrushStroke)) As String
-            If strokes Is Nothing Then Return ""
-            Return String.Join(";", strokes.
-                Where(Function(s) s IsNot Nothing AndAlso s.Points.Count > 0).
-                Select(Function(s) String.Join(" ", s.Points.Select(
-                    Function(p) $"{p.X.ToString("F3", Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString("F3", Globalization.CultureInfo.InvariantCulture)}"))))
-        End Function
-
-        Public Shared Function Parse(text As String) As List(Of BrushStroke)
-            Dim result As New List(Of BrushStroke)()
-            If String.IsNullOrWhiteSpace(text) Then Return result
-
-            For Each strokeText In text.Split(";"c)
-                Dim points As New List(Of StrokePoint)()
-                For Each token In strokeText.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
-                    Dim parts = token.Split(","c)
-                    If parts.Length <> 2 Then Continue For
-                    Dim x As Single
-                    Dim y As Single
-                    If Single.TryParse(parts(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, x) AndAlso
-                       Single.TryParse(parts(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, y) Then
-                        points.Add(New StrokePoint(x, y))
-                    End If
-                Next
-                If points.Count > 0 Then result.Add(New BrushStroke(points))
-            Next
-            Return result
-        End Function
-    End Class
-
     Public Class RetouchSpot
         Public Property XPixels As Single
         Public Property YPixels As Single
@@ -107,8 +68,7 @@ Namespace Services
 
         ''' Klonquelle in Bildpixeln: von hier wird die Textur kopiert. Ein negativer Wert bedeutet
         ''' "kein Quellpunkt gesetzt" - dann greift der Ringmittelwert-Rückfall in ApplyRetouch, der
-        ''' die Umgebung des Ziels mittelt. Ältere Rezepte kennen die Felder nicht und landen darüber
-        ''' automatisch im alten Verhalten.
+        ''' die Umgebung des Ziels mittelt.
         Public Property SourceXPixels As Single = -1
         Public Property SourceYPixels As Single = -1
 
@@ -725,29 +685,6 @@ Namespace Services
             Return String.IsNullOrWhiteSpace(pointsCsv) OrElse String.Equals(pointsCsv.Trim(), "0,0;255,255", StringComparison.Ordinal)
         End Function
 
-        Public Function HasChanges() As Boolean
-            Return Exposure <> 0 OrElse Brightness <> 0 OrElse Contrast <> 0 OrElse
-                   Saturation <> 0 OrElse Vibrance <> 0 OrElse Highlights <> 0 OrElse ShadowsLevel <> 0 OrElse
-                   Whites <> 0 OrElse Blacks <> 0 OrElse Temperature <> 0 OrElse Tint <> 0 OrElse
-                   Sharpness <> 0 OrElse NoiseReduction <> 0 OrElse DustScratches <> 0 OrElse Haze <> 0 OrElse
-                   AddNoise <> 0 OrElse [Structure] <> 0 OrElse Glow <> 0 OrElse Vignette <> 0 OrElse
-                   VignetteTransition <> 55 OrElse VignetteRoundness <> 0 OrElse VignetteFeather <> 70 OrElse
-                   VignetteCenterX <> 50 OrElse VignetteCenterY <> 50 OrElse
-                   Grain <> 0 OrElse BorderSize <> 0 OrElse BorderCornerRadius <> 0 OrElse
-                   Not String.Equals(BorderEffect, "Einfach", StringComparison.OrdinalIgnoreCase) OrElse Clarity <> 0 OrElse
-                   Not IsIdentityCurve(CurveRgbPoints) OrElse Not IsIdentityCurve(CurveRedPoints) OrElse
-                   Not IsIdentityCurve(CurveGreenPoints) OrElse Not IsIdentityCurve(CurveBluePoints) OrElse
-                   Not IsIdentityCurve(CurveLuminancePoints) OrElse HasHslChanges() OrElse
-                   RotationDegrees <> 0 OrElse StraightenDegrees <> 0 OrElse
-                   FlipHorizontal OrElse FlipVertical OrElse CropLeftPercent <> 0 OrElse CropTopPercent <> 0 OrElse
-                   CropRightPercent <> 0 OrElse CropBottomPercent <> 0 OrElse ResizeWidth > 0 OrElse ResizeHeight > 0 OrElse
-                   CanvasWidth > 0 OrElse CanvasHeight > 0 OrElse
-                   RetouchSpots.Count > 0 OrElse Annotations.Count > 0 OrElse
-                   Not String.Equals(FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase) OrElse
-                   Not String.IsNullOrWhiteSpace(LutPath) OrElse
-                   SplitToningShadowSaturation <> 0 OrElse SplitToningHighlightSaturation <> 0
-        End Function
-
         Public Function HasHslChanges() As Boolean
             Return RedHue <> 0 OrElse RedSaturation <> 0 OrElse OrangeHue <> 0 OrElse OrangeSaturation <> 0 OrElse
                    YellowHue <> 0 OrElse YellowSaturation <> 0 OrElse GreenHue <> 0 OrElse GreenSaturation <> 0 OrElse
@@ -845,10 +782,6 @@ Namespace Services
     End Class
 
     Friend Module AnnotationLayoutHelpers
-        Private Function ClampPercent(value As Single, min As Single, max As Single) As Single
-            Return Math.Max(min, Math.Min(max, value))
-        End Function
-
         Friend Function NormalizeAnnotationAnchor(value As String) As String
             Select Case If(value, "").Trim()
                 Case "TopLeft", "Top", "TopRight", "Left", "Center", "Right", "BottomLeft", "Bottom", "BottomRight"
@@ -1038,13 +971,11 @@ Namespace Services
             Public Property ObjectHeight As Double
         End Class
 
-        ''' effectsOnly: zeichnet NUR Schatten/Glow (die Silhouette des Objekts als weichen Halo),
-        ''' nicht das Objekt selbst. Für Text-/Wasserzeichen-Objekte, deren Glyphen während der
-        ''' Selektion von der editierbaren Live-Textbox gezeichnet werden - der Halo liegt dahinter,
-        ''' sodass Schatten/Glow auch im Editiermodus sichtbar sind (siehe UpdateSelectedAnnotationOverlayPreview).
-        Public Shared Function RenderAnnotationOverlay(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer, Optional effectsOnly As Boolean = False) As AnnotationOverlayRender
+        ''' <summary>Zeichnet das selektierte Objekt so, wie es im gebackenen Bild aussieht - Silhouette
+        ''' mit Schatten und Glühen, darüber das Objekt selbst. Die View legt das Bitmap deckungsgleich
+        ''' über die Objekt-Border (siehe AnnotationOverlayRender).</summary>
+        Public Shared Function RenderAnnotationOverlay(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer) As AnnotationOverlayRender
             If annotation Is Nothing Then Return Nothing
-            If effectsOnly AndAlso Not annotation.ShadowEnabled AndAlso Not annotation.GlowEnabled Then Return Nothing
 
             Dim renderAnnotation = annotation.Clone()
             renderAnnotation.RotationDegrees = 0
@@ -1056,6 +987,13 @@ Namespace Services
             Dim renderScale = If(requestedLongest > MaxOverlayRenderDim, MaxOverlayRenderDim / requestedLongest, 1.0F)
             Dim objW = Math.Max(1, CInt(Math.Round(Math.Max(1, pixelWidth) * renderScale)))
             Dim objH = Math.Max(1, CInt(Math.Round(Math.Max(1, pixelHeight) * renderScale)))
+
+            ' Schriftgrad und Konturbreite stehen in Bildpixeln und müssen mit dem Objekt-Rechteck
+            ' schrumpfen - am Klon selbst, nicht nur in lokalen Variablen: DrawAnnotationShape und
+            ' DrawAnnotationEffects lesen für Text und Kontur direkt aus der Annotation weiter. Beim
+            ' Backen erledigt ScaleAnnotationForSource dasselbe.
+            renderAnnotation.FontSizePixels *= renderScale
+            renderAnnotation.StrokeWidth *= renderScale
 
             Dim objSize = CSng(Math.Max(1, Math.Min(objW, objH)))
             ' Schattengröße >100% lässt den (um seine Mitte skalierten) Schatten übers Objekt hinauswachsen;
@@ -1100,9 +1038,7 @@ Namespace Services
                     If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
                         DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, width, height)
                     End If
-                    If Not effectsOnly Then
-                        DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
-                    End If
+                    DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
                 End Using
 
                 Return New AnnotationOverlayRender With {
@@ -1122,6 +1058,25 @@ Namespace Services
         ''' setzt die Glyphen-Oberkante einer TextBox dagegen direkt auf deren Oberkante. Der Rückgabewert
         ''' ist der Versatz, um den die Live-TextBox nach unten geschoben werden muss, damit ihre Glyphen
         ''' dort landen, wo das gebackene Bild sie zeichnet.
+        ''' <summary>Zeilenabstand des gebackenen Textes, aus den Metriken der Schrift statt aus einem
+        ''' festen Faktor. Genau diesen Abstand benutzt auch Avalonia, wenn an der Live-Textbox kein
+        ''' LineHeight gesetzt ist - beides liest dieselben hhea-Werte über SkiaSharp. Ein eigener Faktor
+        ''' hier (früher 1.22) ließ mehrzeiligen Text im Editor enger stehen als im Ergebnis; ihn über
+        ''' TextBox.LineHeight nachzuziehen verschob dafür die erste Zeile nach unten, weil Avalonia die
+        ''' zusätzliche Durchschusshöhe über der Grundlinie verteilt.</summary>
+        Private Shared Function GetLineHeight(metrics As SKFontMetrics) As Single
+            Return -metrics.Ascent + metrics.Descent + metrics.Leading
+        End Function
+
+        ''' <summary>Zeilenabstand in Pixeln für einen Schriftschnitt - für die Größenschätzung des
+        ''' Textrechtecks im EditorViewModel.</summary>
+        Public Shared Function GetBakedTextLineHeight(fontFamily As String, fontSize As Single) As Double
+            If fontSize <= 0 Then Return 0
+            Using paint = New SKPaint With {.TextSize = fontSize, .Typeface = GetTypeface(fontFamily)}
+                Return GetLineHeight(paint.FontMetrics)
+            End Using
+        End Function
+
         Public Shared Function GetBakedTextTopOffset(fontFamily As String, fontSize As Single) As Double
             If fontSize <= 0 Then Return 0
             Using paint = New SKPaint With {.TextSize = fontSize, .Typeface = GetTypeface(fontFamily)}
@@ -1167,16 +1122,6 @@ Namespace Services
             Using processedBitmap = processed
                 Return ToAvaloniaBitmap(processedBitmap)
             End Using
-        End Function
-
-        Public Shared Function LoadThumbnail(imagePath As String, maxSize As Integer) As Bitmap
-            Try
-                Using stream = File.OpenRead(imagePath)
-                    Return Bitmap.DecodeToWidth(stream, maxSize)
-                End Using
-            Catch
-                Return Nothing
-            End Try
         End Function
 
         Public Shared Function BuildHistogramImage(sourcePath As String, width As Integer, height As Integer) As Bitmap
@@ -1376,6 +1321,19 @@ Namespace Services
 
             Return processed
         End Function
+
+        ''' <summary>Gibt das gecachte Basis-Bitmap frei. Muss aufgerufen werden, sobald die zugehörige
+        ''' Quelle verschwindet (Bildwechsel, Editor verlassen) - der Cache ist statisch und hielte sonst
+        ''' ein Bitmap in Vorschauauflösung sowie eine Referenz auf das bereits disposte Quell-SKBitmap
+        ''' bis zum Programmende fest.</summary>
+        Public Shared Sub ClearBaseCache()
+            SyncLock _baseCacheLock
+                _baseCacheBitmap?.Dispose()
+                _baseCacheBitmap = Nothing
+                _baseCacheKey = Nothing
+                _baseCacheSourceRef = Nothing
+            End SyncLock
+        End Sub
 
         ' Liefert die gecachte Basis (Bild vor den Objekten) wenn sich seit dem letzten Aufruf nur
         ' die Objekte geändert haben, sonst wird die Pipeline neu berechnet und der Cache erneuert.
@@ -2490,7 +2448,7 @@ Namespace Services
 
         Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, paint As SKPaint)
             If String.IsNullOrEmpty(text) Then Return
-            Dim lineHeight = fontSize * 1.22F
+            Dim lineHeight = GetLineHeight(paint.FontMetrics)
             Dim baseline = y + fontSize
 
             For Each paragraph In text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)

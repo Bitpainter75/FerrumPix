@@ -29,6 +29,7 @@ Namespace Controls
         Private _suppressSync As Boolean
         Private _isPicking As Boolean
         Private _observedVm As EditorViewModel
+        Private _isAttached As Boolean
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
@@ -55,13 +56,38 @@ Namespace Controls
         ''' am Pipetten-Icon auszuschalten, sobald das Picking endet - egal ob durch erfolgreiche
         ''' Aufnahme oder durch Abbruch (Escape), da beide Wege IsPickingColorFromImage auf False setzen.
         Private Sub OnOwnDataContextChanged(sender As Object, e As EventArgs)
-            If _observedVm IsNot Nothing Then
-                RemoveHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
-            End If
+            RebindViewModel()
+        End Sub
+
+        ''' Das EditorViewModel lebt über die ganze Sitzung, die EditorView wird bei jedem Moduswechsel
+        ''' neu gebaut (ViewLocator). Ohne Abmelden beim Entfernen aus dem Baum bliebe dieses Control samt
+        ''' seinem View-Baum über das Abo am ViewModel hängen - einmal je Editor-Besuch. DataContextChanged
+        ''' allein genügt dafür nicht: beim Verwerfen der View feuert es nicht.
+        Protected Overrides Sub OnAttachedToVisualTree(e As VisualTreeAttachmentEventArgs)
+            MyBase.OnAttachedToVisualTree(e)
+            _isAttached = True
+            RebindViewModel()
+        End Sub
+
+        Protected Overrides Sub OnDetachedFromVisualTree(e As VisualTreeAttachmentEventArgs)
+            MyBase.OnDetachedFromVisualTree(e)
+            _isAttached = False
+            UnsubscribeViewModel()
+        End Sub
+
+        Private Sub RebindViewModel()
+            UnsubscribeViewModel()
+            If Not _isAttached Then Return
             _observedVm = TryCast(DataContext, EditorViewModel)
             If _observedVm IsNot Nothing Then
                 AddHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             End If
+        End Sub
+
+        Private Sub UnsubscribeViewModel()
+            If _observedVm Is Nothing Then Return
+            RemoveHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+            _observedVm = Nothing
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)

@@ -21,6 +21,7 @@ Namespace Views
         Inherits UserControl
 
         Private _subscribedVm As ViewerViewModel
+        Private _isAttached As Boolean = False
         Private _isPanningImage As Boolean
         Private _panStartPoint As Point
         Private _panStartOffset As Vector
@@ -415,15 +416,38 @@ Namespace Views
             ApplyFullscreenImageMode()
         End Sub
 
-        Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)
-            If _subscribedVm IsNot Nothing Then
-                RemoveHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
-            End If
+        ''' Das ViewerViewModel lebt über die ganze Sitzung, diese View wird bei jedem Moduswechsel neu
+        ''' gebaut. Beim Verwerfen feuert kein DataContextChanged, deshalb hängt das Abo am Entfernen aus
+        ''' dem visuellen Baum - sonst bliebe je Betrachter-Besuch eine tote View am ViewModel.
+        Protected Overrides Sub OnAttachedToVisualTree(e As VisualTreeAttachmentEventArgs)
+            MyBase.OnAttachedToVisualTree(e)
+            _isAttached = True
+            RebindViewModel()
+        End Sub
 
+        Protected Overrides Sub OnDetachedFromVisualTree(e As VisualTreeAttachmentEventArgs)
+            MyBase.OnDetachedFromVisualTree(e)
+            _isAttached = False
+            UnsubscribeViewModel()
+        End Sub
+
+        Private Sub RebindViewModel()
+            UnsubscribeViewModel()
+            If Not _isAttached Then Return
             _subscribedVm = GetVm()
             If _subscribedVm IsNot Nothing Then
                 AddHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             End If
+        End Sub
+
+        Private Sub UnsubscribeViewModel()
+            If _subscribedVm Is Nothing Then Return
+            RemoveHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+            _subscribedVm = Nothing
+        End Sub
+
+        Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)
+            RebindViewModel()
 
             _filmstripController.Reset()
             ApplyImageFitMode()

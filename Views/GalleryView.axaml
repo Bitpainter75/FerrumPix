@@ -655,6 +655,9 @@
                               VerticalScrollBarVisibility="Auto"
                               IsVisible="{Binding IsGridView}"
                               ContextRequested="OnGalleryAreaContextRequested"
+                              DragDrop.AllowDrop="True"
+                              DragDrop.DragOver="OnGalleryAreaDragOver"
+                              DragDrop.Drop="OnGalleryAreaDrop"
                               Margin="0,0,8,0">
                     <ScrollViewer.ContextMenu>
                         <ContextMenu>
@@ -997,6 +1000,9 @@
                               VerticalScrollBarVisibility="Auto"
                               IsVisible="{Binding IsListView}"
                               ContextRequested="OnGalleryAreaContextRequested"
+                              DragDrop.AllowDrop="True"
+                              DragDrop.DragOver="OnGalleryAreaDragOver"
+                              DragDrop.Drop="OnGalleryAreaDrop"
                               Margin="0,0,8,0">
                     <ScrollViewer.ContextMenu>
                         <ContextMenu>

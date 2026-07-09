@@ -212,10 +212,8 @@ Namespace ViewModels
         Private _mousePositionText As String = ""
         Private _activeZoomPreset As ZoomPresetMode = ZoomPresetMode.Fit
         Private _saveQuality As Integer = 90
-        Private _exportFormat As String = "JPG"
         Private _histogramImage As Bitmap
         Private _exifInfo As ExifData
-        Private _showExifInfo As Boolean = True
         Private _previewPending As Boolean
         Private _overlayHidesSelectionFromPreview As Boolean = False
         ' Verhindert, dass eine einzelne logische Nutzeraktion (z.B. Werkzeugwechsel, der intern
@@ -231,7 +229,6 @@ Namespace ViewModels
         Private _previewRenderCts As CancellationTokenSource
         Private _previewRequestId As Integer
         Private _activePreviewRenders As Integer
-        Private _livePreviewEnabled As Boolean = True
         Private _showBeforeImage As Boolean = False
         Private _comparisonAutoEnabled As Boolean = True
         Private _folderPaths As New List(Of String)()
@@ -243,6 +240,11 @@ Namespace ViewModels
         Private _selectedLayersPanelTab As LayersPanelTab = LayersPanelTab.Tool
         Private Const PreviewMaxDimension As Integer = 1600
         Private Const UndoCaptureWindowMs As Double = 650
+        ' Text und Wasserzeichen dürfen kleiner werden als die 5%/4%, die für Formen gelten: ihr Rechteck
+        ' wird aus dem Text berechnet und soll ihn eng umschließen. Auf einem 4000-px-Foto wären 5% bereits
+        ' 200 px - ein kurzes Wort in 48 px Schrift bekäme so einen doppelt zu breiten Auswahlrahmen.
+        Private Const MinTextAnnotationWidthPercent As Double = 1.0
+        Private Const MinTextAnnotationHeightPercent As Double = 1.0
         Private _suppressUndoCapture As Boolean
         Private _lastUndoProperty As String = ""
         Private _lastUndoCapturedAt As DateTime = DateTime.MinValue
@@ -257,9 +259,6 @@ Namespace ViewModels
             "Noir", "Duoton", "Polaroid", "VHS", "Alt"
         }
 
-        Public Property ExportFormatOptions As New ObservableCollection(Of String) From {
-            "JPG", "PNG", "WEBP"
-        }
 
         ' Undo-Stack
         Private ReadOnly _undoStack As New Stack(Of ImageAdjustments)()
@@ -949,6 +948,12 @@ Namespace ViewModels
                             _overlayNotifySuppressDepth -= 1
                         End Try
                     End If
+                ElseIf Not String.IsNullOrEmpty(_pendingInsertKind) Then
+                    ' Ohne Selektion beschreiben die Annotation*-Puffer das nächste zu platzierende
+                    ' Objekt. Nach dem Abwählen stehen dort noch die Werte des eben abgewählten
+                    ' Objekts - zurück auf die Vorgaben des scharfgestellten Typs, sonst erbt das
+                    ' nächste Objekt dessen Farbe, Drehung, Verlauf, Schatten usw.
+                    SeedAnnotationDefaultsForKind(_pendingInsertKind)
                 End If
                 ' Editor-Puffer (AnnotationXPercent usw.) VOR den PropertyChanged-Events unten befüllen:
                 ' Diese lösen im View das Sichtbarwerden des Live-Overlays aus (UpdateTextOverlayVisibility),
@@ -1002,7 +1007,13 @@ Namespace ViewModels
                 Dim v = If(value, "")
                 If v = _pendingInsertKind Then Return
                 _pendingInsertKind = v
-                If Not String.IsNullOrEmpty(v) Then SeedAnnotationDefaultsForKind(v)
+                ' Nur für ein noch zu platzierendes Objekt. Bei einer bestehenden Selektion zieht der
+                ' SelectedAnnotationIndex-Setter den Objekttyp hier nach - dort dürfen die Startwerte
+                ' nicht gesetzt werden: die Annotation*-Setter schreiben über SyncSelectedAnnotation
+                ' sofort in das selektierte Objekt zurück und würden es mit den Typ-Vorgaben und den
+                ' noch im Editorpuffer stehenden Werten des zuvor selektierten Objekts überschreiben.
+                ' Die Puffer füllt für eine Selektion stattdessen LoadSelectedAnnotationIntoEditor.
+                If Not String.IsNullOrEmpty(v) AndAlso Not HasSelectedAnnotation Then SeedAnnotationDefaultsForKind(v)
                 Me.RaisePropertyChanged(NameOf(PendingInsertKind))
                 Me.RaisePropertyChanged(NameOf(HasPendingInsertKind))
                 ' Der Objekttyp benennt beim Ebenen-Werkzeug den ersten Tab (siehe InsertKindLabel).
@@ -1203,6 +1214,27 @@ Namespace ViewModels
             _annotationAnchor = "BottomRight"
             Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
             AnnotationIsVisible = True
+            ' Füllart, Schatten und Leuchten gehören genauso zum Startzustand wie Farbe und Größe:
+            ' ohne Rücksetzen erbt das nächste platzierte Objekt sie aus dem Puffer des zuvor
+            ' selektierten (die Werte sind dieselben wie in ResetEditorUiStateForNewImage).
+            AnnotationFillKind = "Solid"
+            AnnotationFillColor2 = "#FFFFFFFF"
+            AnnotationGradientAngleDegrees = 0
+            AnnotationGradientInverted = False
+            AnnotationShadowEnabled = False
+            AnnotationShadowOffsetX = 2
+            AnnotationShadowOffsetY = 2
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+            AnnotationShadowBlur = 6
+            AnnotationShadowStrength = 100
+            AnnotationShadowColor = "#80000000"
+            AnnotationShadowRounded = False
+            AnnotationShadowCornerRadius = 20
+            AnnotationShadowSize = 100
+            AnnotationGlowEnabled = False
+            AnnotationGlowBlur = 10
+            AnnotationGlowStrength = 100
+            AnnotationGlowColor = "#FFFFFF00"
             If normalizedKind = "Watermark" Then
                 _annotationXPercent = 4
                 _annotationYPercent = 4
@@ -1387,16 +1419,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public Property LivePreviewEnabled As Boolean
-            Get
-                Return _livePreviewEnabled
-            End Get
-            Set(value As Boolean)
-                Me.RaiseAndSetIfChanged(_livePreviewEnabled, value)
-                If value AndAlso _hasChanges Then SchedulePreviewUpdate()
-            End Set
-        End Property
-
         Public Property ShowBeforeImage As Boolean
             Get
                 Return _showBeforeImage
@@ -1418,6 +1440,9 @@ Namespace ViewModels
             ShowBeforeImage = value
         End Sub
 
+        ''' Der Vergleichsregler liegt über der Leinwand und fängt Klicks ab. Werkzeuge, die auf der
+        ''' Leinwand selbst arbeiten - malen, retuschieren, Objekte setzen, Bereiche aufziehen - können ihn
+        ''' deshalb nicht gebrauchen. Verwischen und Stempel (EditorTool.Retouch) gehören dazu.
         Public ReadOnly Property CanShowBeforeAfter As Boolean
             Get
                 Return _currentTool <> EditorTool.Crop AndAlso
@@ -1427,6 +1452,7 @@ Namespace ViewModels
                        _currentTool <> EditorTool.Selection AndAlso
                        _currentTool <> EditorTool.Text AndAlso
                        _currentTool <> EditorTool.Draw AndAlso
+                       _currentTool <> EditorTool.Retouch AndAlso
                        _currentTool <> EditorTool.Geometry AndAlso
                        _currentTool <> EditorTool.Insert
             End Get
@@ -1531,12 +1557,6 @@ Namespace ViewModels
             End Select
         End Function
 
-        Public ReadOnly Property ShowHistogramAdjustments As Boolean
-            Get
-                Return True
-            End Get
-        End Property
-
         Public ReadOnly Property ShowCropAdjustments As Boolean
             Get
                 Return _currentTool = EditorTool.Crop
@@ -1613,12 +1633,6 @@ Namespace ViewModels
         Public ReadOnly Property ShowTransformAdjustments As Boolean
             Get
                 Return _currentTool = EditorTool.Rotate OrElse _currentTool = EditorTool.Transform
-            End Get
-        End Property
-
-        Public ReadOnly Property ShowExportAdjustments As Boolean
-            Get
-                Return True
             End Get
         End Property
 
@@ -2330,18 +2344,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property CloneSourceXPercent As Double
-            Get
-                Return _cloneSourceXPercent
-            End Get
-        End Property
-
-        Public ReadOnly Property CloneSourceYPercent As Double
-            Get
-                Return _cloneSourceYPercent
-            End Get
-        End Property
-
         Public ReadOnly Property RetouchHintText As String
             Get
                 If Not IsCloneMode Then Return "Mittelt die Umgebung des Ziels und blendet sie weich ein."
@@ -2386,8 +2388,6 @@ Namespace ViewModels
 
         Private Sub RaiseCloneSourceProperties()
             Me.RaisePropertyChanged(NameOf(HasCloneSource))
-            Me.RaisePropertyChanged(NameOf(CloneSourceXPercent))
-            Me.RaisePropertyChanged(NameOf(CloneSourceYPercent))
             Me.RaisePropertyChanged(NameOf(RetouchHintText))
         End Sub
 
@@ -2918,7 +2918,7 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationRotation, Math.Max(-180, Math.Min(180, value)))
-                SyncSelectedAnnotation()
+                SyncSelectedAnnotation(refreshOverlay:=False)
             End Set
         End Property
 
@@ -2956,7 +2956,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_annotationXPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationXSliderValue))
-                SyncSelectedAnnotation()
+                SyncSelectedAnnotation(refreshOverlay:=False)
             End Set
         End Property
 
@@ -2971,7 +2971,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_annotationYPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationYSliderValue))
-                SyncSelectedAnnotation()
+                SyncSelectedAnnotation(refreshOverlay:=False)
             End Set
         End Property
 
@@ -3519,8 +3519,18 @@ Namespace ViewModels
         ' SyncSelectedAnnotation (inkl. Undo-Erfassung und Vorschau-Neuberechnung) nur einmal statt
         ' viermal pro Zieh-Frame läuft.
         Public Sub SetSelectedAnnotationRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
-            _annotationWidthPercent = Math.Max(5, Math.Min(90, widthPercent))
-            _annotationHeightPercent = Math.Max(4, Math.Min(90, heightPercent))
+            ' Die View ruft dieselbe Methode fürs Verschieben wie fürs Größenändern. Nur im zweiten Fall
+            ' muss das Overlay-Bitmap neu gezeichnet werden (siehe SyncSelectedAnnotation).
+            Dim previousWidth = _annotationWidthPercent
+            Dim previousHeight = _annotationHeightPercent
+            ' Textobjekte umschließen ihre Glyphen eng, für sie gelten kleinere Untergrenzen als für Formen -
+            ' sonst schnappt der Rahmen beim ersten Ziehen an einem Griff auf 5%/4% auf. Ein Wasserzeichen aus
+            ' einer Bilddatei ist kein Text und bleibt bei den Formwerten.
+            Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
+            Dim minWidth = If(isTextual, MinTextAnnotationWidthPercent, 5.0)
+            Dim minHeight = If(isTextual, MinTextAnnotationHeightPercent, 4.0)
+            _annotationWidthPercent = Math.Max(minWidth, Math.Min(90, widthPercent))
+            _annotationHeightPercent = Math.Max(minHeight, Math.Min(90, heightPercent))
             If EffectiveAnnotationKind = "QR" Then
                 Dim baseWidth = GetBaseWidth()
                 Dim baseHeight = GetBaseHeight()
@@ -3549,7 +3559,9 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
             RaiseAnnotationPositionControlProperties()
-            SyncSelectedAnnotation()
+            Dim sizeChanged = Math.Abs(previousWidth - _annotationWidthPercent) > 0.0001 OrElse
+                              Math.Abs(previousHeight - _annotationHeightPercent) > 0.0001
+            SyncSelectedAnnotation(refreshOverlay:=sizeChanged)
         End Sub
 
         Private Sub RaiseAnnotationSizeChanged()
@@ -3827,15 +3839,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property ExportFormat As String
-            Get
-                Return _exportFormat
-            End Get
-            Set(value As String)
-                Me.RaiseAndSetIfChanged(_exportFormat, If(String.IsNullOrWhiteSpace(value), "JPG", value.ToUpperInvariant()))
-            End Set
-        End Property
-
         Public Property HistogramImage As Bitmap
             Get
                 Return _histogramImage
@@ -3853,15 +3856,6 @@ Namespace ViewModels
             End Get
             Set(value As ExifData)
                 Me.RaiseAndSetIfChanged(_exifInfo, value)
-            End Set
-        End Property
-
-        Public Property ShowExifInfo As Boolean
-            Get
-                Return _showExifInfo
-            End Get
-            Set(value As Boolean)
-                Me.RaiseAndSetIfChanged(_showExifInfo, value)
             End Set
         End Property
 
@@ -3938,22 +3932,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property CropSummary As String
-            Get
-                Dim w = GetCroppedWidth()
-                Dim h = GetCroppedHeight()
-                If w <= 0 OrElse h <= 0 Then Return ""
-                Return $"{w} × {h} px"
-            End Get
-        End Property
-
-        Public ReadOnly Property RecipePath As String
-            Get
-                If String.IsNullOrEmpty(_currentImagePath) Then Return ""
-                Return _currentImagePath & ".fpxedit"
-            End Get
-        End Property
-
         Public ReadOnly Property OutputSizeText As String
             Get
                 Dim w = If(_resizeWidth > 0, _resizeWidth, GetCroppedWidth())
@@ -4009,12 +3987,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property HasResizeChanges As Boolean
-            Get
-                Return _resizeWidth > 0 OrElse _resizeHeight > 0 OrElse _canvasWidth > 0 OrElse _canvasHeight > 0
-            End Get
-        End Property
-
         Public ReadOnly Property HasImageResizeChanges As Boolean
             Get
                 Return _resizeWidth <> _appliedResizeWidth OrElse _resizeHeight <> _appliedResizeHeight
@@ -4033,57 +4005,10 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property HasLightChanges As Boolean
-            Get
-                Return _brightness <> 0 OrElse _contrast <> 0 OrElse _highlights <> 0 OrElse
-                       _shadowsLevel <> 0 OrElse _whites <> 0 OrElse _blacks <> 0 OrElse _exposure <> 0
-            End Get
-        End Property
-
         Public ReadOnly Property HasColorChanges As Boolean
             Get
                 Return Not String.Equals(_whiteBalance, "Wie Aufnahme", StringComparison.Ordinal) OrElse
                        _temperature <> 0 OrElse _tint <> 0 OrElse _vibrance <> 0 OrElse _saturation <> 0
-            End Get
-        End Property
-
-        ''' Split-Toning ist im Werkzeug "Farbe" eine eigene Gruppe unterhalb des HSL-Farbmischers,
-        ''' technisch aber unabhängig von HasColorChanges/HasHslChanges - deshalb ein eigener Dirty-State.
-        Public ReadOnly Property HasSplitToningChanges As Boolean
-            Get
-                Return _splitToningShadowSaturation <> 0 OrElse _splitToningHighlightSaturation <> 0 OrElse
-                       _splitToningBalance <> 0
-            End Get
-        End Property
-
-        Public ReadOnly Property HasDetailChanges As Boolean
-            Get
-                Return _clarity <> 0 OrElse _sharpness <> 0 OrElse _noiseReduction <> 0 OrElse
-                       _dustScratches <> 0 OrElse _haze <> 0 OrElse _addNoise <> 0 OrElse
-                       _structure <> 0 OrElse _glow <> 0
-            End Get
-        End Property
-
-        Public ReadOnly Property HasEffectsChanges As Boolean
-            Get
-                Return _vignette <> 0 OrElse _vignetteTransition <> 55 OrElse _vignetteRoundness <> 0 OrElse
-                       _vignetteFeather <> 70 OrElse _vignetteCenterX <> 50 OrElse _vignetteCenterY <> 50 OrElse
-                       _grain <> 0 OrElse _borderSize <> 0 OrElse _borderCornerRadius <> 0 OrElse
-                       Not String.Equals(_borderEffect, "Einfach", StringComparison.OrdinalIgnoreCase)
-            End Get
-        End Property
-
-        Public ReadOnly Property HasRetouchChanges As Boolean
-            Get
-            Return _retouchRadius <> 24.0 OrElse _retouchSpots.Count > 0
-            End Get
-        End Property
-
-        Public ReadOnly Property HasCurveChanges As Boolean
-            Get
-                Return Not IsIdentityCurvePoints(_curveRgbPoints) OrElse Not IsIdentityCurvePoints(_curveRedPoints) OrElse
-                       Not IsIdentityCurvePoints(_curveGreenPoints) OrElse Not IsIdentityCurvePoints(_curveBluePoints) OrElse
-                       Not IsIdentityCurvePoints(_curveLuminancePoints)
             End Get
         End Property
 
@@ -4111,13 +4036,11 @@ Namespace ViewModels
 
         ' Commands
         Public ReadOnly Property SetToolCommand As ICommand
-        Public ReadOnly Property SetPaintModeCommand As ICommand
         Public ReadOnly Property SetPendingInsertKindCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property AddTagCommand As ICommand
         Public ReadOnly Property RemoveTagCommand As ICommand
-        Public ReadOnly Property ResetAdjustmentsCommand As ICommand
         Public ReadOnly Property SaveCommand As ICommand
         Public ReadOnly Property SaveAsCommand As ICommand
         Public ReadOnly Property CancelCommand As ICommand
@@ -4139,22 +4062,17 @@ Namespace ViewModels
         ''' eines anderen Bildes.
         Public Event ImageGeometryChanged As EventHandler
 
-        Public ReadOnly Property SelectInsertToolCommand As ICommand
         Public ReadOnly Property ClearCloneSourceCommand As ICommand
         Public ReadOnly Property ResetResizeCommand As ICommand
         Public ReadOnly Property SetResizePresetCommand As ICommand
         Public ReadOnly Property ResetCanvasCommand As ICommand
         Public ReadOnly Property SetCanvasAnchorCommand As ICommand
-        Public ReadOnly Property AddTextAnnotationCommand As ICommand
-        Public ReadOnly Property AddAnnotationCommand As ICommand
         Public ReadOnly Property DeleteSelectedAnnotationCommand As ICommand
         Public ReadOnly Property DeleteAnnotationCommand As ICommand
         Public ReadOnly Property ToggleAnnotationVisibilityCommand As ICommand
-        Public ReadOnly Property SelectAnnotationCommand As ICommand
         Public ReadOnly Property DuplicateSelectedAnnotationCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationUpCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationDownCommand As ICommand
-        Public ReadOnly Property AlignSelectedAnnotationCommand As ICommand
         Public ReadOnly Property ResetCurrentToolCommand As ICommand
         Public ReadOnly Property ResetLightCommand As ICommand
         Public ReadOnly Property ResetColorCommand As ICommand
@@ -4168,9 +4086,6 @@ Namespace ViewModels
         Public ReadOnly Property ResetTransformCommand As ICommand
         Public ReadOnly Property SetFilterPresetCommand As ICommand
         Public ReadOnly Property ResetFilterCommand As ICommand
-        Public ReadOnly Property ExportCommand As ICommand
-        Public ReadOnly Property SaveRecipeCommand As ICommand
-        Public ReadOnly Property LoadRecipeCommand As ICommand
         Public ReadOnly Property ResetCurveCommand As ICommand
         Public ReadOnly Property SetCurveChannelCommand As ICommand
         Public ReadOnly Property ResetHslCommand As ICommand
@@ -4268,19 +4183,6 @@ Namespace ViewModels
                                                                        Return
                                                                    End If
                                                                End Sub)
-            SetPaintModeCommand = ReactiveCommand.Create(Of String)(Sub(mode)
-                                                                        SetPaintMode(mode)
-                                                                    End Sub)
-            ' Für die Werkzeugleiste: Werkzeug wechseln UND den Objekttyp scharfstellen. SetToolCommand
-            ' allein genügt nicht, weil es PendingInsertKind bewusst leert - und SetPendingInsertKind
-            ' allein nicht, weil es das Werkzeug nicht wechselt.
-            SelectInsertToolCommand = ReactiveCommand.Create(Of String)(Sub(kind)
-                                                                           If String.IsNullOrEmpty(kind) Then Return
-                                                                           CurrentTool = EditorTool.Text
-                                                                           SelectedAnnotationIndex = -1
-                                                                           PendingInsertKind = kind
-                                                                       End Sub)
-
             SetPendingInsertKindCommand = ReactiveCommand.Create(Of String)(Sub(kind)
                                                                                 If String.IsNullOrEmpty(kind) Then Return
                                                                                 If PendingInsertKind = kind Then
@@ -4291,10 +4193,6 @@ Namespace ViewModels
                                                                                 End If
                                                                             End Sub)
 
-            ResetAdjustmentsCommand = ReactiveCommand.Create(Sub()
-                                                                 PushUndo()
-                                                                 ResetAdjustmentsInternal()
-                                                             End Sub)
 
             SaveCommand = ReactiveCommand.Create(Async Function() As Task
                                                      Await SaveImageAsync(False)
@@ -4360,12 +4258,6 @@ Namespace ViewModels
             SetCanvasAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor)
                                                                            CanvasAnchor = anchor
                                                                        End Sub)
-            AddTextAnnotationCommand = ReactiveCommand.Create(Sub()
-                                                                  AddTextAnnotation()
-                                                              End Sub)
-            AddAnnotationCommand = ReactiveCommand.Create(Of String)(Sub(kind)
-                                                                         AddAnnotation(kind)
-                                                                     End Sub)
             DeleteSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                           DeleteSelectedAnnotation()
                                                                       End Sub)
@@ -4375,9 +4267,6 @@ Namespace ViewModels
             ToggleAnnotationVisibilityCommand = ReactiveCommand.Create(Of ImageAnnotation)(Sub(annotation)
                                                                                                 ToggleAnnotationVisibility(annotation)
                                                                                             End Sub)
-            SelectAnnotationCommand = ReactiveCommand.Create(Of ImageAnnotation)(Sub(annotation)
-                                                                                      SelectedAnnotationIndex = _annotations.IndexOf(annotation)
-                                                                                  End Sub)
             DuplicateSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                             DuplicateSelectedAnnotation()
                                                                         End Sub)
@@ -4387,9 +4276,6 @@ Namespace ViewModels
             MoveSelectedAnnotationDownCommand = ReactiveCommand.Create(Sub()
                                                                            MoveSelectedAnnotation(-1)
                                                                        End Sub)
-            AlignSelectedAnnotationCommand = ReactiveCommand.Create(Of String)(Sub(target)
-                                                                                   AlignSelectedAnnotation(target)
-                                                                               End Sub)
             ResetCurrentToolCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo()
                                                                  ResetCurrentToolInternal()
@@ -4432,9 +4318,6 @@ Namespace ViewModels
                                                             PushUndo()
                                                             ResetFilterInternal()
                                                         End Sub)
-            ExportCommand = ReactiveCommand.Create(Sub() ExportImage())
-            SaveRecipeCommand = ReactiveCommand.Create(Sub() SaveRecipe())
-            LoadRecipeCommand = ReactiveCommand.Create(Sub() LoadRecipe())
             ResetCurveCommand = ReactiveCommand.Create(Sub()
                                                            PushUndo()
                                                            ResetCurvePoints()
@@ -4826,7 +4709,6 @@ Namespace ViewModels
 
         Private Sub SchedulePreviewUpdate()
             _hasChanges = True
-            If Not _livePreviewEnabled Then Return
             _previewPending = True
             StatusText = "Vorschau wird aktualisiert..."
             _previewTimer.Stop()
@@ -4839,7 +4721,6 @@ Namespace ViewModels
         ''' GetCurrentAdjustments(forPreview:=True)), aber weder als ungespeicherte Änderung zählen
         ''' noch das kanonische Ergebnis beeinflussen, bis der Nutzer "Anwenden" klickt.
         Private Sub ScheduleToolPreviewUpdate()
-            If Not _livePreviewEnabled Then Return
             _previewPending = True
             StatusText = "Vorschau wird aktualisiert..."
             _previewTimer.Stop()
@@ -4850,6 +4731,32 @@ Namespace ViewModels
             Dim k = NormalizeAnnotationKind(kind)
             Return k = "Text" OrElse k = "Watermark"
         End Function
+
+        ''' <summary>
+        ''' Die Glyphen eines selektierten Text-/Wasserzeichenobjekts kommen aus dem gerenderten Overlay,
+        ''' nicht aus der Live-Textbox. Die Textbox bleibt darüber liegen, zeichnet aber nichts mehr - sie
+        ''' liefert nur Eingabe, Schreibmarke und Textauswahl.
+        '''
+        ''' Der Grund: Avalonia und Skia setzen Text nicht gleich. Avalonia kann Glyphen weder umranden noch
+        ''' mit einem Verlauf füllen (Foreground ist eine einzelne Farbe), es shaped über HarfBuzz mit Kerning,
+        ''' und es hängt die Zeile in einen Zeilenkasten, dessen Grundlinie nicht dort liegt, wo Skia sie setzt
+        ''' (rect.Top + fontSize). Jede dieser Abweichungen einzeln nachzustellen hat sich als Reihe von
+        ''' Ein-Pixel-Korrekturen erwiesen. Zeichnet der Renderer selbst, zeigt der Editor exakt das Ergebnis.
+        ''' </summary>
+        Private Function TextRendersInOverlay(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing Then Return False
+            If Not IsTextualAnnotationKind(annotation.Kind) Then Return False
+            Return Not UsesRenderedSelectionOverlay(annotation)
+        End Function
+
+        ''' Für die View: der selektierte Text steht bereits im Overlay-Bitmap, die Textbox darf ihn nicht
+        ''' ein zweites Mal zeichnen.
+        Public ReadOnly Property SelectedTextRendersInOverlay As Boolean
+            Get
+                If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
+                Return TextRendersInOverlay(_annotations(_selectedAnnotationIndex))
+            End Get
+        End Property
 
         Private Function UsesRenderedSelectionOverlay(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing Then Return False
@@ -4949,6 +4856,9 @@ Namespace ViewModels
                     _stalePreviewSources.Add(oldSource)
                 End If
             End SyncLock
+            ' Der Basis-Cache gehört zur alten Quelle: er würde beim nächsten Render zwar ohnehin
+            ' verworfen (Referenzvergleich auf die Quelle), hielte sein Bitmap bis dahin aber fest.
+            ImageProcessor.ClearBaseCache()
             TryDisposeStalePreviewSources()
         End Sub
 
@@ -4962,6 +4872,7 @@ Namespace ViewModels
                     _stalePreviewSources.Add(oldSource)
                 End If
             End SyncLock
+            ImageProcessor.ClearBaseCache()
             TryDisposeStalePreviewSources()
         End Sub
 
@@ -5124,15 +5035,25 @@ Namespace ViewModels
                 Dim result = Await Task.Run(Function()
                                                 token.ThrowIfCancellationRequested()
                                                 Dim previewBmp = ImageProcessor.ApplyAdjustments(previewSource, adj)
-                                                token.ThrowIfCancellationRequested()
-                                                ' Das Vorher/Nachher-Vergleichsbild wird nur berechnet, wenn der
-                                                ' Vorher/Nachher-Regler gerade sichtbar ist (ShowBeforeImage) - sonst
-                                                ' wäre das bei jedem einzelnen Live-Vorschau-Frame verschwendete Arbeit.
+                                                ' Ab hier ist previewBmp ein fertiges Bitmap mit unmanaged Skia-Speicher.
+                                                ' Bricht der Render danach ab (neuer Slider-Tick) oder wirft das
+                                                ' Vergleichsbild, würde es niemand mehr freigeben - Avalonias Bitmap hat
+                                                ' keinen Finalizer. Deshalb ab jetzt alles im Try mit Aufräumpfad.
                                                 Dim comparisonBmp As Bitmap = Nothing
-                                                If needsComparison Then
-                                                    comparisonBmp = ImageProcessor.ApplyGeometryAdjustments(previewSource, adj)
-                                                End If
-                                                Return New PreviewRenderResult(previewBmp, comparisonBmp)
+                                                Try
+                                                    token.ThrowIfCancellationRequested()
+                                                    ' Das Vorher/Nachher-Vergleichsbild wird nur berechnet, wenn der
+                                                    ' Vorher/Nachher-Regler gerade sichtbar ist (ShowBeforeImage) - sonst
+                                                    ' wäre das bei jedem einzelnen Live-Vorschau-Frame verschwendete Arbeit.
+                                                    If needsComparison Then
+                                                        comparisonBmp = ImageProcessor.ApplyGeometryAdjustments(previewSource, adj)
+                                                    End If
+                                                    Return New PreviewRenderResult(previewBmp, comparisonBmp)
+                                                Catch
+                                                    previewBmp?.Dispose()
+                                                    comparisonBmp?.Dispose()
+                                                    Throw
+                                                End Try
                                             End Function, token)
 
                 If token.IsCancellationRequested OrElse requestId <> _previewRequestId Then
@@ -5402,15 +5323,9 @@ Namespace ViewModels
 
         Private Sub RaiseResetButtonStateChanged()
             Me.RaisePropertyChanged(NameOf(HasCropChanges))
-            Me.RaisePropertyChanged(NameOf(HasResizeChanges))
             Me.RaisePropertyChanged(NameOf(HasImageResizeChanges))
             Me.RaisePropertyChanged(NameOf(HasCanvasSizeChanges))
-            Me.RaisePropertyChanged(NameOf(HasLightChanges))
             Me.RaisePropertyChanged(NameOf(HasColorChanges))
-            Me.RaisePropertyChanged(NameOf(HasDetailChanges))
-            Me.RaisePropertyChanged(NameOf(HasEffectsChanges))
-            Me.RaisePropertyChanged(NameOf(HasRetouchChanges))
-            Me.RaisePropertyChanged(NameOf(HasCurveChanges))
             Me.RaisePropertyChanged(NameOf(HasHslChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
             Me.RaisePropertyChanged(NameOf(HasAnnotationChanges))
@@ -5509,9 +5424,12 @@ Namespace ViewModels
 
         Private Sub PushUndo()
             ResetUndoCapture()
-            _undoStack.Push(GetCurrentAdjustments())
+            ' GetCurrentAdjustments klont alle Objekte und Retusche-Punkte und serialisiert fünf Kurven -
+            ' einmal reicht, der Schnappschuss taugt auch als Vorlage für die Beschriftung.
+            Dim snapshot = GetCurrentAdjustments()
+            _undoStack.Push(snapshot)
             _redoStack.Clear()
-            AddHistoryEntry(BuildHistoryLabel(GetCurrentAdjustments()))
+            AddHistoryEntry(BuildHistoryLabel(snapshot))
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub
@@ -6004,7 +5922,6 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseCropPropertiesChanged()
-            Me.RaisePropertyChanged(NameOf(CropSummary))
             Me.RaisePropertyChanged(NameOf(CropWidthPixels))
             Me.RaisePropertyChanged(NameOf(CropHeightPixels))
             Me.RaisePropertyChanged(NameOf(OutputSizeText))
@@ -6034,22 +5951,32 @@ Namespace ViewModels
                 .Typeface = SKTypeface.FromFamilyName(If(String.IsNullOrWhiteSpace(fontFamily), "Arial", fontFamily)),
                 .IsAntialias = True
             }
+                ' Die Kästchengröße muss zu dem passen, was DrawWrappedText tatsächlich zeichnet, sonst
+                ' steht der Auswahlrahmen sichtbar weiter außen als der Text. Dort gilt: Grundlinie der
+                ' ersten Zeile auf rect.Top + fontSize, Zeilenabstand aus den Schriftmetriken, Umbruch
+                ' sobald die VORSCHUBBREITE (MeasureText ohne Bounds, nicht die engere Tintenbreite)
+                ' rect.Width überschreitet.
                 Dim maxLineWidth As Single = 0
                 Dim lineCount As Integer = 0
                 For Each line In content.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
                     lineCount += 1
-                    Dim bounds As SKRect
-                    paint.MeasureText(If(String.IsNullOrEmpty(line), " ", line), bounds)
-                    maxLineWidth = Math.Max(maxLineWidth, bounds.Width)
+                    maxLineWidth = Math.Max(maxLineWidth, paint.MeasureText(If(String.IsNullOrEmpty(line), " ", line)))
                 Next
                 If lineCount = 0 Then lineCount = 1
 
-                Dim widthPx = Math.Max(72.0, maxLineWidth + fontSizePx * 1.1)
-                Dim heightPx = Math.Max(fontSizePx * 1.35 * lineCount, fontSizePx * 1.7)
+                ' Etwas Luft hinter Text und Unterlänge: der Umbruch soll nicht an einem Rundungsfehler
+                ' auslösen, und die Anfasser des Auswahlrahmens sollen nicht auf den Glyphen sitzen. Nur
+                ' rechts und unten - links und oben zeichnet DrawWrappedText direkt an der Rechteckkante,
+                ' dort entsteht die Luft von selbst aus Seitenvorbreite und Oberlänge. Mit dem Schriftgrad
+                ' skaliert, damit der Abstand bei jeder Größe gleich aussieht.
+                Dim padding = Math.Max(2.0, fontSizePx * 0.08)
+                Dim lineHeight = ImageProcessor.GetBakedTextLineHeight(fontFamily, CSng(fontSizePx))
+                Dim widthPx = maxLineWidth + padding
+                Dim heightPx = fontSizePx + (lineCount - 1) * lineHeight + Math.Max(0.0F, paint.FontMetrics.Descent) + padding
                 Dim widthPercent = widthPx / baseWidth * 100.0
                 Dim heightPercent = heightPx / baseHeight * 100.0
-                Return (Math.Max(5.0, Math.Min(60.0, widthPercent)),
-                        Math.Max(4.0, Math.Min(60.0, heightPercent)))
+                Return (Math.Max(MinTextAnnotationWidthPercent, Math.Min(60.0, widthPercent)),
+                        Math.Max(MinTextAnnotationHeightPercent, Math.Min(60.0, heightPercent)))
             End Using
         End Function
 
@@ -6229,16 +6156,10 @@ Namespace ViewModels
             ScheduleToolPreviewUpdate()
         End Sub
 
-        Private Sub AddTextAnnotation()
-            AddTextAnnotationAt(_annotationXPercent, _annotationYPercent)
-        End Sub
-
+        ''' Platziert ein Objekt an der zuletzt eingestellten Position - für Wege ohne Klick auf die
+        ''' Leinwand (siehe PlacePendingWatermarkAfterPresetSelection).
         Private Sub AddAnnotation(kind As String)
             AddAnnotationAt(kind, _annotationXPercent, _annotationYPercent)
-        End Sub
-
-        Public Sub AddTextAnnotationAt(xPercent As Double, yPercent As Double)
-            AddAnnotationAt("Text", xPercent, yPercent)
         End Sub
 
         Public Sub AddAnnotationAt(kind As String, xPercent As Double, yPercent As Double)
@@ -6608,40 +6529,6 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        Private Sub AlignSelectedAnnotation(target As String)
-            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
-            CaptureUndoState("LayerAlign")
-            Select Case If(target, "").Trim().ToLowerInvariant()
-                Case "left"
-                    AnnotationXPercent = 0
-                Case "center-x"
-                    AnnotationXPercent = Math.Max(0, (100 - _annotationWidthPercent) / 2.0)
-                Case "right"
-                    AnnotationXPercent = Math.Max(0, 100 - _annotationWidthPercent)
-                Case "top"
-                    AnnotationYPercent = 0
-                Case "center-y"
-                    AnnotationYPercent = Math.Max(0, (100 - _annotationHeightPercent) / 2.0)
-                Case "bottom"
-                    AnnotationYPercent = Math.Max(0, 100 - _annotationHeightPercent)
-                Case "center"
-                    AnnotationXPercent = Math.Max(0, (100 - _annotationWidthPercent) / 2.0)
-                    AnnotationYPercent = Math.Max(0, (100 - _annotationHeightPercent) / 2.0)
-                Case "safe-bottom-right"
-                    AnnotationXPercent = Math.Max(0, 96 - _annotationWidthPercent)
-                    AnnotationYPercent = Math.Max(0, 96 - _annotationHeightPercent)
-                Case "safe-bottom-left"
-                    AnnotationXPercent = 4
-                    AnnotationYPercent = Math.Max(0, 96 - _annotationHeightPercent)
-                Case "safe-top-right"
-                    AnnotationXPercent = Math.Max(0, 96 - _annotationWidthPercent)
-                    AnnotationYPercent = 4
-                Case "safe-top-left"
-                    AnnotationXPercent = 4
-                    AnnotationYPercent = 4
-            End Select
-        End Sub
-
         Public Sub NudgeSelectedAnnotation(dx As Double, dy As Double)
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             CaptureUndoState("LayerNudge")
@@ -6654,6 +6541,15 @@ Namespace ViewModels
                                            Optional hitSlopYPercent As Double = 1.5) As Integer
             For i = _annotations.Count - 1 To 0 Step -1
                 Dim a = _annotations(i)
+                ' Pinsel-/Radiergummi-Ebenen sind keine anfassbaren Objekte, sondern Sammelbehälter für
+                ' Striche: ihr Rechteck ist die Hülle aller Züge und überdeckt oft halbe Bilder. Ein Klick
+                ' darin würde sie selektieren und damit (SelectedAnnotationIndex-Setter) zurück ins
+                ' Pinsel-Werkzeug springen - auch wenn der Klick eigentlich einen Beschnitt aufziehen oder
+                ' eine Form setzen sollte. Auswählbar bleiben sie über die Ebenenliste.
+                If IsStrokeAnnotationKind(a.Kind) Then Continue For
+                ' Ausgeblendete Ebenen sind auf der Leinwand nicht zu sehen; ein Klick auf ihre alte
+                ' Stelle darf sie nicht selektieren (und damit ins zugehörige Werkzeug springen).
+                If Not a.IsVisible Then Continue For
                 Dim ax = AnnotationStoredXToPercent(a)
                 Dim ay = AnnotationStoredYToPercent(a)
                 Dim aw = AnnotationStoredWidthToPercent(a)
@@ -6667,6 +6563,12 @@ Namespace ViewModels
             Return -1
         End Function
 
+        ''' Ebenen, deren Inhalt in <see cref="ImageAnnotation.Strokes"/> steckt statt in Geometrie/Text.
+        Private Shared Function IsStrokeAnnotationKind(kind As String) As Boolean
+            Dim normalized = NormalizeAnnotationKind(kind)
+            Return normalized = "Brush" OrElse normalized = "Eraser"
+        End Function
+
         Private Shared Function IsLayerTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Text OrElse tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse tool = EditorTool.Insert OrElse tool = EditorTool.Selection
         End Function
@@ -6677,6 +6579,12 @@ Namespace ViewModels
                 If _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
                     Dim a = _annotations(_selectedAnnotationIndex)
                     _watermarkImagePath = If(NormalizeAnnotationKind(a.Kind) = "Watermark", a.ImagePath, "")
+                    ' Der Vorlagenname beschreibt das zuvor selektierte Objekt und passt nicht mehr zu
+                    ' den gleich geladenen Werten.
+                    _selectedWatermarkPresetName = ""
+                    _watermarkPresetNameDraft = ""
+                    Me.RaisePropertyChanged(NameOf(SelectedWatermarkPresetName))
+                    Me.RaisePropertyChanged(NameOf(WatermarkPresetNameDraft))
                     AnnotationText = a.Text
                     AnnotationFillColor = a.FillColor
                     AnnotationStrokeColor = a.StrokeColor
@@ -6717,7 +6625,13 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Sub SyncSelectedAnnotation()
+        ''' <param name="refreshOverlay">False, wenn sich nur Position oder Drehung geändert haben.
+        ''' RenderAnnotationOverlay liest weder X/Y noch RotationDegrees (es nullt die Drehung sogar
+        ''' explizit) - das Bitmap bliebe also identisch. Der Render läuft synchron auf dem UI-Thread und
+        ''' zeichnet Schatten und Glow inklusive Blur neu, deshalb lohnt es sich, ihn beim Ziehen (ein
+        ''' Aufruf je Mausbewegung) auszulassen. Die Positionierung übernimmt ohnehin die View über die
+        ''' Margins.</param>
+        Private Sub SyncSelectedAnnotation(Optional refreshOverlay As Boolean = True)
             If _isLoadingAnnotation Then Return
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             CaptureUndoState("TextAnnotation")
@@ -6762,7 +6676,7 @@ Namespace ViewModels
             a.GlowStrength = CSng(_annotationGlowStrength)
             a.GlowColor = _annotationGlowColor
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
-            UpdateSelectedAnnotationOverlayPreview()
+            If refreshOverlay Then UpdateSelectedAnnotationOverlayPreview()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -6786,19 +6700,12 @@ Namespace ViewModels
                 Return
             End If
 
-            ' Text-/Wasserzeichen-Objekte werden während der Selektion durch die editierbare Live-Textbox
-            ' gezeichnet, laufen also normalerweise nicht über das gerenderte Overlay. Bei aktivem Schatten/
-            ' Glow rendern wir aber trotzdem einen Effekt-Halo OHNE die Glyphen, der HINTER der Textbox liegt -
-            ' sonst wären Schatten/Glow im Editiermodus komplett unsichtbar (im gebackenen Bild sind sie
-            ' vorhanden, während der Selektion aber ausgeblendet).
-            Dim effectsOnly = False
-            If Not UsesRenderedSelectionOverlay(annotation) Then
-                If IsTextualAnnotationKind(annotation.Kind) AndAlso (annotation.ShadowEnabled OrElse annotation.GlowEnabled) Then
-                    effectsOnly = True
-                Else
-                    SetSelectedAnnotationOverlay(Nothing)
-                    Return
-                End If
+            ' Alles Sichtbare eines selektierten Objekts kommt aus dem Renderer: Formen und Symbole ohnehin,
+            ' Text und Wasserzeichen seit TextRendersInOverlay. Pinsel- und Radiergummi-Ebenen haben kein
+            ' Overlay - ihre Züge stehen bereits im gebackenen Bild.
+            If Not UsesRenderedSelectionOverlay(annotation) AndAlso Not TextRendersInOverlay(annotation) Then
+                SetSelectedAnnotationOverlay(Nothing)
+                Return
             End If
 
             Dim previewSource = GetPreviewSource()
@@ -6809,7 +6716,7 @@ Namespace ViewModels
                 pixelHeight = Math.Max(48, CInt(Math.Round(annotation.HeightPixels)))
             End If
 
-            SetSelectedAnnotationOverlay(ImageProcessor.RenderAnnotationOverlay(annotation.Clone(), pixelWidth, pixelHeight, effectsOnly))
+            SetSelectedAnnotationOverlay(ImageProcessor.RenderAnnotationOverlay(annotation.Clone(), pixelWidth, pixelHeight))
         End Sub
 
         Private Shared Function ParseAvaloniaColorOrDefault(value As String, fallback As Avalonia.Media.Color) As Avalonia.Media.Color
@@ -7161,10 +7068,6 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        Private Shared Function IsIdentityCurvePoints(points As ObservableCollection(Of Avalonia.Point)) As Boolean
-            Return points.Count = 2 AndAlso points(0).X = 0 AndAlso points(0).Y = 0 AndAlso points(1).X = 255 AndAlso points(1).Y = 255
-        End Function
-
         Private Shared Function PointsToCurveString(points As ObservableCollection(Of Avalonia.Point)) As String
             Return String.Join(";", points.Select(Function(p) $"{p.X.ToString(Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString(Globalization.CultureInfo.InvariantCulture)}"))
         End Function
@@ -7281,7 +7184,6 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseToolContextProperties()
-            Me.RaisePropertyChanged(NameOf(ShowHistogramAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowCropAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowResizeAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowLightAdjustments))
@@ -7297,7 +7199,6 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
             Me.RaisePropertyChanged(NameOf(ShowGeometryControls))
             Me.RaisePropertyChanged(NameOf(ShowTransformAdjustments))
-            Me.RaisePropertyChanged(NameOf(ShowExportAdjustments))
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
             Me.RaisePropertyChanged(NameOf(IsGeometryToolSelected))
         End Sub
@@ -7397,161 +7298,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsInfoTabXmp))
         End Sub
 
-        Private Async Sub ExportImage()
-            If String.IsNullOrEmpty(_currentImagePath) Then Return
-            Dim dir = IO.Path.GetDirectoryName(_currentImagePath)
-            Dim baseName = IO.Path.GetFileNameWithoutExtension(_currentImagePath)
-            Dim proposedName = $"{baseName}_export"
-            Dim saveAsResult = Await _mainVm.ShowSaveAsAsync("Exportieren",
-                                                             "Dateiname eingeben",
-                                                             proposedName,
-                                                             ExportFormat,
-                                                             SaveQuality,
-                                                             "Exportieren",
-                                                             "Abbrechen")
-            If saveAsResult Is Nothing OrElse String.IsNullOrWhiteSpace(saveAsResult.BaseName) Then Return
 
-            Dim cleanBaseName = IO.Path.GetFileNameWithoutExtension(saveAsResult.BaseName.Trim())
-            If HasInvalidFileNameChars(cleanBaseName) Then
-                Await _mainVm.ShowMessageAsync("Export fehlgeschlagen", "Der Dateiname enthält ungültige Zeichen.")
-                Return
-            End If
 
-            ExportFormat = saveAsResult.Format
-            Dim targetPath = IO.Path.Combine(dir, cleanBaseName & saveAsResult.Extension)
-            Dim adjForExport = GetCurrentAdjustments()
-            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
-            Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(_currentImagePath, targetPath, adjForExport, saveAsResult.JpgQuality, preserveMetadata))
-            StatusText = If(ok,
-                            $"{LocalizationService.T("Exportiert:")} {IO.Path.GetFileName(targetPath)}",
-                            LocalizationService.T("Export fehlgeschlagen"))
-        End Sub
-
-        ''' Pinsel- und Radiergummi-Ebenen tragen ihre Züge im Arbeitsspeicher als BrushStroke-Liste.
-        ''' In der Rezeptdatei stehen sie weiterhin als Zeichenkette im Text-Feld - so bleiben bereits
-        ''' gespeicherte .fpxedit-Dateien unverändert lesbar und schreibbar.
-        Private Shared Function AnnotationRecipeText(a As ImageAnnotation) As String
-            If a Is Nothing Then Return ""
-            Dim kind = NormalizeAnnotationKind(a.Kind)
-            If kind = "Brush" OrElse kind = "Eraser" Then Return BrushStrokeCodec.Serialize(a.Strokes)
-            Return a.Text
-        End Function
-
-        Private Sub SaveRecipe()
-            If String.IsNullOrEmpty(_currentImagePath) Then Return
-            Try
-                Dim adj = GetCurrentAdjustments()
-                Dim lines = New List(Of String) From {
-                    "FerrumPixEdit=1",
-                    $"Exposure={adj.Exposure}",
-                    $"Brightness={adj.Brightness}",
-                    $"Contrast={adj.Contrast}",
-                    $"Saturation={adj.Saturation}",
-                    $"Vibrance={adj.Vibrance}",
-                    $"Highlights={adj.Highlights}",
-                    $"Shadows={adj.ShadowsLevel}",
-                    $"Whites={adj.Whites}",
-                    $"Blacks={adj.Blacks}",
-                    $"Temperature={adj.Temperature}",
-                    $"Tint={adj.Tint}",
-                    $"Sharpness={adj.Sharpness}",
-                    $"NoiseReduction={adj.NoiseReduction}",
-                    $"NoiseReductionMethod={adj.NoiseReductionMethod}",
-                    $"DustScratches={adj.DustScratches}",
-                    $"Haze={adj.Haze}",
-                    $"AddNoise={adj.AddNoise}",
-                    $"Structure={adj.[Structure]}",
-                    $"Glow={adj.Glow}",
-                    $"Vignette={adj.Vignette}",
-                    $"VignetteTransition={adj.VignetteTransition}",
-                    $"VignetteRoundness={adj.VignetteRoundness}",
-                    $"VignetteFeather={adj.VignetteFeather}",
-                    $"VignetteCenterX={adj.VignetteCenterX}",
-                    $"VignetteCenterY={adj.VignetteCenterY}",
-                    $"Grain={adj.Grain}",
-                    $"BorderSize={adj.BorderSize}",
-                    $"BorderColor={adj.BorderColor}",
-                    $"BorderCornerRadius={adj.BorderCornerRadius}",
-                    $"BorderEffect={adj.BorderEffect}",
-                    $"Clarity={adj.Clarity}",
-                    $"CurveRgbPoints={adj.CurveRgbPoints}",
-                    $"CurveRedPoints={adj.CurveRedPoints}",
-                    $"CurveGreenPoints={adj.CurveGreenPoints}",
-                    $"CurveBluePoints={adj.CurveBluePoints}",
-                    $"CurveLuminancePoints={adj.CurveLuminancePoints}",
-                    $"RedHue={adj.RedHue}",
-                    $"RedSaturation={adj.RedSaturation}",
-                    $"OrangeHue={adj.OrangeHue}",
-                    $"OrangeSaturation={adj.OrangeSaturation}",
-                    $"YellowHue={adj.YellowHue}",
-                    $"YellowSaturation={adj.YellowSaturation}",
-                    $"GreenHue={adj.GreenHue}",
-                    $"GreenSaturation={adj.GreenSaturation}",
-                    $"AquaHue={adj.AquaHue}",
-                    $"AquaSaturation={adj.AquaSaturation}",
-                    $"BlueHue={adj.BlueHue}",
-                    $"BlueSaturation={adj.BlueSaturation}",
-                    $"PurpleHue={adj.PurpleHue}",
-                    $"PurpleSaturation={adj.PurpleSaturation}",
-                    $"MagentaHue={adj.MagentaHue}",
-                    $"MagentaSaturation={adj.MagentaSaturation}",
-                    $"RotationDegrees={adj.RotationDegrees}",
-                    $"StraightenDegrees={adj.StraightenDegrees}",
-                    $"StraightenExpandCanvas={adj.StraightenExpandCanvas}",
-                    $"FlipHorizontal={adj.FlipHorizontal}",
-                    $"FlipVertical={adj.FlipVertical}",
-                    $"CropLeft={adj.CropLeftPercent}",
-                    $"CropTop={adj.CropTopPercent}",
-                    $"CropRight={adj.CropRightPercent}",
-                    $"CropBottom={adj.CropBottomPercent}",
-                    $"ResizeWidth={adj.ResizeWidth}",
-                    $"ResizeHeight={adj.ResizeHeight}",
-                    $"LockResizeAspect={adj.LockResizeAspect}",
-                    $"ResizeInterpolation={adj.ResizeInterpolation}",
-                    $"CanvasWidth={adj.CanvasWidth}",
-                    $"CanvasHeight={adj.CanvasHeight}",
-                    $"LockCanvasAspect={adj.LockCanvasAspect}",
-                    $"CanvasAnchor={adj.CanvasAnchor}",
-                    $"CanvasBackgroundColor={adj.CanvasBackgroundColor}",
-                    $"FilterPreset={adj.FilterPreset}",
-                    $"FilterStrength={adj.FilterStrength}"
-                }
-                File.WriteAllLines(RecipePath, lines)
-                If adj.RetouchSpots IsNot Nothing Then
-                    File.AppendAllLines(RecipePath, adj.RetouchSpots.Select(Function(s) $"RetouchSpot={s.XPixels};{s.YPixels};{s.RadiusPixels};{s.SourceXPixels};{s.SourceYPixels}"))
-                End If
-                If adj.Annotations IsNot Nothing Then
-                    File.AppendAllLines(RecipePath, adj.Annotations.Select(Function(a) $"Annotation={Uri.EscapeDataString(a.Kind)};{Uri.EscapeDataString(AnnotationRecipeText(a))};{Uri.EscapeDataString(a.ImagePath)};{a.XPixels};{a.YPixels};{a.WidthPixels};{a.HeightPixels};{Uri.EscapeDataString(a.FillColor)};{Uri.EscapeDataString(a.StrokeColor)};{a.StrokeWidth};{a.FontSizePixels};{Uri.EscapeDataString(a.FontFamily)};{a.Opacity};{a.RotationDegrees};{a.IsVisible};{a.HardnessPercent};{Uri.EscapeDataString(a.FillKind)};{Uri.EscapeDataString(a.FillColor2)};{a.GradientAngleDegrees};{a.ShadowEnabled};{a.ShadowOffsetXPercent};{a.ShadowOffsetYPercent};{a.ShadowBlur};{Uri.EscapeDataString(a.ShadowColor)};{a.GlowEnabled};{a.GlowBlur};{Uri.EscapeDataString(a.GlowColor)};{a.GradientInverted};{a.GlowStrength};{a.ShadowStrength};{Uri.EscapeDataString(If(a.Anchor, ""))};{a.ShadowRounded};{a.ShadowCornerRadiusPercent};{a.ShadowSizePercent}"))
-                End If
-                StatusText = LocalizationService.T("Bearbeitungsrezept gespeichert")
-            Catch ex As Exception
-                StatusText = LocalizationService.T("Rezept konnte nicht gespeichert werden: ") & ex.Message
-            End Try
-        End Sub
-
-        Private Sub LoadRecipe()
-            If String.IsNullOrEmpty(RecipePath) OrElse Not File.Exists(RecipePath) Then
-                StatusText = LocalizationService.T("Kein Bearbeitungsrezept gefunden")
-                Return
-            End If
-
-            Try
-                PushUndo()
-                Dim adj = GetCurrentAdjustments()
-                adj.RetouchSpots.Clear()
-                For Each line In File.ReadAllLines(RecipePath)
-                    Dim idx = line.IndexOf("="c)
-                    If idx <= 0 Then Continue For
-                    Dim key = line.Substring(0, idx)
-                    Dim value = line.Substring(idx + 1)
-                    ApplyRecipeValue(adj, key, value)
-                Next
-                ApplyAdjustments(adj)
-                StatusText = LocalizationService.T("Bearbeitungsrezept geladen")
-            Catch ex As Exception
-                StatusText = LocalizationService.T("Rezept konnte nicht geladen werden: ") & ex.Message
-            End Try
-        End Sub
 
         Public Sub ApplyLightroomPreset(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
@@ -7795,248 +7543,6 @@ Namespace ViewModels
             Return invalidChars IsNot Nothing AndAlso invalidChars.Length > 0 AndAlso fileName.IndexOfAny(invalidChars) >= 0
         End Function
 
-        Private Sub ApplyRecipeValue(adj As ImageAdjustments, key As String, value As String)
-            Dim f As Single
-            Dim i As Integer
-            Dim b As Boolean
-            Select Case key
-                Case "RetouchSpot"
-                    Dim parts = value.Split(";"c)
-                    If parts.Length >= 3 Then
-                        Dim x As Single
-                        Dim y As Single
-                        Dim r As Single
-                        If Single.TryParse(parts(0), x) AndAlso Single.TryParse(parts(1), y) AndAlso Single.TryParse(parts(2), r) Then
-                            Dim spot = New RetouchSpot With {.XPixels = x, .YPixels = y, .RadiusPixels = r}
-                            ' Rezepte vor dem Klonstempel haben nur drei Felder - die Quelle bleibt dann
-                            ' auf -1 und der Punkt verhält sich wie früher (Ringmittelwert).
-                            If parts.Length >= 5 Then
-                                Dim sx As Single
-                                Dim sy As Single
-                                If Single.TryParse(parts(3), sx) AndAlso Single.TryParse(parts(4), sy) Then
-                                    spot.SourceXPixels = sx
-                                    spot.SourceYPixels = sy
-                                End If
-                            End If
-                            adj.RetouchSpots.Add(spot)
-                        End If
-                    End If
-                Case "Annotation"
-                    Dim parts = value.Split(";"c)
-                    If parts.Length >= 16 Then
-                        Dim x As Single
-                        Dim y As Single
-                        Dim w As Single
-                        Dim h As Single
-                        Dim strokeWidth As Single
-                        Dim fontSize As Single
-                        Dim opacity As Single = 100
-                        Dim rotation As Single = 0
-                        Dim isVisible As Boolean = True
-                        Dim hardness As Single = 100
-                        If Single.TryParse(parts(3), x) AndAlso Single.TryParse(parts(4), y) AndAlso
-                           Single.TryParse(parts(5), w) AndAlso Single.TryParse(parts(6), h) AndAlso
-                           Single.TryParse(parts(9), strokeWidth) AndAlso Single.TryParse(parts(10), fontSize) Then
-                            Single.TryParse(parts(12), opacity)
-                            Single.TryParse(parts(13), rotation)
-                            Boolean.TryParse(parts(14), isVisible)
-                            Single.TryParse(parts(15), hardness)
-                            Dim loadedKind = Uri.UnescapeDataString(parts(0))
-                            Dim loadedText = Uri.UnescapeDataString(parts(1))
-                            Dim normalizedLoadedKind = NormalizeAnnotationKind(loadedKind)
-                            ' Bei Mal-Ebenen steckt im Text-Feld die serialisierte Punktliste - sie wandert
-                            ' in Strokes, das Text-Feld bleibt leer (siehe AnnotationRecipeText).
-                            Dim isPaintLayer = normalizedLoadedKind = "Brush" OrElse normalizedLoadedKind = "Eraser"
-                            Dim loadedStrokes = If(isPaintLayer, BrushStrokeCodec.Parse(loadedText), New List(Of BrushStroke)())
-
-                            adj.Annotations.Add(New ImageAnnotation With {
-                                .Kind = loadedKind,
-                                .Text = If(isPaintLayer, "", loadedText),
-                                .Strokes = loadedStrokes,
-                                .ImagePath = Uri.UnescapeDataString(parts(2)),
-                                .XPixels = x,
-                                .YPixels = y,
-                                .WidthPixels = w,
-                                .HeightPixels = h,
-                                .FillColor = Uri.UnescapeDataString(parts(7)),
-                                .StrokeColor = Uri.UnescapeDataString(parts(8)),
-                                .StrokeWidth = strokeWidth,
-                                .FontSizePixels = fontSize,
-                                .FontFamily = Uri.UnescapeDataString(parts(11)),
-                                .Opacity = opacity,
-                                .RotationDegrees = rotation,
-                                .Anchor = "",
-                                .IsVisible = isVisible,
-                                .HardnessPercent = hardness
-                            })
-                        End If
-                    ElseIf parts.Length >= 15 Then
-                        Dim x As Single
-                        Dim y As Single
-                        Dim w As Single
-                        Dim h As Single
-                        Dim strokeWidth As Single
-                        Dim fontSize As Single
-                        Dim opacity As Single = 100
-                        Dim rotation As Single = 0
-                        Dim isVisible As Boolean = True
-                        Dim hardness As Single = 100
-                        If Single.TryParse(parts(2), x) AndAlso Single.TryParse(parts(3), y) AndAlso
-                           Single.TryParse(parts(4), w) AndAlso Single.TryParse(parts(5), h) AndAlso
-                           Single.TryParse(parts(8), strokeWidth) AndAlso Single.TryParse(parts(9), fontSize) Then
-                            Single.TryParse(parts(11), opacity)
-                            Single.TryParse(parts(12), rotation)
-                            Boolean.TryParse(parts(13), isVisible)
-                            Single.TryParse(parts(14), hardness)
-                            adj.Annotations.Add(New ImageAnnotation With {
-                                .Kind = Uri.UnescapeDataString(parts(0)),
-                                .Text = Uri.UnescapeDataString(parts(1)),
-                                .ImagePath = "",
-                                .XPixels = x,
-                                .YPixels = y,
-                                .WidthPixels = w,
-                                .HeightPixels = h,
-                                .FillColor = Uri.UnescapeDataString(parts(6)),
-                                .StrokeColor = Uri.UnescapeDataString(parts(7)),
-                                .StrokeWidth = strokeWidth,
-                                .FontSizePixels = fontSize,
-                                .FontFamily = Uri.UnescapeDataString(parts(10)),
-                                .Opacity = opacity,
-                                .RotationDegrees = rotation,
-                                .Anchor = "",
-                                .IsVisible = isVisible,
-                                .HardnessPercent = hardness
-                            })
-                        End If
-                    End If
-                    ' Ältere Rezepte enthalten die Fill-Verlauf-/Schatten-/Glow-Felder noch nicht -
-                    ' in dem Fall bleiben die per Klassendefault gesetzten Werte (Solid, kein
-                    ' Schatten/Glow) unverändert, siehe ImageAnnotation-Feld-Defaults.
-                    If parts.Length >= 27 AndAlso adj.Annotations.Count > 0 Then
-                        Dim extra = adj.Annotations(adj.Annotations.Count - 1)
-                        Dim gradientAngle As Single
-                        Dim shadowEnabled As Boolean
-                        Dim shadowOffsetX As Single
-                        Dim shadowOffsetY As Single
-                        Dim shadowBlur As Single
-                        Dim glowEnabled As Boolean
-                        Dim glowBlur As Single
-                        extra.FillKind = Uri.UnescapeDataString(parts(16))
-                        extra.FillColor2 = Uri.UnescapeDataString(parts(17))
-                        If Single.TryParse(parts(18), gradientAngle) Then extra.GradientAngleDegrees = gradientAngle
-                        If Boolean.TryParse(parts(19), shadowEnabled) Then extra.ShadowEnabled = shadowEnabled
-                        If Single.TryParse(parts(20), shadowOffsetX) Then extra.ShadowOffsetXPercent = shadowOffsetX
-                        If Single.TryParse(parts(21), shadowOffsetY) Then extra.ShadowOffsetYPercent = shadowOffsetY
-                        If Single.TryParse(parts(22), shadowBlur) Then extra.ShadowBlur = shadowBlur
-                        extra.ShadowColor = Uri.UnescapeDataString(parts(23))
-                        If Boolean.TryParse(parts(24), glowEnabled) Then extra.GlowEnabled = glowEnabled
-                        If Single.TryParse(parts(25), glowBlur) Then extra.GlowBlur = glowBlur
-                        extra.GlowColor = Uri.UnescapeDataString(parts(26))
-
-                        ' Noch ältere Rezepte (aus der ersten Schatten/Glow-Version) kennen Invertieren/
-                        ' Glow-Stärke noch nicht - Klassendefaults (nicht invertiert, volle Stärke) gelten dann.
-                        If parts.Length >= 29 Then
-                            Dim gradientInverted As Boolean
-                            Dim glowStrength As Single
-                            If Boolean.TryParse(parts(27), gradientInverted) Then extra.GradientInverted = gradientInverted
-                            If Single.TryParse(parts(28), glowStrength) Then extra.GlowStrength = glowStrength
-                        End If
-                        If parts.Length >= 30 Then
-                            Dim shadowStrength As Single
-                            If Single.TryParse(parts(29), shadowStrength) Then extra.ShadowStrength = shadowStrength
-                        End If
-                        If parts.Length >= 31 Then
-                            extra.Anchor = NormalizeAnnotationAnchor(Uri.UnescapeDataString(parts(30)))
-                        End If
-                        ' Rezepte vor der abgerundeten/skalierbaren Schatten-Version kennen diese drei
-                        ' Felder nicht - dann gelten die Klassendefaults (eckig, Radius 20%, Größe 100%).
-                        If parts.Length >= 34 Then
-                            Dim shadowRounded As Boolean
-                            Dim shadowCornerRadius As Single
-                            Dim shadowSize As Single
-                            If Boolean.TryParse(parts(31), shadowRounded) Then extra.ShadowRounded = shadowRounded
-                            If Single.TryParse(parts(32), shadowCornerRadius) Then extra.ShadowCornerRadiusPercent = shadowCornerRadius
-                            If Single.TryParse(parts(33), shadowSize) Then extra.ShadowSizePercent = shadowSize
-                        End If
-                    End If
-                Case "Exposure" : If Single.TryParse(value, f) Then adj.Exposure = f
-                Case "Brightness" : If Single.TryParse(value, f) Then adj.Brightness = f
-                Case "Contrast" : If Single.TryParse(value, f) Then adj.Contrast = f
-                Case "Saturation" : If Single.TryParse(value, f) Then adj.Saturation = f
-                Case "Vibrance" : If Single.TryParse(value, f) Then adj.Vibrance = f
-                Case "Highlights" : If Single.TryParse(value, f) Then adj.Highlights = f
-                Case "Shadows" : If Single.TryParse(value, f) Then adj.ShadowsLevel = f
-                Case "Whites" : If Single.TryParse(value, f) Then adj.Whites = f
-                Case "Blacks" : If Single.TryParse(value, f) Then adj.Blacks = f
-                Case "Temperature" : If Single.TryParse(value, f) Then adj.Temperature = f
-                Case "Tint" : If Single.TryParse(value, f) Then adj.Tint = f
-                Case "Sharpness" : If Single.TryParse(value, f) Then adj.Sharpness = f
-                Case "NoiseReduction" : If Single.TryParse(value, f) Then adj.NoiseReduction = f
-                Case "NoiseReductionMethod"
-                    Dim nrMethod As NoiseReductionMethod
-                    If [Enum].TryParse(value, nrMethod) Then adj.NoiseReductionMethod = nrMethod
-                Case "DustScratches" : If Single.TryParse(value, f) Then adj.DustScratches = f
-                Case "Haze" : If Single.TryParse(value, f) Then adj.Haze = f
-                Case "AddNoise" : If Single.TryParse(value, f) Then adj.AddNoise = f
-                Case "Structure" : If Single.TryParse(value, f) Then adj.[Structure] = f
-                Case "Glow" : If Single.TryParse(value, f) Then adj.Glow = f
-                Case "Vignette" : If Single.TryParse(value, f) Then adj.Vignette = f
-                Case "VignetteTransition" : If Single.TryParse(value, f) Then adj.VignetteTransition = f
-                Case "VignetteRoundness" : If Single.TryParse(value, f) Then adj.VignetteRoundness = f
-                Case "VignetteFeather" : If Single.TryParse(value, f) Then adj.VignetteFeather = f
-                Case "VignetteCenterX" : If Single.TryParse(value, f) Then adj.VignetteCenterX = f
-                Case "VignetteCenterY" : If Single.TryParse(value, f) Then adj.VignetteCenterY = f
-                Case "Grain" : If Single.TryParse(value, f) Then adj.Grain = f
-                Case "BorderSize" : If Single.TryParse(value, f) Then adj.BorderSize = f
-                Case "BorderColor" : adj.BorderColor = value
-                Case "BorderCornerRadius" : If Single.TryParse(value, f) Then adj.BorderCornerRadius = f
-                Case "BorderEffect" : adj.BorderEffect = value
-                Case "Clarity" : If Single.TryParse(value, f) Then adj.Clarity = f
-                Case "CurveRgbPoints" : adj.CurveRgbPoints = value
-                Case "CurveRedPoints" : adj.CurveRedPoints = value
-                Case "CurveGreenPoints" : adj.CurveGreenPoints = value
-                Case "CurveBluePoints" : adj.CurveBluePoints = value
-                Case "CurveLuminancePoints" : adj.CurveLuminancePoints = value
-                Case "RedHue" : If Single.TryParse(value, f) Then adj.RedHue = f
-                Case "RedSaturation" : If Single.TryParse(value, f) Then adj.RedSaturation = f
-                Case "OrangeHue" : If Single.TryParse(value, f) Then adj.OrangeHue = f
-                Case "OrangeSaturation" : If Single.TryParse(value, f) Then adj.OrangeSaturation = f
-                Case "YellowHue" : If Single.TryParse(value, f) Then adj.YellowHue = f
-                Case "YellowSaturation" : If Single.TryParse(value, f) Then adj.YellowSaturation = f
-                Case "GreenHue" : If Single.TryParse(value, f) Then adj.GreenHue = f
-                Case "GreenSaturation" : If Single.TryParse(value, f) Then adj.GreenSaturation = f
-                Case "AquaHue" : If Single.TryParse(value, f) Then adj.AquaHue = f
-                Case "AquaSaturation" : If Single.TryParse(value, f) Then adj.AquaSaturation = f
-                Case "BlueHue" : If Single.TryParse(value, f) Then adj.BlueHue = f
-                Case "BlueSaturation" : If Single.TryParse(value, f) Then adj.BlueSaturation = f
-                Case "PurpleHue" : If Single.TryParse(value, f) Then adj.PurpleHue = f
-                Case "PurpleSaturation" : If Single.TryParse(value, f) Then adj.PurpleSaturation = f
-                Case "MagentaHue" : If Single.TryParse(value, f) Then adj.MagentaHue = f
-                Case "MagentaSaturation" : If Single.TryParse(value, f) Then adj.MagentaSaturation = f
-                Case "RotationDegrees" : If Single.TryParse(value, f) Then adj.RotationDegrees = f
-                Case "StraightenDegrees" : If Single.TryParse(value, f) Then adj.StraightenDegrees = f
-                Case "StraightenExpandCanvas" : If Boolean.TryParse(value, b) Then adj.StraightenExpandCanvas = b
-                Case "FlipHorizontal" : If Boolean.TryParse(value, b) Then adj.FlipHorizontal = b
-                Case "FlipVertical" : If Boolean.TryParse(value, b) Then adj.FlipVertical = b
-                Case "CropLeft" : If Single.TryParse(value, f) Then adj.CropLeftPercent = f
-                Case "CropTop" : If Single.TryParse(value, f) Then adj.CropTopPercent = f
-                Case "CropRight" : If Single.TryParse(value, f) Then adj.CropRightPercent = f
-                Case "CropBottom" : If Single.TryParse(value, f) Then adj.CropBottomPercent = f
-                Case "ResizeWidth" : If Integer.TryParse(value, i) Then adj.ResizeWidth = i
-                Case "ResizeHeight" : If Integer.TryParse(value, i) Then adj.ResizeHeight = i
-                Case "LockResizeAspect" : If Boolean.TryParse(value, b) Then adj.LockResizeAspect = b
-                Case "ResizeInterpolation"
-                    Dim mode As ResizeInterpolationMode
-                    If [Enum].TryParse(value, mode) Then adj.ResizeInterpolation = mode
-                Case "CanvasWidth" : If Integer.TryParse(value, i) Then adj.CanvasWidth = i
-                Case "CanvasHeight" : If Integer.TryParse(value, i) Then adj.CanvasHeight = i
-                Case "LockCanvasAspect" : If Boolean.TryParse(value, b) Then adj.LockCanvasAspect = b
-                Case "CanvasAnchor" : adj.CanvasAnchor = value
-                Case "CanvasBackgroundColor" : adj.CanvasBackgroundColor = value
-                Case "FilterPreset" : adj.FilterPreset = value
-                Case "FilterStrength" : If Single.TryParse(value, f) Then adj.FilterStrength = f
-            End Select
-        End Sub
 
         Private Sub RefreshHistogram()
             If String.IsNullOrEmpty(_currentImagePath) Then

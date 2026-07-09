@@ -644,11 +644,6 @@ Namespace Models
             End Get
         End Property
 
-        Public Sub RequestViewportThumbnail()
-            If IsFolder Then Return
-            QueueThumbnail(ViewportThumbnailPriority)
-        End Sub
-
         ''' <summary>Reiht das Element mit niedrigster Priorität ein - wird erst abgearbeitet, wenn
         ''' die Viewport-Warteschlange leer ist (d.h. im "Ruhezustand", nicht während aktivem
         ''' Scrollen). No-op, falls das Element bereits geladen/geladen wird/schon eingereiht ist.</summary>

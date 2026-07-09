@@ -38,6 +38,7 @@ Namespace Views
         Private _clearingNavigationSelection As Boolean = False
         Private _viewportThumbnailRefreshQueued As Boolean = False
         Private _scrollHandlersAttached As Boolean = False
+        Private _isAttached As Boolean = False
         Private ReadOnly _thumbnailTracker As New ViewportThumbnailTracker()
 
         Public Sub New()
@@ -73,6 +74,8 @@ Namespace Views
         End Function
 
         Private Sub OnGalleryAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
+            _isAttached = True
+            RebindViewModel()
             Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
             RestoreFolderTreeSelectionAfterRecreation()
 
@@ -117,6 +120,12 @@ Namespace Views
         End Sub
 
         Private Sub OnGalleryDetachedFromVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
+            ' Das GalleryViewModel lebt über die ganze Sitzung, diese View wird bei jedem Moduswechsel
+            ' neu gebaut. Ohne Abmelden bliebe sie samt Item-Baum an den drei Abos hängen - DataContextChanged,
+            ' wo sie sonst gelöst werden, feuert beim Verwerfen der View nicht.
+            _isAttached = False
+            UnsubscribeViewModel()
+
             If Not _scrollHandlersAttached Then Return
 
             RemoveHandler Me.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
@@ -138,19 +147,27 @@ Namespace Views
             _scrollHandlersAttached = False
         End Sub
 
+        Private Sub RebindViewModel()
+            UnsubscribeViewModel()
+            If Not _isAttached Then Return
+            _observedVm = GetVm()
+            If _observedVm Is Nothing Then Return
+            AddHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+            AddHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
+            If _observedVm.Items IsNot Nothing Then AddHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
+        End Sub
+
+        Private Sub UnsubscribeViewModel()
+            If _observedVm Is Nothing Then Return
+            RemoveHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+            RemoveHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
+            If _observedVm.Items IsNot Nothing Then RemoveHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
+            _observedVm = Nothing
+        End Sub
+
         Private Sub OnViewDataContextChanged(sender As Object, e As EventArgs)
             Dim vm = GetVm()
-            If _observedVm IsNot Nothing Then
-                RemoveHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
-                RemoveHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
-                If _observedVm.Items IsNot Nothing Then RemoveHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
-            End If
-            _observedVm = vm
-            If _observedVm IsNot Nothing Then
-                AddHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
-                AddHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
-                If _observedVm.Items IsNot Nothing Then AddHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
-            End If
+            RebindViewModel()
             QueueViewportThumbnailRefresh()
 
             If _initialSelectionDone Then Return
@@ -772,8 +789,17 @@ Namespace Views
                            New List(Of String) From {dragItem.FilePath})
             _dragStartItem = Nothing
 
-            Dim data = New DataTransfer()
-            data.Add(DataTransferItem.Create(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
+            ' Die Ziehlast trägt beides: das anwendungseigene Format, an dem der interne Drop das
+            ' Verschieben erkennt, und die Dateien selbst - ohne die sieht ein fremdes Ziel wie Dolphin
+            ' gar nichts und lehnt den Drop ab.
+            Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
+            Dim data = Await ClipboardPathService.BuildFileTransferAsync(storageProvider, paths,
+                Sub(firstItem) firstItem.Set(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
+            If data.Items.Count = 0 Then
+                data = New DataTransfer()
+                data.Add(DataTransferItem.Create(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
+            End If
+
             _isDragging = True
             Try
                 Await DragDrop.DoDragDropAsync(e, data, DragDropEffects.Move Or DragDropEffects.Copy)
@@ -1160,43 +1186,68 @@ Namespace Views
             Await PasteClipboardIntoFolder(node.FullPath)
         End Sub
 
+        Private Function GetDropEffects(payload As (Paths As List(Of String), IsInternal As Boolean), targetFolder As String) As DragDropEffects
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse payload.Paths.Count = 0 Then Return DragDropEffects.None
+            If payload.IsInternal Then
+                Return If(vm.CanMovePathsToFolder(payload.Paths, targetFolder), DragDropEffects.Move, DragDropEffects.None)
+            End If
+            Return If(vm.CanPasteIntoFolder(targetFolder), DragDropEffects.Copy, DragDropEffects.None)
+        End Function
+
+        Private Async Function ApplyDropAsync(payload As (Paths As List(Of String), IsInternal As Boolean), targetFolder As String) As Task
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse payload.Paths.Count = 0 Then Return
+            If payload.IsInternal Then
+                Await vm.MovePathsToFolderAsync(payload.Paths, targetFolder)
+            Else
+                Await vm.PastePathsIntoFolderAsync(payload.Paths, targetFolder, cut:=False)
+            End If
+        End Function
+
         Public Sub OnFolderTreeDragOver(sender As Object, e As DragEventArgs)
             Dim target = GetDropFolder(e)
-            Dim paths = GetDraggedPaths(e)
-            Dim vm = GetVm()
-            If target Is Nothing OrElse vm Is Nothing OrElse Not vm.CanMovePathsToFolder(paths, target.FullPath) Then
-                e.DragEffects = DragDropEffects.None
-            Else
-                e.DragEffects = DragDropEffects.Move
-            End If
+            e.DragEffects = GetDropEffects(GetDragPayload(e), target?.FullPath)
             e.Handled = True
         End Sub
 
         Public Async Sub OnFolderTreeDrop(sender As Object, e As DragEventArgs)
             Dim target = GetDropFolder(e)
             If target Is Nothing Then Return
-            Dim vm = GetVm()
-            If vm IsNot Nothing Then Await vm.MovePathsToFolderAsync(GetDraggedPaths(e), target.FullPath)
+            Await ApplyDropAsync(GetDragPayload(e), target.FullPath)
             e.Handled = True
         End Sub
 
         Public Sub OnItemDragOver(sender As Object, e As DragEventArgs)
             Dim item = TryCast(TryCast(sender, Border)?.DataContext, ImageItem)
-            Dim paths = GetDraggedPaths(e)
-            Dim vm = GetVm()
-            If item IsNot Nothing AndAlso item.IsFolder AndAlso vm IsNot Nothing AndAlso vm.CanMovePathsToFolder(paths, item.FilePath) Then
-                e.DragEffects = DragDropEffects.Move
-            Else
-                e.DragEffects = DragDropEffects.None
-            End If
+            Dim targetFolder = If(item IsNot Nothing AndAlso item.IsFolder, item.FilePath, Nothing)
+            e.DragEffects = GetDropEffects(GetDragPayload(e), targetFolder)
             e.Handled = True
         End Sub
 
         Public Async Sub OnItemDrop(sender As Object, e As DragEventArgs)
             Dim item = TryCast(TryCast(sender, Border)?.DataContext, ImageItem)
             If item Is Nothing OrElse Not item.IsFolder Then Return
-            Dim vm = GetVm()
-            If vm IsNot Nothing Then Await vm.MovePathsToFolderAsync(GetDraggedPaths(e), item.FilePath)
+            Await ApplyDropAsync(GetDragPayload(e), item.FilePath)
+            e.Handled = True
+        End Sub
+
+        ''' Ablegen auf der freien Fläche der Galerie: fremde Dateien landen im gerade angezeigten Ordner.
+        ''' Für eine Ziehgeste aus der Galerie selbst ergibt das nichts - die Dateien liegen schon dort.
+        Public Sub OnGalleryAreaDragOver(sender As Object, e As DragEventArgs)
+            Dim payload = GetDragPayload(e)
+            If payload.IsInternal Then
+                e.DragEffects = DragDropEffects.None
+            Else
+                e.DragEffects = GetDropEffects(payload, GetVm()?.CurrentFolder)
+            End If
+            e.Handled = True
+        End Sub
+
+        Public Async Sub OnGalleryAreaDrop(sender As Object, e As DragEventArgs)
+            Dim payload = GetDragPayload(e)
+            If payload.IsInternal Then Return
+            Await ApplyDropAsync(payload, GetVm()?.CurrentFolder)
             e.Handled = True
         End Sub
 
@@ -1210,19 +1261,32 @@ Namespace Views
             Return GetVm()?.SelectedFolderNode
         End Function
 
-        Private Function GetDraggedPaths(e As DragEventArgs) As List(Of String)
+        ''' Die Ziehlast kommt entweder aus der Galerie selbst (dann verschieben wir) oder aus einem fremden
+        ''' Dateimanager (dann kopieren wir - dessen Dateien liegen woanders und sollen dort bleiben).
+        Private Function GetDragPayload(e As DragEventArgs) As (Paths As List(Of String), IsInternal As Boolean)
             Try
                 Dim internal = e.DataTransfer.TryGetValue(FerrumPixPathsFormat)
                 If Not String.IsNullOrWhiteSpace(internal) Then
-                    Return internal.
+                    Dim internalPaths = internal.
                         Split({ControlChars.Cr, ControlChars.Lf}, StringSplitOptions.RemoveEmptyEntries).
                         Where(Function(p) Not String.IsNullOrEmpty(p)).
                         Distinct(StringComparer.OrdinalIgnoreCase).
                         ToList()
+                    If internalPaths.Count > 0 Then Return (internalPaths, True)
                 End If
             Catch
             End Try
-            Return New List(Of String)()
+
+            Try
+                Dim files = e.DataTransfer.TryGetFiles()
+                If files IsNot Nothing Then
+                    Dim externalPaths = ClipboardPathService.ToLocalPaths(files)
+                    If externalPaths.Count > 0 Then Return (externalPaths, False)
+                End If
+            Catch
+            End Try
+
+            Return (New List(Of String)(), False)
         End Function
 
         Public Sub OnSettingsClick(sender As Object, e As RoutedEventArgs)

@@ -218,8 +218,6 @@ Namespace ViewModels
             End Get
             Set(value As Integer)
                 Me.RaiseAndSetIfChanged(_currentIndex, value)
-                Me.RaisePropertyChanged(NameOf(HasPrevious))
-                Me.RaisePropertyChanged(NameOf(HasNext))
                 Me.RaisePropertyChanged(NameOf(PositionText))
                 Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
                 MarkCurrentFilmstripItem()
@@ -406,18 +404,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property HasPrevious As Boolean
-            Get
-                Return _folderPaths.Count > 1 AndAlso _currentIndex >= 0
-            End Get
-        End Property
-
-        Public ReadOnly Property HasNext As Boolean
-            Get
-                Return _folderPaths.Count > 1 AndAlso _currentIndex >= 0
-            End Get
-        End Property
-
         Public ReadOnly Property IsRawFile As Boolean
             Get
                 Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso
@@ -534,7 +520,6 @@ Namespace ViewModels
         Public ReadOnly Property ZoomFitCommand As ICommand
         Public ReadOnly Property ZoomActualCommand As ICommand
         Public ReadOnly Property EditCommand As ICommand
-        Public ReadOnly Property OpenEditorToolCommand As ICommand
         Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
         Public ReadOnly Property SetInfoTabCommand As ICommand
         Public ReadOnly Property AddTagCommand As ICommand
@@ -548,7 +533,6 @@ Namespace ViewModels
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property OpenFileManagerCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
-        Public ReadOnly Property CycleRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property ToggleSlideshowCommand As ICommand
         Public ReadOnly Property PlayPauseVideoCommand As ICommand
@@ -585,14 +569,6 @@ Namespace ViewModels
                                                                  Await _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
                                                              End If
                                                          End Function)
-            OpenEditorToolCommand = ReactiveCommand.CreateFromTask(Of String)(Async Function(toolName)
-                                                                                  If String.IsNullOrEmpty(_currentImagePath) Then Return
-                                                                                  Await _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
-                                                                                  Dim parsed As EditorTool
-                                                                                  If [Enum].TryParse(toolName, parsed) AndAlso _mainVm.Editor IsNot Nothing Then
-                                                                                      _mainVm.Editor.CurrentTool = parsed
-                                                                                  End If
-                                                                              End Function)
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub()
                                                                    If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
                                                                    _mainVm.Settings.ViewerInfoSidebarExpanded = Not _mainVm.Settings.ViewerInfoSidebarExpanded
@@ -627,7 +603,6 @@ Namespace ViewModels
                                                                      Dim v As Integer
                                                                      If Integer.TryParse(r, v) Then Rating = If(_rating = v, 0, v)
                                                                  End Sub)
-            CycleRatingCommand = ReactiveCommand.Create(Sub() Rating = (_rating Mod 5) + 1)
             ToggleFavoriteCommand = ReactiveCommand.Create(Sub() IsFavorite = Not IsFavorite)
             ToggleSlideshowCommand = ReactiveCommand.Create(Sub()
                                                                 If _isSlideshowPlaying Then

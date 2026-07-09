@@ -37,25 +37,11 @@ Namespace Services
 
             Dim uriList = String.Join(ControlChars.Lf, validPaths.Select(Function(p) New Uri(IO.Path.GetFullPath(p)).AbsoluteUri))
 
-            ' DataFormat.File ist Avalonias plattformübergreifendes Format für Dateien auf der
-            ' Zwischenablage (wird intern auf CF_HDROP unter Windows, text/uri-list unter Linux und
-            ' NSFilenamesPboardType unter macOS abgebildet) - damit können externe Programme wie der
-            ' Windows-Explorer oder Dolphin die kopierten Dateien direkt einfügen.
-            Dim transfer = New DataTransfer()
-            Dim isFirstItem = True
-            For Each path In validPaths
-                Dim storageItem = Await TryResolveStorageItemAsync(storageProvider, path)
-                If storageItem Is Nothing Then Continue For
-
-                Dim item = New DataTransferItem()
-                item.SetFile(storageItem)
-                If isFirstItem Then
-                    item.SetText(uriList)
-                    item.Set(CutFormat, If(cut, "1", "0"))
-                    isFirstItem = False
-                End If
-                transfer.Add(item)
-            Next
+            Dim transfer = Await BuildFileTransferAsync(storageProvider, validPaths,
+                Sub(firstItem)
+                    firstItem.SetText(uriList)
+                    firstItem.Set(CutFormat, If(cut, "1", "0"))
+                End Sub)
 
             If transfer.Items.Count = 0 Then
                 Await clipboard.SetTextAsync(uriList)
@@ -69,6 +55,45 @@ Namespace Services
                 setDataFailed = True
             End Try
             If setDataFailed Then Await clipboard.SetTextAsync(uriList)
+        End Function
+
+        ''' <summary>Baut einen DataTransfer mit einem Datei-Eintrag je Pfad. DataFormat.File ist Avalonias
+        ''' plattformübergreifendes Dateiformat und wird intern auf CF_HDROP unter Windows, text/uri-list
+        ''' unter Linux und NSFilenamesPboardType unter macOS abgebildet - nur damit können Dolphin, Nautilus
+        ''' oder der Windows-Explorer die Daten annehmen, egal ob sie aus der Zwischenablage oder aus einer
+        ''' Ziehen-und-Ablegen-Geste stammen. Ein anwendungseigenes Format allein sehen sie nicht.</summary>
+        ''' <param name="decorateFirstItem">Wird auf dem ersten Eintrag aufgerufen, um zusätzliche Formate
+        ''' anzuhängen (Text-Darstellung, Ausschneide-Marke, anwendungsinterne Pfadliste).</param>
+        Public Shared Async Function BuildFileTransferAsync(storageProvider As IStorageProvider,
+                                                           paths As IEnumerable(Of String),
+                                                           Optional decorateFirstItem As Action(Of DataTransferItem) = Nothing) As Task(Of DataTransfer)
+            Dim transfer = New DataTransfer()
+            If paths Is Nothing Then Return transfer
+
+            Dim isFirstItem = True
+            For Each path In paths
+                Dim storageItem = Await TryResolveStorageItemAsync(storageProvider, path)
+                If storageItem Is Nothing Then Continue For
+
+                Dim item = New DataTransferItem()
+                item.SetFile(storageItem)
+                If isFirstItem Then
+                    decorateFirstItem?.Invoke(item)
+                    isFirstItem = False
+                End If
+                transfer.Add(item)
+            Next
+            Return transfer
+        End Function
+
+        ''' Wandelt die Datei-Einträge eines DataTransfers (eigene oder fremde) in lokale Pfade um.
+        Public Shared Function ToLocalPaths(items As IEnumerable(Of IStorageItem)) As List(Of String)
+            If items Is Nothing Then Return New List(Of String)()
+            Return items.
+                Select(Function(f) TryGetLocalPath(f)).
+                Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
+                Distinct(StringComparer.OrdinalIgnoreCase).
+                ToList()
         End Function
 
         Private Shared Async Function TryResolveStorageItemAsync(storageProvider As IStorageProvider, path As String) As Task(Of IStorageItem)
@@ -139,11 +164,7 @@ Namespace Services
                 Dim files = Await transfer.TryGetFilesAsync()
                 If files Is Nothing OrElse files.Length = 0 Then Return Nothing
 
-                Dim paths = files.
-                    Select(Function(f) TryGetLocalPath(f)).
-                    Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
-                    Distinct(StringComparer.OrdinalIgnoreCase).
-                    ToList()
+                Dim paths = ToLocalPaths(files)
                 If paths.Count = 0 Then Return New ClipboardPathData With {.ClipboardWasReadable = True}
 
                 Dim isCut = False
@@ -168,23 +189,6 @@ Namespace Services
             Catch
                 Return Nothing
             End Try
-        End Function
-
-        Private Shared Function DataToText(data As Object) As String
-            If data Is Nothing Then Return ""
-            If TypeOf data Is String Then Return DirectCast(data, String)
-            If TypeOf data Is Byte() Then Return System.Text.Encoding.UTF8.GetString(DirectCast(data, Byte()))
-            Dim stringValues = TryCast(data, IEnumerable(Of String))
-            If stringValues IsNot Nothing Then Return String.Join(ControlChars.Lf, stringValues)
-            Dim objectValues = TryCast(data, System.Collections.IEnumerable)
-            If objectValues IsNot Nothing Then
-                Dim values As New List(Of String)()
-                For Each value In objectValues
-                    If value IsNot Nothing Then values.Add(value.ToString())
-                Next
-                If values.Count > 0 Then Return String.Join(ControlChars.Lf, values)
-            End If
-            Return data.ToString()
         End Function
 
         Private Shared Function ParsePathText(text As String) As ClipboardPathData

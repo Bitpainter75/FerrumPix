@@ -431,6 +431,8 @@ Namespace Views
                      NameOf(EditorViewModel.AnnotationFontFamily),
                      NameOf(EditorViewModel.AnnotationOpacity),
                      NameOf(EditorViewModel.AnnotationRotation),
+                     NameOf(EditorViewModel.AnnotationStrokeWidth),
+                     NameOf(EditorViewModel.AnnotationFillKind),
                      NameOf(EditorViewModel.AnnotationAnchor),
                      NameOf(EditorViewModel.AnnotationIsVisible),
                      NameOf(EditorViewModel.AnnotationXPercent),
@@ -629,6 +631,18 @@ Namespace Views
                 _panStartOffsetY = _panY
                 _isPanDragging = True
                 e.Pointer.Capture(canvas)
+                e.Handled = True
+                Return
+            End If
+
+            ' Der Griff des Vergleichsreglers liegt als Kind auf diesem Canvas, ein Druck darauf landet
+            ' also hier. Ohne diesen Zweig liefe er weiter unten in den Objekt-Hit-Test und würde ein
+            ' zufällig darunterliegendes Objekt selektieren (samt Werkzeugwechsel), statt den Regler zu
+            ' ziehen. Das Verschieben durch Klick irgendwo aufs Bild bleibt der Rückfall am Ende.
+            If vm IsNot Nothing AndAlso vm.ShowBeforeImage AndAlso IsWithinComparisonSlider(e.Source) Then
+                _isDraggingSlider = True
+                e.Pointer.Capture(canvas)
+                MoveSlider(e.GetPosition(canvas).X, canvas)
                 e.Handled = True
                 Return
             End If
@@ -1434,14 +1448,36 @@ Namespace Views
                 ' uniform auf die Zielauflösung (ImageProcessor.ScaleAnnotationForSource). Die Live-Textbox
                 ' muss exakt dieselbe Umrechnung machen - sonst weicht der Text im Editor deutlich von der
                 ' gebackenen Größe ab. Die Größe darf insbesondere NICHT aus der Objekt-Box abgeleitet
-                ' werden: die Box ist nur eine großzügige Schätzung um den Text herum
-                ' (EditorViewModel.EstimateTextAnnotationSizePercent), der Text füllt sie nicht aus.
+                ' werden: die Box umschließt den Text zwar eng (EditorViewModel.EstimateTextAnnotationSizePercent),
+                ' der Nutzer kann sie aber jederzeit an den Griffen aufziehen - der Schriftgrad bleibt dabei.
                 Dim displayScale = ComputeBasePixelToDisplayScale(vm, iw, ih, scale)
                 Dim bakedFontSize = Math.Max(8.0, vm.AnnotationFontSize)
                 Dim displayFontSize = Math.Max(1.0, bakedFontSize * displayScale)
                 editor.FontSize = displayFontSize
+                ' Kein LineHeight setzen: DrawWrappedText benutzt inzwischen denselben Zeilenabstand aus
+                ' den Schriftmetriken, den Avalonia von sich aus nimmt. Ein gesetztes LineHeight schöbe
+                ' die erste Zeile um die zusätzliche Durchschusshöhe nach unten - sichtbar als Sprung von
+                ' ein bis zwei Pixeln beim Selektieren und zurück beim Abwählen.
+                ' Avalonia setzt Text über HarfBuzz und wendet dabei Kerning und Ligaturen an. Skias
+                ' SKCanvas.DrawText im gebackenen Bild tut das nicht, es reiht die Glyphen mit ihren
+                ' nackten Vorschubbreiten. Bei Paaren wie "Te" rückt Avalonia die Buchstaben deshalb
+                ' enger zusammen als im Ergebnis. Damit der Editor zeigt, was herauskommt, sind beide
+                ' Merkmale in der Live-Textbox abgeschaltet - dieselbe Annahme trifft auch die
+                ' Breitenschätzung in EditorViewModel.EstimateTextAnnotationSizePercent, die mit
+                ' SKPaint.MeasureText misst.
+                editor.FontFeatures = New FontFeatureCollection() From {
+                    New FontFeature With {.Tag = "kern", .Value = 0},
+                    New FontFeature With {.Tag = "liga", .Value = 0}
+                }
                 editor.FontFamily = New FontFamily(vm.AnnotationFontFamily)
-                editor.Foreground = New SolidColorBrush(ParseAvaloniaColor(vm.AnnotationFillColor, Colors.White))
+                ' Kontur und Verlaufsfüllung kann die TextBox nicht: solche Objekte zeichnet das
+                ' Overlay-Bitmap darunter vollständig, die Textbox bleibt nur noch für Eingabe und
+                ' Schreibmarke da und malt selbst nichts (siehe EditorViewModel.TextRendersInOverlay).
+                Dim textColor = ParseAvaloniaColor(vm.AnnotationFillColor, Colors.White)
+                editor.Foreground = If(vm.SelectedTextRendersInOverlay,
+                                       Brushes.Transparent,
+                                       CType(New SolidColorBrush(textColor), IBrush))
+                editor.CaretBrush = New SolidColorBrush(textColor)
                 ' Skia hängt die erste Zeile an der Grundlinie unter der Oberkante auf, Avalonia an der
                 ' Glyphen-Oberkante - ohne diesen Versatz säße der Live-Text über dem gebackenen.
                 editor.RenderTransform = New TranslateTransform(0, ImageProcessor.GetBakedTextTopOffset(vm.AnnotationFontFamily, CSng(displayFontSize)))
@@ -1850,6 +1886,20 @@ Namespace Views
                 vm.AnnotationFontSizePixels = CInt(Math.Round(fitFontSize))
             End If
         End Sub
+
+        ''' True, wenn der Zeiger auf dem Griff oder der Trennlinie des Vergleichsreglers steht. Geprüft
+        ''' wird der Vorfahrenpfad, weil der Druck auf dem Pfeil-Path im Griff ankommt, nicht auf dem Border.
+        Private Shared Function IsWithinComparisonSlider(source As Object) As Boolean
+            Dim current = TryCast(source, Control)
+            While current IsNot Nothing
+                If String.Equals(current.Name, "SliderHandleCircle", StringComparison.Ordinal) OrElse
+                   String.Equals(current.Name, "SliderDivider", StringComparison.Ordinal) Then
+                    Return True
+                End If
+                current = TryCast(current.Parent, Control)
+            End While
+            Return False
+        End Function
 
         Private Sub MoveSlider(mouseX As Double, canvas As Canvas)
             Dim vm = TryCast(DataContext, EditorViewModel)

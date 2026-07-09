@@ -144,7 +144,6 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectionText))
                 Me.RaisePropertyChanged(NameOf(FooterStatusText))
                 Me.RaisePropertyChanged(NameOf(SelectedRating))
-                Me.RaisePropertyChanged(NameOf(HasSelectedItem))
                 Me.RaisePropertyChanged(NameOf(HasSelectedImage))
                 Me.RaisePropertyChanged(NameOf(HasSelection))
             End Set
@@ -674,7 +673,6 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_collageLayoutMode, If(String.IsNullOrWhiteSpace(value), "Grid", value))
-                Me.RaisePropertyChanged(NameOf(IsCollageHeroMode))
                 Me.RaisePropertyChanged(NameOf(IsCollageRandomMode))
                 ScheduleCollagePreviewUpdate()
             End Set
@@ -729,36 +727,8 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_collageHeroPosition, NormalizeHeroPosition(value))
-                Me.RaisePropertyChanged(NameOf(IsCollageHeroLeft))
-                Me.RaisePropertyChanged(NameOf(IsCollageHeroRight))
-                Me.RaisePropertyChanged(NameOf(IsCollageHeroTop))
-                Me.RaisePropertyChanged(NameOf(IsCollageHeroBottom))
                 ScheduleCollagePreviewUpdate()
             End Set
-        End Property
-
-        Public ReadOnly Property IsCollageHeroLeft As Boolean
-            Get
-                Return String.Equals(_collageHeroPosition, "Left", StringComparison.OrdinalIgnoreCase)
-            End Get
-        End Property
-
-        Public ReadOnly Property IsCollageHeroRight As Boolean
-            Get
-                Return String.Equals(_collageHeroPosition, "Right", StringComparison.OrdinalIgnoreCase)
-            End Get
-        End Property
-
-        Public ReadOnly Property IsCollageHeroTop As Boolean
-            Get
-                Return String.Equals(_collageHeroPosition, "Top", StringComparison.OrdinalIgnoreCase)
-            End Get
-        End Property
-
-        Public ReadOnly Property IsCollageHeroBottom As Boolean
-            Get
-                Return String.Equals(_collageHeroPosition, "Bottom", StringComparison.OrdinalIgnoreCase)
-            End Get
         End Property
 
         Public Property CollageRandomSeed As Integer
@@ -818,7 +788,9 @@ Namespace ViewModels
                     SaveFileBrowserSettings()
                     Return
                 End If
-                LoadFolderImages(_currentFolder)
+                ' Ordner ein-/ausblenden ändert nur, welche Einträge dazugehören - kein Grund, die Liste
+                ' und damit die Bildlaufposition neu aufzubauen.
+                SyncFolderItems()
                 SaveFileBrowserSettings()
             End Set
         End Property
@@ -835,7 +807,9 @@ Namespace ViewModels
                     SaveFileBrowserSettings()
                     Return
                 End If
-                LoadFolderImages(_currentFolder)
+                ' Ordner ein-/ausblenden ändert nur, welche Einträge dazugehören - kein Grund, die Liste
+                ' und damit die Bildlaufposition neu aufzubauen.
+                SyncFolderItems()
                 SaveFileBrowserSettings()
             End Set
         End Property
@@ -894,8 +868,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public ReadOnly Property OpenInViewerCommand As ICommand
-        Public ReadOnly Property OpenInEditorCommand As ICommand
         Public ReadOnly Property RefreshCommand As ICommand
         Public ReadOnly Property ClearSearchCommand As ICommand
         Public ReadOnly Property NavigateForwardCommand As ICommand
@@ -905,7 +877,6 @@ Namespace ViewModels
         Public ReadOnly Property SetSortCommand As ICommand
         Public ReadOnly Property SetSortDirectionCommand As ICommand
         Public ReadOnly Property SetViewModeCommand As ICommand
-        Public ReadOnly Property OpenSettingsCommand As ICommand
         Public ReadOnly Property DeleteSelectedCommand As ICommand
         Public ReadOnly Property SelectAllCommand As ICommand
         Public ReadOnly Property ClearSelectionCommand As ICommand
@@ -914,12 +885,7 @@ Namespace ViewModels
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property SetSelectedRatingCommand As ICommand
         Public ReadOnly Property RenameSelectedCommand As ICommand
-        Public ReadOnly Property CreateFolderCommand As ICommand
-        Public ReadOnly Property CopySelectedCommand As ICommand
-        Public ReadOnly Property CutSelectedCommand As ICommand
-        Public ReadOnly Property PasteCommand As ICommand
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
-        Public ReadOnly Property ExportSelectedCommand As ICommand
         Public ReadOnly Property ResizeSelectedCommand As ICommand
         Public ReadOnly Property ApplyWatermarkSelectedCommand As ICommand
         Public ReadOnly Property BatchConvertSelectedCommand As ICommand
@@ -950,12 +916,6 @@ Namespace ViewModels
                 Dim firstRating = images(0).Rating
                 If images.Any(Function(i) i.Rating <> firstRating) Then Return 0
                 Return firstRating
-            End Get
-        End Property
-
-        Public ReadOnly Property HasSelectedItem As Boolean
-            Get
-                Return _selectedItem IsNot Nothing
             End Get
         End Property
 
@@ -1068,8 +1028,6 @@ Namespace ViewModels
                                                        RefreshCollagePreviewAsync()
                                                    End Sub
 
-            OpenInViewerCommand = ReactiveCommand.Create(Sub() OpenSelectedInViewer())
-            OpenInEditorCommand = ReactiveCommand.Create(Sub() OpenSelectedInEditor())
             RefreshCommand = ReactiveCommand.Create(Sub() LoadCurrentFolder())
             ClearSearchCommand = ReactiveCommand.Create(Sub() SearchText = "")
             NavigateForwardCommand = ReactiveCommand.Create(Sub() NavigateForward())
@@ -1081,7 +1039,6 @@ Namespace ViewModels
                                                                             SortAscending = Not String.Equals(direction, "Descending", StringComparison.OrdinalIgnoreCase)
                                                                         End Sub)
             SetViewModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewMode = m)
-            OpenSettingsCommand = ReactiveCommand.Create(Sub() _mainVm.OpenSettings())
             DeleteSelectedCommand = ReactiveCommand.Create(Sub() DeleteSelected())
             SelectAllCommand = ReactiveCommand.Create(Sub() SelectAllVisible())
             ClearSelectionCommand = ReactiveCommand.Create(Sub() ClearSelection())
@@ -1089,12 +1046,7 @@ Namespace ViewModels
             CopyPathCommand = ReactiveCommand.Create(Sub() CopySelectedPath())
             ToggleFavoriteCommand = ReactiveCommand.Create(Of ImageItem)(Sub(item) DoToggleFavorite(item))
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
-            CreateFolderCommand = ReactiveCommand.Create(Sub() CreateFolderIn(If(SelectedFolderNode?.FullPath, _currentFolder)))
-            CopySelectedCommand = ReactiveCommand.Create(Sub() StoreClipboard(False))
-            CutSelectedCommand = ReactiveCommand.Create(Sub() StoreClipboard(True))
-            PasteCommand = ReactiveCommand.Create(Sub() PasteIntoFolder(_currentFolder))
-            DuplicateSelectedCommand = ReactiveCommand.Create(Sub() DuplicateSelected())
-            ExportSelectedCommand = ReactiveCommand.Create(Sub() ExportSelected())
+            DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
             ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
             ApplyWatermarkSelectedCommand = ReactiveCommand.Create(Sub() ApplyWatermarkSelected())
             BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() BatchConvertSelected())
@@ -1265,34 +1217,9 @@ Namespace ViewModels
             ReplaceSelection(Items.Skip(startIndex).Take(endIndex - startIndex + 1))
         End Sub
 
-        Public Function GetFirstSelectableIndex() As Integer
-            For i = 0 To Items.Count - 1
-                If Items(i).IsSelectableEntry Then Return i
-            Next
-            Return -1
-        End Function
-
         Public Function GetFirstNavigableIndex() As Integer
             If Items.Count = 0 Then Return -1
             Return 0
-        End Function
-
-        Public Function FindSelectableIndex(startIndex As Integer, offset As Integer) As Integer
-            If Items.Count = 0 Then Return -1
-            Dim idx = Math.Max(0, Math.Min(Items.Count - 1, startIndex))
-            Dim direction = If(offset >= 0, 1, -1)
-            Dim remaining = Math.Abs(offset)
-
-            Do
-                idx += direction
-                If idx < 0 OrElse idx >= Items.Count Then Exit Do
-                If Items(idx).IsSelectableEntry Then
-                    remaining -= 1
-                    If remaining = 0 Then Return idx
-                End If
-            Loop
-
-            Return -1
         End Function
 
         Public Function FindNavigableIndex(startIndex As Integer, offset As Integer) As Integer
@@ -2141,24 +2068,6 @@ Namespace ViewModels
             Return haystack.Contains(term, StringComparison.OrdinalIgnoreCase)
         End Function
 
-        Private Shared Function BuildSavedSearchQuery(textQuery As String, favoriteMode As String, ratingMin As Integer) As String
-            Dim parts As New List(Of String)()
-            textQuery = If(textQuery, "").Trim()
-            If Not String.IsNullOrWhiteSpace(textQuery) Then parts.Add(textQuery)
-            Select Case AppSettingsService.NormalizeSearchFavoriteMode(favoriteMode)
-                Case "Only"
-                    parts.Add("favorit")
-                Case "Not"
-                    parts.Add("kein favorit")
-            End Select
-            If ratingMin = 0 Then
-                parts.Add("0 Sterne")
-            ElseIf ratingMin > 0 Then
-                parts.Add($">={ratingMin} Sterne")
-            End If
-            Return String.Join(" ", parts)
-        End Function
-
         Private Shared Function NormalizeRatings(ratings As IEnumerable(Of Integer)) As HashSet(Of Integer)
             Return New HashSet(Of Integer)(If(ratings, Enumerable.Empty(Of Integer)()).
                 Select(Function(r) Math.Max(0, Math.Min(5, r))))
@@ -2166,50 +2075,6 @@ Namespace ViewModels
 
         Private Sub SaveSearches()
             SearchListService.Save(_savedSearches)
-        End Sub
-
-        Private Sub LoadVirtualFolder(name As String, metas As IEnumerable(Of LibraryImageMeta))
-            CancelActiveSearch()
-            Dim thumbnailToken = BeginNewFolderThumbnailScope()
-            ClearSelection()
-            _allItems.Clear()
-            Items.Clear()
-            DisplayItems.Clear()
-            _virtualPathSet.Clear()
-            SetupWatcher(Nothing)
-
-            _isVirtualFolder = True
-            _virtualFolderName = If(String.IsNullOrWhiteSpace(name), "Virtueller Ordner", name)
-            CurrentFolder = "virtual://" & _virtualFolderName
-            _historyBack.Clear()
-            _historyForward.Clear()
-            StorageFreeText = ""
-            StorageFillPercent = 0
-            SelectedFolderNode = Nothing
-
-            For Each meta In If(metas, Enumerable.Empty(Of LibraryImageMeta)())
-                If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
-                If Not File.Exists(meta.FilePath) Then Continue For
-                If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
-                If Not _virtualPathSet.Add(meta.FilePath) Then Continue For
-
-                Dim item = New ImageItem(meta.FilePath, thumbnailToken) With {
-                    .IsFavorite = meta.IsFavorite,
-                    .Rating = meta.Rating,
-                    .Tags = If(meta.Tags, New List(Of String)()),
-                    .ImageWidth = If(meta.ImageWidth, 0),
-                    .ImageHeight = If(meta.ImageHeight, 0)
-                }
-                _allItems.Add(item)
-            Next
-
-            FilterAndSort()
-            Me.RaisePropertyChanged(NameOf(IsVirtualFolder))
-            Me.RaisePropertyChanged(NameOf(CurrentFolderName))
-            Me.RaisePropertyChanged(NameOf(BreadcrumbParent))
-            Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))
-            Me.RaisePropertyChanged(NameOf(CanNavigateBack))
-            Me.RaisePropertyChanged(NameOf(CanNavigateForward))
         End Sub
 
         Private Function StartEmptyVirtualFolder(name As String) As CancellationToken
@@ -2415,23 +2280,35 @@ Namespace ViewModels
             End If
             If String.IsNullOrEmpty(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
             Try
+                ' Erst die Handler, dann scharfstellen: mit EnableRaisingEvents im Initialisierer gingen
+                ' alle Ereignisse verloren, die zwischen Konstruktor und AddHandler eintrafen.
                 _watcher = New FileSystemWatcher(folderPath) With {
-                    .NotifyFilter = NotifyFilters.FileName Or NotifyFilters.DirectoryName,
-                    .EnableRaisingEvents = True
+                    .NotifyFilter = NotifyFilters.FileName Or NotifyFilters.DirectoryName
                 }
                 AddHandler _watcher.Created, AddressOf OnFileSystemChanged
                 AddHandler _watcher.Deleted, AddressOf OnFileSystemChanged
                 AddHandler _watcher.Renamed, AddressOf OnFileSystemChanged
-            Catch
+                _watcher.EnableRaisingEvents = True
+            Catch ex As Exception
+                ' Scheitert typischerweise am inotify-Limit unter Linux. Die Galerie funktioniert dann
+                ' weiter, bekommt externe Änderungen aber nicht mehr mit - das gehört ins Diagnoseprotokoll,
+                ' statt still verschluckt zu werden.
+                DiagnosticLogService.LogException("Gallery.SetupWatcher", ex)
+                _watcher?.Dispose()
+                _watcher = Nothing
             End Try
         End Sub
 
         Private Sub OnFileSystemChanged(sender As Object, e As FileSystemEventArgs)
+            ' Läuft auf einem Threadpool-Thread des Watchers, nicht auf dem UI-Thread.
             If _pendingReload Then Return
             _pendingReload = True
             Dispatcher.UIThread.Post(Sub()
                 _pendingReload = False
-                LoadFolderImages(_currentFolder)
+                ' Abgleichen statt neu laden - auch eine Änderung, die wir selbst ausgelöst haben, meldet
+                ' der Watcher noch einmal. Ein Neuaufbau würde dabei jedes Mal die Bildlaufposition
+                ' verwerfen und alle Vorschaubilder neu erzeugen.
+                SyncFolderItems()
                 ' Externe Änderungen (z.B. anderer Dateimanager) betreffen nur die aktuell
                 ' beobachtete Ordner-Ebene - den zugehörigen Baum-Knoten mit aktualisieren,
                 ' damit dessen Unterordnerliste im TreeView nicht veraltet bleibt.
@@ -2481,84 +2358,8 @@ Namespace ViewModels
                     Where(Function(f) _imageExtensions.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
                     ToArray()
 
-                Dim meta = LibraryService.Instance.GetFolderMeta(folderPath)
                 Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
-
-                ''' New ImageItem(...) stößt pro Datei einen synchronen FileInfo-Stat-Aufruf an
-                ''' (EnsureFileInfoLoaded) - bei Ordnern mit vielen Bildern (oder Netzwerk-/USB-
-                ''' Freigaben mit hoher Latenz je Stat-Aufruf) summiert sich das spürbar. Da jedes
-                ''' Element hier unabhängig von den anderen ist und noch an keine UI-gebundene
-                ''' Collection angehängt wurde, kann der Aufbau gefahrlos parallelisiert werden;
-                ''' erst der abschließende _allItems.Add(...)-Durchlauf läuft wieder sequenziell in
-                ''' fester Reihenfolge auf dem UI-Thread.
-                Dim results = New ImageItem(files.Length - 1) {}
-                Dim needsRefreshFlags = New Boolean(files.Length - 1) {}
-                Parallel.For(0, files.Length,
-                    Sub(i As Integer)
-                        Dim file = files(i)
-                        Dim item = New ImageItem(file, thumbnailToken)
-                        Dim needsRefresh = False
-                        Dim m As LibraryImageMeta = Nothing
-                        If meta.TryGetValue(file, m) Then
-                            item.IsFavorite = m.IsFavorite
-                            item.Rating = m.Rating
-                            item.Tags = If(m.Tags, New List(Of String)())
-                            ' Nur übernehmen, wenn die Datei sich seit dem letzten EXIF-Scan nicht geändert hat -
-                            ' sonst würde man dauerhaft veraltete Breite/Höhe/EXIF-Daten anzeigen (siehe IsMetaStale).
-                            If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso
-                               IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified) Then
-                                Dim needsMetadataFlagBackfill =
-                                    Not m.HasExifMetadata AndAlso
-                                    Not m.HasIptcMetadata AndAlso
-                                    Not m.HasXmpMetadata AndAlso
-                                    (Not String.IsNullOrWhiteSpace(m.DateTaken) OrElse
-                                     Not String.IsNullOrWhiteSpace(m.DateModifiedExif) OrElse
-                                     Not String.IsNullOrWhiteSpace(m.Camera) OrElse
-                                     Not String.IsNullOrWhiteSpace(m.Lens) OrElse
-                                     m.Aperture.HasValue OrElse
-                                     m.FocalLengthMm.HasValue OrElse
-                                     m.Iso.HasValue OrElse
-                                     Not String.IsNullOrWhiteSpace(m.ShutterSpeed) OrElse
-                                     m.GpsLatitude.HasValue OrElse
-                                     m.GpsLongitude.HasValue)
-
-                                ''' Einmalige Selbstheilung für Katalog-Einträge aus einer Version vor den
-                                ''' ExifSummary/IptcSummary/XmpSummary-Spalten: Flag ist gesetzt, aber der
-                                ''' Zusammenfassungstext fehlt noch - ohne diesen Nachtrag bliebe das
-                                ''' Metadaten-Hover-Overlay für Alt-Einträge dauerhaft leer.
-                                Dim needsSummaryBackfill =
-                                    (m.HasExifMetadata AndAlso String.IsNullOrEmpty(m.ExifSummary)) OrElse
-                                    (m.HasIptcMetadata AndAlso String.IsNullOrEmpty(m.IptcSummary)) OrElse
-                                    (m.HasXmpMetadata AndAlso String.IsNullOrEmpty(m.XmpSummary))
-
-                                item.ImageWidth = m.ImageWidth.Value
-                                item.ImageHeight = m.ImageHeight.Value
-                                item.ExifDateTaken = ExifService.ParseExifDateTime(m.DateTaken)
-                                item.ExifDateModified = ExifService.ParseExifDateTime(m.DateModifiedExif)
-                                item.ExifCamera = m.Camera
-                                item.ExifIso = m.Iso
-                                item.ExifAperture = m.Aperture
-                                item.HasExifMetadata = m.HasExifMetadata
-                                item.HasIptcMetadata = m.HasIptcMetadata
-                                item.HasXmpMetadata = m.HasXmpMetadata
-                                item.ExifMetadataSummary = m.ExifSummary
-                                item.IptcMetadataSummary = m.IptcSummary
-                                item.XmpMetadataSummary = m.XmpSummary
-                                needsRefresh = needsMetadataFlagBackfill OrElse needsSummaryBackfill
-                            Else
-                                needsRefresh = True
-                            End If
-                        Else
-                            needsRefresh = True
-                        End If
-                        results(i) = item
-                        needsRefreshFlags(i) = needsRefresh
-                    End Sub)
-
-                For i = 0 To results.Length - 1
-                    _allItems.Add(results(i))
-                    If needsRefreshFlags(i) Then itemsNeedingMetaRefresh.Add(results(i))
-                Next
+                _allItems.AddRange(BuildFileItems(files, folderPath, thumbnailToken, itemsNeedingMetaRefresh))
 
                 FilterAndSort()
 
@@ -2671,6 +2472,192 @@ Namespace ViewModels
                                                                 End Sub)
                      End Function)
         End Sub
+
+
+        ''' <summary>
+        ''' Gleicht die Einträge des aktuellen Ordners mit dem Dateisystem ab, statt sie neu aufzubauen:
+        ''' vorhandene Elemente behalten ihre Instanz und damit ihr Vorschaubild, ihre Metadaten und ihre
+        ''' Auswahl, verschwundene fliegen raus, neue kommen dazu. Anders als LoadFolderImages werden Items
+        ''' und DisplayItems nicht geleert - die Bildlaufposition bleibt deshalb erhalten.
+        '''
+        ''' Gedacht für alles, was den Ordnerinhalt verändert, ohne ihn zu wechseln: Löschen, Umbenennen,
+        ''' Einfügen, Verschieben, Duplizieren, Konvertieren - und den FileSystemWatcher, der externe
+        ''' Änderungen meldet. Existiert der Ordner nicht mehr, fällt die Methode auf den vollen Neuaufbau
+        ''' zurück, der den leeren Zustand samt Statusmeldung herstellt.
+        ''' </summary>
+        Private Sub SyncFolderItems()
+            If _isVirtualFolder Then Return
+            If String.IsNullOrEmpty(_currentFolder) Then Return
+            If Not Directory.Exists(_currentFolder) Then
+                LoadFolderImages(_currentFolder)
+                Return
+            End If
+
+            Dim folderPath = _currentFolder
+            ' Den laufenden Thumbnail-Scope weiterbenutzen: BeginNewFolderThumbnailScope würde die
+            ' Vorschaubilder der erhalten gebliebenen Elemente verwerfen.
+            Dim thumbnailToken = _thumbnailLoadCts.Token
+            Dim existing = New Dictionary(Of String, ImageItem)(StringComparer.OrdinalIgnoreCase)
+            For Each item In _allItems
+                If item IsNot Nothing AndAlso Not item.IsParentFolderEntry AndAlso Not existing.ContainsKey(item.FilePath) Then
+                    existing(item.FilePath) = item
+                End If
+            Next
+
+            Dim rebuilt As New List(Of ImageItem)()
+            Try
+                If _showFolders Then
+                    If _showParentFolder Then
+                        Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
+                        If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso Directory.Exists(parentPath) Then
+                            Dim keptParent = _allItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso i.IsParentFolderEntry)
+                            rebuilt.Add(If(keptParent, ImageItem.CreateParentFolderEntry(parentPath)))
+                        End If
+                    End If
+
+                    For Each folder In Directory.GetDirectories(folderPath).
+                        Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
+                        OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase)
+
+                        Dim keptFolder As ImageItem = Nothing
+                        rebuilt.Add(If(existing.TryGetValue(folder, keptFolder) AndAlso keptFolder.IsFolder, keptFolder, ImageItem.FromFolder(folder)))
+                    Next
+                End If
+
+                Dim files = Directory.GetFiles(folderPath).
+                    Where(Function(f) _imageExtensions.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
+                    ToArray()
+
+                ' Nur für neue Dateien ein ImageItem bauen - der Konstruktor kostet je Datei einen Stat-Aufruf.
+                Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f)).ToArray()
+                Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
+                Dim newItems = BuildFileItems(newFiles, folderPath, thumbnailToken, itemsNeedingMetaRefresh)
+                Dim newItemsByPath = newItems.ToDictionary(Function(i) i.FilePath, StringComparer.OrdinalIgnoreCase)
+
+                For Each file In files
+                    Dim keptFile As ImageItem = Nothing
+                    If existing.TryGetValue(file, keptFile) Then
+                        rebuilt.Add(keptFile)
+                    Else
+                        Dim added As ImageItem = Nothing
+                        If newItemsByPath.TryGetValue(file, added) Then rebuilt.Add(added)
+                    End If
+                Next
+
+                PruneSelection(New HashSet(Of ImageItem)(rebuilt))
+                _allItems.Clear()
+                _allItems.AddRange(rebuilt)
+                FilterAndSort()
+                UpdateStorageInfo()
+
+                If itemsNeedingMetaRefresh.Count > 0 Then QueueBackgroundMetaRefresh(itemsNeedingMetaRefresh, thumbnailToken)
+                If newItems.Count > 0 Then ImageItem.QueueBackgroundThumbnails(newItems)
+            Catch ex As UnauthorizedAccessException
+                StatusText = LocalizationService.T("Zugriff verweigert")
+            Catch ex As IOException
+                StatusText = LocalizationService.T("Fehler beim Laden")
+            End Try
+        End Sub
+
+        ''' Entfernt Elemente aus der Auswahl, die es nach dem Abgleich nicht mehr gibt.
+        Private Sub PruneSelection(survivors As HashSet(Of ImageItem))
+            If SelectedItems IsNot Nothing Then
+                For i = SelectedItems.Count - 1 To 0 Step -1
+                    If Not survivors.Contains(SelectedItems(i)) Then SelectedItems.RemoveAt(i)
+                Next
+            End If
+            If SelectedItem IsNot Nothing AndAlso Not survivors.Contains(SelectedItem) Then SelectedItem = Nothing
+        End Sub
+
+        ''' <summary>Erzeugt die ImageItem-Objekte für eine Dateiliste und übernimmt die im Katalog
+        ''' gespeicherten Metadaten. Trägt Elemente, deren Katalogeintrag fehlt oder veraltet ist, in
+        ''' <paramref name="itemsNeedingMetaRefresh"/> ein.</summary>
+        Private Function BuildFileItems(files As String(),
+                                        folderPath As String,
+                                        thumbnailToken As CancellationToken,
+                                        itemsNeedingMetaRefresh As List(Of ImageItem)) As List(Of ImageItem)
+            If files Is Nothing OrElse files.Length = 0 Then Return New List(Of ImageItem)()
+
+            Dim meta = LibraryService.Instance.GetFolderMeta(folderPath)
+
+                ''' New ImageItem(...) stößt pro Datei einen synchronen FileInfo-Stat-Aufruf an
+                ''' (EnsureFileInfoLoaded) - bei Ordnern mit vielen Bildern (oder Netzwerk-/USB-
+                ''' Freigaben mit hoher Latenz je Stat-Aufruf) summiert sich das spürbar. Da jedes
+                ''' Element hier unabhängig von den anderen ist und noch an keine UI-gebundene
+                ''' Collection angehängt wurde, kann der Aufbau gefahrlos parallelisiert werden;
+                ''' erst der abschließende _allItems.Add(...)-Durchlauf läuft wieder sequenziell in
+                ''' fester Reihenfolge auf dem UI-Thread.
+                Dim results = New ImageItem(files.Length - 1) {}
+                Dim needsRefreshFlags = New Boolean(files.Length - 1) {}
+                Parallel.For(0, files.Length,
+                    Sub(i As Integer)
+                        Dim file = files(i)
+                        Dim item = New ImageItem(file, thumbnailToken)
+                        Dim needsRefresh = False
+                        Dim m As LibraryImageMeta = Nothing
+                        If meta.TryGetValue(file, m) Then
+                            item.IsFavorite = m.IsFavorite
+                            item.Rating = m.Rating
+                            item.Tags = If(m.Tags, New List(Of String)())
+                            ' Nur übernehmen, wenn die Datei sich seit dem letzten EXIF-Scan nicht geändert hat -
+                            ' sonst würde man dauerhaft veraltete Breite/Höhe/EXIF-Daten anzeigen (siehe IsMetaStale).
+                            If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso
+                               IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified) Then
+                                Dim needsMetadataFlagBackfill =
+                                    Not m.HasExifMetadata AndAlso
+                                    Not m.HasIptcMetadata AndAlso
+                                    Not m.HasXmpMetadata AndAlso
+                                    (Not String.IsNullOrWhiteSpace(m.DateTaken) OrElse
+                                     Not String.IsNullOrWhiteSpace(m.DateModifiedExif) OrElse
+                                     Not String.IsNullOrWhiteSpace(m.Camera) OrElse
+                                     Not String.IsNullOrWhiteSpace(m.Lens) OrElse
+                                     m.Aperture.HasValue OrElse
+                                     m.FocalLengthMm.HasValue OrElse
+                                     m.Iso.HasValue OrElse
+                                     Not String.IsNullOrWhiteSpace(m.ShutterSpeed) OrElse
+                                     m.GpsLatitude.HasValue OrElse
+                                     m.GpsLongitude.HasValue)
+
+                                ''' Einmalige Selbstheilung für Katalog-Einträge aus einer Version vor den
+                                ''' ExifSummary/IptcSummary/XmpSummary-Spalten: Flag ist gesetzt, aber der
+                                ''' Zusammenfassungstext fehlt noch - ohne diesen Nachtrag bliebe das
+                                ''' Metadaten-Hover-Overlay für Alt-Einträge dauerhaft leer.
+                                Dim needsSummaryBackfill =
+                                    (m.HasExifMetadata AndAlso String.IsNullOrEmpty(m.ExifSummary)) OrElse
+                                    (m.HasIptcMetadata AndAlso String.IsNullOrEmpty(m.IptcSummary)) OrElse
+                                    (m.HasXmpMetadata AndAlso String.IsNullOrEmpty(m.XmpSummary))
+
+                                item.ImageWidth = m.ImageWidth.Value
+                                item.ImageHeight = m.ImageHeight.Value
+                                item.ExifDateTaken = ExifService.ParseExifDateTime(m.DateTaken)
+                                item.ExifDateModified = ExifService.ParseExifDateTime(m.DateModifiedExif)
+                                item.ExifCamera = m.Camera
+                                item.ExifIso = m.Iso
+                                item.ExifAperture = m.Aperture
+                                item.HasExifMetadata = m.HasExifMetadata
+                                item.HasIptcMetadata = m.HasIptcMetadata
+                                item.HasXmpMetadata = m.HasXmpMetadata
+                                item.ExifMetadataSummary = m.ExifSummary
+                                item.IptcMetadataSummary = m.IptcSummary
+                                item.XmpMetadataSummary = m.XmpSummary
+                                needsRefresh = needsMetadataFlagBackfill OrElse needsSummaryBackfill
+                            Else
+                                needsRefresh = True
+                            End If
+                        Else
+                            needsRefresh = True
+                        End If
+                        results(i) = item
+                        needsRefreshFlags(i) = needsRefresh
+                    End Sub)
+
+            Dim built As New List(Of ImageItem)(results.Length)
+            For i = 0 To results.Length - 1
+                built.Add(results(i))
+                If needsRefreshFlags(i) Then itemsNeedingMetaRefresh.Add(results(i))
+            Next
+            Return built
+        End Function
 
         Private Function BeginNewFolderThumbnailScope() As CancellationToken
             _thumbnailLoadCts.Cancel()
@@ -2949,6 +2936,9 @@ Namespace ViewModels
             Dim currentFolderWasDeleted = Not String.IsNullOrEmpty(_currentFolder) AndAlso
                                           targets.Any(Function(p) Directory.Exists(p) AndAlso String.Equals(NormalizePath(p), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase))
             Dim fallbackFolder = If(currentFolderWasDeleted, IO.Path.GetDirectoryName(_currentFolder), Nothing)
+            ' Vor dem Löschen feststellen: danach sagt Directory.Exists nichts mehr. Nur wenn ein Ordner
+            ' dabei war, muss der Baum neu aufgebaut werden.
+            Dim anyFolderDeleted = targets.Any(Function(p) Directory.Exists(p))
             _mainVm.RequestDeletePaths(targets, Sub()
                                                     ClearSelection()
                                                     If currentFolderWasDeleted AndAlso Not String.IsNullOrEmpty(fallbackFolder) AndAlso Directory.Exists(fallbackFolder) Then
@@ -2957,8 +2947,8 @@ Namespace ViewModels
                                                         RefreshTree()
                                                         SelectFolderInTreeByPath(fallbackFolder)
                                                     Else
-                                                        LoadFolderImages(_currentFolder)
-                                                        RefreshTree()
+                                                        SyncFolderItems()
+                                                        If anyFolderDeleted Then RefreshTree()
                                                     End If
                                                 End Sub)
         End Sub
@@ -2991,13 +2981,6 @@ Namespace ViewModels
         Private Sub CopySelectedPath()
             ' Clipboard-Zugriff erfolgt in der View
         End Sub
-
-        Public ReadOnly Property SelectedPath As String
-            Get
-                If SelectedItem Is Nothing OrElse SelectedItem.IsParentFolderEntry Then Return ""
-                Return If(SelectedItem?.FilePath, "")
-            End Get
-        End Property
 
         Public ReadOnly Property SelectionText As String
             Get
@@ -3047,7 +3030,7 @@ Namespace ViewModels
                                                       LoadFolderImages(newPath)
                                                       RestoreCurrentFolderTreeSelection()
                                                   Else
-                                                      LoadFolderImages(_currentFolder)
+                                                      SyncFolderItems()
                                                       SelectedItem = Items.FirstOrDefault(Function(i) String.Equals(i.FilePath, newPath, StringComparison.OrdinalIgnoreCase))
                                                   End If
                                               End Sub)
@@ -3081,7 +3064,7 @@ Namespace ViewModels
                 Next
 
                 ClearSelection()
-                LoadFolderImages(_currentFolder)
+                SyncFolderItems()
                 RefreshTree()
                 Dim renamedPaths = result.Mappings.Select(Function(m) m.TargetPath).ToHashSet(StringComparer.OrdinalIgnoreCase)
                 ReplaceSelection(Items.Where(Function(i) i IsNot Nothing AndAlso renamedPaths.Contains(i.FilePath)))
@@ -3111,7 +3094,7 @@ Namespace ViewModels
                 RefreshTree()
                 ExpandFolderInTreeByPath(folderPath)
                 If Not _isVirtualFolder AndAlso String.Equals(NormalizePath(folderPath), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then
-                    LoadFolderImages(_currentFolder)
+                    SyncFolderItems()
                 End If
             Catch ex As Exception
                 errorMessage = ex.Message
@@ -3256,7 +3239,7 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Collage wird erstellt...")
             Dim ok = Await Task.Run(Function() CollageService.SaveCollage(paths, options))
             StatusText = If(ok, $"Collage gespeichert: {IO.Path.GetFileName(target)}", "Collage konnte nicht erstellt werden")
-            If ok Then LoadFolderImages(CurrentFolder)
+            If ok Then SyncFolderItems()
         End Sub
 
         Private Shared Function MakeUniquePath(path As String) As String
@@ -3312,10 +3295,6 @@ Namespace ViewModels
             If _clipboardCut Then _clipboardPaths.Clear()
         End Function
 
-        Public Sub PasteIntoFolder(targetFolder As String)
-            Dim ignored = PasteIntoFolderAsync(targetFolder)
-        End Sub
-
         Public Sub PastePathsIntoFolder(paths As IEnumerable(Of String), targetFolder As String, Optional cut As Boolean = False)
             Dim ignored = PastePathsIntoFolderAsync(paths, targetFolder, cut)
         End Sub
@@ -3345,7 +3324,7 @@ Namespace ViewModels
                     If cut Then RemovePathsFromVirtualFolder(completedSources)
                     FilterAndSort()
                 Else
-                    LoadFolderImages(_currentFolder)
+                    SyncFolderItems()
                 End If
                 RefreshTree()
             Catch ex As Exception
@@ -3354,45 +3333,23 @@ Namespace ViewModels
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Einfügen fehlgeschlagen", errorMessage)
         End Function
 
-        Public Sub DuplicateSelected()
+        Public Async Function DuplicateSelectedAsync() As Task
             If _isVirtualFolder Then Return
             Dim targets = GetSelectedPaths()
             If targets.Count = 0 OrElse String.IsNullOrEmpty(_currentFolder) OrElse Not FileOperationPolicy.CanPasteInto(_currentFolder) Then Return
+            Dim errorMessage As String = Nothing
             Try
                 For Each source In targets
                     If Not FileOperationPolicy.CanDuplicate(source, _currentFolder) Then Continue For
-                    CopyOrMovePath(source, _currentFolder, False, True)
+                    Await CopyOrMovePathAsync(source, _currentFolder, False, True)
                 Next
-                LoadFolderImages(_currentFolder)
+                SyncFolderItems()
                 RefreshTree()
-            Catch ex As Exception
-                Dim ignored = _mainVm.ShowMessageAsync("Duplizieren fehlgeschlagen", ex.Message)
-            End Try
-        End Sub
-
-        Private Async Sub ExportSelected()
-            Dim targets = GetSelectedPaths().Where(Function(p) File.Exists(p)).ToList()
-            If targets.Count = 0 OrElse _isVirtualFolder OrElse String.IsNullOrEmpty(_currentFolder) Then Return
-
-            Dim defaultFolderName = $"Export_{DateTime.Now:yyyyMMdd_HHmmss}"
-            Dim folderName = Await _mainVm.ShowInputAsync(AppDialogKind.Input, "Exportieren", "Ordnernamen eingeben", defaultFolderName, "Exportieren", "Abbrechen")
-            If String.IsNullOrWhiteSpace(folderName) Then Return
-            folderName = folderName.Trim()
-            If HasInvalidFileNameChars(folderName) Then
-                Await _mainVm.ShowMessageAsync("Export fehlgeschlagen", "Der Ordnername enthält ungültige Zeichen.")
-                Return
-            End If
-
-            Dim exportFolder = IO.Path.Combine(_currentFolder, folderName)
-            Dim errorMessage As String = Nothing
-            Try
-                If Not Directory.Exists(exportFolder) Then Directory.CreateDirectory(exportFolder)
-                PastePathsIntoFolder(targets, exportFolder, False)
             Catch ex As Exception
                 errorMessage = ex.Message
             End Try
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Export fehlgeschlagen", errorMessage)
-        End Sub
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Duplizieren fehlgeschlagen", errorMessage)
+        End Function
 
         Private Shared ReadOnly BatchConvertExcludedExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".svg"}
         Private Shared ReadOnly BatchImageEditWritableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
@@ -3531,7 +3488,7 @@ Namespace ViewModels
             For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso paths.Contains(i.FilePath, StringComparer.OrdinalIgnoreCase))
                 item.EvictThumbnail()
             Next
-            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then LoadFolderImages(_currentFolder)
+            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Sub
 
         Private Async Sub BatchConvertSelected()
@@ -3571,11 +3528,7 @@ Namespace ViewModels
 
             StatusText = $"{convertedCount} von {targets.Count} Datei(en) konvertiert"
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Konvertierung fehlgeschlagen", errorMessage)
-            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then LoadFolderImages(_currentFolder)
-        End Sub
-
-        Public Sub MovePathsToFolder(paths As IEnumerable(Of String), targetFolder As String)
-            Dim ignored = MovePathsToFolderAsync(paths, targetFolder)
+            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Sub
 
         Public Async Function MovePathsToFolderAsync(paths As IEnumerable(Of String), targetFolder As String) As Task
@@ -3604,7 +3557,7 @@ Namespace ViewModels
                     RemovePathsFromVirtualFolder(completedSources)
                     FilterAndSort()
                 Else
-                    LoadFolderImages(_currentFolder)
+                    SyncFolderItems()
                 End If
                 RefreshTree()
             Catch ex As Exception
@@ -3642,10 +3595,6 @@ Namespace ViewModels
             Return Not String.IsNullOrEmpty(path) AndAlso path.StartsWith("virtual://", StringComparison.OrdinalIgnoreCase)
         End Function
 
-        Private Sub CopyOrMovePath(source As String, targetFolder As String, movePath As Boolean, Optional duplicate As Boolean = False)
-            CopyOrMovePathAsync(source, targetFolder, movePath, duplicate).GetAwaiter().GetResult()
-        End Sub
-
         Private Async Function CopyOrMovePathAsync(source As String, targetFolder As String, movePath As Boolean, Optional duplicate As Boolean = False) As Task(Of Boolean)
             If Not File.Exists(source) AndAlso Not Directory.Exists(source) Then Return False
             If duplicate Then
@@ -3660,19 +3609,22 @@ Namespace ViewModels
             Dim target = Await ResolveCopyTargetAsync(source, targetFolder, movePath, duplicate)
             If String.IsNullOrEmpty(target) Then Return False
 
-            If File.Exists(source) Then
-                If movePath Then
-                    File.Move(source, target)
-                Else
-                    File.Copy(source, target)
-                End If
-            Else
-                If movePath Then
-                    Directory.Move(source, target)
-                Else
-                    CopyDirectory(source, target)
-                End If
-            End If
+            ' Kopieren kann bei großen Dateien und Ordnern Sekunden dauern - nicht auf dem UI-Thread.
+            Await Task.Run(Sub()
+                               If File.Exists(source) Then
+                                   If movePath Then
+                                       File.Move(source, target)
+                                   Else
+                                       File.Copy(source, target)
+                                   End If
+                               Else
+                                   If movePath Then
+                                       Directory.Move(source, target)
+                                   Else
+                                       CopyDirectory(source, target)
+                                   End If
+                               End If
+                           End Sub)
             Return True
         End Function
 
@@ -3837,14 +3789,6 @@ Namespace ViewModels
             If node Is Nothing Then Return
             node.EnsureChildrenLoaded()
             node.IsExpanded = True
-        End Sub
-
-        Public Sub SelectNext()
-            SelectByOffset(1)
-        End Sub
-
-        Public Sub SelectPrevious()
-            SelectByOffset(-1)
         End Sub
 
         Public Sub SelectByOffset(offset As Integer)

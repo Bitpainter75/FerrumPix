@@ -164,16 +164,19 @@ Namespace Views
         End Sub
 
         Private Async Sub HandleWindowClosing(sender As Object, e As WindowClosingEventArgs)
-            TryCast(DataContext, MainWindowViewModel)?.Viewer?.ShutdownVideo()
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
 
             If _allowWindowClose Then
+                vm?.Viewer?.ShutdownVideo()
                 If WindowState = WindowState.Normal Then
                     AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
                 End If
                 Return
             End If
 
-            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            ' Das Video erst abräumen, wenn feststeht, dass wirklich geschlossen wird: bricht der Nutzer
+            ' die Nachfrage nach ungespeicherten Änderungen ab, bleibt die App offen - dann darf der Player
+            ' nicht schon tot sein.
             If vm IsNot Nothing AndAlso
                vm.CurrentMode = AppMode.Editor AndAlso
                vm.Editor IsNot Nothing AndAlso
@@ -187,6 +190,7 @@ Namespace Views
                 Return
             End If
 
+            vm?.Viewer?.ShutdownVideo()
             If WindowState = WindowState.Normal Then
                 AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
             End If
