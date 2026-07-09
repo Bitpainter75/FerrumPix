@@ -23,6 +23,7 @@ Namespace ViewModels
         Private _thumbnailQuality As Integer = 82
         Private _thumbnailMemoryCacheCapacity As Integer = 250
         Private _jpgSaveQuality As Integer = 90
+        Private _preserveMetadataOnSave As Boolean = True
         Private _thumbnailCacheEnabled As Boolean = True
         Private _cacheSizeMb As Integer = 512
         Private _viewerOpenFitToWindow As Boolean = True
@@ -62,6 +63,7 @@ Namespace ViewModels
         Private _savedThumbnailQuality As Integer = 82
         Private _savedThumbnailMemoryCacheCapacity As Integer = 250
         Private _savedJpgSaveQuality As Integer = 90
+        Private _savedPreserveMetadataOnSave As Boolean = True
         Private _savedThumbnailCacheEnabled As Boolean = True
         Private _savedShowHiddenFolders As Boolean = False
         Private _savedGalleryShowFolders As Boolean = True
@@ -264,6 +266,17 @@ Namespace ViewModels
                 value = AppSettingsService.NormalizeJpgSaveQuality(value)
                 If _jpgSaveQuality = value Then Return
                 Me.RaiseAndSetIfChanged(_jpgSaveQuality, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        Public Property PreserveMetadataOnSave As Boolean
+            Get
+                Return _preserveMetadataOnSave
+            End Get
+            Set(value As Boolean)
+                If _preserveMetadataOnSave = value Then Return
+                Me.RaiseAndSetIfChanged(_preserveMetadataOnSave, value)
                 SavePerformanceSettings()
             End Set
         End Property
@@ -796,6 +809,7 @@ Namespace ViewModels
             _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)
             ImageItem.MaxResidentThumbnails = _thumbnailMemoryCacheCapacity
             _jpgSaveQuality = _appSettings.JpgSaveQuality
+            _preserveMetadataOnSave = _appSettings.PreserveMetadataOnSave
             _showHiddenFolders = _appSettings.ShowHiddenFolders
             _galleryShowFolders = _appSettings.GalleryShowFolders
             _galleryShowParentFolder = _appSettings.GalleryShowParentFolder
@@ -878,6 +892,7 @@ Namespace ViewModels
             _savedThumbnailQuality = _thumbnailQuality
             _savedThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             _savedJpgSaveQuality = _jpgSaveQuality
+            _savedPreserveMetadataOnSave = _preserveMetadataOnSave
             _savedThumbnailCacheEnabled = _thumbnailCacheEnabled
             _savedShowHiddenFolders = _showHiddenFolders
             _savedGalleryShowFolders = _galleryShowFolders
@@ -907,6 +922,7 @@ Namespace ViewModels
             ThumbnailQuality = _savedThumbnailQuality
             ThumbnailMemoryCacheCapacity = _savedThumbnailMemoryCacheCapacity
             JpgSaveQuality = _savedJpgSaveQuality
+            PreserveMetadataOnSave = _savedPreserveMetadataOnSave
             ThumbnailCacheEnabled = _savedThumbnailCacheEnabled
             ShowHiddenFolders = _savedShowHiddenFolders
             GalleryShowFolders = _savedGalleryShowFolders
@@ -958,6 +974,7 @@ Namespace ViewModels
             ThumbnailQuality = 82
             ThumbnailMemoryCacheCapacity = 250
             JpgSaveQuality = 90
+            PreserveMetadataOnSave = True
             CacheSizeMb = 512
             ShowHiddenFolders = False
             GalleryShowFolders = True
@@ -1064,6 +1081,7 @@ Namespace ViewModels
             settings.ThumbnailQuality = _thumbnailQuality
             settings.GalleryThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             settings.JpgSaveQuality = _jpgSaveQuality
+            settings.PreserveMetadataOnSave = _preserveMetadataOnSave
             AppSettingsService.Save(settings)
         End Sub
 

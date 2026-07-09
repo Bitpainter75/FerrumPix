@@ -58,7 +58,7 @@
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}"
                             Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
+                            Source="avares://FerrumPix/Assets/Icons/outline/rubber-stamp.svg"
                             Width="22" Height="22" />
                     </Button>
                 </WrapPanel>

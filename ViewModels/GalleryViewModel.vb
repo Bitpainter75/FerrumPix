@@ -921,6 +921,7 @@ Namespace ViewModels
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
         Public ReadOnly Property ExportSelectedCommand As ICommand
         Public ReadOnly Property ResizeSelectedCommand As ICommand
+        Public ReadOnly Property ApplyWatermarkSelectedCommand As ICommand
         Public ReadOnly Property BatchConvertSelectedCommand As ICommand
         Public ReadOnly Property RemoveMetadataSelectedCommand As ICommand
         Public ReadOnly Property IncreaseThumbnailSizeCommand As ICommand
@@ -1095,6 +1096,7 @@ Namespace ViewModels
             DuplicateSelectedCommand = ReactiveCommand.Create(Sub() DuplicateSelected())
             ExportSelectedCommand = ReactiveCommand.Create(Sub() ExportSelected())
             ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
+            ApplyWatermarkSelectedCommand = ReactiveCommand.Create(Sub() ApplyWatermarkSelected())
             BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() BatchConvertSelected())
             RemoveMetadataSelectedCommand = ReactiveCommand.Create(Sub() RemoveMetadataSelected())
             IncreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize += 24)
@@ -3431,11 +3433,64 @@ Namespace ViewModels
 
             StatusText = "Entferne Metadaten..."
             Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
-                Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95))
+                Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95, preserveMetadata:=False))
 
             StatusText = $"{changedCount} von {targets.Count} Datei(en) bereinigt"
             RefreshAfterBatchFileRewrite(targets)
         End Sub
+
+        Private Async Sub ApplyWatermarkSelected()
+            Dim targets = GetSelectedEditableImagePaths()
+            If targets.Count = 0 Then Return
+
+            Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync()
+            If result Is Nothing OrElse result.Preset Is Nothing Then Return
+
+            Dim annotation = CreateWatermarkAnnotation(result.Preset)
+            If annotation Is Nothing Then
+                Await _mainVm.ShowMessageAsync("Wasserzeichen anwenden", "Das ausgewählte Wasserzeichen enthält keinen Text und kein Bild.")
+                Return
+            End If
+
+            StatusText = "Wende Wasserzeichen an..."
+            Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
+                Function(source, temp)
+                    Dim adj = New ImageAdjustments()
+                    adj.Annotations.Add(annotation.Clone())
+                    Return ImageProcessor.SaveImage(source, temp, adj, 95)
+                End Function)
+
+            StatusText = $"{changedCount} von {targets.Count} Datei(en) mit Wasserzeichen versehen"
+            RefreshAfterBatchFileRewrite(targets)
+        End Sub
+
+        Private Shared Function CreateWatermarkAnnotation(preset As WatermarkPresetSettings) As ImageAnnotation
+            If preset Is Nothing Then Return Nothing
+            Dim text = If(preset.Text, "").Trim()
+            Dim imagePath = If(preset.ImagePath, "").Trim()
+            If String.IsNullOrWhiteSpace(text) AndAlso String.IsNullOrWhiteSpace(imagePath) Then Return Nothing
+
+            Return New ImageAnnotation With {
+                .Kind = "Watermark",
+                .Text = If(String.IsNullOrWhiteSpace(text), "FerrumPix", text),
+                .ImagePath = imagePath,
+                .XPixels = CSng(Math.Max(0, Math.Min(100000, preset.OffsetXPixels))),
+                .YPixels = CSng(Math.Max(0, Math.Min(100000, preset.OffsetYPixels))),
+                .WidthPixels = CSng(Math.Max(1, Math.Min(100000, preset.WidthPixels))),
+                .HeightPixels = CSng(Math.Max(1, Math.Min(100000, preset.HeightPixels))),
+                .FillColor = AppSettingsService.NormalizeHexColor(preset.FillColor, "#FFFFFFFF"),
+                .StrokeColor = "#FF000000",
+                .StrokeWidth = 0,
+                .FontSizePixels = CSng(Math.Max(8, Math.Min(500, preset.FontSizePixels))),
+                .FontFamily = If(String.IsNullOrWhiteSpace(preset.FontFamily), "Arial", preset.FontFamily),
+                .Opacity = CSng(Math.Max(0, Math.Min(100, preset.Opacity))),
+                .RotationDegrees = CSng(Math.Max(-180, Math.Min(180, preset.RotationDegrees))),
+                .Anchor = AppSettingsService.NormalizeAnnotationAnchorName(preset.Anchor),
+                .IsVisible = True,
+                .FillKind = "Solid",
+                .FillColor2 = AppSettingsService.NormalizeHexColor(preset.FillColor, "#FFFFFFFF")
+            }
+        End Function
 
         Private Function GetSelectedEditableImagePaths() As List(Of String)
             Return GetSelectedPaths().
@@ -3491,6 +3546,7 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Konvertiere…")
             Dim convertedCount = 0
             Dim errorMessage As String = Nothing
+            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
             Try
                 Await Task.Run(Sub()
                     For Each source In targets
@@ -3504,7 +3560,7 @@ Namespace ViewModels
                             suffix += 1
                         End While
 
-                        If ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality) Then
+                        If ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata) Then
                             convertedCount += 1
                         End If
                     Next

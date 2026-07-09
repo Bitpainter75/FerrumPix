@@ -704,6 +704,7 @@
                                             <MenuItem Name="GridContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste" IsVisible="{Binding CanFileOperationPasteInto}"/>
                                             <MenuItem Name="GridContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
                                             <MenuItem Name="GridContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
+                                            <MenuItem Name="GridContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
                                             <MenuItem Name="GridContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
                                             <MenuItem Name="GridContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
                                             <MenuItem Name="GridContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
@@ -1044,6 +1045,7 @@
                                             <MenuItem Name="ListContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste" IsVisible="{Binding CanFileOperationPasteInto}"/>
                                             <MenuItem Name="ListContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
                                             <MenuItem Name="ListContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
+                                            <MenuItem Name="ListContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
                                             <MenuItem Name="ListContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
                                             <MenuItem Name="ListContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
                                             <MenuItem Name="ListContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>

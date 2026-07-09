@@ -14,6 +14,7 @@ Imports Avalonia.Vector
 Imports Avalonia.VisualTree
 Imports FerrumPix.Controls
 Imports FerrumPix.Models
+Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
 Imports System.Threading.Tasks
 Imports System.Linq
@@ -917,8 +918,11 @@ Namespace Views
             line.Points = pts
 
             Dim isEraser = vm.IsEraserMode
-            Dim diameterPx = Math.Max(1.0, Math.Min(imageRect.Width, imageRect.Height) * vm.BrushSize / 100.0)
-            line.StrokeThickness = diameterPx
+            Dim scale = 1.0
+            If vm.CurrentImage IsNot Nothing AndAlso vm.CurrentImage.PixelSize.Width > 0 AndAlso vm.CurrentImage.PixelSize.Height > 0 Then
+                scale = Math.Min(imageRect.Width / vm.CurrentImage.PixelSize.Width, imageRect.Height / vm.CurrentImage.PixelSize.Height)
+            End If
+            line.StrokeThickness = Math.Max(1.0, vm.BrushSize * scale)
             If isEraser Then
                 line.Stroke = New SolidColorBrush(Colors.White)
                 line.StrokeDashArray = New Avalonia.Collections.AvaloniaList(Of Double) From {4, 3}
@@ -939,8 +943,12 @@ Namespace Views
             cursor.IsVisible = showCursor
             If Not showCursor Then Return
 
-            Dim percent = If(vm.CurrentTool = EditorTool.Draw, vm.BrushSize, vm.RetouchRadius)
-            Dim diameter = Math.Max(4.0, Math.Min(imageRect.Width, imageRect.Height) * percent / 100.0 * 2.0)
+            Dim scale = 1.0
+            If vm.CurrentImage IsNot Nothing AndAlso vm.CurrentImage.PixelSize.Width > 0 AndAlso vm.CurrentImage.PixelSize.Height > 0 Then
+                scale = Math.Min(imageRect.Width / vm.CurrentImage.PixelSize.Width, imageRect.Height / vm.CurrentImage.PixelSize.Height)
+            End If
+            Dim diameter = If(vm.CurrentTool = EditorTool.Draw, vm.BrushSize, vm.RetouchRadius * 2.0) * scale
+            diameter = Math.Max(4.0, diameter)
             cursor.Width = diameter
             cursor.Height = diameter
             Canvas.SetLeft(cursor, position.X - diameter / 2.0)
@@ -1363,37 +1371,61 @@ Namespace Views
                 editor.IsVisible = (vm.CurrentTool = EditorTool.Text OrElse vm.CurrentTool = EditorTool.Insert) AndAlso
                                    vm.ShowTextContentControls AndAlso
                                    Not selectedKind.Equals("QR", StringComparison.OrdinalIgnoreCase)
-                ' Der gebackene Renderer wendet seine 8px-Mindestschriftgröße in seinem eigenen
-                ' (nicht gezoomten) Vorschaubild-Pixelraum an, bevor dieses per Stretch="Fill" auf
-                ' iw x ih skaliert wird. Damit die Live-Vorschau bei dieser Mindestgröße nicht vom
-                ' Zoom-Faktor abweicht, wird der Floor hier ebenfalls mit dem Zoom skaliert.
-                editor.FontSize = Math.Max(8.0 * scale, ih * vm.AnnotationFontSize / 100.0)
+
+                ' Die Schriftgröße ist in Basisbild-Pixeln gespeichert; das gebackene Bild skaliert sie
+                ' uniform auf die Zielauflösung (ImageProcessor.ScaleAnnotationForSource). Die Live-Textbox
+                ' muss exakt dieselbe Umrechnung machen - sonst weicht der Text im Editor deutlich von der
+                ' gebackenen Größe ab. Die Größe darf insbesondere NICHT aus der Objekt-Box abgeleitet
+                ' werden: die Box ist nur eine großzügige Schätzung um den Text herum
+                ' (EditorViewModel.EstimateTextAnnotationSizePercent), der Text füllt sie nicht aus.
+                Dim displayScale = ComputeBasePixelToDisplayScale(vm, iw, ih, scale)
+                Dim bakedFontSize = Math.Max(8.0, vm.AnnotationFontSize)
+                Dim displayFontSize = Math.Max(1.0, bakedFontSize * displayScale)
+                editor.FontSize = displayFontSize
                 editor.FontFamily = New FontFamily(vm.AnnotationFontFamily)
                 editor.Foreground = New SolidColorBrush(ParseAvaloniaColor(vm.AnnotationFillColor, Colors.White))
+                ' Skia hängt die erste Zeile an der Grundlinie unter der Oberkante auf, Avalonia an der
+                ' Glyphen-Oberkante - ohne diesen Versatz säße der Live-Text über dem gebackenen.
+                editor.RenderTransform = New TranslateTransform(0, ImageProcessor.GetBakedTextTopOffset(vm.AnnotationFontFamily, CSng(displayFontSize)))
             End If
         End Sub
 
+        ''' Umrechnungsfaktor von Basisbild-Pixeln (Speichereinheit der Annotationen) in Display-Pixel.
+        ''' Uniform (Wurzel aus x*y), genau wie ImageProcessor.ScaleAnnotationForSource beim Backen.
+        Private Shared Function ComputeBasePixelToDisplayScale(vm As EditorViewModel, iw As Double, ih As Double, fallbackScale As Double) As Double
+            Dim baseImage = vm?.CurrentImage
+            If baseImage Is Nothing Then Return fallbackScale
+            Dim baseWidth = CDbl(baseImage.PixelSize.Width)
+            Dim baseHeight = CDbl(baseImage.PixelSize.Height)
+            If baseWidth <= 0 OrElse baseHeight <= 0 OrElse iw <= 0 OrElse ih <= 0 Then Return fallbackScale
+            Return Math.Sqrt((iw / baseWidth) * (ih / baseHeight))
+        End Function
+
+        ''' Das Overlay-Bitmap ist um die Schatten-/Glow-Ränder größer als das Objekt selbst und wird per
+        ''' Stretch="Fill" in die Objekt-Border gezogen. Die negativen Margins schieben genau diese Ränder
+        ''' wieder nach außen, sodass der Objekt-Teil des Bitmaps deckungsgleich auf der Border liegt.
+        ''' Die Ränder werden dabei aus Bitmap-Pixeln in Display-Pixel umgerechnet - sie hier aus den
+        ''' Prozent-Slidern nachzurechnen wäre falsch, weil ImageProcessor sie in der (gedeckelten)
+        ''' Bildpixel-Auflösung des Objekts bemisst, nicht in dessen Bildschirmgröße.
         Private Shared Function ComputeSelectedOverlayImageMargin(vm As EditorViewModel, width As Double, height As Double) As Thickness
             If vm Is Nothing OrElse width <= 0 OrElse height <= 0 OrElse Not vm.ShowSelectedSvgOverlay Then
                 Return New Thickness(0)
             End If
 
-            Dim objSize = Math.Max(1.0, Math.Min(width, height))
-            ' Muss exakt der Padding-Formel in ImageProcessor.RenderAnnotationOverlay entsprechen.
-            Dim shadowGrow = If(vm.AnnotationShadowEnabled, Math.Max(width, height) * Math.Max(0.0, vm.AnnotationShadowSize / 100.0 - 1.0) * 0.5, 0.0)
-            ' Faktor 1.7 muss mit ImageProcessor.RenderAnnotationOverlay (Glow-Dilate+Blur-Reichweite) übereinstimmen.
-            Dim glowPad = If(vm.AnnotationGlowEnabled, objSize * vm.AnnotationGlowBlur / 100.0 * 1.7, 0.0)
-            Dim shadowPad = If(vm.AnnotationShadowEnabled, objSize * vm.AnnotationShadowBlur / 100.0 * 1.8 + shadowGrow, 0.0)
-            Dim offsetX = If(vm.AnnotationShadowEnabled, objSize * vm.AnnotationShadowOffsetX / 100.0, 0.0)
-            Dim offsetY = If(vm.AnnotationShadowEnabled, objSize * vm.AnnotationShadowOffsetY / 100.0, 0.0)
-            Dim effectPad = Math.Max(glowPad, shadowPad)
+            Dim metrics = vm.SelectedAnnotationOverlayMetrics
+            If metrics Is Nothing OrElse metrics.ObjectWidth <= 0 OrElse metrics.ObjectHeight <= 0 Then
+                Return New Thickness(0)
+            End If
 
-            Dim leftPad = 4.0 + effectPad + Math.Max(0.0, -offsetX)
-            Dim rightPad = 4.0 + effectPad + Math.Max(0.0, offsetX)
-            Dim topPad = 4.0 + effectPad + Math.Max(0.0, -offsetY)
-            Dim bottomPad = 4.0 + effectPad + Math.Max(0.0, offsetY)
+            Dim scaleX = width / metrics.ObjectWidth
+            Dim scaleY = height / metrics.ObjectHeight
+            Dim rightPad = metrics.BitmapWidth - metrics.ObjectX - metrics.ObjectWidth
+            Dim bottomPad = metrics.BitmapHeight - metrics.ObjectY - metrics.ObjectHeight
 
-            Return New Thickness(-leftPad, -topPad, -rightPad, -bottomPad)
+            Return New Thickness(-metrics.ObjectX * scaleX,
+                                 -metrics.ObjectY * scaleY,
+                                 -rightPad * scaleX,
+                                 -bottomPad * scaleY)
         End Function
 
         Private Shared Function IsLayerPlacementTool(tool As EditorTool) As Boolean
@@ -1625,7 +1657,7 @@ Namespace Views
             Avalonia.Controls.Canvas.SetTop(overlay, finalRect.Top)
             overlay.Width = finalRect.Width
             overlay.Height = finalRect.Height
-            UpdateTextPercentages(finalRect, imageRect, vm)
+            UpdateTextPixels(finalRect, imageRect, vm)
             UpdateTextSizeBadge(finalRect, imageRect, vm)
             e.Handled = True
         End Sub
@@ -1717,12 +1749,30 @@ Namespace Views
             Return New Avalonia.Rect(left, top, Math.Max(0, overlay.Bounds.Width), Math.Max(0, overlay.Bounds.Height))
         End Function
 
-        Private Sub UpdateTextPercentages(textRect As Avalonia.Rect, imageRect As Avalonia.Rect, vm As EditorViewModel)
-            vm.SetSelectedAnnotationRect(
-                (textRect.Left - imageRect.Left) / imageRect.Width * 100.0,
-                (textRect.Top - imageRect.Top) / imageRect.Height * 100.0,
-                textRect.Width / imageRect.Width * 100.0,
-                textRect.Height / imageRect.Height * 100.0)
+        Private Sub UpdateTextPixels(textRect As Avalonia.Rect, imageRect As Avalonia.Rect, vm As EditorViewModel)
+            Dim baseWidth = vm.CurrentImage.PixelSize.Width
+            Dim baseHeight = vm.CurrentImage.PixelSize.Height
+            If baseWidth <= 0 OrElse baseHeight <= 0 OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            Dim pixelWidth = textRect.Width / imageRect.Width * baseWidth
+            Dim pixelHeight = textRect.Height / imageRect.Height * baseHeight
+            vm.SetSelectedAnnotationRectPixels(
+                (textRect.Left - imageRect.Left) / imageRect.Width * baseWidth,
+                (textRect.Top - imageRect.Top) / imageRect.Height * baseHeight,
+                pixelWidth,
+                pixelHeight)
+
+            Dim selectedKind = If(vm.SelectedAnnotationKind, "")
+            Dim isTextLayer = selectedKind.Equals("Text", StringComparison.OrdinalIgnoreCase) OrElse
+                              (selectedKind.Equals("Watermark", StringComparison.OrdinalIgnoreCase) AndAlso vm.ShowTextContentControls)
+            If isTextLayer Then
+                Dim textValue = If(vm.AnnotationText, "").Trim()
+                Dim longestLine = 1
+                For Each line In textValue.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
+                    longestLine = Math.Max(longestLine, Math.Max(1, line.Trim().Length))
+                Next
+                Dim fitFontSize = Math.Max(8.0, Math.Min(pixelHeight * 0.68, pixelWidth / Math.Max(1.0, longestLine * 0.72)))
+                vm.AnnotationFontSizePixels = CInt(Math.Round(fitFontSize))
+            End If
         End Sub
 
         Private Sub MoveSlider(mouseX As Double, canvas As Canvas)

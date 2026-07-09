@@ -45,8 +45,8 @@
             <Grid ColumnDefinitions="74,*,Auto,44" VerticalAlignment="Center">
                 <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0.2" Maximum="10"
-                                   DefaultValue="3"
+                <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
+                                   DefaultValue="24"
                                    Value="{Binding RetouchRadius}" Margin="0,0" />
                 <Button Grid.Column="2"
                         Classes="icon-btn"
@@ -62,8 +62,8 @@
                 </Button>
                 <icons:SliderValueUpDown Grid.Column="3" Classes="slider-value"
                                          Value="{Binding RetouchRadius, Mode=TwoWay}"
-                                         Minimum="0.2" Maximum="10" Increment="0.01"
-                                         FormatString="F2" />
+                                         Minimum="1" Maximum="300" Increment="1"
+                                         FormatString="F0" />
             </Grid>
         </StackPanel>
         <StackPanel Spacing="2"
@@ -71,13 +71,13 @@
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="11" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0.2" Maximum="15"
-                                   DefaultValue="2"
+                <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
+                                   DefaultValue="24"
                                    Value="{Binding BrushSize}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding BrushSize, Mode=TwoWay}"
-                                         Minimum="0.2" Maximum="15" Increment="0.01"
-                                         FormatString="F2" />
+                                         Minimum="1" Maximum="300" Increment="1"
+                                         FormatString="F0" />
             </Grid>
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"

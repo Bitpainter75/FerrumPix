@@ -14,8 +14,7 @@
                           ItemsSource="{Binding WatermarkPresetNames}"
                           SelectedItem="{Binding SelectedWatermarkPresetName}"
                           FontSize="11"
-                          HorizontalAlignment="Stretch"
-                          MinWidth="180" />
+                          HorizontalAlignment="Stretch" />
             </Grid>
             <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
                 <TextBlock Text="Name" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -23,6 +22,7 @@
                 <TextBox Grid.Column="1"
                          Margin="6,0,0,0"
                          Text="{Binding WatermarkPresetNameDraft}"
+                         HorizontalAlignment="Stretch"
                          FontSize="11" />
             </Grid>
             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -266,53 +266,75 @@
                 </Grid>
             </Border>
         </Grid>
-        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-            <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
-                <Grid ColumnDefinitions="Auto,*,44">
-                    <TextBlock Text="{Binding AnnotationXLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="{Binding AnnotationPositionMinimum}" Maximum="{Binding AnnotationPositionMaximum}"
-                                       Value="{Binding AnnotationXPercent}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+        <StackPanel Spacing="6">
+            <Grid ColumnDefinitions="74,*,44">
+                <TextBlock Text="{Binding AnnotationXLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1"
+                                   Minimum="{Binding AnnotationXSliderMinimum}"
+                                   Maximum="{Binding AnnotationXSliderMaximum}"
+                                   Value="{Binding AnnotationXSliderValue}"
+                                   DragIncrement="{Binding AnnotationSliderDragIncrement}"
+                                   WheelIncrement="{Binding AnnotationSliderWheelIncrement}"
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AnnotationXPixels, Mode=TwoWay}"
-                                             Minimum="0" Maximum="50000" Increment="1"
+                                             Minimum="{Binding AnnotationXSliderMinimum}"
+                                             Maximum="{Binding AnnotationXSliderMaximum}"
+                                             Increment="1"
                                              FormatString="F0" />
-                </Grid>
-                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,44">
-                    <TextBlock Text="{Binding AnnotationYLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="{Binding AnnotationPositionMinimum}" Maximum="{Binding AnnotationPositionMaximum}"
-                                       Value="{Binding AnnotationYPercent}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+            </Grid>
+            <Grid ColumnDefinitions="74,*,44">
+                <TextBlock Text="{Binding AnnotationYLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1"
+                                   Minimum="{Binding AnnotationYSliderMinimum}"
+                                   Maximum="{Binding AnnotationYSliderMaximum}"
+                                   Value="{Binding AnnotationYSliderValue}"
+                                   DragIncrement="{Binding AnnotationSliderDragIncrement}"
+                                   WheelIncrement="{Binding AnnotationSliderWheelIncrement}"
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AnnotationYPixels, Mode=TwoWay}"
-                                             Minimum="0" Maximum="50000" Increment="1"
+                                             Minimum="{Binding AnnotationYSliderMinimum}"
+                                             Maximum="{Binding AnnotationYSliderMaximum}"
+                                             Increment="1"
                                              FormatString="F0" />
-                </Grid>
             </Grid>
-            <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="6">
-                <Grid ColumnDefinitions="16,*,44">
-                    <TextBlock Text="B" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="5" Maximum="90"
-                                       Value="{Binding AnnotationWidthPercent}"
-                                       Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding AnnotationWidthPixels, Mode=TwoWay}"
-                                             Minimum="1" Maximum="50000" Increment="1"
-                                             FormatString="F0" />
-                </Grid>
-                <Grid Grid.Row="1" ColumnDefinitions="16,*,44">
-                    <TextBlock Text="H" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="11" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="4" Maximum="90"
-                                       Value="{Binding AnnotationHeightPercent}"
-                                       Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding AnnotationHeightPixels, Mode=TwoWay}"
-                                             Minimum="1" Maximum="50000" Increment="1"
-                                             FormatString="F0" />
-                </Grid>
+            <Grid ColumnDefinitions="74,*,44">
+                <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1"
+                                   Minimum="{Binding AnnotationWidthSliderMinimum}"
+                                   Maximum="{Binding AnnotationWidthSliderMaximum}"
+                                   Value="{Binding AnnotationWidthPixels}"
+                                   DragIncrement="{Binding AnnotationSliderDragIncrement}"
+                                   WheelIncrement="{Binding AnnotationSliderWheelIncrement}"
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationWidthPixels, Mode=TwoWay}"
+                                         Minimum="{Binding AnnotationWidthSliderMinimum}"
+                                         Maximum="{Binding AnnotationWidthSliderMaximum}"
+                                         Increment="1"
+                                         FormatString="F0" />
             </Grid>
-        </Grid>
+            <Grid ColumnDefinitions="74,*,44">
+                <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <icons:RoundSlider Grid.Column="1"
+                                   Minimum="{Binding AnnotationHeightSliderMinimum}"
+                                   Maximum="{Binding AnnotationHeightSliderMaximum}"
+                                   Value="{Binding AnnotationHeightPixels}"
+                                   DragIncrement="{Binding AnnotationSliderDragIncrement}"
+                                   WheelIncrement="{Binding AnnotationSliderWheelIncrement}"
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationHeightPixels, Mode=TwoWay}"
+                                         Minimum="{Binding AnnotationHeightSliderMinimum}"
+                                         Maximum="{Binding AnnotationHeightSliderMaximum}"
+                                         Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+        </StackPanel>
     </StackPanel>
 </UserControl>

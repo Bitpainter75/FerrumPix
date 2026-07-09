@@ -26,12 +26,12 @@ Namespace Services
     End Enum
 
     Public Class RetouchSpot
-        Public Property XPercent As Single
-        Public Property YPercent As Single
-        Public Property RadiusPercent As Single
+        Public Property XPixels As Single
+        Public Property YPixels As Single
+        Public Property RadiusPixels As Single
 
         Public Function Clone() As RetouchSpot
-            Return New RetouchSpot With {.XPercent = XPercent, .YPercent = YPercent, .RadiusPercent = RadiusPercent}
+            Return New RetouchSpot With {.XPixels = XPixels, .YPixels = YPixels, .RadiusPixels = RadiusPixels}
         End Function
     End Class
 
@@ -41,14 +41,14 @@ Namespace Services
         Private _kind As String = "Text"
         Private _text As String = ""
         Private _imagePath As String = ""
-        Private _xPercent As Single = 50
-        Private _yPercent As Single = 50
-        Private _widthPercent As Single = 30
-        Private _heightPercent As Single = 10
+        Private _xPixels As Single = 0
+        Private _yPixels As Single = 0
+        Private _widthPixels As Single = 480
+        Private _heightPixels As Single = 180
         Private _fillColor As String = "#FFFFFFFF"
         Private _strokeColor As String = "#FF000000"
         Private _strokeWidth As Single = 0
-        Private _fontSizePercent As Single = 6
+        Private _fontSizePixels As Single = 48
         Private _fontFamily As String = "Arial"
         Private _opacity As Single = 100
         Private _rotationDegrees As Single = 0
@@ -161,7 +161,7 @@ Namespace Services
                 End If
                 Select Case If(_kind, "").Trim().ToLowerInvariant()
                     Case "text" : Return base & "03_Editor/34_Text.svg"
-                    Case "watermark" : Return base & "09_FormenSymbole/077_Bild.svg"
+                    Case "watermark" : Return "avares://FerrumPix/Assets/Icons/outline/rubber-stamp.svg"
                     Case "image", "selectionimage" : Return base & "09_FormenSymbole/077_Bild.svg"
                     Case "qr", "qrcode", "qr-code" : Return base & "03_Editor/37_QR_Code.svg"
                     Case "rectangle", "rect", "selectionfill" : Return base & "09_FormenSymbole/005_Rechteck.svg"
@@ -209,39 +209,39 @@ Namespace Services
             End Select
         End Function
 
-        Public Property XPercent As Single
+        Public Property XPixels As Single
             Get
-                Return _xPercent
+                Return _xPixels
             End Get
             Set(value As Single)
-                SetField(_xPercent, value)
+                SetField(_xPixels, value)
             End Set
         End Property
 
-        Public Property YPercent As Single
+        Public Property YPixels As Single
             Get
-                Return _yPercent
+                Return _yPixels
             End Get
             Set(value As Single)
-                SetField(_yPercent, value)
+                SetField(_yPixels, value)
             End Set
         End Property
 
-        Public Property WidthPercent As Single
+        Public Property WidthPixels As Single
             Get
-                Return _widthPercent
+                Return _widthPixels
             End Get
             Set(value As Single)
-                SetField(_widthPercent, value)
+                SetField(_widthPixels, value)
             End Set
         End Property
 
-        Public Property HeightPercent As Single
+        Public Property HeightPixels As Single
             Get
-                Return _heightPercent
+                Return _heightPixels
             End Get
             Set(value As Single)
-                SetField(_heightPercent, value)
+                SetField(_heightPixels, value)
             End Set
         End Property
 
@@ -272,12 +272,12 @@ Namespace Services
             End Set
         End Property
 
-        Public Property FontSizePercent As Single
+        Public Property FontSizePixels As Single
             Get
-                Return _fontSizePercent
+                Return _fontSizePixels
             End Get
             Set(value As Single)
-                SetField(_fontSizePercent, value)
+                SetField(_fontSizePixels, value)
             End Set
         End Property
 
@@ -497,14 +497,14 @@ Namespace Services
                 .Kind = Kind,
                 .Text = Text,
                 .ImagePath = ImagePath,
-                .XPercent = XPercent,
-                .YPercent = YPercent,
-                .WidthPercent = WidthPercent,
-                .HeightPercent = HeightPercent,
+                .XPixels = XPixels,
+                .YPixels = YPixels,
+                .WidthPixels = WidthPixels,
+                .HeightPixels = HeightPixels,
                 .FillColor = FillColor,
                 .StrokeColor = StrokeColor,
                 .StrokeWidth = StrokeWidth,
-                .FontSizePercent = FontSizePercent,
+                .FontSizePixels = FontSizePixels,
                 .FontFamily = FontFamily,
                 .Opacity = Opacity,
                 .RotationDegrees = RotationDegrees,
@@ -539,6 +539,8 @@ Namespace Services
     End Class
 
     Public Class ImageAdjustments
+        Public Property SourceWidthPixels As Integer = 0
+        Public Property SourceHeightPixels As Integer = 0
         Public Property Exposure As Single = 0
         Public Property Brightness As Single = 0
         Public Property Contrast As Single = 0
@@ -658,6 +660,8 @@ Namespace Services
         Public Function Clone() As ImageAdjustments
             Return New ImageAdjustments With {
                 .Exposure = Exposure,
+                .SourceWidthPixels = SourceWidthPixels,
+                .SourceHeightPixels = SourceHeightPixels,
                 .Brightness = Brightness,
                 .Contrast = Contrast,
                 .Saturation = Saturation,
@@ -757,15 +761,15 @@ Namespace Services
         End Function
 
         Friend Function ComputeAnnotationRect(sourceWidth As Integer, sourceHeight As Integer, kind As String, annotation As ImageAnnotation) As SKRect
-            Dim width = Math.Max(1.0F, sourceWidth * ClampPercent(annotation.WidthPercent, 1, 100) / 100.0F)
-            Dim height = Math.Max(1.0F, sourceHeight * ClampPercent(annotation.HeightPercent, 1, 100) / 100.0F)
+            Dim width = Math.Max(1.0F, annotation.WidthPixels)
+            Dim height = Math.Max(1.0F, annotation.HeightPixels)
             Dim normalizedKind = If(kind, "").Trim().ToLowerInvariant()
             Dim x As Single
             Dim y As Single
 
             If normalizedKind = "watermark" Then
-                Dim offsetX = sourceWidth * ClampPercent(annotation.XPercent, -100, 100) / 100.0F
-                Dim offsetY = sourceHeight * ClampPercent(annotation.YPercent, -100, 100) / 100.0F
+                Dim offsetX = annotation.XPixels
+                Dim offsetY = annotation.YPixels
                 Select Case NormalizeAnnotationAnchor(annotation.Anchor)
                     Case "TopLeft"
                         x = offsetX : y = offsetY
@@ -787,8 +791,8 @@ Namespace Services
                         x = sourceWidth - width - offsetX : y = sourceHeight - height - offsetY
                 End Select
             Else
-                x = sourceWidth * ClampPercent(annotation.XPercent, -100, 100) / 100.0F
-                y = sourceHeight * ClampPercent(annotation.YPercent, -100, 100) / 100.0F
+                x = annotation.XPixels
+                y = annotation.YPixels
             End If
 
             Return New SKRect(x, y, x + width, y + height)
@@ -911,57 +915,72 @@ Namespace Services
         ' pro Slider-Tick auf dem UI-Thread alloziert.
         Private Const MaxOverlayRenderDim As Single = 720.0F
 
+        ''' Ergebnis von RenderAnnotationOverlay: das Bitmap UND die Lage des Objekts darin (Bitmap-Pixel).
+        ''' Die View braucht beides: sie legt das Bitmap per Stretch="Fill" und negativen Margins über die
+        ''' Objekt-Border. Die Effekt-Ränder sind in Bitmap-Pixeln bemessen, die Border in Display-Pixeln -
+        ''' die View darf die Padding-Formel deshalb nicht nachbauen, sondern rechnet dieses Rechteck um
+        ''' (siehe EditorView.ComputeSelectedOverlayImageMargin).
+        Public NotInheritable Class AnnotationOverlayRender
+            Public Property Image As Bitmap
+            Public Property BitmapWidth As Double
+            Public Property BitmapHeight As Double
+            Public Property ObjectX As Double
+            Public Property ObjectY As Double
+            Public Property ObjectWidth As Double
+            Public Property ObjectHeight As Double
+        End Class
+
         ''' effectsOnly: zeichnet NUR Schatten/Glow (die Silhouette des Objekts als weichen Halo),
         ''' nicht das Objekt selbst. Für Text-/Wasserzeichen-Objekte, deren Glyphen während der
         ''' Selektion von der editierbaren Live-Textbox gezeichnet werden - der Halo liegt dahinter,
         ''' sodass Schatten/Glow auch im Editiermodus sichtbar sind (siehe UpdateSelectedAnnotationOverlayPreview).
-        Public Shared Function RenderAnnotationOverlay(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer, Optional effectsOnly As Boolean = False) As Bitmap
+        Public Shared Function RenderAnnotationOverlay(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer, Optional effectsOnly As Boolean = False) As AnnotationOverlayRender
             If annotation Is Nothing Then Return Nothing
             If effectsOnly AndAlso Not annotation.ShadowEnabled AndAlso Not annotation.GlowEnabled Then Return Nothing
 
             Dim renderAnnotation = annotation.Clone()
             renderAnnotation.RotationDegrees = 0
 
-            ' Interne Objektauflösung (gedeckelt, Seitenverhältnis erhalten). Alle Effekt-Ränder werden
-            ' proportional zu objSize berechnet, daher bleiben die Verhältnisse - und damit die Deckung
-            ' mit ComputeSelectedOverlayImageMargin in der View - unabhängig von dieser Skalierung gleich.
+            ' Interne Objektauflösung (gedeckelt, Seitenverhältnis erhalten). Die Ränder sind damit in
+            ' Bitmap-Pixeln bemessen, nicht in Display-Pixeln; die View rechnet sie über das zurückgegebene
+            ' Objekt-Rechteck um, statt die Formel nachzubauen.
             Dim requestedLongest = CSng(Math.Max(1, Math.Max(pixelWidth, pixelHeight)))
             Dim renderScale = If(requestedLongest > MaxOverlayRenderDim, MaxOverlayRenderDim / requestedLongest, 1.0F)
             Dim objW = Math.Max(1, CInt(Math.Round(Math.Max(1, pixelWidth) * renderScale)))
             Dim objH = Math.Max(1, CInt(Math.Round(Math.Max(1, pixelHeight) * renderScale)))
 
-            ' Padding EXAKT wie ComputeSelectedOverlayImageMargin (EditorView.axaml.vb), damit das
-            ' gerenderte Objekt deckungsgleich mit der Overlay-Border liegt.
             Dim objSize = CSng(Math.Max(1, Math.Min(objW, objH)))
             ' Schattengröße >100% lässt den (um seine Mitte skalierten) Schatten übers Objekt hinauswachsen;
             ' der Wachstumsrand wird über die größere Objektkante bemessen, damit auf keiner Achse abgeschnitten wird.
             Dim shadowGrow = If(renderAnnotation.ShadowEnabled, Math.Max(objW, objH) * Math.Max(0.0F, Clamp(renderAnnotation.ShadowSizePercent, 10, 400) / 100.0F - 1.0F) * 0.5F, 0.0F)
             ' Faktor 1.7 deckt die Glow-Reichweite (Dilate + Blur, siehe DrawAnnotationEffects: ~1.5x objSize
-            ' bei Maximalwert) mit etwas Reserve ab; muss mit ComputeSelectedOverlayImageMargin übereinstimmen.
+            ' bei Maximalwert) mit etwas Reserve ab.
             Dim glowPad = If(renderAnnotation.GlowEnabled, objSize * Clamp(renderAnnotation.GlowBlur, 0, 100) / 100.0F * 1.7F, 0.0F)
             Dim shadowPad = If(renderAnnotation.ShadowEnabled, objSize * Clamp(renderAnnotation.ShadowBlur, 0, 100) / 100.0F * 1.8F + shadowGrow, 0.0F)
             Dim offsetX = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetXPercent / 100.0F, 0.0F)
             Dim offsetY = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetYPercent / 100.0F, 0.0F)
             Dim effectPad = Math.Max(glowPad, shadowPad)
-            Dim leftPad = 4.0F + effectPad + Math.Max(0.0F, -offsetX)
-            Dim rightPad = 4.0F + effectPad + Math.Max(0.0F, offsetX)
-            Dim topPad = 4.0F + effectPad + Math.Max(0.0F, -offsetY)
-            Dim bottomPad = 4.0F + effectPad + Math.Max(0.0F, offsetY)
+            ' Auf ganze Pixel aufrunden, damit das Objekt verlustfrei im Bitmap-Raster liegt: die View
+            ' skaliert genau dieses Rechteck auf die Border, jeder Bruchteil würde das Objekt verzerren.
+            Dim leftPad = CInt(Math.Ceiling(4.0F + effectPad + Math.Max(0.0F, -offsetX)))
+            Dim rightPad = CInt(Math.Ceiling(4.0F + effectPad + Math.Max(0.0F, offsetX)))
+            Dim topPad = CInt(Math.Ceiling(4.0F + effectPad + Math.Max(0.0F, -offsetY)))
+            Dim bottomPad = CInt(Math.Ceiling(4.0F + effectPad + Math.Max(0.0F, offsetY)))
 
             ' Das Bitmap um die Effekt-Ränder VERGRÖSSERN (nicht das Objekt hineinschrumpfen): so wird
             ' der Schatten/Glow nie an der Bitmap-Kante abgeschnitten - im Gegensatz zum gebackenen Bild,
-            ' das ins ganze Foto ausbluten kann - und die Padding-Formel bleibt mit der View identisch.
+            ' das ins ganze Foto ausbluten kann.
             ' Damit entfällt auch der frühere "Reset auf 2px"-Notausgang, der bei flachen/breiten Objekten
             ' (Effekt-Rand > Objektgröße) die Auswahl-Vorschau komplett von der gebackenen Ansicht abweichen ließ.
-            Dim width = objW + CInt(Math.Ceiling(leftPad + rightPad))
-            Dim height = objH + CInt(Math.Ceiling(topPad + bottomPad))
+            Dim width = objW + leftPad + rightPad
+            Dim height = objH + topPad + bottomPad
 
             Dim rect = SKRect.Create(leftPad, topPad, objW, objH)
             Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
             Dim x = rect.Left
             Dim y = rect.Top
             Dim maxWidth = rect.Width
-            Dim fontSize = Math.Max(8.0F, objH * Clamp(renderAnnotation.FontSizePercent, 0.5F, 50) / 100.0F)
+            Dim fontSize = Math.Max(8.0F, renderAnnotation.FontSizePixels)
             Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
             Dim fill = ApplyAlpha(ParseColor(renderAnnotation.FillColor, SKColors.White), alphaFactor)
             Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
@@ -978,7 +997,27 @@ Namespace Services
                     End If
                 End Using
 
-                Return ToAvaloniaBitmap(bitmap)
+                Return New AnnotationOverlayRender With {
+                    .Image = ToAvaloniaBitmap(bitmap),
+                    .BitmapWidth = width,
+                    .BitmapHeight = height,
+                    .ObjectX = leftPad,
+                    .ObjectY = topPad,
+                    .ObjectWidth = objW,
+                    .ObjectHeight = objH
+                }
+            End Using
+        End Function
+
+        ''' DrawWrappedText setzt die Grundlinie der ersten Zeile auf rect.Top + fontSize, die Glyphen-
+        ''' Oberkante liegt also um (fontSize - Ascent) unter der Oberkante des Objekt-Rechtecks. Avalonia
+        ''' setzt die Glyphen-Oberkante einer TextBox dagegen direkt auf deren Oberkante. Der Rückgabewert
+        ''' ist der Versatz, um den die Live-TextBox nach unten geschoben werden muss, damit ihre Glyphen
+        ''' dort landen, wo das gebackene Bild sie zeichnet.
+        Public Shared Function GetBakedTextTopOffset(fontFamily As String, fontSize As Single) As Double
+            If fontSize <= 0 Then Return 0
+            Using paint = New SKPaint With {.TextSize = fontSize, .Typeface = GetTypeface(fontFamily)}
+                Return Math.Max(0.0F, fontSize + paint.FontMetrics.Ascent)
             End Using
         End Function
 
@@ -1269,7 +1308,7 @@ Namespace Services
                 adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeInterpolation,
                 adj.CanvasWidth, adj.CanvasHeight, adj.LockCanvasAspect, adj.CanvasAnchor, adj.CanvasBackgroundColor,
                 adj.FilterPreset, adj.FilterStrength, adj.LutPath, adj.LutStrength,
-                String.Join(";", adj.RetouchSpots.Select(Function(s) $"{s.XPercent},{s.YPercent},{s.RadiusPercent}"))
+                String.Join(";", adj.RetouchSpots.Select(Function(s) $"{s.XPixels},{s.YPixels},{s.RadiusPixels}"))
             })
         End Function
 
@@ -1339,10 +1378,17 @@ Namespace Services
             If adj.RetouchSpots Is Nothing OrElse adj.RetouchSpots.Count = 0 Then Return source
 
             Dim result = CloneBitmap(source)
+            Dim scaleX As Single = 1.0F
+            Dim scaleY As Single = 1.0F
+            If adj.SourceWidthPixels > 0 AndAlso adj.SourceHeightPixels > 0 AndAlso source.Width > 0 AndAlso source.Height > 0 Then
+                scaleX = source.Width / CSng(adj.SourceWidthPixels)
+                scaleY = source.Height / CSng(adj.SourceHeightPixels)
+            End If
+            Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
             For Each spot In adj.RetouchSpots
-                Dim cx = CInt(Math.Round(source.Width * Clamp(spot.XPercent, 0, 100) / 100.0F))
-                Dim cy = CInt(Math.Round(source.Height * Clamp(spot.YPercent, 0, 100) / 100.0F))
-                Dim radius = Math.Max(2, CInt(Math.Round(Math.Min(source.Width, source.Height) * Clamp(spot.RadiusPercent, 0.1F, 20) / 100.0F)))
+                Dim cx = CInt(Math.Round(Clamp(spot.XPixels * scaleX, 0, source.Width)))
+                Dim cy = CInt(Math.Round(Clamp(spot.YPixels * scaleY, 0, source.Height)))
+                Dim radius = Math.Max(1, CInt(Math.Round(Clamp(spot.RadiusPixels * radiusScale, 1, Math.Max(source.Width, source.Height)))))
                 Dim sampleRadius = radius * 2
 
                 Dim sr As Long = 0
@@ -1450,10 +1496,56 @@ Namespace Services
             Return normalized = "brush" OrElse normalized = "eraser"
         End Function
 
+        Private Shared Function ScaleBrushPoints(pointsText As String, scaleX As Single, scaleY As Single) As String
+            If String.IsNullOrWhiteSpace(pointsText) Then Return pointsText
+
+            Dim strokes As New List(Of String)()
+            For Each strokeText In pointsText.Split(";"c)
+                Dim points As New List(Of String)()
+                For Each token In strokeText.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
+                    Dim parts = token.Split(","c)
+                    If parts.Length <> 2 Then Continue For
+                    Dim x As Single
+                    Dim y As Single
+                    If Single.TryParse(parts(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, x) AndAlso
+                       Single.TryParse(parts(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, y) Then
+                        points.Add($"{(x * scaleX).ToString(Globalization.CultureInfo.InvariantCulture)},{(y * scaleY).ToString(Globalization.CultureInfo.InvariantCulture)}")
+                    End If
+                Next
+                If points.Count > 0 Then strokes.Add(String.Join(" ", points))
+            Next
+
+            Return String.Join(";", strokes)
+        End Function
+
+        Private Shared Function ScaleAnnotationForSource(annotation As ImageAnnotation, scaleX As Single, scaleY As Single) As ImageAnnotation
+            If annotation Is Nothing Then Return Nothing
+            If Math.Abs(scaleX - 1.0F) < 0.0001F AndAlso Math.Abs(scaleY - 1.0F) < 0.0001F Then Return annotation
+
+            Dim scaled = annotation.Clone()
+            Dim uniformScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
+            scaled.XPixels *= scaleX
+            scaled.YPixels *= scaleY
+            scaled.WidthPixels *= scaleX
+            scaled.HeightPixels *= scaleY
+            scaled.FontSizePixels *= uniformScale
+            scaled.StrokeWidth *= uniformScale
+            If IsPaintKind(scaled.Kind) Then
+                scaled.Text = ScaleBrushPoints(scaled.Text, scaleX, scaleY)
+            End If
+            Return scaled
+        End Function
+
         Private Shared Function ApplyAnnotations(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If adj.Annotations Is Nothing OrElse adj.Annotations.Count = 0 Then Return source
 
             Dim result = CloneBitmap(source)
+            Dim scaleX As Single = 1.0F
+            Dim scaleY As Single = 1.0F
+            If adj.SourceWidthPixels > 0 AndAlso adj.SourceHeightPixels > 0 AndAlso source.Width > 0 AndAlso source.Height > 0 Then
+                scaleX = source.Width / CSng(adj.SourceWidthPixels)
+                scaleY = source.Height / CSng(adj.SourceHeightPixels)
+            End If
 
             ' Pinsel- und Radiergummi-Striche werden zuerst auf einer eigenen transparenten
             ' Ebene komponiert, damit der Radiergummi (SKBlendMode.Clear) nur vorherige Striche
@@ -1465,13 +1557,12 @@ Namespace Services
                     paintCanvas.Clear(SKColors.Transparent)
                     For Each annotation In adj.Annotations
                         If annotation Is Nothing OrElse Not annotation.IsVisible OrElse Not IsPaintKind(annotation.Kind) Then Continue For
-                        Dim alphaFactor = Clamp(annotation.Opacity, 0, 100) / 100.0F
-                    Dim stroke = ApplyAlpha(ParseColor(annotation.StrokeColor, SKColors.Black), alphaFactor)
-                    ' Pinselgröße ist (wie RetouchRadius) ein Prozentsatz der kleineren Bildkante,
-                        ' damit die Strichbreite unabhängig von der Bildauflösung gleich wirkt.
-                        Dim strokeWidth = Math.Max(1.0F, Math.Min(source.Width, source.Height) * Clamp(annotation.StrokeWidth, 0.05F, 100) / 100.0F)
+                        Dim renderAnnotation = ScaleAnnotationForSource(annotation, scaleX, scaleY)
+                        Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
+                        Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
+                        Dim strokeWidth = Math.Max(1.0F, Clamp(renderAnnotation.StrokeWidth, 1, Math.Max(source.Width, source.Height)))
                         Dim isEraser = annotation.Kind.Trim().ToLowerInvariant() = "eraser"
-                        DrawBrushStroke(paintCanvas, annotation.Text, source.Width, source.Height, stroke, strokeWidth, annotation.HardnessPercent, isEraser)
+                        DrawBrushStroke(paintCanvas, renderAnnotation.Text, source.Width, source.Height, stroke, strokeWidth, renderAnnotation.HardnessPercent, isEraser)
                     Next
                 End Using
             End If
@@ -1480,7 +1571,8 @@ Namespace Services
             Using canvas = New SKCanvas(result)
                 For Each annotation In adj.Annotations
                     If annotation Is Nothing OrElse Not annotation.IsVisible Then Continue For
-                    Dim kind = If(annotation.Kind, "Text").Trim().ToLowerInvariant()
+                    Dim renderAnnotation = ScaleAnnotationForSource(annotation, scaleX, scaleY)
+                    Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
 
                     If IsPaintKind(kind) Then
                         If Not paintLayerDrawn AndAlso paintLayer IsNot Nothing Then
@@ -1490,26 +1582,26 @@ Namespace Services
                         Continue For
                     End If
 
-                    Dim rect = ComputeAnnotationRect(source.Width, source.Height, kind, annotation)
+                    Dim rect = ComputeAnnotationRect(source.Width, source.Height, kind, renderAnnotation)
                     Dim x = rect.Left
                     Dim y = rect.Top
                     Dim maxWidth = rect.Width
                     Dim maxHeight = rect.Height
-                    Dim fontSize = Math.Max(8.0F, source.Height * Clamp(annotation.FontSizePercent, 0.5F, 50) / 100.0F)
-                    Dim alphaFactor = Clamp(annotation.Opacity, 0, 100) / 100.0F
-                    Dim fill = ApplyAlpha(ParseColor(annotation.FillColor, SKColors.White), alphaFactor)
-                    Dim stroke = ApplyAlpha(ParseColor(annotation.StrokeColor, SKColors.Black), alphaFactor)
-                    Dim strokeWidth = Math.Max(1.0F, annotation.StrokeWidth)
+                    Dim fontSize = Math.Max(8.0F, renderAnnotation.FontSizePixels)
+                    Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
+                    Dim fill = ApplyAlpha(ParseColor(renderAnnotation.FillColor, SKColors.White), alphaFactor)
+                    Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
+                    Dim strokeWidth = Math.Max(1.0F, renderAnnotation.StrokeWidth)
 
                     canvas.Save()
-                    If Math.Abs(annotation.RotationDegrees) > 0.01F Then
-                        canvas.RotateDegrees(annotation.RotationDegrees, rect.MidX, rect.MidY)
+                    If Math.Abs(renderAnnotation.RotationDegrees) > 0.01F Then
+                        canvas.RotateDegrees(renderAnnotation.RotationDegrees, rect.MidX, rect.MidY)
                     End If
 
-                    If annotation.ShadowEnabled OrElse annotation.GlowEnabled Then
-                        DrawAnnotationEffects(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, source.Width, source.Height)
+                    If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
+                        DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, source.Width, source.Height)
                     End If
-                    DrawAnnotationShape(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+                    DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
                     canvas.Restore()
                 Next
             End Using
@@ -2197,7 +2289,7 @@ Namespace Services
                         Dim y As Single
                         If Single.TryParse(parts(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, x) AndAlso
                            Single.TryParse(parts(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, y) Then
-                            points.Add(New SKPoint(width * Clamp(x, 0, 100) / 100.0F, height * Clamp(y, 0, 100) / 100.0F))
+                            points.Add(New SKPoint(Clamp(x, 0, width), Clamp(y, 0, height)))
                         End If
                     Next
                     If points.Count < 2 Then Continue For
@@ -2414,7 +2506,7 @@ Namespace Services
             Return result
         End Function
 
-        Public Shared Function SaveImage(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer) As Boolean
+        Public Shared Function SaveImage(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer, Optional preserveMetadata As Boolean = True) As Boolean
             ' Zentraler Schutz: Bearbeitung einer RAW-Quelle wirkt nur auf deren eingebettete
             ' JPEG-Vorschau (siehe OpenSourceStream/DecodeOriented) - ein Speichern-in-place würde
             ' hier fälschlich die RAW-Rohdaten JPEG-kodiert über die Original-RAW-Datei schreiben.
@@ -2439,12 +2531,600 @@ Namespace Services
                             End Using
                         End Using
                     End Using
+                    If preserveMetadata Then TryCopyMetadata(sourcePath, targetPath)
                     Return True
                 End Using
             Catch ex As Exception
                 Return False
             End Try
         End Function
+
+        Private Shared Sub TryCopyMetadata(sourcePath As String, targetPath As String)
+            If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return
+            If Not File.Exists(sourcePath) OrElse Not File.Exists(targetPath) Then Return
+
+            Try
+                Dim targetExt = IO.Path.GetExtension(targetPath).ToLowerInvariant()
+
+                Select Case targetExt
+                    Case ".jpg", ".jpeg"
+                        CopyJpegMetadata(sourcePath, targetPath)
+                    Case ".png"
+                        CopyPngMetadata(sourcePath, targetPath)
+                    Case ".webp"
+                        CopyWebpMetadata(sourcePath, targetPath)
+                End Select
+            Catch
+            End Try
+        End Sub
+
+        Private Shared Function IsJpegPath(path As String) As Boolean
+            Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
+            Return ext = ".jpg" OrElse ext = ".jpeg"
+        End Function
+
+        Private Shared Sub CopyJpegMetadata(sourcePath As String, targetPath As String)
+            Dim metadataSegments = If(IsJpegPath(sourcePath),
+                                      ReadJpegMetadataSegments(sourcePath),
+                                      BuildJpegMetadataSegmentsFromSource(sourcePath))
+            If metadataSegments.Count = 0 Then Return
+
+            Dim targetBytes = File.ReadAllBytes(targetPath)
+            If targetBytes.Length < 4 OrElse targetBytes(0) <> &HFF OrElse targetBytes(1) <> &HD8 Then Return
+
+            Dim stripped = StripJpegMetadataSegments(targetBytes)
+            Dim insertAt = FindJpegMetadataInsertOffset(stripped)
+            Dim output As New List(Of Byte)(stripped.Length + metadataSegments.Sum(Function(s) s.Length))
+            output.AddRange(stripped.Take(insertAt))
+            For Each segment In metadataSegments
+                output.AddRange(segment)
+            Next
+            output.AddRange(stripped.Skip(insertAt))
+            File.WriteAllBytes(targetPath, output.ToArray())
+        End Sub
+
+        Private Shared Function ReadJpegMetadataSegments(path As String) As List(Of Byte())
+            Dim bytes = File.ReadAllBytes(path)
+            Dim result As New List(Of Byte())()
+            If bytes.Length < 4 OrElse bytes(0) <> &HFF OrElse bytes(1) <> &HD8 Then Return result
+
+            Dim offset = 2
+            While offset + 4 <= bytes.Length
+                If bytes(offset) <> &HFF Then Exit While
+                Dim marker = bytes(offset + 1)
+                If marker = &HDA OrElse marker = &HD9 Then Exit While
+                If marker = &H1 OrElse (marker >= &HD0 AndAlso marker <= &HD7) Then
+                    offset += 2
+                    Continue While
+                End If
+
+                Dim length = ReadUInt16BE(bytes, offset + 2)
+                If length < 2 OrElse offset + 2 + length > bytes.Length Then Exit While
+                Dim totalLength = 2 + length
+
+                If IsJpegMetadataMarker(marker) Then
+                    Dim segment(totalLength - 1) As Byte
+                    Buffer.BlockCopy(bytes, offset, segment, 0, totalLength)
+                    If marker = &HE1 AndAlso IsExifSegment(segment) Then PatchExifOrientationToNormal(segment)
+                    result.Add(segment)
+                End If
+
+                offset += totalLength
+            End While
+
+            Return result
+        End Function
+
+        Private Shared Function BuildJpegMetadataSegmentsFromSource(sourcePath As String) As List(Of Byte())
+            Dim result As New List(Of Byte())()
+            Dim exif = ExtractExifTiffBytes(sourcePath)
+            If exif IsNot Nothing AndAlso exif.Length > 0 Then
+                result.Add(CreateJpegAppSegment(&HE1, CombineBytes(Text.Encoding.ASCII.GetBytes("Exif" & ChrW(0) & ChrW(0)), exif)))
+            End If
+
+            Dim xmp = ExtractXmpBytes(sourcePath)
+            If xmp IsNot Nothing AndAlso xmp.Length > 0 Then
+                result.Add(CreateJpegAppSegment(&HE1, CombineBytes(Text.Encoding.ASCII.GetBytes("http://ns.adobe.com/xap/1.0/" & ChrW(0)), xmp)))
+            End If
+
+            Return result.Where(Function(s) s IsNot Nothing).ToList()
+        End Function
+
+        Private Shared Function CreateJpegAppSegment(marker As Byte, payload As Byte()) As Byte()
+            If payload Is Nothing OrElse payload.Length + 2 > UShort.MaxValue Then Return Nothing
+            Dim segment(payload.Length + 3) As Byte
+            segment(0) = &HFF
+            segment(1) = marker
+            Dim length = payload.Length + 2
+            segment(2) = CByte((length >> 8) And &HFF)
+            segment(3) = CByte(length And &HFF)
+            Buffer.BlockCopy(payload, 0, segment, 4, payload.Length)
+            Return segment
+        End Function
+
+        Private Shared Function StripJpegMetadataSegments(bytes As Byte()) As Byte()
+            Dim output As New List(Of Byte)(bytes.Length)
+            output.Add(bytes(0))
+            output.Add(bytes(1))
+
+            Dim offset = 2
+            While offset + 4 <= bytes.Length
+                If bytes(offset) <> &HFF Then Exit While
+                Dim marker = bytes(offset + 1)
+                If marker = &HDA OrElse marker = &HD9 Then Exit While
+                If marker = &H1 OrElse (marker >= &HD0 AndAlso marker <= &HD7) Then
+                    output.Add(bytes(offset))
+                    output.Add(bytes(offset + 1))
+                    offset += 2
+                    Continue While
+                End If
+
+                Dim length = ReadUInt16BE(bytes, offset + 2)
+                If length < 2 OrElse offset + 2 + length > bytes.Length Then Exit While
+                Dim totalLength = 2 + length
+
+                If Not IsJpegMetadataMarker(marker) Then
+                    output.AddRange(bytes.Skip(offset).Take(totalLength))
+                End If
+
+                offset += totalLength
+            End While
+
+            output.AddRange(bytes.Skip(offset))
+            Return output.ToArray()
+        End Function
+
+        Private Shared Function FindJpegMetadataInsertOffset(bytes As Byte()) As Integer
+            Dim offset = 2
+            While offset + 4 <= bytes.Length AndAlso bytes(offset) = &HFF
+                Dim marker = bytes(offset + 1)
+                If marker <> &HE0 AndAlso marker <> &HEE Then Exit While
+                Dim length = ReadUInt16BE(bytes, offset + 2)
+                If length < 2 OrElse offset + 2 + length > bytes.Length Then Exit While
+                offset += 2 + length
+            End While
+            Return offset
+        End Function
+
+        Private Shared Function IsJpegMetadataMarker(marker As Byte) As Boolean
+            Return marker = &HE1 OrElse marker = &HED OrElse marker = &HE2
+        End Function
+
+        Private Shared Function IsExifSegment(segment As Byte()) As Boolean
+            Return segment.Length >= 12 AndAlso
+                   segment(4) = AscW("E"c) AndAlso segment(5) = AscW("x"c) AndAlso
+                   segment(6) = AscW("i"c) AndAlso segment(7) = AscW("f"c) AndAlso
+                   segment(8) = 0 AndAlso segment(9) = 0
+        End Function
+
+        Private Shared Sub PatchExifOrientationToNormal(segment As Byte())
+            Try
+                Dim tiff = 10
+                If segment.Length < tiff + 8 Then Return
+                Dim littleEndian = segment(tiff) = AscW("I"c) AndAlso segment(tiff + 1) = AscW("I"c)
+                Dim bigEndian = segment(tiff) = AscW("M"c) AndAlso segment(tiff + 1) = AscW("M"c)
+                If Not littleEndian AndAlso Not bigEndian Then Return
+
+                Dim ifd0Offset = ReadUInt32Endian(segment, tiff + 4, littleEndian)
+                Dim ifd0 = tiff + CInt(ifd0Offset)
+                If ifd0 < 0 OrElse ifd0 + 2 > segment.Length Then Return
+
+                Dim count = ReadUInt16Endian(segment, ifd0, littleEndian)
+                Dim entryOffset = ifd0 + 2
+                For i = 0 To count - 1
+                    Dim entry = entryOffset + i * 12
+                    If entry + 12 > segment.Length Then Return
+                    Dim tag = ReadUInt16Endian(segment, entry, littleEndian)
+                    If tag <> &H112 Then Continue For
+
+                    Dim type = ReadUInt16Endian(segment, entry + 2, littleEndian)
+                    Dim itemCount = ReadUInt32Endian(segment, entry + 4, littleEndian)
+                    If type <> 3 OrElse itemCount < 1 Then Return
+
+                    WriteUInt16Endian(segment, entry + 8, 1, littleEndian)
+                    Return
+                Next
+            Catch
+            End Try
+        End Sub
+
+        Private Shared Sub CopyPngMetadata(sourcePath As String, targetPath As String)
+            Dim metadataChunks = If(IO.Path.GetExtension(sourcePath).ToLowerInvariant() = ".png",
+                                    ReadPngMetadataChunks(sourcePath),
+                                    BuildPngMetadataChunksFromSource(sourcePath))
+            If metadataChunks.Count = 0 Then Return
+
+            Dim targetBytes = File.ReadAllBytes(targetPath)
+            If Not IsPngBytes(targetBytes) Then Return
+
+            Dim output As New List(Of Byte)(targetBytes.Length + metadataChunks.Sum(Function(c) c.Length))
+            output.AddRange(targetBytes.Take(8))
+
+            Dim inserted = False
+            Dim offset = 8
+            While offset + 12 <= targetBytes.Length
+                Dim length = ReadInt32BE(targetBytes, offset)
+                Dim chunkEnd = offset + 12 + length
+                If length < 0 OrElse chunkEnd > targetBytes.Length Then Return
+                Dim chunkType = Text.Encoding.ASCII.GetString(targetBytes, offset + 4, 4)
+
+                If Not inserted AndAlso chunkType = "IDAT" Then
+                    For Each chunk In metadataChunks
+                        output.AddRange(chunk)
+                    Next
+                    inserted = True
+                End If
+
+                If Not IsPngMetadataChunk(chunkType) Then
+                    output.AddRange(targetBytes.Skip(offset).Take(12 + length))
+                End If
+
+                offset = chunkEnd
+            End While
+
+            File.WriteAllBytes(targetPath, output.ToArray())
+        End Sub
+
+        Private Shared Function ReadPngMetadataChunks(path As String) As List(Of Byte())
+            Dim bytes = File.ReadAllBytes(path)
+            Dim result As New List(Of Byte())()
+            If Not IsPngBytes(bytes) Then Return result
+
+            Dim offset = 8
+            While offset + 12 <= bytes.Length
+                Dim length = ReadInt32BE(bytes, offset)
+                Dim chunkEnd = offset + 12 + length
+                If length < 0 OrElse chunkEnd > bytes.Length Then Exit While
+                Dim chunkType = Text.Encoding.ASCII.GetString(bytes, offset + 4, 4)
+
+                If IsPngMetadataChunk(chunkType) Then
+                    Dim chunk(12 + length - 1) As Byte
+                    Buffer.BlockCopy(bytes, offset, chunk, 0, chunk.Length)
+                    result.Add(chunk)
+                End If
+
+                offset = chunkEnd
+            End While
+
+            Return result
+        End Function
+
+        Private Shared Function BuildPngMetadataChunksFromSource(sourcePath As String) As List(Of Byte())
+            Dim result As New List(Of Byte())()
+            Dim exif = ExtractExifTiffBytes(sourcePath)
+            If exif IsNot Nothing AndAlso exif.Length > 0 Then result.Add(CreatePngChunk("eXIf", exif))
+
+            Dim xmp = ExtractXmpBytes(sourcePath)
+            If xmp IsNot Nothing AndAlso xmp.Length > 0 Then
+                Dim keyword = Text.Encoding.ASCII.GetBytes("XML:com.adobe.xmp")
+                Dim payload As New List(Of Byte)()
+                payload.AddRange(keyword)
+                payload.Add(0)
+                payload.Add(0)
+                payload.Add(0)
+                payload.Add(0)
+                payload.Add(0)
+                payload.AddRange(xmp)
+                result.Add(CreatePngChunk("iTXt", payload.ToArray()))
+            End If
+
+            Return result
+        End Function
+
+        Private Shared Function IsPngBytes(bytes As Byte()) As Boolean
+            Return bytes.Length >= 8 AndAlso bytes(0) = &H89 AndAlso bytes(1) = &H50 AndAlso bytes(2) = &H4E AndAlso bytes(3) = &H47 AndAlso
+                   bytes(4) = &HD AndAlso bytes(5) = &HA AndAlso bytes(6) = &H1A AndAlso bytes(7) = &HA
+        End Function
+
+        Private Shared Function IsPngMetadataChunk(chunkType As String) As Boolean
+            Select Case chunkType
+                Case "eXIf", "iTXt", "tEXt", "zTXt", "iCCP"
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
+
+        Private Shared Sub CopyWebpMetadata(sourcePath As String, targetPath As String)
+            Dim sourceChunks = If(IO.Path.GetExtension(sourcePath).ToLowerInvariant() = ".webp",
+                                  ReadWebpChunks(File.ReadAllBytes(sourcePath)).
+                                      Where(Function(c) c.Type = "EXIF" OrElse c.Type = "XMP " OrElse c.Type = "ICCP").
+                                      ToList(),
+                                  BuildWebpMetadataChunksFromSource(sourcePath))
+            If sourceChunks.Count = 0 Then Return
+
+            Dim targetBytes = File.ReadAllBytes(targetPath)
+            Dim targetChunks = ReadWebpChunks(targetBytes)
+            If targetChunks.Count = 0 Then Return
+
+            Dim vp8x = targetChunks.FirstOrDefault(Function(c) c.Type = "VP8X")
+            Dim imageChunk = targetChunks.FirstOrDefault(Function(c) c.Type = "VP8 " OrElse c.Type = "VP8L")
+            If vp8x Is Nothing AndAlso imageChunk Is Nothing Then Return
+
+            Dim flags As Byte = 0
+            Dim width As Integer = 0
+            Dim height As Integer = 0
+            If vp8x IsNot Nothing AndAlso vp8x.Data.Length >= 10 Then
+                flags = vp8x.Data(0)
+                width = 1 + vp8x.Data(4) + (vp8x.Data(5) << 8) + (vp8x.Data(6) << 16)
+                height = 1 + vp8x.Data(7) + (vp8x.Data(8) << 8) + (vp8x.Data(9) << 16)
+            ElseIf imageChunk IsNot Nothing Then
+                Dim size = ReadWebpImageSize(imageChunk)
+                width = size.Width
+                height = size.Height
+                If targetChunks.Any(Function(c) c.Type = "ALPH") Then flags = CByte(flags Or &H10)
+            End If
+            If width <= 0 OrElse height <= 0 Then Return
+
+            If sourceChunks.Any(Function(c) c.Type = "ICCP") Then flags = CByte(flags Or &H20)
+            If sourceChunks.Any(Function(c) c.Type = "EXIF") Then flags = CByte(flags Or &H8)
+            If sourceChunks.Any(Function(c) c.Type = "XMP ") Then flags = CByte(flags Or &H4)
+
+            Dim outputChunks As New List(Of WebpChunk)()
+            outputChunks.Add(CreateWebpVp8xChunk(flags, width, height))
+
+            For Each chunk In sourceChunks.Where(Function(c) c.Type = "ICCP")
+                outputChunks.Add(chunk)
+            Next
+            For Each chunk In targetChunks
+                If chunk.Type = "VP8X" OrElse chunk.Type = "EXIF" OrElse chunk.Type = "XMP " OrElse chunk.Type = "ICCP" Then Continue For
+                outputChunks.Add(chunk)
+            Next
+            For Each chunk In sourceChunks.Where(Function(c) c.Type = "EXIF" OrElse c.Type = "XMP ")
+                outputChunks.Add(chunk)
+            Next
+
+            WriteWebpChunks(targetPath, outputChunks)
+        End Sub
+
+        Private Class WebpChunk
+            Public Property Type As String = ""
+            Public Property Data As Byte() = Array.Empty(Of Byte)()
+        End Class
+
+        Private Shared Function ReadWebpChunks(bytes As Byte()) As List(Of WebpChunk)
+            Dim result As New List(Of WebpChunk)()
+            If bytes.Length < 12 OrElse Text.Encoding.ASCII.GetString(bytes, 0, 4) <> "RIFF" OrElse Text.Encoding.ASCII.GetString(bytes, 8, 4) <> "WEBP" Then Return result
+
+            Dim offset = 12
+            While offset + 8 <= bytes.Length
+                Dim chunkType = Text.Encoding.ASCII.GetString(bytes, offset, 4)
+                Dim length = ReadUInt32LE(bytes, offset + 4)
+                If length > Integer.MaxValue OrElse offset + 8L + length > bytes.Length Then Exit While
+
+                Dim data As Byte() = Array.Empty(Of Byte)()
+                If length > 0 Then data = New Byte(CInt(length) - 1) {}
+                If length > 0 Then Buffer.BlockCopy(bytes, offset + 8, data, 0, CInt(length))
+                result.Add(New WebpChunk With {.Type = chunkType, .Data = data})
+
+                offset += 8 + CInt(length)
+                If (length Mod 2UI) = 1UI Then offset += 1
+            End While
+
+            Return result
+        End Function
+
+        Private Shared Function ReadWebpImageSize(chunk As WebpChunk) As (Width As Integer, Height As Integer)
+            If chunk.Type = "VP8 " AndAlso chunk.Data.Length >= 10 Then
+                Return (Width:=1 + (chunk.Data(6) Or ((chunk.Data(7) And &H3F) << 8)),
+                        Height:=1 + (chunk.Data(8) Or ((chunk.Data(9) And &H3F) << 8)))
+            End If
+            If chunk.Type = "VP8L" AndAlso chunk.Data.Length >= 5 Then
+                Dim b1 = chunk.Data(1)
+                Dim b2 = chunk.Data(2)
+                Dim b3 = chunk.Data(3)
+                Dim b4 = chunk.Data(4)
+                Dim width = 1 + (((b2 And &H3F) << 8) Or b1)
+                Dim height = 1 + (((b4 And &HF) << 10) Or (b3 << 2) Or ((b2 And &HC0) >> 6))
+                Return (width, height)
+            End If
+            Return (0, 0)
+        End Function
+
+        Private Shared Function CreateWebpVp8xChunk(flags As Byte, width As Integer, height As Integer) As WebpChunk
+            Dim data(9) As Byte
+            data(0) = flags
+            Dim storedWidth = Math.Max(0, width - 1)
+            Dim storedHeight = Math.Max(0, height - 1)
+            data(4) = CByte(storedWidth And &HFF)
+            data(5) = CByte((storedWidth >> 8) And &HFF)
+            data(6) = CByte((storedWidth >> 16) And &HFF)
+            data(7) = CByte(storedHeight And &HFF)
+            data(8) = CByte((storedHeight >> 8) And &HFF)
+            data(9) = CByte((storedHeight >> 16) And &HFF)
+            Return New WebpChunk With {.Type = "VP8X", .Data = data}
+        End Function
+
+        Private Shared Sub WriteWebpChunks(path As String, chunks As List(Of WebpChunk))
+            Dim body As New List(Of Byte)()
+            For Each chunk In chunks
+                body.AddRange(Text.Encoding.ASCII.GetBytes(chunk.Type))
+                body.AddRange(BitConverter.GetBytes(CUInt(chunk.Data.Length)))
+                body.AddRange(chunk.Data)
+                If (chunk.Data.Length Mod 2) = 1 Then body.Add(0)
+            Next
+
+            Dim bytes As New List(Of Byte)(12 + body.Count)
+            bytes.AddRange(Text.Encoding.ASCII.GetBytes("RIFF"))
+            bytes.AddRange(BitConverter.GetBytes(CUInt(4 + body.Count)))
+            bytes.AddRange(Text.Encoding.ASCII.GetBytes("WEBP"))
+            bytes.AddRange(body)
+            File.WriteAllBytes(path, bytes.ToArray())
+        End Sub
+
+        Private Shared Function BuildWebpMetadataChunksFromSource(sourcePath As String) As List(Of WebpChunk)
+            Dim result As New List(Of WebpChunk)()
+            Dim exif = ExtractExifTiffBytes(sourcePath)
+            If exif IsNot Nothing AndAlso exif.Length > 0 Then result.Add(New WebpChunk With {.Type = "EXIF", .Data = exif})
+
+            Dim xmp = ExtractXmpBytes(sourcePath)
+            If xmp IsNot Nothing AndAlso xmp.Length > 0 Then result.Add(New WebpChunk With {.Type = "XMP ", .Data = xmp})
+
+            Return result
+        End Function
+
+        Private Shared Function ExtractExifTiffBytes(path As String) As Byte()
+            Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
+            Try
+                Select Case ext
+                    Case ".jpg", ".jpeg"
+                        For Each segment In ReadJpegMetadataSegments(path)
+                            If IsExifSegment(segment) Then
+                                Dim tiffLength = segment.Length - 10
+                                If tiffLength <= 0 Then Return Nothing
+                                Dim tiff(tiffLength - 1) As Byte
+                                Buffer.BlockCopy(segment, 10, tiff, 0, tiffLength)
+                                Return tiff
+                            End If
+                        Next
+                    Case ".png"
+                        For Each chunk In ReadPngMetadataChunks(path)
+                            Dim chunkType = Text.Encoding.ASCII.GetString(chunk, 4, 4)
+                            If chunkType = "eXIf" Then
+                                Dim length = ReadInt32BE(chunk, 0)
+                                Dim data(length - 1) As Byte
+                                Buffer.BlockCopy(chunk, 8, data, 0, length)
+                                Return data
+                            End If
+                        Next
+                    Case ".webp"
+                        Dim chunk = ReadWebpChunks(File.ReadAllBytes(path)).FirstOrDefault(Function(c) c.Type = "EXIF")
+                        If chunk IsNot Nothing Then Return chunk.Data
+                End Select
+            Catch
+            End Try
+            Return Nothing
+        End Function
+
+        Private Shared Function ExtractXmpBytes(path As String) As Byte()
+            Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
+            Try
+                Select Case ext
+                    Case ".jpg", ".jpeg"
+                        For Each segment In ReadJpegMetadataSegments(path)
+                            If segment.Length <= 33 OrElse segment(1) <> &HE1 OrElse IsExifSegment(segment) Then Continue For
+                            Dim identifier = Text.Encoding.ASCII.GetBytes("http://ns.adobe.com/xap/1.0/" & ChrW(0))
+                            If StartsWithBytes(segment, 4, identifier) Then
+                                Dim xmpLength = segment.Length - 4 - identifier.Length
+                                Dim xmp(xmpLength - 1) As Byte
+                                Buffer.BlockCopy(segment, 4 + identifier.Length, xmp, 0, xmpLength)
+                                Return xmp
+                            End If
+                        Next
+                    Case ".png"
+                        For Each chunk In ReadPngMetadataChunks(path)
+                            Dim chunkType = Text.Encoding.ASCII.GetString(chunk, 4, 4)
+                            Dim length = ReadInt32BE(chunk, 0)
+                            If chunkType <> "iTXt" OrElse length <= 0 Then Continue For
+                            Dim data(length - 1) As Byte
+                            Buffer.BlockCopy(chunk, 8, data, 0, length)
+                            Dim zero = Array.IndexOf(data, CByte(0))
+                            If zero <= 0 Then Continue For
+                            Dim keyword = Text.Encoding.ASCII.GetString(data, 0, zero)
+                            If keyword <> "XML:com.adobe.xmp" OrElse zero + 5 >= data.Length Then Continue For
+                            If data(zero + 1) <> 0 Then Continue For
+                            Dim textOffset = zero + 5
+                            Dim xmp(data.Length - textOffset - 1) As Byte
+                            Buffer.BlockCopy(data, textOffset, xmp, 0, xmp.Length)
+                            Return xmp
+                        Next
+                    Case ".webp"
+                        Dim chunk = ReadWebpChunks(File.ReadAllBytes(path)).FirstOrDefault(Function(c) c.Type = "XMP ")
+                        If chunk IsNot Nothing Then Return chunk.Data
+                End Select
+            Catch
+            End Try
+            Return Nothing
+        End Function
+
+        Private Shared Function CreatePngChunk(chunkType As String, data As Byte()) As Byte()
+            Dim typeBytes = Text.Encoding.ASCII.GetBytes(chunkType)
+            Dim chunk(12 + data.Length - 1) As Byte
+            WriteInt32BE(chunk, 0, data.Length)
+            Buffer.BlockCopy(typeBytes, 0, chunk, 4, 4)
+            If data.Length > 0 Then Buffer.BlockCopy(data, 0, chunk, 8, data.Length)
+            Dim crc = Crc32(chunk, 4, 4 + data.Length)
+            WriteUInt32BE(chunk, 8 + data.Length, crc)
+            Return chunk
+        End Function
+
+        Private Shared Function CombineBytes(first As Byte(), second As Byte()) As Byte()
+            Dim result(first.Length + second.Length - 1) As Byte
+            Buffer.BlockCopy(first, 0, result, 0, first.Length)
+            Buffer.BlockCopy(second, 0, result, first.Length, second.Length)
+            Return result
+        End Function
+
+        Private Shared Function StartsWithBytes(bytes As Byte(), offset As Integer, prefix As Byte()) As Boolean
+            If bytes.Length < offset + prefix.Length Then Return False
+            For i = 0 To prefix.Length - 1
+                If bytes(offset + i) <> prefix(i) Then Return False
+            Next
+            Return True
+        End Function
+
+        Private Shared Function ReadUInt16BE(bytes As Byte(), offset As Integer) As Integer
+            Return (bytes(offset) << 8) Or bytes(offset + 1)
+        End Function
+
+        Private Shared Function ReadInt32BE(bytes As Byte(), offset As Integer) As Integer
+            Return (bytes(offset) << 24) Or (bytes(offset + 1) << 16) Or (bytes(offset + 2) << 8) Or bytes(offset + 3)
+        End Function
+
+        Private Shared Function ReadUInt16Endian(bytes As Byte(), offset As Integer, littleEndian As Boolean) As Integer
+            If littleEndian Then Return bytes(offset) Or (bytes(offset + 1) << 8)
+            Return ReadUInt16BE(bytes, offset)
+        End Function
+
+        Private Shared Function ReadUInt32Endian(bytes As Byte(), offset As Integer, littleEndian As Boolean) As UInteger
+            If littleEndian Then
+                Return CUInt(bytes(offset) Or (bytes(offset + 1) << 8) Or (bytes(offset + 2) << 16) Or (bytes(offset + 3) << 24))
+            End If
+            Return CUInt((bytes(offset) << 24) Or (bytes(offset + 1) << 16) Or (bytes(offset + 2) << 8) Or bytes(offset + 3))
+        End Function
+
+        Private Shared Function ReadUInt32LE(bytes As Byte(), offset As Integer) As UInteger
+            Return CUInt(bytes(offset) Or (bytes(offset + 1) << 8) Or (bytes(offset + 2) << 16) Or (bytes(offset + 3) << 24))
+        End Function
+
+        Private Shared Sub WriteInt32BE(bytes As Byte(), offset As Integer, value As Integer)
+            bytes(offset) = CByte((value >> 24) And &HFF)
+            bytes(offset + 1) = CByte((value >> 16) And &HFF)
+            bytes(offset + 2) = CByte((value >> 8) And &HFF)
+            bytes(offset + 3) = CByte(value And &HFF)
+        End Sub
+
+        Private Shared Sub WriteUInt32BE(bytes As Byte(), offset As Integer, value As UInteger)
+            bytes(offset) = CByte((value >> 24) And &HFFUI)
+            bytes(offset + 1) = CByte((value >> 16) And &HFFUI)
+            bytes(offset + 2) = CByte((value >> 8) And &HFFUI)
+            bytes(offset + 3) = CByte(value And &HFFUI)
+        End Sub
+
+        Private Shared Function Crc32(bytes As Byte(), offset As Integer, count As Integer) As UInteger
+            Dim crc As UInteger = &HFFFFFFFFUI
+            For i = offset To offset + count - 1
+                crc = crc Xor bytes(i)
+                For bit = 0 To 7
+                    If (crc And 1UI) <> 0UI Then
+                        crc = (crc >> 1) Xor &HEDB88320UI
+                    Else
+                        crc >>= 1
+                    End If
+                Next
+            Next
+            Return Not crc
+        End Function
+
+        Private Shared Sub WriteUInt16Endian(bytes As Byte(), offset As Integer, value As Integer, littleEndian As Boolean)
+            If littleEndian Then
+                bytes(offset) = CByte(value And &HFF)
+                bytes(offset + 1) = CByte((value >> 8) And &HFF)
+            Else
+                bytes(offset) = CByte((value >> 8) And &HFF)
+                bytes(offset + 1) = CByte(value And &HFF)
+            End If
+        End Sub
 
         ''' Für das Auswahlwerkzeug "Kopieren": rendert dieselbe voll bearbeitete Pipeline wie
         ''' SaveImage (Original decodiert + alle Anpassungen/Objekte gebacken), schneidet daraus

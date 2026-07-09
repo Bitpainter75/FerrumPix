@@ -48,6 +48,18 @@
                                              Margin="0,16,0,0"
                                              IsVisible="{Binding DialogShowsBatchResize}"/>
 
+                <StackPanel Grid.Row="3"
+                            Margin="0,16,0,0"
+                            Spacing="8"
+                            IsVisible="{Binding DialogShowsWatermarkPreset}">
+                    <TextBlock Text="Wasserzeichen"
+                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    <ComboBox ItemsSource="{Binding DialogWatermarkPresetNames}"
+                              SelectedItem="{Binding DialogSelectedWatermarkPresetName, Mode=TwoWay}"
+                              MinHeight="36"
+                              HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
                 <!-- Speichern unter -->
                 <StackPanel Grid.Row="3"
                             Spacing="14"

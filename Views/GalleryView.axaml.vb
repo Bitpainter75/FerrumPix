@@ -911,6 +911,17 @@ Namespace Views
             vm?.ResizeSelectedCommand.Execute(Nothing)
         End Sub
 
+        Public Sub OnContextApplyWatermark(sender As Object, e As RoutedEventArgs)
+            Dim item = GetItemFromSender(sender)
+            Dim vm = GetVm()
+            If item IsNot Nothing AndAlso vm IsNot Nothing AndAlso
+               (vm.SelectedItems Is Nothing OrElse Not vm.SelectedItems.Contains(item)) Then
+                vm.SelectOnly(item)
+                _selectionAnchor = item
+            End If
+            vm?.ApplyWatermarkSelectedCommand.Execute(Nothing)
+        End Sub
+
         Public Sub OnContextRemoveMetadata(sender As Object, e As RoutedEventArgs)
             Dim item = GetItemFromSender(sender)
             Dim vm = GetVm()
@@ -1006,6 +1017,7 @@ Namespace Views
             SetMenuItemVisible(menu, "GridContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
             SetMenuItemVisible(menu, "GridContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
             SetMenuItemVisible(menu, "GridContextResizeMenuItem", showResize)
+            SetMenuItemVisible(menu, "GridContextApplyWatermarkMenuItem", showResize)
             SetMenuItemVisible(menu, "GridContextBatchConvertMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "GridContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "GridContextCreateCollageMenuItem", showCollage)
@@ -1023,6 +1035,7 @@ Namespace Views
             SetMenuItemVisible(menu, "ListContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
             SetMenuItemVisible(menu, "ListContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
             SetMenuItemVisible(menu, "ListContextResizeMenuItem", showResize)
+            SetMenuItemVisible(menu, "ListContextApplyWatermarkMenuItem", showResize)
             SetMenuItemVisible(menu, "ListContextBatchConvertMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextCreateCollageMenuItem", showCollage)

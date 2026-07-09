@@ -52,6 +52,8 @@ Namespace ViewModels
         Private _dialogBatchResizeScalePercent As Integer = 0
         Private _dialogBatchResizeSourceWidth As Integer = 0
         Private _dialogBatchResizeSourceHeight As Integer = 0
+        Private _dialogSelectedWatermarkPresetName As String = ""
+        Private ReadOnly _dialogWatermarkPresets As New List(Of WatermarkPresetSettings)()
 
         Public Property Gallery As GalleryViewModel
         Public Property Viewer As ViewerViewModel
@@ -78,6 +80,7 @@ Namespace ViewModels
             "4+ Sterne",
             "5 Sterne"
         }
+        Public ReadOnly Property DialogWatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
 
         Public Property CurrentMode As AppMode
             Get
@@ -222,7 +225,10 @@ Namespace ViewModels
 
             NavigateGalleryCommand = ReactiveCommand.Create(Sub() CurrentMode = AppMode.Gallery)
             NavigateViewerCommand = ReactiveCommand.Create(Sub() CurrentMode = AppMode.Viewer)
-            NavigateEditorCommand = ReactiveCommand.Create(Sub() CurrentMode = AppMode.Editor)
+            NavigateEditorCommand = ReactiveCommand.Create(Sub()
+                                                               Editor?.ResetTransientUiState()
+                                                               CurrentMode = AppMode.Editor
+                                                           End Sub)
             NavigateSettingsCommand = ReactiveCommand.Create(Sub() OpenSettings())
             EnterFullscreenCommand = ReactiveCommand.Create(Sub() EnterFullscreen())
             DialogConfirmCommand = ReactiveCommand.Create(Sub() ConfirmDialog())
@@ -695,6 +701,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchRename))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSearch))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchResize))
+                Me.RaisePropertyChanged(NameOf(DialogShowsWatermarkPreset))
                 Me.RaisePropertyChanged(NameOf(DialogShowsStandardMessage))
                 Me.RaisePropertyChanged(NameOf(DialogUsesWideLayout))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
@@ -720,7 +727,8 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.BatchRename AndAlso
                        _dialogKind <> AppDialogKind.Search AndAlso
                        _dialogKind <> AppDialogKind.BatchConvert AndAlso
-                       _dialogKind <> AppDialogKind.BatchResize
+                       _dialogKind <> AppDialogKind.BatchResize AndAlso
+                       _dialogKind <> AppDialogKind.WatermarkPreset
             End Get
         End Property
 
@@ -756,6 +764,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property DialogShowsWatermarkPreset As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.WatermarkPreset
+            End Get
+        End Property
+
         Public ReadOnly Property DialogUsesWideLayout As Boolean
             Get
                 Return DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch OrElse DialogShowsBatchResize
@@ -764,7 +778,11 @@ Namespace ViewModels
 
         Public ReadOnly Property DialogShowsStandardMessage As Boolean
             Get
-                Return _dialogKind <> AppDialogKind.FileConflict AndAlso _dialogKind <> AppDialogKind.BatchRename AndAlso _dialogKind <> AppDialogKind.Search AndAlso _dialogKind <> AppDialogKind.BatchResize
+                Return _dialogKind <> AppDialogKind.FileConflict AndAlso
+                       _dialogKind <> AppDialogKind.BatchRename AndAlso
+                       _dialogKind <> AppDialogKind.Search AndAlso
+                       _dialogKind <> AppDialogKind.BatchResize AndAlso
+                       _dialogKind <> AppDialogKind.WatermarkPreset
             End Get
         End Property
 
@@ -860,6 +878,15 @@ Namespace ViewModels
                         _dialogBatchResizeInterpolation = ResizeInterpolationMode.Bilinear
                 End Select
                 Me.RaisePropertyChanged(NameOf(DialogBatchResizeInterpolationLabel))
+            End Set
+        End Property
+
+        Public Property DialogSelectedWatermarkPresetName As String
+            Get
+                Return _dialogSelectedWatermarkPresetName
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogSelectedWatermarkPresetName, If(value, "").Trim())
             End Set
         End Property
 
@@ -987,11 +1014,12 @@ Namespace ViewModels
         End Function
 
         Public Async Function ShowBatchResizeAsync(Optional samplePath As String = Nothing) As Task(Of BatchResizeResult)
-            _dialogBatchResizeWidthText = ""
-            _dialogBatchResizeHeightText = ""
-            _dialogBatchResizeLockAspect = True
-            _dialogBatchResizeInterpolation = ResizeInterpolationMode.Bilinear
-            _dialogBatchResizeScalePercent = 0
+            Dim settings = AppSettingsService.Load()
+            _dialogBatchResizeWidthText = If(settings.LastBatchResizeWidth > 0, settings.LastBatchResizeWidth.ToString(CultureInfo.InvariantCulture), "")
+            _dialogBatchResizeHeightText = If(settings.LastBatchResizeHeight > 0, settings.LastBatchResizeHeight.ToString(CultureInfo.InvariantCulture), "")
+            _dialogBatchResizeLockAspect = settings.LastBatchResizeLockAspect
+            _dialogBatchResizeInterpolation = ParseResizeInterpolationMode(settings.LastBatchResizeInterpolation)
+            _dialogBatchResizeScalePercent = settings.LastBatchResizeScalePercent
             _dialogBatchResizeSourceWidth = 0
             _dialogBatchResizeSourceHeight = 0
 
@@ -1002,6 +1030,14 @@ Namespace ViewModels
                     _dialogBatchResizeSourceHeight = size.Height
                 Catch
                 End Try
+            End If
+
+            If _dialogBatchResizeScalePercent > 0 Then
+                SetDialogBatchResizeTextsFromScale(_dialogBatchResizeScalePercent)
+            ElseIf _dialogBatchResizeLockAspect AndAlso Not String.IsNullOrWhiteSpace(_dialogBatchResizeWidthText) Then
+                UpdateDialogBatchResizeHeightFromWidth()
+            ElseIf _dialogBatchResizeLockAspect AndAlso Not String.IsNullOrWhiteSpace(_dialogBatchResizeHeightText) Then
+                UpdateDialogBatchResizeWidthFromHeight()
             End If
 
             RaiseDialogBatchResizeProperties()
@@ -1025,6 +1061,7 @@ Namespace ViewModels
             End If
 
             If _dialogBatchResizeScalePercent <= 0 AndAlso width <= 0 AndAlso height <= 0 Then Return Nothing
+            AppSettingsService.SaveLastBatchResizeSettings(width, height, _dialogBatchResizeScalePercent, _dialogBatchResizeLockAspect, _dialogBatchResizeInterpolation)
             Return New BatchResizeResult With {
                 .Width = width,
                 .Height = height,
@@ -1032,6 +1069,52 @@ Namespace ViewModels
                 .LockAspect = _dialogBatchResizeLockAspect,
                 .Interpolation = _dialogBatchResizeInterpolation
             }
+        End Function
+
+        Public Async Function ShowWatermarkPresetDialogAsync() As Task(Of WatermarkPresetDialogResult)
+            Dim settings = AppSettingsService.Load()
+            _dialogWatermarkPresets.Clear()
+            DialogWatermarkPresetNames.Clear()
+
+            For Each preset In settings.WatermarkPresets
+                _dialogWatermarkPresets.Add(preset)
+                DialogWatermarkPresetNames.Add(preset.Name)
+            Next
+
+            If _dialogWatermarkPresets.Count = 0 Then
+                Await ShowMessageAsync("Wasserzeichen anwenden", "Es ist kein gespeichertes Wasserzeichen vorhanden.")
+                Return Nothing
+            End If
+
+            Dim lastName = AppSettingsService.NormalizePresetName(settings.LastWatermarkPresetName)
+            Dim selectedPreset = _dialogWatermarkPresets.FirstOrDefault(Function(p) String.Equals(p.Name, lastName, StringComparison.OrdinalIgnoreCase))
+            If selectedPreset Is Nothing Then selectedPreset = _dialogWatermarkPresets(0)
+            DialogSelectedWatermarkPresetName = selectedPreset.Name
+
+            Dim result = Await ShowDialogAsync(AppDialogKind.WatermarkPreset,
+                                               "Wasserzeichen anwenden",
+                                               "Wähle ein gespeichertes Wasserzeichen für die ausgewählten Bilder aus.",
+                                               "",
+                                               "Anwenden",
+                                               "Abbrechen")
+            If result Is Nothing Then Return Nothing
+
+            selectedPreset = _dialogWatermarkPresets.FirstOrDefault(Function(p) String.Equals(p.Name, DialogSelectedWatermarkPresetName, StringComparison.OrdinalIgnoreCase))
+            If selectedPreset Is Nothing Then Return Nothing
+
+            AppSettingsService.SaveLastWatermarkPresetName(selectedPreset.Name)
+            Return New WatermarkPresetDialogResult With {.Preset = selectedPreset}
+        End Function
+
+        Private Shared Function ParseResizeInterpolationMode(value As String) As ResizeInterpolationMode
+            Select Case AppSettingsService.NormalizeResizeInterpolationModeName(value)
+                Case "Nearest"
+                    Return ResizeInterpolationMode.Nearest
+                Case "Bicubic"
+                    Return ResizeInterpolationMode.Bicubic
+                Case Else
+                    Return ResizeInterpolationMode.Bilinear
+            End Select
         End Function
 
         ''' prefill: Ist eine bestehende Suchliste angegeben, wird der Dialog mit deren Parametern
@@ -1124,9 +1207,10 @@ Namespace ViewModels
                 Next
             End Sub)
 
-            DialogBatchRenamePattern = AppSettingsService.Load().LastBatchRenamePattern
-            DialogBatchRenameStart = 1
-            DialogBatchRenameStep = 1
+            Dim settings = AppSettingsService.Load()
+            DialogBatchRenamePattern = settings.LastBatchRenamePattern
+            DialogBatchRenameStart = settings.LastBatchRenameStart
+            DialogBatchRenameStep = settings.LastBatchRenameStep
             RebuildBatchRenamePreview()
 
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchRename,
@@ -1137,7 +1221,7 @@ Namespace ViewModels
                                                "Abbrechen")
             If result Is Nothing Then Return Nothing
 
-            AppSettingsService.SaveLastBatchRenamePattern(DialogBatchRenamePattern)
+            AppSettingsService.SaveLastBatchRenameSettings(DialogBatchRenamePattern, DialogBatchRenameStart, DialogBatchRenameStep)
             RebuildBatchRenamePreview()
             If DialogBatchRenamePreview.Any(Function(i) i.HasProblem) Then
                 Await ShowMessageAsync("Stapel-Umbenennen fehlgeschlagen", "Bitte behebe Namenskonflikte oder ungültige Namen in der Vorschau.")
@@ -1241,6 +1325,8 @@ Namespace ViewModels
                 CompleteDialog("Search")
             ElseIf DialogShowsBatchResize Then
                 CompleteDialog("BatchResize")
+            ElseIf DialogShowsWatermarkPreset Then
+                CompleteDialog(DialogSelectedWatermarkPresetName)
             Else
                 CompleteDialog(DialogInputText)
             End If

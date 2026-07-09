@@ -13,6 +13,7 @@ Namespace ViewModels
         Search
         BatchConvert
         BatchResize
+        WatermarkPreset
     End Enum
 
     Public Enum FileConflictChoice
@@ -54,6 +55,10 @@ Namespace ViewModels
         Public Property ScalePercent As Integer
         Public Property LockAspect As Boolean
         Public Property Interpolation As ResizeInterpolationMode
+    End Class
+
+    Public Class WatermarkPresetDialogResult
+        Public Property Preset As WatermarkPresetSettings
     End Class
 
 End Namespace

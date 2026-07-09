@@ -25,6 +25,7 @@ Namespace ViewModels
         Private _previewImage As Bitmap
         Private _comparisonImage As Bitmap
         Private _selectedAnnotationOverlayImage As Bitmap
+        Private _selectedAnnotationOverlayMetrics As ImageProcessor.AnnotationOverlayRender
         Private _currentTool As EditorTool = EditorTool.Crop
         Private _brightness As Double = 0
         Private _contrast As Double = 0
@@ -86,8 +87,8 @@ Namespace ViewModels
         Private _purpleSaturation As Double = 0
         Private _magentaHue As Double = 0
         Private _magentaSaturation As Double = 0
-        Private _retouchRadius As Double = 2.0
-        Private _brushSize As Double = 2.5
+        Private _retouchRadius As Double = 24.0
+        Private _brushSize As Double = 24.0
         Private _brushHardness As Double = 100
         Private _brushOpacity As Double = 100
         Private _isEraserMode As Boolean = False
@@ -144,7 +145,7 @@ Namespace ViewModels
         Private _annotationText As String = "Text"
         Private _annotationFillColor As String = "#FFFFFFFF"
         Private _annotationStrokeColor As String = "#FF000000"
-        Private _annotationFontSize As Double = 6
+        Private _annotationFontSize As Double = 48
         Private _annotationStrokeWidth As Double = 0
         Private _annotationFontFamily As String = "Arial"
         Private _annotationOpacity As Double = 100
@@ -314,6 +315,7 @@ Namespace ViewModels
                     _watermarkPresetNameDraft = normalized
                     Me.RaisePropertyChanged(NameOf(WatermarkPresetNameDraft))
                     ApplyWatermarkPreset(normalized)
+                    PlacePendingWatermarkAfterPresetSelection()
                 End If
             End Set
         End Property
@@ -357,6 +359,70 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property AnnotationXSliderMinimum As Double
+            Get
+                If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseWidth() * GetAnnotationPositionMinimumPercent(_annotationWidthPercent) / 100.0)
+                Return Math.Round(GetBaseWidth() * GetAnnotationOffsetMinimumPercent(_annotationAnchor, True) / 100.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationXSliderMaximum As Double
+            Get
+                If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseWidth() * (100.0 - AnnotationMinVisiblePercent) / 100.0)
+                Return Math.Round(GetBaseWidth() * 50.0 / 100.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationYSliderMinimum As Double
+            Get
+                If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseHeight() * GetAnnotationPositionMinimumPercent(_annotationHeightPercent) / 100.0)
+                Return Math.Round(GetBaseHeight() * GetAnnotationOffsetMinimumPercent(_annotationAnchor, False) / 100.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationYSliderMaximum As Double
+            Get
+                If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseHeight() * (100.0 - AnnotationMinVisiblePercent) / 100.0)
+                Return Math.Round(GetBaseHeight() * 50.0 / 100.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationWidthSliderMinimum As Double
+            Get
+                Return Math.Round(GetBaseWidth() * 5.0 / 100.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationWidthSliderMaximum As Double
+            Get
+                Return Math.Round(GetBaseWidth() * 90.0 / 100.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationHeightSliderMinimum As Double
+            Get
+                Return Math.Round(GetBaseHeight() * 4.0 / 100.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationHeightSliderMaximum As Double
+            Get
+                Return Math.Round(GetBaseHeight() * 90.0 / 100.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationSliderDragIncrement As Double
+            Get
+                Return 1
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationSliderWheelIncrement As Double
+            Get
+                Return 1
+            End Get
+        End Property
+
         Public ReadOnly Property AnnotationXLabel As String
             Get
                 Return If(ShowWatermarkAnchorControls, "Abst. X", "X")
@@ -377,6 +443,7 @@ Namespace ViewModels
                 Dim normalized = NormalizeAnnotationAnchor(value)
                 If String.Equals(_annotationAnchor, normalized, StringComparison.OrdinalIgnoreCase) Then Return
                 Me.RaiseAndSetIfChanged(_annotationAnchor, normalized)
+                RaiseAnnotationPositionControlProperties()
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -403,6 +470,15 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
+        End Property
+
+        ''' Lage des Objekts innerhalb von SelectedAnnotationOverlayImage (Bitmap-Pixel). Das Bitmap ist um
+        ''' die Schatten-/Glow-Ränder größer als das Objekt; die View braucht dieses Rechteck, um das Bitmap
+        ''' deckungsgleich mit dem gebackenen Bild über die Objekt-Border zu legen.
+        Public ReadOnly Property SelectedAnnotationOverlayMetrics As ImageProcessor.AnnotationOverlayRender
+            Get
+                Return _selectedAnnotationOverlayMetrics
+            End Get
         End Property
 
         Public ReadOnly Property SelectedAnnotationImagePath As String
@@ -454,6 +530,7 @@ Namespace ViewModels
         Private Sub LoadWatermarkPresets()
             _watermarkPresets.Clear()
             WatermarkPresetNames.Clear()
+            WatermarkPresetNames.Add("")
             For Each preset In AppSettingsService.Load().WatermarkPresets
                 _watermarkPresets.Add(preset)
                 WatermarkPresetNames.Add(preset.Name)
@@ -583,12 +660,15 @@ Namespace ViewModels
                 .Name = p.Name,
                 .Text = p.Text,
                 .ImagePath = p.ImagePath,
-                .WidthPercent = p.WidthPercent,
-                .HeightPercent = p.HeightPercent,
+                .OffsetXPixels = p.OffsetXPixels,
+                .OffsetYPixels = p.OffsetYPixels,
+                .WidthPixels = p.WidthPixels,
+                .HeightPixels = p.HeightPixels,
+                .Anchor = p.Anchor,
                 .RotationDegrees = p.RotationDegrees,
                 .Opacity = p.Opacity,
                 .FontFamily = p.FontFamily,
-                .FontSizePercent = p.FontSizePercent,
+                .FontSizePixels = p.FontSizePixels,
                 .FillColor = p.FillColor
             }).ToList()
             AppSettingsService.Save(settings)
@@ -603,6 +683,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
             Me.RaisePropertyChanged(NameOf(AnnotationPositionMinimum))
             Me.RaisePropertyChanged(NameOf(AnnotationPositionMaximum))
+            RaiseAnnotationPositionControlProperties()
             Me.RaisePropertyChanged(NameOf(AnnotationXLabel))
             Me.RaisePropertyChanged(NameOf(AnnotationYLabel))
             Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
@@ -613,21 +694,44 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
         End Sub
 
+        Private Sub RaiseAnnotationPositionControlProperties()
+            Me.RaisePropertyChanged(NameOf(AnnotationXSliderMinimum))
+            Me.RaisePropertyChanged(NameOf(AnnotationXSliderMaximum))
+            Me.RaisePropertyChanged(NameOf(AnnotationYSliderMinimum))
+            Me.RaisePropertyChanged(NameOf(AnnotationYSliderMaximum))
+            Me.RaisePropertyChanged(NameOf(AnnotationXSliderValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationYSliderValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMinimum))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMaximum))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMinimum))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMaximum))
+        End Sub
+
         Private Sub ApplyWatermarkPreset(name As String)
             Dim preset = _watermarkPresets.FirstOrDefault(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
             If preset Is Nothing Then Return
 
             _annotationText = If(String.IsNullOrWhiteSpace(preset.Text), "FerrumPix", preset.Text)
             _watermarkImagePath = If(preset.ImagePath, "")
-            _annotationWidthPercent = Math.Max(5, Math.Min(90, preset.WidthPercent))
-            _annotationHeightPercent = Math.Max(4, Math.Min(90, preset.HeightPercent))
+            Dim baseWidth = Math.Max(1, GetBaseWidth())
+            Dim baseHeight = Math.Max(1, GetBaseHeight())
+            _annotationAnchor = NormalizeAnnotationAnchor(preset.Anchor)
+            _annotationXPercent = Math.Max(0.0, Math.Min(50.0, preset.OffsetXPixels / CDbl(baseWidth) * 100.0))
+            _annotationYPercent = Math.Max(0.0, Math.Min(50.0, preset.OffsetYPixels / CDbl(baseHeight) * 100.0))
+            _annotationWidthPercent = Math.Max(1.0, Math.Min(100.0, preset.WidthPixels / CDbl(baseWidth) * 100.0))
+            _annotationHeightPercent = Math.Max(1.0, Math.Min(100.0, preset.HeightPixels / CDbl(baseHeight) * 100.0))
             _annotationRotation = Math.Max(-180, Math.Min(180, preset.RotationDegrees))
             _annotationOpacity = Math.Max(0, Math.Min(100, preset.Opacity))
             _annotationFontFamily = If(String.IsNullOrWhiteSpace(preset.FontFamily), "Arial", preset.FontFamily)
-            _annotationFontSize = Math.Max(1, Math.Min(40, preset.FontSizePercent))
+            _annotationFontSize = Math.Max(8, Math.Min(500, preset.FontSizePixels))
             _annotationFillColor = NormalizeAvaloniaColor(preset.FillColor, "#FFFFFFFF")
 
             Me.RaisePropertyChanged(NameOf(AnnotationText))
+            Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
+            Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationYPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
@@ -642,6 +746,13 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationImagePath))
             RaiseWatermarkUiChanged()
             If HasSelectedAnnotation AndAlso EffectiveAnnotationKind = "Watermark" Then SyncSelectedAnnotation()
+        End Sub
+
+        Private Sub PlacePendingWatermarkAfterPresetSelection()
+            If _isLoadingAnnotation OrElse HasSelectedAnnotation Then Return
+            If Not String.Equals(NormalizeAnnotationKind(_pendingInsertKind), "Watermark", StringComparison.OrdinalIgnoreCase) Then Return
+
+            AddAnnotation("Watermark")
         End Sub
 
         Public Sub SetWatermarkImagePath(path As String)
@@ -677,12 +788,15 @@ Namespace ViewModels
             existing.Name = name
             existing.Text = If(_annotationText, "")
             existing.ImagePath = If(_watermarkImagePath, "")
-            existing.WidthPercent = _annotationWidthPercent
-            existing.HeightPercent = _annotationHeightPercent
+            existing.OffsetXPixels = AnnotationXPixels
+            existing.OffsetYPixels = AnnotationYPixels
+            existing.WidthPixels = AnnotationWidthPixels
+            existing.HeightPixels = AnnotationHeightPixels
+            existing.Anchor = NormalizeAnnotationAnchor(_annotationAnchor)
             existing.RotationDegrees = _annotationRotation
             existing.Opacity = _annotationOpacity
             existing.FontFamily = _annotationFontFamily
-            existing.FontSizePercent = _annotationFontSize
+            existing.FontSizePixels = _annotationFontSize
             existing.FillColor = _annotationFillColor
             PersistWatermarkPresets()
             SelectedWatermarkPresetName = name
@@ -791,6 +905,14 @@ Namespace ViewModels
                                 normalizedAnchor = "Left" OrElse normalizedAnchor = "Center" OrElse normalizedAnchor = "Right")
             If usesCenter Then Return Math.Max(-50, Math.Min(50, value))
             Return Math.Max(0, Math.Min(50, value))
+        End Function
+
+        Private Shared Function GetAnnotationOffsetMinimumPercent(anchor As String, isHorizontal As Boolean) As Double
+            Dim normalizedAnchor = NormalizeAnnotationAnchor(anchor)
+            Dim usesCenter = If(isHorizontal,
+                                normalizedAnchor = "Top" OrElse normalizedAnchor = "Center" OrElse normalizedAnchor = "Bottom",
+                                normalizedAnchor = "Left" OrElse normalizedAnchor = "Center" OrElse normalizedAnchor = "Right")
+            Return If(usesCenter, -50.0, 0.0)
         End Function
 
         Private Function GetCurrentAnnotationDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
@@ -1041,7 +1163,7 @@ Namespace ViewModels
             AnnotationStrokeColor = "#FF000000"
             AnnotationStrokeWidth = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark" OrElse normalizedKind = "QR" OrElse normalizedKind = "Image", 0, 2)
             AnnotationText = GetDefaultAnnotationText(normalizedKind, rawKind)
-            AnnotationFontSize = 4
+            AnnotationFontSize = 48
             AnnotationFontFamily = "Arial"
             AnnotationOpacity = 100
             AnnotationRotation = 0
@@ -1061,11 +1183,10 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
                 Me.RaisePropertyChanged(NameOf(AnnotationYPercent))
                 ClearWatermarkImagePath()
-                If _watermarkPresets.Count > 0 Then
-                    If String.IsNullOrWhiteSpace(_selectedWatermarkPresetName) Then _selectedWatermarkPresetName = _watermarkPresets(0).Name
-                    Me.RaisePropertyChanged(NameOf(SelectedWatermarkPresetName))
-                    ApplyWatermarkPreset(_selectedWatermarkPresetName)
-                End If
+                _selectedWatermarkPresetName = ""
+                _watermarkPresetNameDraft = ""
+                Me.RaisePropertyChanged(NameOf(SelectedWatermarkPresetName))
+                Me.RaisePropertyChanged(NameOf(WatermarkPresetNameDraft))
             End If
             If normalizedKind = "Text" OrElse (normalizedKind = "Watermark" AndAlso Not IsWatermarkImageSource) Then
                 UpdatePendingTextAnnotationSize()
@@ -2135,7 +2256,7 @@ Namespace ViewModels
                 Return _retouchRadius
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_retouchRadius, Math.Max(0.2, Math.Min(10, value)))
+                Me.RaiseAndSetIfChanged(_retouchRadius, Math.Max(1, Math.Min(300, value)))
                 RaiseResetButtonStateChanged()
                 SchedulePreviewUpdate()
             End Set
@@ -2146,7 +2267,7 @@ Namespace ViewModels
                 Return _brushSize
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_brushSize, Math.Max(0.2, Math.Min(15, value)))
+                Me.RaiseAndSetIfChanged(_brushSize, Math.Max(1, Math.Min(300, value)))
                 RaiseResetButtonStateChanged()
             End Set
         End Property
@@ -2613,7 +2734,7 @@ Namespace ViewModels
                 Return _annotationFontSize
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationFontSize, Math.Max(0.2, Math.Min(100, value)))
+                Me.RaiseAndSetIfChanged(_annotationFontSize, Math.Max(8, Math.Min(500, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationFontSizePixels))
                 UpdatePendingTextAnnotationSize()
                 SyncSelectedAnnotation()
@@ -2622,12 +2743,10 @@ Namespace ViewModels
 
         Public Property AnnotationFontSizePixels As Integer
             Get
-                Return CInt(Math.Round(GetBaseHeight() * _annotationFontSize / 100.0))
+                Return CInt(Math.Round(_annotationFontSize))
             End Get
             Set(value As Integer)
-                Dim baseHeight = GetBaseHeight()
-                If baseHeight <= 0 Then Return
-                AnnotationFontSize = value / CDbl(baseHeight) * 100.0
+                AnnotationFontSize = value
             End Set
         End Property
 
@@ -2686,9 +2805,13 @@ Namespace ViewModels
 
         Private Shared Function ClampAnnotationPositionPercent(value As Double, sizePercent As Double) As Double
             Dim size = Math.Max(0.0, sizePercent)
-            Dim minValue = -Math.Max(0.0, size - AnnotationMinVisiblePercent)
+            Dim minValue = GetAnnotationPositionMinimumPercent(size)
             Dim maxValue = 100.0 - AnnotationMinVisiblePercent
             Return Math.Max(minValue, Math.Min(maxValue, value))
+        End Function
+
+        Private Shared Function GetAnnotationPositionMinimumPercent(sizePercent As Double) As Double
+            Return -Math.Max(0.0, Math.Max(0.0, sizePercent) - AnnotationMinVisiblePercent)
         End Function
 
         Public Property AnnotationXPercent As Double
@@ -2701,6 +2824,7 @@ Namespace ViewModels
                                     ClampAnnotationPositionPercent(value, _annotationWidthPercent))
                 Me.RaiseAndSetIfChanged(_annotationXPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
+                Me.RaisePropertyChanged(NameOf(AnnotationXSliderValue))
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -2715,7 +2839,26 @@ Namespace ViewModels
                                     ClampAnnotationPositionPercent(value, _annotationHeightPercent))
                 Me.RaiseAndSetIfChanged(_annotationYPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
+                Me.RaisePropertyChanged(NameOf(AnnotationYSliderValue))
                 SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public Property AnnotationXSliderValue As Double
+            Get
+                Return CDbl(AnnotationXPixels)
+            End Get
+            Set(value As Double)
+                AnnotationXPixels = CInt(Math.Round(value))
+            End Set
+        End Property
+
+        Public Property AnnotationYSliderValue As Double
+            Get
+                Return CDbl(AnnotationYPixels)
+            End Get
+            Set(value As Double)
+                AnnotationYPixels = CInt(Math.Round(value))
             End Set
         End Property
 
@@ -2726,6 +2869,9 @@ Namespace ViewModels
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationWidthPercent, Math.Max(5, Math.Min(90, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+                Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMinimum))
+                Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMaximum))
+                RaiseAnnotationPositionControlProperties()
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -2737,6 +2883,9 @@ Namespace ViewModels
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationHeightPercent, Math.Max(4, Math.Min(90, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+                Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMinimum))
+                Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMaximum))
+                RaiseAnnotationPositionControlProperties()
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -3088,14 +3237,14 @@ Namespace ViewModels
                 .Kind = "SelectionImage",
                 .Text = NextSelectionObjectLabel(),
                 .ImagePath = imagePath,
-                .XPercent = CSng(xPercent),
-                .YPercent = CSng(yPercent),
-                .WidthPercent = CSng(Math.Max(1.0, widthPercent)),
-                .HeightPercent = CSng(Math.Max(1.0, heightPercent)),
+                .XPixels = CSng(PercentXToPixels(xPercent)),
+                .YPixels = CSng(PercentYToPixels(yPercent)),
+                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(widthPercent))),
+                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(heightPercent))),
                 .FillColor = "#00FFFFFF",
                 .StrokeColor = _annotationStrokeColor,
                 .StrokeWidth = CSng(_annotationStrokeWidth),
-                .FontSizePercent = CSng(_annotationFontSize),
+                .FontSizePixels = CSng(_annotationFontSize),
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .RotationDegrees = CSng(_annotationRotation),
@@ -3190,10 +3339,10 @@ Namespace ViewModels
                 .Kind = "SelectionFill",
                 .Text = NextSelectionObjectLabel(),
                 .ImagePath = "",
-                .XPercent = CSng(_selectionXPercent),
-                .YPercent = CSng(_selectionYPercent),
-                .WidthPercent = CSng(_selectionWidthPercent),
-                .HeightPercent = CSng(_selectionHeightPercent),
+                .XPixels = CSng(PercentXToPixels(_selectionXPercent)),
+                .YPixels = CSng(PercentYToPixels(_selectionYPercent)),
+                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(_selectionWidthPercent))),
+                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(_selectionHeightPercent))),
                 .FillColor = _annotationFillColor,
                 .FillKind = _annotationFillKind,
                 .FillColor2 = _annotationFillColor2,
@@ -3233,11 +3382,58 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+            RaiseAnnotationPositionControlProperties()
             SyncSelectedAnnotation()
+        End Sub
+
+        Public Sub SetSelectedAnnotationRectPixels(xPixels As Double, yPixels As Double, widthPixels As Double, heightPixels As Double)
+            Dim baseWidth = Math.Max(1, GetBaseWidth())
+            Dim baseHeight = Math.Max(1, GetBaseHeight())
+            SetSelectedAnnotationRect(
+                xPixels / baseWidth * 100.0,
+                yPixels / baseHeight * 100.0,
+                widthPixels / baseWidth * 100.0,
+                heightPixels / baseHeight * 100.0)
         End Sub
 
         Public Function GetSelectedAnnotationDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
             Return GetCurrentAnnotationDisplayRectPercent()
+        End Function
+
+        Private Function AnnotationStoredXToPercent(annotation As ImageAnnotation) As Double
+            If annotation Is Nothing Then Return 0
+            Dim baseWidth = GetBaseWidth()
+            If baseWidth <= 0 Then Return 0
+            Return annotation.XPixels / CDbl(baseWidth) * 100.0
+        End Function
+
+        Private Function AnnotationStoredYToPercent(annotation As ImageAnnotation) As Double
+            If annotation Is Nothing Then Return 0
+            Dim baseHeight = GetBaseHeight()
+            If baseHeight <= 0 Then Return 0
+            Return annotation.YPixels / CDbl(baseHeight) * 100.0
+        End Function
+
+        Private Function AnnotationStoredWidthToPercent(annotation As ImageAnnotation) As Double
+            If annotation Is Nothing Then Return 0
+            Dim baseWidth = GetBaseWidth()
+            If baseWidth <= 0 Then Return 0
+            Return annotation.WidthPixels / CDbl(baseWidth) * 100.0
+        End Function
+
+        Private Function AnnotationStoredHeightToPercent(annotation As ImageAnnotation) As Double
+            If annotation Is Nothing Then Return 0
+            Dim baseHeight = GetBaseHeight()
+            If baseHeight <= 0 Then Return 0
+            Return annotation.HeightPixels / CDbl(baseHeight) * 100.0
+        End Function
+
+        Private Function PercentXToPixels(value As Double) As Double
+            Return GetBaseWidth() * value / 100.0
+        End Function
+
+        Private Function PercentYToPixels(value As Double) As Double
+            Return GetBaseHeight() * value / 100.0
         End Function
 
         Public Property AnnotationXPixels As Integer
@@ -3700,7 +3896,7 @@ Namespace ViewModels
 
         Public ReadOnly Property HasRetouchChanges As Boolean
             Get
-                Return _retouchRadius <> 2.0 OrElse _retouchSpots.Count > 0
+            Return _retouchRadius <> 24.0 OrElse _retouchSpots.Count > 0
             End Get
         End Property
 
@@ -4106,6 +4302,13 @@ Namespace ViewModels
             End If
         End Function
 
+        Public Sub ResetTransientUiState()
+            _selectedAnnotationIndex = -1
+            ResetEditorUiStateForNewImage(resetTool:=True)
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+            Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
+        End Sub
+
         Public Sub NavigateToFilmstripItem(item As ImageItem)
             Dim ignored = NavigateToFilmstripItemAsync(item)
         End Sub
@@ -4187,7 +4390,7 @@ Namespace ViewModels
             CurrentImagePath = path
             _currentImagePath = path
             SelectedInfoTab = InfoSidebarTab.General
-            ResetAdjustmentsInternal()
+            ResetAdjustmentsInternal(resetEditorUi:=True)
             ClearUndoHistory()
             ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
             PreviewImage = Nothing
@@ -4227,7 +4430,7 @@ Namespace ViewModels
             CurrentImagePath = imagePath
             _currentImagePath = imagePath
             SelectedInfoTab = InfoSidebarTab.General
-            ResetAdjustmentsInternal()
+            ResetAdjustmentsInternal(resetEditorUi:=True)
             ClearUndoHistory()
             ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
             PreviewImage = Nothing
@@ -4757,7 +4960,8 @@ Namespace ViewModels
             Try
                 StatusText = LocalizationService.T("Wird gespeichert…")
                 Dim adj = GetCurrentAdjustments()
-                Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(_currentImagePath, targetPath, adj, targetQuality))
+                Dim preserveMetadata = If(saveAs AndAlso _mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
+                Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(_currentImagePath, targetPath, adj, targetQuality, preserveMetadata))
                 If ok Then
                     StatusText = If(saveAs,
                                     $"{LocalizationService.T("Gespeichert als")} {IO.Path.GetFileName(targetPath)}",
@@ -4881,6 +5085,8 @@ Namespace ViewModels
                 .LockCanvasAspect = _lockCanvasAspect,
                 .CanvasAnchor = _canvasAnchor,
                 .CanvasBackgroundColor = _canvasBackgroundColor,
+                .SourceWidthPixels = GetBaseWidth(),
+                .SourceHeightPixels = GetBaseHeight(),
                 .FilterPreset = _filterPreset,
                 .FilterStrength = CSng(_filterStrength),
                 .LutPath = _lutPath,
@@ -5258,7 +5464,7 @@ Namespace ViewModels
             UpdatePreview()
         End Sub
 
-        Private Sub ResetAdjustmentsInternal()
+        Private Sub ResetAdjustmentsInternal(Optional resetEditorUi As Boolean = False)
             _brightness = 0
             _contrast = 0
             _saturation = 0
@@ -5323,6 +5529,7 @@ Namespace ViewModels
             _retouchSpots.Clear()
             _annotations.Clear()
             _selectedAnnotationIndex = -1
+            If resetEditorUi Then ResetEditorUiStateForNewImage(resetTool:=False)
             _hasChanges = False
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
@@ -5370,6 +5577,165 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(BeforeDisplayImage))
         End Sub
 
+        Private Sub ResetEditorUiStateForNewImage(Optional resetTool As Boolean = False)
+            If resetTool Then _currentTool = EditorTool.Crop
+            _pendingInsertKind = ""
+            _selectedWatermarkPresetName = ""
+            _watermarkPresetNameDraft = ""
+            _watermarkImagePath = ""
+            _shapeIconSearchText = ""
+            _selectedLayersPanelTab = LayersPanelTab.Tool
+            _isPickingColorFromImage = False
+            _pendingColorPickCallback = Nothing
+            _activeStrokeAnnotation = Nothing
+            _activeStrokeIsEraser = False
+            _isEraserMode = False
+            _retouchRadius = 24.0
+            _brushSize = 24.0
+            _brushHardness = 100
+            _brushOpacity = 100
+
+            _annotationText = "Text"
+            _annotationFillColor = "#FFFFFFFF"
+            _annotationStrokeColor = "#FF000000"
+            _annotationStrokeWidth = 0
+            _annotationFontSize = 48
+            _annotationFontFamily = "Arial"
+            _annotationOpacity = 100
+            _annotationRotation = 0
+            _annotationAnchor = "BottomRight"
+            _annotationIsVisible = True
+            _annotationXPercent = 35
+            _annotationYPercent = 35
+            _annotationWidthPercent = 30
+            _annotationHeightPercent = 12
+            _annotationFillKind = "Solid"
+            _annotationFillColor2 = "#FFFFFFFF"
+            _annotationGradientAngle = 0
+            _annotationGradientInverted = False
+            _annotationShadowEnabled = False
+            _annotationShadowOffsetX = 2
+            _annotationShadowOffsetY = 2
+            _annotationShadowBlur = 6
+            _annotationShadowStrength = 100
+            _annotationShadowColor = "#80000000"
+            _annotationShadowRounded = False
+            _annotationShadowCornerRadius = 20
+            _annotationShadowSize = 100
+            _annotationGlowEnabled = False
+            _annotationGlowBlur = 10
+            _annotationGlowStrength = 100
+            _annotationGlowColor = "#FFFFFF00"
+
+            _hasActiveSelection = False
+            _selectionXPercent = 0
+            _selectionYPercent = 0
+            _selectionWidthPercent = 0
+            _selectionHeightPercent = 0
+            SetSelectedAnnotationOverlay(Nothing)
+
+            RefreshFilteredShapeIcons()
+            RaiseEditorUiStateChanged()
+        End Sub
+
+        Private Sub RaiseEditorUiStateChanged()
+            Me.RaisePropertyChanged(NameOf(CurrentTool))
+            Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
+            RaiseToolContextProperties()
+            Me.RaisePropertyChanged(NameOf(PendingInsertKind))
+            Me.RaisePropertyChanged(NameOf(HasPendingInsertKind))
+            Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
+            Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
+            Me.RaisePropertyChanged(NameOf(ShowWatermarkPresetControls))
+            Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
+            Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
+            Me.RaisePropertyChanged(NameOf(AnnotationPositionMinimum))
+            Me.RaisePropertyChanged(NameOf(AnnotationPositionMaximum))
+            Me.RaisePropertyChanged(NameOf(AnnotationXLabel))
+            Me.RaisePropertyChanged(NameOf(AnnotationYLabel))
+            Me.RaisePropertyChanged(NameOf(SelectedWatermarkPresetName))
+            Me.RaisePropertyChanged(NameOf(WatermarkPresetNameDraft))
+            RaiseWatermarkUiChanged()
+
+            Me.RaisePropertyChanged(NameOf(SelectedLayersPanelTab))
+            Me.RaisePropertyChanged(NameOf(IsToolTabSelected))
+            Me.RaisePropertyChanged(NameOf(IsLayersTabSelected))
+            Me.RaisePropertyChanged(NameOf(IsHistoryTabSelected))
+            Me.RaisePropertyChanged(NameOf(ShapeIconSearchText))
+            UpdateShapeIconStates()
+
+            Me.RaisePropertyChanged(NameOf(RetouchRadius))
+            Me.RaisePropertyChanged(NameOf(BrushSize))
+            Me.RaisePropertyChanged(NameOf(BrushHardness))
+            Me.RaisePropertyChanged(NameOf(BrushOpacity))
+            Me.RaisePropertyChanged(NameOf(IsEraserMode))
+            Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
+            Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
+            Me.RaisePropertyChanged(NameOf(IsSmudgePaintMode))
+            Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
+            Me.RaisePropertyChanged(NameOf(IsPickingColorFromImage))
+
+            Me.RaisePropertyChanged(NameOf(AnnotationText))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillColor))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillColorValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillBrush))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeColor))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeColorValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeBrush))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeWidth))
+            Me.RaisePropertyChanged(NameOf(AnnotationFontSize))
+            Me.RaisePropertyChanged(NameOf(AnnotationFontSizePixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationFontFamily))
+            Me.RaisePropertyChanged(NameOf(AnnotationOpacity))
+            Me.RaisePropertyChanged(NameOf(AnnotationRotation))
+            Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
+            Me.RaisePropertyChanged(NameOf(AnnotationIsVisible))
+            Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationYPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillKind))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillColor2))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillColor2Value))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillColor2Brush))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientAngleDegrees))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientInverted))
+            Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
+            Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
+            Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+            Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
+
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowEnabled))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetX))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetY))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowBlur))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowStrength))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowColor))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowColorValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowColorBrush))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowRounded))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowCornerRadius))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowSize))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowEnabled))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowBlur))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowStrength))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowColor))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowColorValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowColorBrush))
+
+            Me.RaisePropertyChanged(NameOf(HasActiveSelection))
+            Me.RaisePropertyChanged(NameOf(SelectionXPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionYPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionWidthPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionHeightPercent))
+            RequestOverlayStateNotify()
+        End Sub
+
         Private Shared Function ClampPercent(value As Double) As Double
             Return Math.Max(0, Math.Min(95, value))
         End Function
@@ -5402,7 +5768,7 @@ Namespace ViewModels
             Return CurrentImage.PixelSize.Height
         End Function
 
-        Private Function EstimateTextAnnotationSizePercent(text As String, fontSizePercent As Double, fontFamily As String) As (WidthPercent As Double, HeightPercent As Double)
+        Private Function EstimateTextAnnotationSizePercent(text As String, fontSizePixels As Double, fontFamily As String) As (WidthPercent As Double, HeightPercent As Double)
             Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (_annotationWidthPercent, _annotationHeightPercent)
@@ -5410,7 +5776,7 @@ Namespace ViewModels
             Dim content = If(text, "").Trim()
             If content.Length = 0 Then content = "Text"
 
-            Dim fontSizePx = Math.Max(8.0, baseHeight * Math.Max(0.2, fontSizePercent) / 100.0)
+            Dim fontSizePx = Math.Max(8.0, fontSizePixels)
             Using paint = New SKPaint With {
                 .TextSize = CSng(fontSizePx),
                 .Typeface = SKTypeface.FromFamilyName(If(String.IsNullOrWhiteSpace(fontFamily), "Arial", fontFamily)),
@@ -5605,12 +5971,20 @@ Namespace ViewModels
             Dim defaultSize = GetDefaultAnnotationSizePercent(normalizedKind, kind)
             Dim width = defaultSize.WidthPercent
             Dim height = defaultSize.HeightPercent
-            If normalizedKind = "Watermark" AndAlso Not String.IsNullOrWhiteSpace(_watermarkImagePath) Then
+            If normalizedKind = "Watermark" Then
                 width = _annotationWidthPercent
                 height = _annotationHeightPercent
             End If
-            Dim x = Math.Max(-width + 1, Math.Min(100 - 1, xPercent))
-            Dim y = Math.Max(-height + 1, Math.Min(100 - 1, yPercent))
+            Dim x = If(normalizedKind = "Watermark",
+                       ClampAnnotationOffsetPercent(_annotationXPercent, _annotationAnchor, True),
+                       Math.Max(-width + 1, Math.Min(100 - 1, xPercent)))
+            Dim y = If(normalizedKind = "Watermark",
+                       ClampAnnotationOffsetPercent(_annotationYPercent, _annotationAnchor, False),
+                       Math.Max(-height + 1, Math.Min(100 - 1, yPercent)))
+            Dim storedX = PercentXToPixels(x)
+            Dim storedY = PercentYToPixels(y)
+            Dim storedWidth = Math.Max(1.0, PercentXToPixels(width))
+            Dim storedHeight = Math.Max(1.0, PercentYToPixels(height))
             Dim text = If(normalizedKind = "Image" OrElse normalizedKind = "Brush" OrElse normalizedKind = "Eraser",
                           "",
                           If(String.IsNullOrWhiteSpace(_annotationText), GetDefaultAnnotationText(normalizedKind, kind), _annotationText))
@@ -5624,14 +5998,14 @@ Namespace ViewModels
                 .Kind = normalizedKind,
                 .Text = text,
                 .ImagePath = If(normalizedKind = "Svg", ExtractSvgIconPath(kind), If(normalizedKind = "Watermark", _watermarkImagePath, "")),
-                .XPercent = CSng(x),
-                .YPercent = CSng(y),
-                .WidthPercent = CSng(width),
-                .HeightPercent = CSng(height),
+                .XPixels = CSng(storedX),
+                .YPixels = CSng(storedY),
+                .WidthPixels = CSng(storedWidth),
+                .HeightPixels = CSng(storedHeight),
                 .FillColor = fill,
                 .StrokeColor = stroke,
                 .StrokeWidth = CSng(strokeWidth),
-                .FontSizePercent = CSng(If(normalizedKind = "Watermark", Math.Max(8, _annotationFontSize), _annotationFontSize)),
+                .FontSizePixels = CSng(If(normalizedKind = "Watermark", Math.Max(8, _annotationFontSize), _annotationFontSize)),
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .RotationDegrees = CSng(_annotationRotation),
@@ -5678,14 +6052,14 @@ Namespace ViewModels
                 .Kind = "Image",
                 .Text = "",
                 .ImagePath = imagePath,
-                .XPercent = CSng(x),
-                .YPercent = CSng(y),
-                .WidthPercent = CSng(width),
-                .HeightPercent = CSng(height),
+                .XPixels = CSng(PercentXToPixels(x)),
+                .YPixels = CSng(PercentYToPixels(y)),
+                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(width))),
+                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(height))),
                 .FillColor = "#00FFFFFF",
                 .StrokeColor = _annotationStrokeColor,
                 .StrokeWidth = CSng(_annotationStrokeWidth),
-                .FontSizePercent = CSng(_annotationFontSize),
+                .FontSizePixels = CSng(_annotationFontSize),
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .RotationDegrees = CSng(_annotationRotation),
@@ -5823,11 +6197,12 @@ Namespace ViewModels
             If normalized.Count < 2 Then Return
 
             PushUndo()
-            Dim minX = Math.Max(0, normalized.Min(Function(p) p.X))
-            Dim minY = Math.Max(0, normalized.Min(Function(p) p.Y))
-            Dim maxX = Math.Min(100, normalized.Max(Function(p) p.X))
-            Dim maxY = Math.Min(100, normalized.Max(Function(p) p.Y))
-            Dim pointText = String.Join(" ", normalized.Select(Function(p) $"{p.X.ToString("F3", Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString("F3", Globalization.CultureInfo.InvariantCulture)}"))
+            Dim pixelPoints = normalized.Select(Function(p) New Avalonia.Point(PercentXToPixels(p.X), PercentYToPixels(p.Y))).ToList()
+            Dim minX = Math.Max(0, pixelPoints.Min(Function(p) p.X))
+            Dim minY = Math.Max(0, pixelPoints.Min(Function(p) p.Y))
+            Dim maxX = Math.Min(GetBaseWidth(), pixelPoints.Max(Function(p) p.X))
+            Dim maxY = Math.Min(GetBaseHeight(), pixelPoints.Max(Function(p) p.Y))
+            Dim pointText = String.Join(" ", pixelPoints.Select(Function(p) $"{p.X.ToString("F3", Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString("F3", Globalization.CultureInfo.InvariantCulture)}"))
 
             Dim expectedKind = If(isEraser, "Eraser", "Brush")
             Dim canAppend = _activeStrokeAnnotation IsNot Nothing AndAlso
@@ -5837,31 +6212,31 @@ Namespace ViewModels
 
             If canAppend Then
                 Dim existing = _activeStrokeAnnotation
-                Dim unionMinX = Math.Min(existing.XPercent, CSng(minX))
-                Dim unionMinY = Math.Min(existing.YPercent, CSng(minY))
-                Dim unionMaxX = Math.Max(existing.XPercent + existing.WidthPercent, CSng(maxX))
-                Dim unionMaxY = Math.Max(existing.YPercent + existing.HeightPercent, CSng(maxY))
+                Dim unionMinX = Math.Min(existing.XPixels, CSng(minX))
+                Dim unionMinY = Math.Min(existing.YPixels, CSng(minY))
+                Dim unionMaxX = Math.Max(existing.XPixels + existing.WidthPixels, CSng(maxX))
+                Dim unionMaxY = Math.Max(existing.YPixels + existing.HeightPixels, CSng(maxY))
                 existing.Text = existing.Text & ";" & pointText
-                existing.XPercent = unionMinX
-                existing.YPercent = unionMinY
-                existing.WidthPercent = Math.Max(1, unionMaxX - unionMinX)
-                existing.HeightPercent = Math.Max(1, unionMaxY - unionMinY)
+                existing.XPixels = unionMinX
+                existing.YPixels = unionMinY
+                existing.WidthPixels = Math.Max(1, unionMaxX - unionMinX)
+                existing.HeightPixels = Math.Max(1, unionMaxY - unionMinY)
             Else
                 Dim width = Math.Max(1, maxX - minX)
                 Dim height = Math.Max(1, maxY - minY)
                 Dim newAnnotation = New ImageAnnotation With {
                     .Kind = expectedKind,
                     .Text = pointText,
-                    .XPercent = CSng(minX),
-                    .YPercent = CSng(minY),
-                    .WidthPercent = CSng(width),
-                    .HeightPercent = CSng(height),
+                    .XPixels = CSng(minX),
+                    .YPixels = CSng(minY),
+                    .WidthPixels = CSng(width),
+                    .HeightPixels = CSng(height),
                     .FillColor = _annotationFillColor,
                     .StrokeColor = _annotationStrokeColor,
                     .StrokeWidth = CSng(_brushSize),
                     .Opacity = CSng(_brushOpacity),
                     .HardnessPercent = CSng(_brushHardness),
-                    .FontSizePercent = CSng(_annotationFontSize),
+                    .FontSizePixels = CSng(_annotationFontSize),
                     .FontFamily = _annotationFontFamily
                 }
                 _annotations.Add(newAnnotation)
@@ -5912,8 +6287,8 @@ Namespace ViewModels
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             PushUndo()
             Dim copy = _annotations(_selectedAnnotationIndex).Clone()
-            copy.XPercent = CSng(Math.Min(99, copy.XPercent + 3))
-            copy.YPercent = CSng(Math.Min(99, copy.YPercent + 3))
+            copy.XPixels += 24
+            copy.YPixels += 24
             _annotations.Insert(_selectedAnnotationIndex + 1, copy)
             SelectedAnnotationIndex = _selectedAnnotationIndex + 1
             RaiseResetButtonStateChanged()
@@ -5978,9 +6353,13 @@ Namespace ViewModels
                                            Optional hitSlopYPercent As Double = 1.5) As Integer
             For i = _annotations.Count - 1 To 0 Step -1
                 Dim a = _annotations(i)
-                Dim origin = ComputeAnnotationOriginPercent(a.Kind, a.XPercent, a.YPercent, a.WidthPercent, a.HeightPercent, a.Anchor)
-                If xPercent >= origin.X - hitSlopXPercent AndAlso xPercent <= origin.X + a.WidthPercent + hitSlopXPercent AndAlso
-                   yPercent >= origin.Y - hitSlopYPercent AndAlso yPercent <= origin.Y + a.HeightPercent + hitSlopYPercent Then
+                Dim ax = AnnotationStoredXToPercent(a)
+                Dim ay = AnnotationStoredYToPercent(a)
+                Dim aw = AnnotationStoredWidthToPercent(a)
+                Dim ah = AnnotationStoredHeightToPercent(a)
+                Dim origin = ComputeAnnotationOriginPercent(a.Kind, ax, ay, aw, ah, a.Anchor)
+                If xPercent >= origin.X - hitSlopXPercent AndAlso xPercent <= origin.X + aw + hitSlopXPercent AndAlso
+                   yPercent >= origin.Y - hitSlopYPercent AndAlso yPercent <= origin.Y + ah + hitSlopYPercent Then
                     Return i
                 End If
             Next
@@ -6001,16 +6380,16 @@ Namespace ViewModels
                     AnnotationFillColor = a.FillColor
                     AnnotationStrokeColor = a.StrokeColor
                     AnnotationStrokeWidth = a.StrokeWidth
-                    AnnotationFontSize = a.FontSizePercent
+                    AnnotationFontSize = a.FontSizePixels
                     AnnotationFontFamily = a.FontFamily
                     AnnotationOpacity = a.Opacity
                     AnnotationRotation = a.RotationDegrees
                     _annotationAnchor = NormalizeAnnotationAnchor(a.Anchor)
                     AnnotationIsVisible = a.IsVisible
-                    AnnotationXPercent = a.XPercent
-                    AnnotationYPercent = a.YPercent
-                    AnnotationWidthPercent = a.WidthPercent
-                    AnnotationHeightPercent = a.HeightPercent
+                    AnnotationXPercent = AnnotationStoredXToPercent(a)
+                    AnnotationYPercent = AnnotationStoredYToPercent(a)
+                    AnnotationWidthPercent = AnnotationStoredWidthToPercent(a)
+                    AnnotationHeightPercent = AnnotationStoredHeightToPercent(a)
                     AnnotationFillKind = a.FillKind
                     AnnotationFillColor2 = a.FillColor2
                     AnnotationGradientAngleDegrees = a.GradientAngleDegrees
@@ -6057,16 +6436,16 @@ Namespace ViewModels
             a.FillColor = _annotationFillColor
             a.StrokeColor = _annotationStrokeColor
             a.StrokeWidth = CSng(_annotationStrokeWidth)
-            a.FontSizePercent = CSng(_annotationFontSize)
+            a.FontSizePixels = CSng(_annotationFontSize)
             a.FontFamily = _annotationFontFamily
             a.Opacity = CSng(_annotationOpacity)
             a.RotationDegrees = CSng(_annotationRotation)
             a.Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             a.IsVisible = _annotationIsVisible
-            a.XPercent = CSng(_annotationXPercent)
-            a.YPercent = CSng(_annotationYPercent)
-            a.WidthPercent = CSng(_annotationWidthPercent)
-            a.HeightPercent = CSng(_annotationHeightPercent)
+            a.XPixels = CSng(AnnotationXPixels)
+            a.YPixels = CSng(AnnotationYPixels)
+            a.WidthPixels = CSng(Math.Max(1, AnnotationWidthPixels))
+            a.HeightPixels = CSng(Math.Max(1, AnnotationHeightPixels))
             a.FillKind = _annotationFillKind
             a.FillColor2 = _annotationFillColor2
             a.GradientAngleDegrees = CSng(_annotationGradientAngle)
@@ -6090,15 +6469,22 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' Bild und Objekt-Rechteck gehören zusammen (die View rechnet das Rechteck in die negativen
+        ''' Overlay-Margins um) und müssen deshalb immer gemeinsam gesetzt werden.
+        Private Sub SetSelectedAnnotationOverlay(render As ImageProcessor.AnnotationOverlayRender)
+            _selectedAnnotationOverlayMetrics = render
+            SelectedAnnotationOverlayImage = render?.Image
+        End Sub
+
         Private Sub UpdateSelectedAnnotationOverlayPreview()
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then
-                SelectedAnnotationOverlayImage = Nothing
+                SetSelectedAnnotationOverlay(Nothing)
                 Return
             End If
 
             Dim annotation = _annotations(_selectedAnnotationIndex)
             If annotation Is Nothing OrElse Not annotation.IsVisible Then
-                SelectedAnnotationOverlayImage = Nothing
+                SetSelectedAnnotationOverlay(Nothing)
                 Return
             End If
 
@@ -6112,7 +6498,7 @@ Namespace ViewModels
                 If IsTextualAnnotationKind(annotation.Kind) AndAlso (annotation.ShadowEnabled OrElse annotation.GlowEnabled) Then
                     effectsOnly = True
                 Else
-                    SelectedAnnotationOverlayImage = Nothing
+                    SetSelectedAnnotationOverlay(Nothing)
                     Return
                 End If
             End If
@@ -6121,11 +6507,11 @@ Namespace ViewModels
             Dim pixelWidth = 256
             Dim pixelHeight = 256
             If previewSource IsNot Nothing Then
-                pixelWidth = Math.Max(48, CInt(Math.Round(previewSource.Width * Math.Max(0.01, annotation.WidthPercent) / 100.0)))
-                pixelHeight = Math.Max(48, CInt(Math.Round(previewSource.Height * Math.Max(0.01, annotation.HeightPercent) / 100.0)))
+                pixelWidth = Math.Max(48, CInt(Math.Round(annotation.WidthPixels)))
+                pixelHeight = Math.Max(48, CInt(Math.Round(annotation.HeightPixels)))
             End If
 
-            SelectedAnnotationOverlayImage = ImageProcessor.RenderAnnotationOverlay(annotation.Clone(), pixelWidth, pixelHeight, effectsOnly)
+            SetSelectedAnnotationOverlay(ImageProcessor.RenderAnnotationOverlay(annotation.Clone(), pixelWidth, pixelHeight, effectsOnly))
         End Sub
 
         Private Shared Function ParseAvaloniaColorOrDefault(value As String, fallback As Avalonia.Media.Color) As Avalonia.Media.Color
@@ -6237,9 +6623,9 @@ Namespace ViewModels
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
             If captureUndo Then PushUndo()
             _retouchSpots.Add(New RetouchSpot With {
-                .XPercent = CSng(Math.Max(0, Math.Min(100, xPercent))),
-                .YPercent = CSng(Math.Max(0, Math.Min(100, yPercent))),
-                .RadiusPercent = CSng(_retouchRadius)
+                .XPixels = CSng(Math.Max(0, Math.Min(GetBaseWidth(), PercentXToPixels(xPercent)))),
+                .YPixels = CSng(Math.Max(0, Math.Min(GetBaseHeight(), PercentYToPixels(yPercent)))),
+                .RadiusPixels = CSng(_retouchRadius)
             })
             AddHistoryEntry("Verwischen")
             UpdatePreview()
@@ -6412,7 +6798,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetRetouchInternal()
-            _retouchRadius = 2.0
+            _retouchRadius = 24.0
             _retouchSpots.Clear()
             Me.RaisePropertyChanged(NameOf(RetouchRadius))
             RaiseResetButtonStateChanged()
@@ -6676,7 +7062,8 @@ Namespace ViewModels
             ExportFormat = saveAsResult.Format
             Dim targetPath = IO.Path.Combine(dir, cleanBaseName & saveAsResult.Extension)
             Dim adjForExport = GetCurrentAdjustments()
-            Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(_currentImagePath, targetPath, adjForExport, saveAsResult.JpgQuality))
+            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
+            Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(_currentImagePath, targetPath, adjForExport, saveAsResult.JpgQuality, preserveMetadata))
             StatusText = If(ok,
                             $"{LocalizationService.T("Exportiert:")} {IO.Path.GetFileName(targetPath)}",
                             LocalizationService.T("Export fehlgeschlagen"))
@@ -6763,10 +7150,10 @@ Namespace ViewModels
                 }
                 File.WriteAllLines(RecipePath, lines)
                 If adj.RetouchSpots IsNot Nothing Then
-                    File.AppendAllLines(RecipePath, adj.RetouchSpots.Select(Function(s) $"RetouchSpot={s.XPercent};{s.YPercent};{s.RadiusPercent}"))
+                    File.AppendAllLines(RecipePath, adj.RetouchSpots.Select(Function(s) $"RetouchSpot={s.XPixels};{s.YPixels};{s.RadiusPixels}"))
                 End If
                 If adj.Annotations IsNot Nothing Then
-                    File.AppendAllLines(RecipePath, adj.Annotations.Select(Function(a) $"Annotation={Uri.EscapeDataString(a.Kind)};{Uri.EscapeDataString(a.Text)};{Uri.EscapeDataString(a.ImagePath)};{a.XPercent};{a.YPercent};{a.WidthPercent};{a.HeightPercent};{Uri.EscapeDataString(a.FillColor)};{Uri.EscapeDataString(a.StrokeColor)};{a.StrokeWidth};{a.FontSizePercent};{Uri.EscapeDataString(a.FontFamily)};{a.Opacity};{a.RotationDegrees};{a.IsVisible};{a.HardnessPercent};{Uri.EscapeDataString(a.FillKind)};{Uri.EscapeDataString(a.FillColor2)};{a.GradientAngleDegrees};{a.ShadowEnabled};{a.ShadowOffsetXPercent};{a.ShadowOffsetYPercent};{a.ShadowBlur};{Uri.EscapeDataString(a.ShadowColor)};{a.GlowEnabled};{a.GlowBlur};{Uri.EscapeDataString(a.GlowColor)};{a.GradientInverted};{a.GlowStrength};{a.ShadowStrength};{Uri.EscapeDataString(If(a.Anchor, ""))}"))
+                    File.AppendAllLines(RecipePath, adj.Annotations.Select(Function(a) $"Annotation={Uri.EscapeDataString(a.Kind)};{Uri.EscapeDataString(a.Text)};{Uri.EscapeDataString(a.ImagePath)};{a.XPixels};{a.YPixels};{a.WidthPixels};{a.HeightPixels};{Uri.EscapeDataString(a.FillColor)};{Uri.EscapeDataString(a.StrokeColor)};{a.StrokeWidth};{a.FontSizePixels};{Uri.EscapeDataString(a.FontFamily)};{a.Opacity};{a.RotationDegrees};{a.IsVisible};{a.HardnessPercent};{Uri.EscapeDataString(a.FillKind)};{Uri.EscapeDataString(a.FillColor2)};{a.GradientAngleDegrees};{a.ShadowEnabled};{a.ShadowOffsetXPercent};{a.ShadowOffsetYPercent};{a.ShadowBlur};{Uri.EscapeDataString(a.ShadowColor)};{a.GlowEnabled};{a.GlowBlur};{Uri.EscapeDataString(a.GlowColor)};{a.GradientInverted};{a.GlowStrength};{a.ShadowStrength};{Uri.EscapeDataString(If(a.Anchor, ""))}"))
                 End If
                 StatusText = LocalizationService.T("Bearbeitungsrezept gespeichert")
             Catch ex As Exception
@@ -7052,7 +7439,7 @@ Namespace ViewModels
                         Dim y As Single
                         Dim r As Single
                         If Single.TryParse(parts(0), x) AndAlso Single.TryParse(parts(1), y) AndAlso Single.TryParse(parts(2), r) Then
-                            adj.RetouchSpots.Add(New RetouchSpot With {.XPercent = x, .YPercent = y, .RadiusPercent = r})
+                            adj.RetouchSpots.Add(New RetouchSpot With {.XPixels = x, .YPixels = y, .RadiusPixels = r})
                         End If
                     End If
                 Case "Annotation"
@@ -7079,14 +7466,14 @@ Namespace ViewModels
                                 .Kind = Uri.UnescapeDataString(parts(0)),
                                 .Text = Uri.UnescapeDataString(parts(1)),
                                 .ImagePath = Uri.UnescapeDataString(parts(2)),
-                                .XPercent = x,
-                                .YPercent = y,
-                                .WidthPercent = w,
-                                .HeightPercent = h,
+                                .XPixels = x,
+                                .YPixels = y,
+                                .WidthPixels = w,
+                                .HeightPixels = h,
                                 .FillColor = Uri.UnescapeDataString(parts(7)),
                                 .StrokeColor = Uri.UnescapeDataString(parts(8)),
                                 .StrokeWidth = strokeWidth,
-                                .FontSizePercent = fontSize,
+                                .FontSizePixels = fontSize,
                                 .FontFamily = Uri.UnescapeDataString(parts(11)),
                                 .Opacity = opacity,
                                 .RotationDegrees = rotation,
@@ -7117,14 +7504,14 @@ Namespace ViewModels
                                 .Kind = Uri.UnescapeDataString(parts(0)),
                                 .Text = Uri.UnescapeDataString(parts(1)),
                                 .ImagePath = "",
-                                .XPercent = x,
-                                .YPercent = y,
-                                .WidthPercent = w,
-                                .HeightPercent = h,
+                                .XPixels = x,
+                                .YPixels = y,
+                                .WidthPixels = w,
+                                .HeightPixels = h,
                                 .FillColor = Uri.UnescapeDataString(parts(6)),
                                 .StrokeColor = Uri.UnescapeDataString(parts(7)),
                                 .StrokeWidth = strokeWidth,
-                                .FontSizePercent = fontSize,
+                                .FontSizePixels = fontSize,
                                 .FontFamily = Uri.UnescapeDataString(parts(10)),
                                 .Opacity = opacity,
                                 .RotationDegrees = rotation,

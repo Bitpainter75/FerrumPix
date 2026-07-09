@@ -23,12 +23,15 @@ Namespace Services
         Public Property Name As String = ""
         Public Property Text As String = ""
         Public Property ImagePath As String = ""
-        Public Property WidthPercent As Double = 24
-        Public Property HeightPercent As Double = 12
+        Public Property OffsetXPixels As Double = 24
+        Public Property OffsetYPixels As Double = 24
+        Public Property WidthPixels As Double = 480
+        Public Property HeightPixels As Double = 180
+        Public Property Anchor As String = "BottomRight"
         Public Property RotationDegrees As Double = 0
         Public Property Opacity As Double = 100
         Public Property FontFamily As String = "Arial"
-        Public Property FontSizePercent As Double = 6
+        Public Property FontSizePixels As Double = 48
         Public Property FillColor As String = "#FFFFFFFF"
     End Class
 
@@ -104,6 +107,7 @@ Namespace Services
         Public Property ThumbnailQuality As Integer = 82
         Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 250
         Public Property JpgSaveQuality As Integer = 90
+        Public Property PreserveMetadataOnSave As Boolean = True
         Public Property EditorInfoSidebarExpanded As Boolean = True
         Public Property ViewerInfoSidebarExpanded As Boolean = True
         Public Property ApplicationScale As Double = 1.0
@@ -117,6 +121,14 @@ Namespace Services
         Public Property TransparencyBackgroundMode As String = "Checkerboard"
         Public Property TransparencyBackgroundColor As String = "#FFFFFFFF"
         Public Property LastBatchRenamePattern As String = "{name}_###"
+        Public Property LastBatchRenameStart As Integer = 1
+        Public Property LastBatchRenameStep As Integer = 1
+        Public Property LastBatchResizeWidth As Integer = 0
+        Public Property LastBatchResizeHeight As Integer = 0
+        Public Property LastBatchResizeScalePercent As Integer = 0
+        Public Property LastBatchResizeLockAspect As Boolean = True
+        Public Property LastBatchResizeInterpolation As String = "Bilinear"
+        Public Property LastWatermarkPresetName As String = ""
         Public Property EnableDiagnosticLogging As Boolean = False
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
         Public Property LightroomPresets As New List(Of LightroomPresetSettings)()
@@ -165,6 +177,14 @@ Namespace Services
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
+                settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(settings.LastBatchRenamePattern)
+                settings.LastBatchRenameStart = NormalizeBatchRenameStart(settings.LastBatchRenameStart)
+                settings.LastBatchRenameStep = NormalizeBatchRenameStep(settings.LastBatchRenameStep)
+                settings.LastBatchResizeWidth = NormalizeBatchResizeDimension(settings.LastBatchResizeWidth)
+                settings.LastBatchResizeHeight = NormalizeBatchResizeDimension(settings.LastBatchResizeHeight)
+                settings.LastBatchResizeScalePercent = NormalizeBatchResizeScalePercent(settings.LastBatchResizeScalePercent)
+                settings.LastBatchResizeInterpolation = NormalizeResizeInterpolationModeName(settings.LastBatchResizeInterpolation)
+                settings.LastWatermarkPresetName = NormalizePresetName(settings.LastWatermarkPresetName)
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
                 settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
@@ -201,6 +221,14 @@ Namespace Services
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
+                settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(settings.LastBatchRenamePattern)
+                settings.LastBatchRenameStart = NormalizeBatchRenameStart(settings.LastBatchRenameStart)
+                settings.LastBatchRenameStep = NormalizeBatchRenameStep(settings.LastBatchRenameStep)
+                settings.LastBatchResizeWidth = NormalizeBatchResizeDimension(settings.LastBatchResizeWidth)
+                settings.LastBatchResizeHeight = NormalizeBatchResizeDimension(settings.LastBatchResizeHeight)
+                settings.LastBatchResizeScalePercent = NormalizeBatchResizeScalePercent(settings.LastBatchResizeScalePercent)
+                settings.LastBatchResizeInterpolation = NormalizeResizeInterpolationModeName(settings.LastBatchResizeInterpolation)
+                settings.LastWatermarkPresetName = NormalizePresetName(settings.LastWatermarkPresetName)
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
                 settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
@@ -226,6 +254,40 @@ Namespace Services
 
         Public Shared Function NormalizeJpgSaveQuality(value As Integer) As Integer
             Return Math.Max(1, Math.Min(100, value))
+        End Function
+
+        Public Shared Function NormalizeBatchRenamePattern(value As String) As String
+            If String.IsNullOrWhiteSpace(value) Then Return "{name}_###"
+            Return value.Trim()
+        End Function
+
+        Public Shared Function NormalizeBatchRenameStart(value As Integer) As Integer
+            Return Math.Max(0, Math.Min(999999, value))
+        End Function
+
+        Public Shared Function NormalizeBatchRenameStep(value As Integer) As Integer
+            Return Math.Max(1, Math.Min(999999, value))
+        End Function
+
+        Public Shared Function NormalizeBatchResizeDimension(value As Integer) As Integer
+            Return Math.Max(0, Math.Min(100000, value))
+        End Function
+
+        Public Shared Function NormalizeBatchResizeScalePercent(value As Integer) As Integer
+            Return Math.Max(0, Math.Min(1000, value))
+        End Function
+
+        Public Shared Function NormalizeResizeInterpolationModeName(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Nearest", "Bicubic"
+                    Return value.Trim()
+                Case Else
+                    Return "Bilinear"
+            End Select
+        End Function
+
+        Public Shared Function NormalizePresetName(value As String) As String
+            Return If(value, "").Trim()
         End Function
 
         Public Shared Function NormalizeViewerSlideshowIntervalSeconds(value As Integer) As Integer
@@ -404,16 +466,28 @@ Namespace Services
                     .Name = name,
                     .Text = If(preset.Text, "").Trim(),
                     .ImagePath = NormalizeFolderPath(preset.ImagePath),
-                    .WidthPercent = Math.Max(5, Math.Min(90, preset.WidthPercent)),
-                    .HeightPercent = Math.Max(4, Math.Min(90, preset.HeightPercent)),
+                    .OffsetXPixels = Math.Max(0, Math.Min(100000, preset.OffsetXPixels)),
+                    .OffsetYPixels = Math.Max(0, Math.Min(100000, preset.OffsetYPixels)),
+                    .WidthPixels = Math.Max(1, Math.Min(100000, preset.WidthPixels)),
+                    .HeightPixels = Math.Max(1, Math.Min(100000, preset.HeightPixels)),
+                    .Anchor = NormalizeAnnotationAnchorName(preset.Anchor),
                     .RotationDegrees = Math.Max(-180, Math.Min(180, preset.RotationDegrees)),
                     .Opacity = Math.Max(0, Math.Min(100, preset.Opacity)),
                     .FontFamily = If(preset.FontFamily, "Arial").Trim(),
-                    .FontSizePercent = Math.Max(1, Math.Min(40, preset.FontSizePercent)),
+                    .FontSizePixels = Math.Max(8, Math.Min(500, preset.FontSizePixels)),
                     .FillColor = NormalizeHexColor(preset.FillColor, "#FFFFFFFF")
                 })
             Next
             Return result.OrderBy(Function(p) p.Name, StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
+        Public Shared Function NormalizeAnnotationAnchorName(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "TopLeft", "Top", "TopRight", "Left", "Center", "Right", "BottomLeft", "Bottom", "BottomRight"
+                    Return value.Trim()
+                Case Else
+                    Return "BottomRight"
+            End Select
         End Function
 
         Public Shared Function NormalizeLightroomPresets(value As List(Of LightroomPresetSettings)) As List(Of LightroomPresetSettings)
@@ -522,9 +596,32 @@ Namespace Services
             Save(settings)
         End Sub
 
+        Public Shared Sub SaveLastBatchRenameSettings(pattern As String, start As Integer, stepValue As Integer)
+            Dim settings = Load()
+            settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(pattern)
+            settings.LastBatchRenameStart = NormalizeBatchRenameStart(start)
+            settings.LastBatchRenameStep = NormalizeBatchRenameStep(stepValue)
+            Save(settings)
+        End Sub
+
         Public Shared Sub SaveLastBatchRenamePattern(value As String)
             Dim settings = Load()
-            settings.LastBatchRenamePattern = If(String.IsNullOrWhiteSpace(value), "{name}_###", value)
+            SaveLastBatchRenameSettings(value, settings.LastBatchRenameStart, settings.LastBatchRenameStep)
+        End Sub
+
+        Public Shared Sub SaveLastBatchResizeSettings(width As Integer, height As Integer, scalePercent As Integer, lockAspect As Boolean, interpolation As ResizeInterpolationMode)
+            Dim settings = Load()
+            settings.LastBatchResizeWidth = NormalizeBatchResizeDimension(width)
+            settings.LastBatchResizeHeight = NormalizeBatchResizeDimension(height)
+            settings.LastBatchResizeScalePercent = NormalizeBatchResizeScalePercent(scalePercent)
+            settings.LastBatchResizeLockAspect = lockAspect
+            settings.LastBatchResizeInterpolation = interpolation.ToString()
+            Save(settings)
+        End Sub
+
+        Public Shared Sub SaveLastWatermarkPresetName(value As String)
+            Dim settings = Load()
+            settings.LastWatermarkPresetName = NormalizePresetName(value)
             Save(settings)
         End Sub
 

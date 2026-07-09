@@ -99,7 +99,7 @@
 
                         <Grid ColumnDefinitions="160,*" RowDefinitions="Auto" RowSpacing="8">
                             <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}"/>
-                            <TextBlock Grid.Column="1" Text="0.4.0 - Juli 2026"/>
+                            <TextBlock Grid.Column="1" Text="0.5.0 - Juli 2026"/>
                         </Grid>
 
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
@@ -714,6 +714,18 @@
                                            TextAlignment="Right"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Metadaten beim Speichern übernehmen" FontSize="12"/>
+                                <TextBlock Text="Übernimmt EXIF/XMP beim Speichern unter, Exportieren und Konvertieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="10"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding PreserveMetadataOnSave}"
+                                          OnContent="Ein"
+                                          OffContent="Aus"
+                                          VerticalAlignment="Center"/>
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto">
