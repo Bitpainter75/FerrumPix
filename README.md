@@ -17,6 +17,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - File operations: copy/cut/paste, rename/batch rename, duplicate, create folder, delete (with confirmation), export selected, batch selection, reveal in file manager, copy path
 - Batch rename: pattern-based with counters (`#`, `###`), and placeholders for the original name/extension, file date, EXIF date taken, image width/height, camera, ISO, aperture, and focal length; the last-used pattern is remembered between sessions
 - Batch format conversion: convert selected images to JPG/PNG/WEBP (with quality setting) in place, skipping files already in the target format and auto-numbering on name collisions
+- Further batch operations on the selection: resize (target size or scale percentage, with lock-aspect and interpolation choice), apply a saved watermark preset, and strip all metadata from the files
 - Collage creation: Grid, Hero (one large image + the others framing it — top/bottom/left/right/center, position pickable via the same anchor-grid as the editor's canvas tool, or by clicking the desired image in the live preview), and Random (jittered size/rotation per photo) layouts; adjustable width/columns/margin, a per-image border, background color/format/quality, a zoomable/pannable preview with a fit button, and a reshuffle button that randomizes image order (and, in Random mode, size/rotation) across all three layouts
 - Camera RAW support (CR2, CR3, NEF, ARW, DNG, PEF, RW2) alongside standard formats
 - SQLite-backed library (metadata, ratings, tags, cached EXIF/dimensions for search)
@@ -38,17 +39,19 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 
 **Editor** (non-destructive, with undo/redo)
 - Crop (with presets), image resize, rotate/straighten (with auto canvas expand), flip, and canvas resize with anchor picker
-- Adjust: exposure, brightness, contrast, highlights/shadows, whites/blacks, tone curve (RGB + individual channels)
+- Adjust: exposure, brightness, contrast, highlights/shadows, whites/blacks, tone curve (RGB, luminance, and the individual red/green/blue channels)
 - Color: white balance, temperature/tint, vibrance/saturation, split toning, and an 8-band HSL color mixer — pick a color band on a color wheel, then dial in its hue/saturation with a shared pair of sliders
 - Filters: built-in filter presets with a strength slider, plus Lightroom XMP preset import and `.cube` LUT support
 - Details: clarity, sharpening, softening/noise reduction (Gaussian/median), structure, haze, glow, grain/noise, and dust/scratch style effects
-- Effects/Frame: vignette and border/frame controls with color picker and rounded-corner support
+- Effects/Frame: vignette (size, transition, roundness, feather, freely placeable center) and border/frame controls with six edge styles (solid, dashed, jagged, double, dotted, wavy), color picker, and rounded-corner support
 - Paint tool: brush, eraser, and a blur/retouch brush, each with size/hardness/opacity
 - Rectangle selection tool: drag a selection on the image, then copy it into a new movable object (also via Ctrl+C/Ctrl+V, repeatable paste) or fill it with a solid color or linear/radial gradient (gradient direction/invert supported)
 - Insert objects: text, watermark, shapes (rectangle, ellipse, square, triangle, cone, pyramid, trapezoid, diamond, spiral, droplet, speech bubble, line, arrow), symbols/SVGs, images, and QR codes
 - Per-object properties: fill (solid or gradient), stroke color/width, opacity, rotation, position/size, anchor handling, plus separate shadow and glow controls (color, offset, blur, strength, corner radius where applicable) — edited live directly on the canvas or via the sliders
-- Objects panel: reorder (front/back), duplicate, show/hide, delete, drag-handles for move/resize/rotate on canvas
+- Watermarks can be stored as named presets (text or image, with anchor, offset, size, rotation, opacity, font, and color) and reapplied later, including as a batch operation from the gallery
+- Side panel with three tabs: the active tool, the object list (reorder front/back, duplicate, show/hide, delete; drag-handles for move/resize/rotate on canvas), and a running history of the applied steps
 - Central color picker (color wheel, hex input, recent colors) with a built-in eyedropper to sample any color straight from the image
+- Info sidebar with the same General/EXIF/IPTC/XMP tabs and live histogram as the viewer
 - Before/after comparison slider, save/load non-destructive edit recipes
 
 <img src="Screenshots/Editor_Text.png" />
@@ -57,8 +60,10 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - Theme (light/dark/darkgrey/lightgrey) and accent color
 - Language: auto-detect, German, English, Spanish, French, Italian
 - Thumbnail size/quality, JPEG export quality, filmstrip visibility, and other per-view preferences
+- Preserve original EXIF/XMP metadata when using "save as", export, and format conversion (on by default)
 - UI scale, video hardware acceleration toggle, transparency background (checkerboard or solid color), startup folder/image behavior, hidden folders/breadcrumbs
 - Thumbnail cache management: size limit, per-folder or full cache cleanup, database cleanup
+- Optional diagnostic log for preview/playback errors, written to `%LocalAppData%/FerrumPix/logs/diagnostics.log`
 - Window position/size and last-used folder are remembered between sessions
 
 <img src="Screenshots/Settings.png" />
@@ -69,6 +74,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - VB.NET on .NET 10
 - [ReactiveUI](https://www.reactiveui.net/) for MVVM
 - [SkiaSharp](https://github.com/mono/SkiaSharp) for image processing/rendering
+- [Svg.Skia](https://github.com/wieslawsoltes/Svg.Skia) for rendering SVG icons and SVG objects
 - [Microsoft.Data.Sqlite](https://learn.microsoft.com/dotnet/standard/data/sqlite/) for the library
 - [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet) for EXIF data
 - [QRCoder](https://github.com/codebude/QRCoder) for QR code objects

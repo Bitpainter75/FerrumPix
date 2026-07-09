@@ -234,9 +234,11 @@ Namespace Services
 
         ' ── BMFF read helpers ─────────────────────────────────────────────────────
 
+        ' In VB.NET liefert "byteWert << n" wieder einen Byte und maskiert die Schiebeweite mit 7 -
+        ' die Operanden müssen deshalb vor dem Shift geweitet werden.
         Private Shared Function ReadU32BE(br As BinaryReader) As UInteger
             Dim b = br.ReadBytes(4)
-            Return CUInt((b(0) << 24) Or (b(1) << 16) Or (b(2) << 8) Or b(3))
+            Return CUInt((CLng(b(0)) << 24) Or (CLng(b(1)) << 16) Or (CLng(b(2)) << 8) Or CLng(b(3)))
         End Function
 
         Private Shared Function ReadU64BE(br As BinaryReader) As Long

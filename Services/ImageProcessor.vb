@@ -826,12 +826,21 @@ Namespace Services
         End Function
 
         Private Shared Function DecodeOriented(path As String) As SKBitmap
+            ' SKCodec.Create(Stream) übernimmt den Stream, und manche Codecs (insbesondere WebP) schließen
+            ' ihn dabei sofort. Ein späteres stream.Seek für den Fallback-Decode wirft dann
+            ' ObjectDisposedException - WebP-Quellen ließen sich deshalb weder öffnen noch konvertieren.
+            ' Den Inhalt daher einmal in SKData puffern und alle Decode-Pfade daraus bedienen.
+            Dim data As SKData
             Using stream = OpenSourceStream(path)
                 If stream Is Nothing Then Return Nothing
-                Using codec = SKCodec.Create(stream)
+                data = SKData.Create(stream)
+            End Using
+            If data Is Nothing Then Return Nothing
+
+            Using data
+                Using codec = SKCodec.Create(data)
                     If codec Is Nothing OrElse codec.EncodedOrigin = SKEncodedOrigin.TopLeft Then
-                        stream.Seek(0, SeekOrigin.Begin)
-                        Return SKBitmap.Decode(stream)
+                        Return SKBitmap.Decode(data)
                     End If
 
                     Dim info = codec.Info
@@ -840,8 +849,7 @@ Namespace Services
                     Dim result = codec.GetPixels(decodeInfo, original.GetPixels())
                     If result <> SKCodecResult.Success AndAlso result <> SKCodecResult.IncompleteInput Then
                         original.Dispose()
-                        stream.Seek(0, SeekOrigin.Begin)
-                        Return SKBitmap.Decode(stream)
+                        Return SKBitmap.Decode(data)
                     End If
 
                     Dim corrected = ImageOrientationService.ApplyOrientation(original, codec.EncodedOrigin)
@@ -2846,8 +2854,8 @@ Namespace Services
             Dim height As Integer = 0
             If vp8x IsNot Nothing AndAlso vp8x.Data.Length >= 10 Then
                 flags = vp8x.Data(0)
-                width = 1 + vp8x.Data(4) + (vp8x.Data(5) << 8) + (vp8x.Data(6) << 16)
-                height = 1 + vp8x.Data(7) + (vp8x.Data(8) << 8) + (vp8x.Data(9) << 16)
+                width = 1 + CInt(vp8x.Data(4)) + (CInt(vp8x.Data(5)) << 8) + (CInt(vp8x.Data(6)) << 16)
+                height = 1 + CInt(vp8x.Data(7)) + (CInt(vp8x.Data(8)) << 8) + (CInt(vp8x.Data(9)) << 16)
             ElseIf imageChunk IsNot Nothing Then
                 Dim size = ReadWebpImageSize(imageChunk)
                 width = size.Width
@@ -2905,15 +2913,18 @@ Namespace Services
         End Function
 
         Private Shared Function ReadWebpImageSize(chunk As WebpChunk) As (Width As Integer, Height As Integer)
+            ' Der VP8-Keyframe-Header (verlustbehaftet) speichert die tatsächliche Breite/Höhe in je 14 Bit.
+            ' VP8L (verlustfrei) speichert dagegen width-1/height-1 - deshalb nur dort das "1 +".
+            ' Ein Off-by-one macht die VP8X-Canvas-Größe inkonsistent zum Bild und libwebp lehnt die Datei ab.
             If chunk.Type = "VP8 " AndAlso chunk.Data.Length >= 10 Then
-                Return (Width:=1 + (chunk.Data(6) Or ((chunk.Data(7) And &H3F) << 8)),
-                        Height:=1 + (chunk.Data(8) Or ((chunk.Data(9) And &H3F) << 8)))
+                Return (Width:=CInt(chunk.Data(6)) Or ((CInt(chunk.Data(7)) And &H3F) << 8),
+                        Height:=CInt(chunk.Data(8)) Or ((CInt(chunk.Data(9)) And &H3F) << 8))
             End If
             If chunk.Type = "VP8L" AndAlso chunk.Data.Length >= 5 Then
-                Dim b1 = chunk.Data(1)
-                Dim b2 = chunk.Data(2)
-                Dim b3 = chunk.Data(3)
-                Dim b4 = chunk.Data(4)
+                Dim b1 = CInt(chunk.Data(1))
+                Dim b2 = CInt(chunk.Data(2))
+                Dim b3 = CInt(chunk.Data(3))
+                Dim b4 = CInt(chunk.Data(4))
                 Dim width = 1 + (((b2 And &H3F) << 8) Or b1)
                 Dim height = 1 + (((b4 And &HF) << 10) Or (b3 << 2) Or ((b2 And &HC0) >> 6))
                 Return (width, height)
@@ -3063,28 +3074,29 @@ Namespace Services
             Return True
         End Function
 
+        ' ACHTUNG: In VB.NET liefert "byteWert << n" wieder einen Byte und maskiert die Schiebeweite
+        ' mit 7 (Byte << 8 ist also ein No-Op). Jeder Byte-Operand MUSS vor dem Shift nach Integer
+        ' geweitet werden - sonst liest z.B. ReadUInt16BE(&H01, &H2E) 47 statt 302.
         Private Shared Function ReadUInt16BE(bytes As Byte(), offset As Integer) As Integer
-            Return (bytes(offset) << 8) Or bytes(offset + 1)
+            Return (CInt(bytes(offset)) << 8) Or CInt(bytes(offset + 1))
         End Function
 
         Private Shared Function ReadInt32BE(bytes As Byte(), offset As Integer) As Integer
-            Return (bytes(offset) << 24) Or (bytes(offset + 1) << 16) Or (bytes(offset + 2) << 8) Or bytes(offset + 3)
+            Return (CInt(bytes(offset)) << 24) Or (CInt(bytes(offset + 1)) << 16) Or (CInt(bytes(offset + 2)) << 8) Or CInt(bytes(offset + 3))
         End Function
 
         Private Shared Function ReadUInt16Endian(bytes As Byte(), offset As Integer, littleEndian As Boolean) As Integer
-            If littleEndian Then Return bytes(offset) Or (bytes(offset + 1) << 8)
+            If littleEndian Then Return CInt(bytes(offset)) Or (CInt(bytes(offset + 1)) << 8)
             Return ReadUInt16BE(bytes, offset)
         End Function
 
         Private Shared Function ReadUInt32Endian(bytes As Byte(), offset As Integer, littleEndian As Boolean) As UInteger
-            If littleEndian Then
-                Return CUInt(bytes(offset) Or (bytes(offset + 1) << 8) Or (bytes(offset + 2) << 16) Or (bytes(offset + 3) << 24))
-            End If
-            Return CUInt((bytes(offset) << 24) Or (bytes(offset + 1) << 16) Or (bytes(offset + 2) << 8) Or bytes(offset + 3))
+            If littleEndian Then Return ReadUInt32LE(bytes, offset)
+            Return CUInt(CLng(bytes(offset)) << 24) Or CUInt(CLng(bytes(offset + 1)) << 16) Or CUInt(CInt(bytes(offset + 2)) << 8) Or CUInt(bytes(offset + 3))
         End Function
 
         Private Shared Function ReadUInt32LE(bytes As Byte(), offset As Integer) As UInteger
-            Return CUInt(bytes(offset) Or (bytes(offset + 1) << 8) Or (bytes(offset + 2) << 16) Or (bytes(offset + 3) << 24))
+            Return CUInt(bytes(offset)) Or CUInt(CInt(bytes(offset + 1)) << 8) Or CUInt(CLng(bytes(offset + 2)) << 16) Or CUInt(CLng(bytes(offset + 3)) << 24)
         End Function
 
         Private Shared Sub WriteInt32BE(bytes As Byte(), offset As Integer, value As Integer)
