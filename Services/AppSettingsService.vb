@@ -156,14 +156,19 @@ Namespace Services
         Private Shared ReadOnly _cacheLock As New Object()
         Private Shared _cachedJson As String = Nothing
 
-        ''' Geschrieben wird verzögert und zusammengefasst. Sonst löst jeder Ordnerklick (CurrentFolder ->
-        ''' SaveLastGalleryFolder) und jedes Häkchen im Dialog ein vollständiges Serialisieren samt
-        ''' Temporärdatei und Umbenennen aus. Flush() erzwingt das Schreiben - beim Programmende und immer
-        ''' dann, wenn ein Verlust der letzten Sekunde nicht hinnehmbar wäre.
+        ''' Geschrieben wird verzögert und zusammengefasst. Sonst löste jedes Häkchen im Dialog ein
+        ''' vollständiges Serialisieren samt Temporärdatei und Umbenennen aus. Flush() erzwingt das Schreiben -
+        ''' beim Programmende und immer dann, wenn ein Verlust der letzten Sekunde nicht hinnehmbar wäre.
         Private Const WriteDebounceMs As Integer = 1500
         Private Shared ReadOnly _writeLock As New Object()
         Private Shared _pendingJson As String = Nothing
         Private Shared _flushTimer As Timers.Timer = Nothing
+
+        ''' Der zuletzt geöffnete Galerie-Ordner wird beim Navigieren nur gemerkt, nicht geschrieben. Ein
+        ''' Ordnerklick soll gar nichts serialisieren; persistiert wird der Ordner gesammelt beim nächsten
+        ''' Flush (Programmende oder ohnehin fälliger Schreibvorgang). Gelesen wird er nur beim Start.
+        Private Shared ReadOnly _pendingFolderLock As New Object()
+        Private Shared _pendingLastGalleryFolder As String = Nothing
 
         Shared Sub New()
             AddHandler AppDomain.CurrentDomain.ProcessExit, Sub(sender As Object, e As EventArgs) Flush()
@@ -328,6 +333,9 @@ Namespace Services
         ''' (ProcessExit) und darf jederzeit zusätzlich aufgerufen werden - ohne ausstehende Änderung tut sie
         ''' nichts.</summary>
         Public Shared Sub Flush()
+            ' Erst den gemerkten Ordner in einen ausstehenden Stand überführen, dann diesen wegschreiben.
+            CommitPendingLastGalleryFolder()
+
             Dim json As String
             SyncLock _writeLock
                 json = _pendingJson
@@ -710,8 +718,26 @@ Namespace Services
             Update(Sub(s) s.GalleryStartupFolderMode = mode)
         End Sub
 
-        Public Shared Sub SaveLastGalleryFolder(folderPath As String)
-            Update(Sub(s) s.LastGalleryFolder = folderPath)
+        ''' Merkt sich den zuletzt geöffneten Galerie-Ordner nur im Speicher (kein Serialisieren, kein
+        ''' Schreiben). Persistiert wird er beim nächsten Flush - siehe CommitPendingLastGalleryFolder.
+        Public Shared Sub RememberLastGalleryFolder(folderPath As String)
+            SyncLock _pendingFolderLock
+                _pendingLastGalleryFolder = folderPath
+            End SyncLock
+        End Sub
+
+        ''' Überführt den gemerkten Ordner in einen ausstehenden Schreibvorgang, falls er sich vom
+        ''' gespeicherten Stand unterscheidet. Läuft vor jedem Flush; ohne gemerkten Ordner ein No-Op.
+        Private Shared Sub CommitPendingLastGalleryFolder()
+            Dim folder As String
+            SyncLock _pendingFolderLock
+                folder = _pendingLastGalleryFolder
+                _pendingLastGalleryFolder = Nothing
+            End SyncLock
+            If folder Is Nothing Then Return
+
+            If String.Equals(Load().LastGalleryFolder, NormalizeFolderPath(folder), StringComparison.Ordinal) Then Return
+            Update(Sub(s) s.LastGalleryFolder = folder)
         End Sub
 
         Public Shared Sub SaveJpgSaveQuality(value As Integer)

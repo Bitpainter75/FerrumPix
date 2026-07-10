@@ -90,7 +90,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(BreadcrumbParent))
                 Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))
                 If Not String.IsNullOrWhiteSpace(value) AndAlso Directory.Exists(value) Then
-                    AppSettingsService.SaveLastGalleryFolder(value)
+                    ' Nur merken; geschrieben wird der Ordner gesammelt beim Schließen der App.
+                    AppSettingsService.RememberLastGalleryFolder(value)
                 End If
             End Set
         End Property

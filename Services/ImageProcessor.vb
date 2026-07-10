@@ -5,6 +5,7 @@ Imports System.IO
 Imports System.Linq
 Imports System.Runtime.CompilerServices
 Imports System.Threading
+Imports System.Threading.Tasks
 Imports SkiaSharp
 Imports Avalonia.Media.Imaging
 Imports Avalonia.Platform
@@ -1435,6 +1436,40 @@ Namespace Services
         Private Shared Sub CommitBgraBuffer(bmp As SKBitmap, buffer As Byte())
             Marshal.Copy(buffer, 0, bmp.GetPixels(), buffer.Length)
         End Sub
+
+        ' Ab dieser Pixelzahl lohnt der Thread-Overhead von Parallel.For. Darunter (Miniaturen,
+        ' entartete Größen) bleibt es seriell.
+        Private Const ParallelPixelThreshold As Integer = 65536
+
+        ''' <summary>Führt eine zeilenweise Bildoperation über y = 0..height-1 aus - parallel, sobald sich
+        ''' der Thread-Overhead lohnt, sonst seriell. Voraussetzung: Die Zeilen sind unabhängig, jeder
+        ''' Aufruf schreibt nur in seine eigene Zeile und liest höchstens aus unveränderten Quellpuffern.
+        ''' Dann ist das Ergebnis unabhängig von der Thread-Aufteilung bitgleich zum seriellen Lauf.</summary>
+        Private Shared Sub ForEachRow(width As Integer, height As Integer, body As Action(Of Integer))
+            If height <= 0 Then Return
+            If CLng(width) * height < ParallelPixelThreshold Then
+                For y As Integer = 0 To height - 1
+                    body(y)
+                Next
+            Else
+                Parallel.For(0, height, body)
+            End If
+        End Sub
+
+        ''' <summary>Identitätstabelle (Index -> Index) für den Alpha-Kanal von SKColorFilter.CreateTable.
+        ''' Seit SkiaSharp 3.119 wirft die Überladung eine ArgumentNullException, wenn die Alpha-Tabelle
+        ''' Nothing ist - früher stand Nothing für "Alpha unverändert lassen". Diese Tabelle stellt genau
+        ''' dieses Verhalten wieder her und wird von Skia beim Bau des nativen Filters kopiert, ist also
+        ''' gefahrlos gemeinsam nutzbar.</summary>
+        Private Shared ReadOnly IdentityByteTable As Byte() = BuildIdentityByteTable()
+
+        Private Shared Function BuildIdentityByteTable() As Byte()
+            Dim table = New Byte(255) {}
+            For i As Integer = 0 To 255
+                table(i) = CByte(i)
+            Next
+            Return table
+        End Function
 
         Private Shared Function CloneBitmap(source As SKBitmap) As SKBitmap
             Dim clone = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
@@ -3315,29 +3350,33 @@ Namespace Services
             Dim stride As Integer = 0
             If TryBorrowBgraBuffer(source, srcBuf, stride) Then
                 Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                For y As Integer = 0 To h - 1
-                    Dim rowOffset = y * stride
-                    For x As Integer = 0 To w - 1
-                        rWindow.Clear() : gWindow.Clear() : bWindow.Clear()
-                        Dim centerO = rowOffset + x * 4
-                        Dim alpha = srcBuf(centerO + 3)
-                        For yy As Integer = Math.Max(0, y - radius) To Math.Min(h - 1, y + radius)
-                            Dim yyRowOffset = yy * stride
-                            For xx As Integer = Math.Max(0, x - radius) To Math.Min(w - 1, x + radius)
-                                Dim oo = yyRowOffset + xx * 4
-                                bWindow.Add(srcBuf(oo))
-                                gWindow.Add(srcBuf(oo + 1))
-                                rWindow.Add(srcBuf(oo + 2))
-                            Next
-                        Next
-                        rWindow.Sort() : gWindow.Sort() : bWindow.Sort()
-                        Dim mid = rWindow.Count \ 2
-                        dstBuf(centerO) = bWindow(mid)
-                        dstBuf(centerO + 1) = gWindow(mid)
-                        dstBuf(centerO + 2) = rWindow(mid)
-                        dstBuf(centerO + 3) = alpha
-                    Next
-                Next
+                ' Jede Zeile bekommt eigene Fensterlisten - parallel dürfen sie nicht geteilt werden.
+                ForEachRow(w, h, Sub(y)
+                                     Dim rWin As New List(Of Byte)()
+                                     Dim gWin As New List(Of Byte)()
+                                     Dim bWin As New List(Of Byte)()
+                                     Dim rowOffset = y * stride
+                                     For x As Integer = 0 To w - 1
+                                         rWin.Clear() : gWin.Clear() : bWin.Clear()
+                                         Dim centerO = rowOffset + x * 4
+                                         Dim alpha = srcBuf(centerO + 3)
+                                         For yy As Integer = Math.Max(0, y - radius) To Math.Min(h - 1, y + radius)
+                                             Dim yyRowOffset = yy * stride
+                                             For xx As Integer = Math.Max(0, x - radius) To Math.Min(w - 1, x + radius)
+                                                 Dim oo = yyRowOffset + xx * 4
+                                                 bWin.Add(srcBuf(oo))
+                                                 gWin.Add(srcBuf(oo + 1))
+                                                 rWin.Add(srcBuf(oo + 2))
+                                             Next
+                                         Next
+                                         rWin.Sort() : gWin.Sort() : bWin.Sort()
+                                         Dim mid = rWin.Count \ 2
+                                         dstBuf(centerO) = bWin(mid)
+                                         dstBuf(centerO + 1) = gWin(mid)
+                                         dstBuf(centerO + 2) = rWin(mid)
+                                         dstBuf(centerO + 3) = alpha
+                                     Next
+                                 End Sub)
                 CommitBgraBuffer(result, dstBuf)
                 Return result
             End If
@@ -3498,7 +3537,7 @@ Namespace Services
             Next
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using filter = SKColorFilter.CreateTable(Nothing, finalR, finalG, finalB)
+            Using filter = SKColorFilter.CreateTable(IdentityByteTable, finalR, finalG, finalB)
                 Using paint = New SKPaint With {.ColorFilter = filter}
                     Using canvas = New SKCanvas(result)
                         canvas.DrawBitmap(source, 0, 0, paint)
@@ -3514,19 +3553,19 @@ Namespace Services
                 Dim stride As Integer = 0
                 If TryBorrowBgraBuffer(result, srcBuf, stride) Then
                     Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                    For y As Integer = 0 To result.Height - 1
-                        Dim rowOffset = y * stride
-                        For x As Integer = 0 To result.Width - 1
-                            Dim o = rowOffset + x * 4
-                            Dim h As Double
-                            Dim s As Double
-                            Dim l As Double
-                            RgbToHsl(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), h, s, l)
-                            Dim newL = lumLut(ClampToByte(l * 255.0)) / 255.0
-                            Dim nc = HslToRgb(h, s, newL, srcBuf(o + 3))
-                            dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
-                        Next
-                    Next
+                    ForEachRow(result.Width, result.Height, Sub(y)
+                                                                Dim rowOffset = y * stride
+                                                                For x As Integer = 0 To result.Width - 1
+                                                                    Dim o = rowOffset + x * 4
+                                                                    Dim h As Double
+                                                                    Dim s As Double
+                                                                    Dim l As Double
+                                                                    RgbToHsl(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), h, s, l)
+                                                                    Dim newL = lumLut(ClampToByte(l * 255.0)) / 255.0
+                                                                    Dim nc = HslToRgb(h, s, newL, srcBuf(o + 3))
+                                                                    dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
+                                                                Next
+                                                            End Sub)
                     CommitBgraBuffer(withLuminance, dstBuf)
                 Else
                     For y As Integer = 0 To result.Height - 1
@@ -3684,14 +3723,14 @@ Namespace Services
             Dim stride As Integer = 0
             If TryBorrowBgraBuffer(source, srcBuf, stride) Then
                 Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                For y As Integer = 0 To source.Height - 1
-                    Dim rowOffset = y * stride
-                    For x As Integer = 0 To source.Width - 1
-                        Dim o = rowOffset + x * 4
-                        Dim nc = ProcessHslPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), adj)
-                        dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
-                    Next
-                Next
+                ForEachRow(source.Width, source.Height, Sub(y)
+                                                            Dim rowOffset = y * stride
+                                                            For x As Integer = 0 To source.Width - 1
+                                                                Dim o = rowOffset + x * 4
+                                                                Dim nc = ProcessHslPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), adj)
+                                                                dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
+                                                            Next
+                                                        End Sub)
                 CommitBgraBuffer(result, dstBuf)
                 Return result
             End If
@@ -3778,14 +3817,14 @@ Namespace Services
             Dim stride As Integer = 0
             If TryBorrowBgraBuffer(source, srcBuf, stride) Then
                 Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                For y As Integer = 0 To source.Height - 1
-                    Dim rowOffset = y * stride
-                    For x As Integer = 0 To source.Width - 1
-                        Dim o = rowOffset + x * 4
-                        Dim nc = ProcessSplitToningPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), adj, hasShadow, hasHighlight, pivot)
-                        dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
-                    Next
-                Next
+                ForEachRow(source.Width, source.Height, Sub(y)
+                                                            Dim rowOffset = y * stride
+                                                            For x As Integer = 0 To source.Width - 1
+                                                                Dim o = rowOffset + x * 4
+                                                                Dim nc = ProcessSplitToningPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), adj, hasShadow, hasHighlight, pivot)
+                                                                dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
+                                                            Next
+                                                        End Sub)
                 CommitBgraBuffer(result, dstBuf)
                 Return result
             End If
@@ -4076,14 +4115,14 @@ Namespace Services
             Dim stride As Integer = 0
             If TryBorrowBgraBuffer(source, srcBuf, stride) Then
                 Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                For y = 0 To source.Height - 1
-                    Dim rowOffset = y * stride
-                    For x = 0 To source.Width - 1
-                        Dim o = rowOffset + x * 4
-                        Dim nc = ProcessCubeLutPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), table, size, maxIndex, strength)
-                        dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
-                    Next
-                Next
+                ForEachRow(source.Width, source.Height, Sub(y)
+                                                            Dim rowOffset = y * stride
+                                                            For x = 0 To source.Width - 1
+                                                                Dim o = rowOffset + x * 4
+                                                                Dim nc = ProcessCubeLutPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), table, size, maxIndex, strength)
+                                                                dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
+                                                            Next
+                                                        End Sub)
                 CommitBgraBuffer(result, dstBuf)
                 Return result
             End If
@@ -4120,32 +4159,32 @@ Namespace Services
             Dim stride As Integer = 0
             If TryBorrowBgraBuffer(result, srcBuf, stride) Then
                 Dim dstBuf = CType(srcBuf.Clone(), Byte())
-                For y = 0 To result.Height - 1
-                    Dim rowOffset = y * stride
-                    For x = 0 To result.Width - 1
-                        Dim dx = (x - cx) / Math.Max(1.0F, radiusX)
-                        Dim dy = (y - cy) / Math.Max(1.0F, radiusY)
-                        Dim distance = CSng(Math.Sqrt(dx * dx + dy * dy))
-                        Dim t = Clamp((distance - inner) / softness, 0, 1)
-                        If t <= 0 Then Continue For
-                        t = t * t * (3.0F - 2.0F * t)
+                ForEachRow(result.Width, result.Height, Sub(y)
+                                                            Dim rowOffset = y * stride
+                                                            For x = 0 To result.Width - 1
+                                                                Dim dx = (x - cx) / Math.Max(1.0F, radiusX)
+                                                                Dim dy = (y - cy) / Math.Max(1.0F, radiusY)
+                                                                Dim distance = CSng(Math.Sqrt(dx * dx + dy * dy))
+                                                                Dim t = Clamp((distance - inner) / softness, 0, 1)
+                                                                If t <= 0 Then Continue For
+                                                                t = t * t * (3.0F - 2.0F * t)
 
-                        Dim o = rowOffset + x * 4
-                        Dim bB = srcBuf(o)
-                        Dim gG = srcBuf(o + 1)
-                        Dim rR = srcBuf(o + 2)
-                        Dim mix = t * edgeAlpha / 255.0F
-                        If darken Then
-                            dstBuf(o) = ClampToByte(bB * (1 - mix))
-                            dstBuf(o + 1) = ClampToByte(gG * (1 - mix))
-                            dstBuf(o + 2) = ClampToByte(rR * (1 - mix))
-                        Else
-                            dstBuf(o) = ClampToByte(bB + (255 - bB) * mix)
-                            dstBuf(o + 1) = ClampToByte(gG + (255 - gG) * mix)
-                            dstBuf(o + 2) = ClampToByte(rR + (255 - rR) * mix)
-                        End If
-                    Next
-                Next
+                                                                Dim o = rowOffset + x * 4
+                                                                Dim bB = srcBuf(o)
+                                                                Dim gG = srcBuf(o + 1)
+                                                                Dim rR = srcBuf(o + 2)
+                                                                Dim mix = t * edgeAlpha / 255.0F
+                                                                If darken Then
+                                                                    dstBuf(o) = ClampToByte(bB * (1 - mix))
+                                                                    dstBuf(o + 1) = ClampToByte(gG * (1 - mix))
+                                                                    dstBuf(o + 2) = ClampToByte(rR * (1 - mix))
+                                                                Else
+                                                                    dstBuf(o) = ClampToByte(bB + (255 - bB) * mix)
+                                                                    dstBuf(o + 1) = ClampToByte(gG + (255 - gG) * mix)
+                                                                    dstBuf(o + 2) = ClampToByte(rR + (255 - rR) * mix)
+                                                                End If
+                                                            Next
+                                                        End Sub)
                 CommitBgraBuffer(result, dstBuf)
                 Return result
             End If
@@ -4482,7 +4521,7 @@ Namespace Services
                 lut(i) = ClampToByte(v * 255.0)
             Next
 
-            Dim colorFilter = SKColorFilter.CreateTable(Nothing, lut, lut, lut)
+            Dim colorFilter = SKColorFilter.CreateTable(IdentityByteTable, lut, lut, lut)
             Dim paint = New SKPaint With {.ColorFilter = colorFilter}
             Dim result = New SKBitmap(source.Width, source.Height)
             Using canvas = New SKCanvas(result)
