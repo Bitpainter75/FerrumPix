@@ -1,10 +1,14 @@
+Imports System.Collections.Concurrent
 Imports System.Globalization
 Imports System.IO
 Imports System.Text.RegularExpressions
+Imports System.Threading
+Imports System.Threading.Tasks
 Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Media
 Imports Avalonia.Platform
+Imports Avalonia.Threading
 
 Namespace Controls
 
@@ -17,7 +21,10 @@ Namespace Controls
         Public Shared ReadOnly IconBrushProperty As StyledProperty(Of IBrush) =
             AvaloniaProperty.Register(Of SvgIcon, IBrush)(NameOf(IconBrush), New SolidColorBrush(Color.Parse("#D6DCE1")))
 
-        Private Shared ReadOnly Cache As New Dictionary(Of String, SvgIconData)()
+        ' Nebenläufig, weil PreloadOutlineIconsAsync im Hintergrund einträgt, während Render auf dem
+        ' UI-Faden liest. Doppelt geparste Icons sind dabei unkritisch - die Daten sind unveränderlich.
+        Private Shared ReadOnly Cache As New ConcurrentDictionary(Of String, SvgIconData)()
+        Private Shared _preloadStarted As Integer = 0
         Private Const IconAssetPrefix As String = "/Assets/Icons/"
         Private Const OutlineAssetBase As String = "avares://FerrumPix/Assets/Icons/outline/"
         Private Shared ReadOnly LegacyOutlineFileMap As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
@@ -166,19 +173,67 @@ Namespace Controls
             Return OutlineAssetBase & mappedFile
         End Function
 
+        ''' <summary>Liest und zerlegt alle Kontur-Icons einmalig im Hintergrund und baut ihre
+        ''' Geometrien anschließend häppchenweise auf dem UI-Faden. Ohne das wird jedes Symbol erst
+        ''' geparst, wenn es zum ersten Mal gezeichnet wird - beim Aufklappen von "Formen und Symbole"
+        ''' ruckelt dadurch das Scrollen, weil dort mehrere tausend Icons liegen.
+        '''
+        ''' Das Zerlegen (Datei lesen, reguläre Ausdrücke) läuft auf einem Arbeitsfaden, das Erzeugen der
+        ''' Geometry-Objekte MUSS auf dem UI-Faden laufen: Geometry erbt von AvaloniaObject und ist an
+        ''' den Faden gebunden, der es angelegt hat.
+        ''' Läuft je Programmlauf genau einmal; weitere Aufrufe kehren sofort zurück.</summary>
+        Public Shared Function PreloadOutlineIconsAsync() As Task
+            If Interlocked.Exchange(_preloadStarted, 1) <> 0 Then Return Task.CompletedTask
+
+            Return Task.Run(Sub()
+                                Dim parsed As New List(Of KeyValuePair(Of String, SvgIconSource))()
+                                Try
+                                    For Each uri In AssetLoader.GetAssets(New Uri(OutlineAssetBase), Nothing)
+                                        Dim source = uri.ToString()
+                                        If Not source.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) Then Continue For
+                                        If Cache.ContainsKey(source) Then Continue For
+                                        Dim parsedSource = LoadSource(source)
+                                        If parsedSource IsNot Nothing Then parsed.Add(New KeyValuePair(Of String, SvgIconSource)(source, parsedSource))
+                                    Next
+                                Catch
+                                End Try
+
+                                ' In Häppchen, damit die Oberfläche zwischendurch zeichnen kann.
+                                Const batchSize As Integer = 64
+                                For start = 0 To parsed.Count - 1 Step batchSize
+                                    Dim first = start
+                                    Dispatcher.UIThread.Post(
+                                        Sub()
+                                            For i = first To Math.Min(first + batchSize - 1, parsed.Count - 1)
+                                                Dim entry = parsed(i)
+                                                If Cache.ContainsKey(entry.Key) Then Continue For
+                                                Dim icon = BuildIcon(entry.Value)
+                                                If icon IsNot Nothing Then Cache(entry.Key) = icon
+                                            Next
+                                        End Sub, DispatcherPriority.Background)
+                                Next
+                            End Sub)
+        End Function
+
         Private Shared Function GetIcon(source As String) As SvgIconData
             Dim resolvedSource = ResolveIconSource(source)
             Dim cached As SvgIconData = Nothing
             If Cache.TryGetValue(resolvedSource, cached) Then Return cached
 
+            Dim parsedSource = LoadSource(resolvedSource)
+            If parsedSource Is Nothing Then Return Nothing
+
+            Dim icon = BuildIcon(parsedSource)
+            If icon IsNot Nothing Then Cache(resolvedSource) = icon
+            Return icon
+        End Function
+
+        ''' Nur Lesen und Zerlegen - erzeugt keine Avalonia-Objekte und darf daher auf jedem Faden laufen.
+        Private Shared Function LoadSource(resolvedSource As String) As SvgIconSource
             Try
-                Dim uri = New Uri(resolvedSource)
-                Using stream = AssetLoader.Open(uri)
+                Using stream = AssetLoader.Open(New Uri(resolvedSource))
                     Using reader = New StreamReader(stream)
-                        Dim svg = reader.ReadToEnd()
-                        Dim icon = ParseSvg(svg)
-                        Cache(resolvedSource) = icon
-                        Return icon
+                        Return ParseSvg(reader.ReadToEnd())
                     End Using
                 End Using
             Catch
@@ -186,7 +241,35 @@ Namespace Controls
             End Try
         End Function
 
-        Private Shared Function ParseSvg(svg As String) As SvgIconData
+        ''' Baut die Geometrie aus den Pfaddaten - nur auf dem UI-Faden aufrufen.
+        Private Shared Function BuildIcon(source As SvgIconSource) As SvgIconData
+            Dim geometry = BuildGeometry(source.PathData)
+            If geometry Is Nothing Then Return Nothing
+
+            Return New SvgIconData With {
+                .ViewBox = source.ViewBox,
+                .SvgTransform = source.SvgTransform,
+                .Geometry = geometry,
+                .IsStroked = source.IsStroked,
+                .StrokeWidth = source.StrokeWidth
+            }
+        End Function
+
+        Private Shared Function BuildGeometry(pathData As List(Of String)) As Geometry
+            Dim group As New GeometryGroup()
+            For Each d In pathData
+                Try
+                    group.Children.Add(Geometry.Parse(d))
+                Catch
+                End Try
+            Next
+
+            If group.Children.Count = 0 Then Return Nothing
+            If group.Children.Count = 1 Then Return group.Children(0)
+            Return group
+        End Function
+
+        Private Shared Function ParseSvg(svg As String) As SvgIconSource
             Dim viewBoxMatch = Regex.Match(svg, "viewBox=""(?<x>[-0-9.]+)\s+(?<y>[-0-9.]+)\s+(?<w>[-0-9.]+)\s+(?<h>[-0-9.]+)""")
             If Not viewBoxMatch.Success Then Throw New InvalidDataException("Unsupported SVG icon.")
 
@@ -214,23 +297,24 @@ Namespace Controls
             Dim strokeWidthMatch = Regex.Match(rootTag, "stroke-width\s*=\s*""(?<w>[-0-9.]+)""")
             If strokeWidthMatch.Success Then strokeWidth = ParseInvariant(strokeWidthMatch.Groups("w").Value)
 
-            Dim geometry = ParseShapes(svg)
-            If geometry Is Nothing Then Throw New InvalidDataException("Unsupported SVG icon.")
+            Dim pathData = ParseShapes(svg)
+            If pathData.Count = 0 Then Throw New InvalidDataException("Unsupported SVG icon.")
 
-            Return New SvgIconData With {
+            Return New SvgIconSource With {
                 .ViewBox = viewBox,
                 .SvgTransform = transform,
-                .Geometry = geometry,
+                .PathData = pathData,
                 .IsStroked = isStroked,
                 .StrokeWidth = strokeWidth
             }
         End Function
 
-        ' Kombiniert alle Grundformen (path/rect/circle/ellipse/line) einer SVG-Datei zu einer Geometrie,
-        ' da manche Icons (v.a. die Kontur-Symbole) aus mehreren Elementen statt nur einem <path> bestehen.
-        Private Shared Function ParseShapes(svg As String) As Geometry
+        ' Sammelt die Pfaddaten aller Grundformen (path/rect/circle/ellipse/line) einer SVG-Datei, da
+        ' manche Icons (v.a. die Kontur-Symbole) aus mehreren Elementen statt nur einem <path> bestehen.
+        ' Reine Zeichenkettenarbeit - die Geometrie daraus baut BuildGeometry auf dem UI-Faden.
+        Private Shared Function ParseShapes(svg As String) As List(Of String)
             Dim shapeRegex = New Regex("<(?<tag>path|rect|circle|ellipse|line)\b(?<attrs>[^>]*?)/?>", RegexOptions.Singleline)
-            Dim group As New GeometryGroup()
+            Dim pathData As New List(Of String)()
 
             For Each m As Match In shapeRegex.Matches(svg)
                 Dim d As String = Nothing
@@ -243,17 +327,10 @@ Namespace Controls
                     Case "line" : d = LineToPath(attrs)
                 End Select
 
-                If Not String.IsNullOrWhiteSpace(d) Then
-                    Try
-                        group.Children.Add(Geometry.Parse(d))
-                    Catch
-                    End Try
-                End If
+                If Not String.IsNullOrWhiteSpace(d) Then pathData.Add(d)
             Next
 
-            If group.Children.Count = 0 Then Return Nothing
-            If group.Children.Count = 1 Then Return group.Children(0)
-            Return group
+            Return pathData
         End Function
 
         Private Shared Function GetAttr(attrs As String, name As String) As String
@@ -334,6 +411,15 @@ Namespace Controls
             Public Property ViewBox As Rect
             Public Property SvgTransform As Matrix
             Public Property Geometry As Geometry
+            Public Property IsStroked As Boolean
+            Public Property StrokeWidth As Double
+        End Class
+
+        ''' Zwischenstufe ohne Avalonia-Objekte: darf auf jedem Faden entstehen (siehe LoadSource).
+        Private Class SvgIconSource
+            Public Property ViewBox As Rect
+            Public Property SvgTransform As Matrix
+            Public Property PathData As List(Of String)
             Public Property IsStroked As Boolean
             Public Property StrokeWidth As Double
         End Class

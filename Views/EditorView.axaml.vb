@@ -402,6 +402,9 @@ Namespace Views
                 Function() If(TryCast(DataContext, EditorViewModel) Is Nothing, -1, TryCast(DataContext, EditorViewModel).CurrentFilmstripIndex))
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             AddHandler Loaded, Sub(s, e)
+                ' Die Symbolgalerie ("Formen und Symbole") enthält mehrere tausend SVGs. Sie werden hier
+                ' einmalig im Hintergrund geparst, damit das Aufklappen später nicht ruckelt.
+                Dim ignored = SvgIcon.PreloadOutlineIconsAsync()
                 RestoreRulerAndGridState()
                 UpdateSliderLayout()
                 UpdateInfoSidebarLayout()
@@ -1581,7 +1584,7 @@ Namespace Views
             ReleasePickSampleBitmap()
             Try
                 Using ms = New MemoryStream()
-                    bitmap.Save(ms)
+                    bitmap.Save(ms, PngBitmapEncoderOptions.Default)
                     ms.Seek(0, SeekOrigin.Begin)
                     _pickSampleBitmap = SKBitmap.Decode(ms)
                 End Using

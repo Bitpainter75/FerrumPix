@@ -2872,6 +2872,16 @@ Namespace ViewModels
             BottomSpacerHeight = 0
             If Items Is Nothing OrElse DisplayItems Is Nothing Then Return
             DisplayItems.ReplaceAll(Items.Take(Math.Min(120, Items.Count)))
+
+            ' Das gefüllte Fenster mitführen. Sonst hält der nächste SetDisplayWindow-Aufruf (er kommt
+            ' vom ersten Layout-Durchlauf der Ansicht) die Grenzen für unbekannt und ersetzt DisplayItems
+            ' per ReplaceAll durch exakt dieselben Elemente. Das Reset-Ereignis baut alle Kacheln neu auf,
+            ' und der ItemsControl bleibt danach mit Höhe 0 stehen - die Galerie wirkt leer, bis ein
+            ' Ordnerwechsel sie neu aufbaut.
+            If DisplayItems.Count > 0 Then
+                _displayWindowFirst = 0
+                _displayWindowLast = DisplayItems.Count - 1
+            End If
         End Sub
 
         Private Sub FilterAndSort()

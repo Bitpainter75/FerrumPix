@@ -832,6 +832,36 @@ Namespace Services
 
     Public Class ImageProcessor
 
+        ''' SKPaint trug bis SkiaSharp 2 die Schrift selbst. Sein interner Ersatz-SKFont hat
+        ''' LinearMetrics=True - ein frisch erzeugter SKFont dagegen False, was Textbreiten und das
+        ''' Rendering messbar verändert (geprüft: identische Bytes erst mit LinearMetrics=True).
+        Private Shared Function CreateFont(fontFamily As String, fontSize As Single) As SKFont
+            Return New SKFont(GetTypeface(fontFamily), fontSize) With {.LinearMetrics = True}
+        End Function
+
+        ''' SkiaSharp hat SKFilterQuality zugunsten von SKSamplingOptions abgekündigt. Diese Werte sind
+        ''' exakt die, auf die SkiaSharp die alten Stufen intern abbildet (siehe SkiaExtensions.ToSamplingOptions):
+        ''' High = kubisch (Mitchell), Medium = linear mit Mipmaps.
+        Private Shared ReadOnly SamplingHigh As New SKSamplingOptions(SKCubicResampler.Mitchell)
+
+        ''' Zeichnet eine Bitmap mit ausdrücklicher Abtastung. SKCanvas.DrawBitmap kennt keine
+        ''' SKSamplingOptions-Überladung, DrawImage schon - ohne sie fiele die Skalierung auf
+        ''' Nearest zurück, weil SKSamplingOptions.Default nicht filtert.
+        Private Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, source As SKRect, dest As SKRect,
+                                             sampling As SKSamplingOptions, paint As SKPaint)
+            Using image = SKImage.FromBitmap(bitmap)
+                canvas.DrawImage(image, source, dest, sampling, paint)
+            End Using
+        End Sub
+
+        Private Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, x As Single, y As Single,
+                                             sampling As SKSamplingOptions, paint As SKPaint)
+            Using image = SKImage.FromBitmap(bitmap)
+                canvas.DrawImage(image, x, y, sampling, paint)
+            End Using
+        End Sub
+
+
         ' Cache des zuletzt berechneten Bildes VOR dem Einzeichnen der Objekte (Annotations).
         ' Beim Live-Verschieben/Bearbeiten eines Objekts ändert sich nur dieser letzte Schritt,
         ' daher muss die teure Pipeline (Belichtung, Kurven, Filter, Schärfen, ...) nicht jedes
@@ -1072,15 +1102,15 @@ Namespace Services
         ''' Textrechtecks im EditorViewModel.</summary>
         Public Shared Function GetBakedTextLineHeight(fontFamily As String, fontSize As Single) As Double
             If fontSize <= 0 Then Return 0
-            Using paint = New SKPaint With {.TextSize = fontSize, .Typeface = GetTypeface(fontFamily)}
-                Return GetLineHeight(paint.FontMetrics)
+            Using font = CreateFont(fontFamily, fontSize)
+                Return GetLineHeight(font.Metrics)
             End Using
         End Function
 
         Public Shared Function GetBakedTextTopOffset(fontFamily As String, fontSize As Single) As Double
             If fontSize <= 0 Then Return 0
-            Using paint = New SKPaint With {.TextSize = fontSize, .Typeface = GetTypeface(fontFamily)}
-                Return Math.Max(0.0F, fontSize + paint.FontMetrics.Ascent)
+            Using font = CreateFont(fontFamily, fontSize)
+                Return Math.Max(0.0F, fontSize + font.Metrics.Ascent)
             End Using
         End Function
 
@@ -1161,8 +1191,8 @@ Namespace Services
                     Dim result = New SKBitmap(width, height, original.ColorType, original.AlphaType)
                     Using canvas = New SKCanvas(result)
                         canvas.Clear(SKColors.Transparent)
-                        Using paint = New SKPaint With {.FilterQuality = SKFilterQuality.High, .IsAntialias = True}
-                            canvas.DrawBitmap(original, New SKRect(0, 0, original.Width, original.Height), New SKRect(0, 0, width, height), paint)
+                        Using paint = New SKPaint With {.IsAntialias = True}
+                            DrawBitmapSampled(canvas, original, New SKRect(0, 0, original.Width, original.Height), New SKRect(0, 0, width, height), SamplingHigh, paint)
                         End Using
                     End Using
                     Return result
@@ -1559,21 +1589,22 @@ Namespace Services
             Dim result = New SKBitmap(targetWidth, targetHeight, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)
-                Using paint = New SKPaint With {.FilterQuality = ToFilterQuality(adj.ResizeInterpolation), .IsAntialias = True}
-                    canvas.DrawBitmap(source, New SKRect(0, 0, source.Width, source.Height), New SKRect(0, 0, targetWidth, targetHeight), paint)
+                Using paint = New SKPaint With {.IsAntialias = True}
+                    DrawBitmapSampled(canvas, source, New SKRect(0, 0, source.Width, source.Height), New SKRect(0, 0, targetWidth, targetHeight),
+                                      ToSampling(adj.ResizeInterpolation), paint)
                 End Using
             End Using
             Return result
         End Function
 
-        Private Shared Function ToFilterQuality(mode As ResizeInterpolationMode) As SKFilterQuality
+        Private Shared Function ToSampling(mode As ResizeInterpolationMode) As SKSamplingOptions
             Select Case mode
                 Case ResizeInterpolationMode.Nearest
-                    Return SKFilterQuality.None
+                    Return New SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None)
                 Case ResizeInterpolationMode.Bilinear
-                    Return SKFilterQuality.Low
+                    Return New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)
                 Case Else
-                    Return SKFilterQuality.High
+                    Return SamplingHigh
             End Select
         End Function
 
@@ -1918,31 +1949,29 @@ Namespace Services
         End Function
 
         Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
-            If strokeWidth > 0 Then
-                Using strokePaint = New SKPaint With {
-                    .Color = stroke,
-                    .TextSize = fontSize,
-                    .Typeface = GetTypeface(fontFamily),
-                    .IsAntialias = True,
-                    .Style = SKPaintStyle.Stroke,
-                    .StrokeWidth = Math.Max(1.0F, strokeWidth)
-                }
-                    DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, strokePaint)
-                End Using
-            End If
-
-            Using fillPaint = New SKPaint With {
-                .Color = fill,
-                .TextSize = fontSize,
-                .Typeface = GetTypeface(fontFamily),
-                .IsAntialias = True,
-                .Style = SKPaintStyle.Fill
-            }
-                Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
-                If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
-                    fillPaint.Shader = CreateFillGradientShader(bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+            Using font = CreateFont(fontFamily, fontSize)
+                If strokeWidth > 0 Then
+                    Using strokePaint = New SKPaint With {
+                        .Color = stroke,
+                        .IsAntialias = True,
+                        .Style = SKPaintStyle.Stroke,
+                        .StrokeWidth = Math.Max(1.0F, strokeWidth)
+                    }
+                        DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint)
+                    End Using
                 End If
-                DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, fillPaint)
+
+                Using fillPaint = New SKPaint With {
+                    .Color = fill,
+                    .IsAntialias = True,
+                    .Style = SKPaintStyle.Fill
+                }
+                    Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
+                    If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
+                        fillPaint.Shader = CreateFillGradientShader(bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+                    End If
+                    DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, fillPaint)
+                End Using
             End Using
         End Sub
 
@@ -1958,10 +1987,9 @@ Namespace Services
                 Dim fitRect = FitRectKeepingAspectRatio(rect, bitmap.Width, bitmap.Height)
                 Using paint = New SKPaint With {
                     .IsAntialias = True,
-                    .FilterQuality = SKFilterQuality.High,
                     .Color = New SKColor(255, 255, 255, CByte(Math.Max(0, Math.Min(255, 255 * Clamp(opacity, 0, 100) / 100.0F))))
                 }
-                    canvas.DrawBitmap(bitmap, SKRect.Create(0, 0, bitmap.Width, bitmap.Height), fitRect, paint)
+                    DrawBitmapSampled(canvas, bitmap, SKRect.Create(0, 0, bitmap.Width, bitmap.Height), fitRect, SamplingHigh, paint)
                 End Using
 
                 If strokeWidth > 0 Then
@@ -2399,20 +2427,22 @@ Namespace Services
             Dim text = glyph.Trim()
             If text.Length = 0 Then text = "★"
             Dim fontSize = Math.Max(12.0F, Math.Min(rect.Width, rect.Height) * 0.82F)
-            Using paint = New SKPaint With {.TextSize = fontSize, .Typeface = GetTypeface(fontFamily), .IsAntialias = True}
-                Dim bounds As SKRect
-                paint.MeasureText(text, bounds)
-                Dim x = rect.MidX - bounds.MidX
-                Dim y = rect.MidY - bounds.MidY
-                If strokeWidth > 0 Then
-                    paint.Style = SKPaintStyle.Stroke
-                    paint.StrokeWidth = strokeWidth
-                    paint.Color = stroke
-                    canvas.DrawText(text, x, y, paint)
-                End If
-                paint.Style = SKPaintStyle.Fill
-                paint.Color = fill
-                canvas.DrawText(text, x, y, paint)
+            Using font = CreateFont(fontFamily, fontSize)
+                Using paint = New SKPaint With {.IsAntialias = True}
+                    Dim bounds As SKRect
+                    font.MeasureText(text, bounds, paint)
+                    Dim x = rect.MidX - bounds.MidX
+                    Dim y = rect.MidY - bounds.MidY
+                    If strokeWidth > 0 Then
+                        paint.Style = SKPaintStyle.Stroke
+                        paint.StrokeWidth = strokeWidth
+                        paint.Color = stroke
+                        canvas.DrawText(text, x, y, font, paint)
+                    End If
+                    paint.Style = SKPaintStyle.Fill
+                    paint.Color = fill
+                    canvas.DrawText(text, x, y, font, paint)
+                End Using
             End Using
         End Sub
 
@@ -2446,17 +2476,17 @@ Namespace Services
             Return New SKColor(color.Red, color.Green, color.Blue, alpha)
         End Function
 
-        Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, paint As SKPaint)
+        Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint)
             If String.IsNullOrEmpty(text) Then Return
-            Dim lineHeight = GetLineHeight(paint.FontMetrics)
+            Dim lineHeight = GetLineHeight(font.Metrics)
             Dim baseline = y + fontSize
 
             For Each paragraph In text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
                 Dim current = ""
                 For Each word In paragraph.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
                     Dim candidate = If(String.IsNullOrEmpty(current), word, current & " " & word)
-                    If current.Length > 0 AndAlso paint.MeasureText(candidate) > maxWidth Then
-                        canvas.DrawText(current, x, baseline, paint)
+                    If current.Length > 0 AndAlso font.MeasureText(candidate, paint) > maxWidth Then
+                        canvas.DrawText(current, x, baseline, font, paint)
                         baseline += lineHeight
                         current = word
                     Else
@@ -2465,7 +2495,7 @@ Namespace Services
                 Next
 
                 If current.Length > 0 Then
-                    canvas.DrawText(current, x, baseline, paint)
+                    canvas.DrawText(current, x, baseline, font, paint)
                 End If
                 baseline += lineHeight
             Next
@@ -2571,8 +2601,8 @@ Namespace Services
                     canvas.Clear(ParseColor(adj.CanvasBackgroundColor, SKColors.Transparent))
                     canvas.Translate(expandedWidth / 2.0F, expandedHeight / 2.0F)
                     canvas.RotateDegrees(degrees)
-                    Using paint = New SKPaint With {.FilterQuality = SKFilterQuality.High, .IsAntialias = True}
-                        canvas.DrawBitmap(source, -source.Width / 2.0F, -source.Height / 2.0F, paint)
+                    Using paint = New SKPaint With {.IsAntialias = True}
+                        DrawBitmapSampled(canvas, source, -source.Width / 2.0F, -source.Height / 2.0F, SamplingHigh, paint)
                     End Using
                 End Using
                 Return expanded
@@ -2589,8 +2619,8 @@ Namespace Services
                 canvas.Translate(source.Width / 2.0F, source.Height / 2.0F)
                 canvas.Scale(CSng(scale))
                 canvas.RotateDegrees(degrees)
-                Using paint = New SKPaint With {.FilterQuality = SKFilterQuality.High, .IsAntialias = True}
-                    canvas.DrawBitmap(source, -source.Width / 2.0F, -source.Height / 2.0F, paint)
+                Using paint = New SKPaint With {.IsAntialias = True}
+                    DrawBitmapSampled(canvas, source, -source.Width / 2.0F, -source.Height / 2.0F, SamplingHigh, paint)
                 End Using
             End Using
             Return result

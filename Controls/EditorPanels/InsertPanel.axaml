@@ -47,14 +47,14 @@
                         Text="{Binding ShapeIconSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         Watermark="Symbol suchen…"
                         FontSize="{DynamicResource FP.Font.Small}" />
+                    <!-- Über viertausend Symbole: ein ItemsControl legt für jedes sofort einen Knopf an.
+                         Der ItemsRepeater mit WrapLayout erzeugt nur die tatsächlich sichtbaren. -->
                     <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding FilteredShapeIcons}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
+                        <ItemsRepeater ItemsSource="{Binding FilteredShapeIcons}">
+                            <ItemsRepeater.Layout>
+                                <WrapLayout />
+                            </ItemsRepeater.Layout>
+                            <ItemsRepeater.ItemTemplate>
                                 <DataTemplate>
                                     <Button Classes="ghost insert-option-btn compact"
                                             ToolTip.Tip="{Binding DisplayName}"
@@ -66,8 +66,8 @@
                                                        Height="16" />
                                     </Button>
                                 </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
                     </ScrollViewer>
                 </StackPanel>
             </Expander>

@@ -158,8 +158,8 @@ Namespace Services
             End If
 
             Dim textBox = TryCast(node, TextBox)
-            If textBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBox.Watermark) Then
-                textBox.Watermark = T(textBox.Watermark)
+            If textBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBox.PlaceholderText) Then
+                textBox.PlaceholderText = T(textBox.PlaceholderText)
             End If
 
             Dim control = TryCast(node, Control)

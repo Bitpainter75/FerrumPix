@@ -119,7 +119,9 @@ Namespace Services
             Dim surfaceBitmap = New SKBitmap(width, layout.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
             Using canvas = New SKCanvas(surfaceBitmap)
                 canvas.Clear(bg)
-                Using paint = New SKPaint With {.IsAntialias = True, .FilterQuality = SKFilterQuality.High}
+                ' SKFilterQuality ist abgekündigt; SamplingHigh entspricht der alten Stufe "High" (kubisch/Mitchell).
+                Dim samplingHigh = New SKSamplingOptions(SKCubicResampler.Mitchell)
+                Using paint = New SKPaint With {.IsAntialias = True}
                     ' "Gap" wird hier als weißer (Hintergrundfarbe) Rahmen um JEDES einzelne Bild
                     ' interpretiert, nicht als Zwischenraum zwischen Zellen - die Zellen selbst liegen
                     ' kantenweise aneinander (siehe BuildGridSlots/BuildHeroSlots), das Bild wird um
@@ -145,7 +147,9 @@ Namespace Services
                                 Dim insetY = slot.Y + (slot.Height - innerHeight) / 2.0F
                                 Dim dst = New SKRect(insetX, insetY, insetX + innerWidth, insetY + innerHeight)
                                 Dim src = GetUniformToFillSourceRect(source.Width, source.Height, CInt(innerWidth), CInt(innerHeight))
-                                canvas.DrawBitmap(source, src, dst, paint)
+                                Using image = SKImage.FromBitmap(source)
+                                    canvas.DrawImage(image, src, dst, samplingHigh, paint)
+                                End Using
                                 canvas.Restore()
                             Finally
                                 If Not Object.ReferenceEquals(source, original) Then source.Dispose()

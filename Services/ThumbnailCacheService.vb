@@ -48,6 +48,9 @@ Namespace Services
         End Sub
 
         Private Const CacheWidth As Integer = 480
+
+        ''' Entspricht der abgekündigten Stufe SKFilterQuality.Medium (linear mit Mipmaps).
+        Private Shared ReadOnly SamplingMedium As New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)
         Private Const IndexFileName As String = "index.json"
 
         ' Bei jeder Änderung, die den Pixelinhalt der Cache-Datei betrifft, ohne dass sich
@@ -455,7 +458,7 @@ Namespace Services
                             Dim scale = targetWidth / CDbl(corrected.Width)
                             Dim targetHeight = Math.Max(1, CInt(Math.Round(corrected.Height * scale)))
 
-                            Using resized = corrected.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SKFilterQuality.Medium)
+                            Using resized = corrected.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
                                 If resized Is Nothing Then Return False
                                 Using image = SKImage.FromBitmap(resized)
                                     Using data = image.Encode(SKEncodedImageFormat.Jpeg, quality)
@@ -543,7 +546,7 @@ Namespace Services
                         Dim targetWidth = Math.Min(maxWidth, corrected.Width)
                         Dim scale = targetWidth / CDbl(corrected.Width)
                         Dim targetHeight = Math.Max(1, CInt(Math.Round(corrected.Height * scale)))
-                        Using resized = corrected.Resize(New SKImageInfo(targetWidth, targetHeight, corrected.ColorType, corrected.AlphaType), SKFilterQuality.Medium)
+                        Using resized = corrected.Resize(New SKImageInfo(targetWidth, targetHeight, corrected.ColorType, corrected.AlphaType), SamplingMedium)
                             Return ImageOrientationService.ToAvaloniaBitmapFast(If(resized, corrected))
                         End Using
                     Finally

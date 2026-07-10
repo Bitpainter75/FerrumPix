@@ -38,6 +38,13 @@ Namespace Controls.EditorPanels
             End Try
         End Function
 
+        Public Async Sub OnInsertImageClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            Dim path = Await PickSingleImagePathAsync("Bild auswählen")
+            If Not String.IsNullOrWhiteSpace(path) Then vm.AddImageAnnotationAtCurrentPosition(path)
+        End Sub
+
         Public Async Sub OnWatermarkChooseImageClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return

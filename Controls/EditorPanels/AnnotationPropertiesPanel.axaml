@@ -50,7 +50,7 @@
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <StackPanel Grid.Column="1" Margin="6,0,0,0" Orientation="Horizontal" Spacing="6">
                     <Button Classes="ghost" Padding="8,4" Click="OnWatermarkChooseImageClick">
-                        <TextBlock Text="Bild…" FontSize="{DynamicResource FP.Font.Small}" />
+                        <TextBlock Text="Bild einfügen" FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                     <Button Classes="ghost" Padding="8,4" Click="OnWatermarkClearImageClick">
                         <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Small}" />
@@ -58,6 +58,18 @@
                 </StackPanel>
             </Grid>
         </StackPanel>
+
+        <!-- Bild-Werkzeug: derselbe Weg wie beim Wasserzeichen - Datei wählen, Objekt erscheint. -->
+        <Grid ColumnDefinitions="74,*" VerticalAlignment="Center"
+              IsVisible="{Binding ShowImageSourceControls}">
+            <TextBlock Text="Quelle" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+            <Button Grid.Column="1" Margin="6,0,0,0" Classes="ghost" Padding="8,4"
+                    HorizontalAlignment="Left"
+                    Click="OnInsertImageClick">
+                <TextBlock Text="Bild einfügen" FontSize="{DynamicResource FP.Font.Small}" />
+            </Button>
+        </Grid>
         <TextBox Text="{Binding AnnotationText}"
                  Watermark="Text, QR-Inhalt oder Symbol eingeben"
                  FontSize="{DynamicResource FP.Font.Body}"

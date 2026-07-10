@@ -1,6 +1,7 @@
 Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Input
+Imports Avalonia.Input.Platform
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Interactivity
 Imports Avalonia.Threading
@@ -53,7 +54,7 @@ Namespace Views
             End If
         End Sub
 
-        Private Sub OnDescendantGotFocus(sender As Object, e As GotFocusEventArgs)
+        Private Sub OnDescendantGotFocus(sender As Object, e As FocusChangedEventArgs)
             Dim focused = TryCast(e.Source, Control)
             If focused Is Nothing OrElse Object.ReferenceEquals(focused, Me) Then Return
             If IsTextInputSource(focused) Then Return
@@ -155,6 +156,7 @@ Namespace Views
             AddHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             AddHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
             If _observedVm.Items IsNot Nothing Then AddHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
+            If _observedVm.DisplayItems IsNot Nothing Then AddHandler _observedVm.DisplayItems.CollectionChanged, AddressOf OnDisplayItemsCollectionChanged
         End Sub
 
         Private Sub UnsubscribeViewModel()
@@ -162,7 +164,29 @@ Namespace Views
             RemoveHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             RemoveHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
             If _observedVm.Items IsNot Nothing Then RemoveHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
+            If _observedVm.DisplayItems IsNot Nothing Then RemoveHandler _observedVm.DisplayItems.CollectionChanged, AddressOf OnDisplayItemsCollectionChanged
             _observedVm = Nothing
+        End Sub
+
+        ''' Der Ordner wird asynchron geladen: DisplayItems füllt sich, nachdem der ItemsControl bereits
+        ''' (leer) vermessen und angeordnet wurde. Sein Reset-Ereignis erneuert zwar seine eigene
+        ''' Wunschgröße, der umgebende StackPanel wird davon aber nicht neu vermessen - der ItemsControl
+        ''' bleibt mit Höhe 0 angeordnet, die Galerie sieht leer aus, bis ein Ordnerwechsel sie neu baut.
+        ''' Bei vielen Bildern fiel das nie auf, weil dort die Platzhalter-Höhen des Sichtfensters von 0
+        ''' abweichen und damit ohnehin eine neue Messung auslösen.
+        Private Sub OnDisplayItemsCollectionChanged(sender As Object, e As NotifyCollectionChangedEventArgs)
+            If e.Action <> NotifyCollectionChangedAction.Reset Then Return
+            Dispatcher.UIThread.Post(AddressOf InvalidateGalleryItemsLayout, DispatcherPriority.Loaded)
+        End Sub
+
+        Private Sub InvalidateGalleryItemsLayout()
+            For Each scrollViewerName In {"GalleryGridScrollViewer", "GalleryListScrollViewer"}
+                Dim scrollViewer = Me.FindControl(Of ScrollViewer)(scrollViewerName)
+                Dim itemsControl = scrollViewer?.GetVisualDescendants().OfType(Of ItemsControl)().FirstOrDefault()
+                If itemsControl Is Nothing Then Continue For
+                itemsControl.InvalidateMeasure()
+                TryCast(itemsControl.GetVisualParent(), Control)?.InvalidateMeasure()
+            Next
         End Sub
 
         Private Sub OnViewDataContextChanged(sender As Object, e As EventArgs)
@@ -1160,7 +1184,7 @@ Namespace Views
             Dim path = node.FullPath
             Task.Run(Async Function()
                          Dim clip = TopLevel.GetTopLevel(Me)?.Clipboard
-                         If clip IsNot Nothing Then Await clip.SetTextAsync(path)
+                         If clip IsNot Nothing Then Await clip.SetValueAsync(DataFormat.Text, path)
                      End Function)
         End Sub
 

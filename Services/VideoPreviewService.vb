@@ -232,7 +232,7 @@ Namespace Services
                                                    .Width = 1,
                                                    .Height = 1,
                                                    .Opacity = 0,
-                                                   .SystemDecorations = SystemDecorations.None,
+                                                   .WindowDecorations = WindowDecorations.None,
                                                    .ShowInTaskbar = False,
                                                    .CanResize = False,
                                                    .ShowActivated = False,

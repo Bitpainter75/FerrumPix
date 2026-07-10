@@ -315,7 +315,7 @@ Namespace ViewModels
         End Property
 
         Private ReadOnly _allShapeIcons As New List(Of ShapeIconEntry)()
-        Private ReadOnly _filteredShapeIcons As New ObservableCollection(Of ShapeIconEntry)()
+        Private ReadOnly _filteredShapeIcons As New BulkObservableCollection(Of ShapeIconEntry)()
         Private ReadOnly _watermarkPresets As New List(Of WatermarkPresetSettings)()
         Public ReadOnly Property SavedLightroomPresets As ObservableCollection(Of LightroomPresetSettings) = New ObservableCollection(Of LightroomPresetSettings)()
         Public ReadOnly Property SavedLutPresets As ObservableCollection(Of LutPresetSettings) = New ObservableCollection(Of LutPresetSettings)()
@@ -329,7 +329,7 @@ Namespace ViewModels
         Private _selectedWatermarkPresetName As String = ""
         Private _watermarkPresetNameDraft As String = ""
 
-        Public ReadOnly Property FilteredShapeIcons As ObservableCollection(Of ShapeIconEntry)
+        Public ReadOnly Property FilteredShapeIcons As BulkObservableCollection(Of ShapeIconEntry)
             Get
                 Return _filteredShapeIcons
             End Get
@@ -364,6 +364,14 @@ Namespace ViewModels
         Public ReadOnly Property ShowWatermarkPresetControls As Boolean
             Get
                 Return EffectiveAnnotationKind = "Watermark"
+            End Get
+        End Property
+
+        ''' Das Bild-Werkzeug wartete bisher auf einen Klick in die Leinwand, um den Dateidialog zu
+        ''' öffnen. Der Knopf im Eigenschaften-Panel bietet denselben Weg wie beim Wasserzeichen an.
+        Public ReadOnly Property ShowImageSourceControls As Boolean
+            Get
+                Return EffectiveAnnotationKind = "Image"
             End Get
         End Property
 
@@ -702,6 +710,7 @@ Namespace ViewModels
 
         Private Sub RaiseWatermarkUiChanged()
             Me.RaisePropertyChanged(NameOf(ShowWatermarkPresetControls))
+            Me.RaisePropertyChanged(NameOf(ShowImageSourceControls))
             Me.RaisePropertyChanged(NameOf(IsWatermarkImageSource))
             Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
             Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
@@ -857,10 +866,8 @@ Namespace ViewModels
                               _allShapeIcons.Where(Function(e) e.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) OrElse
                                                                 e.SourceName.Contains(query, StringComparison.OrdinalIgnoreCase) OrElse
                                                                 e.IconPath.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList())
-            _filteredShapeIcons.Clear()
-            For Each item In matches
-                _filteredShapeIcons.Add(item)
-            Next
+            ' Ein einzelnes Reset statt viertausend Add-Ereignisse.
+            _filteredShapeIcons.ReplaceAll(matches)
         End Sub
 
         Private Shared Function NormalizeAnnotationAnchor(value As String) As String
@@ -5874,6 +5881,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
             Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
             Me.RaisePropertyChanged(NameOf(ShowWatermarkPresetControls))
+            Me.RaisePropertyChanged(NameOf(ShowImageSourceControls))
             Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
             Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
             Me.RaisePropertyChanged(NameOf(AnnotationPositionMinimum))
@@ -6004,11 +6012,10 @@ Namespace ViewModels
             If content.Length = 0 Then content = "Text"
 
             Dim fontSizePx = Math.Max(8.0, fontSizePixels)
-            Using paint = New SKPaint With {
-                .TextSize = CSng(fontSizePx),
-                .Typeface = SKTypeface.FromFamilyName(If(String.IsNullOrWhiteSpace(fontFamily), "Arial", fontFamily)),
-                .IsAntialias = True
-            }
+            ' Seit SkiaSharp 3 trägt SKFont die Schrift, SKPaint nur noch Farbe/Kantenglättung.
+            ' LinearMetrics=True wie im internen Ersatz-Font von SKPaint, sonst weichen die Textbreiten ab.
+            Using font = New SKFont(SKTypeface.FromFamilyName(If(String.IsNullOrWhiteSpace(fontFamily), "Arial", fontFamily)), CSng(fontSizePx)) With {.LinearMetrics = True}
+                Using paint = New SKPaint With {.IsAntialias = True}
                 ' Die Kästchengröße muss zu dem passen, was DrawWrappedText tatsächlich zeichnet, sonst
                 ' steht der Auswahlrahmen sichtbar weiter außen als der Text. Dort gilt: Grundlinie der
                 ' ersten Zeile auf rect.Top + fontSize, Zeilenabstand aus den Schriftmetriken, Umbruch
@@ -6018,7 +6025,7 @@ Namespace ViewModels
                 Dim lineCount As Integer = 0
                 For Each line In content.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
                     lineCount += 1
-                    maxLineWidth = Math.Max(maxLineWidth, paint.MeasureText(If(String.IsNullOrEmpty(line), " ", line)))
+                    maxLineWidth = Math.Max(maxLineWidth, font.MeasureText(If(String.IsNullOrEmpty(line), " ", line), paint))
                 Next
                 If lineCount = 0 Then lineCount = 1
 
@@ -6030,11 +6037,12 @@ Namespace ViewModels
                 Dim padding = Math.Max(2.0, fontSizePx * 0.08)
                 Dim lineHeight = ImageProcessor.GetBakedTextLineHeight(fontFamily, CSng(fontSizePx))
                 Dim widthPx = maxLineWidth + padding
-                Dim heightPx = fontSizePx + (lineCount - 1) * lineHeight + Math.Max(0.0F, paint.FontMetrics.Descent) + padding
+                Dim heightPx = fontSizePx + (lineCount - 1) * lineHeight + Math.Max(0.0F, font.Metrics.Descent) + padding
                 Dim widthPercent = widthPx / baseWidth * 100.0
                 Dim heightPercent = heightPx / baseHeight * 100.0
                 Return (Math.Max(MinTextAnnotationWidthPercent, Math.Min(60.0, widthPercent)),
                         Math.Max(MinTextAnnotationHeightPercent, Math.Min(60.0, heightPercent)))
+                End Using
             End Using
         End Function
 
@@ -6303,6 +6311,12 @@ Namespace ViewModels
                     Return (_annotationWidthPercent, _annotationHeightPercent)
             End Select
         End Function
+
+        ''' Für den Weg über den Knopf im Eigenschaften-Panel: platziert das Bild an der zuletzt
+        ''' eingestellten Position, ohne Klick in die Leinwand (siehe PlacePendingWatermark).
+        Public Sub AddImageAnnotationAtCurrentPosition(imagePath As String)
+            AddImageAnnotationAt(imagePath, _annotationXPercent, _annotationYPercent)
+        End Sub
 
         Public Sub AddImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
