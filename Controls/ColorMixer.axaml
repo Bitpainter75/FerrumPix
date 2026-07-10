@@ -76,7 +76,7 @@
             <!-- Rechtsbündig direkt unter der Pipette: der Hex-Wert füllt die zweite Hälfte der
                  60px hohen Farbfeld-Spalte und spart so seine eigene Zeile ganz ein. -->
             <TextBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2"
-                     Name="HexTextBox" Watermark="#AARRGGBB"
+                     Name="HexTextBox" PlaceholderText="#AARRGGBB"
                      Width="104" Height="26"
                      Margin="0,-8,0,0"
                      HorizontalAlignment="Right" VerticalAlignment="Top"

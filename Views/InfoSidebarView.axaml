@@ -95,7 +95,7 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <AutoCompleteBox Text="{Binding NewTagText, Mode=TwoWay}"
                                                  ItemsSource="{Binding TagSuggestions}"
-                                                 Watermark="Stichwort hinzufügen…"
+                                                 PlaceholderText="Stichwort hinzufügen…"
                                                  FilterMode="Contains"
                                                  MinimumPrefixLength="0"
                                                  FontSize="{DynamicResource FP.Font.Small}"

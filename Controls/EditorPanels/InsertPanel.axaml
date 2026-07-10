@@ -45,7 +45,7 @@
                 <StackPanel Spacing="6" Margin="0,8,0,0">
                     <TextBox
                         Text="{Binding ShapeIconSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        Watermark="Symbol suchen…"
+                        PlaceholderText="Symbol suchen…"
                         FontSize="{DynamicResource FP.Font.Small}" />
                     <!-- Über viertausend Symbole: ein ItemsControl legt für jedes sofort einen Knopf an.
                          Der ItemsRepeater mit WrapLayout erzeugt nur die tatsächlich sichtbaren. -->

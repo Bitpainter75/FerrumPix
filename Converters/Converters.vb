@@ -1,5 +1,6 @@
 Imports System
 Imports System.Globalization
+Imports Avalonia.Data
 Imports Avalonia.Data.Converters
 Imports FerrumPix.ViewModels
 
@@ -20,7 +21,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 
@@ -38,7 +39,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 
@@ -51,7 +52,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 
@@ -66,7 +67,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 
@@ -88,7 +89,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 
@@ -111,7 +112,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 
@@ -131,7 +132,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 
@@ -152,7 +153,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 
@@ -164,7 +165,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 
@@ -182,7 +183,7 @@ Namespace Converters
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
-            Throw New NotImplementedException()
+            Return BindingOperations.DoNothing
         End Function
     End Class
 

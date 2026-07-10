@@ -13,7 +13,7 @@
                     <Border Background="{DynamicResource FP.Bg.Panel}" BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6" Padding="10">
                         <StackPanel Spacing="2" Width="230">
                             <ColorPicker Name="InnerColorPicker" ColorModel="Rgba" HorizontalAlignment="Stretch"/>
-                            <TextBox Name="HexTextBox" Watermark="#AARRGGBB" FontSize="{DynamicResource FP.Font.Small}"/>
+                            <TextBox Name="HexTextBox" PlaceholderText="#AARRGGBB" FontSize="{DynamicResource FP.Font.Small}"/>
                             <ItemsControl Name="RecentColorsList">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>

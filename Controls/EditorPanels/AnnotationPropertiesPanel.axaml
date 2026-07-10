@@ -71,7 +71,7 @@
             </Button>
         </Grid>
         <TextBox Text="{Binding AnnotationText}"
-                 Watermark="Text, QR-Inhalt oder Symbol eingeben"
+                 PlaceholderText="Text, QR-Inhalt oder Symbol eingeben"
                  FontSize="{DynamicResource FP.Font.Body}"
                  AcceptsReturn="True"
                  TextWrapping="Wrap"

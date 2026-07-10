@@ -283,7 +283,7 @@
                                                          ColorModel="Rgba"
                                                          HorizontalAlignment="Stretch"/>
                                             <TextBox Text="{Binding CollageBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                     Watermark="#AARRGGBB"
+                                                     PlaceholderText="#AARRGGBB"
                                                      FontSize="{DynamicResource FP.Font.Body}"/>
                                         </StackPanel>
                                     </Border>
