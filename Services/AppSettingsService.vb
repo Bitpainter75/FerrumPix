@@ -103,6 +103,10 @@ Namespace Services
         Public Property EditorShowRulers As Boolean = False
         Public Property EditorShowGrid As Boolean = False
         Public Property ShowHiddenFolders As Boolean = False
+        ' Löschen: standardmäßig in den Papierkorb und mit Sicherheitsabfrage. Beide Schalter können das
+        ' einzeln abschalten (True = überspringen).
+        Public Property DeleteSkipTrash As Boolean = False
+        Public Property DeleteSkipConfirmation As Boolean = False
         Public Property ThemeMode As String = "Dark"
         Public Property AccentColor As String = "#F08A1A"
         Public Property StartupImageMode As String = "Viewer"

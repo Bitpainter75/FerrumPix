@@ -759,6 +759,30 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
+                                <TextBlock Text="Papierkorb überspringen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Löscht Dateien und Ordner dauerhaft, statt sie in den Papierkorb zu verschieben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding DeleteSkipTrash}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Sicherheitsfrage überspringen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Löscht ohne die vorherige Bestätigungsabfrage." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding DeleteSkipConfirmation}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
                                 <TextBlock Text="Metadaten beim Speichern übernehmen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Übernimmt EXIF/XMP beim Speichern unter, Exportieren und Konvertieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
                             </StackPanel>

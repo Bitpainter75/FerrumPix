@@ -3439,6 +3439,7 @@ Namespace ViewModels
             If IsVirtualFolderPath(targetFolder) Then Return
             If paths Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then Return
             If Not FileOperationPolicy.CanPasteInto(targetFolder) Then Return
+            _conflictBatchDecision = Nothing
             Dim errorMessage As String = Nothing
             Dim sourcePaths As List(Of String) = Nothing
             Dim completedSources As New List(Of String)()
@@ -3671,6 +3672,7 @@ Namespace ViewModels
             If IsVirtualFolderPath(targetFolder) Then Return
             If paths Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then Return
             If Not FileOperationPolicy.CanPasteInto(targetFolder) Then Return
+            _conflictBatchDecision = Nothing
             Dim errorMessage As String = Nothing
             Dim sourcePaths As List(Of String) = Nothing
             Dim completedSources As New List(Of String)()
@@ -3791,12 +3793,31 @@ Namespace ViewModels
             Return Await ResolveConflictTargetAsync(target, source)
         End Function
 
+        ' "Alle überschreiben"/"Alle überspringen" gilt für den Rest des laufenden Stapels. Wird zu Beginn
+        ' jedes konfliktbehafteten Stapels (Einfügen/Verschieben) zurückgesetzt.
+        Private _conflictBatchDecision As FileConflictChoice? = Nothing
+
         Private Async Function ResolveConflictTargetAsync(conflictingTarget As String, source As String) As Task(Of String)
+            If _conflictBatchDecision.HasValue Then
+                If _conflictBatchDecision.Value = FileConflictChoice.OverwriteAll Then
+                    DeleteTargetForOverwrite(conflictingTarget)
+                    Return conflictingTarget
+                End If
+                Return Nothing   ' SkipAll
+            End If
+
             Do
                 Dim result = Await _mainVm.ShowFileConflictAsync(conflictingTarget, source)
                 If result Is Nothing Then Return Nothing
 
                 Select Case result.Choice
+                    Case FileConflictChoice.OverwriteAll
+                        _conflictBatchDecision = FileConflictChoice.OverwriteAll
+                        DeleteTargetForOverwrite(conflictingTarget)
+                        Return conflictingTarget
+                    Case FileConflictChoice.SkipAll
+                        _conflictBatchDecision = FileConflictChoice.SkipAll
+                        Return Nothing
                     Case FileConflictChoice.Overwrite
                         DeleteTargetForOverwrite(conflictingTarget)
                         Return conflictingTarget

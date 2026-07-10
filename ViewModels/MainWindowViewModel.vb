@@ -169,6 +169,8 @@ Namespace ViewModels
         Public ReadOnly Property DialogCancelCommand As ICommand
         Public ReadOnly Property DialogSkipCommand As ICommand
         Public ReadOnly Property DialogRenameCommand As ICommand
+        Public ReadOnly Property DialogSkipAllCommand As ICommand
+        Public ReadOnly Property DialogOverwriteAllCommand As ICommand
 
         Public Sub New(Optional initialImagePath As String = Nothing)
             Settings = New SettingsViewModel(Me)
@@ -180,6 +182,8 @@ Namespace ViewModels
             DialogCancelCommand = ReactiveCommand.Create(Sub() CancelDialog())
             DialogSkipCommand = ReactiveCommand.Create(Sub() SkipDialog())
             DialogRenameCommand = ReactiveCommand.Create(Sub() RenameConflictDialog())
+            DialogSkipAllCommand = ReactiveCommand.Create(Sub() CompleteDialog("SkipAll"))
+            DialogOverwriteAllCommand = ReactiveCommand.Create(Sub() CompleteDialog("OverwriteAll"))
 
             If Not String.IsNullOrEmpty(initialImagePath) Then
                 OpenInitialImage(initialImagePath)
@@ -1180,10 +1184,14 @@ Namespace ViewModels
             Select Case result
                 Case "Overwrite"
                     Return New FileConflictDialogResult With {.Choice = FileConflictChoice.Overwrite}
+                Case "OverwriteAll"
+                    Return New FileConflictDialogResult With {.Choice = FileConflictChoice.OverwriteAll}
                 Case "Rename"
                     Return New FileConflictDialogResult With {.Choice = FileConflictChoice.Rename, .NewName = DialogConflictRenameText}
                 Case "Skip"
                     Return New FileConflictDialogResult With {.Choice = FileConflictChoice.Skip}
+                Case "SkipAll"
+                    Return New FileConflictDialogResult With {.Choice = FileConflictChoice.SkipAll}
                 Case Else
                     Return New FileConflictDialogResult With {.Choice = FileConflictChoice.Cancel}
             End Select
@@ -1513,28 +1521,51 @@ Namespace ViewModels
                 ToList()
             If pathList.Count = 0 Then Return
 
-            Dim message = If(pathList.Count = 1,
-                             $"{IO.Path.GetFileName(pathList(0))} endgültig löschen?",
-                             $"{pathList.Count} Elemente endgültig löschen?")
-            If Not Await ShowConfirmAsync("Löschen", message, "Löschen", "Abbrechen") Then Return
+            Dim settings = AppSettingsService.Load()
+            Dim useTrash = Not settings.DeleteSkipTrash
+            Dim skipConfirmation = settings.DeleteSkipConfirmation
 
-            Dim errorMessage As String = Nothing
-            Try
-                Viewer.ReleaseCurrentImageIfAny(pathList)
-                Editor.ReleaseCurrentImageIfAny(pathList)
+            If Not skipConfirmation Then
+                Dim verb = If(useTrash, "in den Papierkorb verschieben", "endgültig löschen")
+                Dim message = If(pathList.Count = 1,
+                                 $"{IO.Path.GetFileName(pathList(0))} {verb}?",
+                                 $"{pathList.Count} Elemente {verb}?")
+                Dim confirmText = If(useTrash, "In den Papierkorb", "Löschen")
+                If Not Await ShowConfirmAsync("Löschen", message, confirmText, "Abbrechen") Then Return
+            End If
 
-                For Each itemPath In pathList
-                    DeletePath(itemPath)
-                Next
-                afterDelete?.Invoke()
-            Catch ex As Exception
-                errorMessage = ex.Message
-            End Try
-            If errorMessage IsNot Nothing Then Await ShowMessageAsync("Löschen fehlgeschlagen", errorMessage)
+            Viewer.ReleaseCurrentImageIfAny(pathList)
+            Editor.ReleaseCurrentImageIfAny(pathList)
+
+            ' Pro Element abfangen, damit ein einzelner Fehler (z.B. Papierkorb nicht verfügbar) den Rest
+            ' nicht abbricht und die Ansicht trotzdem aktualisiert wird.
+            Dim failures As New List(Of String)()
+            For Each itemPath In pathList
+                Try
+                    DeletePath(itemPath, useTrash)
+                Catch ex As Exception
+                    failures.Add($"{IO.Path.GetFileName(itemPath)}: {ex.Message}")
+                End Try
+            Next
+            afterDelete?.Invoke()
+
+            If failures.Count > 0 Then
+                Dim title = If(useTrash, "In den Papierkorb fehlgeschlagen", "Löschen fehlgeschlagen")
+                Await ShowMessageAsync(title, String.Join(Environment.NewLine, failures))
+            End If
         End Sub
 
-        Private Sub DeletePath(itemPath As String)
+        Private Sub DeletePath(itemPath As String, useTrash As Boolean)
             If String.IsNullOrEmpty(itemPath) Then Return
+
+            If useTrash Then
+                ' Bewusst KEIN stiller Rückfall auf dauerhaftes Löschen, wenn der Papierkorb scheitert -
+                ' das wäre die gefährliche Überraschung, die dieser Schalter gerade verhindern soll.
+                If Not TrashService.MoveToTrash(itemPath) Then
+                    Throw New IOException("Papierkorb nicht verfügbar")
+                End If
+                Return
+            End If
 
             If IO.File.Exists(itemPath) Then
                 IO.File.Delete(itemPath)
