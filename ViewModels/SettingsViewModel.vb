@@ -31,6 +31,7 @@ Namespace ViewModels
         Private _galleryShowParentFolder As Boolean = True
         Private _galleryViewMode As String = "Grid"
         Private _galleryStartupFolderMode As String = "Pictures"
+        Private _galleryStartupCustomFolder As String = ""
         Private _viewerShowFilmstrip As Boolean = True
         Private _viewerSlideshowIntervalSeconds As Integer = 3
         Private _editorShowFilmstrip As Boolean = True
@@ -68,6 +69,7 @@ Namespace ViewModels
         Private _savedGalleryShowParentFolder As Boolean = True
         Private _savedGalleryViewMode As String = "Grid"
         Private _savedGalleryStartupFolderMode As String = "Pictures"
+        Private _savedGalleryStartupCustomFolder As String = ""
         Private _savedViewerShowFilmstrip As Boolean = True
         Private _savedViewerSlideshowIntervalSeconds As Integer = 3
         Private _savedEditorShowFilmstrip As Boolean = True
@@ -546,6 +548,24 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property IsGalleryStartupCustomFolder As Boolean
+            Get
+                Return _galleryStartupFolderMode = "Custom"
+            End Get
+        End Property
+
+        Public Property GalleryStartupCustomFolder As String
+            Get
+                Return _galleryStartupCustomFolder
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeFolderPath(value)
+                If _galleryStartupCustomFolder = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryStartupCustomFolder, value)
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
         Public Property ShowHiddenFolders As Boolean
             Get
                 Return _showHiddenFolders
@@ -854,6 +874,7 @@ Namespace ViewModels
             _galleryShowParentFolder = _appSettings.GalleryShowParentFolder
             _galleryViewMode = AppSettingsService.NormalizeGalleryViewMode(_appSettings.GalleryViewMode)
             _galleryStartupFolderMode = _appSettings.GalleryStartupFolderMode
+            _galleryStartupCustomFolder = AppSettingsService.NormalizeFolderPath(_appSettings.GalleryStartupCustomFolder)
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
             _viewerSlideshowIntervalSeconds = _appSettings.ViewerSlideshowIntervalSeconds
             _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
@@ -942,6 +963,7 @@ Namespace ViewModels
             _savedGalleryShowParentFolder = _galleryShowParentFolder
             _savedGalleryViewMode = _galleryViewMode
             _savedGalleryStartupFolderMode = _galleryStartupFolderMode
+            _savedGalleryStartupCustomFolder = _galleryStartupCustomFolder
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
             _savedViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
             _savedEditorShowFilmstrip = _editorShowFilmstrip
@@ -973,6 +995,7 @@ Namespace ViewModels
             GalleryShowParentFolder = _savedGalleryShowParentFolder
             GalleryViewMode = _savedGalleryViewMode
             GalleryStartupFolderMode = _savedGalleryStartupFolderMode
+            GalleryStartupCustomFolder = _savedGalleryStartupCustomFolder
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
             ViewerSlideshowIntervalSeconds = _savedViewerSlideshowIntervalSeconds
             EditorShowFilmstrip = _savedEditorShowFilmstrip
@@ -1025,6 +1048,7 @@ Namespace ViewModels
             GalleryShowParentFolder = True
             GalleryViewMode = "Grid"
             GalleryStartupFolderMode = "Pictures"
+            GalleryStartupCustomFolder = ""
             ViewerShowFilmstrip = True
             ViewerSlideshowIntervalSeconds = 3
             EditorShowFilmstrip = True
@@ -1107,6 +1131,7 @@ Namespace ViewModels
             settings.GalleryShowParentFolder = _galleryShowParentFolder
             settings.GalleryViewMode = _galleryViewMode
             settings.GalleryStartupFolderMode = _galleryStartupFolderMode
+            settings.GalleryStartupCustomFolder = _galleryStartupCustomFolder
             AppSettingsService.Save(settings)
         End Sub
 
@@ -1203,6 +1228,7 @@ Namespace ViewModels
         Private Sub RaiseGalleryStartupFolderModeProperties()
             Me.RaisePropertyChanged(NameOf(IsGalleryStartupPicturesFolder))
             Me.RaisePropertyChanged(NameOf(IsGalleryStartupLastFolder))
+            Me.RaisePropertyChanged(NameOf(IsGalleryStartupCustomFolder))
         End Sub
 
         Private Sub RaiseThemeModeProperties()

@@ -3,6 +3,7 @@ Imports Avalonia.Controls.Primitives
 Imports Avalonia.Input
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
+Imports Avalonia.Platform.Storage
 Imports System.Diagnostics
 Imports System.Linq
 Imports FerrumPix.ViewModels
@@ -41,6 +42,29 @@ Namespace Views
             If Not String.IsNullOrEmpty(selected) Then
                 vm.ApplicationScaleScreen = selected
             End If
+            e.Handled = True
+        End Sub
+
+        Private Async Sub OnBrowseGalleryStartupFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            If vm Is Nothing Then Return
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                    .Title = "Startordner der Galerie wählen",
+                    .AllowMultiple = False
+                })
+                Dim folder = folders?.FirstOrDefault()
+                If folder IsNot Nothing Then
+                    Dim path = folder.Path.LocalPath
+                    If Not String.IsNullOrWhiteSpace(path) Then
+                        vm.GalleryStartupCustomFolder = path
+                        vm.GalleryStartupFolderMode = "Custom"
+                    End If
+                End If
+            Catch
+            End Try
             e.Handled = True
         End Sub
 

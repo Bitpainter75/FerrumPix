@@ -357,7 +357,7 @@
                                                                  ColorModel="Rgba"
                                                                  HorizontalAlignment="Stretch"/>
                                                     <TextBox Text="{Binding TransparencyBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                             Watermark="#AARRGGBB"
+                                                             PlaceholderText="#AARRGGBB"
                                                              FontSize="{DynamicResource FP.Font.Small}"/>
                                                 </StackPanel>
                                             </Border>
@@ -517,17 +517,33 @@
                                 <TextBlock Text="Startordner der Galerie" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Bestimmt, welcher Ordner beim Start der Anwendung geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                <Button Classes="ghost"
-                                        Classes.active="{Binding IsGalleryStartupPicturesFolder}"
-                                        Padding="10,6"
-                                        Command="{Binding SetGalleryStartupFolderModeCommand}"
-                                        CommandParameter="Pictures">Bilder-Ordner</Button>
-                                <Button Classes="ghost"
-                                        Classes.active="{Binding IsGalleryStartupLastFolder}"
-                                        Padding="10,6"
-                                        Command="{Binding SetGalleryStartupFolderModeCommand}"
-                                        CommandParameter="Last">Letzter Ordner</Button>
+                            <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsGalleryStartupPicturesFolder}"
+                                            Padding="10,6"
+                                            Command="{Binding SetGalleryStartupFolderModeCommand}"
+                                            CommandParameter="Pictures">Bilder-Ordner</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsGalleryStartupLastFolder}"
+                                            Padding="10,6"
+                                            Command="{Binding SetGalleryStartupFolderModeCommand}"
+                                            CommandParameter="Last">Letzter Ordner</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsGalleryStartupCustomFolder}"
+                                            Padding="10,6"
+                                            Command="{Binding SetGalleryStartupFolderModeCommand}"
+                                            CommandParameter="Custom">Benutzerdefiniert</Button>
+                                </StackPanel>
+                                <Grid ColumnDefinitions="260,Auto" ColumnSpacing="6" IsVisible="{Binding IsGalleryStartupCustomFolder}">
+                                    <TextBox Text="{Binding GalleryStartupCustomFolder, Mode=TwoWay}"
+                                             PlaceholderText="Ordner auswählen"
+                                             IsReadOnly="True"/>
+                                    <Button Grid.Column="1"
+                                            Classes="ghost"
+                                            Padding="10,6"
+                                            Click="OnBrowseGalleryStartupFolderClick">Auswählen</Button>
+                                </Grid>
                             </StackPanel>
                         </Grid>
                     </StackPanel>

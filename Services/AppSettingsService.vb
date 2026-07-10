@@ -90,6 +90,7 @@ Namespace Services
         Public Property GalleryFilterRatings As New List(Of Integer)()
         Public Property GalleryFilterFileType As String = "All"
         Public Property GalleryStartupFolderMode As String = "Pictures"
+        Public Property GalleryStartupCustomFolder As String = ""
         Public Property LastGalleryFolder As String = ""
         Public Property ViewerShowFilmstrip As Boolean = True
         Public Property ViewerSlideshowIntervalSeconds As Integer = 3
@@ -202,6 +203,7 @@ Namespace Services
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
                 settings.GalleryStartupFolderMode = NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
+                settings.GalleryStartupCustomFolder = NormalizeFolderPath(settings.GalleryStartupCustomFolder)
                 settings.LastGalleryFolder = NormalizeFolderPath(settings.LastGalleryFolder)
                 settings.GalleryFilterFavorite = NormalizeGalleryFilterFavorite(settings.GalleryFilterFavorite)
                 settings.GalleryFilterRatings = NormalizeGalleryFilterRatings(settings.GalleryFilterRatings)
@@ -275,6 +277,7 @@ Namespace Services
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
                 settings.GalleryStartupFolderMode = NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
+                settings.GalleryStartupCustomFolder = NormalizeFolderPath(settings.GalleryStartupCustomFolder)
                 settings.LastGalleryFolder = NormalizeFolderPath(settings.LastGalleryFolder)
                 settings.GalleryFilterFavorite = NormalizeGalleryFilterFavorite(settings.GalleryFilterFavorite)
                 settings.GalleryFilterRatings = NormalizeGalleryFilterRatings(settings.GalleryFilterRatings)
@@ -548,7 +551,7 @@ Namespace Services
 
         Public Shared Function NormalizeGalleryStartupFolderMode(value As String) As String
             Select Case If(value, "").Trim()
-                Case "Pictures", "Last"
+                Case "Pictures", "Last", "Custom"
                     Return value.Trim()
                 Case Else
                     Return "Pictures"

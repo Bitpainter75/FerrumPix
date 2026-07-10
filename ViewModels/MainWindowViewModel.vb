@@ -309,11 +309,16 @@ Namespace ViewModels
             Dim settings = AppSettingsService.Load()
             Dim targetFolder As String = Nothing
 
-            If String.Equals(settings.GalleryStartupFolderMode, "Last", StringComparison.OrdinalIgnoreCase) Then
-                If Directory.Exists(settings.LastGalleryFolder) Then
-                    targetFolder = settings.LastGalleryFolder
-                End If
-            End If
+            Select Case AppSettingsService.NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
+                Case "Last"
+                    If Directory.Exists(settings.LastGalleryFolder) Then
+                        targetFolder = settings.LastGalleryFolder
+                    End If
+                Case "Custom"
+                    If Directory.Exists(settings.GalleryStartupCustomFolder) Then
+                        targetFolder = settings.GalleryStartupCustomFolder
+                    End If
+            End Select
 
             If String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then
                 targetFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)

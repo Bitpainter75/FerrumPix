@@ -19,7 +19,9 @@ Namespace ViewModels
     Public Enum FileConflictChoice
         Cancel
         Skip
+        SkipAll
         Overwrite
+        OverwriteAll
         Rename
     End Enum
 
