@@ -293,23 +293,44 @@ Namespace Views
 
         Public Sub OnRulerModeToggleClick(sender As Object, e As RoutedEventArgs)
             _showRulers = Not _showRulers
-            Dim btn = Me.FindControl(Of Button)("RulerModeButton")
-            If btn IsNot Nothing Then
-                If _showRulers Then btn.Classes.Add("active") Else btn.Classes.Remove("active")
-            End If
-            ApplyRulerVisibility()
+            AppSettingsService.SaveEditorShowRulers(_showRulers)
+            ApplyRulerState()
             UpdateSliderLayout()
         End Sub
 
         Public Sub OnGridModeToggleClick(sender As Object, e As RoutedEventArgs)
             _showGrid = Not _showGrid
+            AppSettingsService.SaveEditorShowGrid(_showGrid)
+            ApplyGridState()
+            UpdateGridOverlay()
+        End Sub
+
+        ''' Für jeden Editor-Besuch wird eine neue EditorView gebaut (siehe HandleDataContextChanged) -
+        ''' Lineale und Raster kämen sonst jedes Mal ausgeschaltet zurück.
+        Private Sub RestoreRulerAndGridState()
+            Dim settings = AppSettingsService.Load()
+            _showRulers = settings.EditorShowRulers
+            _showGrid = settings.EditorShowGrid
+            ApplyRulerState()
+            ApplyGridState()
+            UpdateGridOverlay()
+        End Sub
+
+        Private Sub ApplyRulerState()
+            Dim btn = Me.FindControl(Of Button)("RulerModeButton")
+            If btn IsNot Nothing Then
+                If _showRulers Then btn.Classes.Add("active") Else btn.Classes.Remove("active")
+            End If
+            ApplyRulerVisibility()
+        End Sub
+
+        Private Sub ApplyGridState()
             Dim btn = Me.FindControl(Of Button)("GridModeButton")
             If btn IsNot Nothing Then
                 If _showGrid Then btn.Classes.Add("active") Else btn.Classes.Remove("active")
             End If
             Dim overlay = Me.FindControl(Of PixelGridOverlay)("GridOverlay")
             If overlay IsNot Nothing Then overlay.IsVisible = _showGrid
-            UpdateGridOverlay()
         End Sub
 
         Public Sub OnClearGuidesClick(sender As Object, e As RoutedEventArgs)
@@ -381,6 +402,7 @@ Namespace Views
                 Function() If(TryCast(DataContext, EditorViewModel) Is Nothing, -1, TryCast(DataContext, EditorViewModel).CurrentFilmstripIndex))
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             AddHandler Loaded, Sub(s, e)
+                RestoreRulerAndGridState()
                 UpdateSliderLayout()
                 UpdateInfoSidebarLayout()
                 Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")

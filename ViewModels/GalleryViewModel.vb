@@ -146,12 +146,15 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectedRating))
                 Me.RaisePropertyChanged(NameOf(HasSelectedImage))
                 Me.RaisePropertyChanged(NameOf(HasSelection))
+                Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
             End Set
         End Property
 
         Private Sub OnSelectedItemPropertyChanged(sender As Object, e As ComponentModel.PropertyChangedEventArgs)
             If e.PropertyName = NameOf(ImageItem.Rating) Then
                 Me.RaisePropertyChanged(NameOf(SelectedRating))
+            ElseIf e.PropertyName = NameOf(ImageItem.IsFavorite) Then
+                Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
             End If
         End Sub
 
@@ -883,6 +886,7 @@ Namespace ViewModels
         Public ReadOnly Property OpenFileManagerCommand As ICommand
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
+        Public ReadOnly Property ToggleSelectedFavoriteCommand As ICommand
         Public ReadOnly Property SetSelectedRatingCommand As ICommand
         Public ReadOnly Property RenameSelectedCommand As ICommand
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
@@ -918,6 +922,20 @@ Namespace ViewModels
                 Return firstRating
             End Get
         End Property
+
+        ''' Gefüllt nur, wenn ALLE ausgewählten Bilder Favoriten sind - bei gemischter Auswahl zeigt die
+        ''' Fußleiste das leere Herz, und der nächste Klick macht alle zu Favoriten.
+        Public ReadOnly Property SelectedIsFavorite As Boolean
+            Get
+                Dim images = GetSelectedImageItems()
+                Return images.Count > 0 AndAlso images.All(Function(i) i.IsFavorite)
+            End Get
+        End Property
+
+        Private Sub RaiseSelectionMetadataChanged()
+            Me.RaisePropertyChanged(NameOf(SelectedRating))
+            Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
+        End Sub
 
         Public ReadOnly Property HasSelection As Boolean
             Get
@@ -1045,6 +1063,7 @@ Namespace ViewModels
             OpenFileManagerCommand = ReactiveCommand.Create(Sub() OpenInFileManager())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopySelectedPath())
             ToggleFavoriteCommand = ReactiveCommand.Create(Of ImageItem)(Sub(item) DoToggleFavorite(item))
+            ToggleSelectedFavoriteCommand = ReactiveCommand.Create(Sub() ToggleSelectedFavorite())
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
             DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
             ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
@@ -1098,7 +1117,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(FooterStatusText))
             Me.RaisePropertyChanged(NameOf(HasSelection))
             Me.RaisePropertyChanged(NameOf(HasSelectedImage))
-            Me.RaisePropertyChanged(NameOf(SelectedRating))
+            RaiseSelectionMetadataChanged()
         End Sub
 
         Private Sub SetNavigationOnlySelection(item As ImageItem)
@@ -1113,7 +1132,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(FooterStatusText))
             Me.RaisePropertyChanged(NameOf(HasSelection))
             Me.RaisePropertyChanged(NameOf(HasSelectedImage))
-            Me.RaisePropertyChanged(NameOf(SelectedRating))
+            RaiseSelectionMetadataChanged()
         End Sub
 
         Public Sub SelectOnly(item As ImageItem)
@@ -1146,7 +1165,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(FooterStatusText))
             Me.RaisePropertyChanged(NameOf(HasSelection))
             Me.RaisePropertyChanged(NameOf(HasSelectedImage))
-            Me.RaisePropertyChanged(NameOf(SelectedRating))
+            RaiseSelectionMetadataChanged()
         End Sub
 
         Private Function GetSelectedImageItems() As List(Of ImageItem)
@@ -2302,6 +2321,25 @@ Namespace ViewModels
             Dim newVal = Not item.IsFavorite
             item.IsFavorite = newVal
             LibraryService.Instance.SetFavorite(item.FilePath, newVal)
+            If Object.ReferenceEquals(item, _selectedItem) OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item)) Then
+                Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
+            End If
+            If _sortMode = "Favorite" Then FilterAndSort()
+        End Sub
+
+        ''' Herz in der Fußleiste: setzt die gesamte Auswahl auf denselben Zustand, statt jedes Bild
+        ''' einzeln umzuschalten - bei gemischter Auswahl werden also erst alle zu Favoriten.
+        Private Sub ToggleSelectedFavorite()
+            Dim images = GetSelectedImageItems()
+            If images.Count = 0 Then Return
+
+            Dim target = Not SelectedIsFavorite
+            For Each item In images
+                item.IsFavorite = target
+                LibraryService.Instance.SetFavorite(item.FilePath, target)
+            Next
+
+            Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
             If _sortMode = "Favorite" Then FilterAndSort()
         End Sub
 

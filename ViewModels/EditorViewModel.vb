@@ -1529,7 +1529,7 @@ Namespace ViewModels
                 Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
                 Select Case _currentTool
                     Case EditorTool.Selection : Return base & "rectangle.svg"
-                    Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", "adjustments-spark.svg")
+                    Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", "blur.svg")
                     Case EditorTool.Draw : Return base & If(_isEraserMode, "eraser.svg", "brush.svg")
                     Case EditorTool.Geometry, EditorTool.Insert : Return base & "cube.svg"
                     Case EditorTool.Text
@@ -2439,6 +2439,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
+                Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
                 Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
                 Me.RaisePropertyChanged(NameOf(IsSmudgePaintMode))
                 Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
@@ -2448,6 +2449,14 @@ Namespace ViewModels
         Public ReadOnly Property IsBrushPaintMode As Boolean
             Get
                 Return _currentTool = EditorTool.Draw AndAlso Not _isEraserMode
+            End Get
+        End Property
+
+        ''' Größe, Härte und Deckkraft gelten für Pinsel UND Radiergummi - beide legen denselben
+        ''' Strich an (siehe AppendBrushStroke), nur die Farbe braucht der Radiergummi nicht.
+        Public ReadOnly Property ShowBrushStrokeAdjustments As Boolean
+            Get
+                Return _currentTool = EditorTool.Draw
             End Get
         End Property
 
@@ -5865,6 +5874,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(BrushOpacity))
             Me.RaisePropertyChanged(NameOf(IsEraserMode))
             Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
+            Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
             Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
             Me.RaisePropertyChanged(NameOf(IsSmudgePaintMode))
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))

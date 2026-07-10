@@ -100,6 +100,8 @@ Namespace Services
         Public Property EditorShowFilmstrip As Boolean = True
         ''' Kantenlänge einer Rasterzelle im Editor, in Bildpixeln.
         Public Property EditorGridSize As Integer = 50
+        Public Property EditorShowRulers As Boolean = False
+        Public Property EditorShowGrid As Boolean = False
         Public Property ShowHiddenFolders As Boolean = False
         Public Property ThemeMode As String = "Dark"
         Public Property AccentColor As String = "#F08A1A"
@@ -749,6 +751,14 @@ Namespace Services
 
         Public Shared Sub SaveEditorInfoSidebarExpanded(value As Boolean)
             Update(Sub(s) s.EditorInfoSidebarExpanded = value)
+        End Sub
+
+        Public Shared Sub SaveEditorShowRulers(value As Boolean)
+            Update(Sub(s) s.EditorShowRulers = value)
+        End Sub
+
+        Public Shared Sub SaveEditorShowGrid(value As Boolean)
+            Update(Sub(s) s.EditorShowGrid = value)
         End Sub
 
         Public Shared Sub SaveMainWindowPlacement(left As Integer, top As Integer, width As Double, height As Double)

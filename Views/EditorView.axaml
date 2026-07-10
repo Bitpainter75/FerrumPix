@@ -362,7 +362,7 @@
                             CommandParameter="Blur"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Blur}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-spark.svg" Width="18" Height="18" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/blur.svg" Width="18" Height="18" />
                             <TextBlock Text="Verwischen" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>

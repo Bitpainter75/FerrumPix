@@ -759,9 +759,10 @@
                                                         Margin="8"
                                                         Click="OnSelectionBadgeClick"
                                                         ToolTip.Tip="Auswählen">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-check.svg"
-                                                                   Width="12"
-                                                                   Height="12"
+                                                    <!-- Ohne den Kreis aus circle-check: der Knopf selbst ist schon rund. -->
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
+                                                                   Width="14"
+                                                                   Height="14"
                                                                    Classes="badge-glyph"
                                                                    IsVisible="{Binding IsSelected}"/>
                                                 </Button>
@@ -1106,9 +1107,9 @@
                                                         Margin="4"
                                                         Click="OnSelectionBadgeClick"
                                                         ToolTip.Tip="Auswählen">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-check.svg"
-                                                                   Width="10"
-                                                                   Height="10"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
+                                                                   Width="12"
+                                                                   Height="12"
                                                                    Classes="badge-glyph"
                                                                    IsVisible="{Binding IsSelected}"/>
                                                 </Button>
@@ -1374,6 +1375,21 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
+                        </Button>
+                        <Button Classes="icon-btn"
+                                Width="24" Height="24" VerticalAlignment="Center" Margin="6,0,0,0"
+                                Command="{Binding ToggleSelectedFavoriteCommand}"
+                                ToolTip.Tip="Favorit">
+                            <Grid Width="20" Height="20">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                               Width="20" Height="20"
+                                               Classes="fav-heart"
+                                               IsVisible="{Binding !SelectedIsFavorite}"/>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                               Width="20" Height="20"
+                                               Classes="fav-heart active"
+                                               IsVisible="{Binding SelectedIsFavorite}"/>
+                            </Grid>
                         </Button>
                     </StackPanel>
                 </StackPanel>

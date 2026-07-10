@@ -2,11 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.DrawPanel">
-    <Expander Header="Malen" IsExpanded="True">
+    <!-- Kopfzeile folgt dem gewählten Werkzeug: Pinsel, Radiergummi, Verwischen oder Stempel. -->
+    <Expander Header="{Binding CurrentToolLabel}" IsExpanded="True">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg"
+                    <icons:SvgIcon Source="{Binding DataContext.CurrentToolIconSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                    Width="14" Height="14" />
                     <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                 </StackPanel>
@@ -58,8 +59,7 @@
                 </Button>
             </Grid>
         </StackPanel>
-        <StackPanel Spacing="2"
-                    IsVisible="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
+        <StackPanel Spacing="2" IsVisible="{Binding ShowBrushStrokeAdjustments}">
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -94,7 +94,7 @@
                                          Minimum="0" Maximum="100" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+            <Grid ColumnDefinitions="74,*" VerticalAlignment="Top" IsVisible="{Binding IsBrushPaintMode}">
                 <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:ColorPickerButton Grid.Column="1"
