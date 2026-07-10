@@ -97,7 +97,7 @@
                             </Grid>
                         </Border>
 
-                        <Grid ColumnDefinitions="160,*" RowDefinitions="Auto" RowSpacing="8">
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" ColumnSpacing="12">
                             <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}"/>
                             <TextBlock Grid.Column="1" Text="{Binding DisplayVersion}"/>
                         </Grid>

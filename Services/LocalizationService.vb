@@ -157,9 +157,22 @@ Namespace Services
                 menuItem.Header = T(CStr(menuItem.Header))
             End If
 
+            ' Expander und TabItem erben Header nicht von MenuItem, sondern von
+            ' HeaderedContentControl - ohne diesen Zweig blieben ihre Überschriften deutsch.
+            Dim headered = TryCast(node, HeaderedContentControl)
+            If headered IsNot Nothing AndAlso TypeOf headered.Header Is String Then
+                headered.Header = T(CStr(headered.Header))
+            End If
+
             Dim textBox = TryCast(node, TextBox)
             If textBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBox.PlaceholderText) Then
                 textBox.PlaceholderText = T(textBox.PlaceholderText)
+            End If
+
+            ' AutoCompleteBox ist keine TextBox, hat aber denselben Platzhalter.
+            Dim autoComplete = TryCast(node, AutoCompleteBox)
+            If autoComplete IsNot Nothing AndAlso Not String.IsNullOrEmpty(autoComplete.PlaceholderText) Then
+                autoComplete.PlaceholderText = T(autoComplete.PlaceholderText)
             End If
 
             Dim control = TryCast(node, Control)

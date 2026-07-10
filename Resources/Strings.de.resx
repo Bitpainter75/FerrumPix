@@ -2105,7 +2105,268 @@
   <data name="Suche_fehlgeschlagen_f28916a1" xml:space="preserve">
     <value>Suche fehlgeschlagen</value>
   </data>
-  <data name="0_5_0_Juli_2026_737ad974" xml:space="preserve">
-    <value>0.5.0 - Juli 2026</value>
+  <data name="Abgerundet_46027ce5" xml:space="preserve">
+    <value>Abgerundet</value>
+  </data>
+  <data name="Aktiv_16a766ca" xml:space="preserve">
+    <value>Aktiv</value>
+  </data>
+  <data name="Alle_Einstellungen_dieses_Werkzeugs_zur_cksetzen_2e2e41e7" xml:space="preserve">
+    <value>Alle Einstellungen dieses Werkzeugs zurücksetzen</value>
+  </data>
+  <data name="Alle_Hilfslinien_entfernen_e28ab3a4" xml:space="preserve">
+    <value>Alle Hilfslinien entfernen</value>
+  </data>
+  <data name="Alle_Retusche_Punkte_zur_cksetzen_3d1d1af6" xml:space="preserve">
+    <value>Alle Retusche-Punkte zurücksetzen</value>
+  </data>
+  <data name="Alt_e30eff92" xml:space="preserve">
+    <value>Alt</value>
+  </data>
+  <data name="Anker_47a80269" xml:space="preserve">
+    <value>Anker</value>
+  </data>
+  <data name="Aufgenommen_EXIF_1393623e" xml:space="preserve">
+    <value>Aufgenommen (EXIF)</value>
+  </data>
+  <data name="Balance_90eef613" xml:space="preserve">
+    <value>Balance</value>
+  </data>
+  <data name="BILD_d8568270" xml:space="preserve">
+    <value>BILD</value>
+  </data>
+  <data name="Bild_einf_gen_09182a99" xml:space="preserve">
+    <value>Bild einfügen</value>
+  </data>
+  <data name="Bildbreite_85b1b9c6" xml:space="preserve">
+    <value>Bildbreite</value>
+  </data>
+  <data name="Bildgr_e_ndern_d30b1624" xml:space="preserve">
+    <value>Bildgröße ändern...</value>
+  </data>
+  <data name="Bildh_he_740db505" xml:space="preserve">
+    <value>Bildhöhe</value>
+  </data>
+  <data name="DATUM_629e7ea0" xml:space="preserve">
+    <value>DATUM</value>
+  </data>
+  <data name="Details_zur_cksetzen_Klarheit_Sch_rfe_Weichzeich_b653c056" xml:space="preserve">
+    <value>Details zurücksetzen: Klarheit, Schärfe, Weichzeichnen, Körnung und Methode</value>
+  </data>
+  <data name="Dunst_b8cec811" xml:space="preserve">
+    <value>Dunst</value>
+  </data>
+  <data name="Einpassen_Verhalten_08e3361e" xml:space="preserve">
+    <value>Einpassen-Verhalten</value>
+  </data>
+  <data name="Entfernen_f78b6376" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="Erstellt_Datei_1c30bd14" xml:space="preserve">
+    <value>Erstellt (Datei)</value>
+  </data>
+  <data name="EXIF_vorhanden_5d9f2a6a" xml:space="preserve">
+    <value>EXIF vorhanden</value>
+  </data>
+  <data name="Fehlerdiagnose_Protokoll_56cde540" xml:space="preserve">
+    <value>Fehlerdiagnose-Protokoll</value>
+  </data>
+  <data name="Filter_zur_cksetzen_f7117606" xml:space="preserve">
+    <value>Filter zurücksetzen</value>
+  </data>
+  <data name="Ge_ndert_Datei_23a8bd1b" xml:space="preserve">
+    <value>Geändert (Datei)</value>
+  </data>
+  <data name="Ge_ndert_EXIF_ab37f30e" xml:space="preserve">
+    <value>Geändert (EXIF)</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_und_Editor_nur_verkleinern_wenn__913aae5e" xml:space="preserve">
+    <value>Gilt für Viewer und Editor: nur verkleinern, wenn das Bild größer als die Darstellungsfläche ist, oder immer auf die Fläche skalieren.</value>
+  </data>
+  <data name="Gl_hen_95635384" xml:space="preserve">
+    <value>Glühen</value>
+  </data>
+  <data name="Homepage_ac066591" xml:space="preserve">
+    <value>Homepage</value>
+  </data>
+  <data name="Im_Viewer_ffnen_584a398c" xml:space="preserve">
+    <value>Im Viewer öffnen</value>
+  </data>
+  <data name="IPTC_vorhanden_2b2376f3" xml:space="preserve">
+    <value>IPTC vorhanden</value>
+  </data>
+  <data name="Kantenl_nge_einer_Rasterzelle_im_Editor_in_Bildp_d827c2bc" xml:space="preserve">
+    <value>Kantenlänge einer Rasterzelle im Editor, in Bildpixeln.</value>
+  </data>
+  <data name="Keine_cube_Dateien_im_Ordner_gefunden_9f94b650" xml:space="preserve">
+    <value>Keine .cube-Dateien im Ordner gefunden</value>
+  </data>
+  <data name="Keine_XMP_Dateien_im_Ordner_gefunden_cb2e7f02" xml:space="preserve">
+    <value>Keine XMP-Dateien im Ordner gefunden</value>
+  </data>
+  <data name="K_rnung_5d4a420a" xml:space="preserve">
+    <value>Körnung</value>
+  </data>
+  <data name="Lichter_S_tt_ebb7b61a" xml:space="preserve">
+    <value>Lichter Sätt.</value>
+  </data>
+  <data name="Lichter_Ton_ca3cfd77" xml:space="preserve">
+    <value>Lichter Ton</value>
+  </data>
+  <data name="Lichtwinkel_d9e9e055" xml:space="preserve">
+    <value>Lichtwinkel</value>
+  </data>
+  <data name="Lightroom_Preset_cd7e484e" xml:space="preserve">
+    <value>Lightroom-Preset</value>
+  </data>
+  <data name="Lightroom_Preset_angewendet_e4e1914a" xml:space="preserve">
+    <value>Lightroom-Preset angewendet</value>
+  </data>
+  <data name="Lightroom_Preset_konnte_nicht_geladen_werden_4e8bbdf4" xml:space="preserve">
+    <value>Lightroom-Preset konnte nicht geladen werden: </value>
+  </data>
+  <data name="Lineale_5d516e97" xml:space="preserve">
+    <value>Lineale</value>
+  </data>
+  <data name="Lineale_und_Hilfslinien_ein_oder_ausblenden_76c1102d" xml:space="preserve">
+    <value>Lineale und Hilfslinien ein- oder ausblenden</value>
+  </data>
+  <data name="LUT_cube_dd80b2a4" xml:space="preserve">
+    <value>LUT (.cube)</value>
+  </data>
+  <data name="LUT_angewendet_67297612" xml:space="preserve">
+    <value>LUT angewendet</value>
+  </data>
+  <data name="LUT_laden_9c402047" xml:space="preserve">
+    <value>LUT laden</value>
+  </data>
+  <data name="LUTs_importiert_f3c90d82" xml:space="preserve">
+    <value>LUTs importiert: </value>
+  </data>
+  <data name="Metadaten_beim_Speichern_bernehmen_8fa9da39" xml:space="preserve">
+    <value>Metadaten beim Speichern übernehmen</value>
+  </data>
+  <data name="Metadaten_entfernen_e96884a0" xml:space="preserve">
+    <value>Metadaten entfernen</value>
+  </data>
+  <data name="Mitte_X_e190cf13" xml:space="preserve">
+    <value>Mitte X</value>
+  </data>
+  <data name="Mitte_Y_262d333d" xml:space="preserve">
+    <value>Mitte Y</value>
+  </data>
+  <data name="Ordner_laden_8103307c" xml:space="preserve">
+    <value>Ordner laden</value>
+  </data>
+  <data name="Ordner_wird_gelesen_61bb17fa" xml:space="preserve">
+    <value>Ordner wird gelesen...</value>
+  </data>
+  <data name="Preset_entfernen_f3a542f3" xml:space="preserve">
+    <value>Preset entfernen</value>
+  </data>
+  <data name="Presets_importiert_3d05a01d" xml:space="preserve">
+    <value>Presets importiert: </value>
+  </data>
+  <data name="QR_Code_09f02216" xml:space="preserve">
+    <value>QR-Code</value>
+  </data>
+  <data name="Quelle_f707c323" xml:space="preserve">
+    <value>Quelle</value>
+  </data>
+  <data name="Quelle_l_sen_5a8f5c2a" xml:space="preserve">
+    <value>Quelle lösen</value>
+  </data>
+  <data name="Quellpunkt_verwerfen_b919fa2a" xml:space="preserve">
+    <value>Quellpunkt verwerfen</value>
+  </data>
+  <data name="Rahmen_zur_cksetzen_ca2a397f" xml:space="preserve">
+    <value>Rahmen zurücksetzen</value>
+  </data>
+  <data name="Rahmenart_c5aba63d" xml:space="preserve">
+    <value>Rahmenart</value>
+  </data>
+  <data name="Raster_4e92822e" xml:space="preserve">
+    <value>Raster</value>
+  </data>
+  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_089598b9" xml:space="preserve">
+    <value>Raster ein- oder ausblenden (Größe: Einstellungen → Editor)</value>
+  </data>
+  <data name="Rastergr_e_cb478cbb" xml:space="preserve">
+    <value>Rastergröße</value>
+  </data>
+  <data name="Rundheit_788e732d" xml:space="preserve">
+    <value>Rundheit</value>
+  </data>
+  <data name="Rundung_e43f1c12" xml:space="preserve">
+    <value>Rundung</value>
+  </data>
+  <data name="Schatten_S_tt_fcb05495" xml:space="preserve">
+    <value>Schatten Sätt.</value>
+  </data>
+  <data name="Schatten_Ton_b89e4f42" xml:space="preserve">
+    <value>Schatten Ton</value>
+  </data>
+  <data name="Schreibt_Details_zu_Vorschau_Wiedergabe_Fehlern__7ef8054a" xml:space="preserve">
+    <value>Schreibt Details zu Vorschau-/Wiedergabe-Fehlern nach %LocalAppData%/FerrumPix/logs/diagnostics.log. Nur bei Bedarf zur Fehlersuche einschalten.</value>
+  </data>
+  <data name="Schriftgrad_922569af" xml:space="preserve">
+    <value>Schriftgrad</value>
+  </data>
+  <data name="Split_Toning_55ae278f" xml:space="preserve">
+    <value>Split-Toning</value>
+  </data>
+  <data name="Split_Toning_zur_cksetzen_0e8d6174" xml:space="preserve">
+    <value>Split-Toning zurücksetzen</value>
+  </data>
+  <data name="Staub_Kratzer_50452838" xml:space="preserve">
+    <value>Staub/Kratzer</value>
+  </data>
+  <data name="Stempel_cf577b82" xml:space="preserve">
+    <value>Stempel</value>
+  </data>
+  <data name="Stempel_Alt_Klick_setzt_die_Quelle_f61845f4" xml:space="preserve">
+    <value>Stempel (Alt+Klick setzt die Quelle)</value>
+  </data>
+  <data name="Struktur_8ad87337" xml:space="preserve">
+    <value>Struktur</value>
+  </data>
+  <data name="Vergr_ert_oder_verkleinert_die_Schrift_der_Oberf_e14413e1" xml:space="preserve">
+    <value>Vergrößert oder verkleinert die Schrift der Oberfläche in ganzen Stufen. Wirkt sofort.</value>
+  </data>
+  <data name="Vorgaben_d521ab97" xml:space="preserve">
+    <value>Vorgaben</value>
+  </data>
+  <data name="Vorlage_4271557d" xml:space="preserve">
+    <value>Vorlage</value>
+  </data>
+  <data name="Vorschaubild_Speichercache_a62958d6" xml:space="preserve">
+    <value>Vorschaubild-Speichercache</value>
+  </data>
+  <data name="Wasserzeichen_b9e13365" xml:space="preserve">
+    <value>Wasserzeichen</value>
+  </data>
+  <data name="Wasserzeichen_anwenden_8a8ae097" xml:space="preserve">
+    <value>Wasserzeichen anwenden...</value>
+  </data>
+  <data name="Weiche_Kante_ea9145f3" xml:space="preserve">
+    <value>Weiche Kante</value>
+  </data>
+  <data name="WERKZEUGE_68cbfb6d" xml:space="preserve">
+    <value>WERKZEUGE</value>
+  </data>
+  <data name="Wie_viele_Vorschaubilder_maximal_gleichzeitig_im_d4e10972" xml:space="preserve">
+    <value>Wie viele Vorschaubilder maximal gleichzeitig im Arbeitsspeicher gehalten werden. Höhere Werte verringern erneutes Laden beim Scrollen, benötigen aber mehr Arbeitsspeicher.</value>
+  </data>
+  <data name="XMP_laden_518c06e2" xml:space="preserve">
+    <value>XMP laden</value>
+  </data>
+  <data name="XMP_vorhanden_179af215" xml:space="preserve">
+    <value>XMP vorhanden</value>
+  </data>
+  <data name="bergang_8c28a44b" xml:space="preserve">
+    <value>Übergang</value>
+  </data>
+  <data name="bernimmt_EXIF_XMP_beim_Speichern_unter_Exportier_ca80d46d" xml:space="preserve">
+    <value>Übernimmt EXIF/XMP beim Speichern unter, Exportieren und Konvertieren.</value>
   </data>
 </root>
