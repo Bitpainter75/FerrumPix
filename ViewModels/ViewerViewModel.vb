@@ -434,6 +434,19 @@ Namespace ViewModels
             End Get
         End Property
 
+        Private _isVideoEnded As Boolean = False
+
+        ''' Nach dem Videoende wird die native Ausgabefläche ausgeblendet. Sie behält sonst den zuletzt
+        ''' gezeichneten Frame - ein X11-Fenster wird nicht von selbst geleert -, und da keine neuen
+        ''' Frames mehr kommen, steht dieser Frame nach einem Vollbild-Wechsel in der alten Skalierung
+        ''' im Bild. Ausgeblendet zerstört Avalonia das Kindfenster, und der schwarze Hintergrund des
+        ''' VideoOverlay-Grids bleibt in der richtigen Größe zurück.
+        Public ReadOnly Property ShowVideoSurface As Boolean
+            Get
+                Return IsVideoPlaybackAvailable AndAlso Not _isVideoEnded
+            End Get
+        End Property
+
         Public ReadOnly Property CanEdit As Boolean
             Get
                 Return Not IsVideoFile AndAlso
@@ -724,6 +737,12 @@ Namespace ViewModels
                 Dim hwAccelArg = If(AppSettingsService.Load().VideoHardwareAcceleration, "--avcodec-hw=any", "--avcodec-hw=none")
                 _libVlc = New LibVLC("--quiet", hwAccelArg)
                 _mediaPlayer = New MediaPlayer(_libVlc)
+                ' Sonst wählt das Ausgabefenster von VLC selbst ButtonPress/PointerMotion/KeyPress aus
+                ' und verschluckt als oberstes natives Kindfenster jede Maus- und Tasteneingabe über dem
+                ' Video. Im Vollbild deckt es das gesamte Fenster ab - die Oberfläche wirkt dann tot und
+                ' lässt sich nur noch über den Fenstermanager (Alt+F4) beenden.
+                _mediaPlayer.EnableMouseInput = False
+                _mediaPlayer.EnableKeyInput = False
                 _mediaPlayer.Mute = _isVideoMuted
                 AddHandler _mediaPlayer.TimeChanged, AddressOf OnVideoTimeChanged
                 AddHandler _mediaPlayer.LengthChanged, AddressOf OnVideoLengthChanged
@@ -764,6 +783,8 @@ Namespace ViewModels
                 VideoPositionSeconds = 0
                 VideoDurationSeconds = 0
                 IsVideoPlaying = False
+                _isVideoEnded = False
+                Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                 Using media As New Media(_libVlc, path, FromType.FromPath)
                     _mediaPlayer.Media = media
                 End Using
@@ -814,6 +835,17 @@ Namespace ViewModels
 
         Private Sub ToggleVideoPlayPause()
             If _mediaPlayer Is Nothing Then Return
+
+            ' Nach dem Ende ist die Ausgabefläche ausgeblendet (siehe ShowVideoSurface). Play() erst,
+            ' wenn sie wieder da ist und ihr Handle am Player hängt - das erledigt die View über
+            ' AttachVideoPlayer/StartPendingVideoAutoplay, sobald sie das Layout durchlaufen hat.
+            If _isVideoEnded Then
+                _isVideoEnded = False
+                _pendingVideoAutoplay = True
+                Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
+                Return
+            End If
+
             If _mediaPlayer.IsPlaying Then
                 _mediaPlayer.Pause()
             Else
@@ -841,12 +873,28 @@ Namespace ViewModels
             Dispatcher.UIThread.Post(Sub() VideoDurationSeconds = Math.Max(0, e.Length / 1000.0))
         End Sub
 
+        ''' Am Ende bleibt LibVLC im Zustand "Ended" stehen: Play() ist von dort aus wirkungslos, das
+        ''' Video ließe sich nicht erneut starten. Und weil keine Frames mehr kommen, behält das
+        ''' Ausgabefenster den zuletzt gezeichneten Frame samt der Skalierung, die beim Zeichnen galt -
+        ''' nach einem Vollbild-Wechsel steht das Bild danach verzerrt/beschnitten da.
+        '''
+        ''' Stop() räumt beides ab: der Zustand wird "Stopped" (Play() spielt von vorn), und das
+        ''' Ausgabefenster verschwindet. Es MUSS außerhalb des LibVLC-Ereignisfadens laufen, sonst
+        ''' verklemmt sich LibVLC - daher der Umweg über den UI-Faden.
         Private Sub OnVideoEndReached(sender As Object, e As EventArgs)
-            ' Die letzte TimeChanged-Position vor EndReached entspricht dem letzten dekodierten
-            ' Frame, nicht exakt dem Ende - der Regler blieb dadurch sichtbar vor 100% stehen,
-            ' obwohl die (auf ganze Sekunden gerundete) Zeit-Anzeige schon "Ende/Ende" zeigte.
             Dispatcher.UIThread.Post(Sub()
+                                          Try
+                                              _mediaPlayer?.Stop()
+                                          Catch ex As Exception
+                                              DiagnosticLogService.LogException("VideoPlayback.OnVideoEndReached", ex)
+                                          End Try
+                                          _isVideoEnded = True
+                                          Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                                           IsVideoPlaying = False
+                                          ' Die letzte TimeChanged-Position vor EndReached entspricht dem letzten
+                                          ' dekodierten Frame, nicht exakt dem Ende - der Regler blieb dadurch
+                                          ' sichtbar vor 100% stehen, obwohl die (auf ganze Sekunden gerundete)
+                                          ' Zeit-Anzeige schon "Ende/Ende" zeigte.
                                           VideoPositionSeconds = VideoDurationSeconds
                                       End Sub)
         End Sub

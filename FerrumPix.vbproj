@@ -31,7 +31,6 @@
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
     <PackageReference Include="Svg.Skia" Version="2.0.0.7" />
     <PackageReference Include="LibVLCSharp" Version="3.9.4" />
-    <PackageReference Include="LibVLCSharp.Avalonia" Version="3.9.4" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" Condition="'$(RuntimeIdentifier)' == 'win-x64'" />
   </ItemGroup>
 

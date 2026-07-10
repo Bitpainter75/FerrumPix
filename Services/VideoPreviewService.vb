@@ -219,7 +219,7 @@ Namespace Services
                                                    created = _instance
                                                    Return
                                                End If
-                                               Dim videoView As New LibVLCSharp.Avalonia.VideoView()
+                                               Dim videoView As New FerrumPix.Controls.VideoView()
                                                ' KEINE extreme Off-Screen-Position verwenden (z.B. -32000,-32000):
                                                ' manche Fenstermanager (u.a. KWin) respektieren das nicht und
                                                ' klemmen das Fenster stattdessen sichtbar in eine Bildschirmecke -

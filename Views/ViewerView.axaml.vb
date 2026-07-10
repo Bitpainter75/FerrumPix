@@ -12,7 +12,6 @@ Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
 Imports System.ComponentModel
 Imports System.Threading.Tasks
-Imports LibVLCSharp.Avalonia
 Imports LibVLCSharp.Shared
 
 Namespace Views
@@ -149,9 +148,7 @@ Namespace Views
                 Case Key.Space
                     vm.ToggleSlideshowCommand.Execute(Nothing)
                     e.Handled = True
-                Case Key.F11
-                    OnToggleFullscreenClick(Nothing, Nothing)
-                    e.Handled = True
+                ' F11 behandelt MainWindow.OnWindowKeyDown im Tunnel, für alle Modi gemeinsam.
                 Case Key.Escape, Key.Back
                     If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen Then
                         mainVm.ExitFullscreen()
@@ -470,7 +467,10 @@ Namespace Views
                 ApplyVideoLayout()
             End If
 
-            If e.PropertyName = NameOf(ViewerViewModel.IsVideoFile) Then
+            ' ShowVideoSurface kippt beim Videoende (Fläche verschwindet) und beim erneuten Abspielen
+            ' (Fläche kommt zurück) - im zweiten Fall muss der Player an das neu erzeugte native Fenster.
+            If e.PropertyName = NameOf(ViewerViewModel.IsVideoFile) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.ShowVideoSurface) Then
                 UpdateActiveVideoView()
             End If
 

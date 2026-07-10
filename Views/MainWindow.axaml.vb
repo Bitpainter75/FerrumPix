@@ -355,6 +355,14 @@ Namespace Views
                 Return
             End If
 
+            ' F11 schaltet in jedem Modus um - hier oben im Tunnel, damit es auch im Vollbild greift,
+            ' wo die darunterliegenden Ansichten keine Tasten mehr sehen.
+            If e.Key = Key.F11 Then
+                If vm.IsFullscreen Then vm.ExitFullscreen() Else vm.EnterFullscreen()
+                e.Handled = True
+                Return
+            End If
+
             If vm.IsFullscreen Then
                 Select Case e.Key
                     Case Key.Escape, Key.Space

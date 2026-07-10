@@ -4,7 +4,6 @@
              xmlns:vm="clr-namespace:FerrumPix.ViewModels"
              xmlns:models="clr-namespace:FerrumPix.Models"
              xmlns:services="clr-namespace:FerrumPix.Services"
-             xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
              xmlns:views="clr-namespace:FerrumPix.Views"
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="FerrumPix.Views.ViewerView"
@@ -391,9 +390,9 @@
               Background="Black"
               IsVisible="{Binding IsVideoFile}"
               RowDefinitions="*,Auto">
-            <vlc:VideoView Name="TheVideoView" Grid.Row="0"
-                           IsVisible="{Binding IsVideoPlaybackAvailable}"
-                           Tapped="OnVideoViewTapped"/>
+            <icons:VideoView Name="TheVideoView" Grid.Row="0"
+                             IsVisible="{Binding ShowVideoSurface}"
+                             Tapped="OnVideoViewTapped"/>
             <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                         IsVisible="{Binding ShowVideoUnavailableNotice}">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
