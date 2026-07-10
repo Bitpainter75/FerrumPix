@@ -635,8 +635,8 @@
     <Style Selector=":is(NumericUpDown).slider-value">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="3"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Caption}"/>
@@ -649,7 +649,7 @@
 
     <!-- 2. Fokus-Zustand -->
     <Style Selector=":is(NumericUpDown).slider-value:focus-within">
-        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
 
     <!-- 3. Das eigentliche Textfeld im Template stylen -->
@@ -720,7 +720,9 @@
         <Setter Property="TrackBrush" Value="{DynamicResource FP.Border.Normal}"/>
         <Setter Property="FillBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="ThumbBorderBrush" Value="{DynamicResource FP.Bg.Root}"/>
-        <Setter Property="Height" Value="42"/>
+        <!-- Bestimmt die Zeilenhöhe der Schieberegler-Zeilen: die Spur ist nur 4px hoch, der Rest ist
+             Klickfläche um sie herum. -->
+        <Setter Property="Height" Value="36"/>
     </Style>
     <Style Selector="ScrollBar:vertical">
         <Setter Property="Width" Value="13"/>

@@ -2,13 +2,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.ColorMixer">
-    <StackPanel Spacing="10">
+    <StackPanel Spacing="6">
 
         <!-- Füllung und Kontur überlappen wie in klassischen Malprogrammen; das angeklickte Feld
              bestimmt, welche Farbe das Rad darunter bearbeitet. Beim QR-Code heißen die beiden
              "Hintergrund" und "Vordergrund" - die Beschriftungen kommen von außen. -->
-        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-            <Panel Width="60" Height="52" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto">
+            <!-- 60x60: die beiden 34px-Felder überlappen diagonal und lassen unten links genau die
+                 26x26-Ecke für den Tauschen-Knopf frei - er kostet so keine eigene Zeile. -->
+            <Panel Grid.RowSpan="2" Width="60" Height="60">
                 <Border Name="StrokeSwatch"
                         Width="34" Height="34"
                         HorizontalAlignment="Right" VerticalAlignment="Bottom"
@@ -25,6 +27,13 @@
                         BorderBrush="{DynamicResource FP.Border.Strong}"
                         Cursor="Hand"
                         PointerPressed="OnFillSwatchPressed" />
+                <Button Name="SwapButton" Classes="icon-btn group-action"
+                        Width="24" Height="24" Padding="0"
+                        HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                        Click="OnSwapClick">
+                    <TextBlock Text="⇄" FontSize="{DynamicResource FP.Glyph.Large}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
             </Panel>
 
             <Border Grid.Column="1"
@@ -46,12 +55,15 @@
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource FP.Text.Secondary}" />
 
-            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                <Button Name="SwapButton" Classes="icon-btn group-action" Width="30" Height="30" Padding="0"
-                        Click="OnSwapClick">
-                    <TextBlock Text="⇄" FontSize="{DynamicResource FP.Glyph.Large}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Button>
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Top">
+                <!-- Zeigt die aktive Farbe - und solange die Pipette über dem Bild steht, die Farbe
+                     unter ihrer Spitze (siehe EditorViewModel.ColorPickPreview). -->
+                <Border Name="PreviewSwatch"
+                        Width="20" Height="20"
+                        CornerRadius="10"
+                        BorderThickness="1.5"
+                        BorderBrush="{DynamicResource FP.Border.Strong}"
+                        VerticalAlignment="Center" />
                 <Button Name="EyedropperButton" Classes="icon-btn group-action" Width="30" Height="30" Padding="0"
                         Click="OnEyedropperClick"
                         ToolTip.Tip="Farbe aus dem Bild aufnehmen (Pipette)">
@@ -60,13 +72,26 @@
                                    IconBrush="{DynamicResource FP.Text.Primary}" />
                 </Button>
             </StackPanel>
+
+            <!-- Rechtsbündig direkt unter der Pipette: der Hex-Wert füllt die zweite Hälfte der
+                 60px hohen Farbfeld-Spalte und spart so seine eigene Zeile ganz ein. -->
+            <TextBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2"
+                     Name="HexTextBox" Watermark="#AARRGGBB"
+                     Width="104" Height="26"
+                     Margin="0,-8,0,0"
+                     HorizontalAlignment="Right" VerticalAlignment="Top"
+                     TextAlignment="Right"
+                     Background="Transparent" BorderThickness="0"
+                     FontSize="{DynamicResource FP.Font.Small}" Padding="6,0" />
         </Grid>
 
         <icons:ColorWheel Name="Wheel"
                           Width="168" Height="168"
                           HorizontalAlignment="Center" />
 
-        <Grid ColumnDefinitions="60,*,44" VerticalAlignment="Center">
+        <!-- Der 36px hohe Regler trägt seine Klickfläche als Leerraum um die 4px-Spur; unten zieht der
+             negative Rand die Zeile wieder an den Expander-Rahmen heran. -->
+        <Grid ColumnDefinitions="60,*,44" VerticalAlignment="Center" Margin="0,0,0,-6">
             <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <icons:RoundSlider Grid.Column="1" Name="AlphaSlider"
@@ -78,9 +103,6 @@
                                      Minimum="0" Maximum="100" Increment="1"
                                      FormatString="F0" />
         </Grid>
-
-        <TextBox Name="HexTextBox" Watermark="#AARRGGBB"
-                 FontSize="{DynamicResource FP.Font.Small}" Padding="8,5" />
 
     </StackPanel>
 </UserControl>

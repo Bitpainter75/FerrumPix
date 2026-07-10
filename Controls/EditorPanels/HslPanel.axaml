@@ -34,29 +34,33 @@
                        FontWeight="SemiBold"
                        FontSize="{DynamicResource FP.Font.Body}"
                        HorizontalAlignment="Center" />
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                   DefaultValue="0"
-                                   Value="{Binding ActiveHslHue}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding ActiveHslHue, Mode=TwoWay}"
-                                         Minimum="-100" Maximum="100" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Sättigung"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                   DefaultValue="0"
-                                   Value="{Binding ActiveHslSaturation}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding ActiveHslSaturation, Mode=TwoWay}"
-                                         Minimum="-100" Maximum="100" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
+            <!-- Die Regler stehen enger beieinander als Rad und Beschriftung darüber - wie in den
+                 übrigen Anpassungs-Panels. -->
+            <StackPanel Spacing="2">
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       DefaultValue="0"
+                                       Value="{Binding ActiveHslHue}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding ActiveHslHue, Mode=TwoWay}"
+                                             Minimum="-100" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Sättigung"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       DefaultValue="0"
+                                       Value="{Binding ActiveHslSaturation}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding ActiveHslSaturation, Mode=TwoWay}"
+                                             Minimum="-100" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+            </StackPanel>
         </StackPanel>
     </Expander>
 </UserControl>

@@ -48,10 +48,10 @@ Namespace Controls
 
         Public Sub New()
             Cursor = New Cursor(StandardCursorType.Hand)
-            MinHeight = 42
+            MinHeight = 24
         End Sub
 
-        ''' Garantiert unabhängig vom Theme-Style (FerrumPixTheme.axaml setzt Height=42, könnte aber
+        ''' Garantiert unabhängig vom Theme-Style (FerrumPixTheme.axaml setzt Height=36, könnte aber
         ''' durch spätere Änderungen/spezifischere Selektoren überschrieben werden) eine Mindesthöhe,
         ''' die mindestens dem Thumb-Durchmesser (2*8=16px) entspricht.
         Protected Overrides Function MeasureOverride(availableSize As Size) As Size

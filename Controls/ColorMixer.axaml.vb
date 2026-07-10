@@ -238,9 +238,28 @@ Namespace Controls
                 Dim hex = FormatHex(active)
                 Dim hexBox = Me.FindControl(Of TextBox)("HexTextBox")
                 If hexBox IsNot Nothing AndAlso Not String.Equals(hexBox.Text, hex, StringComparison.OrdinalIgnoreCase) Then hexBox.Text = hex
+
+                UpdatePreviewSwatch()
             Finally
                 _suppressSync = False
             End Try
+        End Sub
+
+        ''' Der Kreis vor der Pipette: normalerweise die aktive Farbe, während einer laufenden Aufnahme
+        ''' die Farbe unter der Pipettenspitze - so ist vor dem Klick sichtbar, was man trifft.
+        Private Sub UpdatePreviewSwatch()
+            Dim swatch = Me.FindControl(Of Border)("PreviewSwatch")
+            If swatch Is Nothing Then Return
+
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim live As Color? = If(vm IsNot Nothing AndAlso vm.IsPickingColorFromImage, vm.ColorPickPreview, Nothing)
+            Dim shown = If(live.HasValue, live.Value, ActiveColor)
+
+            swatch.Background = New SolidColorBrush(shown)
+            swatch.BorderBrush = If(live.HasValue,
+                                    TryFindResourceBrush("FP.Accent", Brushes.Orange),
+                                    TryFindResourceBrush("FP.Border.Strong", Brushes.Gray))
+            ToolTip.SetTip(swatch, If(live.HasValue, $"Pipette: {FormatHex(shown)}", FormatHex(shown)))
         End Sub
 
         Private Function ActiveSlotLabelText() As String
@@ -389,9 +408,14 @@ Namespace Controls
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
-            If e.PropertyName <> NameOf(EditorViewModel.IsPickingColorFromImage) Then Return
-            If _observedVm Is Nothing OrElse _observedVm.IsPickingColorFromImage Then Return
-            SetPickingActive(False)
+            If _observedVm Is Nothing Then Return
+            Select Case e.PropertyName
+                Case NameOf(EditorViewModel.ColorPickPreview)
+                    UpdatePreviewSwatch()
+                Case NameOf(EditorViewModel.IsPickingColorFromImage)
+                    If Not _observedVm.IsPickingColorFromImage Then SetPickingActive(False)
+                    UpdatePreviewSwatch()
+            End Select
         End Sub
 
         Private Sub SetPickingActive(active As Boolean)

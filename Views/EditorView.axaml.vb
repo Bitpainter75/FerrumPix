@@ -32,6 +32,10 @@ Namespace Views
         Private _sliderPosition As Double = 0.5
         Private _currentVm As EditorViewModel
 
+        ' Für die Pipette dekodierte Fassung des gerade angezeigten Bildes (siehe SampleDisplayedColor).
+        Private _pickSampleSource As Bitmap = Nothing
+        Private _pickSampleBitmap As SKBitmap = Nothing
+
         ' Zoom state (0-100 slider maps exponentially to 10%-500%)
         Private _zoomSliderValue As Double = 50
         Private _zoomInitialized As Boolean = False
@@ -422,6 +426,7 @@ Namespace Views
         ''' immer am Leben halten (Memory-Leak, wächst mit jedem Galerie<->Editor-Wechsel).
         Protected Overrides Sub OnDetachedFromVisualTree(e As Avalonia.VisualTreeAttachmentEventArgs)
             MyBase.OnDetachedFromVisualTree(e)
+            ReleasePickSampleBitmap()
             If _currentVm IsNot Nothing Then
                 RemoveHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 RemoveHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
@@ -485,6 +490,7 @@ Namespace Views
                     If pickCanvas IsNot Nothing AndAlso vmForPick IsNot Nothing Then
                         pickCanvas.Cursor = If(vmForPick.IsPickingColorFromImage, GetPipetteCursor(), Nothing)
                     End If
+                    If vmForPick Is Nothing OrElse Not vmForPick.IsPickingColorFromImage Then ReleasePickSampleBitmap()
                 Case NameOf(EditorViewModel.CurrentFilmstripIndex)
                     _filmstripController.ScrollToCurrent()
                 Case NameOf(EditorViewModel.IsInfoSidebarVisible)
@@ -913,6 +919,16 @@ Namespace Views
                 ' unten bei jeder Mausbewegung den einmalig in OnViewModelPropertyChanged gesetzten
                 ' Pipetten-Cursor sofort wieder mit Nothing.
                 cursorCanvas.Cursor = GetPipetteCursor()
+
+                ' Live-Vorschau für den Farbkreis im ColorMixer: nur solange der Zeiger wirklich über dem
+                ' Bild steht, sonst zeigt der Kreis wieder die gewählte Farbe.
+                Dim pickRect = GetDisplayedImageRect(cursorCanvas, cursorVm)
+                Dim pickPoint = e.GetPosition(cursorCanvas)
+                If pickRect.Contains(pickPoint) Then
+                    cursorVm.ColorPickPreview = SampleDisplayedColor(cursorVm, pickRect, pickPoint)
+                Else
+                    cursorVm.ColorPickPreview = Nothing
+                End If
             ElseIf _isGuideDragging AndAlso cursorCanvas IsNot Nothing Then
                 cursorCanvas.Cursor = If(_guideDragIsVertical, GuideCursorVertical, GuideCursorHorizontal)
             ElseIf guideHoverIndex >= 0 AndAlso cursorCanvas IsNot Nothing Then
@@ -1518,33 +1534,47 @@ Namespace Views
             End Using
         End Function
 
-        ''' Pipette: nimmt die Farbe an der Klickposition direkt aus dem aktuell angezeigten
+        ''' Pipette: nimmt die Farbe an der Zeigerposition direkt aus dem aktuell angezeigten
         ''' DisplayImage (voll bearbeitete Live-Vorschau inkl. Objekte) - "what you see is what you
-        ''' get". Avalonia-Bitmaps erlauben keinen direkten Pixelzugriff, daher einmalig (nur bei
-        ''' diesem expliziten Nutzerklick, nicht pro Frame) über PNG-Bytes nach SkiaSharp dekodiert.
+        ''' get". Avalonia-Bitmaps erlauben keinen direkten Pixelzugriff, daher über PNG-Bytes nach
+        ''' SkiaSharp dekodiert - die Live-Vorschau fragt bei jeder Mausbewegung, deshalb hält
+        ''' GetPickSampleBitmap das Ergebnis fest, bis eine andere Bildfassung angezeigt wird.
         Private Function SampleDisplayedColor(vm As EditorViewModel, imageRect As Avalonia.Rect, screenPoint As Avalonia.Point) As Color?
             Dim bitmap = vm?.DisplayImage
             If bitmap Is Nothing OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return Nothing
+            Dim decoded = GetPickSampleBitmap(bitmap)
+            If decoded Is Nothing Then Return Nothing
+
             Dim pos = ClampPointToRect(screenPoint, imageRect)
             Dim xPct = (pos.X - imageRect.Left) / imageRect.Width
             Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height
+            Dim px = Math.Max(0, Math.Min(decoded.Width - 1, CInt(xPct * decoded.Width)))
+            Dim py = Math.Max(0, Math.Min(decoded.Height - 1, CInt(yPct * decoded.Height)))
+            Dim sampled = decoded.GetPixel(px, py)
+            Return Color.FromArgb(sampled.Alpha, sampled.Red, sampled.Green, sampled.Blue)
+        End Function
 
+        Private Function GetPickSampleBitmap(bitmap As Bitmap) As SKBitmap
+            If _pickSampleBitmap IsNot Nothing AndAlso _pickSampleSource Is bitmap Then Return _pickSampleBitmap
+            ReleasePickSampleBitmap()
             Try
                 Using ms = New MemoryStream()
                     bitmap.Save(ms)
                     ms.Seek(0, SeekOrigin.Begin)
-                    Using decoded = SKBitmap.Decode(ms)
-                        If decoded Is Nothing Then Return Nothing
-                        Dim px = Math.Max(0, Math.Min(decoded.Width - 1, CInt(xPct * decoded.Width)))
-                        Dim py = Math.Max(0, Math.Min(decoded.Height - 1, CInt(yPct * decoded.Height)))
-                        Dim sampled = decoded.GetPixel(px, py)
-                        Return Color.FromArgb(sampled.Alpha, sampled.Red, sampled.Green, sampled.Blue)
-                    End Using
+                    _pickSampleBitmap = SKBitmap.Decode(ms)
                 End Using
             Catch
-                Return Nothing
+                _pickSampleBitmap = Nothing
             End Try
+            If _pickSampleBitmap IsNot Nothing Then _pickSampleSource = bitmap
+            Return _pickSampleBitmap
         End Function
+
+        Private Sub ReleasePickSampleBitmap()
+            _pickSampleBitmap?.Dispose()
+            _pickSampleBitmap = Nothing
+            _pickSampleSource = Nothing
+        End Sub
 
         Private Sub UpdateSelectionOverlayFromDrag()
             Dim overlay = Me.FindControl(Of Border)("SelectionOverlay")

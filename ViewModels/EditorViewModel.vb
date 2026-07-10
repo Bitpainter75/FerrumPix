@@ -325,7 +325,7 @@ Namespace ViewModels
                     _watermarkPresetNameDraft = normalized
                     Me.RaisePropertyChanged(NameOf(WatermarkPresetNameDraft))
                     ApplyWatermarkPreset(normalized)
-                    PlacePendingWatermarkAfterPresetSelection()
+                    PlacePendingWatermark()
                 End If
             End Set
         End Property
@@ -495,13 +495,6 @@ Namespace ViewModels
             Get
                 If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return ""
                 Return If(_annotations(_selectedAnnotationIndex)?.ImagePath, "")
-            End Get
-        End Property
-
-        Public ReadOnly Property WatermarkSourceSummary As String
-            Get
-                If String.IsNullOrWhiteSpace(_watermarkImagePath) Then Return "Text-Wasserzeichen"
-                Return "Bild-Wasserzeichen"
             End Get
         End Property
 
@@ -688,7 +681,6 @@ Namespace ViewModels
         Private Sub RaiseWatermarkUiChanged()
             Me.RaisePropertyChanged(NameOf(ShowWatermarkPresetControls))
             Me.RaisePropertyChanged(NameOf(IsWatermarkImageSource))
-            Me.RaisePropertyChanged(NameOf(WatermarkSourceSummary))
             Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
             Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
             Me.RaisePropertyChanged(NameOf(AnnotationPositionMinimum))
@@ -760,7 +752,10 @@ Namespace ViewModels
             If HasSelectedAnnotation AndAlso EffectiveAnnotationKind = "Watermark" Then SyncSelectedAnnotation()
         End Sub
 
-        Private Sub PlacePendingWatermarkAfterPresetSelection()
+        ''' Ein Wasserzeichen wartet nicht auf einen Klick in die Leinwand: sobald eine Vorlage oder ein
+        ''' Bild gewählt ist, steht es an seinem Anker mit den eingestellten Abständen im Bild und lässt
+        ''' sich von dort wie jedes andere Objekt greifen.
+        Private Sub PlacePendingWatermark()
             If _isLoadingAnnotation OrElse HasSelectedAnnotation Then Return
             If Not String.Equals(NormalizeAnnotationKind(_pendingInsertKind), "Watermark", StringComparison.OrdinalIgnoreCase) Then Return
 
@@ -781,6 +776,9 @@ Namespace ViewModels
             RaiseWatermarkUiChanged()
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationImagePath))
             If HasSelectedAnnotation AndAlso EffectiveAnnotationKind = "Watermark" Then SyncSelectedAnnotation()
+            ' Die Größe steht oben schon anhand des gewählten Bildes fest - das Objekt kann also direkt
+            ' erscheinen, statt auf einen Klick in die Leinwand zu warten.
+            If Not String.IsNullOrWhiteSpace(_watermarkImagePath) Then PlacePendingWatermark()
         End Sub
 
         Public Sub ClearWatermarkImagePath()
@@ -3441,23 +3439,42 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _colorPickPreview As Avalonia.Media.Color? = Nothing
+
+        ''' Die Farbe unter der Pipette, solange sie über dem Bild schwebt - EditorView schreibt sie bei
+        ''' jeder Mausbewegung, der ColorMixer zeigt sie in seinem Vorschaukreis. Nothing, sobald der
+        ''' Zeiger das Bild verlässt oder die Aufnahme endet.
+        Public Property ColorPickPreview As Avalonia.Media.Color?
+            Get
+                Return _colorPickPreview
+            End Get
+            Set(value As Avalonia.Media.Color?)
+                If Nullable.Equals(_colorPickPreview, value) Then Return
+                _colorPickPreview = value
+                Me.RaisePropertyChanged(NameOf(ColorPickPreview))
+            End Set
+        End Property
+
         ''' Von ColorPickerButton.OnEyedropperClick aufgerufen: merkt sich, WELCHE Farbe (per Closure)
         ''' beim nächsten Bildklick gesetzt werden soll, statt eine feste ViewModel-Farbe zu kennen -
         ''' dadurch bleibt die Pipette für jede beliebige ColorPickerButton-Instanz wiederverwendbar.
         Public Sub BeginColorPick(onPicked As Action(Of Avalonia.Media.Color))
             _pendingColorPickCallback = onPicked
+            ColorPickPreview = Nothing
             IsPickingColorFromImage = True
         End Sub
 
         Public Sub CompleteColorPick(color As Avalonia.Media.Color)
             Dim callback = _pendingColorPickCallback
             _pendingColorPickCallback = Nothing
+            ColorPickPreview = Nothing
             IsPickingColorFromImage = False
             callback?.Invoke(color)
         End Sub
 
         Public Sub CancelColorPick()
             _pendingColorPickCallback = Nothing
+            ColorPickPreview = Nothing
             IsPickingColorFromImage = False
         End Sub
 

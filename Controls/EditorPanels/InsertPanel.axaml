@@ -3,7 +3,7 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.InsertPanel">
     <StackPanel Spacing="7">
-        <StackPanel Spacing="6" Margin="0,2,0,6">
+        <StackPanel Spacing="6" Margin="0,2,0,2">
             <Expander Header="Farbmischer" IsExpanded="True">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
