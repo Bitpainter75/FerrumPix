@@ -36,6 +36,8 @@ Namespace ViewModels
         Private _viewerSlideshowIntervalSeconds As Integer = 3
         Private _editorShowFilmstrip As Boolean = True
         Private _editorGridSize As Integer = 50
+        Private _editorShowRulers As Boolean = False
+        Private _editorShowGrid As Boolean = False
         Private _editorInfoSidebarExpanded As Boolean = True
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _startupImageMode As String = "Viewer"
@@ -74,6 +76,8 @@ Namespace ViewModels
         Private _savedViewerSlideshowIntervalSeconds As Integer = 3
         Private _savedEditorShowFilmstrip As Boolean = True
         Private _savedEditorGridSize As Integer = 50
+        Private _savedEditorShowRulers As Boolean = False
+        Private _savedEditorShowGrid As Boolean = False
         Private _savedEditorInfoSidebarExpanded As Boolean = True
         Private _savedViewerInfoSidebarExpanded As Boolean = True
         Private _savedStartupImageMode As String = "Viewer"
@@ -699,6 +703,30 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property EditorShowRulers As Boolean
+            Get
+                Return _editorShowRulers
+            End Get
+            Set(value As Boolean)
+                If _editorShowRulers = value Then Return
+                Me.RaiseAndSetIfChanged(_editorShowRulers, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public Property EditorShowGrid As Boolean
+            Get
+                Return _editorShowGrid
+            End Get
+            Set(value As Boolean)
+                If _editorShowGrid = value Then Return
+                Me.RaiseAndSetIfChanged(_editorShowGrid, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
         Public Property EditorInfoSidebarExpanded As Boolean
             Get
                 Return _editorInfoSidebarExpanded
@@ -881,6 +909,8 @@ Namespace ViewModels
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
             _editorShowFilmstrip = _appSettings.EditorShowFilmstrip
             _editorGridSize = AppSettingsService.NormalizeEditorGridSize(_appSettings.EditorGridSize)
+            _editorShowRulers = _appSettings.EditorShowRulers
+            _editorShowGrid = _appSettings.EditorShowGrid
             _editorInfoSidebarExpanded = _appSettings.EditorInfoSidebarExpanded
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
@@ -968,6 +998,8 @@ Namespace ViewModels
             _savedViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
             _savedEditorShowFilmstrip = _editorShowFilmstrip
             _savedEditorGridSize = _editorGridSize
+            _savedEditorShowRulers = _editorShowRulers
+            _savedEditorShowGrid = _editorShowGrid
             _savedEditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             _savedViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             _savedStartupImageMode = _startupImageMode
@@ -1000,6 +1032,8 @@ Namespace ViewModels
             ViewerSlideshowIntervalSeconds = _savedViewerSlideshowIntervalSeconds
             EditorShowFilmstrip = _savedEditorShowFilmstrip
             EditorGridSize = _savedEditorGridSize
+            EditorShowRulers = _savedEditorShowRulers
+            EditorShowGrid = _savedEditorShowGrid
             EditorInfoSidebarExpanded = _savedEditorInfoSidebarExpanded
             ViewerInfoSidebarExpanded = _savedViewerInfoSidebarExpanded
             StartupImageMode = _savedStartupImageMode
@@ -1053,6 +1087,8 @@ Namespace ViewModels
             ViewerSlideshowIntervalSeconds = 3
             EditorShowFilmstrip = True
             EditorGridSize = 50
+            EditorShowRulers = False
+            EditorShowGrid = False
             EditorInfoSidebarExpanded = True
             ViewerInfoSidebarExpanded = True
             LanguageMode = "System"
@@ -1143,6 +1179,8 @@ Namespace ViewModels
             settings.ViewerFitBehavior = _viewerFitBehavior
             settings.EditorShowFilmstrip = _editorShowFilmstrip
             settings.EditorGridSize = _editorGridSize
+            settings.EditorShowRulers = _editorShowRulers
+            settings.EditorShowGrid = _editorShowGrid
             settings.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             AppSettingsService.Save(settings)

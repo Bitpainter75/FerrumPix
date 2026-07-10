@@ -1359,6 +1359,30 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public Property EditorShowRulers As Boolean
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return False
+                Return _mainVm.Settings.EditorShowRulers
+            End Get
+            Set(value As Boolean)
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+                _mainVm.Settings.EditorShowRulers = value
+                Me.RaisePropertyChanged(NameOf(EditorShowRulers))
+            End Set
+        End Property
+
+        Public Property EditorShowGrid As Boolean
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return False
+                Return _mainVm.Settings.EditorShowGrid
+            End Get
+            Set(value As Boolean)
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+                _mainVm.Settings.EditorShowGrid = value
+                Me.RaisePropertyChanged(NameOf(EditorShowGrid))
+            End Set
+        End Property
+
         Public ReadOnly Property IsInfoSidebarVisible As Boolean
             Get
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorInfoSidebarExpanded

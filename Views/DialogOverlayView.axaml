@@ -141,37 +141,54 @@
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             Spacing="10"
-                            Margin="0,22,0,0">
+                            Margin="0,22,0,0"
+                            IsVisible="{Binding DialogShowsStandardActions}">
                     <Button Classes="ghost"
                             Command="{Binding DialogCancelCommand}"
                             IsVisible="{Binding IsDialogCancelVisible}">
                         <TextBlock Text="{Binding DialogCancelText}"/>
-                    </Button>
-                    <Button Classes="ghost"
-                            Command="{Binding DialogSkipCommand}"
-                            IsVisible="{Binding DialogShowsFileConflict}">
-                        <TextBlock Text="Überspringen"/>
-                    </Button>
-                    <Button Classes="ghost"
-                            Command="{Binding DialogSkipAllCommand}"
-                            IsVisible="{Binding DialogShowsFileConflict}">
-                        <TextBlock Text="Alle überspringen"/>
-                    </Button>
-                    <Button Classes="ghost"
-                            Command="{Binding DialogRenameCommand}"
-                            IsVisible="{Binding DialogShowsFileConflict}">
-                        <TextBlock Text="Umbenennen"/>
-                    </Button>
-                    <Button Classes="ghost"
-                            Command="{Binding DialogOverwriteAllCommand}"
-                            IsVisible="{Binding DialogShowsFileConflict}">
-                        <TextBlock Text="Alle überschreiben"/>
                     </Button>
                     <Button Classes="accent"
                             Command="{Binding DialogConfirmCommand}">
                         <TextBlock Text="{Binding DialogConfirmText}"/>
                     </Button>
                 </StackPanel>
+
+                <Grid Grid.Row="5"
+                      ColumnDefinitions="Auto,*,Auto"
+                      Margin="0,22,0,0"
+                      IsVisible="{Binding DialogShowsFileConflict}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10"
+                                HorizontalAlignment="Left">
+                        <Button Classes="ghost"
+                                Command="{Binding DialogSkipAllCommand}">
+                            <TextBlock Text="Alle überspringen"/>
+                        </Button>
+                        <Button Classes="ghost"
+                                Command="{Binding DialogOverwriteAllCommand}">
+                            <TextBlock Text="Alle überschreiben"/>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="10"
+                                HorizontalAlignment="Right">
+                        <Button Classes="ghost"
+                                Command="{Binding DialogRenameCommand}">
+                            <TextBlock Text="Umbenennen"/>
+                        </Button>
+                        <Button Classes="ghost"
+                                Command="{Binding DialogSkipCommand}">
+                            <TextBlock Text="Überspringen"/>
+                        </Button>
+                        <Button Classes="accent"
+                                Command="{Binding DialogConfirmCommand}">
+                            <TextBlock Text="{Binding DialogConfirmText}"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Border>
     </Border>

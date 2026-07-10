@@ -293,14 +293,24 @@ Namespace Views
 
         Public Sub OnRulerModeToggleClick(sender As Object, e As RoutedEventArgs)
             _showRulers = Not _showRulers
-            AppSettingsService.SaveEditorShowRulers(_showRulers)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then
+                vm.EditorShowRulers = _showRulers
+            Else
+                AppSettingsService.SaveEditorShowRulers(_showRulers)
+            End If
             ApplyRulerState()
             UpdateSliderLayout()
         End Sub
 
         Public Sub OnGridModeToggleClick(sender As Object, e As RoutedEventArgs)
             _showGrid = Not _showGrid
-            AppSettingsService.SaveEditorShowGrid(_showGrid)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then
+                vm.EditorShowGrid = _showGrid
+            Else
+                AppSettingsService.SaveEditorShowGrid(_showGrid)
+            End If
             ApplyGridState()
             UpdateGridOverlay()
         End Sub
@@ -308,9 +318,15 @@ Namespace Views
         ''' Für jeden Editor-Besuch wird eine neue EditorView gebaut (siehe HandleDataContextChanged) -
         ''' Lineale und Raster kämen sonst jedes Mal ausgeschaltet zurück.
         Private Sub RestoreRulerAndGridState()
-            Dim settings = AppSettingsService.Load()
-            _showRulers = settings.EditorShowRulers
-            _showGrid = settings.EditorShowGrid
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then
+                _showRulers = vm.EditorShowRulers
+                _showGrid = vm.EditorShowGrid
+            Else
+                Dim settings = AppSettingsService.Load()
+                _showRulers = settings.EditorShowRulers
+                _showGrid = settings.EditorShowGrid
+            End If
             ApplyRulerState()
             ApplyGridState()
             UpdateGridOverlay()

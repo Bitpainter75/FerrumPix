@@ -340,6 +340,8 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstrip))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsInfoSidebarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorGridSize))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowRulers))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowGrid))
         End Sub
 
         Public Sub RefreshDisplayBindings()
@@ -649,6 +651,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsInput))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsFileConflict))
+                Me.RaisePropertyChanged(NameOf(DialogShowsStandardActions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchRename))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSearch))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchResize))
@@ -693,6 +696,12 @@ Namespace ViewModels
         Public ReadOnly Property DialogShowsFileConflict As Boolean
             Get
                 Return _dialogKind = AppDialogKind.FileConflict
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogShowsStandardActions As Boolean
+            Get
+                Return Not DialogShowsFileConflict
             End Get
         End Property
 
