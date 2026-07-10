@@ -330,6 +330,7 @@ Namespace ViewModels
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstrip))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstrip))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsInfoSidebarVisible))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorGridSize))
         End Sub
 
         Public Sub RefreshDisplayBindings()

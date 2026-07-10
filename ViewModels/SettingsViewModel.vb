@@ -33,6 +33,7 @@ Namespace ViewModels
         Private _viewerShowFilmstrip As Boolean = True
         Private _viewerSlideshowIntervalSeconds As Integer = 3
         Private _editorShowFilmstrip As Boolean = True
+        Private _editorGridSize As Integer = 50
         Private _editorInfoSidebarExpanded As Boolean = True
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _startupImageMode As String = "Viewer"
@@ -69,6 +70,7 @@ Namespace ViewModels
         Private _savedViewerShowFilmstrip As Boolean = True
         Private _savedViewerSlideshowIntervalSeconds As Integer = 3
         Private _savedEditorShowFilmstrip As Boolean = True
+        Private _savedEditorGridSize As Integer = 50
         Private _savedEditorInfoSidebarExpanded As Boolean = True
         Private _savedViewerInfoSidebarExpanded As Boolean = True
         Private _savedStartupImageMode As String = "Viewer"
@@ -648,6 +650,20 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' Kantenlänge einer Rasterzelle im Editor, in Bildpixeln.
+        Public Property EditorGridSize As Integer
+            Get
+                Return _editorGridSize
+            End Get
+            Set(value As Integer)
+                value = AppSettingsService.NormalizeEditorGridSize(value)
+                If _editorGridSize = value Then Return
+                Me.RaiseAndSetIfChanged(_editorGridSize, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
         Public Property EditorInfoSidebarExpanded As Boolean
             Get
                 Return _editorInfoSidebarExpanded
@@ -828,6 +844,7 @@ Namespace ViewModels
             _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
             _editorShowFilmstrip = _appSettings.EditorShowFilmstrip
+            _editorGridSize = AppSettingsService.NormalizeEditorGridSize(_appSettings.EditorGridSize)
             _editorInfoSidebarExpanded = _appSettings.EditorInfoSidebarExpanded
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
@@ -913,6 +930,7 @@ Namespace ViewModels
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
             _savedViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
             _savedEditorShowFilmstrip = _editorShowFilmstrip
+            _savedEditorGridSize = _editorGridSize
             _savedEditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             _savedViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             _savedStartupImageMode = _startupImageMode
@@ -943,6 +961,7 @@ Namespace ViewModels
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
             ViewerSlideshowIntervalSeconds = _savedViewerSlideshowIntervalSeconds
             EditorShowFilmstrip = _savedEditorShowFilmstrip
+            EditorGridSize = _savedEditorGridSize
             EditorInfoSidebarExpanded = _savedEditorInfoSidebarExpanded
             ViewerInfoSidebarExpanded = _savedViewerInfoSidebarExpanded
             StartupImageMode = _savedStartupImageMode
@@ -994,6 +1013,7 @@ Namespace ViewModels
             ViewerShowFilmstrip = True
             ViewerSlideshowIntervalSeconds = 3
             EditorShowFilmstrip = True
+            EditorGridSize = 50
             EditorInfoSidebarExpanded = True
             ViewerInfoSidebarExpanded = True
             LanguageMode = "System"
@@ -1082,6 +1102,7 @@ Namespace ViewModels
             settings.ViewerOpenFitToWindow = _viewerOpenFitToWindow
             settings.ViewerFitBehavior = _viewerFitBehavior
             settings.EditorShowFilmstrip = _editorShowFilmstrip
+            settings.EditorGridSize = _editorGridSize
             settings.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             AppSettingsService.Save(settings)

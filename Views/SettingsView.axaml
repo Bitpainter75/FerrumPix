@@ -659,6 +659,25 @@
                                           OffContent=""
                                           VerticalAlignment="Center"/>
                         </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Rastergröße" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Kantenlänge einer Rasterzelle im Editor, in Bildpixeln." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="2"
+                                                   Maximum="500"
+                                                   Value="{Binding EditorGridSize}"/>
+                                <TextBlock Text="{Binding EditorGridSize, StringFormat={}{0} px}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           Width="52"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </Border>
 

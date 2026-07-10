@@ -1324,6 +1324,14 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' Kantenlänge einer Rasterzelle in Bildpixeln (Einstellungen -> Editor).
+        Public ReadOnly Property EditorGridSize As Integer
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return 50
+                Return _mainVm.Settings.EditorGridSize
+            End Get
+        End Property
+
         Public ReadOnly Property IsInfoSidebarVisible As Boolean
             Get
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorInfoSidebarExpanded

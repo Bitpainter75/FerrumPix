@@ -68,6 +68,22 @@ Namespace Views
         Private _isSelectionDragging As Boolean = False
         Private _selectionStart As Avalonia.Point
         Private _selectionEnd As Avalonia.Point
+
+        ' Lineale und Hilfslinien. Die Hilfslinien werden in Bildpixeln gespeichert, nicht in
+        ' Canvas-Koordinaten - so bleiben sie beim Zoomen und Schwenken an derselben Stelle im Bild.
+        Private _showRulers As Boolean = False
+        Private _showGrid As Boolean = False
+        Private ReadOnly _guidesX As New List(Of Double)()
+        Private ReadOnly _guidesY As New List(Of Double)()
+        Private _isGuideDragging As Boolean = False
+        Private _guideDragIsVertical As Boolean = False
+        Private _guideDragIndex As Integer = -1
+
+        Private Const GuideHitTolerance As Double = 4.0
+        Private Shared ReadOnly GuideBrush As IBrush = New SolidColorBrush(Color.Parse("#FF00C8FF"))
+        Private Shared ReadOnly GuideCursorVertical As New Cursor(StandardCursorType.SizeWestEast)
+        Private Shared ReadOnly GuideCursorHorizontal As New Cursor(StandardCursorType.SizeNorthSouth)
+
         Private ReadOnly _filmstripController As FilmstripInteractionController
 
         Private Enum CropDragMode
@@ -271,6 +287,49 @@ Namespace Views
             End If
         End Sub
 
+        Public Sub OnRulerModeToggleClick(sender As Object, e As RoutedEventArgs)
+            _showRulers = Not _showRulers
+            Dim btn = Me.FindControl(Of Button)("RulerModeButton")
+            If btn IsNot Nothing Then
+                If _showRulers Then btn.Classes.Add("active") Else btn.Classes.Remove("active")
+            End If
+            ApplyRulerVisibility()
+            UpdateSliderLayout()
+        End Sub
+
+        Public Sub OnGridModeToggleClick(sender As Object, e As RoutedEventArgs)
+            _showGrid = Not _showGrid
+            Dim btn = Me.FindControl(Of Button)("GridModeButton")
+            If btn IsNot Nothing Then
+                If _showGrid Then btn.Classes.Add("active") Else btn.Classes.Remove("active")
+            End If
+            Dim overlay = Me.FindControl(Of PixelGridOverlay)("GridOverlay")
+            If overlay IsNot Nothing Then overlay.IsVisible = _showGrid
+            UpdateGridOverlay()
+        End Sub
+
+        Public Sub OnClearGuidesClick(sender As Object, e As RoutedEventArgs)
+            ClearGuides()
+        End Sub
+
+        Private Sub ApplyRulerVisibility()
+            Dim topRuler = Me.FindControl(Of RulerControl)("TopRuler")
+            Dim leftRuler = Me.FindControl(Of RulerControl)("LeftRuler")
+            Dim corner = Me.FindControl(Of Button)("RulerCornerButton")
+            If topRuler IsNot Nothing Then topRuler.IsVisible = _showRulers
+            If leftRuler IsNot Nothing Then leftRuler.IsVisible = _showRulers
+            If corner IsNot Nothing Then corner.IsVisible = _showRulers
+        End Sub
+
+        Private Sub ClearGuides()
+            If _guidesX.Count = 0 AndAlso _guidesY.Count = 0 Then Return
+            _guidesX.Clear()
+            _guidesY.Clear()
+            _isGuideDragging = False
+            _guideDragIndex = -1
+            UpdateGuideLines()
+        End Sub
+
         Public Sub OnToggleFilmstripClick(sender As Object, e As RoutedEventArgs)
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             If mainVm Is Nothing OrElse mainVm.Settings Is Nothing Then Return
@@ -385,6 +444,12 @@ Namespace Views
                 Case Else
                     ' Manual: _zoomSliderValue/_panX/_panY unverändert lassen
             End Select
+            ' Hilfslinien liegen auf Bildpixeln - nach einem Beschnitt oder Bildwechsel bezeichnen
+            ' dieselben Zahlen eine andere Stelle im Bild, deshalb werden sie verworfen.
+            _guidesX.Clear()
+            _guidesY.Clear()
+            _isGuideDragging = False
+            _guideDragIndex = -1
             UpdateSliderLayout()
         End Sub
 
@@ -424,6 +489,8 @@ Namespace Views
                     _filmstripController.ScrollToCurrent()
                 Case NameOf(EditorViewModel.IsInfoSidebarVisible)
                     UpdateInfoSidebarLayout()
+                Case NameOf(EditorViewModel.EditorGridSize)
+                    UpdateGridOverlay()
                 Case NameOf(EditorViewModel.AnnotationText),
                      NameOf(EditorViewModel.AnnotationFillColor),
                      NameOf(EditorViewModel.AnnotationStrokeColor),
@@ -607,6 +674,10 @@ Namespace Views
             If Not _isSelectionDragging Then
                 PositionSelectionOverlayFromViewModel(ix, iy, iw, ih)
             End If
+
+            UpdateRulers()
+            UpdateGuideLines()
+            UpdateGridOverlay()
         End Sub
 
         Private Sub OnSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
@@ -633,6 +704,20 @@ Namespace Views
                 e.Pointer.Capture(canvas)
                 e.Handled = True
                 Return
+            End If
+
+            ' Eine bereits gesetzte Hilfslinie lässt sich direkt im Bild greifen. Das muss vor allen
+            ' Werkzeug-Zweigen passieren, sonst zeichnet der Pinsel darüber statt sie zu verschieben.
+            If _showRulers AndAlso vm IsNot Nothing Then
+                Dim guideRect = GetDisplayedImageRect(canvas, vm)
+                Dim guideIsVertical As Boolean
+                Dim guideIndex = HitTestGuide(e.GetPosition(canvas), guideRect, vm, guideIsVertical)
+                If guideIndex >= 0 Then
+                    BeginGuideDrag(guideIsVertical, guideIndex)
+                    e.Pointer.Capture(canvas)
+                    e.Handled = True
+                    Return
+                End If
             End If
 
             ' Der Griff des Vergleichsreglers liegt als Kind auf diesem Canvas, ein Druck darauf landet
@@ -809,6 +894,14 @@ Namespace Views
             If cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing Then
                 UpdateBrushCursorPreview(e.GetPosition(cursorCanvas), GetDisplayedImageRect(cursorCanvas, cursorVm), cursorVm)
                 UpdateMousePositionText(e.GetPosition(cursorCanvas), GetDisplayedImageRect(cursorCanvas, cursorVm), cursorVm)
+                UpdateRulerMarkers(e.GetPosition(cursorCanvas))
+            End If
+
+            Dim guideHoverIsVertical As Boolean = False
+            Dim guideHoverIndex As Integer = -1
+            If _showRulers AndAlso Not _isGuideDragging AndAlso cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing Then
+                guideHoverIndex = HitTestGuide(e.GetPosition(cursorCanvas), GetDisplayedImageRect(cursorCanvas, cursorVm),
+                                               cursorVm, guideHoverIsVertical)
             End If
 
             ' Die Ecken der Resize-Griffe und der Rotier-Griff ragen per negativem Margin über die
@@ -820,6 +913,10 @@ Namespace Views
                 ' unten bei jeder Mausbewegung den einmalig in OnViewModelPropertyChanged gesetzten
                 ' Pipetten-Cursor sofort wieder mit Nothing.
                 cursorCanvas.Cursor = GetPipetteCursor()
+            ElseIf _isGuideDragging AndAlso cursorCanvas IsNot Nothing Then
+                cursorCanvas.Cursor = If(_guideDragIsVertical, GuideCursorVertical, GuideCursorHorizontal)
+            ElseIf guideHoverIndex >= 0 AndAlso cursorCanvas IsNot Nothing Then
+                cursorCanvas.Cursor = If(guideHoverIsVertical, GuideCursorVertical, GuideCursorHorizontal)
             ElseIf Not _isPanDragging AndAlso Not _isCropDragging AndAlso Not _isBrushDrawing AndAlso
                Not _isRetouching AndAlso Not _isTextDragging AndAlso Not _isDraggingSlider AndAlso Not _isSelectionDragging AndAlso
                cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso
@@ -830,6 +927,12 @@ Namespace Views
                 cursorCanvas.Cursor = Nothing
             End If
 
+            If _isGuideDragging Then
+                If cursorCanvas Is Nothing Then Return
+                UpdateGuideDrag(e.GetPosition(cursorCanvas))
+                e.Handled = True
+                Return
+            End If
             If _isPanDragging Then
                 Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 If canvas Is Nothing Then Return
@@ -895,6 +998,14 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            If _isGuideDragging Then
+                Dim guideCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                If guideCanvas IsNot Nothing Then EndGuideDrag(e.GetPosition(guideCanvas))
+                e.Pointer.Capture(Nothing)
+                e.Handled = True
+                Return
+            End If
+
             Dim wasCropDragging = _isCropDragging
             If _isCropDragging Then
                 CommitCropDrag()
@@ -1090,6 +1201,235 @@ Namespace Views
         Private Sub OnPreviewCanvasPointerExited(sender As Object, e As PointerEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm IsNot Nothing Then vm.MousePositionText = ""
+            If Not _isGuideDragging Then HideRulerMarkers()
+        End Sub
+
+        Private Sub UpdateRulers()
+            Dim topRuler = Me.FindControl(Of RulerControl)("TopRuler")
+            Dim leftRuler = Me.FindControl(Of RulerControl)("LeftRuler")
+            If topRuler Is Nothing OrElse leftRuler Is Nothing OrElse Not _showRulers Then Return
+
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If canvas Is Nothing OrElse vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+
+            ' Die Skala zählt echte Bildpixel - dieselbe Bezugsgröße wie die Positionsanzeige in
+            ' UpdateMousePositionText, damit Lineal und Statuszeile denselben Wert nennen.
+            Dim pixelSize = vm.CurrentImage.PixelSize
+            If pixelSize.Width <= 0 OrElse pixelSize.Height <= 0 Then Return
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+
+            topRuler.Origin = imageRect.Left
+            topRuler.PixelsPerUnit = imageRect.Width / pixelSize.Width
+            topRuler.ImageLength = pixelSize.Width
+
+            leftRuler.Origin = imageRect.Top
+            leftRuler.PixelsPerUnit = imageRect.Height / pixelSize.Height
+            leftRuler.ImageLength = pixelSize.Height
+        End Sub
+
+        Private Sub UpdateGridOverlay()
+            Dim overlay = Me.FindControl(Of PixelGridOverlay)("GridOverlay")
+            If overlay Is Nothing OrElse Not _showGrid Then Return
+
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If canvas Is Nothing OrElse vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+
+            Dim pixelSize = vm.CurrentImage.PixelSize
+            If pixelSize.Width <= 0 OrElse pixelSize.Height <= 0 Then Return
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+
+            Avalonia.Controls.Canvas.SetLeft(overlay, 0)
+            Avalonia.Controls.Canvas.SetTop(overlay, 0)
+            overlay.Width = canvas.Bounds.Width
+            overlay.Height = canvas.Bounds.Height
+            overlay.ImageOrigin = imageRect.TopLeft
+            overlay.PixelsPerUnit = imageRect.Width / pixelSize.Width
+            overlay.ImageSize = New Avalonia.Size(pixelSize.Width, pixelSize.Height)
+            overlay.GridSize = vm.EditorGridSize
+        End Sub
+
+        ''' Zeigt auf beiden Linealen, wo der Mauszeiger steht. NaN blendet die Markierung aus.
+        Private Sub UpdateRulerMarkers(canvasPosition As Avalonia.Point)
+            If Not _showRulers Then Return
+            Dim topRuler = Me.FindControl(Of RulerControl)("TopRuler")
+            Dim leftRuler = Me.FindControl(Of RulerControl)("LeftRuler")
+            If topRuler IsNot Nothing Then topRuler.PointerOffset = canvasPosition.X
+            If leftRuler IsNot Nothing Then leftRuler.PointerOffset = canvasPosition.Y
+        End Sub
+
+        Private Sub HideRulerMarkers()
+            UpdateRulerMarkers(New Avalonia.Point(Double.NaN, Double.NaN))
+        End Sub
+
+        Private Sub UpdateGuideLines()
+            Dim layer = Me.FindControl(Of Canvas)("GuideLayer")
+            If layer Is Nothing Then Return
+            layer.Children.Clear()
+
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If canvas Is Nothing Then Return
+            layer.Width = canvas.Bounds.Width
+            layer.Height = canvas.Bounds.Height
+            If Not _showRulers OrElse vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+
+            Dim pixelSize = vm.CurrentImage.PixelSize
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If pixelSize.Width <= 0 OrElse pixelSize.Height <= 0 Then Return
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+
+            For Each guideX In _guidesX
+                Dim x = Math.Floor(imageRect.Left + guideX / pixelSize.Width * imageRect.Width) + 0.5
+                layer.Children.Add(CreateGuideLine(New Avalonia.Point(x, 0), New Avalonia.Point(x, layer.Height)))
+            Next
+            For Each guideY In _guidesY
+                Dim y = Math.Floor(imageRect.Top + guideY / pixelSize.Height * imageRect.Height) + 0.5
+                layer.Children.Add(CreateGuideLine(New Avalonia.Point(0, y), New Avalonia.Point(layer.Width, y)))
+            Next
+        End Sub
+
+        Private Shared Function CreateGuideLine(startPoint As Avalonia.Point, endPoint As Avalonia.Point) As Line
+            Return New Line With {
+                .StartPoint = startPoint,
+                .EndPoint = endPoint,
+                .Stroke = GuideBrush,
+                .StrokeThickness = 1,
+                .IsHitTestVisible = False
+            }
+        End Function
+
+        ''' Wandelt eine Hilfslinie (Bildpixel) in ihre Canvas-Koordinate um.
+        Private Shared Function GuideToCanvas(guide As Double, axisStart As Double, axisLength As Double, imageLength As Double) As Double
+            If imageLength <= 0 Then Return axisStart
+            Return axisStart + guide / imageLength * axisLength
+        End Function
+
+        ''' Index der Hilfslinie unter dem Zeiger, oder -1. Senkrechte Linien haben Vorrang, wenn beide
+        ''' gleich nah liegen - sonst ließe sich eine Kreuzung nie in beide Richtungen auflösen.
+        Private Function HitTestGuide(position As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel,
+                                      ByRef isVertical As Boolean) As Integer
+            isVertical = False
+            If vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return -1
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return -1
+
+            Dim pixelSize = vm.CurrentImage.PixelSize
+            Dim bestIndex = -1
+            Dim bestDistance = GuideHitTolerance
+
+            For i = 0 To _guidesY.Count - 1
+                Dim distance = Math.Abs(position.Y - GuideToCanvas(_guidesY(i), imageRect.Top, imageRect.Height, pixelSize.Height))
+                If distance <= bestDistance Then
+                    bestDistance = distance
+                    bestIndex = i
+                End If
+            Next
+            For i = 0 To _guidesX.Count - 1
+                Dim distance = Math.Abs(position.X - GuideToCanvas(_guidesX(i), imageRect.Left, imageRect.Width, pixelSize.Width))
+                If distance <= bestDistance Then
+                    bestDistance = distance
+                    bestIndex = i
+                    isVertical = True
+                End If
+            Next
+            Return bestIndex
+        End Function
+
+        Private Sub BeginGuideDrag(isVertical As Boolean, index As Integer)
+            _guideDragIsVertical = isVertical
+            _guideDragIndex = index
+            _isGuideDragging = True
+        End Sub
+
+        Private Sub UpdateGuideDrag(canvasPosition As Avalonia.Point)
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If canvas Is Nothing OrElse vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+
+            Dim pixelSize = vm.CurrentImage.PixelSize
+            Dim axisStart = If(_guideDragIsVertical, imageRect.Left, imageRect.Top)
+            Dim axisLength = If(_guideDragIsVertical, imageRect.Width, imageRect.Height)
+            Dim imageLength = CDbl(If(_guideDragIsVertical, pixelSize.Width, pixelSize.Height))
+            If imageLength <= 0 Then Return
+
+            Dim pointerOnAxis = If(_guideDragIsVertical, canvasPosition.X, canvasPosition.Y)
+            Dim value = Math.Round((pointerOnAxis - axisStart) / axisLength * imageLength)
+            value = Math.Max(0, Math.Min(imageLength, value))
+
+            Dim guides = If(_guideDragIsVertical, _guidesX, _guidesY)
+            If _guideDragIndex < 0 OrElse _guideDragIndex >= guides.Count Then Return
+            guides(_guideDragIndex) = value
+            UpdateGuideLines()
+        End Sub
+
+        ''' Eine Hilfslinie, die außerhalb des Canvas oder neben dem Bild losgelassen wird, wird
+        ''' verworfen - das ist zugleich die Geste zum Löschen (zurück aufs Lineal ziehen) und der
+        ''' Grund, warum ein bloßer Klick aufs Lineal noch keine Linie erzeugt.
+        Private Sub EndGuideDrag(canvasPosition As Avalonia.Point)
+            If Not _isGuideDragging Then Return
+            _isGuideDragging = False
+
+            Dim guides = If(_guideDragIsVertical, _guidesX, _guidesY)
+            Dim index = _guideDragIndex
+            _guideDragIndex = -1
+            If index < 0 OrElse index >= guides.Count Then Return
+
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If canvas Is Nothing OrElse vm Is Nothing Then Return
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+
+            Dim pointerOnAxis = If(_guideDragIsVertical, canvasPosition.X, canvasPosition.Y)
+            Dim canvasLength = If(_guideDragIsVertical, canvas.Bounds.Width, canvas.Bounds.Height)
+            Dim imageStart = If(_guideDragIsVertical, imageRect.Left, imageRect.Top)
+            Dim imageEnd = If(_guideDragIsVertical, imageRect.Right, imageRect.Bottom)
+
+            Dim droppedOutside = pointerOnAxis < 0 OrElse pointerOnAxis > canvasLength OrElse
+                                 pointerOnAxis < imageStart OrElse pointerOnAxis > imageEnd
+            If droppedOutside Then guides.RemoveAt(index)
+            UpdateGuideLines()
+        End Sub
+
+        Public Sub OnRulerPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            If Not _showRulers Then Return
+            If Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
+            Dim ruler = TryCast(sender, RulerControl)
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If ruler Is Nothing OrElse canvas Is Nothing OrElse vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+
+            ' Das obere Lineal liefert waagerechte Hilfslinien, das linke senkrechte.
+            Dim isVertical = Not ruler.IsHorizontal
+            Dim guides = If(isVertical, _guidesX, _guidesY)
+            guides.Add(0.0)
+            BeginGuideDrag(isVertical, guides.Count - 1)
+            e.Pointer.Capture(ruler)
+            UpdateGuideDrag(e.GetPosition(canvas))
+            e.Handled = True
+        End Sub
+
+        Public Sub OnRulerPointerMoved(sender As Object, e As PointerEventArgs)
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            If canvas Is Nothing Then Return
+            Dim position = e.GetPosition(canvas)
+            UpdateRulerMarkers(position)
+            If Not _isGuideDragging Then Return
+            UpdateGuideDrag(position)
+            e.Handled = True
+        End Sub
+
+        Public Sub OnRulerPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            If Not _isGuideDragging Then Return
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            If canvas Is Nothing Then Return
+            EndGuideDrag(e.GetPosition(canvas))
+            e.Pointer.Capture(Nothing)
+            e.Handled = True
         End Sub
 
         Private Function GetDisplayedImageRect(canvas As Canvas, vm As EditorViewModel) As Avalonia.Rect
@@ -1827,11 +2167,11 @@ Namespace Views
             e.Handled = True
         End Sub
 
-        ''' Prüft, ob left/left+width/2/left+width nahe an einem Snap-Ziel (Bildkante/Mitte/Sicherheitsabstand) liegt und rastet ggf. ein.
+        ''' Prüft, ob left/left+width/2/left+width nahe an einem Snap-Ziel (Hilfslinie, Bildkante, Mitte,
+        ''' Sicherheitsabstand) liegt und rastet ggf. ein.
         Private Function ApplyTextSnap(value As Double, size As Double, axisStart As Double, axisLength As Double, isVerticalLine As Boolean) As Double
             Const tolerance As Double = 7.0
-            For Each pct In TextSnapPercents
-                Dim target = axisStart + axisLength * pct / 100.0
+            For Each target In GetSnapTargets(axisStart, axisLength, isVerticalLine)
                 If Math.Abs(value - target) <= tolerance Then
                     ShowTextSnapGuide(target, isVerticalLine)
                     Return target
@@ -1847,6 +2187,26 @@ Namespace Views
             Next
             HideTextSnapGuide(isVerticalLine)
             Return value
+        End Function
+
+        ''' Canvas-Koordinaten, an denen ein Objekt einrastet. Die vom Nutzer gesetzten Hilfslinien
+        ''' kommen zuerst: liegen sie nahe an einem der festen Prozentziele, soll die Hilfslinie gewinnen.
+        Private Iterator Function GetSnapTargets(axisStart As Double, axisLength As Double, isVerticalLine As Boolean) As IEnumerable(Of Double)
+            If _showRulers Then
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If vm IsNot Nothing AndAlso vm.CurrentImage IsNot Nothing Then
+                    Dim guides = If(isVerticalLine, _guidesX, _guidesY)
+                    Dim imageLength = CDbl(If(isVerticalLine, vm.CurrentImage.PixelSize.Width, vm.CurrentImage.PixelSize.Height))
+                    If imageLength > 0 Then
+                        For Each guide In guides
+                            Yield GuideToCanvas(guide, axisStart, axisLength, imageLength)
+                        Next
+                    End If
+                End If
+            End If
+            For Each pct In TextSnapPercents
+                Yield axisStart + axisLength * pct / 100.0
+            Next
         End Function
 
         Private Sub ShowTextSnapGuide(position As Double, isVerticalLine As Boolean)

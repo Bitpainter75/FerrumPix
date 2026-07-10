@@ -98,6 +98,8 @@ Namespace Services
         ''' (nur einpassen, wenn das Bild größer als die Darstellungsfläche ist, sonst 100%).
         Public Property ViewerFitBehavior As String = "Always"
         Public Property EditorShowFilmstrip As Boolean = True
+        ''' Kantenlänge einer Rasterzelle im Editor, in Bildpixeln.
+        Public Property EditorGridSize As Integer = 50
         Public Property ShowHiddenFolders As Boolean = False
         Public Property ThemeMode As String = "Dark"
         Public Property AccentColor As String = "#F08A1A"
@@ -201,6 +203,7 @@ Namespace Services
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
+                settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
@@ -273,6 +276,7 @@ Namespace Services
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
+                settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
@@ -408,6 +412,10 @@ Namespace Services
 
         Public Shared Function NormalizeViewerSlideshowIntervalSeconds(value As Integer) As Integer
             Return Math.Max(1, Math.Min(30, value))
+        End Function
+
+        Public Shared Function NormalizeEditorGridSize(value As Integer) As Integer
+            Return Math.Max(2, Math.Min(1000, value))
         End Function
 
         Public Shared Function NormalizeViewerFitBehavior(value As String) As String

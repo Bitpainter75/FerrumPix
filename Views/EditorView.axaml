@@ -58,6 +58,28 @@
                         </StackPanel>
                     </Button>
 
+                    <Button Name="RulerModeButton" Classes="ghost" Height="38" Padding="8,2"
+                            Margin="0,0,0,0" ToolTip.Tip="Lineale und Hilfslinien ein- oder ausblenden"
+                            Focusable="False"
+                            Click="OnRulerModeToggleClick">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/ruler-2.svg"
+                                           Width="20" Height="20" />
+                            <TextBlock Text="Lineale" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Name="GridModeButton" Classes="ghost" Height="38" Padding="8,2"
+                            Margin="0,0,0,0" ToolTip.Tip="Raster ein- oder ausblenden (Größe: Einstellungen → Editor)"
+                            Focusable="False"
+                            Click="OnGridModeToggleClick">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/grid-pattern.svg"
+                                           Width="20" Height="20" />
+                            <TextBlock Text="Raster" />
+                        </StackPanel>
+                    </Button>
+
                     <Button Classes="ghost"
                             Height="38"
                             Padding="8,2"
@@ -382,9 +404,53 @@
 
                 <Grid RowDefinitions="*,Auto"
                       IsVisible="{Binding CurrentImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <!-- Die Lineale teilen sich Spalte bzw. Zeile mit dem Vorschau-Canvas; ihre lokalen
+                         Koordinaten entlang der Skala sind damit identisch mit denen des Canvas. Sind sie
+                         ausgeblendet, kollabieren die Auto-Spur und der Canvas nutzt die volle Fläche. -->
+                    <Grid Grid.Row="0" RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
+                        <Button x:Name="RulerCornerButton"
+                                Grid.Row="0" Grid.Column="0"
+                                Width="18" Height="18"
+                                MinWidth="0" MinHeight="0" Padding="0"
+                                CornerRadius="0"
+                                Focusable="False"
+                                IsVisible="False"
+                                Background="{DynamicResource FP.Bg.Elevated}"
+                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                BorderThickness="0,0,1,1"
+                                Click="OnClearGuidesClick"
+                                ToolTip.Tip="Alle Hilfslinien entfernen" />
+                        <icons:RulerControl x:Name="TopRuler"
+                                            Grid.Row="0" Grid.Column="1"
+                                            Height="18"
+                                            IsHorizontal="True"
+                                            IsVisible="False"
+                                            Cursor="Hand"
+                                            RulerBackground="{DynamicResource FP.Bg.Elevated}"
+                                            ImageAreaBrush="{DynamicResource FP.Bg.Panel}"
+                                            TickBrush="{DynamicResource FP.Border.Strong}"
+                                            LabelBrush="{DynamicResource FP.Text.Muted}"
+                                            MarkerBrush="{DynamicResource FP.Accent}"
+                                            PointerPressed="OnRulerPointerPressed"
+                                            PointerMoved="OnRulerPointerMoved"
+                                            PointerReleased="OnRulerPointerReleased" />
+                        <icons:RulerControl x:Name="LeftRuler"
+                                            Grid.Row="1" Grid.Column="0"
+                                            Width="18"
+                                            IsHorizontal="False"
+                                            IsVisible="False"
+                                            Cursor="Hand"
+                                            RulerBackground="{DynamicResource FP.Bg.Elevated}"
+                                            ImageAreaBrush="{DynamicResource FP.Bg.Panel}"
+                                            TickBrush="{DynamicResource FP.Border.Strong}"
+                                            LabelBrush="{DynamicResource FP.Text.Muted}"
+                                            MarkerBrush="{DynamicResource FP.Accent}"
+                                            PointerPressed="OnRulerPointerPressed"
+                                            PointerMoved="OnRulerPointerMoved"
+                                            PointerReleased="OnRulerPointerReleased" />
                     <Canvas x:Name="PreviewCanvas"
                             PointerWheelChanged="OnCanvasWheelZoom"
-                            Grid.Row="0"
+                            Grid.Row="1" Grid.Column="1"
                             ClipToBounds="True"
                             SizeChanged="OnPreviewCanvasSizeChanged"
                             PointerPressed="OnSliderPointerPressed"
@@ -407,6 +473,10 @@
                                 BorderBrush="{DynamicResource FP.Border.Strong}"
                                 BorderThickness="1"
                                 IsHitTestVisible="False" />
+                        <!-- Raster und Hilfslinien liegen über dem Bild, aber unter Zuschnitt- und
+                             Objekt-Overlay, damit sie deren Anfasspunkte nicht verdecken. -->
+                        <icons:PixelGridOverlay x:Name="GridOverlay" IsVisible="False" IsHitTestVisible="False" />
+                        <Canvas x:Name="GuideLayer" IsHitTestVisible="False" ClipToBounds="True" />
                         <Border x:Name="SliderDivider"
                                 Width="2"
                                 Background="{DynamicResource FP.Accent}"
@@ -638,6 +708,7 @@
                                  StrokeThickness="1.5"
                                  StrokeDashArray="3,3" />
                     </Canvas>
+                    </Grid>
                 </Grid>
             </Grid>
         </Border>
