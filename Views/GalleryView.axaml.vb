@@ -28,6 +28,9 @@ Namespace Views
         Private _initialSelectionDone As Boolean = False
         Private _dragStartPoint As Avalonia.Point
         Private _dragStartItem As ImageItem
+        ' DoDragDropAsync verlangt genau das Press-Ereignis, das die Geste ausgelöst hat - das
+        ' PointerMoved-Argument taugt dafür nicht.
+        Private _dragStartArgs As PointerPressedEventArgs
         Private _selectionAnchor As ImageItem
         Private _observedVm As GalleryViewModel
         Private _spaceOverviewActive As Boolean = False
@@ -632,6 +635,7 @@ Namespace Views
                    vm.SelectedItems.Contains(item) Then
                     _dragStartItem = item
                     _dragStartPoint = e.GetPosition(Me)
+                    _dragStartArgs = e
                     Me.Focus()
                     e.Handled = True
                     Return
@@ -639,6 +643,7 @@ Namespace Views
                 ApplyPointerSelection(vm, item, e.KeyModifiers)
                 _dragStartItem = item
                 _dragStartPoint = e.GetPosition(Me)
+                _dragStartArgs = e
                 Me.Focus()
                 e.Handled = True
             End If
@@ -806,12 +811,14 @@ Namespace Views
             Dim vm = GetVm()
             If vm Is Nothing Then Return
             Dim dragItem = _dragStartItem
-            If dragItem Is Nothing Then Return
+            Dim pressedArgs = _dragStartArgs
+            If dragItem Is Nothing OrElse pressedArgs Is Nothing Then Return
             Dim useSelection = vm.SelectedItems IsNot Nothing AndAlso vm.SelectedItems.Contains(dragItem)
             Dim paths = If(useSelection,
                            vm.SelectedItems.Select(Function(i) i.FilePath).ToList(),
                            New List(Of String) From {dragItem.FilePath})
             _dragStartItem = Nothing
+            _dragStartArgs = Nothing
 
             ' Die Ziehlast trägt beides: das anwendungseigene Format, an dem der interne Drop das
             ' Verschieben erkennt, und die Dateien selbst - ohne die sieht ein fremdes Ziel wie Dolphin
@@ -826,7 +833,7 @@ Namespace Views
 
             _isDragging = True
             Try
-                Await DragDrop.DoDragDropAsync(e, data, DragDropEffects.Move Or DragDropEffects.Copy)
+                Await DragDrop.DoDragDropAsync(pressedArgs, data, DragDropEffects.Move Or DragDropEffects.Copy)
             Finally
                 _isDragging = False
             End Try

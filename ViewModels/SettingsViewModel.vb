@@ -1,6 +1,7 @@
 Imports System.Collections.ObjectModel
 Imports System.Globalization
 Imports System.Linq
+Imports System.Reflection
 Imports System.Windows.Input
 Imports Avalonia
 Imports Avalonia.Media
@@ -109,6 +110,20 @@ Namespace ViewModels
                 ApplyTheme(_themeMode, _accentColor)
                 SaveAppearanceSettings()
             End Set
+        End Property
+
+        ' Kommt aus -p:InformationalVersion, das packaging/package.sh aus der Datei VERSION speist.
+        Public ReadOnly Property DisplayVersion As String
+            Get
+                Dim asm = Assembly.GetExecutingAssembly()
+                Dim informational = asm.GetCustomAttribute(Of AssemblyInformationalVersionAttribute)()?.InformationalVersion
+                If String.IsNullOrWhiteSpace(informational) Then
+                    Return If(asm.GetName().Version?.ToString(3), "?")
+                End If
+                ' Ohne gesetzte InformationalVersion hängt der Compiler "+<commit-sha>" an.
+                Dim plus = informational.IndexOf("+"c)
+                Return If(plus >= 0, informational.Substring(0, plus), informational)
+            End Get
         End Property
 
         Public ReadOnly Property IsDarkThemeMode As Boolean

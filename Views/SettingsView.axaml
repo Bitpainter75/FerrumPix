@@ -99,7 +99,7 @@
 
                         <Grid ColumnDefinitions="160,*" RowDefinitions="Auto" RowSpacing="8">
                             <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}"/>
-                            <TextBlock Grid.Column="1" Text="0.7.0 - Juli 2026"/>
+                            <TextBlock Grid.Column="1" Text="{Binding DisplayVersion}"/>
                         </Grid>
 
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
