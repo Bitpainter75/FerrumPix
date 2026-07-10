@@ -92,6 +92,28 @@ Namespace ViewModels
         Private _brushHardness As Double = 100
         Private _brushOpacity As Double = 100
         Private _isEraserMode As Boolean = False
+
+        ''' Pinsel, Radiergummi, Verwischen und Stempel arbeiten auf denselben Feldern (_brushSize,
+        ''' _retouchRadius, _annotationStrokeColor). Damit beim Wechsel keines die Werte des anderen
+        ''' erbt, sichert SetPaintMode den Stand des verlassenen Werkzeugs hier und holt den des neuen
+        ''' zurück - beim ersten Aufruf sind das die Startwerte aus ResetEditorUiStateForNewImage.
+        Private NotInheritable Class PaintToolState
+            Public Property Size As Double = 24.0
+            Public Property Hardness As Double = 100
+            Public Property Opacity As Double = 100
+            Public Property StrokeColor As String = "#FF000000"
+        End Class
+
+        Private _paintToolStates As Dictionary(Of String, PaintToolState) = NewPaintToolStates()
+
+        Private Shared Function NewPaintToolStates() As Dictionary(Of String, PaintToolState)
+            Return New Dictionary(Of String, PaintToolState)(StringComparer.Ordinal) From {
+                {"Brush", New PaintToolState()},
+                {"Eraser", New PaintToolState()},
+                {"Blur", New PaintToolState()},
+                {"Clone", New PaintToolState()}
+            }
+        End Function
         Private ReadOnly _retouchSpots As New List(Of RetouchSpot)()
         ' Klonquelle in Prozent der Bildkante; negativ = nicht gesetzt. Der Versatz zwischen Quelle und
         ' erstem gesetzten Punkt wird gemerkt und für den restlichen Zug beibehalten ("aligned"), damit
@@ -5797,6 +5819,7 @@ Namespace ViewModels
             _brushSize = 24.0
             _brushHardness = 100
             _brushOpacity = 100
+            _paintToolStates = NewPaintToolStates()
 
             _annotationText = "Text"
             _annotationFillColor = "#FFFFFFFF"
@@ -7240,6 +7263,7 @@ Namespace ViewModels
 
         Private Sub SetPaintMode(mode As String)
             Dim normalized = If(mode, "").Trim().ToLowerInvariant()
+            Dim previousPaintMode = SelectedPaintMode
             _overlayNotifySuppressDepth += 1
             Try
                 PendingInsertKind = ""
@@ -7263,6 +7287,10 @@ Namespace ViewModels
                         IsEraserMode = False
                 End Select
                 SelectedLayersPanelTab = LayersPanelTab.Tool
+                If Not String.Equals(previousPaintMode, SelectedPaintMode, StringComparison.Ordinal) Then
+                    StorePaintToolState(previousPaintMode)
+                    ApplyPaintToolState(SelectedPaintMode)
+                End If
             Finally
                 _overlayNotifySuppressDepth -= 1
             End Try
@@ -7273,6 +7301,46 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
             Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
             RaiseCloneSourceProperties()
+        End Sub
+
+        ''' Sichert die Regler des Werkzeugs, das gerade verlassen wird. Für ein Nicht-Malwerkzeug
+        ''' (paintMode ist dann leer) gibt es nichts zu sichern.
+        Private Sub StorePaintToolState(paintMode As String)
+            Dim state As PaintToolState = Nothing
+            If String.IsNullOrEmpty(paintMode) OrElse Not _paintToolStates.TryGetValue(paintMode, state) Then Return
+
+            Select Case paintMode
+                Case "Brush"
+                    state.StrokeColor = _annotationStrokeColor
+                    state.Size = _brushSize
+                    state.Hardness = _brushHardness
+                    state.Opacity = _brushOpacity
+                Case "Eraser"
+                    state.Size = _brushSize
+                    state.Hardness = _brushHardness
+                    state.Opacity = _brushOpacity
+                Case "Blur", "Clone"
+                    state.Size = _retouchRadius
+            End Select
+        End Sub
+
+        Private Sub ApplyPaintToolState(paintMode As String)
+            Dim state As PaintToolState = Nothing
+            If String.IsNullOrEmpty(paintMode) OrElse Not _paintToolStates.TryGetValue(paintMode, state) Then Return
+
+            Select Case paintMode
+                Case "Brush"
+                    AnnotationStrokeColor = state.StrokeColor
+                    BrushSize = state.Size
+                    BrushHardness = state.Hardness
+                    BrushOpacity = state.Opacity
+                Case "Eraser"
+                    BrushSize = state.Size
+                    BrushHardness = state.Hardness
+                    BrushOpacity = state.Opacity
+                Case "Blur", "Clone"
+                    RetouchRadius = state.Size
+            End Select
         End Sub
 
         Private Sub AddHistoryEntry(label As String)
