@@ -1724,7 +1724,10 @@ Namespace Views
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing OrElse Not IsSelectionScopeTool(vm.CurrentTool) OrElse Not vm.HasActiveSelection Then Return
+            If vm Is Nothing OrElse Not IsSelectionScopeTool(vm.CurrentTool) OrElse Not vm.HasActiveSelection Then
+                HideCurrentSelectionOverlay()
+                Return
+            End If
             Dim left = ix + iw * vm.SelectionXPercent / 100.0
             Dim top = iy + ih * vm.SelectionYPercent / 100.0
             Dim width = Math.Max(1, iw * vm.SelectionWidthPercent / 100.0)
@@ -1772,8 +1775,12 @@ Namespace Views
             Dim dragOverlay = Me.FindControl(Of SelectionOverlayControl)("SelectionDragOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim showSelection = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso vm.HasActiveSelection
-            If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = False
-            If overlay IsNot Nothing Then overlay.IsVisible = showSelection
+            If showSelection Then
+                If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = False
+                If overlay IsNot Nothing Then overlay.IsVisible = True
+            Else
+                HideCurrentSelectionOverlay()
+            End If
             If dragOverlay IsNot Nothing AndAlso Not _isSelectionDragging AndAlso Not _isLassoDrawing Then dragOverlay.IsVisible = False
             UpdateSliderLayout()
         End Sub
@@ -1781,8 +1788,27 @@ Namespace Views
         Private Sub SetCurrentSelectionOverlayVisible(isVisible As Boolean)
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
-            If overlay IsNot Nothing Then overlay.IsVisible = isVisible
+            If Not isVisible Then
+                HideCurrentSelectionOverlay()
+                Return
+            End If
+            If overlay IsNot Nothing Then overlay.IsVisible = True
             If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = False
+        End Sub
+
+        Private Sub HideCurrentSelectionOverlay()
+            Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
+            Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
+            If maskOverlay IsNot Nothing Then
+                maskOverlay.IsVisible = False
+            End If
+            If overlay Is Nothing Then Return
+            overlay.IsVisible = False
+            overlay.Points = Nothing
+            overlay.EdgePoints = Nothing
+            overlay.CombineMode = "New"
+            overlay.Width = 0
+            overlay.Height = 0
         End Sub
 
         Private Sub CommitSelectionDrag()
