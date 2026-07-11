@@ -74,6 +74,7 @@ Namespace Views
         Private _selectionEnd As Avalonia.Point
         Private _isSelectionMoveDragging As Boolean = False
         Private _selectionMoveLastPoint As Avalonia.Point
+        Private _selectionDragReplacesExisting As Boolean = False
         Private _isLassoDrawing As Boolean = False
         Private ReadOnly _lassoPoints As New List(Of Avalonia.Point)()
 
@@ -530,6 +531,8 @@ Namespace Views
                      NameOf(EditorViewModel.SelectionWidthPercent),
                      NameOf(EditorViewModel.SelectionHeightPercent),
                      NameOf(EditorViewModel.SelectionMaskPreviewImage),
+                     NameOf(EditorViewModel.SelectionMaskEdgePointsX),
+                     NameOf(EditorViewModel.SelectionMaskEdgePointsY),
                      NameOf(EditorViewModel.SelectionShapeMode),
                      NameOf(EditorViewModel.SelectionShapePointsX),
                      NameOf(EditorViewModel.SelectionShapePointsY)
@@ -848,22 +851,25 @@ Namespace Views
             If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Selection Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-                Dim pos = ClampPointToRect(e.GetPosition(canvas), imageRect)
-                If vm.HasActiveSelection AndAlso IsPointInsideSelection(pos, imageRect, vm) Then
-                    If vm.SelectionCombineMode = "Add" Then
-                        e.Handled = True
-                        Return
-                    ElseIf vm.SelectionCombineMode <> "New" Then
-                        ' Subtrahieren/Überlappen müssen innerhalb der bestehenden Auswahl neue Formen
-                        ' aufziehen können; Verschieben ist deshalb nur im Neu-Modus aktiv.
-                    Else
+                Dim rawPos = e.GetPosition(canvas)
+                Dim pos = ClampPointToRect(rawPos, imageRect)
+                Dim clickedInsideSelection = vm.HasActiveSelection AndAlso vm.SelectionMode <> "MagicWand" AndAlso IsPointInsideSelection(rawPos, imageRect, vm)
+                If clickedInsideSelection Then
+                    If vm.SelectionCombineMode = "New" Then
                         _isSelectionMoveDragging = True
                         _selectionMoveLastPoint = pos
                         e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
                     End If
+                    ' Add/Subtract/Intersect starten auch innerhalb der bestehenden Auswahl eine neue
+                    ' Kandidatenform; nur "Neu" nutzt den Treffer zum Verschieben der Auswahl.
                 End If
+                _selectionDragReplacesExisting = vm.HasActiveSelection AndAlso
+                                                 vm.SelectionMode <> "MagicWand" AndAlso
+                                                 vm.SelectionCombineMode = "New" AndAlso
+                                                 Not clickedInsideSelection
+                If _selectionDragReplacesExisting Then SetCurrentSelectionOverlayVisible(False)
                 Select Case vm.SelectionMode
                     Case "MagicWand"
                         ' Einzelklick: zusammenhängende Farbfläche wählen (kein Ziehen).
@@ -872,12 +878,12 @@ Namespace Views
                         vm.SetSelectionMagicWand(xPct, yPct)
                     Case "Lasso"
                         _lassoPoints.Clear()
-                        _lassoPoints.Add(pos)
+                        _lassoPoints.Add(rawPos)
                         _isLassoDrawing = True
                         e.Pointer.Capture(canvas)
                     Case Else   ' Rectangle, Ellipse - Rechteck aufziehen
-                        _selectionStart = pos
-                        _selectionEnd = pos
+                        _selectionStart = rawPos
+                        _selectionEnd = rawPos
                         _isSelectionDragging = True
                         e.Pointer.Capture(canvas)
                         UpdateSelectionOverlayFromDrag()
@@ -1093,7 +1099,7 @@ Namespace Views
                 If canvas Is Nothing OrElse vm Is Nothing Then Return
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-                _lassoPoints.Add(ClampPointToRect(e.GetPosition(canvas), imageRect))
+                _lassoPoints.Add(e.GetPosition(canvas))
                 UpdateLassoOverlayFromPoints()
                 e.Handled = True
                 Return
@@ -1104,7 +1110,7 @@ Namespace Views
                 If canvas Is Nothing OrElse vm Is Nothing Then Return
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-                _selectionEnd = ClampPointToRect(e.GetPosition(canvas), imageRect)
+                _selectionEnd = e.GetPosition(canvas)
                 UpdateSelectionOverlayFromDrag()
                 e.Handled = True
                 Return
@@ -1143,7 +1149,9 @@ Namespace Views
             _isCropDragging = False
             _isSelectionDragging = False
             _isSelectionMoveDragging = False
+            _selectionDragReplacesExisting = False
             _isLassoDrawing = False
+            If wasSelectionDragging OrElse wasLassoDrawing Then UpdateSelectionOverlayVisibility()
             If _isBrushDrawing Then
                 Dim vm = TryCast(DataContext, EditorViewModel)
                 vm?.AddBrushStroke(_brushPoints, vm.IsEraserMode)
@@ -1700,7 +1708,9 @@ Namespace Views
             Dim width = Math.Abs(_selectionEnd.X - _selectionStart.X)
             Dim height = Math.Abs(_selectionEnd.Y - _selectionStart.Y)
             overlay.ShapeMode = If(vm IsNot Nothing AndAlso vm.SelectionMode = "Ellipse", "Ellipse", "Rectangle")
+            overlay.CombineMode = If(vm Is Nothing, "New", vm.SelectionCombineMode)
             overlay.Points = Nothing
+            overlay.EdgePoints = Nothing
             overlay.IsVisible = True
             Avalonia.Controls.Canvas.SetLeft(overlay, left)
             Avalonia.Controls.Canvas.SetTop(overlay, top)
@@ -1719,10 +1729,11 @@ Namespace Views
             Dim top = iy + ih * vm.SelectionYPercent / 100.0
             Dim width = Math.Max(1, iw * vm.SelectionWidthPercent / 100.0)
             Dim height = Math.Max(1, ih * vm.SelectionHeightPercent / 100.0)
-            Dim hasMaskPreview = vm.SelectionMaskPreviewImage IsNot Nothing
+            Dim maskEdgePoints = BuildOverlayMaskEdgePoints(vm, width, height)
+            Dim hasMaskEdgePoints = maskEdgePoints IsNot Nothing AndAlso maskEdgePoints.Count > 0
 
             If maskOverlay IsNot Nothing Then
-                maskOverlay.IsVisible = hasMaskPreview
+                maskOverlay.IsVisible = False
                 Avalonia.Controls.Canvas.SetLeft(maskOverlay, left)
                 Avalonia.Controls.Canvas.SetTop(maskOverlay, top)
                 maskOverlay.Width = width
@@ -1730,15 +1741,15 @@ Namespace Views
             End If
 
             If overlay IsNot Nothing Then
-                overlay.IsVisible = Not hasMaskPreview
-                If Not hasMaskPreview Then
-                    overlay.ShapeMode = vm.SelectionShapeMode
-                    overlay.Points = BuildOverlayPoints(vm, ix, iy, iw, ih, left, top)
-                    Avalonia.Controls.Canvas.SetLeft(overlay, left)
-                    Avalonia.Controls.Canvas.SetTop(overlay, top)
-                    overlay.Width = width
-                    overlay.Height = height
-                End If
+                overlay.IsVisible = True
+                overlay.ShapeMode = vm.SelectionShapeMode
+                overlay.CombineMode = "New"
+                overlay.EdgePoints = maskEdgePoints
+                overlay.Points = If(hasMaskEdgePoints, Nothing, BuildOverlayPoints(vm, ix, iy, iw, ih, left, top))
+                Avalonia.Controls.Canvas.SetLeft(overlay, left)
+                Avalonia.Controls.Canvas.SetTop(overlay, top)
+                overlay.Width = width
+                overlay.Height = height
             End If
         End Sub
 
@@ -1761,11 +1772,17 @@ Namespace Views
             Dim dragOverlay = Me.FindControl(Of SelectionOverlayControl)("SelectionDragOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim showSelection = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso vm.HasActiveSelection
-            Dim hasMaskPreview = showSelection AndAlso vm.SelectionMaskPreviewImage IsNot Nothing
-            If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = hasMaskPreview
-            If overlay IsNot Nothing Then overlay.IsVisible = showSelection AndAlso Not hasMaskPreview
+            If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = False
+            If overlay IsNot Nothing Then overlay.IsVisible = showSelection
             If dragOverlay IsNot Nothing AndAlso Not _isSelectionDragging AndAlso Not _isLassoDrawing Then dragOverlay.IsVisible = False
             UpdateSliderLayout()
+        End Sub
+
+        Private Sub SetCurrentSelectionOverlayVisible(isVisible As Boolean)
+            Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
+            Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
+            If overlay IsNot Nothing Then overlay.IsVisible = isVisible
+            If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = False
         End Sub
 
         Private Sub CommitSelectionDrag()
@@ -1798,6 +1815,7 @@ Namespace Views
             Else
                 vm.SetSelectionRect(xPercent, yPercent, widthPercent, heightPercent)
             End If
+            _selectionDragReplacesExisting = False
             HideSelectionDragOverlay()
         End Sub
 
@@ -1811,6 +1829,8 @@ Namespace Views
                 maxX = Math.Max(maxX, p.X) : maxY = Math.Max(maxY, p.Y)
             Next
             overlay.ShapeMode = "Lasso"
+            overlay.CombineMode = If(TryCast(DataContext, EditorViewModel)?.SelectionCombineMode, "New")
+            overlay.EdgePoints = Nothing
             overlay.Points = _lassoPoints.Select(Function(p) New Avalonia.Point(p.X - minX, p.Y - minY)).ToList()
             overlay.IsVisible = True
             Avalonia.Controls.Canvas.SetLeft(overlay, minX)
@@ -1824,6 +1844,8 @@ Namespace Views
             If overlay Is Nothing Then Return
             overlay.IsVisible = False
             overlay.Points = Nothing
+            overlay.EdgePoints = Nothing
+            overlay.CombineMode = "New"
         End Sub
 
         Private Shared Function BuildOverlayPoints(vm As EditorViewModel,
@@ -1846,6 +1868,21 @@ Namespace Views
             Return result
         End Function
 
+        Private Shared Function BuildOverlayMaskEdgePoints(vm As EditorViewModel,
+                                                           overlayWidth As Double,
+                                                           overlayHeight As Double) As IList(Of Avalonia.Point)
+            Dim xs = vm.SelectionMaskEdgePointsX
+            Dim ys = vm.SelectionMaskEdgePointsY
+            If xs Is Nothing OrElse ys Is Nothing OrElse xs.Length = 0 OrElse xs.Length <> ys.Length Then Return Nothing
+
+            Dim result As New List(Of Avalonia.Point)(xs.Length)
+            For i = 0 To xs.Length - 1
+                result.Add(New Avalonia.Point(overlayWidth * xs(i) / 100.0,
+                                              overlayHeight * ys(i) / 100.0))
+            Next
+            Return result
+        End Function
+
         Private Shared Function IsPointInsideSelection(point As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel) As Boolean
             Dim left = imageRect.Left + imageRect.Width * vm.SelectionXPercent / 100.0
             Dim top = imageRect.Top + imageRect.Height * vm.SelectionYPercent / 100.0
@@ -1854,6 +1891,12 @@ Namespace Views
             If width <= 0 OrElse height <= 0 Then Return False
             Dim bounds = New Avalonia.Rect(left, top, width, height)
             If Not bounds.Contains(point) Then Return False
+
+            If vm.HasSelectionMask Then
+                Dim xPercent = (point.X - imageRect.Left) / imageRect.Width * 100.0
+                Dim yPercent = (point.Y - imageRect.Top) / imageRect.Height * 100.0
+                Return vm.IsPointInsideSelectionPercent(xPercent, yPercent)
+            End If
 
             Select Case vm.SelectionShapeMode
                 Case "Ellipse"
@@ -1868,7 +1911,7 @@ Namespace Views
                 Case "Lasso", "MagicWand"
                     Dim xs = vm.SelectionShapePointsX
                     Dim ys = vm.SelectionShapePointsY
-                    If xs Is Nothing OrElse ys Is Nothing OrElse xs.Length < 3 OrElse xs.Length <> ys.Length Then Return True
+                    If xs Is Nothing OrElse ys Is Nothing OrElse xs.Length < 3 OrElse xs.Length <> ys.Length Then Return False
                     Dim polygon As New List(Of Avalonia.Point)(xs.Length)
                     For i = 0 To xs.Length - 1
                         polygon.Add(New Avalonia.Point(imageRect.Left + imageRect.Width * xs(i) / 100.0,
@@ -1914,6 +1957,7 @@ Namespace Views
                 ys(i) = (_lassoPoints(i).Y - rect.Top) / rect.Height * 100.0
             Next
             vm.SetSelectionLasso(xs, ys)
+            _selectionDragReplacesExisting = False
             HideSelectionDragOverlay()
         End Sub
 

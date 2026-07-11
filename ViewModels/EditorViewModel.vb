@@ -227,12 +227,16 @@ Namespace ViewModels
         Private _selectionCombineMode As String = "New"
         Private _selectionMask As SKBitmap = Nothing
         Private _selectionMaskRect As SKRectI = SKRectI.Empty
+        Private _selectionMaskBytes As Byte() = Nothing
+        Private _selectionMaskBytesStride As Integer = 0
         ' Gecachte PNG/Base64-Kodierung von _selectionMask (siehe EncodeSelectionMaskBase64).
         Private _selectionMaskBase64 As String = ""
         Private _selectionMaskPreviewImage As Bitmap = Nothing
         Private _selectionShapeMode As String = "Rectangle"
         Private _selectionShapePointsX As Double() = Nothing
         Private _selectionShapePointsY As Double() = Nothing
+        Private _selectionMaskEdgePointsX As Double() = Nothing
+        Private _selectionMaskEdgePointsY As Double() = Nothing
         Private ReadOnly _annotations As New ObservableCollection(Of ImageAnnotation)()
         Private _selectedAnnotationIndex As Integer = -1
         ' Verfolgt die Ebene, an die der aktuell laufende Pinsel-/Radiergummi-"Sitzung" noch weitere
@@ -3532,6 +3536,47 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property HasSelectionMask As Boolean
+            Get
+                Return _selectionMask IsNot Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectionMaskEdgePointsX As Double()
+            Get
+                Return _selectionMaskEdgePointsX
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectionMaskEdgePointsY As Double()
+            Get
+                Return _selectionMaskEdgePointsY
+            End Get
+        End Property
+
+        Public Function IsPointInsideSelectionPercent(xPercent As Double, yPercent As Double) As Boolean
+            If Not _hasActiveSelection Then Return False
+            Dim bw = GetBaseWidth()
+            Dim bh = GetBaseHeight()
+            If bw <= 0 OrElse bh <= 0 Then Return False
+
+            Dim imageX = CInt(Math.Round(bw * xPercent / 100.0))
+            Dim imageY = CInt(Math.Round(bh * yPercent / 100.0))
+            imageX = Math.Max(0, Math.Min(bw - 1, imageX))
+            imageY = Math.Max(0, Math.Min(bh - 1, imageY))
+
+            If _selectionMask IsNot Nothing Then
+                Dim localX = imageX - _selectionMaskRect.Left
+                Dim localY = imageY - _selectionMaskRect.Top
+                If localX < 0 OrElse localY < 0 OrElse localX >= _selectionMask.Width OrElse localY >= _selectionMask.Height Then Return False
+                If _selectionMaskBytes Is Nothing OrElse _selectionMaskBytesStride <= 0 Then Return False
+                Return _selectionMaskBytes(localY * _selectionMaskBytesStride + localX) > 0
+            End If
+
+            Dim rectPx = SelectionRectPixels()
+            Return imageX >= rectPx.Left AndAlso imageX < rectPx.Right AndAlso imageY >= rectPx.Top AndAlso imageY < rectPx.Bottom
+        End Function
+
         ''' Farbtoleranz des Zauberstabs in Prozent (0..100).
         Public Property SelectionTolerance As Double
             Get
@@ -3546,16 +3591,27 @@ Namespace ViewModels
             If _selectionMask IsNot Nothing AndAlso Not Object.ReferenceEquals(_selectionMask, mask) Then _selectionMask.Dispose()
             _selectionMask = mask
             _selectionMaskRect = rectPx
+            _selectionMaskBytesStride = If(mask Is Nothing, 0, mask.RowBytes)
+            _selectionMaskBytes = If(mask Is Nothing, Nothing, New Byte(_selectionMaskBytesStride * mask.Height - 1) {})
+            If mask IsNot Nothing Then Marshal.Copy(mask.GetPixels(), _selectionMaskBytes, 0, _selectionMaskBytes.Length)
             _selectionMaskBase64 = EncodeMaskBitmapToBase64(mask)
-            RefreshSelectionMaskPreviewImage()
+            RefreshSelectionMaskEdgePoints()
+            Me.RaisePropertyChanged(NameOf(HasSelectionMask))
         End Sub
 
         Private Sub ClearSelectionMask()
             _selectionMask?.Dispose()
             _selectionMask = Nothing
             _selectionMaskRect = SKRectI.Empty
+            _selectionMaskBytes = Nothing
+            _selectionMaskBytesStride = 0
             _selectionMaskBase64 = ""
+            _selectionMaskEdgePointsX = Nothing
+            _selectionMaskEdgePointsY = Nothing
+            Me.RaisePropertyChanged(NameOf(SelectionMaskEdgePointsX))
+            Me.RaisePropertyChanged(NameOf(SelectionMaskEdgePointsY))
             SetSelectionMaskPreviewImage(Nothing)
+            Me.RaisePropertyChanged(NameOf(HasSelectionMask))
         End Sub
 
         Private Sub SetSelectionMaskPreviewImage(image As Bitmap)
@@ -3565,59 +3621,39 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectionMaskPreviewImage))
         End Sub
 
-        Private Sub RefreshSelectionMaskPreviewImage()
-            If _selectionMask Is Nothing OrElse _selectionMask.Width <= 0 OrElse _selectionMask.Height <= 0 Then
-                SetSelectionMaskPreviewImage(Nothing)
+        Private Sub RefreshSelectionMaskEdgePoints()
+            SetSelectionMaskPreviewImage(Nothing)
+            If _selectionMask Is Nothing OrElse _selectionMaskBytes Is Nothing OrElse _selectionMask.Width <= 0 OrElse _selectionMask.Height <= 0 Then
+                _selectionMaskEdgePointsX = Nothing
+                _selectionMaskEdgePointsY = Nothing
+                Me.RaisePropertyChanged(NameOf(SelectionMaskEdgePointsX))
+                Me.RaisePropertyChanged(NameOf(SelectionMaskEdgePointsY))
                 Return
             End If
 
-            Dim stride = _selectionMask.RowBytes
-            Dim maskBytes = New Byte(stride * _selectionMask.Height - 1) {}
-            Marshal.Copy(_selectionMask.GetPixels(), maskBytes, 0, maskBytes.Length)
+            Dim edgeXs As New List(Of Double)()
+            Dim edgeYs As New List(Of Double)()
+            Dim edgeSampleStep = Math.Max(1, Math.Min(_selectionMask.Width, _selectionMask.Height) \ 900)
 
-            Using preview = New SKBitmap(_selectionMask.Width, _selectionMask.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
-                Dim previewStride = preview.RowBytes
-                Dim pixels = New Byte(previewStride * preview.Height - 1) {}
-                For y = 0 To _selectionMask.Height - 1
-                    For x = 0 To _selectionMask.Width - 1
-                        Dim alpha = maskBytes(y * stride + x)
-                        If alpha = 0 Then Continue For
-                        Dim isEdge = x = 0 OrElse y = 0 OrElse x = _selectionMask.Width - 1 OrElse y = _selectionMask.Height - 1 OrElse
-                                     maskBytes(y * stride + x - 1) = 0 OrElse
-                                     maskBytes(y * stride + x + 1) = 0 OrElse
-                                     maskBytes((y - 1) * stride + x) = 0 OrElse
-                                     maskBytes((y + 1) * stride + x) = 0
-                        Dim offset = y * previewStride + x * 4
-                        If isEdge Then
-                            Dim lightDash = ((x + y) Mod 10) < 5
-                            If lightDash Then
-                                pixels(offset) = 255
-                                pixels(offset + 1) = 255
-                                pixels(offset + 2) = 255
-                            Else
-                                pixels(offset) = 0
-                                pixels(offset + 1) = 0
-                                pixels(offset + 2) = 0
-                            End If
-                            pixels(offset + 3) = 245
-                        Else
-                            pixels(offset) = 255
-                            pixels(offset + 1) = 140
-                            pixels(offset + 2) = 45
-                            pixels(offset + 3) = 72
-                        End If
-                    Next
+            For y = 0 To _selectionMask.Height - 1
+                For x = 0 To _selectionMask.Width - 1
+                    If _selectionMaskBytes(y * _selectionMaskBytesStride + x) = 0 Then Continue For
+                    Dim isEdge = x = 0 OrElse y = 0 OrElse x = _selectionMask.Width - 1 OrElse y = _selectionMask.Height - 1 OrElse
+                                 _selectionMaskBytes(y * _selectionMaskBytesStride + x - 1) = 0 OrElse
+                                 _selectionMaskBytes(y * _selectionMaskBytesStride + x + 1) = 0 OrElse
+                                 _selectionMaskBytes((y - 1) * _selectionMaskBytesStride + x) = 0 OrElse
+                                 _selectionMaskBytes((y + 1) * _selectionMaskBytesStride + x) = 0
+                    If isEdge AndAlso ((x + y) Mod edgeSampleStep) = 0 Then
+                        edgeXs.Add((x + 0.5) * 100.0 / Math.Max(1, _selectionMask.Width))
+                        edgeYs.Add((y + 0.5) * 100.0 / Math.Max(1, _selectionMask.Height))
+                    End If
                 Next
+            Next
 
-                Marshal.Copy(pixels, 0, preview.GetPixels(), pixels.Length)
-                Using image = SKImage.FromBitmap(preview)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        Using stream As New MemoryStream(data.ToArray())
-                            SetSelectionMaskPreviewImage(New Bitmap(stream))
-                        End Using
-                    End Using
-                End Using
-            End Using
+            _selectionMaskEdgePointsX = edgeXs.ToArray()
+            _selectionMaskEdgePointsY = edgeYs.ToArray()
+            Me.RaisePropertyChanged(NameOf(SelectionMaskEdgePointsX))
+            Me.RaisePropertyChanged(NameOf(SelectionMaskEdgePointsY))
         End Sub
 
         Private Sub SetSelectionShape(mode As String, xsPercent As Double(), ysPercent As Double())
@@ -3673,7 +3709,8 @@ Namespace ViewModels
         End Sub
 
         ''' Wird von EditorView beim Loslassen der Maus nach dem Aufziehen eines Auswahlrechtecks aufgerufen.
-        Public Sub SetSelectionRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
+        Public Sub SetSelectionRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double,
+                                    Optional captureUndo As Boolean = True)
             Dim bw = GetBaseWidth(), bh = GetBaseHeight()
             If bw <= 0 OrElse bh <= 0 Then Return
             Dim rectPx = New SKRectI(
@@ -3682,11 +3719,11 @@ Namespace ViewModels
                 Math.Min(bw, CInt(Math.Round(bw * (xPercent + widthPercent) / 100.0))),
                 Math.Min(bh, CInt(Math.Round(bh * (yPercent + heightPercent) / 100.0))))
             If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return
-            PushUndo()
+            If captureUndo Then PushUndo()
 
             If _selectionCombineMode = "New" OrElse Not _hasActiveSelection Then
                 ClearSelectionMask()
-                SetSelectionBoundsFromPercent(xPercent, yPercent, widthPercent, heightPercent)
+                SetSelectionBoundsFromPixels(rectPx)
                 SetSelectionShape("Rectangle", Nothing, Nothing)
                 HasActiveSelection = True
                 Return
@@ -3698,24 +3735,33 @@ Namespace ViewModels
         End Sub
 
         ''' Ellipse-Auswahl: Rechteck wie beim Rechteck-Modus, zusätzlich eine eingepasste Ellipsen-Maske.
-        Public Sub SetSelectionEllipse(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
+        Public Sub SetSelectionEllipse(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double,
+                                       Optional captureUndo As Boolean = True)
             Dim bw = GetBaseWidth(), bh = GetBaseHeight()
             If bw <= 0 OrElse bh <= 0 Then Return
+            Dim rawLeft = CInt(Math.Round(bw * xPercent / 100.0))
+            Dim rawTop = CInt(Math.Round(bh * yPercent / 100.0))
+            Dim rawRight = CInt(Math.Round(bw * (xPercent + widthPercent) / 100.0))
+            Dim rawBottom = CInt(Math.Round(bh * (yPercent + heightPercent) / 100.0))
             Dim rectPx = New SKRectI(
-                Math.Max(0, CInt(Math.Round(bw * xPercent / 100.0))),
-                Math.Max(0, CInt(Math.Round(bh * yPercent / 100.0))),
-                Math.Min(bw, CInt(Math.Round(bw * (xPercent + widthPercent) / 100.0))),
-                Math.Min(bh, CInt(Math.Round(bh * (yPercent + heightPercent) / 100.0))))
+                Math.Max(0, rawLeft),
+                Math.Max(0, rawTop),
+                Math.Min(bw, rawRight),
+                Math.Min(bh, rawBottom))
             If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return
-            PushUndo()
-            Using mask = ImageProcessor.BuildEllipseMask(rectPx.Width, rectPx.Height)
+            If captureUndo Then PushUndo()
+            Dim localOval = New SKRect(rawLeft - rectPx.Left,
+                                       rawTop - rectPx.Top,
+                                       rawRight - rectPx.Left,
+                                       rawBottom - rectPx.Top)
+            Using mask = ImageProcessor.BuildEllipseMask(rectPx.Width, rectPx.Height, localOval)
                 If mask IsNot Nothing Then ApplySelectionCandidate(mask, rectPx, "Ellipse", Nothing, Nothing)
             End Using
         End Sub
 
         ''' Lasso-Auswahl aus Freihand-Punkten (Prozentkoordinaten). Bounding-Box wird zum Auswahlrechteck,
         ''' das Polygon zur Maske.
-        Public Sub SetSelectionLasso(xsPercent As Double(), ysPercent As Double())
+        Public Sub SetSelectionLasso(xsPercent As Double(), ysPercent As Double(), Optional captureUndo As Boolean = True)
             If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length < 3 OrElse xsPercent.Length <> ysPercent.Length Then Return
             Dim minX = xsPercent.Min(), maxX = xsPercent.Max()
             Dim minY = ysPercent.Min(), maxY = ysPercent.Max()
@@ -3734,7 +3780,7 @@ Namespace ViewModels
                 localX(i) = CSng(bw * xsPercent(i) / 100.0 - rectPx.Left)
                 localY(i) = CSng(bh * ysPercent(i) / 100.0 - rectPx.Top)
             Next
-            PushUndo()
+            If captureUndo Then PushUndo()
             Using mask = ImageProcessor.BuildPolygonMask(localX, localY, rectPx.Width, rectPx.Height)
                 If mask IsNot Nothing Then ApplySelectionCandidate(mask, rectPx, "Lasso", xsPercent.ToArray(), ysPercent.ToArray())
             End Using

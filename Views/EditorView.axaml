@@ -451,6 +451,7 @@
                     <Canvas x:Name="PreviewCanvas"
                             PointerWheelChanged="OnCanvasWheelZoom"
                             Grid.Row="1" Grid.Column="1"
+                            Background="Transparent"
                             ClipToBounds="True"
                             SizeChanged="OnPreviewCanvasSizeChanged"
                             PointerPressed="OnSliderPointerPressed"

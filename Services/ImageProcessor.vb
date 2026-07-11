@@ -3689,12 +3689,16 @@ Namespace Services
         ''' <summary>Alpha8-Maske einer in das Rechteck (0,0,width,height) eingepassten Ellipse - für das
         ''' Kreis-/Ellipse-Auswahlwerkzeug.</summary>
         Public Shared Function BuildEllipseMask(width As Integer, height As Integer) As SKBitmap
+            Return BuildEllipseMask(width, height, New SKRect(0, 0, width, height))
+        End Function
+
+        Public Shared Function BuildEllipseMask(width As Integer, height As Integer, ovalRect As SKRect) As SKBitmap
             If width <= 0 OrElse height <= 0 Then Return Nothing
             Using rgba = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                 Using canvas = New SKCanvas(rgba)
                     canvas.Clear(SKColors.Transparent)
                     Using paint = New SKPaint With {.Color = SKColors.White, .IsAntialias = True, .Style = SKPaintStyle.Fill}
-                        canvas.DrawOval(New SKRect(0, 0, width, height), paint)
+                        canvas.DrawOval(ovalRect, paint)
                     End Using
                 End Using
                 Return AlphaMaskFrom(rgba)
