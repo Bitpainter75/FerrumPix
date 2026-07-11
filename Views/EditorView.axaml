@@ -588,17 +588,21 @@
                                         Margin="0,0,-9,-9" />
                             </Grid>
                         </Border>
-                        <Border x:Name="SelectionOverlay"
-                                BorderThickness="0"
-                                Background="Transparent"
-                                IsHitTestVisible="False"
-                                IsVisible="False">
-                            <Rectangle Fill="{Binding SelectionFillPreviewBrush}"
-                                       Opacity="0.55"
-                                       Stroke="{DynamicResource FP.Accent}"
-                                       StrokeThickness="1.5"
-                                       StrokeDashArray="4,3" />
-                        </Border>
+                        <Image x:Name="SelectionMaskOverlay"
+                               Source="{Binding SelectionMaskPreviewImage}"
+                               Stretch="Fill"
+                               IsHitTestVisible="False"
+                               IsVisible="False" />
+                        <icons:SelectionOverlayControl x:Name="SelectionOverlay"
+                                                       FillBrush="{Binding SelectionFillPreviewBrush}"
+                                                       StrokeBrush="{DynamicResource FP.Accent}"
+                                                       IsHitTestVisible="False"
+                                                       IsVisible="False" />
+                        <icons:SelectionOverlayControl x:Name="SelectionDragOverlay"
+                                                       FillBrush="#33FFFFFF"
+                                                       StrokeBrush="{DynamicResource FP.Accent}"
+                                                       IsHitTestVisible="False"
+                                                       IsVisible="False" />
                         <Border x:Name="TextOverlay"
                                 BorderThickness="0"
                                 Background="Transparent"
@@ -766,6 +770,11 @@
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowSelectionAdjustments}">
+                                <panels:SelectionPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowAnnotationProperties}">
                                 <panels:AnnotationPropertiesPanel />
                             </Border>
@@ -857,11 +866,6 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowTransformAdjustments}">
                                 <panels:TransformPanel />
-                            </Border>
-
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowSelectionAdjustments}">
-                                <panels:SelectionPanel />
                             </Border>
 
                         </StackPanel>

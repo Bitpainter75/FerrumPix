@@ -4,6 +4,9 @@ Namespace ViewModels
         Public Property BaseName As String
         Public Property Format As String
         Public Property JpgQuality As Integer
+        ''' Zielort: "Local" (Ordner) oder "Immich" (Upload als neues Asset).
+        Public Property Target As String = "Local"
+        Public Property TargetFolder As String = ""
 
         Public ReadOnly Property Extension As String
             Get

@@ -20,6 +20,16 @@ Namespace ViewModels
 
         Private ReadOnly _mainVm As MainWindowViewModel
         Private _currentImagePath As String = ""
+        ' Immich-Sitzung: _folderPaths enthält dann die Immich-Pseudo-Pfade (immich://{assetId}/{name})
+        ' für Filmstreifen/Zähler, während _currentImagePath weiterhin der reale (heruntergeladene)
+        ' Temp-Pfad des aktuell angezeigten Bildes ist - so bleibt der ganze Datei-/Anzeigecode gleich.
+        Private _isImmichSession As Boolean = False
+        Private _currentImmichAssetId As String = Nothing
+        Private _immichSourceAlbumId As String = Nothing
+        Private _immichNavToken As Integer = 0
+        ' Metadaten (Favorit/Rating/Stichwörter) je Album-Position - aus den Galerie-Items durchgereicht,
+        ' da die reinen Pseudo-Pfade sie nicht tragen.
+        Private _immichSessionItems As New List(Of ImageItem)()
         Private _currentImage As Bitmap
         Private _zoomLevel As Double = 1.0
         Private _zoomText As String = "100%"
@@ -363,7 +373,9 @@ Namespace ViewModels
             Set(value As Integer)
                 Me.RaiseAndSetIfChanged(_rating, value)
                 Me.RaisePropertyChanged(NameOf(RatingText))
-                If Not String.IsNullOrEmpty(_currentImagePath) Then
+                If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
+                    Dim ignored = ImmichService.SetRatingAsync(_currentImmichAssetId, value)
+                ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                     LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
                 End If
             End Set
@@ -382,7 +394,9 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isFavorite, value)
-                If Not String.IsNullOrEmpty(_currentImagePath) Then
+                If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
+                    Dim ignored = ImmichService.SetFavoriteAsync(_currentImmichAssetId, value)
+                ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                     LibraryService.Instance.SetFavorite(_currentImagePath, value)
                 End If
             End Set
@@ -579,7 +593,7 @@ Namespace ViewModels
                                                        End Sub)
             EditCommand = ReactiveCommand.CreateFromTask(Async Function()
                                                              If Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                                 Await _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
+                                                                 Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName, forceSaveAsOnly:=_isImmichSession, immichAlbumId:=_immichSourceAlbumId)
                                                              End If
                                                          End Function)
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub()
@@ -594,13 +608,18 @@ Namespace ViewModels
                                                        If String.IsNullOrEmpty(tag) OrElse Tags.Contains(tag) Then Return
                                                        Tags.Add(tag)
                                                        NewTagText = ""
-                                                       If Not String.IsNullOrEmpty(_currentImagePath) Then
+                                                       If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
+                                                           Dim ignored = ImmichService.AddTagToAssetAsync(_currentImmichAssetId, tag)
+                                                       ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                                            LibraryService.Instance.SetTags(_currentImagePath, Tags)
                                                        End If
                                                        RefreshTagSuggestions()
                                                    End Sub)
             RemoveTagCommand = ReactiveCommand.Create(Of String)(Sub(tag)
-                                                                     If Tags.Remove(tag) AndAlso Not String.IsNullOrEmpty(_currentImagePath) Then
+                                                                     If Not Tags.Remove(tag) Then Return
+                                                                     If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
+                                                                         Dim ignored = ImmichService.RemoveTagFromAssetAsync(_currentImmichAssetId, tag)
+                                                                     ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                                                          LibraryService.Instance.SetTags(_currentImagePath, Tags)
                                                                      End If
                                                                  End Sub)
@@ -629,7 +648,92 @@ Namespace ViewModels
             ToggleVideoMuteCommand = ReactiveCommand.Create(Sub() IsVideoMuted = Not IsVideoMuted)
         End Sub
 
+        ''' <summary>Öffnet eine Immich-Sitzung: der Filmstreifen zeigt das ganze Album (Pseudo-Pfade),
+        ''' das jeweils angezeigte Original wird on-demand heruntergeladen. Reibt sich nicht mit dem
+        ''' lokalen Pfad-Fluss (alles Immich-spezifische ist über _isImmichSession gekapselt).</summary>
+        Public Sub OpenImmichSession(startPseudoPath As String, sessionItems As List(Of ImageItem), Optional immichAlbumId As String = Nothing)
+            If sessionItems Is Nothing OrElse sessionItems.Count = 0 Then Return
+            _isImmichSession = True
+            _immichSourceAlbumId = immichAlbumId
+            _thumbCacheScopeId = Nothing
+            _thumbCacheScopeName = Nothing
+            StopVideoPlayback()
+            _immichSessionItems = sessionItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImmichAsset).ToList()
+            _folderPaths = _immichSessionItems.Select(Function(i) i.FilePath).ToList()
+            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, startPseudoPath, StringComparison.OrdinalIgnoreCase))
+            If _currentIndex < 0 Then _currentIndex = 0
+            LoadFilmstrip()
+            LoadImmichAt(_currentIndex)
+        End Sub
+
+        ''' <summary>Lädt das Immich-Bild an Position idx: Original in Temp holen, dann anzeigen. Der
+        ''' Navigations-Token verwirft ein spät eintreffendes Download-Ergebnis, falls der Nutzer
+        ''' inzwischen weitergeblättert hat.</summary>
+        Private Async Sub LoadImmichAt(idx As Integer)
+            If idx < 0 OrElse idx >= _folderPaths.Count Then Return
+            Dim pseudo = _folderPaths(idx)
+            Dim assetId As String = Nothing, fileName As String = Nothing
+            If Not ImmichService.TryParsePseudoPath(pseudo, assetId, fileName) Then Return
+
+            Dim token = System.Threading.Interlocked.Increment(_immichNavToken)
+            _currentIndex = idx
+            CurrentIndex = idx
+            MarkCurrentFilmstripItem()
+            CurrentFileName = fileName
+            _currentImmichAssetId = assetId
+            StatusInfo = LocalizationService.T("Lade…")
+
+            ' Favorit/Rating/Stichwörter aus dem durchgereichten Galerie-Item übernehmen - Felder direkt
+            ' setzen, damit die Property-Setter nicht sofort wieder an den Server zurückschreiben.
+            If idx < _immichSessionItems.Count Then
+                Dim meta = _immichSessionItems(idx)
+                _isFavorite = meta.IsFavorite
+                Me.RaisePropertyChanged(NameOf(IsFavorite))
+                _rating = meta.Rating
+                Me.RaisePropertyChanged(NameOf(Rating))
+                Me.RaisePropertyChanged(NameOf(RatingText))
+                Tags.Clear()
+                If meta.Tags IsNot Nothing Then
+                    For Each t In meta.Tags
+                        Tags.Add(t)
+                    Next
+                End If
+            End If
+
+            Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
+            ' Zwischenzeitlich weitergeblättert oder Sitzung verlassen? Dann Ergebnis verwerfen.
+            If token <> System.Threading.Volatile.Read(_immichNavToken) OrElse Not _isImmichSession Then Return
+            If String.IsNullOrEmpty(localPath) Then
+                StatusInfo = LocalizationService.T("Bild konnte nicht aus Immich geladen werden")
+                Return
+            End If
+
+            _currentImagePath = localPath
+            CurrentImagePath = localPath
+            RotationAngle = 0
+            ScaleX = 1.0
+            Select Case _activeZoomPreset
+                Case ZoomPresetMode.Fit : IsFitToWindow = True
+                Case ZoomPresetMode.Actual
+                    IsFitToWindow = False
+                    ZoomLevel = 1.0
+                Case Else : IsFitToWindow = False
+            End Select
+            LoadBitmap()
+            If _isFitToWindow Then UpdateFitZoom()
+            UpdateStatus()
+            ' Die heruntergeladene Temp-Kopie ist das Original - EXIF/IPTC/XMP direkt daraus lesen.
+            LoadInfoPanelData(_currentImagePath, preserveExistingTags:=True)
+            Me.RaisePropertyChanged(NameOf(IsRawFile))
+            Me.RaisePropertyChanged(NameOf(IsVideoFile))
+            Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
+            Me.RaisePropertyChanged(NameOf(HasNoMedia))
+            Me.RaisePropertyChanged(NameOf(CanEdit))
+        End Sub
+
         Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
+            _isImmichSession = False
+            _immichSourceAlbumId = Nothing
             If Not File.Exists(imagePath) Then Return
 
             ' Scope nur wirksam, wenn eine explizite Pfadliste (z.B. Suchliste) übergeben wurde; beim
@@ -677,9 +781,16 @@ Namespace ViewModels
 
         ' Öffnet das Bild im Editor mit aktivem Zuschneiden-Werkzeug und übernimmt den im
         ' Viewer per Ziehgeste ausgewählten Bildausschnitt als Vorschlag.
+        ''' <summary>Filmstreifen-Pfade für den Editor: in einer Immich-Sitzung nur das aktuelle
+        ''' (heruntergeladene) Bild, da _folderPaths dort Pseudo-Pfade enthält, die der Editor nicht laden kann.</summary>
+        Private Function EditorFilmstripPaths() As List(Of String)
+            If _isImmichSession Then Return New List(Of String) From {_currentImagePath}
+            Return _folderPaths.ToList()
+        End Function
+
         Public Async Sub OpenCropInEditor(cropLeft As Double, cropTop As Double, cropRight As Double, cropBottom As Double)
             If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
-            Await _mainVm.OpenImageInEditor(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
+            Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName, forceSaveAsOnly:=_isImmichSession, immichAlbumId:=_immichSourceAlbumId)
             If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
             _mainVm.Editor.CurrentTool = EditorTool.Crop
             _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
@@ -929,11 +1040,21 @@ Namespace ViewModels
             Next
             FilmstripItems.ReplaceAll(_folderPaths.
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
-                Select(Function(p) ImageItem.CreateLightweight(p, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)))
+                Select(AddressOf CreateFilmstripItem))
             MarkCurrentFilmstripItem()
             Dim itemsSnapshot = FilmstripItems.ToList()
             Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
         End Sub
+
+        ''' <summary>Baut einen Filmstreifen-Eintrag: für Immich-Pseudo-Pfade ein Immich-Item (Thumbnail
+        ''' aus dem Immich-Cache), sonst ein normales lokales Lightweight-Item.</summary>
+        Private Function CreateFilmstripItem(pseudoOrPath As String) As ImageItem
+            Dim assetId As String = Nothing, fileName As String = Nothing
+            If ImmichService.TryParsePseudoPath(pseudoOrPath, assetId, fileName) Then
+                Return ImageItem.CreateImmichItem(New ImmichAsset With {.Id = assetId, .FileName = fileName}, Nothing)
+            End If
+            Return ImageItem.CreateLightweight(pseudoOrPath, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)
+        End Function
 
         Private Sub UpdateStatus()
             Try
@@ -1025,16 +1146,18 @@ Namespace ViewModels
         ' Das Histogramm wird zusätzlich nur berechnet, wenn die Info-Leiste gerade sichtbar ist -
         ' andernfalls wäre die Arbeit für ein unsichtbares Panel verschwendet (siehe EnsureHistogramLoaded,
         ' das beim Einblenden für das dann aktuelle Bild nachlädt).
-        Private Sub LoadInfoPanelData(imagePath As String)
+        Private Sub LoadInfoPanelData(imagePath As String, Optional preserveExistingTags As Boolean = False)
             Dim token = System.Threading.Interlocked.Increment(_infoPanelLoadToken)
             Dim capturedWidth = _imageWidth
             Dim capturedHeight = _imageHeight
             Dim loadHistogram = IsInfoSidebarVisible
 
-            Tags.Clear()
-            For Each tag In LibraryService.Instance.GetTags(imagePath)
-                Tags.Add(tag)
-            Next
+            If Not preserveExistingTags Then
+                Tags.Clear()
+                For Each tag In LibraryService.Instance.GetTags(imagePath)
+                    Tags.Add(tag)
+                Next
+            End If
             RefreshTagSuggestions()
 
             If Not loadHistogram Then HistogramImage = Nothing
@@ -1108,6 +1231,10 @@ Namespace ViewModels
 
         Private Sub LoadPathAt(idx As Integer)
             If idx < 0 OrElse idx >= _folderPaths.Count Then Return
+            If _isImmichSession Then
+                LoadImmichAt(idx)
+                Return
+            End If
             Dim nextPath = _folderPaths(idx)
             If String.IsNullOrEmpty(nextPath) OrElse Not File.Exists(nextPath) Then
                 _folderPaths.RemoveAll(Function(p) String.Equals(p, nextPath, StringComparison.OrdinalIgnoreCase))

@@ -3,6 +3,7 @@ Imports System.Collections.Generic
 Imports System.Collections.ObjectModel
 Imports System.IO
 Imports System.Linq
+Imports System.Runtime.InteropServices
 Imports System.Text.RegularExpressions
 Imports System.Threading
 Imports System.Threading.Tasks
@@ -21,6 +22,12 @@ Namespace ViewModels
 
         Private ReadOnly _mainVm As MainWindowViewModel
         Private _currentImagePath As String = ""
+        ' True, wenn die Quelle nicht in-place überschrieben werden darf (z.B. eine Immich-Temp-Kopie):
+        ' "Speichern" ist dann gesperrt und leitet überall auf "Speichern unter" um.
+        Private _forceSaveAsOnly As Boolean = False
+        ' Immich-Album, aus dem das aktuelle Bild stammt - ein Upload des bearbeiteten Bildes nach Immich
+        ' landet dann gleich in diesem Album (leer = nur in die Bibliothek).
+        Private _immichSourceAlbumId As String = Nothing
         Private _currentImage As Bitmap
         Private _previewImage As Bitmap
         Private _comparisonImage As Bitmap
@@ -176,7 +183,7 @@ Namespace ViewModels
         Private _appliedFlipV As Boolean = False
         Private _isUpdatingCanvas As Boolean
         Private _annotationText As String = "Text"
-        Private _annotationFillColor As String = "#FFFFFFFF"
+        Private _annotationFillColor As String = "#00FFFFFF"
         Private _annotationStrokeColor As String = "#FF000000"
         Private _annotationFontSize As Double = 48
         Private _annotationStrokeWidth As Double = 0
@@ -212,6 +219,18 @@ Namespace ViewModels
         Private _selectionYPercent As Double = 0
         Private _selectionWidthPercent As Double = 0
         Private _selectionHeightPercent As Double = 0
+        ' Auswahlmodus (Untermenü im Auswahl-Werkzeug) und - für Ellipse/Lasso/Zauberstab - die
+        ' zugehörige Alpha8-Maske in Bildpixeln samt umschließendem Rechteck. Beim Rechteck ist die
+        ' Maske Nothing (dann greift der einfache Rechteck-Pfad).
+        Private _selectionMode As String = "Rectangle"
+        Private _selectionTolerance As Double = 15
+        Private _selectionCombineMode As String = "New"
+        Private _selectionMask As SKBitmap = Nothing
+        Private _selectionMaskRect As SKRectI = SKRectI.Empty
+        Private _selectionMaskPreviewImage As Bitmap = Nothing
+        Private _selectionShapeMode As String = "Rectangle"
+        Private _selectionShapePointsX As Double() = Nothing
+        Private _selectionShapePointsY As Double() = Nothing
         Private ReadOnly _annotations As New ObservableCollection(Of ImageAnnotation)()
         Private _selectedAnnotationIndex As Integer = -1
         ' Verfolgt die Ebene, an die der aktuell laufende Pinsel-/Radiergummi-"Sitzung" noch weitere
@@ -3394,10 +3413,251 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' Wird von EditorView beim Loslassen der Maus nach dem Aufziehen eines neuen
-        ''' Auswahlrechtecks aufgerufen (ersetzt eine ggf. vorhandene alte Auswahl komplett - v1
-        ''' kennt kein Verschieben/Skalieren einer bestehenden Auswahl).
-        Public Sub SetSelectionRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
+        ''' Aktueller Auswahlmodus: "Rectangle", "Ellipse", "Lasso" oder "MagicWand". Steuert, wie
+        ''' EditorView den Zeiger interpretiert (Rechteck aufziehen, Freihand zeichnen, klicken) und
+        ''' welche Zusatzregler (Toleranz) sichtbar sind.
+        Public Property SelectionMode As String
+            Get
+                Return _selectionMode
+            End Get
+            Set(value As String)
+                Dim v = If(String.IsNullOrWhiteSpace(value), "Rectangle", value)
+                If _selectionMode = v Then Return
+                Me.RaiseAndSetIfChanged(_selectionMode, v)
+                Me.RaisePropertyChanged(NameOf(ShowMagicWandControls))
+                Me.RaisePropertyChanged(NameOf(IsRectangleSelectionMode))
+                Me.RaisePropertyChanged(NameOf(IsEllipseSelectionMode))
+                Me.RaisePropertyChanged(NameOf(IsLassoSelectionMode))
+                Me.RaisePropertyChanged(NameOf(IsMagicWandSelectionMode))
+            End Set
+        End Property
+
+        Public Sub SetSelectionMode(mode As String)
+            SelectionMode = mode
+        End Sub
+
+        Public Property SelectionCombineMode As String
+            Get
+                Return _selectionCombineMode
+            End Get
+            Set(value As String)
+                Dim v = NormalizeSelectionCombineMode(value)
+                If _selectionCombineMode = v Then Return
+                Me.RaiseAndSetIfChanged(_selectionCombineMode, v)
+                Me.RaisePropertyChanged(NameOf(IsSelectionCombineNew))
+                Me.RaisePropertyChanged(NameOf(IsSelectionCombineAdd))
+                Me.RaisePropertyChanged(NameOf(IsSelectionCombineSubtract))
+                Me.RaisePropertyChanged(NameOf(IsSelectionCombineIntersect))
+            End Set
+        End Property
+
+        Public Sub SetSelectionCombineMode(mode As String)
+            SelectionCombineMode = mode
+        End Sub
+
+        Public ReadOnly Property IsSelectionCombineNew As Boolean
+            Get
+                Return _selectionCombineMode = "New"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSelectionCombineAdd As Boolean
+            Get
+                Return _selectionCombineMode = "Add"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSelectionCombineSubtract As Boolean
+            Get
+                Return _selectionCombineMode = "Subtract"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSelectionCombineIntersect As Boolean
+            Get
+                Return _selectionCombineMode = "Intersect"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsRectangleSelectionMode As Boolean
+            Get
+                Return _selectionMode = "Rectangle"
+            End Get
+        End Property
+        Public ReadOnly Property IsEllipseSelectionMode As Boolean
+            Get
+                Return _selectionMode = "Ellipse"
+            End Get
+        End Property
+        Public ReadOnly Property IsLassoSelectionMode As Boolean
+            Get
+                Return _selectionMode = "Lasso"
+            End Get
+        End Property
+        Public ReadOnly Property IsMagicWandSelectionMode As Boolean
+            Get
+                Return _selectionMode = "MagicWand"
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowMagicWandControls As Boolean
+            Get
+                Return _selectionMode = "MagicWand"
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectionShapeMode As String
+            Get
+                Return _selectionShapeMode
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectionShapePointsX As Double()
+            Get
+                Return _selectionShapePointsX
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectionShapePointsY As Double()
+            Get
+                Return _selectionShapePointsY
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectionMaskPreviewImage As Bitmap
+            Get
+                Return _selectionMaskPreviewImage
+            End Get
+        End Property
+
+        ''' Farbtoleranz des Zauberstabs in Prozent (0..100).
+        Public Property SelectionTolerance As Double
+            Get
+                Return _selectionTolerance
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_selectionTolerance, Math.Max(0, Math.Min(100, value)))
+            End Set
+        End Property
+
+        Private Sub SetSelectionMaskData(mask As SKBitmap, rectPx As SKRectI)
+            If _selectionMask IsNot Nothing AndAlso Not Object.ReferenceEquals(_selectionMask, mask) Then _selectionMask.Dispose()
+            _selectionMask = mask
+            _selectionMaskRect = rectPx
+            RefreshSelectionMaskPreviewImage()
+        End Sub
+
+        Private Sub ClearSelectionMask()
+            _selectionMask?.Dispose()
+            _selectionMask = Nothing
+            _selectionMaskRect = SKRectI.Empty
+            SetSelectionMaskPreviewImage(Nothing)
+        End Sub
+
+        Private Sub SetSelectionMaskPreviewImage(image As Bitmap)
+            Dim oldImage = _selectionMaskPreviewImage
+            _selectionMaskPreviewImage = image
+            If oldImage IsNot Nothing AndAlso Not Object.ReferenceEquals(oldImage, image) Then oldImage.Dispose()
+            Me.RaisePropertyChanged(NameOf(SelectionMaskPreviewImage))
+        End Sub
+
+        Private Sub RefreshSelectionMaskPreviewImage()
+            If _selectionMask Is Nothing OrElse _selectionMask.Width <= 0 OrElse _selectionMask.Height <= 0 Then
+                SetSelectionMaskPreviewImage(Nothing)
+                Return
+            End If
+
+            Dim stride = _selectionMask.RowBytes
+            Dim maskBytes = New Byte(stride * _selectionMask.Height - 1) {}
+            Marshal.Copy(_selectionMask.GetPixels(), maskBytes, 0, maskBytes.Length)
+
+            Using preview = New SKBitmap(_selectionMask.Width, _selectionMask.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Dim previewStride = preview.RowBytes
+                Dim pixels = New Byte(previewStride * preview.Height - 1) {}
+                For y = 0 To _selectionMask.Height - 1
+                    For x = 0 To _selectionMask.Width - 1
+                        Dim alpha = maskBytes(y * stride + x)
+                        If alpha = 0 Then Continue For
+                        Dim isEdge = x = 0 OrElse y = 0 OrElse x = _selectionMask.Width - 1 OrElse y = _selectionMask.Height - 1 OrElse
+                                     maskBytes(y * stride + x - 1) = 0 OrElse
+                                     maskBytes(y * stride + x + 1) = 0 OrElse
+                                     maskBytes((y - 1) * stride + x) = 0 OrElse
+                                     maskBytes((y + 1) * stride + x) = 0
+                        Dim offset = y * previewStride + x * 4
+                        If isEdge Then
+                            Dim lightDash = ((x + y) Mod 10) < 5
+                            If lightDash Then
+                                pixels(offset) = 255
+                                pixels(offset + 1) = 255
+                                pixels(offset + 2) = 255
+                            Else
+                                pixels(offset) = 0
+                                pixels(offset + 1) = 0
+                                pixels(offset + 2) = 0
+                            End If
+                            pixels(offset + 3) = 245
+                        Else
+                            pixels(offset) = 255
+                            pixels(offset + 1) = 140
+                            pixels(offset + 2) = 45
+                            pixels(offset + 3) = 72
+                        End If
+                    Next
+                Next
+
+                Marshal.Copy(pixels, 0, preview.GetPixels(), pixels.Length)
+                Using image = SKImage.FromBitmap(preview)
+                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                        Using stream As New MemoryStream(data.ToArray())
+                            SetSelectionMaskPreviewImage(New Bitmap(stream))
+                        End Using
+                    End Using
+                End Using
+            End Using
+        End Sub
+
+        Private Sub SetSelectionShape(mode As String, xsPercent As Double(), ysPercent As Double())
+            _selectionShapeMode = If(String.IsNullOrWhiteSpace(mode), "Rectangle", mode)
+            _selectionShapePointsX = xsPercent
+            _selectionShapePointsY = ysPercent
+            Me.RaisePropertyChanged(NameOf(SelectionShapeMode))
+            Me.RaisePropertyChanged(NameOf(SelectionShapePointsX))
+            Me.RaisePropertyChanged(NameOf(SelectionShapePointsY))
+        End Sub
+
+        Private Shared Function NormalizeSelectionCombineMode(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Add", "Subtract", "Intersect"
+                    Return value.Trim()
+                Case Else
+                    Return "New"
+            End Select
+        End Function
+
+        ' Auswahlrechteck aus Prozentwerten in Bildpixel umrechnen (für Maskenerzeugung/-extraktion).
+        Private Function SelectionRectPixels() As SKRectI
+            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim left = CInt(Math.Round(bw * _selectionXPercent / 100.0))
+            Dim top = CInt(Math.Round(bh * _selectionYPercent / 100.0))
+            Dim right = CInt(Math.Round(bw * (_selectionXPercent + _selectionWidthPercent) / 100.0))
+            Dim bottom = CInt(Math.Round(bh * (_selectionYPercent + _selectionHeightPercent) / 100.0))
+            Return New SKRectI(Math.Max(0, left), Math.Max(0, top), Math.Min(bw, right), Math.Min(bh, bottom))
+        End Function
+
+        Private Sub SetSelectionBoundsFromPixels(rectPx As SKRectI)
+            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            If bw <= 0 OrElse bh <= 0 Then Return
+            _selectionXPercent = Math.Max(0, rectPx.Left * 100.0 / bw)
+            _selectionYPercent = Math.Max(0, rectPx.Top * 100.0 / bh)
+            _selectionWidthPercent = Math.Max(0.5, rectPx.Width * 100.0 / bw)
+            _selectionHeightPercent = Math.Max(0.5, rectPx.Height * 100.0 / bh)
+            Me.RaisePropertyChanged(NameOf(SelectionXPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionYPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionWidthPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionHeightPercent))
+        End Sub
+
+        Private Sub SetSelectionBoundsFromPercent(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
             _selectionXPercent = Math.Max(0, xPercent)
             _selectionYPercent = Math.Max(0, yPercent)
             _selectionWidthPercent = Math.Max(0.5, widthPercent)
@@ -3406,12 +3666,425 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectionYPercent))
             Me.RaisePropertyChanged(NameOf(SelectionWidthPercent))
             Me.RaisePropertyChanged(NameOf(SelectionHeightPercent))
-            HasActiveSelection = True
         End Sub
 
-        Public Sub ClearSelection()
+        ''' Wird von EditorView beim Loslassen der Maus nach dem Aufziehen eines Auswahlrechtecks aufgerufen.
+        Public Sub SetSelectionRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
+            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            If bw <= 0 OrElse bh <= 0 Then Return
+            Dim rectPx = New SKRectI(
+                Math.Max(0, CInt(Math.Round(bw * xPercent / 100.0))),
+                Math.Max(0, CInt(Math.Round(bh * yPercent / 100.0))),
+                Math.Min(bw, CInt(Math.Round(bw * (xPercent + widthPercent) / 100.0))),
+                Math.Min(bh, CInt(Math.Round(bh * (yPercent + heightPercent) / 100.0))))
+            If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return
+            PushUndo()
+
+            If _selectionCombineMode = "New" OrElse Not _hasActiveSelection Then
+                ClearSelectionMask()
+                SetSelectionBoundsFromPercent(xPercent, yPercent, widthPercent, heightPercent)
+                SetSelectionShape("Rectangle", Nothing, Nothing)
+                HasActiveSelection = True
+                Return
+            End If
+
+            Using candidate = CreateSolidMask(rectPx.Width, rectPx.Height)
+                ApplySelectionCandidate(candidate, rectPx, "Rectangle", Nothing, Nothing)
+            End Using
+        End Sub
+
+        ''' Ellipse-Auswahl: Rechteck wie beim Rechteck-Modus, zusätzlich eine eingepasste Ellipsen-Maske.
+        Public Sub SetSelectionEllipse(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
+            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            If bw <= 0 OrElse bh <= 0 Then Return
+            Dim rectPx = New SKRectI(
+                Math.Max(0, CInt(Math.Round(bw * xPercent / 100.0))),
+                Math.Max(0, CInt(Math.Round(bh * yPercent / 100.0))),
+                Math.Min(bw, CInt(Math.Round(bw * (xPercent + widthPercent) / 100.0))),
+                Math.Min(bh, CInt(Math.Round(bh * (yPercent + heightPercent) / 100.0))))
+            If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return
+            PushUndo()
+            Using mask = ImageProcessor.BuildEllipseMask(rectPx.Width, rectPx.Height)
+                If mask IsNot Nothing Then ApplySelectionCandidate(mask, rectPx, "Ellipse", Nothing, Nothing)
+            End Using
+        End Sub
+
+        ''' Lasso-Auswahl aus Freihand-Punkten (Prozentkoordinaten). Bounding-Box wird zum Auswahlrechteck,
+        ''' das Polygon zur Maske.
+        Public Sub SetSelectionLasso(xsPercent As Double(), ysPercent As Double())
+            If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length < 3 OrElse xsPercent.Length <> ysPercent.Length Then Return
+            Dim minX = xsPercent.Min(), maxX = xsPercent.Max()
+            Dim minY = ysPercent.Min(), maxY = ysPercent.Max()
+            If (maxX - minX) < 0.5 OrElse (maxY - minY) < 0.5 Then Return
+            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            If bw <= 0 OrElse bh <= 0 Then Return
+            Dim rectPx = New SKRectI(
+                Math.Max(0, CInt(Math.Round(bw * minX / 100.0))),
+                Math.Max(0, CInt(Math.Round(bh * minY / 100.0))),
+                Math.Min(bw, CInt(Math.Round(bw * maxX / 100.0))),
+                Math.Min(bh, CInt(Math.Round(bh * maxY / 100.0))))
+            If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return
+            Dim localX(xsPercent.Length - 1) As Single
+            Dim localY(ysPercent.Length - 1) As Single
+            For i = 0 To xsPercent.Length - 1
+                localX(i) = CSng(bw * xsPercent(i) / 100.0 - rectPx.Left)
+                localY(i) = CSng(bh * ysPercent(i) / 100.0 - rectPx.Top)
+            Next
+            PushUndo()
+            Using mask = ImageProcessor.BuildPolygonMask(localX, localY, rectPx.Width, rectPx.Height)
+                If mask IsNot Nothing Then ApplySelectionCandidate(mask, rectPx, "Lasso", xsPercent.ToArray(), ysPercent.ToArray())
+            End Using
+        End Sub
+
+        ''' Zauberstab: wählt die zusammenhängende Farbfläche am Klickpunkt (Prozentkoordinaten).
+        Public Sub SetSelectionMagicWand(xPercent As Double, yPercent As Double)
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            If bw <= 0 OrElse bh <= 0 Then Return
+            Dim seedX = CInt(Math.Round(bw * xPercent / 100.0))
+            Dim seedY = CInt(Math.Round(bh * yPercent / 100.0))
+            seedX = Math.Max(0, Math.Min(bw - 1, seedX))
+            seedY = Math.Max(0, Math.Min(bh - 1, seedY))
+            Dim bounds As SKRectI
+            Using mask = ImageProcessor.BuildMagicWandMaskFromFile(_currentImagePath, GetCurrentAdjustments(),
+                                                                   seedX, seedY, CSng(_selectionTolerance / 100.0), bounds)
+                If mask Is Nothing OrElse bounds.Width <= 0 OrElse bounds.Height <= 0 Then Return
+                PushUndo()
+                Dim outline = BuildMaskOutlinePercent(mask, bounds)
+                ApplySelectionCandidate(mask, bounds, "MagicWand", outline.Xs, outline.Ys)
+            End Using
+        End Sub
+
+        Public Sub ClearSelection(Optional captureUndo As Boolean = True)
+            If captureUndo AndAlso _hasActiveSelection Then PushUndo()
+            ClearSelectionMask()
+            SetSelectionShape("Rectangle", Nothing, Nothing)
             HasActiveSelection = False
         End Sub
+
+        Public Sub InvertSelection()
+            If Not _hasActiveSelection Then Return
+            Dim bw = GetBaseWidth()
+            Dim bh = GetBaseHeight()
+            If bw <= 0 OrElse bh <= 0 Then Return
+
+            Using existingMask = BuildCurrentSelectionMask()
+                Dim existingRect = SelectionRectPixels()
+                If existingMask Is Nothing OrElse existingRect.Width <= 0 OrElse existingRect.Height <= 0 Then Return
+
+                PushUndo()
+                Dim fullRect = New SKRectI(0, 0, bw, bh)
+                Using fullMask = CreateSolidMask(bw, bh)
+                    Dim inverted = CombineSelectionMasks(fullMask, fullRect, existingMask, existingRect, fullRect, "Subtract")
+                    If inverted Is Nothing OrElse Not MaskHasVisiblePixels(inverted) Then
+                        inverted?.Dispose()
+                        ClearSelection(captureUndo:=False)
+                        Return
+                    End If
+
+                    ClearSelectionMask()
+                    SetSelectionBoundsFromPixels(fullRect)
+                    SetSelectionShape("MagicWand", Nothing, Nothing)
+                    SetSelectionMaskData(inverted, fullRect)
+                    HasActiveSelection = True
+                End Using
+            End Using
+        End Sub
+
+        Private Sub ApplySelectionCandidate(candidateMask As SKBitmap,
+                                            candidateRect As SKRectI,
+                                            candidateShapeMode As String,
+                                            candidateXsPercent As Double(),
+                                            candidateYsPercent As Double())
+            If candidateMask Is Nothing OrElse candidateRect.Width <= 0 OrElse candidateRect.Height <= 0 Then Return
+            Dim combineMode = If(_hasActiveSelection, _selectionCombineMode, "New")
+
+            If combineMode = "New" Then
+                ClearSelectionMask()
+                SetSelectionBoundsFromPixels(candidateRect)
+                SetSelectionShape(candidateShapeMode, candidateXsPercent, candidateYsPercent)
+                SetSelectionMaskData(candidateMask.Copy(), candidateRect)
+                HasActiveSelection = True
+                Return
+            End If
+
+            Using existingMask = BuildCurrentSelectionMask()
+                Dim existingRect = SelectionRectPixels()
+                If existingMask Is Nothing OrElse existingRect.Width <= 0 OrElse existingRect.Height <= 0 Then
+                    If combineMode = "Subtract" OrElse combineMode = "Intersect" Then
+                        ClearSelection(captureUndo:=False)
+                    Else
+                        ClearSelectionMask()
+                        SetSelectionBoundsFromPixels(candidateRect)
+                        SetSelectionShape(candidateShapeMode, candidateXsPercent, candidateYsPercent)
+                        SetSelectionMaskData(candidateMask.Copy(), candidateRect)
+                        HasActiveSelection = True
+                    End If
+                    Return
+                End If
+
+                Dim resultRect As SKRectI
+                Select Case combineMode
+                    Case "Intersect"
+                        resultRect = New SKRectI(Math.Max(existingRect.Left, candidateRect.Left),
+                                                 Math.Max(existingRect.Top, candidateRect.Top),
+                                                 Math.Min(existingRect.Right, candidateRect.Right),
+                                                 Math.Min(existingRect.Bottom, candidateRect.Bottom))
+                        If resultRect.Width <= 0 OrElse resultRect.Height <= 0 Then
+                            ClearSelection(captureUndo:=False)
+                            Return
+                        End If
+                    Case "Subtract"
+                        resultRect = existingRect
+                    Case Else
+                        resultRect = New SKRectI(Math.Min(existingRect.Left, candidateRect.Left),
+                                                 Math.Min(existingRect.Top, candidateRect.Top),
+                                                 Math.Max(existingRect.Right, candidateRect.Right),
+                                                 Math.Max(existingRect.Bottom, candidateRect.Bottom))
+                End Select
+
+                Dim combined = CombineSelectionMasks(existingMask, existingRect, candidateMask, candidateRect, resultRect, combineMode)
+                If combined Is Nothing OrElse Not MaskHasVisiblePixels(combined) Then
+                    combined?.Dispose()
+                    ClearSelection(captureUndo:=False)
+                    Return
+                End If
+
+                ClearSelectionMask()
+                SetSelectionBoundsFromPixels(resultRect)
+                Dim outline = BuildMaskOutlinePercent(combined, resultRect)
+                SetSelectionShape("MagicWand", outline.Xs, outline.Ys)
+                SetSelectionMaskData(combined, resultRect)
+                HasActiveSelection = True
+            End Using
+        End Sub
+
+        Private Function BuildCurrentSelectionMask() As SKBitmap
+            If Not _hasActiveSelection Then Return Nothing
+            If _selectionMask IsNot Nothing Then Return _selectionMask.Copy()
+            Dim rectPx = SelectionRectPixels()
+            If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return Nothing
+            Return CreateSolidMask(rectPx.Width, rectPx.Height)
+        End Function
+
+        Private Shared Function CreateSolidMask(width As Integer, height As Integer) As SKBitmap
+            Dim mask = New SKBitmap(width, height, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim stride = mask.RowBytes
+            Dim buffer = Enumerable.Repeat(CByte(255), stride * height).ToArray()
+            Marshal.Copy(buffer, 0, mask.GetPixels(), buffer.Length)
+            Return mask
+        End Function
+
+        Private Shared Function CombineSelectionMasks(existingMask As SKBitmap,
+                                                      existingRect As SKRectI,
+                                                      candidateMask As SKBitmap,
+                                                      candidateRect As SKRectI,
+                                                      resultRect As SKRectI,
+                                                      combineMode As String) As SKBitmap
+            Dim result = New SKBitmap(resultRect.Width, resultRect.Height, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim existingBytes = ReadMaskBytes(existingMask)
+            Dim candidateBytes = ReadMaskBytes(candidateMask)
+            Dim resultStride = result.RowBytes
+            Dim resultBytes = New Byte(resultStride * result.Height - 1) {}
+
+            For y = 0 To resultRect.Height - 1
+                For x = 0 To resultRect.Width - 1
+                    Dim imageX = resultRect.Left + x
+                    Dim imageY = resultRect.Top + y
+                    Dim a = SampleMask(existingBytes, existingMask.RowBytes, existingMask.Width, existingMask.Height,
+                                       imageX - existingRect.Left, imageY - existingRect.Top)
+                    Dim b = SampleMask(candidateBytes, candidateMask.RowBytes, candidateMask.Width, candidateMask.Height,
+                                       imageX - candidateRect.Left, imageY - candidateRect.Top)
+                    Dim value As Integer
+                    Select Case combineMode
+                        Case "Add"
+                            value = Math.Max(a, b)
+                        Case "Subtract"
+                            value = Math.Max(0, a - b)
+                        Case "Intersect"
+                            value = Math.Min(a, b)
+                        Case Else
+                            value = b
+                    End Select
+                    resultBytes(y * resultStride + x) = CByte(value)
+                Next
+            Next
+
+            Marshal.Copy(resultBytes, 0, result.GetPixels(), resultBytes.Length)
+            Return result
+        End Function
+
+        Private Shared Function ReadMaskBytes(mask As SKBitmap) As Byte()
+            Dim buffer = New Byte(mask.RowBytes * mask.Height - 1) {}
+            Marshal.Copy(mask.GetPixels(), buffer, 0, buffer.Length)
+            Return buffer
+        End Function
+
+        Private Shared Function SampleMask(buffer As Byte(), stride As Integer, width As Integer, height As Integer, x As Integer, y As Integer) As Integer
+            If x < 0 OrElse y < 0 OrElse x >= width OrElse y >= height Then Return 0
+            Return CInt(buffer(y * stride + x))
+        End Function
+
+        Private Shared Function MaskHasVisiblePixels(mask As SKBitmap) As Boolean
+            Dim buffer = ReadMaskBytes(mask)
+            For Each value In buffer
+                If value > 0 Then Return True
+            Next
+            Return False
+        End Function
+
+        Private Function EncodeSelectionMaskBase64() As String
+            If _selectionMask Is Nothing Then Return ""
+            Try
+                Using image = SKImage.FromBitmap(_selectionMask)
+                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                        Return Convert.ToBase64String(data.ToArray())
+                    End Using
+                End Using
+            Catch
+                Return ""
+            End Try
+        End Function
+
+        Private Shared Function DecodeSelectionMaskBase64(value As String) As SKBitmap
+            If String.IsNullOrWhiteSpace(value) Then Return Nothing
+            Try
+                Dim bytes = Convert.FromBase64String(value)
+                Return SKBitmap.Decode(bytes)
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        Public Sub MoveSelection(deltaXPercent As Double, deltaYPercent As Double)
+            If Not _hasActiveSelection Then Return
+            Dim maxX = Math.Max(0, 100.0 - _selectionWidthPercent)
+            Dim maxY = Math.Max(0, 100.0 - _selectionHeightPercent)
+            Dim newX = Math.Max(0, Math.Min(maxX, _selectionXPercent + deltaXPercent))
+            Dim newY = Math.Max(0, Math.Min(maxY, _selectionYPercent + deltaYPercent))
+            Dim actualDx = newX - _selectionXPercent
+            Dim actualDy = newY - _selectionYPercent
+            If Math.Abs(actualDx) < 0.0001 AndAlso Math.Abs(actualDy) < 0.0001 Then Return
+            CaptureUndoState("Auswahl")
+
+            SelectionXPercent = newX
+            SelectionYPercent = newY
+
+            If _selectionShapePointsX IsNot Nothing AndAlso _selectionShapePointsY IsNot Nothing Then
+                _selectionShapePointsX = _selectionShapePointsX.Select(Function(x) Math.Max(0, Math.Min(100, x + actualDx))).ToArray()
+                _selectionShapePointsY = _selectionShapePointsY.Select(Function(y) Math.Max(0, Math.Min(100, y + actualDy))).ToArray()
+                Me.RaisePropertyChanged(NameOf(SelectionShapePointsX))
+                Me.RaisePropertyChanged(NameOf(SelectionShapePointsY))
+            End If
+
+            If Not _selectionMaskRect.IsEmpty Then
+                Dim bw = GetBaseWidth()
+                Dim bh = GetBaseHeight()
+                If bw > 0 AndAlso bh > 0 Then
+                    Dim dxPx = CInt(Math.Round(actualDx * bw / 100.0))
+                    Dim dyPx = CInt(Math.Round(actualDy * bh / 100.0))
+                    _selectionMaskRect = New SKRectI(_selectionMaskRect.Left + dxPx,
+                                                     _selectionMaskRect.Top + dyPx,
+                                                     _selectionMaskRect.Right + dxPx,
+                                                     _selectionMaskRect.Bottom + dyPx)
+                End If
+            End If
+        End Sub
+
+        Private Function BuildMaskOutlinePercent(mask As SKBitmap, bounds As SKRectI) As (Xs As Double(), Ys As Double())
+            Dim bw = GetBaseWidth()
+            Dim bh = GetBaseHeight()
+            If mask Is Nothing OrElse bw <= 0 OrElse bh <= 0 Then
+                Return (BuildBoundsOutlineXPercent(bounds), BuildBoundsOutlineYPercent(bounds))
+            End If
+
+            Dim stride = mask.RowBytes
+            Dim buffer = New Byte(stride * mask.Height - 1) {}
+            Marshal.Copy(mask.GetPixels(), buffer, 0, buffer.Length)
+
+            Dim sampleStep = Math.Max(1, Math.Min(mask.Width, mask.Height) \ 180)
+            Dim edgePoints As New List(Of SKPoint)()
+            For y = 0 To mask.Height - 1
+                For x = 0 To mask.Width - 1
+                    If buffer(y * stride + x) = 0 Then Continue For
+                    Dim isEdge = x = 0 OrElse y = 0 OrElse x = mask.Width - 1 OrElse y = mask.Height - 1 OrElse
+                                 buffer(y * stride + x - 1) = 0 OrElse
+                                 buffer(y * stride + x + 1) = 0 OrElse
+                                 buffer((y - 1) * stride + x) = 0 OrElse
+                                 buffer((y + 1) * stride + x) = 0
+                    If isEdge AndAlso ((x + y) Mod sampleStep = 0) Then
+                        edgePoints.Add(New SKPoint(bounds.Left + x + 0.5F, bounds.Top + y + 0.5F))
+                    End If
+                Next
+            Next
+
+            Dim hull = BuildConvexHull(edgePoints)
+            If hull.Count < 3 Then Return (BuildBoundsOutlineXPercent(bounds), BuildBoundsOutlineYPercent(bounds))
+
+            Dim xs(hull.Count - 1) As Double
+            Dim ys(hull.Count - 1) As Double
+            For i = 0 To hull.Count - 1
+                xs(i) = hull(i).X * 100.0 / bw
+                ys(i) = hull(i).Y * 100.0 / bh
+            Next
+            Return (xs, ys)
+        End Function
+
+        Private Shared Function BuildConvexHull(points As List(Of SKPoint)) As List(Of SKPoint)
+            If points Is Nothing OrElse points.Count <= 3 Then Return If(points, New List(Of SKPoint)())
+            Dim sorted = points.
+                OrderBy(Function(p) p.X).
+                ThenBy(Function(p) p.Y).
+                ToList()
+
+            Dim lower As New List(Of SKPoint)()
+            For Each p In sorted
+                While lower.Count >= 2 AndAlso Cross(lower(lower.Count - 2), lower(lower.Count - 1), p) <= 0
+                    lower.RemoveAt(lower.Count - 1)
+                End While
+                lower.Add(p)
+            Next
+
+            Dim upper As New List(Of SKPoint)()
+            For i = sorted.Count - 1 To 0 Step -1
+                Dim p = sorted(i)
+                While upper.Count >= 2 AndAlso Cross(upper(upper.Count - 2), upper(upper.Count - 1), p) <= 0
+                    upper.RemoveAt(upper.Count - 1)
+                End While
+                upper.Add(p)
+            Next
+
+            lower.RemoveAt(lower.Count - 1)
+            upper.RemoveAt(upper.Count - 1)
+            lower.AddRange(upper)
+            Return lower
+        End Function
+
+        Private Shared Function Cross(o As SKPoint, a As SKPoint, b As SKPoint) As Single
+            Return (a.X - o.X) * (b.Y - o.Y) - (a.Y - o.Y) * (b.X - o.X)
+        End Function
+
+        Private Function BuildBoundsOutlineXPercent(bounds As SKRectI) As Double()
+            Dim bw = GetBaseWidth()
+            If bw <= 0 Then Return Nothing
+            Return New Double() {
+                bounds.Left * 100.0 / bw,
+                bounds.Right * 100.0 / bw,
+                bounds.Right * 100.0 / bw,
+                bounds.Left * 100.0 / bw
+            }
+        End Function
+
+        Private Function BuildBoundsOutlineYPercent(bounds As SKRectI) As Double()
+            Dim bh = GetBaseHeight()
+            If bh <= 0 Then Return Nothing
+            Return New Double() {
+                bounds.Top * 100.0 / bh,
+                bounds.Top * 100.0 / bh,
+                bounds.Bottom * 100.0 / bh,
+                bounds.Bottom * 100.0 / bh
+            }
+        End Function
 
         ''' Schneidet den aktuell verarbeiteten Bildinhalt (alle Anpassungen/Objekte gebacken) auf
         ''' das Auswahlrechteck zu, sichert ihn als temporäre PNG (Muster wie VideoPreviewService)
@@ -3433,8 +4106,13 @@ Namespace ViewModels
 
             Dim tempPath = IO.Path.Combine(IO.Path.GetTempPath(), $"ferrumpix_selection_{Guid.NewGuid():N}.png")
             Dim adj = GetCurrentAdjustments()
-            Dim pixelRect = New SKRectI(left, top, left + width, top + height)
-            If Not ImageProcessor.ExtractRegionToFile(_currentImagePath, adj, pixelRect, tempPath) Then Return Nothing
+            If _selectionMask IsNot Nothing Then
+                ' Unregelmäßige Auswahl (Ellipse/Lasso/Zauberstab): mit Maske freischneiden.
+                If Not ImageProcessor.ExtractRegionToFileMasked(_currentImagePath, adj, _selectionMaskRect, _selectionMask, tempPath) Then Return Nothing
+            Else
+                Dim pixelRect = New SKRectI(left, top, left + width, top + height)
+                If Not ImageProcessor.ExtractRegionToFile(_currentImagePath, adj, pixelRect, tempPath) Then Return Nothing
+            End If
             Return tempPath
         End Function
 
@@ -3551,16 +4229,22 @@ Namespace ViewModels
         ''' und -größe) als "Zwischenablage", statt sofort ein Objekt anzulegen - Strg+V fügt sie danach
         ''' beliebig oft ein.
         Public Sub CopySelectionToClipboard()
-            Dim tempPath = CropSelectionToTempFile()
+            Dim tempPath = CopySelectionToClipboardFile()
             If tempPath Is Nothing Then Return
+            AddHistoryEntry("Auswahl kopiert")
+        End Sub
+
+        Public Function CopySelectionToClipboardFile() As String
+            Dim tempPath = CropSelectionToTempFile()
+            If tempPath Is Nothing Then Return Nothing
             _selectionClipboardPath = tempPath
             _selectionClipboardXPercent = _selectionXPercent
             _selectionClipboardYPercent = _selectionYPercent
             _selectionClipboardWidthPercent = _selectionWidthPercent
             _selectionClipboardHeightPercent = _selectionHeightPercent
             _selectionClipboardPasteCount = 0
-            AddHistoryEntry("Auswahl kopiert")
-        End Sub
+            Return tempPath
+        End Function
 
         Public Sub PasteSelectionClipboard()
             If String.IsNullOrWhiteSpace(_selectionClipboardPath) OrElse Not File.Exists(_selectionClipboardPath) Then Return
@@ -3576,6 +4260,18 @@ Namespace ViewModels
         ''' nicht-destruktiver Fill-Pipeline-Mechanismus).
         Public Sub FillSelection()
             If Not _hasActiveSelection Then Return
+
+            ' Unregelmäßige Auswahl: die Füllung entsteht als maskierte PNG und wird als bewegliches
+            ' Bild-Objekt eingefügt (Vollfarbe). Verläufe bleiben dem Rechteck vorbehalten.
+            If _selectionMask IsNot Nothing Then
+                Dim tempPath = IO.Path.Combine(IO.Path.GetTempPath(), $"ferrumpix_fill_{Guid.NewGuid():N}.png")
+                If ImageProcessor.RenderMaskedFillToFile(_selectionMask, _annotationFillColor, tempPath) Then
+                    AddSelectionImageAnnotationAt(tempPath, _selectionXPercent, _selectionYPercent, _selectionWidthPercent, _selectionHeightPercent)
+                    AddHistoryEntry("Auswahl gefüllt")
+                End If
+                Return
+            End If
+
             PushUndo()
             Dim annotation = New ImageAnnotation With {
                 .Kind = "SelectionFill",
@@ -3834,7 +4530,10 @@ Namespace ViewModels
             End Get
             Set(value As Integer)
                 Me.RaiseAndSetIfChanged(_rating, value)
-                If Not String.IsNullOrEmpty(_currentImagePath) Then
+                Dim immichAssetId = CurrentImmichAssetId()
+                If immichAssetId IsNot Nothing Then
+                    Dim ignored = ImmichService.SetRatingAsync(immichAssetId, value)
+                ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                     LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
                 End If
             End Set
@@ -3846,7 +4545,10 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isFavorite, value)
-                If Not String.IsNullOrEmpty(_currentImagePath) Then
+                Dim immichAssetId = CurrentImmichAssetId()
+                If immichAssetId IsNot Nothing Then
+                    Dim ignored = ImmichService.SetFavoriteAsync(immichAssetId, value)
+                ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                     LibraryService.Instance.SetFavorite(_currentImagePath, value)
                 End If
             End Set
@@ -4060,9 +4762,17 @@ Namespace ViewModels
         ''' "Speichern unter" erlaubt (siehe SaveImageAsync/ConfirmSaveBeforeLeavingAsync).
         Public ReadOnly Property CanSaveInPlace As Boolean
             Get
-                Return Not IsCurrentImageRaw
+                Return Not IsCurrentImageRaw AndAlso Not _forceSaveAsOnly
             End Get
         End Property
+
+        ''' <summary>Asset-ID, falls das aktuelle Bild eine Immich-Temp-Kopie ist (Dateiname-Stamm = UUID),
+        ''' sonst Nothing. Damit landen Stichwort-Änderungen im Editor beim richtigen Immich-Asset.</summary>
+        Private Function CurrentImmichAssetId() As String
+            If Not ImmichService.IsImmichTempPath(_currentImagePath) Then Return Nothing
+            Dim stem = IO.Path.GetFileNameWithoutExtension(_currentImagePath)
+            Return If(String.IsNullOrEmpty(stem), Nothing, stem)
+        End Function
 
         ''' _cropLeft.._cropBottom sind der noch nicht angewendete Beschnitt, gemessen am aktuell
         ''' ANGEZEIGTEN (also bereits beschnittenen) Bild. Ein offener Beschnitt liegt genau dann vor,
@@ -4166,8 +4876,12 @@ Namespace ViewModels
         Public ReadOnly Property ResetDetailCommand As ICommand
         Public ReadOnly Property ResetEffectsCommand As ICommand
         Public ReadOnly Property ResetRetouchCommand As ICommand
+        Public ReadOnly Property ClearSelectionCommand As ICommand
+        Public ReadOnly Property InvertSelectionCommand As ICommand
         Public ReadOnly Property CopySelectionCommand As ICommand
         Public ReadOnly Property FillSelectionCommand As ICommand
+        Public ReadOnly Property SetSelectionModeCommand As ICommand
+        Public ReadOnly Property SetSelectionCombineModeCommand As ICommand
         Public ReadOnly Property SetAnnotationFillKindCommand As ICommand
         Public ReadOnly Property SetAnnotationAnchorCommand As ICommand
         Public ReadOnly Property ResetTransformCommand As ICommand
@@ -4222,14 +4936,21 @@ Namespace ViewModels
                                                        If String.IsNullOrEmpty(tag) OrElse Tags.Contains(tag) Then Return
                                                        Tags.Add(tag)
                                                        NewTagText = ""
-                                                       If Not String.IsNullOrEmpty(_currentImagePath) Then
+                                                       Dim immichAssetId = CurrentImmichAssetId()
+                                                       If immichAssetId IsNot Nothing Then
+                                                           Dim ignored = ImmichService.AddTagToAssetAsync(immichAssetId, tag)
+                                                       ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                                            LibraryService.Instance.SetTags(_currentImagePath, Tags)
                                                        End If
                                                        RefreshTagSuggestions()
                                                    End Sub)
 
             RemoveTagCommand = ReactiveCommand.Create(Of String)(Sub(tag)
-                                                                     If Tags.Remove(tag) AndAlso Not String.IsNullOrEmpty(_currentImagePath) Then
+                                                                     If Not Tags.Remove(tag) Then Return
+                                                                     Dim immichAssetId = CurrentImmichAssetId()
+                                                                     If immichAssetId IsNot Nothing Then
+                                                                         Dim ignored = ImmichService.RemoveTagFromAssetAsync(immichAssetId, tag)
+                                                                     ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                                                          LibraryService.Instance.SetTags(_currentImagePath, Tags)
                                                                      End If
                                                                  End Sub)
@@ -4389,8 +5110,12 @@ Namespace ViewModels
                                                          End Sub)
             ' Löst nur die Quelle - bereits gesetzte Punkte behalten ihre und bleiben unverändert.
             ClearCloneSourceCommand = ReactiveCommand.Create(Sub() ClearCloneSource())
+            ClearSelectionCommand = ReactiveCommand.Create(Sub() ClearSelection())
+            InvertSelectionCommand = ReactiveCommand.Create(Sub() InvertSelection())
             CopySelectionCommand = ReactiveCommand.Create(Sub() CopySelectionToNewObject())
             FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
+            SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
+            SetSelectionCombineModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionCombineMode(mode))
             SetAnnotationAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) AnnotationAnchor = anchor)
             SetAnnotationFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationFillKind(kind))
             ResetTransformCommand = ReactiveCommand.Create(Sub()
@@ -4579,6 +5304,7 @@ Namespace ViewModels
             CurrentImagePath = path
             _currentImagePath = path
             SelectedInfoTab = InfoSidebarTab.General
+            ClearSelection()   ' pixelbasierte Auswahlmaske gilt nur fürs alte Bild
             ResetAdjustmentsInternal(resetEditorUi:=True)
             ClearUndoHistory()
             ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
@@ -4611,11 +5337,16 @@ Namespace ViewModels
             Dim ignored = OpenImageAsync(imagePath, allPaths)
         End Sub
 
-        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing) As Task(Of Boolean)
+        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing) As Task(Of Boolean)
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return False
             If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
             End If
+            ' Vor dem Setzen von CurrentImagePath, damit dessen PropertyChanged CanSaveInPlace korrekt neu bewertet.
+            ' Pfadbasierte Erkennung ergänzt das Flag: eine Immich-Temp-Kopie ist IMMER nur „Speichern
+            ' unter", egal ob aus Galerie (Flag gesetzt) oder aus dem Viewer (Flag nicht durchgereicht).
+            _forceSaveAsOnly = forceSaveAsOnly OrElse ImmichService.IsImmichTempPath(imagePath)
+            _immichSourceAlbumId = immichAlbumId
             CurrentImagePath = imagePath
             _currentImagePath = imagePath
             SelectedInfoTab = InfoSidebarTab.General
@@ -4634,6 +5365,8 @@ Namespace ViewModels
                 LoadFilmstripContext(imagePath)
             End If
             LoadLibraryMeta(imagePath)
+            Dim immichAssetId = CurrentImmichAssetId()
+            If immichAssetId IsNot Nothing Then Await LoadImmichMetaAsync(immichAssetId)
 
             Try
                 CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(imagePath)
@@ -4720,6 +5453,21 @@ Namespace ViewModels
             Next
             RefreshTagSuggestions()
         End Sub
+
+        Private Async Function LoadImmichMetaAsync(assetId As String) As Task
+            Dim asset = Await ImmichService.GetAssetDetailAsync(assetId)
+            If asset Is Nothing Then Return
+
+            _rating = asset.Rating
+            Me.RaisePropertyChanged(NameOf(Rating))
+            _isFavorite = asset.IsFavorite
+            Me.RaisePropertyChanged(NameOf(IsFavorite))
+            Tags.Clear()
+            For Each tag In If(asset.Tags, New List(Of String)())
+                Tags.Add(tag)
+            Next
+            RefreshTagSuggestions()
+        End Function
 
         Private Sub RefreshTagSuggestions()
             TagSuggestions.Clear()
@@ -5186,11 +5934,14 @@ Namespace ViewModels
 
         Private Async Function SaveImageAsync(saveAs As Boolean) As Task(Of Boolean)
             If String.IsNullOrEmpty(_currentImagePath) Then Return False
-            If Not saveAs AndAlso IsCurrentImageRaw Then Return False
+            If Not saveAs AndAlso (IsCurrentImageRaw OrElse _forceSaveAsOnly) Then Return False
             Dim targetPath = _currentImagePath
             Dim targetQuality = SaveQuality
+            Dim saveToImmich As Boolean = False
             If saveAs Then
-                Dim dir = IO.Path.GetDirectoryName(_currentImagePath)
+                ' Externe Quellen (Immich-Temp-Kopie) liegen im Temp-Verzeichnis - als Ziel taugt das nicht,
+                ' daher den Bilder-Ordner vorschlagen statt den Temp-Pfad.
+                Dim dir = If(_forceSaveAsOnly, Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), IO.Path.GetDirectoryName(_currentImagePath))
                 Dim name = IO.Path.GetFileNameWithoutExtension(_currentImagePath)
                 Dim proposedName = name & "_bearbeitet"
                 Dim saveAsResult = Await _mainVm.ShowSaveAsAsync("Speichern unter",
@@ -5207,7 +5958,17 @@ Namespace ViewModels
                     Await _mainVm.ShowMessageAsync("Speichern fehlgeschlagen", "Der Dateiname enthält ungültige Zeichen.")
                     Return False
                 End If
-                targetPath = IO.Path.Combine(dir, cleanBaseName & saveAsResult.Extension)
+                saveToImmich = String.Equals(saveAsResult.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured
+                If saveToImmich Then
+                    ' Für den Immich-Upload zunächst in eine Temp-Datei rendern (nicht in den Bilder-Ordner).
+                    Dim uploadTempDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichUpload")
+                    IO.Directory.CreateDirectory(uploadTempDir)
+                    targetPath = IO.Path.Combine(uploadTempDir, cleanBaseName & saveAsResult.Extension)
+                Else
+                    If Not String.IsNullOrWhiteSpace(saveAsResult.TargetFolder) Then dir = saveAsResult.TargetFolder
+                    If Not IO.Directory.Exists(dir) Then IO.Directory.CreateDirectory(dir)
+                    targetPath = IO.Path.Combine(dir, cleanBaseName & saveAsResult.Extension)
+                End If
                 targetQuality = saveAsResult.JpgQuality
             End If
 
@@ -5217,6 +5978,23 @@ Namespace ViewModels
                 Dim adj = GetCurrentAdjustments()
                 Dim preserveMetadata = If(saveAs AndAlso _mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
                 Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(_currentImagePath, targetPath, adj, targetQuality, preserveMetadata))
+                If ok AndAlso saveToImmich Then
+                    StatusText = LocalizationService.T("Wird nach Immich hochgeladen…")
+                    Dim assetId = Await ImmichService.UploadAssetAsync(targetPath)
+                    Try : IO.File.Delete(targetPath) : Catch : End Try
+                    If String.IsNullOrEmpty(assetId) Then
+                        StatusText = LocalizationService.T("Immich-Upload fehlgeschlagen")
+                        Return False
+                    End If
+                    If Not String.IsNullOrEmpty(_immichSourceAlbumId) Then
+                        Await ImmichService.AddAssetsToAlbumAsync(_immichSourceAlbumId, {assetId})
+                    End If
+                    Await ImmichService.WaitForThumbnailReadyAsync(assetId)
+                    StatusText = LocalizationService.T("Nach Immich hochgeladen")
+                    _hasChanges = False
+                    ClearPreviewSource()
+                    Return True
+                End If
                 If ok Then
                     StatusText = If(saveAs,
                                     $"{LocalizationService.T("Gespeichert als")} {IO.Path.GetFileName(targetPath)}",
@@ -5260,7 +6038,7 @@ Namespace ViewModels
             ' Bei RAW-Bildern ist Speichern-in-place deaktiviert (siehe CanSaveInPlace) - "Speichern"
             ' im Bestätigungsdialog leitet hier deshalb automatisch auf Speichern-unter um, statt
             ' unbedingt in-place zu speichern (das würde sonst versuchen, die RAW-Datei zu überschreiben).
-            Return Await SaveImageAsync(IsCurrentImageRaw)
+            Return Await SaveImageAsync(IsCurrentImageRaw OrElse _forceSaveAsOnly)
         End Function
 
         Private Function GetCurrentAdjustments(Optional forPreview As Boolean = False) As ImageAdjustments
@@ -5347,7 +6125,20 @@ Namespace ViewModels
                 .LutPath = _lutPath,
                 .LutStrength = CSng(_lutStrength),
                 .RetouchSpots = _retouchSpots.Select(Function(s) s.Clone()).ToList(),
-                .Annotations = _annotations.Select(Function(a) a.Clone()).ToList()
+                .Annotations = _annotations.Select(Function(a) a.Clone()).ToList(),
+                .HasActiveSelection = _hasActiveSelection,
+                .SelectionXPercent = _selectionXPercent,
+                .SelectionYPercent = _selectionYPercent,
+                .SelectionWidthPercent = _selectionWidthPercent,
+                .SelectionHeightPercent = _selectionHeightPercent,
+                .SelectionShapeMode = _selectionShapeMode,
+                .SelectionShapePointsX = If(_selectionShapePointsX Is Nothing, Nothing, _selectionShapePointsX.ToArray()),
+                .SelectionShapePointsY = If(_selectionShapePointsY Is Nothing, Nothing, _selectionShapePointsY.ToArray()),
+                .SelectionMaskLeft = _selectionMaskRect.Left,
+                .SelectionMaskTop = _selectionMaskRect.Top,
+                .SelectionMaskRight = _selectionMaskRect.Right,
+                .SelectionMaskBottom = _selectionMaskRect.Bottom,
+                .SelectionMaskPngBase64 = EncodeSelectionMaskBase64()
             }
 
             ' Während die Text-/Wasserzeichen-Ebene per Canvas-Overlay live bearbeitet wird, zeigt das
@@ -5659,6 +6450,19 @@ Namespace ViewModels
                     _annotations.Add(annotation.Clone())
                 Next
             End If
+            ClearSelectionMask()
+            _hasActiveSelection = adj.HasActiveSelection
+            _selectionXPercent = adj.SelectionXPercent
+            _selectionYPercent = adj.SelectionYPercent
+            _selectionWidthPercent = adj.SelectionWidthPercent
+            _selectionHeightPercent = adj.SelectionHeightPercent
+            _selectionShapeMode = If(String.IsNullOrWhiteSpace(adj.SelectionShapeMode), "Rectangle", adj.SelectionShapeMode)
+            _selectionShapePointsX = If(adj.SelectionShapePointsX Is Nothing, Nothing, adj.SelectionShapePointsX.ToArray())
+            _selectionShapePointsY = If(adj.SelectionShapePointsY Is Nothing, Nothing, adj.SelectionShapePointsY.ToArray())
+            Dim restoredMask = DecodeSelectionMaskBase64(adj.SelectionMaskPngBase64)
+            If restoredMask IsNot Nothing Then
+                SetSelectionMaskData(restoredMask, New SKRectI(adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom))
+            End If
             Me.RaisePropertyChanged(NameOf(Brightness))
             Me.RaisePropertyChanged(NameOf(Contrast))
             Me.RaisePropertyChanged(NameOf(Saturation))
@@ -5697,6 +6501,14 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasLutApplied))
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
+            Me.RaisePropertyChanged(NameOf(HasActiveSelection))
+            Me.RaisePropertyChanged(NameOf(SelectionXPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionYPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionWidthPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionHeightPercent))
+            Me.RaisePropertyChanged(NameOf(SelectionShapeMode))
+            Me.RaisePropertyChanged(NameOf(SelectionShapePointsX))
+            Me.RaisePropertyChanged(NameOf(SelectionShapePointsY))
             RaiseCropPropertiesChanged()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
@@ -5853,7 +6665,7 @@ Namespace ViewModels
             _paintToolStates = NewPaintToolStates()
 
             _annotationText = "Text"
-            _annotationFillColor = "#FFFFFFFF"
+            _annotationFillColor = "#00FFFFFF"
             _annotationStrokeColor = "#FF000000"
             _annotationStrokeWidth = 0
             _annotationFontSize = 48

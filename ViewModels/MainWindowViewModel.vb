@@ -29,6 +29,8 @@ Namespace ViewModels
         Private _dialogKind As AppDialogKind = AppDialogKind.Message
         Private _dialogCompletion As TaskCompletionSource(Of String)
         Private _dialogSelectedFormat As String = "JPG"
+        Private _dialogSaveAsTarget As String = "Local"
+        Private _dialogSaveAsTargetFolder As String = ""
         Private _dialogJpgQuality As Integer = AppSettingsService.Load().JpgSaveQuality
         Private _dialogExistingFile As FileConflictInfo
         Private _dialogIncomingFile As FileConflictInfo
@@ -38,6 +40,7 @@ Namespace ViewModels
         Private _dialogBatchRenamePaths As List(Of String) = New List(Of String)()
         Private ReadOnly _dialogBatchRenameExifCache As New Dictionary(Of String, ExifData)(StringComparer.OrdinalIgnoreCase)
         Private _dialogSearchName As String = ""
+        Private _dialogSearchSource As String = "Local"
         Private _dialogSearchText As String = ""
         Private _dialogSearchRootFolder As String = ""
         Private _dialogSearchIncludeSubfolders As Boolean = True
@@ -206,11 +209,21 @@ Namespace ViewModels
             CurrentMode = AppMode.Viewer
         End Sub
 
-        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing) As Task
+        ''' <summary>Öffnet eine Immich-Sitzung im Betrachter: der Filmstreifen zeigt das ganze Album
+        ''' (Pseudo-Pfade), das aktuelle Bild wird on-demand heruntergeladen.</summary>
+        Public Async Sub OpenImmichViewer(startPseudoPath As String, sessionItems As System.Collections.Generic.List(Of Models.ImageItem), Optional immichAlbumId As String = Nothing)
+            If CurrentMode = AppMode.Editor Then
+                If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
+            End If
+            Viewer.OpenImmichSession(startPseudoPath, sessionItems, immichAlbumId)
+            CurrentMode = AppMode.Viewer
+        End Sub
+
+        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing) As Task
             If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmEditorLeaveAsync("ein anderes Bild zu öffnen") Then Return
             End If
-            Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName)
+            Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId)
             If Not opened Then Return
             CurrentMode = AppMode.Editor
         End Function
@@ -405,6 +418,58 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Zielort im Speichern-unter-Dialog: "Local" oder "Immich" (nur wählbar, wenn konfiguriert).</summary>
+        Public Property DialogSaveAsTarget As String
+            Get
+                Return _dialogSaveAsTarget
+            End Get
+            Set(value As String)
+                Dim v = If(String.Equals(value, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso IsSaveAsImmichAvailable, "Immich", "Local")
+                If _dialogSaveAsTarget = v Then Return
+                Me.RaiseAndSetIfChanged(_dialogSaveAsTarget, v)
+                Me.RaisePropertyChanged(NameOf(IsSaveAsTargetLocal))
+                Me.RaisePropertyChanged(NameOf(IsSaveAsTargetImmich))
+                Me.RaisePropertyChanged(NameOf(IsSaveAsTargetFolderVisible))
+            End Set
+        End Property
+
+        Public Property DialogSaveAsTargetFolder As String
+            Get
+                Return _dialogSaveAsTargetFolder
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogSaveAsTargetFolder, AppSettingsService.NormalizeFolderPath(value))
+            End Set
+        End Property
+
+        Public Sub SetDialogSaveAsTarget(target As String)
+            DialogSaveAsTarget = target
+        End Sub
+
+        Public ReadOnly Property IsSaveAsImmichAvailable As Boolean
+            Get
+                Return ImmichService.IsConfigured
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSaveAsTargetLocal As Boolean
+            Get
+                Return Not String.Equals(_dialogSaveAsTarget, "Immich", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSaveAsTargetImmich As Boolean
+            Get
+                Return String.Equals(_dialogSaveAsTarget, "Immich", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSaveAsTargetFolderVisible As Boolean
+            Get
+                Return IsSaveAsTargetLocal
+            End Get
+        End Property
+
         Public Property DialogConfirmText As String
             Get
                 Return _dialogConfirmText
@@ -497,6 +562,39 @@ Namespace ViewModels
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_dialogSearchIncludeSubfolders, value)
             End Set
+        End Property
+
+        ''' <summary>Suchquelle im Dialog: "Local" (Dateisystem) oder "Immich" (nur wählbar, wenn Immich
+        ''' konfiguriert ist). Bei Immich gelten Struktur-/Ordnerbedingungen nicht.</summary>
+        Public Property DialogSearchSource As String
+            Get
+                Return _dialogSearchSource
+            End Get
+            Set(value As String)
+                Dim v = If(String.Equals(value, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso IsDialogImmichAvailable, "Immich", "Local")
+                If _dialogSearchSource = v Then Return
+                Me.RaiseAndSetIfChanged(_dialogSearchSource, v)
+                Me.RaisePropertyChanged(NameOf(IsDialogSourceLocal))
+                Me.RaisePropertyChanged(NameOf(IsDialogSourceImmich))
+            End Set
+        End Property
+
+        Public ReadOnly Property IsDialogImmichAvailable As Boolean
+            Get
+                Return ImmichService.IsConfigured
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogSourceLocal As Boolean
+            Get
+                Return Not String.Equals(_dialogSearchSource, "Immich", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogSourceImmich As Boolean
+            Get
+                Return String.Equals(_dialogSearchSource, "Immich", StringComparison.OrdinalIgnoreCase)
+            End Get
         End Property
 
         Public Property DialogSearchFavoriteMode As String
@@ -1072,8 +1170,10 @@ Namespace ViewModels
             Dim isEdit = prefill IsNot Nothing
             _dialogSearchRatings.Clear()
             DialogSearchConditions.Clear()
+            Me.RaisePropertyChanged(NameOf(IsDialogImmichAvailable))
             If isEdit Then
                 DialogSearchName = If(prefill.Name, "")
+                DialogSearchSource = If(prefill.Source, "Local")
                 DialogSearchText = If(prefill.TextQuery, "").Trim()
                 DialogSearchRootFolder = If(prefill.RootFolder, "")
                 DialogSearchIncludeSubfolders = prefill.IncludeSubfolders
@@ -1088,6 +1188,7 @@ Namespace ViewModels
                 DialogSearchConditionCombinator = If(prefill.ConditionCombinator, "AND")
             Else
                 DialogSearchName = ""
+                DialogSearchSource = "Local"
                 DialogSearchText = If(initialText, "").Trim()
                 DialogSearchRootFolder = ""
                 DialogSearchIncludeSubfolders = True
@@ -1121,6 +1222,7 @@ Namespace ViewModels
 
             Return New SearchDialogResult With {
                 .Name = name,
+                .Source = DialogSearchSource,
                 .TextQuery = textQuery,
                 .RootFolder = rootFolder,
                 .IncludeSubfolders = DialogSearchIncludeSubfolders,
@@ -1220,14 +1322,20 @@ Namespace ViewModels
                                              Optional cancelText As String = "Abbrechen") As Task(Of SaveAsDialogResult)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             DialogJpgQuality = initialJpgQuality
+            DialogSaveAsTarget = "Local"
+            DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
+            Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
             Dim result = Await ShowDialogAsync(AppDialogKind.SaveAs, titleText, messageText, initialBaseName, confirmText, cancelText)
             If result Is Nothing Then Return Nothing
 
+            PersistDialogTargetFolderIfLocal()
             Return New SaveAsDialogResult With {
                 .BaseName = result.Trim(),
                 .Format = DialogSelectedFormat,
-                .JpgQuality = DialogJpgQuality
+                .JpgQuality = DialogJpgQuality,
+                .Target = DialogSaveAsTarget,
+                .TargetFolder = DialogSaveAsTargetFolder
             }
         End Function
 
@@ -1236,6 +1344,9 @@ Namespace ViewModels
         Public Async Function ShowBatchConvertAsync(fileCount As Integer, initialFormat As String, Optional initialJpgQuality As Integer = 90) As Task(Of SaveAsDialogResult)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             DialogJpgQuality = initialJpgQuality
+            DialogSaveAsTarget = "Local"
+            DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
+            Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchConvert,
                                                $"In anderes Format konvertieren ({fileCount} Dateien)",
@@ -1245,11 +1356,29 @@ Namespace ViewModels
                                                "Abbrechen")
             If result Is Nothing Then Return Nothing
 
+            PersistDialogTargetFolderIfLocal()
             Return New SaveAsDialogResult With {
                 .Format = DialogSelectedFormat,
-                .JpgQuality = DialogJpgQuality
+                .JpgQuality = DialogJpgQuality,
+                .Target = DialogSaveAsTarget,
+                .TargetFolder = DialogSaveAsTargetFolder
             }
         End Function
+
+        Private Function ResolveDefaultSaveAsTargetFolder() As String
+            Dim settings = AppSettingsService.Load()
+            If Directory.Exists(settings.LastSaveAsTargetFolder) Then Return settings.LastSaveAsTargetFolder
+            If Directory.Exists(settings.LastGalleryFolder) Then Return settings.LastGalleryFolder
+            If Directory.Exists(settings.GalleryStartupCustomFolder) Then Return settings.GalleryStartupCustomFolder
+            Return Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+        End Function
+
+        Private Sub PersistDialogTargetFolderIfLocal()
+            If Not IsSaveAsTargetLocal Then Return
+            Dim folder = AppSettingsService.NormalizeFolderPath(DialogSaveAsTargetFolder)
+            If String.IsNullOrWhiteSpace(folder) Then Return
+            AppSettingsService.SaveLastSaveAsTargetFolder(folder)
+        End Sub
 
         Private Function ShowDialogAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, confirmText As String, cancelText As String) As Task(Of String)
             If _dialogCompletion IsNot Nothing Then

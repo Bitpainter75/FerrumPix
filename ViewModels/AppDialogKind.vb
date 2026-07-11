@@ -41,6 +41,8 @@ Namespace ViewModels
 
     Public Class SearchDialogResult
         Public Property Name As String
+        ''' "Local" (Dateisystem) oder "Immich" (Server-Suche).
+        Public Property Source As String = "Local"
         Public Property TextQuery As String
         Public Property RootFolder As String
         Public Property IncludeSubfolders As Boolean

@@ -22,6 +22,8 @@ Namespace Services
     Public Class SearchListEntry
         Public Property Id As String = Guid.NewGuid().ToString("N")
         Public Property Name As String = ""
+        ''' "Local" (Dateisystem-Scan) oder "Immich" (Server-Suche). Immich nur nutzbar, wenn konfiguriert.
+        Public Property Source As String = "Local"
         Public Property TextQuery As String = ""
         Public Property RootFolder As String = ""
         Public Property IncludeSubfolders As Boolean = True
@@ -81,6 +83,7 @@ Namespace Services
                 result.Add(New SearchListEntry With {
                     .Id = If(String.IsNullOrWhiteSpace(item.Id), Guid.NewGuid().ToString("N"), item.Id),
                     .Name = name,
+                    .Source = If(String.Equals(item.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local"),
                     .TextQuery = If(item.TextQuery, "").Trim(),
                     .RootFolder = If(item.RootFolder, "").Trim(),
                     .IncludeSubfolders = item.IncludeSubfolders,

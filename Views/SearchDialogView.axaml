@@ -5,33 +5,54 @@
 
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
           RowSpacing="14">
-        <Grid ColumnDefinitions="160,*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="8">
+        <Grid ColumnDefinitions="160,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="8">
             <TextBlock Text="Name" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <TextBox Grid.Column="1"
                      Grid.ColumnSpan="2"
                      Text="{Binding DialogSearchName, Mode=TwoWay}"
                      MinHeight="36"/>
-            <TextBlock Grid.Row="1" Text="Dateimuster oder Tags" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
-            <TextBox Grid.Row="1"
+
+            <TextBlock Grid.Row="1" Text="Quelle" VerticalAlignment="Center"
+                       IsVisible="{Binding IsDialogImmichAvailable}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8"
+                        IsVisible="{Binding IsDialogImmichAvailable}">
+                <Button Classes="segmented"
+                        Classes.active="{Binding IsDialogSourceLocal}"
+                        Click="OnSourceClick"
+                        Tag="Local">Lokale Ordner</Button>
+                <Button Classes="segmented"
+                        Classes.active="{Binding IsDialogSourceImmich}"
+                        Click="OnSourceClick"
+                        Tag="Immich">Immich</Button>
+            </StackPanel>
+
+            <TextBlock Grid.Row="2" Text="Dateimuster oder Tags" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBox Grid.Row="2"
                      Grid.Column="1"
                      Grid.ColumnSpan="2"
                      Text="{Binding DialogSearchText, Mode=TwoWay}"
                      MinHeight="36"/>
-            <TextBlock Grid.Row="2" Text="Startordner (optional)" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
-            <TextBox Grid.Row="2"
+            <TextBlock Grid.Row="3" Text="Startordner (optional)" VerticalAlignment="Center"
+                       IsVisible="{Binding IsDialogSourceLocal}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBox Grid.Row="3"
                      Grid.Column="1"
+                     IsVisible="{Binding IsDialogSourceLocal}"
                      Text="{Binding DialogSearchRootFolder, Mode=TwoWay}"
                      MinHeight="36"/>
-            <Button Grid.Row="2"
+            <Button Grid.Row="3"
                     Grid.Column="2"
                     Width="38"
                     Height="36"
                     Padding="0"
+                    IsVisible="{Binding IsDialogSourceLocal}"
                     Click="OnBrowseFolderClick"
                     ToolTip.Tip="Ordner wählen">...</Button>
         </Grid>
 
-        <Grid Grid.Row="1" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0">
+        <Grid Grid.Row="1" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0"
+              IsVisible="{Binding IsDialogSourceLocal}">
             <TextBlock Text="Umfang" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <CheckBox Grid.Column="1"
                       IsChecked="{Binding DialogSearchIncludeSubfolders, Mode=TwoWay}"
@@ -111,7 +132,8 @@
             </Button>
         </Grid>
 
-        <Grid Grid.Row="4" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0">
+        <Grid Grid.Row="4" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0"
+              IsVisible="{Binding IsDialogSourceLocal}">
             <TextBlock Text="Bedingungen" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <StackPanel Grid.Column="1" Spacing="8">
                 <ItemsControl ItemsSource="{Binding DialogSearchConditions}">

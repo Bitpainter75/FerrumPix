@@ -681,6 +681,19 @@ Namespace Services
         Public Property LutStrength As Single = 100
         Public Property RetouchSpots As New System.Collections.Generic.List(Of RetouchSpot)()
         Public Property Annotations As New System.Collections.Generic.List(Of ImageAnnotation)()
+        Public Property HasActiveSelection As Boolean = False
+        Public Property SelectionXPercent As Double = 0
+        Public Property SelectionYPercent As Double = 0
+        Public Property SelectionWidthPercent As Double = 0
+        Public Property SelectionHeightPercent As Double = 0
+        Public Property SelectionShapeMode As String = "Rectangle"
+        Public Property SelectionShapePointsX As Double() = Nothing
+        Public Property SelectionShapePointsY As Double() = Nothing
+        Public Property SelectionMaskLeft As Integer = 0
+        Public Property SelectionMaskTop As Integer = 0
+        Public Property SelectionMaskRight As Integer = 0
+        Public Property SelectionMaskBottom As Integer = 0
+        Public Property SelectionMaskPngBase64 As String = ""
 
         Public Shared Function IsIdentityCurve(pointsCsv As String) As Boolean
             Return String.IsNullOrWhiteSpace(pointsCsv) OrElse String.Equals(pointsCsv.Trim(), "0,0;255,255", StringComparison.Ordinal)
@@ -777,7 +790,20 @@ Namespace Services
                 .LutPath = LutPath,
                 .LutStrength = LutStrength,
                 .RetouchSpots = RetouchSpots.Select(Function(s) s.Clone()).ToList(),
-                .Annotations = Annotations.Select(Function(a) a.Clone()).ToList()
+                .Annotations = Annotations.Select(Function(a) a.Clone()).ToList(),
+                .HasActiveSelection = HasActiveSelection,
+                .SelectionXPercent = SelectionXPercent,
+                .SelectionYPercent = SelectionYPercent,
+                .SelectionWidthPercent = SelectionWidthPercent,
+                .SelectionHeightPercent = SelectionHeightPercent,
+                .SelectionShapeMode = SelectionShapeMode,
+                .SelectionShapePointsX = If(SelectionShapePointsX Is Nothing, Nothing, SelectionShapePointsX.ToArray()),
+                .SelectionShapePointsY = If(SelectionShapePointsY Is Nothing, Nothing, SelectionShapePointsY.ToArray()),
+                .SelectionMaskLeft = SelectionMaskLeft,
+                .SelectionMaskTop = SelectionMaskTop,
+                .SelectionMaskRight = SelectionMaskRight,
+                .SelectionMaskBottom = SelectionMaskBottom,
+                .SelectionMaskPngBase64 = SelectionMaskPngBase64
             }
         End Function
     End Class
@@ -3322,6 +3348,259 @@ Namespace Services
             End Try
         End Function
 
+        ' ── Freie Selektion (Kern) ────────────────────────────────────────────────
+        ' Grundbausteine für Lasso-/Zauberstab-Auswahl. Eine Maske ist ein Alpha8-Bitmap in der Größe
+        ' des umschließenden Rechtecks: 255 = innerhalb der Auswahl, 0 = außerhalb. Alle Funktionen sind
+        ' rein (Bitmap rein, Bitmap raus) und damit ohne laufenden Editor prüfbar.
+
+        ''' <summary>Zauberstab: wählt ab dem Klickpunkt die zusammenhängende Fläche ähnlicher Farbe (4er-
+        ''' Nachbarschaft, Toleranz 0..1 als maximaler Kanalabstand). Liefert eine Alpha8-Maske in der Größe
+        ''' des umschließenden Rechtecks, oder Nothing. <paramref name="bounds"/> erhält dieses Rechteck in
+        ''' Bildpixeln.</summary>
+        Public Shared Function BuildMagicWandMask(image As SKBitmap, seedX As Integer, seedY As Integer,
+                                                  tolerance As Single, ByRef bounds As SKRectI) As SKBitmap
+            bounds = SKRectI.Empty
+            If image Is Nothing Then Return Nothing
+            Dim w = image.Width, h = image.Height
+            If seedX < 0 OrElse seedY < 0 OrElse seedX >= w OrElse seedY >= h Then Return Nothing
+
+            Dim buf As Byte() = Nothing, stride As Integer = 0
+            If Not TryBorrowBgraBuffer(image, buf, stride) Then Return Nothing
+
+            Dim tol = CInt(Math.Round(Clamp(tolerance, 0, 1) * 255))
+            Dim seedO = seedY * stride + seedX * 4
+            Dim sb = CInt(buf(seedO)), sg = CInt(buf(seedO + 1)), sr = CInt(buf(seedO + 2))
+
+            Dim inside = New Boolean(w * h - 1) {}
+            Dim stack As New Stack(Of Integer)()
+            stack.Push(seedY * w + seedX)
+            Dim minX = w, minY = h, maxX = -1, maxY = -1
+
+            While stack.Count > 0
+                Dim idx = stack.Pop()
+                If inside(idx) Then Continue While
+                Dim x = idx Mod w, y = idx \ w
+                Dim o = y * stride + x * 4
+                If Math.Abs(CInt(buf(o)) - sb) > tol OrElse
+                   Math.Abs(CInt(buf(o + 1)) - sg) > tol OrElse
+                   Math.Abs(CInt(buf(o + 2)) - sr) > tol Then Continue While
+                inside(idx) = True
+                If x < minX Then minX = x
+                If x > maxX Then maxX = x
+                If y < minY Then minY = y
+                If y > maxY Then maxY = y
+                If x > 0 Then stack.Push(idx - 1)
+                If x < w - 1 Then stack.Push(idx + 1)
+                If y > 0 Then stack.Push(idx - w)
+                If y < h - 1 Then stack.Push(idx + w)
+            End While
+
+            If maxX < minX Then Return Nothing
+            Dim bw = maxX - minX + 1, bh = maxY - minY + 1
+            bounds = New SKRectI(minX, minY, maxX + 1, maxY + 1)
+
+            Dim mask = New SKBitmap(bw, bh, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim mstride = mask.RowBytes
+            Dim mbuf = New Byte(mstride * bh - 1) {}
+            For y = 0 To bh - 1
+                For x = 0 To bw - 1
+                    If inside((minY + y) * w + (minX + x)) Then mbuf(y * mstride + x) = 255
+                Next
+            Next
+            Marshal.Copy(mbuf, 0, mask.GetPixels(), mbuf.Length)
+            Return mask
+        End Function
+
+        Private Shared Function ReadMaskBytes(mask As SKBitmap, ByRef stride As Integer) As Byte()
+            stride = mask.RowBytes
+            Dim mbuf = New Byte(stride * mask.Height - 1) {}
+            Marshal.Copy(mask.GetPixels(), mbuf, 0, mbuf.Length)
+            Return mbuf
+        End Function
+
+        ''' <summary>Schneidet <paramref name="source"/> mit der Maske aus: RGB bleibt, Alpha wird mit dem
+        ''' Masken-Alpha multipliziert (außerhalb der Maske also transparent). Gleiche Größe vorausgesetzt.
+        ''' Ergebnis ist Unpremul - passend für die PNG-Ausgabe.</summary>
+        Public Shared Function ApplyMaskCutout(source As SKBitmap, mask As SKBitmap) As SKBitmap
+            Dim w = source.Width, h = source.Height
+            Dim result = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+            Dim mstride As Integer
+            Dim mbuf = ReadMaskBytes(mask, mstride)
+            For y = 0 To h - 1
+                For x = 0 To w - 1
+                    Dim c = source.GetPixel(x, y)
+                    Dim m = If(x < mask.Width AndAlso y < mask.Height, CInt(mbuf(y * mstride + x)), 0)
+                    result.SetPixel(x, y, New SKColor(c.Red, c.Green, c.Blue, CByte(CInt(c.Alpha) * m \ 255)))
+                Next
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Umkehrung von <see cref="ApplyMaskCutout"/> für "Löschen/Freistellen": innerhalb der
+        ''' Maske wird das Bild transparent, außerhalb bleibt es erhalten.</summary>
+        Public Shared Function ApplyMaskErase(source As SKBitmap, mask As SKBitmap) As SKBitmap
+            Dim w = source.Width, h = source.Height
+            Dim result = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+            Dim mstride As Integer
+            Dim mbuf = ReadMaskBytes(mask, mstride)
+            For y = 0 To h - 1
+                For x = 0 To w - 1
+                    Dim c = source.GetPixel(x, y)
+                    Dim m = If(x < mask.Width AndAlso y < mask.Height, CInt(mbuf(y * mstride + x)), 0)
+                    result.SetPixel(x, y, New SKColor(c.Red, c.Green, c.Blue, CByte(CInt(c.Alpha) * (255 - m) \ 255)))
+                Next
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Füllt die Maske mit einer einzelnen Farbe (Alpha = Farb-Alpha × Masken-Alpha). Grundlage
+        ''' für "Auswahl mit Farbe füllen".</summary>
+        Public Shared Function RenderMaskedFill(mask As SKBitmap, colorHex As String) As SKBitmap
+            Dim col = ParseColor(colorHex, SKColors.White)
+            Dim w = mask.Width, h = mask.Height
+            Dim result = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+            Dim mstride As Integer
+            Dim mbuf = ReadMaskBytes(mask, mstride)
+            For y = 0 To h - 1
+                For x = 0 To w - 1
+                    Dim m = CInt(mbuf(y * mstride + x))
+                    result.SetPixel(x, y, New SKColor(col.Red, col.Green, col.Blue, CByte(CInt(col.Alpha) * m \ 255)))
+                Next
+            Next
+            Return result
+        End Function
+
+        Private Shared Function SaveBitmapPng(bmp As SKBitmap, targetPngPath As String) As Boolean
+            Using image = SKImage.FromBitmap(bmp)
+                Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                    Using fs = File.Open(targetPngPath, FileMode.Create, FileAccess.Write)
+                        data.SaveTo(fs)
+                    End Using
+                End Using
+            End Using
+            Return True
+        End Function
+
+        ''' <summary>Wie <see cref="ExtractRegionToFile"/>, aber schneidet den Ausschnitt zusätzlich mit einer
+        ''' Maske frei (unregelmäßige Auswahl). Die Maske muss die Größe des (geklemmten) Rechtecks haben.</summary>
+        Public Shared Function ExtractRegionToFileMasked(sourcePath As String, adj As ImageAdjustments,
+                                                         pixelRect As SKRectI, mask As SKBitmap, targetPngPath As String) As Boolean
+            Try
+                If mask Is Nothing Then Return False
+                Using original = DecodeOriented(sourcePath)
+                    If original Is Nothing Then Return False
+                    Using processed = ProcessBitmap(original, adj)
+                        Dim left = Math.Max(0, pixelRect.Left)
+                        Dim top = Math.Max(0, pixelRect.Top)
+                        Dim right = Math.Min(processed.Width, pixelRect.Right)
+                        Dim bottom = Math.Min(processed.Height, pixelRect.Bottom)
+                        Dim width = right - left, height = bottom - top
+                        If width <= 0 OrElse height <= 0 Then Return False
+
+                        Using cropped = New SKBitmap(width, height, processed.ColorType, processed.AlphaType)
+                            Using canvas = New SKCanvas(cropped)
+                                canvas.DrawBitmap(processed, New SKRect(left, top, right, bottom), New SKRect(0, 0, width, height))
+                            End Using
+                            Using cutout = ApplyMaskCutout(cropped, mask)
+                                Return SaveBitmapPng(cutout, targetPngPath)
+                            End Using
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Speichert eine mit <paramref name="colorHex"/> gefüllte Maske als PNG - Grundlage für ein
+        ''' Füll-Objekt in exakter Auswahlgröße.</summary>
+        Public Shared Function RenderMaskedFillToFile(mask As SKBitmap, colorHex As String, targetPngPath As String) As Boolean
+            Try
+                If mask Is Nothing Then Return False
+                Using filled = RenderMaskedFill(mask, colorHex)
+                    Return SaveBitmapPng(filled, targetPngPath)
+                End Using
+            Catch ex As Exception
+                Return False
+            End Try
+        End Function
+
+        ' Baut aus dem Alpha-Kanal eines gezeichneten RGBA-Bitmaps die Alpha8-Maske (weiche Kanten bleiben
+        ' als Teil-Alpha erhalten - dadurch werden Ellipse/Lasso-Auswahlen antialiased ausgeschnitten).
+        Private Shared Function AlphaMaskFrom(rgba As SKBitmap) As SKBitmap
+            Dim w = rgba.Width, h = rgba.Height
+            Dim mask = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim mstride = mask.RowBytes
+            Dim mbuf = New Byte(mstride * h - 1) {}
+            Dim src As Byte() = Nothing, stride As Integer = 0
+            If TryBorrowBgraBuffer(rgba, src, stride) Then
+                For y = 0 To h - 1
+                    For x = 0 To w - 1
+                        mbuf(y * mstride + x) = src(y * stride + x * 4 + 3)
+                    Next
+                Next
+            End If
+            Marshal.Copy(mbuf, 0, mask.GetPixels(), mbuf.Length)
+            Return mask
+        End Function
+
+        ''' <summary>Alpha8-Maske einer in das Rechteck (0,0,width,height) eingepassten Ellipse - für das
+        ''' Kreis-/Ellipse-Auswahlwerkzeug.</summary>
+        Public Shared Function BuildEllipseMask(width As Integer, height As Integer) As SKBitmap
+            If width <= 0 OrElse height <= 0 Then Return Nothing
+            Using rgba = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                Using canvas = New SKCanvas(rgba)
+                    canvas.Clear(SKColors.Transparent)
+                    Using paint = New SKPaint With {.Color = SKColors.White, .IsAntialias = True, .Style = SKPaintStyle.Fill}
+                        canvas.DrawOval(New SKRect(0, 0, width, height), paint)
+                    End Using
+                End Using
+                Return AlphaMaskFrom(rgba)
+            End Using
+        End Function
+
+        ''' <summary>Alpha8-Maske eines gefüllten Polygons (Lasso). Punkte in lokalen Koordinaten des
+        ''' Rechtecks (0..width / 0..height); der Pfad wird automatisch geschlossen.</summary>
+        Public Shared Function BuildPolygonMask(pointsX As Single(), pointsY As Single(), width As Integer, height As Integer) As SKBitmap
+            If width <= 0 OrElse height <= 0 OrElse pointsX Is Nothing OrElse pointsY Is Nothing Then Return Nothing
+            If pointsX.Length < 3 OrElse pointsX.Length <> pointsY.Length Then Return Nothing
+            Using rgba = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                Using canvas = New SKCanvas(rgba)
+                    canvas.Clear(SKColors.Transparent)
+                    Using path = New SKPath()
+                        path.MoveTo(pointsX(0), pointsY(0))
+                        For i = 1 To pointsX.Length - 1
+                            path.LineTo(pointsX(i), pointsY(i))
+                        Next
+                        path.Close()
+                        Using paint = New SKPaint With {.Color = SKColors.White, .IsAntialias = True, .Style = SKPaintStyle.Fill}
+                            canvas.DrawPath(path, paint)
+                        End Using
+                    End Using
+                End Using
+                Return AlphaMaskFrom(rgba)
+            End Using
+        End Function
+
+        ''' <summary>Dekodiert und verarbeitet das Bild (alle Anpassungen/Objekte gebacken) und liefert die
+        ''' Zauberstab-Maske am Saatpunkt in Bildpixeln. <paramref name="bounds"/> ist das umschließende
+        ''' Rechteck in Bildpixeln.</summary>
+        Public Shared Function BuildMagicWandMaskFromFile(sourcePath As String, adj As ImageAdjustments,
+                                                          seedX As Integer, seedY As Integer, tolerance As Single,
+                                                          ByRef bounds As SKRectI) As SKBitmap
+            bounds = SKRectI.Empty
+            Try
+                Using original = DecodeOriented(sourcePath)
+                    If original Is Nothing Then Return Nothing
+                    Using processed = ProcessBitmap(original, adj)
+                        Return BuildMagicWandMask(processed, seedX, seedY, tolerance, bounds)
+                    End Using
+                End Using
+            Catch ex As Exception
+                Return Nothing
+            End Try
+        End Function
+
         Private Shared Function ApplyNoiseReduction(source As SKBitmap, amount As Single) As SKBitmap
             Dim sigma = 0.25F + Clamp(amount, 0, 1) * 2.2F
             Dim filter = SKImageFilter.CreateBlur(sigma, sigma)
@@ -3436,7 +3715,11 @@ Namespace Services
         ''' von Clarity unterscheidbar, nur schwächer.
         Private Shared Function ApplyStructure(source As SKBitmap, amount As Single) As SKBitmap
             Dim clamped = Clamp(amount, -1, 1)
-            Return ApplyLocalContrast(source, 1.2F, clamped, 2.4F)
+            ' blurSigma muss über ApplyNoiseReduction einen effektiven Gauß-Sigma > ~1.0 ergeben, sonst
+            ' ist SkiaSharps CreateBlur praktisch ein No-Op und Structure wirkungslos (Original minus
+            ' unveränderte "Weichzeichnung" = 0). 1.2 lag darunter und machte den Regler tot; 3.6 ergibt
+            ' effektiv ~1.24 - klar wirksam, aber weiter kleinerer Radius als Clarity (feinere Textur).
+            Return ApplyLocalContrast(source, 3.6F, clamped, 2.4F)
         End Function
 
         Private Shared Function ApplyHaze(source As SKBitmap, amount As Single) As SKBitmap

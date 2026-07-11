@@ -23,6 +23,14 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        Private Sub OnSourceClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If button Is Nothing OrElse vm Is Nothing Then Return
+            vm.DialogSearchSource = TryCast(button.Tag, String)
+            e.Handled = True
+        End Sub
+
         Private Sub OnRatingClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)
             Dim vm = TryCast(DataContext, MainWindowViewModel)

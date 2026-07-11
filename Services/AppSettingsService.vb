@@ -92,6 +92,7 @@ Namespace Services
         Public Property GalleryStartupFolderMode As String = "Pictures"
         Public Property GalleryStartupCustomFolder As String = ""
         Public Property LastGalleryFolder As String = ""
+        Public Property LastSaveAsTargetFolder As String = ""
         Public Property ViewerShowFilmstrip As Boolean = True
         Public Property ViewerSlideshowIntervalSeconds As Integer = 3
         Public Property ViewerOpenFitToWindow As Boolean = True
@@ -144,6 +145,17 @@ Namespace Services
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
         Public Property LightroomPresets As New List(Of LightroomPresetSettings)()
         Public Property LutPresets As New List(Of LutPresetSettings)()
+
+        ' Immich-Anbindung (self-hosted Foto-Server). Der Baum blendet den Immich-Zweig nur ein,
+        ' wenn Enabled=True und eine Server-URL hinterlegt ist. Der API-Key wird - wie bei den meisten
+        ' self-hosted-Tools üblich - im Klartext in settings.json gehalten; die Datei liegt im
+        ' Benutzerprofil (AppData/.config). Wer strengere Geheimnisverwaltung braucht, kann später auf
+        ' einen plattformspezifischen Tresor umstellen (siehe ImmichService).
+        Public Property ImmichEnabled As Boolean = False
+        Public Property ImmichServerUrl As String = ""
+        Public Property ImmichApiKey As String = ""
+        Public Property ImmichStoreRatingInDescription As Boolean = False
+        Public Property ImmichStoreTagsInDescription As Boolean = False
     End Class
 
     Public NotInheritable Class AppSettingsService
@@ -205,6 +217,7 @@ Namespace Services
                 settings.GalleryStartupFolderMode = NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
                 settings.GalleryStartupCustomFolder = NormalizeFolderPath(settings.GalleryStartupCustomFolder)
                 settings.LastGalleryFolder = NormalizeFolderPath(settings.LastGalleryFolder)
+                settings.LastSaveAsTargetFolder = NormalizeFolderPath(settings.LastSaveAsTargetFolder)
                 settings.GalleryFilterFavorite = NormalizeGalleryFilterFavorite(settings.GalleryFilterFavorite)
                 settings.GalleryFilterRatings = NormalizeGalleryFilterRatings(settings.GalleryFilterRatings)
                 settings.GalleryFilterFileType = NormalizeGalleryFilterFileType(settings.GalleryFilterFileType)
@@ -279,6 +292,7 @@ Namespace Services
                 settings.GalleryStartupFolderMode = NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
                 settings.GalleryStartupCustomFolder = NormalizeFolderPath(settings.GalleryStartupCustomFolder)
                 settings.LastGalleryFolder = NormalizeFolderPath(settings.LastGalleryFolder)
+                settings.LastSaveAsTargetFolder = NormalizeFolderPath(settings.LastSaveAsTargetFolder)
                 settings.GalleryFilterFavorite = NormalizeGalleryFilterFavorite(settings.GalleryFilterFavorite)
                 settings.GalleryFilterRatings = NormalizeGalleryFilterRatings(settings.GalleryFilterRatings)
                 settings.GalleryFilterFileType = NormalizeGalleryFilterFileType(settings.GalleryFilterFileType)
@@ -749,6 +763,10 @@ Namespace Services
 
         Public Shared Sub SaveJpgSaveQuality(value As Integer)
             Update(Sub(s) s.JpgSaveQuality = value)
+        End Sub
+
+        Public Shared Sub SaveLastSaveAsTargetFolder(folderPath As String)
+            Update(Sub(s) s.LastSaveAsTargetFolder = NormalizeFolderPath(folderPath))
         End Sub
 
         Public Shared Sub SaveLastBatchRenameSettings(pattern As String, start As Integer, stepValue As Integer)

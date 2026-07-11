@@ -60,6 +60,31 @@ Namespace Models
             End Get
         End Property
 
+        ''' <summary>True, wenn dieses Item ein Immich-Asset repräsentiert (kein lokaler Dateipfad).
+        ''' FilePath trägt dann nur den Original-Dateinamen zur Endungserkennung.</summary>
+        Public ReadOnly Property IsImmichAsset As Boolean
+            Get
+                Return _immichAssetId IsNot Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property ImmichAssetId As String
+            Get
+                Return _immichAssetId
+            End Get
+        End Property
+
+        Public ReadOnly Property ImmichOriginalFileName As String
+            Get
+                Return _immichOriginalFileName
+            End Get
+        End Property
+
+        ''' <summary>Lokaler Temp-Pfad des zuletzt heruntergeladenen Originals (für Viewer/Editor).
+        ''' Erlaubt der Galerie, das Item beim Rückweg aus dem Viewer wiederzufinden, obwohl FilePath
+        ''' ein Immich-Pseudo-Pfad ist.</summary>
+        Public Property ImmichLocalPath As String
+
         Private Shared ReadOnly _videoFormats As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
 
         Public ReadOnly Property IsRawFile As Boolean
@@ -85,6 +110,12 @@ Namespace Models
         Public ReadOnly Property CanEditFile As Boolean
             Get
                 Return Not IsFolder AndAlso Not IsVectorFile AndAlso Not IsVideoFile
+            End Get
+        End Property
+
+        Public ReadOnly Property CanRemoveMetadata As Boolean
+            Get
+                Return Not IsImmichAsset AndAlso CanEditFile
             End Get
         End Property
 
@@ -410,6 +441,13 @@ Namespace Models
         Private _thumbnailCancellationToken As CancellationToken = CancellationToken.None
         Private _thumbnailCacheScopeId As String = Nothing
         Private _thumbnailCacheScopeName As String = Nothing
+        ' Gesetzt (Asset-UUID) nur für Immich-Items. Diese laden ihr Thumbnail über den Immich-Zweig
+        ' (ImmichService, eigener Netz-/Diskcache) statt über den dateipfad-basierten
+        ' ThumbnailCacheService - die gesamte übrige Warteschlangen-/LRU-/Dispose-Logik gilt unverändert.
+        Private _immichAssetId As String = Nothing
+        Private _immichOriginalFileName As String = Nothing
+        Private _immichUpdatedAt As String = ""      ' Immichs updatedAt - Invalidierung des Metadaten-Index
+        Private _immichDetailState As Integer = 0   ' 0=noch nicht, 1=läuft/erledigt (je Item einmal)
         Private _fileInfoLoaded As Boolean = False
         Private _residentLruNode As LinkedListNode(Of ImageItem)
         Private _isPinnedVisible As Boolean = False
@@ -591,6 +629,57 @@ Namespace Models
             item._thumbnailCacheScopeName = thumbnailCacheScopeName
             Return item
         End Function
+
+        ''' <summary>Baut ein Item für ein Immich-Asset. FilePath = Original-Dateiname (nur zur
+        ''' endungsbasierten Format-/Editier-Erkennung, KEIN lokaler Pfad); die Metadaten kommen fertig
+        ''' aus dem Immich-Album-Abruf, sodass keine FileInfo-/EXIF-Zugriffe auf Platte nötig sind.</summary>
+        Public Shared Function CreateImmichItem(asset As ImmichAsset, Optional thumbnailCancellationToken As CancellationToken = Nothing) As ImageItem
+            Dim item = New ImageItem()
+            ' Eindeutiger Pseudo-Pfad: die Asset-UUID hält ihn kollisionsfrei (zwei Album-Bilder dürfen
+            ' denselben Original-Namen tragen), während GetFileName/GetExtension weiterhin Anzeigename
+            ' und Endung liefern - Letztere steuert Video-/RAW-/Editierbarkeits-Erkennung.
+            Dim displayName = If(String.IsNullOrEmpty(asset.FileName), asset.Id, asset.FileName)
+            item.InitializePath("immich://" & asset.Id & "/" & displayName, False)
+            item.FileName = displayName
+            item._immichAssetId = asset.Id
+            item._immichOriginalFileName = asset.FileName
+            item._immichUpdatedAt = asset.UpdatedAt
+            item._thumbnailCancellationToken = thumbnailCancellationToken
+            item._fileInfoLoaded = True
+            item.IsFolder = False
+            item.ImageWidth = asset.Width
+            item.ImageHeight = asset.Height
+            item.FileSize = asset.FileSizeBytes
+            item.IsFavorite = asset.IsFavorite
+            item.Rating = asset.Rating
+            item.Tags = If(asset.Tags, New List(Of String)())
+            item.ExifDateTaken = asset.ExifDateTaken
+            item.ExifCamera = asset.Camera
+            item.ExifIso = asset.Iso
+            item.ExifAperture = asset.Aperture
+            Dim created = If(asset.FileCreatedAt.HasValue, asset.FileCreatedAt.Value, DateTime.MinValue)
+            item.FileCreatedAt = created
+            item.DateModified = created
+            Return item
+        End Function
+
+        ''' <summary>Ergänzt ein Immich-Item um die erst per Detail-Abruf verfügbaren Metadaten
+        ''' (Dateigröße, Rating, Kamera/ISO/Blende, Aufnahmedatum, Stichwörter) und feuert die passenden
+        ''' PropertyChanged, damit Kachel und Info-Leiste sich aktualisieren.</summary>
+        Public Sub ApplyImmichDetail(fileSizeBytes As Long, rating As Integer, camera As String,
+                                     iso As Integer?, aperture As Double?, dateTaken As DateTime?, tags As List(Of String))
+            If Not IsImmichAsset Then Return
+            FileSize = fileSizeBytes
+            RaisePropertyChanged(NameOf(FileSizeText))
+            Me.Rating = rating
+            ExifCamera = camera
+            ExifIso = iso
+            ExifAperture = aperture
+            If dateTaken.HasValue Then ExifDateTaken = dateTaken
+            Me.Tags = If(tags, New List(Of String)())
+            RaisePropertyChanged(NameOf(Tags))
+            RaisePropertyChanged(NameOf(SearchText))
+        End Sub
 
         Public Shared Function FromFolder(folderPath As String) As ImageItem
             Dim item = New ImageItem()
@@ -845,6 +934,14 @@ Namespace Models
                 Return
             End If
 
+            ' Immich-Items umgehen den dateipfad-basierten Cache vollständig und holen ihr Thumbnail
+            ' über den Immich-Netz-/Diskcache. State-, TouchResident- und UI-Benachrichtigungs-Ablauf
+            ' sind identisch zum lokalen Zweig, damit LRU-Verdrängung und Dispose-Race-Schutz greifen.
+            If _immichAssetId IsNot Nothing Then
+                Await LoadImmichThumbnailAsync(token)
+                Return
+            End If
+
             Try
                 Dim bmp As Bitmap = Nothing
                 Dim cachedWasExact As Boolean = False
@@ -899,6 +996,55 @@ Namespace Models
                 _thumbState = 2
             End Try
         End Function
+
+        ''' <summary>Lädt das Thumbnail eines Immich-Assets. Netz-/Diskcache und Dekodierung erledigt
+        ''' der ImmichService; hier läuft nur der zu <see cref="LoadThumbnailAsync"/> identische State-/
+        ''' Benachrichtigungs-Ablauf, damit das Ergebnis genauso resident/verdrängbar ist wie ein
+        ''' lokales Thumbnail. Ein Nothing-Ergebnis (Server nicht erreichbar) zählt bewusst als
+        ''' "fertig" (State 2), um Wiederhol-Stürme gegen einen ausgefallenen Server zu vermeiden.</summary>
+        Private Async Function LoadImmichThumbnailAsync(token As CancellationToken) As Task
+            Try
+                Dim bmp = Await ImmichService.LoadThumbnailBitmapAsync(_immichAssetId, ImmichService.ThumbnailSize, token)
+                If token.IsCancellationRequested Then
+                    bmp?.Dispose()
+                    _thumbState = 0
+                    Return
+                End If
+                _thumbnail = bmp
+                _thumbState = 2
+                If bmp IsNot Nothing Then TouchResident(Me)
+                Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), DispatcherPriority.Background)
+            Catch ex As OperationCanceledException
+                _thumbState = 0
+            Catch
+                _thumbState = 2
+            End Try
+            ' An den (viewport-priorisierten) Thumbnail-Ladeweg gekoppelt: sichtbare Bilder bekommen ihre
+            ' Detaildaten (Dateigröße/Rating/Kamera/Tags) zuerst, statt eager 25.000 Assets auf einmal.
+            RequestImmichDetailOnce()
+        End Function
+
+        ''' <summary>Holt einmalig die Detail-Metadaten des Immich-Assets nach (GET /api/assets/{id}) und
+        ''' überträgt sie auf das Item. Nicht blockierend (eigener Task, damit der Thumbnail-Worker frei
+        ''' bleibt) und je Item nur einmal (CompareExchange-Gate).</summary>
+        Private Sub RequestImmichDetailOnce()
+            If _immichAssetId Is Nothing Then Return
+            If Interlocked.CompareExchange(_immichDetailState, 1, 0) <> 0 Then Return
+            Dim token = _thumbnailCancellationToken
+            Dim assetId = _immichAssetId
+            Dim updatedAt = _immichUpdatedAt
+            Dim ignored = Task.Run(Async Function()
+                                       Try
+                                           If token.IsCancellationRequested Then Return
+                                           Dim detail = Await ImmichService.GetAssetDetailCachedAsync(assetId, updatedAt, token).ConfigureAwait(False)
+                                           If detail Is Nothing OrElse token.IsCancellationRequested Then Return
+                                           Await Dispatcher.UIThread.InvokeAsync(
+                                               Sub() ApplyImmichDetail(detail.FileSizeBytes, detail.Rating, detail.Camera,
+                                                                       detail.Iso, detail.Aperture, detail.ExifDateTaken, detail.Tags))
+                                       Catch
+                                       End Try
+                                   End Function)
+        End Sub
 
         ''' Ein Item, das während des Ladens den Sichtbereich verlassen hat (_evictThumbnailAfterLoad),
         ''' wird nach Abschluss nicht mehr verworfen, sondern - wie jedes andere fertig geladene

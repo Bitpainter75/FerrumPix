@@ -206,16 +206,21 @@ Namespace Views
             ' auslösen und aus der Suchliste heraus in den Ordner navigieren. Stattdessen die Suchlisten-
             ' Auswahl im Suchbaum wiederherstellen (mit _clearingNavigationSelection, damit die Suche nicht
             ' neu gestartet wird).
-            If vm.IsVirtualFolder AndAlso vm.SelectedSearchNode IsNot Nothing Then
+            ' Gilt für JEDEN virtuellen Ordner (Suchliste ODER Immich): nach Neuinstanziierung nicht in
+            ' den Startordner navigieren, sondern die Auswahl im passenden Baum wiederherstellen.
+            If vm.IsVirtualFolder AndAlso (vm.SelectedSearchNode IsNot Nothing OrElse vm.SelectedImmichNode IsNot Nothing) Then
                 _initialSelectionDone = True
                 Dim searchNode = vm.SelectedSearchNode
+                Dim immichNode = vm.SelectedImmichNode
                 Dispatcher.UIThread.Post(Sub()
-                    Dim searchTree = Me.FindControl(Of TreeView)("SearchTreeView")
-                    If searchTree IsNot Nothing Then
+                    Dim treeName = If(searchNode IsNot Nothing, "SearchTreeView", "ImmichTreeView")
+                    Dim targetNode = If(searchNode, immichNode)
+                    Dim tree = Me.FindControl(Of TreeView)(treeName)
+                    If tree IsNot Nothing AndAlso targetNode IsNot Nothing Then
                         _clearingNavigationSelection = True
                         Try
-                            searchTree.SelectedItem = searchNode
-                            BringTreeItemIntoView(searchTree, searchNode)
+                            tree.SelectedItem = targetNode
+                            BringTreeItemIntoView(tree, targetNode)
                         Finally
                             _clearingNavigationSelection = False
                         End Try
@@ -276,6 +281,23 @@ Namespace Views
                                                  Try
                                                      tree.SelectedItem = vm.SelectedSearchNode
                                                      BringTreeItemIntoView(tree, vm.SelectedSearchNode)
+                                                 Finally
+                                                     _clearingNavigationSelection = False
+                                                 End Try
+                                             End If
+                                         End Sub, DispatcherPriority.Loaded)
+                Return
+            End If
+
+            If e.PropertyName = NameOf(GalleryViewModel.SelectedImmichNode) Then
+                Dispatcher.UIThread.Post(Sub()
+                                             Dim vm = GetVm()
+                                             Dim tree = Me.FindControl(Of TreeView)("ImmichTreeView")
+                                             If vm IsNot Nothing AndAlso tree IsNot Nothing AndAlso vm.SelectedImmichNode IsNot Nothing Then
+                                                 _clearingNavigationSelection = True
+                                                 Try
+                                                     tree.SelectedItem = vm.SelectedImmichNode
+                                                     BringTreeItemIntoView(tree, vm.SelectedImmichNode)
                                                  Finally
                                                      _clearingNavigationSelection = False
                                                  End Try
@@ -525,6 +547,8 @@ Namespace Views
             Try
                 Dim searchTree = Me.FindControl(Of TreeView)("SearchTreeView")
                 If searchTree IsNot Nothing Then searchTree.SelectedItem = Nothing
+                Dim immichTree = Me.FindControl(Of TreeView)("ImmichTreeView")
+                If immichTree IsNot Nothing Then immichTree.SelectedItem = Nothing
             Finally
                 _clearingNavigationSelection = False
             End Try
@@ -535,7 +559,9 @@ Namespace Views
             Try
                 Dim searchTree = Me.FindControl(Of TreeView)("SearchTreeView")
                 Dim folderTree = Me.FindControl(Of TreeView)("FolderTreeView")
+                Dim immichTree = Me.FindControl(Of TreeView)("ImmichTreeView")
                 If searchTree IsNot Nothing AndAlso Not Object.ReferenceEquals(searchTree, activeTree) Then searchTree.SelectedItem = Nothing
+                If immichTree IsNot Nothing AndAlso Not Object.ReferenceEquals(immichTree, activeTree) Then immichTree.SelectedItem = Nothing
                 If folderTree IsNot Nothing Then folderTree.SelectedItem = Nothing
             Finally
                 _clearingNavigationSelection = False
@@ -550,6 +576,86 @@ Namespace Views
         Public Sub OnEditVirtualSearchClick(sender As Object, e As RoutedEventArgs)
             GetVm()?.EditVirtualSearchNode(GetVirtualNodeFromSender(sender))
             e.Handled = True
+        End Sub
+
+        Public Sub OnImmichNewAlbumClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.CreateImmichAlbum()
+            e.Handled = True
+        End Sub
+
+        Public Sub OnImmichRenameAlbumClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.RenameImmichAlbum(GetVirtualNodeFromSender(sender))
+            e.Handled = True
+        End Sub
+
+        ' --- Drag&Drop lokal → Immich (Datei-Payload auf einen Immich-Knoten ablegen = Upload) ---
+
+        Private Function GetImmichDropNode(e As DragEventArgs) As VirtualNavigationNode
+            Dim current = TryCast(e.Source, Control)
+            While current IsNot Nothing
+                Dim node = TryCast(current.DataContext, VirtualNavigationNode)
+                If node IsNot Nothing Then Return node
+                current = TryCast(current.Parent, Control)
+            End While
+            Return Nothing
+        End Function
+
+        Public Sub OnImmichTreeDragOver(sender As Object, e As DragEventArgs)
+            Dim node = GetImmichDropNode(e)
+            Dim payload = GetDragPayload(e)
+            ' Nur echte lokale Dateien auf einen Immich-Knoten - keine Immich-Pseudo-Pfade (Immich→Immich hier nicht).
+            Dim hasLocal = payload.Paths.Any(Function(p) Not ImmichService.IsImmichPseudoPath(p))
+            If node IsNot Nothing AndAlso node.IsImmichNode AndAlso hasLocal Then
+                e.DragEffects = DragDropEffects.Copy
+            Else
+                e.DragEffects = DragDropEffects.None
+            End If
+            e.Handled = True
+        End Sub
+
+        Public Sub OnImmichTreeDrop(sender As Object, e As DragEventArgs)
+            Dim node = GetImmichDropNode(e)
+            If node Is Nothing OrElse Not node.IsImmichNode Then Return
+            Dim payload = GetDragPayload(e)
+            Dim localPaths = payload.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso IO.File.Exists(p)).ToList()
+            e.Handled = True
+            If localPaths.Count = 0 Then Return
+            GetVm()?.UploadToImmich(node, localPaths)
+        End Sub
+
+        Public Async Sub OnImmichPasteClick(sender As Object, e As RoutedEventArgs)
+            e.Handled = True
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            Dim node = GetVirtualNodeFromSender(sender)
+            If node Is Nothing OrElse Not node.IsImmichNode Then Return
+            Dim clipboardData = Await ClipboardPathService.ReadPathDataAsync(TopLevel.GetTopLevel(Me)?.Clipboard)
+            Dim localPaths = clipboardData.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso IO.File.Exists(p)).ToList()
+            If localPaths.Count = 0 Then Return
+            vm.UploadToImmich(node, localPaths)
+        End Sub
+
+        Public Async Sub OnImmichUploadClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            Dim node = GetVirtualNodeFromSender(sender)
+            Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
+            If storageProvider Is Nothing Then Return
+            e.Handled = True
+            Dim mediaType = New Avalonia.Platform.Storage.FilePickerFileType("Bilder & Videos") With {
+                .Patterns = New List(Of String) From {
+                    "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
+                    "*.heic", "*.heif", "*.avif", "*.mp4", "*.mov", "*.mkv", "*.avi", "*.webm"}
+            }
+            Dim files = Await storageProvider.OpenFilePickerAsync(New Avalonia.Platform.Storage.FilePickerOpenOptions With {
+                .Title = "Bilder/Videos zum Hochladen wählen",
+                .AllowMultiple = True,
+                .FileTypeFilter = New List(Of Avalonia.Platform.Storage.FilePickerFileType) From {mediaType}
+            })
+            If files Is Nothing Then Return
+            Dim paths = files.Select(Function(f) f.Path.LocalPath).Where(Function(p) Not String.IsNullOrEmpty(p)).ToList()
+            If paths.Count = 0 Then Return
+            vm.UploadToImmich(node, paths)
         End Sub
 
         ' Kein Kontextmenü für den festen "Neue Suche"-Knoten (nicht bearbeit-/entfernbar) - würde
@@ -1217,9 +1323,17 @@ Namespace Views
             Await PasteClipboardIntoFolder(node.FullPath)
         End Sub
 
+        Private Shared Function PayloadHasImmich(payload As (Paths As List(Of String), IsInternal As Boolean)) As Boolean
+            Return payload.Paths.Any(Function(p) ImmichService.IsImmichPseudoPath(p))
+        End Function
+
         Private Function GetDropEffects(payload As (Paths As List(Of String), IsInternal As Boolean), targetFolder As String) As DragDropEffects
             Dim vm = GetVm()
             If vm Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse payload.Paths.Count = 0 Then Return DragDropEffects.None
+            ' Immich-Items in einen lokalen Ordner ziehen = herunterladen (Kopie), nie "verschieben".
+            If PayloadHasImmich(payload) Then
+                Return If(vm.CanPasteIntoFolder(targetFolder), DragDropEffects.Copy, DragDropEffects.None)
+            End If
             If payload.IsInternal Then
                 Return If(vm.CanMovePathsToFolder(payload.Paths, targetFolder), DragDropEffects.Move, DragDropEffects.None)
             End If
@@ -1229,7 +1343,9 @@ Namespace Views
         Private Async Function ApplyDropAsync(payload As (Paths As List(Of String), IsInternal As Boolean), targetFolder As String) As Task
             Dim vm = GetVm()
             If vm Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse payload.Paths.Count = 0 Then Return
-            If payload.IsInternal Then
+            If PayloadHasImmich(payload) Then
+                Await vm.PastePathsIntoFolderAsync(payload.Paths, targetFolder, cut:=False)
+            ElseIf payload.IsInternal Then
                 Await vm.MovePathsToFolderAsync(payload.Paths, targetFolder)
             Else
                 Await vm.PastePathsIntoFolderAsync(payload.Paths, targetFolder, cut:=False)

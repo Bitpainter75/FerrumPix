@@ -362,6 +362,40 @@
     <Style Selector="Button.ghost.active icons|SvgIcon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <Style Selector="Button.segmented">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="Padding" Value="11,6"/>
+        <Setter Property="CornerRadius" Value="6"/>
+    </Style>
+    <Style Selector="Button.segmented /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.segmented:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="Button.segmented.active">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.segmented.active /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.segmented.active:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent.Light}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent.Light}"/>
+    </Style>
     <Style Selector="Button.icon-btn">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>

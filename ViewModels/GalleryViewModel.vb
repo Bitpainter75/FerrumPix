@@ -35,6 +35,7 @@ Namespace ViewModels
         Private _storageFillPercent As Double = 0
         Private _selectedFolderNode As FolderNode
         Private _selectedSearchNode As VirtualNavigationNode
+        Private _selectedImmichNode As VirtualNavigationNode
         Private _clipboardPaths As New List(Of String)()
         Private _clipboardCut As Boolean
         Private ReadOnly _historyBack As New Stack(Of String)()
@@ -74,6 +75,9 @@ Namespace ViewModels
 
         Public Property FolderTree As ObservableCollection(Of FolderNode)
         Public Property SearchTree As ObservableCollection(Of VirtualNavigationNode)
+        ''' <summary>Eigener Immich-Bereich im Navigationsbereich (getrennt von der Suche): der
+        ''' „Alle Fotos"-Knoten plus je ein Knoten pro Album.</summary>
+        Public Property ImmichTree As ObservableCollection(Of VirtualNavigationNode)
         Public Property Items As BulkObservableCollection(Of ImageItem)
         Public Property DisplayItems As BulkObservableCollection(Of ImageItem)
         Public Property SelectedItems As ObservableCollection(Of ImageItem)
@@ -997,6 +1001,18 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Der aktuell geöffnete Immich-Knoten (Album bzw. „Alle Fotos"). Analog zu
+        ''' SelectedSearchNode, damit die GalleryView nach Neuinstanziierung (Moduswechsel) im Immich-
+        ''' Ordner bleibt statt in den Startordner zu navigieren.</summary>
+        Public Property SelectedImmichNode As VirtualNavigationNode
+            Get
+                Return _selectedImmichNode
+            End Get
+            Set(value As VirtualNavigationNode)
+                Me.RaiseAndSetIfChanged(_selectedImmichNode, value)
+            End Set
+        End Property
+
         Private _allItems As New List(Of ImageItem)()
         Private _displayWindowFirst As Integer = -1
         Private _displayWindowLast As Integer = -1
@@ -1040,6 +1056,7 @@ Namespace ViewModels
             SelectedItems = New ObservableCollection(Of ImageItem)()
             FolderTree = New ObservableCollection(Of FolderNode)()
             SearchTree = New ObservableCollection(Of VirtualNavigationNode)()
+            ImmichTree = New ObservableCollection(Of VirtualNavigationNode)()
 
             _collagePreviewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(350)}
             AddHandler _collagePreviewTimer.Tick, Sub()
@@ -1099,6 +1116,7 @@ Namespace ViewModels
 
             InitializeFolderTree()
             InitializeVirtualNavigation()
+            InitializeImmich()
         End Sub
 
         Public Sub ReplaceSelection(selected As IEnumerable(Of ImageItem))
@@ -1176,6 +1194,27 @@ Namespace ViewModels
             Return selected.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).ToList()
         End Function
 
+        ''' <summary>Persistiert eine Bewertung ans passende Backend: Immich-Items an den Server
+        ''' (Rückrichtung), lokale Dateien in den SQLite-Katalog samt XMP-Sidecar.</summary>
+        Private Shared Sub PersistRating(item As ImageItem, rating As Integer)
+            If item Is Nothing Then Return
+            If item.IsImmichAsset Then
+                Dim ignored = ImmichService.SetRatingAsync(item.ImmichAssetId, rating)
+            Else
+                LibraryService.Instance.SetRating(item.FilePath, rating, syncToXmp:=True)
+            End If
+        End Sub
+
+        ''' <summary>Persistiert den Favoriten-Status ans passende Backend (Immich-Server bzw. Katalog).</summary>
+        Private Shared Sub PersistFavorite(item As ImageItem, value As Boolean)
+            If item Is Nothing Then Return
+            If item.IsImmichAsset Then
+                Dim ignored = ImmichService.SetFavoriteAsync(item.ImmichAssetId, value)
+            Else
+                LibraryService.Instance.SetFavorite(item.FilePath, value)
+            End If
+        End Sub
+
         Private Sub SetSelectedRating(ratingText As String)
             Dim rating As Integer
             If Not Integer.TryParse(ratingText, rating) Then Return
@@ -1187,7 +1226,12 @@ Namespace ViewModels
             For Each item In images
                 item.Rating = targetRating
             Next
-            LibraryService.Instance.SetRatingForMany(images.Select(Function(i) i.FilePath), targetRating, syncToXmp:=True)
+            ' Lokale gebündelt (ein DB-/XMP-Durchlauf), Immich-Items einzeln an den Server.
+            Dim localPaths = images.Where(Function(i) Not i.IsImmichAsset).Select(Function(i) i.FilePath).ToList()
+            If localPaths.Count > 0 Then LibraryService.Instance.SetRatingForMany(localPaths, targetRating, syncToXmp:=True)
+            For Each im In images.Where(Function(i) i.IsImmichAsset)
+                Dim ignored = ImmichService.SetRatingAsync(im.ImmichAssetId, targetRating)
+            Next
 
             Me.RaisePropertyChanged(NameOf(SelectedRating))
             If _sortMode = "Rating" Then FilterAndSort()
@@ -1197,7 +1241,7 @@ Namespace ViewModels
             If item Is Nothing OrElse Not item.IsImage Then Return
             Dim targetRating = If(item.Rating = rating, 0, rating)
             item.Rating = targetRating
-            LibraryService.Instance.SetRating(item.FilePath, targetRating, syncToXmp:=True)
+            PersistRating(item, targetRating)
 
             If Object.ReferenceEquals(item, _selectedItem) OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item)) Then
                 Me.RaisePropertyChanged(NameOf(SelectedRating))
@@ -1315,8 +1359,187 @@ Namespace ViewModels
                     Return Await OpenSearchDialog()
                 Case "SavedSearch"
                     OpenSavedSearch(node)
+                Case "ImmichAlbum"
+                    Await OpenImmichAlbumAsync(node)
+                Case "ImmichAll"
+                    Await OpenImmichAllAsync(node)
             End Select
             Return True
+        End Function
+
+        Public ReadOnly Property HasImmich As Boolean
+            Get
+                Return ImmichTree IsNot Nothing AndAlso ImmichTree.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Baut den eigenen Immich-Bereich auf, sofern konfiguriert: „Alle Fotos" plus die
+        ''' Alben (im Hintergrund nachgeladen). No-op, wenn Immich deaktiviert/unkonfiguriert ist.</summary>
+        Private Sub InitializeImmich()
+            ImmichTree.Clear()
+            Me.RaisePropertyChanged(NameOf(HasImmich))
+            If Not ImmichService.IsConfigured Then Return
+            ImmichTree.Add(New VirtualNavigationNode(LocalizationService.T("Alle Fotos"), "ImmichAll"))
+            Me.RaisePropertyChanged(NameOf(HasImmich))
+            RefreshImmichAlbumsAsync()
+        End Sub
+
+        ''' <summary>Baut den Immich-Bereich nach einer Konfigurationsänderung (Einstellungen) neu auf.</summary>
+        Public Sub ReinitializeImmich()
+            InitializeImmich()
+        End Sub
+
+        ''' <summary>Legt ein neues Immich-Album an (nach Namenseingabe) und aktualisiert den Baum.</summary>
+        Public Async Sub CreateImmichAlbum()
+            If Not ImmichService.IsConfigured Then Return
+            Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Input, LocalizationService.T("Neues Immich-Album"), LocalizationService.T("Name des Albums:"), "")
+            If String.IsNullOrWhiteSpace(name) Then Return
+            Dim id = Await ImmichService.CreateAlbumAsync(name)
+            If String.IsNullOrEmpty(id) Then
+                StatusText = LocalizationService.T("Album konnte nicht angelegt werden")
+                Return
+            End If
+            RefreshImmichAlbumsAsync()
+            StatusText = String.Format(LocalizationService.T("Album {0} angelegt"), name.Trim())
+        End Sub
+
+        ''' <summary>Benennt ein Immich-Album um (nach Namenseingabe) und aktualisiert den Baum.</summary>
+        Public Async Sub RenameImmichAlbum(node As VirtualNavigationNode)
+            If node Is Nothing OrElse Not String.Equals(node.Kind, "ImmichAlbum", StringComparison.Ordinal) OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
+            Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Rename, LocalizationService.T("Album umbenennen"), LocalizationService.T("Neuer Name:"), node.Name)
+            If String.IsNullOrWhiteSpace(name) OrElse String.Equals(name.Trim(), node.Name, StringComparison.Ordinal) Then Return
+            Dim ok = Await ImmichService.RenameAlbumAsync(node.Id, name)
+            If Not ok Then
+                StatusText = LocalizationService.T("Umbenennen fehlgeschlagen")
+                Return
+            End If
+            RefreshImmichAlbumsAsync()
+            StatusText = String.Format(LocalizationService.T("Album umbenannt: {0}"), name.Trim())
+        End Sub
+
+        ''' <summary>Lädt lokale Dateien nach Immich hoch und ordnet sie - falls ein Album-Knoten übergeben
+        ''' wurde - diesem zu. Aktualisiert danach Baum und (falls betroffen) die offene Ansicht.</summary>
+        Public Async Sub UploadToImmich(node As VirtualNavigationNode, filePaths As IEnumerable(Of String))
+            If Not ImmichService.IsConfigured Then Return
+            Dim albumId = If(node IsNot Nothing AndAlso String.Equals(node.Kind, "ImmichAlbum", StringComparison.Ordinal), node.Id, Nothing)
+            Dim paths = If(filePaths, Enumerable.Empty(Of String)()).Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso File.Exists(p)).ToList()
+            If paths.Count = 0 Then Return
+
+            IsLoading = True
+            Dim uploaded As New List(Of String)()
+            Try
+                Dim done = 0
+                For Each p In paths
+                    done += 1
+                    StatusText = String.Format(LocalizationService.T("Lade nach Immich hoch… ({0}/{1})"), done, paths.Count)
+                    Dim id = Await ImmichService.UploadAssetAsync(p)
+                    If Not String.IsNullOrEmpty(id) Then uploaded.Add(id)
+                Next
+                If Not String.IsNullOrEmpty(albumId) AndAlso uploaded.Count > 0 Then
+                    Await ImmichService.AddAssetsToAlbumAsync(albumId, uploaded)
+                End If
+                StatusText = String.Format(LocalizationService.T("{0} von {1} nach Immich hochgeladen"), uploaded.Count, paths.Count)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.UploadFlow", ex)
+                StatusText = LocalizationService.T("Upload fehlgeschlagen")
+            Finally
+                IsLoading = False
+            End Try
+
+            RefreshImmichAlbumsAsync()
+            ' Offene Immich-Ansicht (dasselbe Album oder „Alle Fotos") neu laden, damit die neuen Bilder erscheinen.
+            If uploaded.Count > 0 AndAlso _isVirtualFolder AndAlso SelectedImmichNode IsNot Nothing Then
+                Dim reopen = SelectedImmichNode
+                If String.Equals(reopen.Kind, "ImmichAll", StringComparison.Ordinal) OrElse
+                   (String.Equals(reopen.Kind, "ImmichAlbum", StringComparison.Ordinal) AndAlso String.Equals(reopen.Id, albumId, StringComparison.Ordinal)) Then
+                    Await OpenVirtualNavigationNode(reopen)
+                End If
+            End If
+        End Sub
+
+        ''' <summary>Lädt die Albenliste im Hintergrund und hängt sie (unter „Alle Fotos") in den
+        ''' Immich-Bereich. Ein nicht erreichbarer Server hinterlässt einfach nur „Alle Fotos".</summary>
+        Private Sub RefreshImmichAlbumsAsync()
+            Dim ignored = Task.Run(Async Function()
+                                       Dim albums = Await ImmichService.GetAlbumsAsync()
+                                       Await Dispatcher.UIThread.InvokeAsync(
+                                           Sub()
+                                               ' Nur die Album-Knoten ersetzen, „Alle Fotos" bleibt stehen.
+                                               For i = ImmichTree.Count - 1 To 0 Step -1
+                                                   If ImmichTree(i).Kind = "ImmichAlbum" Then ImmichTree.RemoveAt(i)
+                                               Next
+                                               For Each album In albums
+                                                   ImmichTree.Add(New VirtualNavigationNode(album.Name, "ImmichAlbum") With {
+                                                       .Id = album.Id,
+                                                       .IsRemovable = False
+                                                   })
+                                               Next
+                                               Me.RaisePropertyChanged(NameOf(HasImmich))
+                                           End Sub)
+                                   End Function)
+        End Sub
+
+        ''' <summary>Öffnet „Alle Fotos" (Timeline ohne Album) als virtuellen Ordner.</summary>
+        Private Async Function OpenImmichAllAsync(node As VirtualNavigationNode) As Task
+            SelectedImmichNode = node
+            Await LoadImmichVirtualFolderAsync(If(node?.Name, LocalizationService.T("Alle Fotos")), Nothing)
+        End Function
+
+        ''' <summary>Öffnet ein Immich-Album als virtuellen Ordner.</summary>
+        Private Async Function OpenImmichAlbumAsync(node As VirtualNavigationNode) As Task
+            If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
+            SelectedImmichNode = node
+            Await LoadImmichVirtualFolderAsync(node.Name, node.Id)
+        End Function
+
+        ''' <summary>Gemeinsamer Lade-Pfad für „Alle Fotos" (albumId = Nothing) und Alben (albumId gesetzt):
+        ''' streamt die Assets seitenweise über die Metadaten-Suche und zeigt bereits geladene sofort an.
+        ''' v3 liefert Album-Assets NICHT über /api/albums/{id}, daher der einheitliche Suche-mit-albumIds-Weg.</summary>
+        Private Async Function LoadImmichVirtualFolderAsync(name As String, albumId As String) As Task
+            Dim thumbnailToken = StartEmptyVirtualFolder(name)
+            SelectedSearchNode = Nothing
+            IsLoading = True
+            StatusText = LocalizationService.T("Lade Immich-Fotos…")
+            ' Sicherheitsnetz gegen eine versehentlich riesige Bibliothek.
+            Const SafetyCap As Integer = 100000
+            Dim total As Integer = 0
+            Try
+                Dim page As Integer = 1
+                ' FilterAndSort ist O(n log n) über ALLE bisher geladenen Items und läuft auf dem UI-Thread.
+                ' Bei zehntausenden Fotos (viele Seiten) darf es NICHT pro Seite laufen (sonst O(n²) und
+                ' träge Bedienung). Erste Charge sofort anzeigen, danach höchstens alle ~600ms neu sortieren,
+                ' plus ein abschließender Durchlauf. Detaildaten (Dateigröße/Rating/…) lädt jedes Item
+                ' viewport-priorisiert selbst nach, gekoppelt an seinen Thumbnail-Ladeweg.
+                Dim lastSortTick = Environment.TickCount64
+                Do
+                    Dim result = Await ImmichService.GetAssetsPageAsync(page, albumId, thumbnailToken)
+                    If thumbnailToken.IsCancellationRequested Then Return
+                    If result.Items.Count > 0 Then
+                        Dim isFirstBatch = (total = 0)
+                        Dim items = result.Items.Select(Function(a) ImageItem.CreateImmichItem(a, thumbnailToken)).ToList()
+                        AddPrebuiltItemsToVirtualFolder(items, sortNow:=False)
+                        total += items.Count
+                        ' Zwischensortierungen bewusst selten (das Neuaufbauen der Liste läuft auf dem
+                        ' UI-Thread und konkurriert sonst mit den Viewport-Thumbnail-Benachrichtigungen).
+                        If isFirstBatch OrElse Environment.TickCount64 - lastSortTick > 1500 Then
+                            FilterAndSort()
+                            lastSortTick = Environment.TickCount64
+                        End If
+                    End If
+                    If result.NextPage <= 0 OrElse total >= SafetyCap Then Exit Do
+                    page = result.NextPage
+                Loop
+                FilterAndSort()
+                If total = 0 AndAlso Not String.IsNullOrEmpty(ImmichService.LastError) Then
+                    StatusText = LocalizationService.T("Immich-Fehler: ") & ImmichService.LastError
+                End If
+            Catch ex As OperationCanceledException
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.LoadVirtualFolder", ex)
+                StatusText = LocalizationService.T("Immich-Fotos konnten nicht geladen werden")
+            Finally
+                If Not thumbnailToken.IsCancellationRequested Then IsLoading = False
+            End Try
         End Function
 
         Public Sub RemoveVirtualSearchNode(node As VirtualNavigationNode)
@@ -1430,7 +1653,14 @@ Namespace ViewModels
 
         Public Function SelectImageInCurrentView(imagePath As String) As Boolean
             If String.IsNullOrEmpty(imagePath) Then Return False
-            Dim item = Items.FirstOrDefault(Function(i) i.IsImage AndAlso String.Equals(i.FilePath, imagePath, StringComparison.OrdinalIgnoreCase))
+            ' Aus dem Viewer/Editor kommt bei Immich der Temp-Pfad zurück; dessen Dateiname-Stamm ist die
+            ' Asset-UUID (siehe DownloadOriginalToTempAsync), womit sich das Album-Item wiederfinden lässt -
+            ' unabhängig davon, ob ImmichLocalPath am Item gesetzt wurde (Filmstreifen-Navigation setzt es nicht).
+            Dim immichStem = If(ImmichService.IsImmichTempPath(imagePath), IO.Path.GetFileNameWithoutExtension(imagePath), Nothing)
+            Dim item = Items.FirstOrDefault(Function(i) i.IsImage AndAlso (
+                String.Equals(i.FilePath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                (i.IsImmichAsset AndAlso Not String.IsNullOrEmpty(i.ImmichLocalPath) AndAlso String.Equals(i.ImmichLocalPath, imagePath, StringComparison.OrdinalIgnoreCase)) OrElse
+                (i.IsImmichAsset AndAlso immichStem IsNot Nothing AndAlso String.Equals(i.ImmichAssetId, immichStem, StringComparison.OrdinalIgnoreCase))))
             If item Is Nothing Then Return False
             SelectOnly(item)
             RaiseEvent RequestScrollToItem(Me, EventArgs.Empty)
@@ -1482,6 +1712,7 @@ Namespace ViewModels
             Dim saved = New SearchListEntry With {
                 .Id = Guid.NewGuid().ToString("N"),
                 .Name = result.Name,
+                .Source = If(String.Equals(result.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local"),
                 .TextQuery = result.TextQuery,
                 .RootFolder = result.RootFolder,
                 .IncludeSubfolders = result.IncludeSubfolders,
@@ -1511,6 +1742,7 @@ Namespace ViewModels
             If result Is Nothing Then Return
 
             existing.Name = result.Name
+            existing.Source = If(String.Equals(result.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local")
             existing.TextQuery = result.TextQuery
             existing.RootFolder = result.RootFolder
             existing.IncludeSubfolders = result.IncludeSubfolders
@@ -1538,6 +1770,11 @@ Namespace ViewModels
 
         Private Sub OpenSavedSearch(node As VirtualNavigationNode)
             If node Is Nothing Then Return
+            If String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase) Then
+                SelectedSearchNode = node
+                StartImmichSearch(node)
+                Return
+            End If
             If Not String.IsNullOrWhiteSpace(node.RootFolder) AndAlso Not Directory.Exists(node.RootFolder) Then
                 StatusText = LocalizationService.T("Startordner nicht gefunden")
                 Return
@@ -1546,9 +1783,64 @@ Namespace ViewModels
             StartIncrementalSavedSearch(node)
         End Sub
 
+        ''' <summary>Führt eine Immich-Suchliste aus: fragt Immichs Such-API (semantisch bei Suchtext, sonst
+        ''' Metadaten) mit Favorit-/Bewertungsfilter ab und spielt die Treffer als virtuellen Ordner ein.
+        ''' Strukturbedingungen (Breite/ISO/…) gelten hier nicht - Immich kennt diese Felder in der Suche nicht.</summary>
+        Private Async Sub StartImmichSearch(node As VirtualNavigationNode)
+            CancelActiveSearch()
+            _activeSearchCts = New CancellationTokenSource()
+            Dim token = _activeSearchCts.Token
+            Dim thumbnailToken = StartEmptyVirtualFolder(node.Name)
+            SelectedImmichNode = Nothing
+            Dim favoriteOnly = String.Equals(AppSettingsService.NormalizeSearchFavoriteMode(node.FavoriteMode), "Only", StringComparison.OrdinalIgnoreCase)
+            Dim ratings = NormalizeRatings(node.Ratings)
+            ' Immich filtert auf genau eine Bewertung - bei mehreren nehmen wir die höchste, bei keiner keine.
+            Dim rating = If(ratings.Count > 0, ratings.Max(), 0)
+            Dim query = If(node.TextQuery, "").Trim()
+            IsLoading = True
+            StatusText = LocalizationService.T("Immich-Suche läuft…")
+            Const SafetyCap As Integer = 5000
+            Dim total As Integer = 0
+            Try
+                Dim page As Integer = 1
+                Dim lastSortTick = Environment.TickCount64
+                Do
+                    Dim result = Await ImmichService.SearchAsync(query, favoriteOnly, rating, page, thumbnailToken)
+                    If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
+                    If result.Items.Count > 0 Then
+                        Dim isFirstBatch = (total = 0)
+                        Dim items = result.Items.Select(Function(a) ImageItem.CreateImmichItem(a, thumbnailToken)).ToList()
+                        AddPrebuiltItemsToVirtualFolder(items, sortNow:=False)
+                        total += items.Count
+                        ' Zwischensortierungen bewusst selten (das Neuaufbauen der Liste läuft auf dem
+                        ' UI-Thread und konkurriert sonst mit den Viewport-Thumbnail-Benachrichtigungen).
+                        If isFirstBatch OrElse Environment.TickCount64 - lastSortTick > 1500 Then
+                            FilterAndSort()
+                            lastSortTick = Environment.TickCount64
+                        End If
+                    End If
+                    If result.NextPage <= 0 OrElse total >= SafetyCap Then Exit Do
+                    page = result.NextPage
+                Loop
+                FilterAndSort()
+                If total = 0 Then
+                    StatusText = If(Not String.IsNullOrEmpty(ImmichService.LastError),
+                                    LocalizationService.T("Immich-Fehler: ") & ImmichService.LastError,
+                                    LocalizationService.T("Keine Treffer"))
+                End If
+            Catch ex As OperationCanceledException
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.Search", ex)
+                StatusText = LocalizationService.T("Immich-Suche fehlgeschlagen")
+            Finally
+                If Not thumbnailToken.IsCancellationRequested Then IsLoading = False
+            End Try
+        End Sub
+
         Private Shared Function CreateSavedSearchNode(search As SearchListEntry) As VirtualNavigationNode
             Return New VirtualNavigationNode(search.Name, "SavedSearch") With {
                 .Id = search.Id,
+                .Source = If(String.Equals(search.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local"),
                 .TextQuery = search.TextQuery,
                 .RootFolder = search.RootFolder,
                 .IncludeSubfolders = search.IncludeSubfolders,
@@ -2155,7 +2447,7 @@ Namespace ViewModels
 
         ''' Adds pre-built ImageItem objects (constructed on a background thread) to the virtual
         ''' folder without any filesystem I/O — only dedup check and collection mutation.
-        Private Sub AddPrebuiltItemsToVirtualFolder(items As List(Of ImageItem))
+        Private Sub AddPrebuiltItemsToVirtualFolder(items As List(Of ImageItem), Optional sortNow As Boolean = True)
             Dim added = False
             For Each item In If(items, New List(Of ImageItem)())
                 If item Is Nothing Then Continue For
@@ -2163,7 +2455,7 @@ Namespace ViewModels
                 _allItems.Add(item)
                 added = True
             Next
-            If added Then FilterAndSort()
+            If added AndAlso sortNow Then FilterAndSort()
         End Sub
 
         Private Sub AppendSearchListResults(node As VirtualNavigationNode, paths As IEnumerable(Of String))
@@ -2321,7 +2613,7 @@ Namespace ViewModels
             If item Is Nothing OrElse item.IsFolder Then Return
             Dim newVal = Not item.IsFavorite
             item.IsFavorite = newVal
-            LibraryService.Instance.SetFavorite(item.FilePath, newVal)
+            PersistFavorite(item, newVal)
             If Object.ReferenceEquals(item, _selectedItem) OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item)) Then
                 Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
             End If
@@ -2337,7 +2629,7 @@ Namespace ViewModels
             Dim target = Not SelectedIsFavorite
             For Each item In images
                 item.IsFavorite = target
-                LibraryService.Instance.SetFavorite(item.FilePath, target)
+                PersistFavorite(item, target)
             Next
 
             Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
@@ -3022,10 +3314,15 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public Sub OpenSelectedInViewer()
+        Public Async Sub OpenSelectedInViewer()
             Dim images = GetSelectedImageItems()
             If images.Count > 0 Then
-                _mainVm.OpenImageInViewer(images(0).FilePath, Items.Where(Function(i) i.IsImage).Select(Function(i) i.FilePath).ToList(),
+                Dim first = images(0)
+                If first.IsImmichAsset Then
+                    Await OpenImmichItemInViewerAsync(first)
+                    Return
+                End If
+                _mainVm.OpenImageInViewer(first.FilePath, Items.Where(Function(i) i.IsImage).Select(Function(i) i.FilePath).ToList(),
                                           cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
             ElseIf SelectedItem IsNot Nothing AndAlso SelectedItem.IsParentFolderEntry Then
                 NavigateToParent()
@@ -3034,11 +3331,45 @@ Namespace ViewModels
 
         Public Async Sub OpenSelectedInEditor()
             Dim image = GetSelectedImageItems().FirstOrDefault(Function(i) i.CanEditFile)
-            If image IsNot Nothing Then
-                Await _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList(),
-                                                cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
+            If image Is Nothing Then Return
+            If image.IsImmichAsset Then
+                Await OpenImmichItemInEditorAsync(image)
+                Return
             End If
+            Await _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList(),
+                                            cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
         End Sub
+
+        ''' <summary>Lädt das Immich-Original in eine Temp-Kopie und öffnet es im Editor mit
+        ''' Speichern-unter-Zwang - die Temp-Kopie wird nie in-place überschrieben, das Ergebnis landet
+        ''' als neue Datei im Bilder-Ordner. (Rückschreiben nach Immich als Upload wäre ein späterer Schritt.)</summary>
+        Private Async Function OpenImmichItemInEditorAsync(item As ImageItem) As Task
+            IsLoading = True
+            StatusText = LocalizationService.T("Lade Bild aus Immich…")
+            Try
+                Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(item.ImmichAssetId, item.ImmichOriginalFileName)
+                If String.IsNullOrEmpty(localPath) Then
+                    StatusText = LocalizationService.T("Bild konnte nicht aus Immich geladen werden")
+                    Return
+                End If
+                item.ImmichLocalPath = localPath
+                ' Stammt das Bild aus einem geöffneten Immich-Album, den bearbeiteten Upload gleich dorthin.
+                Dim sourceAlbumId = If(SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Kind, "ImmichAlbum", StringComparison.Ordinal), SelectedImmichNode.Id, Nothing)
+                Await _mainVm.OpenImageInEditor(localPath, New List(Of String) From {localPath}, forceSaveAsOnly:=True, immichAlbumId:=sourceAlbumId)
+                StatusText = ""
+            Finally
+                IsLoading = False
+            End Try
+        End Function
+
+        ''' <summary>Öffnet ein Immich-Bild im Betrachter als Album-Sitzung: der Filmstreifen zeigt alle
+        ''' Immich-Bilder der aktuellen Ansicht (Pseudo-Pfade), das Original wird im Viewer on-demand geladen.</summary>
+        Private Function OpenImmichItemInViewerAsync(item As ImageItem) As Task
+            Dim sessionItems = Items.Where(Function(i) i.IsImage AndAlso i.IsImmichAsset).ToList()
+            Dim sourceAlbumId = If(SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Kind, "ImmichAlbum", StringComparison.Ordinal), SelectedImmichNode.Id, Nothing)
+            _mainVm.OpenImmichViewer(item.FilePath, sessionItems, sourceAlbumId)
+            Return Task.CompletedTask
+        End Function
 
         Public Sub DeleteSelected()
             If _isVirtualFolder Then
@@ -3439,6 +3770,10 @@ Namespace ViewModels
             If IsVirtualFolderPath(targetFolder) Then Return
             If paths Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then Return
             If Not FileOperationPolicy.CanPasteInto(targetFolder) Then Return
+            ' Immich-Items (Pseudo-Pfade) werden nicht dateikopiert, sondern als Originale in den Zielordner
+            ' heruntergeladen. Die restliche (lokale) Kopierlogik ignoriert Pseudo-Pfade ohnehin (File.Exists).
+            Dim immichPseudo = paths.Where(Function(p) ImmichService.IsImmichPseudoPath(p)).ToList()
+            If immichPseudo.Count > 0 Then Await DownloadImmichToFolderAsync(immichPseudo, targetFolder)
             _conflictBatchDecision = Nothing
             Dim errorMessage As String = Nothing
             Dim sourcePaths As List(Of String) = Nothing
@@ -3470,6 +3805,48 @@ Namespace ViewModels
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Einfügen fehlgeschlagen", errorMessage)
         End Function
 
+        ''' <summary>Lädt Immich-Originale (Pseudo-Pfade) in einen lokalen Zielordner herunter - der
+        ''' Immich→lokal-Zweig von Einfügen/Drag&Drop. Kollidierende Namen werden nummeriert.</summary>
+        Private Async Function DownloadImmichToFolderAsync(pseudoPaths As List(Of String), targetFolder As String) As Task
+            Dim total = pseudoPaths.Count
+            Dim done = 0
+            Dim saved = 0
+            For Each pseudo In pseudoPaths
+                Dim assetId As String = Nothing, fileName As String = Nothing
+                If Not ImmichService.TryParsePseudoPath(pseudo, assetId, fileName) Then Continue For
+                done += 1
+                StatusText = String.Format(LocalizationService.T("Lade aus Immich… ({0}/{1})"), done, total)
+                Dim temp = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
+                If String.IsNullOrEmpty(temp) OrElse Not File.Exists(temp) Then Continue For
+                Try
+                    Dim dest = MakeUniqueFilePath(IO.Path.Combine(targetFolder, If(String.IsNullOrEmpty(fileName), assetId, fileName)))
+                    File.Copy(temp, dest, False)
+                    saved += 1
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Immich.DownloadToFolder", ex)
+                End Try
+            Next
+            If Not _isVirtualFolder AndAlso String.Equals(NormalizePath(targetFolder), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then
+                SyncFolderItems()
+            End If
+            RefreshTree()
+            StatusText = String.Format(LocalizationService.T("{0} Bilder aus Immich gespeichert"), saved)
+        End Function
+
+        Private Shared Function MakeUniqueFilePath(path As String) As String
+            If Not File.Exists(path) Then Return path
+            Dim dir = IO.Path.GetDirectoryName(path)
+            Dim stem = IO.Path.GetFileNameWithoutExtension(path)
+            Dim ext = IO.Path.GetExtension(path)
+            Dim i = 1
+            Dim candidate As String
+            Do
+                candidate = IO.Path.Combine(dir, $"{stem} ({i}){ext}")
+                i += 1
+            Loop While File.Exists(candidate)
+            Return candidate
+        End Function
+
         Public Async Function DuplicateSelectedAsync() As Task
             If _isVirtualFolder Then Return
             Dim targets = GetSelectedPaths()
@@ -3492,14 +3869,16 @@ Namespace ViewModels
         Private Shared ReadOnly BatchImageEditWritableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
 
         Private Async Sub ResizeSelected()
-            Dim targets = GetSelectedEditableImagePaths()
-            If targets.Count = 0 Then Return
+            Dim targetItems = GetSelectedBatchEditableImageItems()
+            If targetItems.Count = 0 Then Return
 
-            Dim resize = Await _mainVm.ShowBatchResizeAsync(targets(0))
+            Dim samplePath = Await EnsureLocalPathForBatchAsync(targetItems(0))
+            Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath)
             If resize Is Nothing Then Return
 
             StatusText = "Ändere Bildgröße..."
-            Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
+            Dim localTargets = targetItems.Where(Function(i) Not i.IsImmichAsset AndAlso File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
+            Dim changedCount = Await RewriteImagesInPlaceAsync(localTargets,
                 Function(source, temp)
                     Dim width = resize.Width
                     Dim height = resize.Height
@@ -3517,8 +3896,30 @@ Namespace ViewModels
                     Return ImageProcessor.SaveImage(source, temp, adj, 95)
                 End Function)
 
-            StatusText = $"{changedCount} von {targets.Count} Datei(en) geändert"
-            RefreshAfterBatchFileRewrite(targets)
+            Dim uploadedAssetIds As New List(Of String)()
+            Dim uploadedCount = Await ProcessImmichBatchItemsAsync(targetItems.Where(Function(i) i.IsImmichAsset),
+                Function(source, target)
+                    Dim width = resize.Width
+                    Dim height = resize.Height
+                    If resize.ScalePercent > 0 Then
+                        Dim size = ImageProcessor.GetImageSize(source)
+                        width = Math.Max(1, CInt(Math.Round(size.Width * resize.ScalePercent / 100.0)))
+                        height = Math.Max(1, CInt(Math.Round(size.Height * resize.ScalePercent / 100.0)))
+                    End If
+                    Dim adj = New ImageAdjustments With {
+                        .ResizeWidth = width,
+                        .ResizeHeight = height,
+                        .LockResizeAspect = resize.LockAspect,
+                        .ResizeInterpolation = resize.Interpolation
+                    }
+                    Return ImageProcessor.SaveImage(source, target, adj, 95)
+                End Function,
+                Function(source) IO.Path.GetExtension(source),
+                uploadedAssetIds).ConfigureAwait(True)
+
+            StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
+            RefreshAfterBatchFileRewrite(localTargets)
+            If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
         End Sub
 
         Private Async Sub RemoveMetadataSelected()
@@ -3534,8 +3935,8 @@ Namespace ViewModels
         End Sub
 
         Private Async Sub ApplyWatermarkSelected()
-            Dim targets = GetSelectedEditableImagePaths()
-            If targets.Count = 0 Then Return
+            Dim targetItems = GetSelectedBatchEditableImageItems()
+            If targetItems.Count = 0 Then Return
 
             Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync()
             If result Is Nothing OrElse result.Preset Is Nothing Then Return
@@ -3547,15 +3948,27 @@ Namespace ViewModels
             End If
 
             StatusText = "Wende Wasserzeichen an..."
-            Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
+            Dim localTargets = targetItems.Where(Function(i) Not i.IsImmichAsset AndAlso File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
+            Dim changedCount = Await RewriteImagesInPlaceAsync(localTargets,
                 Function(source, temp)
                     Dim adj = New ImageAdjustments()
                     adj.Annotations.Add(annotation.Clone())
                     Return ImageProcessor.SaveImage(source, temp, adj, 95)
                 End Function)
 
-            StatusText = $"{changedCount} von {targets.Count} Datei(en) mit Wasserzeichen versehen"
-            RefreshAfterBatchFileRewrite(targets)
+            Dim uploadedAssetIds As New List(Of String)()
+            Dim uploadedCount = Await ProcessImmichBatchItemsAsync(targetItems.Where(Function(i) i.IsImmichAsset),
+                Function(source, target)
+                    Dim adj = New ImageAdjustments()
+                    adj.Annotations.Add(annotation.Clone())
+                    Return ImageProcessor.SaveImage(source, target, adj, 95)
+                End Function,
+                Function(source) IO.Path.GetExtension(source),
+                uploadedAssetIds).ConfigureAwait(True)
+
+            StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) mit Wasserzeichen versehen"
+            RefreshAfterBatchFileRewrite(localTargets)
+            If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
         End Sub
 
         Private Shared Function CreateWatermarkAnnotation(preset As WatermarkPresetSettings) As ImageAnnotation
@@ -3592,6 +4005,13 @@ Namespace ViewModels
                 ToList()
         End Function
 
+        Private Function GetSelectedBatchEditableImageItems() As List(Of ImageItem)
+            Return GetSelectedImageItems().
+                Where(Function(i) i IsNot Nothing AndAlso i.CanEditFile).
+                Where(Function(i) BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
+                ToList()
+        End Function
+
         Private Async Function RewriteImagesInPlaceAsync(targets As List(Of String), writer As Func(Of String, String, Boolean)) As Task(Of Integer)
             Dim changedCount = 0
             Dim errorMessage As String = Nothing
@@ -3621,6 +4041,206 @@ Namespace ViewModels
             Return changedCount
         End Function
 
+        Private Async Function EnsureLocalPathForBatchAsync(item As ImageItem) As Task(Of String)
+            If item Is Nothing Then Return Nothing
+            If Not item.IsImmichAsset Then Return item.FilePath
+            Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(item.ImmichAssetId, item.ImmichOriginalFileName)
+            If Not String.IsNullOrEmpty(localPath) Then item.ImmichLocalPath = localPath
+            Return localPath
+        End Function
+
+        Private Function CurrentImmichAlbumIdForUpload() As String
+            If SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Kind, "ImmichAlbum", StringComparison.Ordinal) Then
+                Return SelectedImmichNode.Id
+            End If
+            Return Nothing
+        End Function
+
+        Private Shared Function CreateImmichBatchOutputPath(sourcePath As String, requestedExtension As String) As String
+            Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(sourcePath), requestedExtension)
+            If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
+            If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
+
+            Dim dir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichBatch")
+            Directory.CreateDirectory(dir)
+            Dim stem = If(String.IsNullOrWhiteSpace(IO.Path.GetFileNameWithoutExtension(sourcePath)), "immich-export", IO.Path.GetFileNameWithoutExtension(sourcePath))
+            Return IO.Path.Combine(dir, $"{stem}-ferrumpix-{Guid.NewGuid():N}{ext}")
+        End Function
+
+        Private Shared Function CreateBatchTargetFolderPath(sourcePath As String, targetFolder As String, requestedExtension As String) As String
+            Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(sourcePath), requestedExtension)
+            If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
+            If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
+
+            Dim stem = If(String.IsNullOrWhiteSpace(IO.Path.GetFileNameWithoutExtension(sourcePath)), "ferrumpix-export", IO.Path.GetFileNameWithoutExtension(sourcePath))
+            Return MakeUniqueFilePath(IO.Path.Combine(targetFolder, stem & ext))
+        End Function
+
+        Private Async Function ProcessImmichBatchItemsAsync(items As IEnumerable(Of ImageItem),
+                                                            writer As Func(Of String, String, Boolean),
+                                                            outputExtension As Func(Of String, String),
+                                                            Optional uploadedAssetIds As List(Of String) = Nothing) As Task(Of Integer)
+            Dim uploadedCount = 0
+            Dim errorMessage As String = Nothing
+            Dim albumId = CurrentImmichAlbumIdForUpload()
+
+            Try
+                For Each item In If(items, Enumerable.Empty(Of ImageItem)())
+                    If item Is Nothing OrElse Not item.IsImmichAsset Then Continue For
+                    Dim source = Await EnsureLocalPathForBatchAsync(item)
+                    If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
+
+                    Dim outputPath = CreateImmichBatchOutputPath(source, outputExtension(source))
+                    Try
+                        Dim ok = Await Task.Run(Function() writer(source, outputPath))
+                        If Not ok OrElse Not File.Exists(outputPath) Then Continue For
+
+                        Dim newAssetId = Await ImmichService.UploadAssetAsync(outputPath)
+                        If String.IsNullOrEmpty(newAssetId) Then Continue For
+                        uploadedAssetIds?.Add(newAssetId)
+                        If Not String.IsNullOrEmpty(albumId) Then Await ImmichService.AddAssetsToAlbumAsync(albumId, {newAssetId})
+                        Await ImmichService.WaitForThumbnailReadyAsync(newAssetId)
+                        uploadedCount += 1
+                    Finally
+                        Try
+                            If File.Exists(outputPath) Then File.Delete(outputPath)
+                        Catch
+                        End Try
+                    End Try
+                Next
+            Catch ex As Exception
+                errorMessage = ex.Message
+            End Try
+
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Immich-Upload fehlgeschlagen", errorMessage)
+            Return uploadedCount
+        End Function
+
+        Private Async Function ProcessImmichBatchItemsToFolderAsync(items As IEnumerable(Of ImageItem),
+                                                                    targetFolder As String,
+                                                                    writer As Func(Of String, String, Boolean),
+                                                                    outputExtension As Func(Of String, String)) As Task(Of Integer)
+            Dim savedCount = 0
+            Dim errorMessage As String = Nothing
+
+            Try
+                For Each item In If(items, Enumerable.Empty(Of ImageItem)())
+                    If item Is Nothing OrElse Not item.IsImmichAsset Then Continue For
+                    Dim source = Await EnsureLocalPathForBatchAsync(item)
+                    If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
+
+                    Dim target = CreateBatchTargetFolderPath(source, targetFolder, outputExtension(source))
+                    Dim ok = Await Task.Run(Function() writer(source, target))
+                    If ok AndAlso File.Exists(target) Then savedCount += 1
+                Next
+            Catch ex As Exception
+                errorMessage = ex.Message
+            End Try
+
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Immich-Export fehlgeschlagen", errorMessage)
+            Return savedCount
+        End Function
+
+        Private Async Function ProcessLocalBatchItemsToFolderAsync(items As IEnumerable(Of ImageItem),
+                                                                   targetFolder As String,
+                                                                   writer As Func(Of String, String, Boolean),
+                                                                   outputExtension As Func(Of String, String)) As Task(Of Integer)
+            Dim savedCount = 0
+            Dim errorMessage As String = Nothing
+
+            Try
+                Await Task.Run(Sub()
+                    For Each item In If(items, Enumerable.Empty(Of ImageItem)())
+                        If item Is Nothing OrElse item.IsImmichAsset OrElse Not File.Exists(item.FilePath) Then Continue For
+                        Dim sourceExt = IO.Path.GetExtension(item.FilePath)
+                        Dim targetExt = outputExtension(item.FilePath)
+                        If String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
+
+                        Dim target = CreateBatchTargetFolderPath(item.FilePath, targetFolder, targetExt)
+                        If writer(item.FilePath, target) AndAlso File.Exists(target) Then savedCount += 1
+                    Next
+                End Sub)
+            Catch ex As Exception
+                errorMessage = ex.Message
+            End Try
+
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Konvertierung fehlgeschlagen", errorMessage)
+            Return savedCount
+        End Function
+
+        Private Async Function ProcessLocalBatchItemsToImmichAsync(items As IEnumerable(Of ImageItem),
+                                                                   writer As Func(Of String, String, Boolean),
+                                                                   outputExtension As Func(Of String, String),
+                                                                   Optional uploadedAssetIds As List(Of String) = Nothing) As Task(Of Integer)
+            Dim uploadedCount = 0
+            Dim errorMessage As String = Nothing
+            Dim albumId = CurrentImmichAlbumIdForUpload()
+
+            Try
+                For Each item In If(items, Enumerable.Empty(Of ImageItem)())
+                    If item Is Nothing OrElse item.IsImmichAsset OrElse Not File.Exists(item.FilePath) Then Continue For
+                    Dim sourceExt = IO.Path.GetExtension(item.FilePath)
+                    Dim targetExt = outputExtension(item.FilePath)
+                    If String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
+
+                    Dim outputPath = CreateImmichBatchOutputPath(item.FilePath, targetExt)
+                    Try
+                        Dim ok = Await Task.Run(Function() writer(item.FilePath, outputPath))
+                        If Not ok OrElse Not File.Exists(outputPath) Then Continue For
+
+                        Dim newAssetId = Await ImmichService.UploadAssetAsync(outputPath)
+                        If String.IsNullOrEmpty(newAssetId) Then Continue For
+                        uploadedAssetIds?.Add(newAssetId)
+                        If Not String.IsNullOrEmpty(albumId) Then Await ImmichService.AddAssetsToAlbumAsync(albumId, {newAssetId})
+                        Await ImmichService.WaitForThumbnailReadyAsync(newAssetId)
+                        uploadedCount += 1
+                    Finally
+                        Try
+                            If File.Exists(outputPath) Then File.Delete(outputPath)
+                        Catch
+                        End Try
+                    End Try
+                Next
+            Catch ex As Exception
+                errorMessage = ex.Message
+            End Try
+
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Immich-Upload fehlgeschlagen", errorMessage)
+            Return uploadedCount
+        End Function
+
+        Private Async Function RefreshAfterImmichBatchUploadAsync(Optional uploadedAssetIds As IEnumerable(Of String) = Nothing) As Task
+            RefreshImmichAlbumsAsync()
+            If SelectedImmichNode Is Nothing Then Return
+
+            Dim reopen = SelectedImmichNode
+            If String.Equals(reopen.Kind, "ImmichAll", StringComparison.Ordinal) Then
+                Await OpenImmichAllAsync(reopen)
+            ElseIf String.Equals(reopen.Kind, "ImmichAlbum", StringComparison.Ordinal) Then
+                Await OpenImmichAlbumAsync(reopen)
+            End If
+            Await EnsureUploadedImmichAssetsVisibleAsync(uploadedAssetIds)
+        End Function
+
+        Private Async Function EnsureUploadedImmichAssetsVisibleAsync(assetIds As IEnumerable(Of String)) As Task
+            Dim ids = If(assetIds, Enumerable.Empty(Of String)()).
+                Where(Function(id) Not String.IsNullOrWhiteSpace(id)).
+                Distinct(StringComparer.OrdinalIgnoreCase).
+                ToList()
+            If ids.Count = 0 Then Return
+
+            Dim missingItems As New List(Of ImageItem)()
+            For Each id In ids
+                Dim pseudoPrefix = "immich://" & id & "/"
+                If _virtualPathSet.Any(Function(p) p.StartsWith(pseudoPrefix, StringComparison.OrdinalIgnoreCase)) Then Continue For
+                Dim detail = Await ImmichService.GetAssetDetailAsync(id)
+                If detail Is Nothing Then Continue For
+                missingItems.Add(ImageItem.CreateImmichItem(detail))
+            Next
+
+            If missingItems.Count > 0 Then AddPrebuiltItemsToVirtualFolder(missingItems)
+        End Function
+
         Private Sub RefreshAfterBatchFileRewrite(paths As IEnumerable(Of String))
             For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso paths.Contains(i.FilePath, StringComparer.OrdinalIgnoreCase))
                 item.EvictThumbnail()
@@ -3629,43 +4249,75 @@ Namespace ViewModels
         End Sub
 
         Private Async Sub BatchConvertSelected()
-            Dim targets = GetSelectedPaths().
-                Where(Function(p) File.Exists(p) AndAlso Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(p).ToLowerInvariant())).
+            Dim targetItems = GetSelectedImageItems().
+                Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
+                Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
                 ToList()
-            If targets.Count = 0 Then Return
+            If targetItems.Count = 0 Then Return
 
-            Dim result = Await _mainVm.ShowBatchConvertAsync(targets.Count, "JPG")
+            Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, "JPG")
             If result Is Nothing Then Return
 
             StatusText = LocalizationService.T("Konvertiere…")
             Dim convertedCount = 0
-            Dim errorMessage As String = Nothing
             Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
-            Try
-                Await Task.Run(Sub()
-                    For Each source In targets
-                        Dim sourceExt = IO.Path.GetExtension(source)
-                        If String.Equals(sourceExt, result.Extension, StringComparison.OrdinalIgnoreCase) Then Continue For
+            Dim uploadedCount = 0
+            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
+            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
+            Dim saveToImmich = String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured
+            Dim uploadedAssetIds As New List(Of String)()
 
-                        Dim target = IO.Path.ChangeExtension(source, result.Extension)
-                        Dim suffix = 1
-                        While File.Exists(target)
-                            target = IO.Path.Combine(IO.Path.GetDirectoryName(source), $"{IO.Path.GetFileNameWithoutExtension(source)}_{suffix}{result.Extension}")
-                            suffix += 1
-                        End While
+            If saveToImmich Then
+                convertedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems,
+                    Function(source, target)
+                        Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
+                    End Function,
+                    Function(source) result.Extension,
+                    uploadedAssetIds).ConfigureAwait(True)
 
-                        If ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata) Then
-                            convertedCount += 1
-                        End If
-                    Next
-                End Sub)
-            Catch ex As Exception
-                errorMessage = ex.Message
-            End Try
+                uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems,
+                    Function(source, target)
+                        If String.Equals(IO.Path.GetExtension(source), result.Extension, StringComparison.OrdinalIgnoreCase) Then Return False
+                        Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
+                    End Function,
+                    Function(source) result.Extension,
+                    uploadedAssetIds).ConfigureAwait(True)
+            Else
+                Dim targetFolder = If(result.TargetFolder, "").Trim()
+                If String.IsNullOrWhiteSpace(targetFolder) Then
+                    Await _mainVm.ShowMessageAsync("Konvertierung fehlgeschlagen", "Kein Zielordner angegeben.")
+                    Return
+                End If
+                Dim createFolderError As String = Nothing
+                Try
+                    Directory.CreateDirectory(targetFolder)
+                Catch ex As Exception
+                    createFolderError = ex.Message
+                End Try
+                If createFolderError IsNot Nothing Then
+                    Await _mainVm.ShowMessageAsync("Konvertierung fehlgeschlagen", createFolderError)
+                    Return
+                End If
 
-            StatusText = $"{convertedCount} von {targets.Count} Datei(en) konvertiert"
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Konvertierung fehlgeschlagen", errorMessage)
+                convertedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems,
+                    targetFolder,
+                    Function(source, target)
+                        Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
+                    End Function,
+                    Function(source) result.Extension).ConfigureAwait(True)
+
+                uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems,
+                    targetFolder,
+                    Function(source, target)
+                        If String.Equals(IO.Path.GetExtension(source), result.Extension, StringComparison.OrdinalIgnoreCase) Then Return False
+                        Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
+                    End Function,
+                    Function(source) result.Extension).ConfigureAwait(True)
+            End If
+
+            StatusText = $"{convertedCount + uploadedCount} von {targetItems.Count} Datei(en) konvertiert"
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
+            If saveToImmich AndAlso uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
         End Sub
 
         Public Async Function MovePathsToFolderAsync(paths As IEnumerable(Of String), targetFolder As String) As Task

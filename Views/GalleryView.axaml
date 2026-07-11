@@ -510,7 +510,7 @@
                                   SelectionChanged="OnVirtualTreeSelectionChanged">
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-36,3,0,3"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-34,3,0,3"
                                           ContextRequested="OnSearchNodeContextRequested">
                                         <Grid.ContextMenu>
                                             <ContextMenu>
@@ -524,7 +524,7 @@
                                         </Grid.ContextMenu>
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
                                                        Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="6,0,0,0"
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
                                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <Button Grid.Column="2"
@@ -543,6 +543,45 @@
                                                            VerticalAlignment="Center"
                                                            Opacity="0.75"/>
                                         </Button>
+                                    </Grid>
+                                </TreeDataTemplate>
+                            </TreeView.ItemTemplate>
+                        </TreeView>
+                    </ScrollViewer>
+
+                    <Grid ColumnDefinitions="*" Margin="0,6,14,8" IsVisible="{Binding HasImmich}">
+                        <TextBlock Text="Immich" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                    </Grid>
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  MaxHeight="160"
+                                  IsVisible="{Binding HasImmich}">
+                        <TreeView Name="ImmichTreeView"
+                                  ItemsSource="{Binding ImmichTree}"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  DragDrop.AllowDrop="True"
+                                  DragDrop.DragOver="OnImmichTreeDragOver"
+                                  DragDrop.Drop="OnImmichTreeDrop"
+                                  SelectionChanged="OnVirtualTreeSelectionChanged">
+                            <TreeView.ItemTemplate>
+                                <TreeDataTemplate ItemsSource="{Binding Children}">
+                                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center" Margin="-34,3,0,3">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Bilder hochladen…" Click="OnImmichUploadClick"/>
+                                                <MenuItem Header="Einfügen (nach Immich)" Click="OnImmichPasteClick"/>
+                                                <MenuItem Header="Album umbenennen" IsVisible="{Binding IsImmichAlbumNode}" Click="OnImmichRenameAlbumClick"/>
+                                                <Separator/>
+                                                <MenuItem Header="Neues Album…" Click="OnImmichNewAlbumClick"/>
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/cloud.svg"
+                                                       Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
+                                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
+                                                   TextTrimming="CharacterEllipsis"/>
                                     </Grid>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>
@@ -709,7 +748,7 @@
                                             <MenuItem Name="GridContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
                                             <MenuItem Name="GridContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
                                             <MenuItem Name="GridContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
-                                            <MenuItem Name="GridContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
+                                            <MenuItem Name="GridContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
                                             <MenuItem Name="GridContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
                                             <Separator Name="GridContextPathSeparator"/>
                                             <MenuItem Name="GridContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
@@ -1054,7 +1093,7 @@
                                             <MenuItem Name="ListContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
                                             <MenuItem Name="ListContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
                                             <MenuItem Name="ListContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
-                                            <MenuItem Name="ListContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
+                                            <MenuItem Name="ListContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
                                             <MenuItem Name="ListContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
                                             <Separator Name="ListContextPathSeparator"/>
                                             <MenuItem Name="ListContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>

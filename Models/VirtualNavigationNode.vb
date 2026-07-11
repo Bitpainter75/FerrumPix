@@ -6,6 +6,8 @@ Namespace Models
     Public Class VirtualNavigationNode
         Public Property Name As String
         Public Property Kind As String
+        ''' Für gespeicherte Suchen: "Local" oder "Immich".
+        Public Property Source As String = "Local"
         Public Property Query As String
         Public Property Id As String
         Public Property TextQuery As String
@@ -19,6 +21,20 @@ Namespace Models
         Public Property ConditionCombinator As String = "AND"
         Public Property IsRemovable As Boolean
         Public Property Children As ObservableCollection(Of VirtualNavigationNode)
+
+        ''' True für einen konkreten Immich-Album-Knoten (umbenennbar, Upload-Ziel).
+        Public ReadOnly Property IsImmichAlbumNode As Boolean
+            Get
+                Return String.Equals(Kind, "ImmichAlbum", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' True für jeden Immich-Knoten (Album oder „Alle Fotos") - zeigt das Immich-Kontextmenü.
+        Public ReadOnly Property IsImmichNode As Boolean
+            Get
+                Return String.Equals(Kind, "ImmichAlbum", StringComparison.Ordinal) OrElse String.Equals(Kind, "ImmichAll", StringComparison.Ordinal)
+            End Get
+        End Property
 
         Public Sub New(name As String, kind As String, Optional query As String = "")
             Me.Name = name

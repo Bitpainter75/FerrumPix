@@ -26,6 +26,11 @@ Namespace Services
         ''' hinweg zu erkennen - wird zusätzlich zu Avalonias DataFormat.File gesetzt/gelesen.
         Private Shared ReadOnly CutFormat As DataFormat(Of String) = DataFormat.CreateStringApplicationFormat("FerrumPixCut")
 
+        ''' Anwendungseigene Roh-Pfadliste (newline-getrennt). Trägt ALLE Pfade - auch nicht-lokale wie
+        ''' Immich-Pseudo-Pfade (immich://…), die weder als Datei-URI noch für fremde Programme taugen.
+        ''' Wird beim internen Lesen zuerst geprüft, damit Kopieren/Einfügen von Immich-Items round-trippt.
+        Private Shared ReadOnly InternalPathsFormat As DataFormat(Of String) = DataFormat.CreateStringApplicationFormat("FerrumPixInternalPaths")
+
         Public Shared Async Function CopyPathsAsync(clipboard As IClipboard, storageProvider As IStorageProvider, paths As IEnumerable(Of String), cut As Boolean) As Task
             If clipboard Is Nothing OrElse paths Is Nothing Then Return
 
@@ -35,16 +40,30 @@ Namespace Services
                 ToList()
             If validPaths.Count = 0 Then Return
 
-            Dim uriList = String.Join(ControlChars.Lf, validPaths.Select(Function(p) New Uri(IO.Path.GetFullPath(p)).AbsoluteUri))
+            Dim rawList = String.Join(ControlChars.Lf, validPaths)
+            ' URI-Liste nur aus echten lokalen Pfaden (für fremde Programme); Pseudo-Pfade auslassen.
+            Dim localPaths = validPaths.Where(Function(p) IO.File.Exists(p) OrElse IO.Directory.Exists(p)).ToList()
+            Dim uriList = String.Join(ControlChars.Lf, localPaths.Select(Function(p) New Uri(IO.Path.GetFullPath(p)).AbsoluteUri))
 
-            Dim transfer = Await BuildFileTransferAsync(storageProvider, validPaths,
+            Dim transfer = Await BuildFileTransferAsync(storageProvider, localPaths,
                 Sub(firstItem)
                     firstItem.SetText(uriList)
                     firstItem.Set(CutFormat, If(cut, "1", "0"))
+                    firstItem.Set(InternalPathsFormat, rawList)
                 End Sub)
 
             If transfer.Items.Count = 0 Then
-                Await clipboard.SetTextAsync(uriList)
+                ' Keine echten Dateien (z.B. reine Immich-Auswahl) - dennoch die interne Rohpfadliste
+                ' auf die Zwischenablage legen, damit Einfügen innerhalb von FerrumPix funktioniert.
+                Dim internalOnly = New DataTransfer()
+                Dim item = New DataTransferItem()
+                item.Set(InternalPathsFormat, rawList)
+                item.Set(CutFormat, If(cut, "1", "0"))
+                internalOnly.Add(item)
+                Try
+                    Await clipboard.SetDataAsync(internalOnly)
+                Catch
+                End Try
                 Return
             End If
 
@@ -160,6 +179,27 @@ Namespace Services
                     ownsTransfer = True
                 End If
                 If transfer Is Nothing Then Return Nothing
+
+                ' Interne Rohpfadliste zuerst: enthält auch Immich-Pseudo-Pfade, die als Datei fehlen.
+                Try
+                    Dim internalRaw = Await transfer.TryGetValueAsync(InternalPathsFormat)
+                    If Not String.IsNullOrWhiteSpace(internalRaw) Then
+                        Dim rawPaths = internalRaw.
+                            Split({ControlChars.Cr, ControlChars.Lf}, StringSplitOptions.RemoveEmptyEntries).
+                            Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                            Distinct(StringComparer.OrdinalIgnoreCase).
+                            ToList()
+                        If rawPaths.Count > 0 Then
+                            Dim internalCut = False
+                            Try
+                                internalCut = String.Equals(Await transfer.TryGetValueAsync(CutFormat), "1", StringComparison.Ordinal)
+                            Catch
+                            End Try
+                            Return New ClipboardPathData With {.Paths = rawPaths, .IsCut = internalCut, .ClipboardWasReadable = True}
+                        End If
+                    End If
+                Catch
+                End Try
 
                 Dim files = Await transfer.TryGetFilesAsync()
                 If files Is Nothing OrElse files.Length = 0 Then Return Nothing

@@ -56,6 +56,19 @@ Namespace ViewModels
         Private _enableDiagnosticLogging As Boolean = False
         Private _isThumbnailCacheRefreshing As Boolean = False
         Private _isThumbnailCacheRefreshQueued As Boolean = False
+        Private _immichEnabled As Boolean = False
+        Private _immichServerUrl As String = ""
+        Private _immichApiKey As String = ""
+        Private _immichStoreRatingInDescription As Boolean = False
+        Private _immichStoreTagsInDescription As Boolean = False
+        Private _immichConnectionMessage As String = ""
+        Private _immichCacheMessage As String = ""
+        Private _immichIsTesting As Boolean = False
+        Private _savedImmichEnabled As Boolean = False
+        Private _savedImmichServerUrl As String = ""
+        Private _savedImmichApiKey As String = ""
+        Private _savedImmichStoreRatingInDescription As Boolean = False
+        Private _savedImmichStoreTagsInDescription As Boolean = False
 
         Private _savedThemeMode As String = "Dark"
         Private _savedAccentColor As String = "#F08A1A"
@@ -852,6 +865,101 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Immich-Anbindung ein/aus. Schaltet den Immich-Zweig im Galerie-Navigationsbaum
+        ''' frei bzw. entfernt ihn sofort.</summary>
+        Public Property ImmichEnabled As Boolean
+            Get
+                Return _immichEnabled
+            End Get
+            Set(value As Boolean)
+                If _immichEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_immichEnabled, value)
+                PersistImmichSettings()
+                _mainVm?.Gallery?.ReinitializeImmich()
+            End Set
+        End Property
+
+        ''' <summary>Basis-URL des Immich-Servers (z.B. http://nas:2283). Wird beim Speichern normalisiert
+        ''' (ohne "/api", ohne Schrägstrich am Ende). Kein Netzabruf beim Tippen - erst beim Verbindungstest
+        ''' bzw. beim Aktivieren.</summary>
+        Public Property ImmichServerUrl As String
+            Get
+                Return _immichServerUrl
+            End Get
+            Set(value As String)
+                If String.Equals(_immichServerUrl, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_immichServerUrl, If(value, ""))
+                PersistImmichSettings()
+                If _immichEnabled Then _mainVm?.Gallery?.ReinitializeImmich()
+            End Set
+        End Property
+
+        ''' <summary>Immich-API-Key (Konto → API-Keys im Immich-Webinterface).</summary>
+        Public Property ImmichApiKey As String
+            Get
+                Return _immichApiKey
+            End Get
+            Set(value As String)
+                If String.Equals(_immichApiKey, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_immichApiKey, If(value, ""))
+                PersistImmichSettings()
+                If _immichEnabled Then _mainVm?.Gallery?.ReinitializeImmich()
+            End Set
+        End Property
+
+        Public Property ImmichStoreRatingInDescription As Boolean
+            Get
+                Return _immichStoreRatingInDescription
+            End Get
+            Set(value As Boolean)
+                If _immichStoreRatingInDescription = value Then Return
+                Me.RaiseAndSetIfChanged(_immichStoreRatingInDescription, value)
+                PersistImmichSettings()
+            End Set
+        End Property
+
+        Public Property ImmichStoreTagsInDescription As Boolean
+            Get
+                Return _immichStoreTagsInDescription
+            End Get
+            Set(value As Boolean)
+                If _immichStoreTagsInDescription = value Then Return
+                Me.RaiseAndSetIfChanged(_immichStoreTagsInDescription, value)
+                PersistImmichSettings()
+            End Set
+        End Property
+
+        Public Property ImmichConnectionMessage As String
+            Get
+                Return _immichConnectionMessage
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_immichConnectionMessage, value)
+            End Set
+        End Property
+
+        Public Property ImmichCacheMessage As String
+            Get
+                Return _immichCacheMessage
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_immichCacheMessage, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property ClearImmichCacheCommand As ICommand
+
+        Public Property ImmichIsTesting As Boolean
+            Get
+                Return _immichIsTesting
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_immichIsTesting, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property TestImmichConnectionCommand As ICommand
+
         Public ReadOnly Property ResetCommand As ICommand
         Public ReadOnly Property ApplyCommand As ICommand
         Public ReadOnly Property CancelCommand As ICommand
@@ -917,6 +1025,11 @@ Namespace ViewModels
             _transparencyBackgroundMode = AppSettingsService.NormalizeTransparencyBackgroundMode(_appSettings.TransparencyBackgroundMode)
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
             _enableDiagnosticLogging = _appSettings.EnableDiagnosticLogging
+            _immichEnabled = _appSettings.ImmichEnabled
+            _immichServerUrl = _appSettings.ImmichServerUrl
+            _immichApiKey = _appSettings.ImmichApiKey
+            _immichStoreRatingInDescription = _appSettings.ImmichStoreRatingInDescription
+            _immichStoreTagsInDescription = _appSettings.ImmichStoreTagsInDescription
             FolderNode.ShowHiddenFolders = _showHiddenFolders
             ResetCommand = ReactiveCommand.Create(Sub() ResetToDefaults())
             ApplyCommand = ReactiveCommand.Create(Sub()
@@ -959,11 +1072,61 @@ Namespace ViewModels
                                                                         RefreshThumbnailCacheFolders()
                                                                         _mainVm?.Gallery?.LoadCurrentFolder()
                                                                     End Sub)
+            TestImmichConnectionCommand = ReactiveCommand.CreateFromTask(Function() TestImmichConnectionAsync())
+            ClearImmichCacheCommand = ReactiveCommand.CreateFromTask(Function() ClearImmichCacheAsync())
             ApplyTheme(_themeMode, _accentColor)
             FontScaleService.Apply(_fontSizeOffset)
             LocalizationService.LanguageMode = _languageMode
             SnapshotSettings()
         End Sub
+
+        ''' <summary>Leert nur die lokal zwischengespeicherten Immich-Thumbnail-Dateien. Der Metadaten-Index
+        ''' bleibt bewusst erhalten (er ist teuer neu aufzubauen und über updatedAt selbst-invalidierend).</summary>
+        Private Async Function ClearImmichCacheAsync() As Task
+            ImmichCacheMessage = LocalizationService.T("Wird geleert…")
+            Dim removed = Await Task.Run(Function() ImmichService.ClearCache())
+            ImmichCacheMessage = String.Format(LocalizationService.T("{0} Vorschaubilder gelöscht"), removed)
+            _mainVm?.Gallery?.LoadCurrentFolder()
+        End Function
+
+        Private Sub PersistImmichSettings()
+            AppSettingsService.Update(Sub(s)
+                                          s.ImmichEnabled = _immichEnabled
+                                          s.ImmichServerUrl = ImmichService.NormalizeServerUrl(_immichServerUrl)
+                                          s.ImmichApiKey = If(_immichApiKey, "").Trim()
+                                          s.ImmichStoreRatingInDescription = _immichStoreRatingInDescription
+                                          s.ImmichStoreTagsInDescription = _immichStoreTagsInDescription
+                                      End Sub)
+        End Sub
+
+        ''' <summary>Prüft URL + API-Key gegen den Server. Bei Erfolg wird der Galerie-Immich-Zweig neu
+        ''' aufgebaut, damit die Alben mit den bestätigten Zugangsdaten erscheinen.</summary>
+        Private Async Function TestImmichConnectionAsync() As Task
+            If ImmichIsTesting Then Return
+            PersistImmichSettings()
+            ImmichIsTesting = True
+            ImmichConnectionMessage = LocalizationService.T("Teste Verbindung…")
+            Try
+                Dim result = Await ImmichService.TestConnectionAsync(_immichServerUrl, _immichApiKey)
+                If Not result.Ok Then
+                    ImmichConnectionMessage = result.Message
+                    Return
+                End If
+                ' Erfolgreicher Test = klare Absicht, Immich zu nutzen: aktivieren (falls noch nicht) und
+                ' den Galeriebaum aufbauen. Das Setzen von ImmichEnabled löst Persist + Reinit selbst aus.
+                If Not _immichEnabled Then
+                    ImmichEnabled = True
+                Else
+                    _mainVm?.Gallery?.ReinitializeImmich()
+                End If
+                Dim albums = Await ImmichService.GetAlbumsAsync()
+                ImmichConnectionMessage = $"{result.Message} · {albums.Count} Alben"
+            Catch ex As Exception
+                ImmichConnectionMessage = ex.Message
+            Finally
+                ImmichIsTesting = False
+            End Try
+        End Function
 
         Public Sub New()
             Me.New(Nothing)
@@ -988,6 +1151,11 @@ Namespace ViewModels
             _savedJpgSaveQuality = _jpgSaveQuality
             _savedPreserveMetadataOnSave = _preserveMetadataOnSave
             _savedThumbnailCacheEnabled = _thumbnailCacheEnabled
+            _savedImmichEnabled = _immichEnabled
+            _savedImmichServerUrl = _immichServerUrl
+            _savedImmichApiKey = _immichApiKey
+            _savedImmichStoreRatingInDescription = _immichStoreRatingInDescription
+            _savedImmichStoreTagsInDescription = _immichStoreTagsInDescription
             _savedShowHiddenFolders = _showHiddenFolders
             _savedGalleryShowFolders = _galleryShowFolders
             _savedGalleryShowParentFolder = _galleryShowParentFolder
@@ -1022,6 +1190,11 @@ Namespace ViewModels
             JpgSaveQuality = _savedJpgSaveQuality
             PreserveMetadataOnSave = _savedPreserveMetadataOnSave
             ThumbnailCacheEnabled = _savedThumbnailCacheEnabled
+            ImmichServerUrl = _savedImmichServerUrl
+            ImmichApiKey = _savedImmichApiKey
+            ImmichStoreRatingInDescription = _savedImmichStoreRatingInDescription
+            ImmichStoreTagsInDescription = _savedImmichStoreTagsInDescription
+            ImmichEnabled = _savedImmichEnabled
             ShowHiddenFolders = _savedShowHiddenFolders
             GalleryShowFolders = _savedGalleryShowFolders
             GalleryShowParentFolder = _savedGalleryShowParentFolder
@@ -1077,6 +1250,8 @@ Namespace ViewModels
             ThumbnailMemoryCacheCapacity = 250
             JpgSaveQuality = 90
             PreserveMetadataOnSave = True
+            ImmichStoreRatingInDescription = False
+            ImmichStoreTagsInDescription = False
             ShowHiddenFolders = False
             GalleryShowFolders = True
             GalleryShowParentFolder = True

@@ -14,10 +14,98 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
-        <TextBlock Text="Rechteck im Bild aufziehen, dann kopieren oder füllen."
+
+        <TextBlock Text="Werkzeug" Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Stretch">
+            <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionModeCommand}" CommandParameter="Rectangle"
+                    Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Rectangle}"
+                    ToolTip.Tip="Rechteck aufziehen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rectangle.svg" Width="16" Height="16" />
+            </Button>
+            <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionModeCommand}" CommandParameter="Ellipse"
+                    Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Ellipse}"
+                    ToolTip.Tip="Kreis/Ellipse aufziehen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/oval.svg" Width="16" Height="16" />
+            </Button>
+            <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionModeCommand}" CommandParameter="Lasso"
+                    Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Lasso}"
+                    ToolTip.Tip="Freihand-Auswahl (Lasso)">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/lasso.svg" Width="16" Height="16" />
+            </Button>
+            <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionModeCommand}" CommandParameter="MagicWand"
+                    Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=MagicWand}"
+                    ToolTip.Tip="Zauberstab: zusammenhängende Farbfläche wählen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/wand.svg" Width="16" Height="16" />
+            </Button>
+        </StackPanel>
+
+        <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Stretch">
+            <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="New"
+                    Classes.active="{Binding IsSelectionCombineNew}"
+                    ToolTip.Tip="Neue Auswahl erstellen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square.svg" Width="16" Height="16" />
+            </Button>
+            <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Add"
+                    Classes.active="{Binding IsSelectionCombineAdd}"
+                    ToolTip.Tip="Zur bestehenden Auswahl hinzufügen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-plus.svg" Width="16" Height="16" />
+            </Button>
+            <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Subtract"
+                    Classes.active="{Binding IsSelectionCombineSubtract}"
+                    ToolTip.Tip="Von der bestehenden Auswahl abziehen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-minus.svg" Width="16" Height="16" />
+            </Button>
+            <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Intersect"
+                    Classes.active="{Binding IsSelectionCombineIntersect}"
+                    ToolTip.Tip="Schnittmenge mit bestehender Auswahl bilden">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/squares.svg" Width="16" Height="16" />
+            </Button>
+            <Border Width="1"
+                    Margin="4,4"
+                    Background="{DynamicResource FP.Border.Normal}" />
+            <Button Classes="ghost" Padding="8,6"
+                    IsEnabled="{Binding HasActiveSelection}"
+                    Command="{Binding InvertSelectionCommand}"
+                    ToolTip.Tip="Auswahl umkehren">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg" Width="16" Height="16" />
+            </Button>
+            <Button Classes="ghost" Padding="8,6"
+                    IsEnabled="{Binding HasActiveSelection}"
+                    Command="{Binding ClearSelectionCommand}"
+                    ToolTip.Tip="Auswahl aufheben">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg" Width="16" Height="16" />
+            </Button>
+        </StackPanel>
+
+        <TextBlock Text="Auswahl im Bild erstellen, dann kopieren oder füllen."
                    Foreground="{DynamicResource FP.Text.Secondary}"
                    FontSize="{DynamicResource FP.Font.Small}"
                    TextWrapping="Wrap" />
+
+        <!-- Zauberstab-Toleranz -->
+        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
+              IsVisible="{Binding ShowMagicWandControls}">
+            <TextBlock Text="Toleranz" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                               DefaultValue="15"
+                               Value="{Binding SelectionTolerance}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding SelectionTolerance, Mode=TwoWay}"
+                                     Minimum="0" Maximum="100" Increment="1"
+                                     FormatString="F0" />
+        </Grid>
         <Button Classes="ghost"
                 HorizontalAlignment="Stretch"
                 Padding="10,6"
@@ -25,9 +113,8 @@
                 Command="{Binding CopySelectionCommand}"
                 ToolTip.Tip="Auswahlinhalt als neues, frei verschiebbares Bild-Objekt kopieren">
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                <icons:SvgIcon
-                    Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
-                    Width="16" Height="16" />
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
+                               Width="16" Height="16" />
                 <TextBlock Text="Kopieren" />
             </StackPanel>
         </Button>

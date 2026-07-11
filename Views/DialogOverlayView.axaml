@@ -66,7 +66,7 @@
                             Margin="0,14,0,0"
                             IsVisible="{Binding DialogShowsSaveAsOptions}">
                     <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto,Auto"
                           ColumnSpacing="14"
                           RowSpacing="12">
                         <TextBlock Text="Format"
@@ -128,6 +128,46 @@
                                        TextAlignment="Right"
                                        VerticalAlignment="Center"
                                        Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        </Grid>
+
+                        <TextBlock Grid.Row="2" Text="Ziel"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsSaveAsImmichAvailable}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                    IsVisible="{Binding IsSaveAsImmichAvailable}">
+                            <Button Classes="segmented"
+                                    Classes.active="{Binding IsSaveAsTargetLocal}"
+                                    Click="OnDialogSaveTargetClick"
+                                    Tag="Local">Ordner</Button>
+                            <Button Classes="segmented"
+                                    Classes.active="{Binding IsSaveAsTargetImmich}"
+                                    Click="OnDialogSaveTargetClick"
+                                    Tag="Immich">Immich</Button>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="3"
+                                   Text="Zielordner"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsSaveAsTargetFolderVisible}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        <Grid Grid.Row="3"
+                              Grid.Column="1"
+                              ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8"
+                              IsVisible="{Binding IsSaveAsTargetFolderVisible}">
+                            <TextBox Text="{Binding DialogSaveAsTargetFolder, Mode=TwoWay}"
+                                     MinHeight="36"/>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn"
+                                    Width="38"
+                                    Height="36"
+                                    Click="OnBrowseSaveTargetFolderClick"
+                                    ToolTip.Tip="Ordner wählen">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg"
+                                               Width="18"
+                                               Height="18"/>
+                            </Button>
                         </Grid>
                     </Grid>
                 </StackPanel>
