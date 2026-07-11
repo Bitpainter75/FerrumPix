@@ -227,6 +227,8 @@ Namespace ViewModels
         Private _selectionCombineMode As String = "New"
         Private _selectionMask As SKBitmap = Nothing
         Private _selectionMaskRect As SKRectI = SKRectI.Empty
+        ' Gecachte PNG/Base64-Kodierung von _selectionMask (siehe EncodeSelectionMaskBase64).
+        Private _selectionMaskBase64 As String = ""
         Private _selectionMaskPreviewImage As Bitmap = Nothing
         Private _selectionShapeMode As String = "Rectangle"
         Private _selectionShapePointsX As Double() = Nothing
@@ -3544,6 +3546,7 @@ Namespace ViewModels
             If _selectionMask IsNot Nothing AndAlso Not Object.ReferenceEquals(_selectionMask, mask) Then _selectionMask.Dispose()
             _selectionMask = mask
             _selectionMaskRect = rectPx
+            _selectionMaskBase64 = EncodeMaskBitmapToBase64(mask)
             RefreshSelectionMaskPreviewImage()
         End Sub
 
@@ -3551,6 +3554,7 @@ Namespace ViewModels
             _selectionMask?.Dispose()
             _selectionMask = Nothing
             _selectionMaskRect = SKRectI.Empty
+            _selectionMaskBase64 = ""
             SetSelectionMaskPreviewImage(Nothing)
         End Sub
 
@@ -3762,6 +3766,15 @@ Namespace ViewModels
             HasActiveSelection = False
         End Sub
 
+        ''' <summary>Verwirft die aktive Auswahl beim Anwenden von Geometrie (Crop/Resize/Canvas/Transform):
+        ''' die Auswahlmaske liegt im Basisbild-Raum und würde danach nicht mehr zum Bild passen - der
+        ''' Anpassungs-Skopus greift ohnehin nur bei neutraler Geometrie (siehe
+        ''' ImageProcessor.SelectionGeometryIsNeutral). Ohne eigenen Undo-Schritt, damit die Löschung Teil
+        ''' desselben Schritts wie die Geometrie ist (der Aufrufer hat unmittelbar davor PushUndo gerufen).</summary>
+        Private Sub ClearActiveSelectionForGeometry()
+            If _hasActiveSelection OrElse _selectionMask IsNot Nothing Then ClearSelection(captureUndo:=False)
+        End Sub
+
         Public Sub InvertSelection()
             If Not _hasActiveSelection Then Return
             Dim bw = GetBaseWidth()
@@ -3933,10 +3946,17 @@ Namespace ViewModels
             Return False
         End Function
 
+        ' Gecacht, weil GetCurrentAdjustments (und damit dies) bei aktivem Auswahl-Skopus pro Vorschau-Frame
+        ' läuft - ohne Cache würde die Maske jedes Frame neu als PNG kodiert. Wird nur bei Masken-Änderung
+        ' in SetSelectionMaskData/ClearSelectionMask neu befüllt.
         Private Function EncodeSelectionMaskBase64() As String
-            If _selectionMask Is Nothing Then Return ""
+            Return _selectionMaskBase64
+        End Function
+
+        Private Shared Function EncodeMaskBitmapToBase64(mask As SKBitmap) As String
+            If mask Is Nothing Then Return ""
             Try
-                Using image = SKImage.FromBitmap(_selectionMask)
+                Using image = SKImage.FromBitmap(mask)
                     Using data = image.Encode(SKEncodedImageFormat.Png, 100)
                         Return Convert.ToBase64String(data.ToArray())
                     End Using
@@ -5337,7 +5357,7 @@ Namespace ViewModels
                 Dim mp = CurrentImage.Size.Width * CurrentImage.Size.Height / 1_000_000.0
                 StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}"
             Catch
-                StatusText = "Fehler beim Laden"
+                StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
         End Sub
 
@@ -5395,7 +5415,7 @@ Namespace ViewModels
                 Dim mp = CurrentImage.Size.Width * CurrentImage.Size.Height / 1_000_000.0
                 StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}"
             Catch ex As Exception
-                StatusText = "Fehler beim Laden"
+                StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
             Return True
         End Function
@@ -5553,7 +5573,7 @@ Namespace ViewModels
         Private Sub SchedulePreviewUpdate()
             _hasChanges = True
             _previewPending = True
-            StatusText = "Vorschau wird aktualisiert..."
+            StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
             _previewTimer.Stop()
             _previewTimer.Start()
         End Sub
@@ -5565,7 +5585,7 @@ Namespace ViewModels
         ''' noch das kanonische Ergebnis beeinflussen, bis der Nutzer "Anwenden" klickt.
         Private Sub ScheduleToolPreviewUpdate()
             _previewPending = True
-            StatusText = "Vorschau wird aktualisiert..."
+            StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
             _previewTimer.Stop()
             _previewTimer.Start()
         End Sub
@@ -5642,7 +5662,7 @@ Namespace ViewModels
             InvalidatePreviewWork()
             PreviewImage = newPreview
             _previewPending = False
-            StatusText = "Vorschau bereit"
+            StatusText = LocalizationService.T("Vorschau bereit")
             Return True
         End Function
 
@@ -5791,6 +5811,7 @@ Namespace ViewModels
         Private Async Function ApplyCropAsync() As Task
             If Not HasCropChanges Then Return
             PushUndo()
+            ClearActiveSelectionForGeometry()
 
             Dim remainingWidth = 1.0 - (_appliedCropLeft + _appliedCropRight) / 100.0
             Dim remainingHeight = 1.0 - (_appliedCropTop + _appliedCropBottom) / 100.0
@@ -5824,6 +5845,7 @@ Namespace ViewModels
         Private Async Function ApplyResizeAsync() As Task
             If Not HasImageResizeChanges Then Return
             PushUndo()
+            ClearActiveSelectionForGeometry()
             _appliedResizeWidth = _resizeWidth
             _appliedResizeHeight = _resizeHeight
             _hasChanges = True
@@ -5834,6 +5856,7 @@ Namespace ViewModels
         Private Async Function ApplyCanvasAsync() As Task
             If Not HasCanvasSizeChanges Then Return
             PushUndo()
+            ClearActiveSelectionForGeometry()
             _appliedCanvasWidth = _canvasWidth
             _appliedCanvasHeight = _canvasHeight
             _hasChanges = True
@@ -5844,6 +5867,7 @@ Namespace ViewModels
         Private Async Function ApplyTransformAsync() As Task
             If Not HasTransformChanges Then Return
             PushUndo()
+            ClearActiveSelectionForGeometry()
             _appliedRotationDegrees = _rotationDegrees
             _appliedStraightenDegrees = _straightenDegrees
             _appliedStraightenExpandCanvas = _straightenExpandCanvas
@@ -5873,7 +5897,7 @@ Namespace ViewModels
             CancelAndDisposePreviewCts(oldCts)
 
             Try
-                StatusText = "Vorschau wird berechnet…"
+                StatusText = LocalizationService.T("Vorschau wird berechnet…")
                 Dim needsComparison = _showBeforeImage
                 Dim result = Await Task.Run(Function()
                                                 token.ThrowIfCancellationRequested()
@@ -5907,7 +5931,7 @@ Namespace ViewModels
                 PreviewImage = result.Preview
                 ComparisonImage = result.Comparison
                 _previewPending = False
-                StatusText = "Vorschau bereit"
+                StatusText = LocalizationService.T("Vorschau bereit")
                 result.Preview = Nothing
                 result.Comparison = Nothing
                 result.Dispose()
@@ -5915,12 +5939,12 @@ Namespace ViewModels
             Catch ex As Exception
                 If IsIgnorablePreviewException(ex) Then
                     If requestId <> _previewRequestId OrElse _previewPending Then
-                        StatusText = "Vorschau wird aktualisiert..."
+                        StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
                     Else
-                        StatusText = "Vorschau bereit"
+                        StatusText = LocalizationService.T("Vorschau bereit")
                     End If
                 Else
-                    StatusText = "Vorschau bereit"
+                    StatusText = LocalizationService.T("Vorschau bereit")
                     LogPreviewError(ex)
                 End If
             Finally

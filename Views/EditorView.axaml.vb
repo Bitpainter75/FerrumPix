@@ -1714,7 +1714,7 @@ Namespace Views
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Selection OrElse Not vm.HasActiveSelection Then Return
+            If vm Is Nothing OrElse Not IsSelectionScopeTool(vm.CurrentTool) OrElse Not vm.HasActiveSelection Then Return
             Dim left = ix + iw * vm.SelectionXPercent / 100.0
             Dim top = iy + ih * vm.SelectionYPercent / 100.0
             Dim width = Math.Max(1, iw * vm.SelectionWidthPercent / 100.0)
@@ -1742,12 +1742,25 @@ Namespace Views
             End If
         End Sub
 
+        ''' <summary>Werkzeuge, in denen das Auswahl-Overlay (nur als Anzeige, nicht interaktiv) sichtbar
+        ''' bleiben soll: das Auswahl-Werkzeug selbst UND die pixel-anpassenden Werkzeuge, deren Regler jetzt
+        ''' nur innerhalb der Auswahl wirken - so sieht der Nutzer, warum sich nur ein Teil ändert. In
+        ''' Geometrie-/Ebenen-Werkzeugen dagegen ausgeblendet (dort wird die Auswahl ohnehin verworfen).</summary>
+        Private Shared Function IsSelectionScopeTool(tool As EditorTool) As Boolean
+            Select Case tool
+                Case EditorTool.Selection, EditorTool.Adjust, EditorTool.Color, EditorTool.Filters, EditorTool.Effects
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
+
         Private Sub UpdateSelectionOverlayVisibility()
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
             Dim dragOverlay = Me.FindControl(Of SelectionOverlayControl)("SelectionDragOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim showSelection = vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Selection AndAlso vm.HasActiveSelection
+            Dim showSelection = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso vm.HasActiveSelection
             Dim hasMaskPreview = showSelection AndAlso vm.SelectionMaskPreviewImage IsNot Nothing
             If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = hasMaskPreview
             If overlay IsNot Nothing Then overlay.IsVisible = showSelection AndAlso Not hasMaskPreview

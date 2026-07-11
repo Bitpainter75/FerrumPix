@@ -2369,4 +2369,241 @@
   <data name="bernimmt_EXIF_XMP_beim_Speichern_unter_Exportier_ca80d46d" xml:space="preserve">
     <value>Transfiere EXIF/XMP al guardar como, exportar y convertir.</value>
   </data>
+  <data name="Werkzeug_dfa660bf" xml:space="preserve">
+    <value>Herramienta</value>
+  </data>
+  <data name="Modus_a7f116c3" xml:space="preserve">
+    <value>Modo</value>
+  </data>
+  <data name="Toleranz_bb0b5fd0" xml:space="preserve">
+    <value>Tolerancia</value>
+  </data>
+  <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
+    <value>Dibujar un rectángulo</value>
+  </data>
+  <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
+    <value>Dibujar un círculo/elipse</value>
+  </data>
+  <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
+    <value>Selección a mano alzada (lazo)</value>
+  </data>
+  <data name="Zauberstab_zusammenh_ngende_Farbfl_che_w_hlen_ba6e6e09" xml:space="preserve">
+    <value>Varita mágica: seleccionar un área de color contigua</value>
+  </data>
+  <data name="Neue_Auswahl_erstellen_9d42d82f" xml:space="preserve">
+    <value>Crear una selección nueva</value>
+  </data>
+  <data name="Zur_bestehenden_Auswahl_hinzuf_gen_d663f633" xml:space="preserve">
+    <value>Añadir a la selección existente</value>
+  </data>
+  <data name="Von_der_bestehenden_Auswahl_abziehen_66b26b4e" xml:space="preserve">
+    <value>Restar de la selección existente</value>
+  </data>
+  <data name="Schnittmenge_mit_bestehender_Auswahl_bilden_7d96c22b" xml:space="preserve">
+    <value>Intersecar con la selección existente</value>
+  </data>
+  <data name="Auswahl_umkehren_53318bb2" xml:space="preserve">
+    <value>Invertir selección</value>
+  </data>
+  <data name="Auswahl_aufheben_b69fd365" xml:space="preserve">
+    <value>Anular selección</value>
+  </data>
+  <data name="Auswahl_im_Bild_erstellen_dann_kopieren_oder_f_l_1e7b1755" xml:space="preserve">
+    <value>Crea una selección en la imagen y luego cópiala o rellénala.</value>
+  </data>
+  <data name="Album_konnte_nicht_angelegt_werden_d0b3c789" xml:space="preserve">
+    <value>No se pudo crear el álbum</value>
+  </data>
+  <data name="Album_umbenannt_0_7ad06957" xml:space="preserve">
+    <value>Álbum renombrado: {0}</value>
+  </data>
+  <data name="Album_umbenennen_a5d5e317" xml:space="preserve">
+    <value>Cambiar nombre del álbum</value>
+  </data>
+  <data name="Album_0_angelegt_6b554d85" xml:space="preserve">
+    <value>Álbum {0} creado</value>
+  </data>
+  <data name="Bild_konnte_nicht_aus_Immich_geladen_werden_d39194e5" xml:space="preserve">
+    <value>No se pudo cargar la imagen desde Immich</value>
+  </data>
+  <data name="Immich_Fehler_5a71b5ce" xml:space="preserve">
+    <value>Error de Immich: </value>
+  </data>
+  <data name="Immich_Fotos_konnten_nicht_geladen_werden_8e9fb949" xml:space="preserve">
+    <value>No se pudieron cargar las fotos de Immich</value>
+  </data>
+  <data name="Immich_Suche_fehlgeschlagen_c6b3357f" xml:space="preserve">
+    <value>La búsqueda en Immich falló</value>
+  </data>
+  <data name="Immich_Suche_l_uft_9c206054" xml:space="preserve">
+    <value>Buscando en Immich…</value>
+  </data>
+  <data name="Immich_Upload_fehlgeschlagen_340c2c36" xml:space="preserve">
+    <value>La subida a Immich falló</value>
+  </data>
+  <data name="Kein_API_Key_angegeben_a50277d5" xml:space="preserve">
+    <value>No se indicó ninguna clave de API</value>
+  </data>
+  <data name="Keine_Server_URL_angegeben_a521f999" xml:space="preserve">
+    <value>No se indicó ninguna URL de servidor</value>
+  </data>
+  <data name="Keine_Treffer_921d4224" xml:space="preserve">
+    <value>Sin resultados</value>
+  </data>
+  <data name="Lade_Bild_aus_Immich_057469d3" xml:space="preserve">
+    <value>Cargando imagen desde Immich…</value>
+  </data>
+  <data name="Lade_Immich_Fotos_7ac41e68" xml:space="preserve">
+    <value>Cargando fotos de Immich…</value>
+  </data>
+  <data name="Lade_aus_Immich_0_1_41bc6349" xml:space="preserve">
+    <value>Descargando de Immich… ({0}/{1})</value>
+  </data>
+  <data name="Lade_nach_Immich_hoch_0_1_73919d51" xml:space="preserve">
+    <value>Subiendo a Immich… ({0}/{1})</value>
+  </data>
+  <data name="Lade_8877cfec" xml:space="preserve">
+    <value>Cargando…</value>
+  </data>
+  <data name="Nach_Immich_hochgeladen_447b6d6f" xml:space="preserve">
+    <value>Subido a Immich</value>
+  </data>
+  <data name="Name_des_Albums_cd53c626" xml:space="preserve">
+    <value>Nombre del álbum:</value>
+  </data>
+  <data name="Neuer_Name_37e77e42" xml:space="preserve">
+    <value>Nombre nuevo:</value>
+  </data>
+  <data name="Neues_Immich_Album_d87b42a1" xml:space="preserve">
+    <value>Nuevo álbum de Immich</value>
+  </data>
+  <data name="Teste_Verbindung_39b5fbcd" xml:space="preserve">
+    <value>Probando conexión…</value>
+  </data>
+  <data name="Upload_fehlgeschlagen_ad04ab84" xml:space="preserve">
+    <value>La subida falló</value>
+  </data>
+  <data name="Verbunden_als_b6a7c448" xml:space="preserve">
+    <value>Conectado como</value>
+  </data>
+  <data name="Warte_auf_Immich_Thumbnails_69addc81" xml:space="preserve">
+    <value>Esperando miniaturas de Immich…</value>
+  </data>
+  <data name="Wird_geleert_a7de8e8e" xml:space="preserve">
+    <value>Vaciando…</value>
+  </data>
+  <data name="Wird_nach_Immich_hochgeladen_0eb3a7d4" xml:space="preserve">
+    <value>Subiendo a Immich…</value>
+  </data>
+  <data name="0_Bilder_aus_Immich_gespeichert_b3b60f4f" xml:space="preserve">
+    <value>{0} imágenes guardadas desde Immich</value>
+  </data>
+  <data name="0_Vorschaubilder_gel_scht_ae446dd1" xml:space="preserve">
+    <value>{0} miniaturas eliminadas</value>
+  </data>
+  <data name="0_von_1_nach_Immich_hochgeladen_7e7c45f6" xml:space="preserve">
+    <value>{0} de {1} subidas a Immich</value>
+  </data>
+  <data name="Bilder_hochladen_d4850a4c" xml:space="preserve">
+    <value>Subir imágenes…</value>
+  </data>
+  <data name="Einf_gen_nach_Immich_adff0b7f" xml:space="preserve">
+    <value>Pegar (en Immich)</value>
+  </data>
+  <data name="Neues_Album_349970ce" xml:space="preserve">
+    <value>Álbum nuevo…</value>
+  </data>
+  <data name="ICC_Farbprofil_vorhanden_f3bcd33d" xml:space="preserve">
+    <value>Perfil de color ICC presente</value>
+  </data>
+  <data name="API_Key_fb2f3f28" xml:space="preserve">
+    <value>Clave de API</value>
+  </data>
+  <data name="Server_URL_153a9d06" xml:space="preserve">
+    <value>URL del servidor</value>
+  </data>
+  <data name="Basis_Adresse_deiner_Immich_Instanz_z_B_http_nas_1f4bf0d1" xml:space="preserve">
+    <value>Dirección base de tu instancia de Immich, p. ej. http://nas:2283</value>
+  </data>
+  <data name="Im_Immich_Webinterface_unter_Konto_API_Keys_erze_06e36b46" xml:space="preserve">
+    <value>Créala en la interfaz web de Immich en Cuenta → Claves de API.</value>
+  </data>
+  <data name="Immich_aktivieren_2eba91fe" xml:space="preserve">
+    <value>Activar Immich</value>
+  </data>
+  <data name="Immich_Cache_leeren_d8a51177" xml:space="preserve">
+    <value>Vaciar caché de Immich</value>
+  </data>
+  <data name="Zeigt_den_Immich_Zweig_mit_deinen_Alben_im_Galer_a6b06c93" xml:space="preserve">
+    <value>Muestra la rama de Immich con tus álbumes en el árbol de la galería.</value>
+  </data>
+  <data name="L_scht_die_lokal_zwischengespeicherten_Immich_Vo_2e79d5d5" xml:space="preserve">
+    <value>Elimina las miniaturas de Immich en caché local y el índice de metadatos. Ambos se recargan cuando es necesario.</value>
+  </data>
+  <data name="Bindet_einen_self_hosted_Immich_Server_ein_Alben_57ede30d" xml:space="preserve">
+    <value>Integra un servidor Immich autoalojado. Los álbumes aparecen en el panel de navegación de la galería; las fotos se pueden ver y editar (como copia).</value>
+  </data>
+  <data name="Integration_899e5920" xml:space="preserve">
+    <value>Integración</value>
+  </data>
+  <data name="Sterne_in_Beschreibung_speichern_a0db3559" xml:space="preserve">
+    <value>Guardar estrellas en la descripción</value>
+  </data>
+  <data name="Stichw_rter_in_Beschreibung_speichern_bd5d2205" xml:space="preserve">
+    <value>Guardar palabras clave en la descripción</value>
+  </data>
+  <data name="Speichert_FerrumPix_Bewertungen_in_einem_abgegre_d73d5de9" xml:space="preserve">
+    <value>Guarda las valoraciones de FerrumPix en un bloque delimitado de la descripción de Immich en lugar del campo de valoración de Immich.</value>
+  </data>
+  <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_0b05b5ee" xml:space="preserve">
+    <value>Guarda las palabras clave de FerrumPix en un bloque delimitado de la descripción de Immich en lugar de como etiquetas de Immich.</value>
+  </data>
+  <data name="Ordner_ausw_hlen_0d705794" xml:space="preserve">
+    <value>Seleccionar carpeta</value>
+  </data>
+  <data name="Papierkorb_berspringen_d860699d" xml:space="preserve">
+    <value>Omitir la papelera</value>
+  </data>
+  <data name="L_scht_Dateien_und_Ordner_dauerhaft_statt_sie_in_b2d0c4bb" xml:space="preserve">
+    <value>Elimina archivos y carpetas de forma permanente en lugar de moverlos a la papelera.</value>
+  </data>
+  <data name="Sicherheitsabfrage_beim_L_schen_berspringen_d42af895" xml:space="preserve">
+    <value>Omitir la confirmación al eliminar</value>
+  </data>
+  <data name="L_scht_Dateien_und_Ordner_ohne_vorherige_Best_ti_e203327b" xml:space="preserve">
+    <value>Elimina archivos y carpetas sin confirmación previa.</value>
+  </data>
+  <data name="Lineale_im_Editor_anzeigen_b1438eeb" xml:space="preserve">
+    <value>Mostrar reglas en el editor</value>
+  </data>
+  <data name="Blendet_die_Pixel_Lineale_am_oberen_und_linken_R_d309775e" xml:space="preserve">
+    <value>Muestra las reglas de píxeles en los bordes superior e izquierdo de la vista previa.</value>
+  </data>
+  <data name="Raster_im_Editor_anzeigen_ed191ca8" xml:space="preserve">
+    <value>Mostrar cuadrícula en el editor</value>
+  </data>
+  <data name="Zeigt_ein_Pixelraster_ber_dem_Bild_an_00968ceb" xml:space="preserve">
+    <value>Muestra una cuadrícula de píxeles sobre la imagen.</value>
+  </data>
+  <data name="Ziel_44d12621" xml:space="preserve">
+    <value>Destino</value>
+  </data>
+  <data name="Zielordner_8036bfe3" xml:space="preserve">
+    <value>Carpeta de destino</value>
+  </data>
+  <data name="Alle_berschreiben_eaf7926d" xml:space="preserve">
+    <value>Sobrescribir todo</value>
+  </data>
+  <data name="Alle_berspringen_9a5dcfcc" xml:space="preserve">
+    <value>Omitir todo</value>
+  </data>
+  <data name="Entferne_Metadaten_8bac4979" xml:space="preserve">
+    <value>Eliminando metadatos...</value>
+  </data>
+  <data name="Wende_Wasserzeichen_an_16df0be9" xml:space="preserve">
+    <value>Aplicando marca de agua...</value>
+  </data>
+  <data name="ndere_Bildgr_e_c4636b19" xml:space="preserve">
+    <value>Cambiando tamaño de la imagen...</value>
+  </data>
 </root>

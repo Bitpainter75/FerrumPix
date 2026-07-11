@@ -3883,7 +3883,7 @@ Namespace ViewModels
             Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath)
             If resize Is Nothing Then Return
 
-            StatusText = "Ändere Bildgröße..."
+            StatusText = LocalizationService.T("Ändere Bildgröße...")
             Dim localTargets = targetItems.Where(Function(i) Not i.IsImmichAsset AndAlso File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
             Dim changedCount = Await RewriteImagesInPlaceAsync(localTargets,
                 Function(source, temp)
@@ -3933,7 +3933,7 @@ Namespace ViewModels
             Dim targets = GetSelectedEditableImagePaths()
             If targets.Count = 0 Then Return
 
-            StatusText = "Entferne Metadaten..."
+            StatusText = LocalizationService.T("Entferne Metadaten...")
             Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
                 Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95, preserveMetadata:=False))
 
@@ -3954,7 +3954,7 @@ Namespace ViewModels
                 Return
             End If
 
-            StatusText = "Wende Wasserzeichen an..."
+            StatusText = LocalizationService.T("Wende Wasserzeichen an...")
             Dim localTargets = targetItems.Where(Function(i) Not i.IsImmichAsset AndAlso File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
             Dim changedCount = Await RewriteImagesInPlaceAsync(localTargets,
                 Function(source, temp)

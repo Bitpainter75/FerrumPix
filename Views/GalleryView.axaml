@@ -567,7 +567,8 @@
                                   SelectionChanged="OnVirtualTreeSelectionChanged">
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
-                                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center" Margin="-34,3,0,3">
+                                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center"
+                                          HorizontalAlignment="Stretch" Background="Transparent" Margin="-34,3,0,3">
                                         <Grid.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Bilder hochladen…" Click="OnImmichUploadClick"/>
@@ -1273,6 +1274,20 @@
                                                                    IconBrush="White"
                                                                    IsVisible="{Binding HasXmpMetadata}"
                                                                    ToolTip.Tip="XMP vorhanden">
+                                                        <icons:SvgIcon.Effect>
+                                                            <DropShadowEffect BlurRadius="6"
+                                                                              OffsetX="0"
+                                                                              OffsetY="1"
+                                                                              Color="#B0000000"/>
+                                                        </icons:SvgIcon.Effect>
+                                                    </icons:SvgIcon>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/ICC.svg"
+                                                                   Classes="gallery-meta-icon compact"
+                                                                   Width="26"
+                                                                   Height="26"
+                                                                   IconBrush="White"
+                                                                   IsVisible="{Binding HasIccProfile}"
+                                                                   ToolTip.Tip="ICC-Farbprofil vorhanden">
                                                         <icons:SvgIcon.Effect>
                                                             <DropShadowEffect BlurRadius="6"
                                                                               OffsetX="0"
