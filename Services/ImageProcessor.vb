@@ -1978,7 +1978,7 @@ Namespace Services
                     ' Beim QR-Code ist FillColor die Hintergrundfarbe, StrokeColor die Modulfarbe.
                     DrawQrCode(canvas, If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text), rect, stroke, fill)
                 Case "image", "selectionimage"
-                    DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth)
+                    DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth, stretchToFill:=kind = "selectionimage")
                 Case "svg"
                     Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                     DrawSvgAnnotation(canvas, annotation.ImagePath, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
@@ -2181,13 +2181,13 @@ Namespace Services
         ''' opacity ist auf der 0-100-Skala (wie annotation.Opacity), NICHT der bereits normalisierten
         ''' 0-1 alphaFactor-Skala, die für die übrigen (bereits alpha-vorgemischten) Fill/Stroke-Farben
         ''' verwendet wird - siehe Aufrufstelle im Select Case (Kind "image").
-        Private Shared Sub DrawImageAnnotation(canvas As SKCanvas, imagePath As String, rect As SKRect, opacity As Single, stroke As SKColor, strokeWidth As Single)
+        Private Shared Sub DrawImageAnnotation(canvas As SKCanvas, imagePath As String, rect As SKRect, opacity As Single, stroke As SKColor, strokeWidth As Single, Optional stretchToFill As Boolean = False)
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then Return
 
             Using bitmap = SKBitmap.Decode(imagePath)
                 If bitmap Is Nothing OrElse bitmap.Width <= 0 OrElse bitmap.Height <= 0 Then Return
 
-                Dim fitRect = FitRectKeepingAspectRatio(rect, bitmap.Width, bitmap.Height)
+                Dim fitRect = If(stretchToFill, rect, FitRectKeepingAspectRatio(rect, bitmap.Width, bitmap.Height))
                 Using paint = New SKPaint With {
                     .IsAntialias = True,
                     .Color = New SKColor(255, 255, 255, CByte(Math.Max(0, Math.Min(255, 255 * Clamp(opacity, 0, 100) / 100.0F))))
