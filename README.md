@@ -83,7 +83,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 
 ## Technology Stack
 
-- [Avalonia UI](https://avaloniaui.net/) 11.3 (Fluent theme) — cross-platform UI framework
+- [Avalonia UI](https://avaloniaui.net/) 12.1 (Fluent theme) — cross-platform UI framework
 - VB.NET on .NET 10
 - [ReactiveUI](https://www.reactiveui.net/) for MVVM
 - [SkiaSharp](https://github.com/mono/SkiaSharp) for image processing/rendering
