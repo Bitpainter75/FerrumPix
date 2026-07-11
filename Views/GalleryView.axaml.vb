@@ -920,11 +920,28 @@ Namespace Views
             Dim pressedArgs = _dragStartArgs
             If dragItem Is Nothing OrElse pressedArgs Is Nothing Then Return
             Dim useSelection = vm.SelectedItems IsNot Nothing AndAlso vm.SelectedItems.Contains(dragItem)
-            Dim paths = If(useSelection,
-                           vm.SelectedItems.Select(Function(i) i.FilePath).ToList(),
-                           New List(Of String) From {dragItem.FilePath})
+            Dim dragItems = If(useSelection,
+                               vm.SelectedItems.ToList(),
+                               New List(Of ImageItem) From {dragItem})
             _dragStartItem = Nothing
             _dragStartArgs = Nothing
+
+            ' Immich-Assets sind Pseudo-Pfade (immich://…) und damit für ein fremdes Ziel wie Dolphin
+            ' keine echten Dateien. Vor dem Ziehen die Originale in temporäre Dateien holen, damit der
+            ' Export nach außen (und ein interner Drop) tatsächlich eine Datei liefert.
+            Dim paths As New List(Of String)()
+            For Each it In dragItems
+                If it Is Nothing Then Continue For
+                If it.IsImmichAsset Then
+                    Dim assetId As String = Nothing, fileName As String = Nothing
+                    If Not ImmichService.TryParsePseudoPath(it.FilePath, assetId, fileName) Then Continue For
+                    Dim tmp = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
+                    If Not String.IsNullOrEmpty(tmp) Then paths.Add(tmp)
+                ElseIf Not String.IsNullOrEmpty(it.FilePath) Then
+                    paths.Add(it.FilePath)
+                End If
+            Next
+            If paths.Count = 0 Then Return
 
             ' Die Ziehlast trägt beides: das anwendungseigene Format, an dem der interne Drop das
             ' Verschieben erkennt, und die Dateien selbst - ohne die sieht ein fremdes Ziel wie Dolphin
@@ -1383,10 +1400,16 @@ Namespace Views
         ''' Für eine Ziehgeste aus der Galerie selbst ergibt das nichts - die Dateien liegen schon dort.
         Public Sub OnGalleryAreaDragOver(sender As Object, e As DragEventArgs)
             Dim payload = GetDragPayload(e)
-            If payload.IsInternal Then
+            Dim vm = GetVm()
+            ' Steht gerade eine Immich-Ansicht (Album oder „Alle Fotos") offen, landen fremde Dateien
+            ' als Upload dort - genau wie beim Ablegen auf dem Baumknoten. Keine Immich-Pseudo-Pfade.
+            If Not payload.IsInternal AndAlso IsImmichAlbumView(vm) AndAlso
+               payload.Paths.Any(Function(p) Not ImmichService.IsImmichPseudoPath(p)) Then
+                e.DragEffects = DragDropEffects.Copy
+            ElseIf payload.IsInternal Then
                 e.DragEffects = DragDropEffects.None
             Else
-                e.DragEffects = GetDropEffects(payload, GetVm()?.CurrentFolder)
+                e.DragEffects = GetDropEffects(payload, vm?.CurrentFolder)
             End If
             e.Handled = True
         End Sub
@@ -1394,9 +1417,23 @@ Namespace Views
         Public Async Sub OnGalleryAreaDrop(sender As Object, e As DragEventArgs)
             Dim payload = GetDragPayload(e)
             If payload.IsInternal Then Return
-            Await ApplyDropAsync(payload, GetVm()?.CurrentFolder)
+            Dim vm = GetVm()
+            If IsImmichAlbumView(vm) Then
+                Dim immichPaths = payload.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso IO.File.Exists(p)).ToList()
+                e.Handled = True
+                If immichPaths.Count > 0 Then vm.UploadToImmich(vm.SelectedImmichNode, immichPaths)
+                Return
+            End If
+            Await ApplyDropAsync(payload, vm?.CurrentFolder)
             e.Handled = True
         End Sub
+
+        ''' <summary>True, wenn die Galerie gerade eine Immich-Ansicht (Album oder „Alle Fotos") zeigt -
+        ''' dann sind Drops fremder Dateien Uploads nach Immich statt Kopien in einen lokalen Ordner.</summary>
+        Private Shared Function IsImmichAlbumView(vm As GalleryViewModel) As Boolean
+            Return vm IsNot Nothing AndAlso vm.IsVirtualFolder AndAlso
+                   vm.SelectedImmichNode IsNot Nothing AndAlso vm.SelectedImmichNode.IsImmichNode
+        End Function
 
         Private Function GetDropFolder(e As DragEventArgs) As FolderNode
             Dim current = TryCast(e.Source, Control)

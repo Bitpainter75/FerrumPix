@@ -328,6 +328,18 @@ Namespace Models
             End Set
         End Property
 
+        Private _hasIccProfile As Boolean
+        Public Property HasIccProfile As Boolean
+            Get
+                Return _hasIccProfile
+            End Get
+            Set(value As Boolean)
+                If _hasIccProfile = value Then Return
+                _hasIccProfile = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
         Private _exifMetadataSummary As String = ""
         Public Property ExifMetadataSummary As String
             Get

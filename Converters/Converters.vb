@@ -2,9 +2,27 @@ Imports System
 Imports System.Globalization
 Imports Avalonia.Data
 Imports Avalonia.Data.Converters
+Imports Avalonia.Media
 Imports FerrumPix.ViewModels
 
 Namespace Converters
+
+    ''' <summary>Wandelt eine Avalonia.Media.Color in einen SolidColorBrush - Avalonia konvertiert
+    ''' Color nicht automatisch nach IBrush, daher schlug z.B. Background="{Binding}" auf einer
+    ''' Farb-Sammlung (Zuletzt-verwendete-Farben) mit einer Bindungsfehlermeldung fehl.</summary>
+    Public Class ColorToBrushConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            If TypeOf value Is Color Then Return New SolidColorBrush(CType(value, Color))
+            If TypeOf value Is IBrush Then Return value
+            Return BindingOperations.DoNothing
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Return BindingOperations.DoNothing
+        End Function
+    End Class
 
     Public Class AppModeToVisibilityConverter
         Implements IValueConverter

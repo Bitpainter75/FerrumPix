@@ -1452,6 +1452,10 @@ Namespace ViewModels
                 Dim reopen = SelectedImmichNode
                 If String.Equals(reopen.Kind, "ImmichAll", StringComparison.Ordinal) OrElse
                    (String.Equals(reopen.Kind, "ImmichAlbum", StringComparison.Ordinal) AndAlso String.Equals(reopen.Id, albumId, StringComparison.Ordinal)) Then
+                    ' Immich erzeugt die Thumbnails asynchron nach dem Upload. Vor dem Neuladen darauf warten,
+                    ' sonst zeigt die Ansicht für die neuen Assets leere Kacheln (siehe SaveImageAsync-Upload).
+                    StatusText = LocalizationService.T("Warte auf Immich-Thumbnails…")
+                    Await Task.WhenAll(uploaded.Select(Function(id) ImmichService.WaitForThumbnailReadyAsync(id)))
                     Await OpenVirtualNavigationNode(reopen)
                 End If
             End If
@@ -2838,6 +2842,7 @@ Namespace ViewModels
                                                                Dim hasExif = catalogSummary.HasExifMetadata
                                                                Dim hasIptc = catalogSummary.HasIptcMetadata
                                                                Dim hasXmp = catalogSummary.HasXmpMetadata
+                                                               Dim hasIcc = catalogSummary.HasIccProfile
                                                                Dim exifSummary = catalogSummary.ExifSummary
                                                                Dim iptcSummary = catalogSummary.IptcSummary
                                                                Dim xmpSummary = catalogSummary.XmpSummary
@@ -2865,6 +2870,7 @@ Namespace ViewModels
                                                                                                           item.HasExifMetadata = hasExif
                                                                                                           item.HasIptcMetadata = hasIptc
                                                                                                           item.HasXmpMetadata = hasXmp
+                                                                                                          item.HasIccProfile = hasIcc
                                                                                                           item.ExifMetadataSummary = exifSummary
                                                                                                           item.IptcMetadataSummary = iptcSummary
                                                                                                           item.XmpMetadataSummary = xmpSummary
@@ -3055,6 +3061,7 @@ Namespace ViewModels
                                 item.HasExifMetadata = m.HasExifMetadata
                                 item.HasIptcMetadata = m.HasIptcMetadata
                                 item.HasXmpMetadata = m.HasXmpMetadata
+                                item.HasIccProfile = m.HasIccProfile
                                 item.ExifMetadataSummary = m.ExifSummary
                                 item.IptcMetadataSummary = m.IptcSummary
                                 item.XmpMetadataSummary = m.XmpSummary

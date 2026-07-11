@@ -930,7 +930,7 @@
                             <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
                         </Button>
                         <icons:RoundSlider Name="EditorZoomSlider" Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
-                                           Value="{Binding ZoomSliderValue, Mode=TwoWay}" VerticalAlignment="Center" />
+                                           VerticalAlignment="Center" />
                         <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
                                 Focusable="False"
                                 Click="OnZoomInClick" ToolTip.Tip="Vergrößern">

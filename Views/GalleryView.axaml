@@ -974,6 +974,27 @@
                                                                 </icons:SvgIcon.Effect>
                                                             </icons:SvgIcon>
                                                         </Border>
+                                                        <Border Width="32" Height="32"
+                                                                Background="Transparent"
+                                                                IsVisible="{Binding HasIccProfile}"
+                                                                Tag="Icc"
+                                                                ToolTip.Tip="ICC-Farbprofil vorhanden">
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/ICC.svg"
+                                                                       Classes="gallery-meta-icon"
+                                                                       Width="26"
+                                                                       Height="26"
+                                                                       IconBrush="White"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Bottom"
+                                                                       IsHitTestVisible="False">
+                                                                <icons:SvgIcon.Effect>
+                                                                    <DropShadowEffect BlurRadius="6"
+                                                                                      OffsetX="0"
+                                                                                      OffsetY="1"
+                                                                                      Color="#B0000000"/>
+                                                                </icons:SvgIcon.Effect>
+                                                            </icons:SvgIcon>
+                                                        </Border>
                                                     </StackPanel>
                                                     <Button Classes="favorite-btn image-favorite-btn"
                                                         Width="26"

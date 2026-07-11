@@ -23,7 +23,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Button Width="20" Height="20" Padding="0" Margin="0,0,4,4" CornerRadius="4"
-                                                Background="{Binding}"
+                                                Background="{Binding Converter={StaticResource ColorToBrushConverter}}"
                                                 BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1"
                                                 Click="OnRecentColorClick"
                                                 Tag="{Binding}"/>

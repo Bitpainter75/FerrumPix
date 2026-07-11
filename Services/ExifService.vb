@@ -45,6 +45,7 @@ Namespace Services
         Public Property HasExifMetadata As Boolean
         Public Property HasIptcMetadata As Boolean
         Public Property HasXmpMetadata As Boolean
+        Public Property HasIccProfile As Boolean
         Public Property ExifSummary As String = ""
         Public Property IptcSummary As String = ""
         Public Property XmpSummary As String = ""
@@ -78,6 +79,9 @@ Namespace Services
         Public Property ExifTags As New List(Of ExifTag)()
         Public Property IptcTags As New List(Of ExifTag)()
         Public Property XmpTags As New List(Of ExifTag)()
+        ''' <summary>True, wenn die Datei ein eingebettetes ICC-Farbprofil trägt (MetadataExtractor
+        ''' IccDirectory). Steuert das ICC-Badge in der Galerie - analog zu den EXIF/IPTC/XMP-Badges.</summary>
+        Public Property HasIccProfile As Boolean
     End Class
 
     Public Class ExifService
@@ -155,7 +159,8 @@ Namespace Services
                 .XmpRating = source.XmpRating,
                 .ExifTags = source.ExifTags,
                 .IptcTags = source.IptcTags,
-                .XmpTags = source.XmpTags
+                .XmpTags = source.XmpTags,
+                .HasIccProfile = source.HasIccProfile
             }
         End Function
 
@@ -172,6 +177,12 @@ Namespace Services
 
                 For Each metaDir As MetadataExtractor.Directory In metaDirectories
                     Dim dirType = metaDir.GetType().FullName
+
+                    ' ICC-Farbprofil erkennen (eigenes Badge). Die ICC-Tags landen zusätzlich wie bisher
+                    ' im EXIF-Tag-Baum (Else-Zweig unten) - das Flag ist rein additiv.
+                    If String.Equals(dirType, "MetadataExtractor.Formats.Icc.IccDirectory", StringComparison.Ordinal) Then
+                        data.HasIccProfile = True
+                    End If
 
                     If String.Equals(dirType, "MetadataExtractor.Formats.Iptc.IptcDirectory", StringComparison.Ordinal) Then
                         For Each metaTag In metaDir.Tags
@@ -275,6 +286,7 @@ Namespace Services
                 .HasExifMetadata = data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0,
                 .HasIptcMetadata = data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0,
                 .HasXmpMetadata = data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0,
+                .HasIccProfile = data IsNot Nothing AndAlso data.HasIccProfile,
                 .ExifSummary = BuildMetadataSummary(If(data?.ExifTags, Nothing), 6),
                 .IptcSummary = BuildMetadataSummary(If(data?.IptcTags, Nothing), 6),
                 .XmpSummary = BuildMetadataSummary(If(data?.XmpTags, Nothing), 6)

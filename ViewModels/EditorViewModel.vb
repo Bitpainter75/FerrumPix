@@ -5208,6 +5208,14 @@ Namespace ViewModels
 
         Public Async Function BackToViewerAsync() As Task
             If Not Await ConfirmSaveBeforeLeavingAsync("den Editor verlässt") Then Return
+            ' Immich-Edit: der Viewer hält seine Album-Sitzung (Pseudo-Pfade) noch. Erneutes OpenImage mit
+            ' dem lokalen Temp-Pfad würde sie durch eine Ein-Bild-Sitzung ersetzen und den Filmstreifen auf
+            ' das aktuelle Foto reduzieren. Stattdessen einfach zurückschalten - das ganze Album bleibt.
+            Dim editorIsImmich = _immichSourceAlbumId IsNot Nothing OrElse ImmichService.IsImmichTempPath(_currentImagePath)
+            If editorIsImmich AndAlso _mainVm.Viewer IsNot Nothing AndAlso _mainVm.Viewer.IsImmichSession Then
+                _mainVm.CurrentMode = AppMode.Viewer
+                Return
+            End If
             If Not String.IsNullOrEmpty(_currentImagePath) Then
                 _mainVm.Viewer.OpenImage(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
                 _mainVm.CurrentMode = AppMode.Viewer

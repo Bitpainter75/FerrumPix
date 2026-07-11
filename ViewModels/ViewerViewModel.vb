@@ -25,6 +25,15 @@ Namespace ViewModels
         ' Temp-Pfad des aktuell angezeigten Bildes ist - so bleibt der ganze Datei-/Anzeigecode gleich.
         Private _isImmichSession As Boolean = False
         Private _currentImmichAssetId As String = Nothing
+
+        ''' <summary>True, solange der Viewer eine Immich-Album-Sitzung zeigt (Filmstreifen = Album).
+        ''' Der Editor braucht das, um beim Zurückschalten die noch lebende Sitzung nicht durch eine
+        ''' Ein-Bild-Sitzung des lokalen Temp-Pfads zu ersetzen.</summary>
+        Public ReadOnly Property IsImmichSession As Boolean
+            Get
+                Return _isImmichSession
+            End Get
+        End Property
         Private _immichSourceAlbumId As String = Nothing
         Private _immichNavToken As Integer = 0
         ' Metadaten (Favorit/Rating/Stichwörter) je Album-Position - aus den Galerie-Items durchgereicht,

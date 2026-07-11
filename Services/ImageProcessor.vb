@@ -3705,7 +3705,11 @@ Namespace Services
         End Function
 
         Private Shared Function ApplyClarity(source As SKBitmap, amount As Single) As SKBitmap
-            Dim sigma = 2.0F + Math.Abs(amount) * 5.0F
+            ' Clarity = breiter Mitteltonkontrast: bewusst deutlich größerer Blur-Radius als Structure.
+            ' Untergrenze so wählen, dass ApplyNoiseReduction einen effektiven Gauß-Sigma > ~1.6 liefert
+            ' (blurSigma 5.0 → 0.625 → eff. ~1.6); bei 2.0 war Clarity bei kleinen Stärken fast ein No-Op
+            ' und vom feinen Structure-Radius (eff. ~1.24) kaum zu unterscheiden.
+            Dim sigma = 5.0F + Math.Abs(amount) * 5.0F
             Return ApplyLocalContrast(source, sigma, amount, 1.6F)
         End Function
 
@@ -4530,10 +4534,15 @@ Namespace Services
             For y As Integer = 0 To source.Height - 1
                 For x As Integer = 0 To source.Width - 1
                     Dim c = source.GetPixel(x, y)
-                    Dim noise = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                    result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + noise),
-                                                      ClampToByte(c.Green + noise),
-                                                      ClampToByte(c.Blue + noise),
+                    ' Digitales Rauschen ist chromatisch: pro Kanal ein eigener Zufallswert, damit
+                    ' farbige Sensor-Speckles entstehen. Das unterscheidet "Rauschen" klar von der
+                    ' monochromen "Körnung" (ApplyGrain), die denselben Wert auf alle Kanäle legt.
+                    Dim noiseR = (random.NextDouble() * 2.0 - 1.0) * amplitude
+                    Dim noiseG = (random.NextDouble() * 2.0 - 1.0) * amplitude
+                    Dim noiseB = (random.NextDouble() * 2.0 - 1.0) * amplitude
+                    result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + noiseR),
+                                                      ClampToByte(c.Green + noiseG),
+                                                      ClampToByte(c.Blue + noiseB),
                                                       c.Alpha))
                 Next
             Next

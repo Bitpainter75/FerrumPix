@@ -20,9 +20,12 @@ Namespace Services
 
         Private Shared ReadOnly _writeLock As New Object()
 
-        ''' <summary>Schreibt eine Info-Zeile IMMER (unabhängig von EnableDiagnosticLogging) - für
-        ''' gezielte Fehlersuche, die der Nutzer nicht erst per Einstellung freischalten soll.</summary>
+        ''' <summary>Schreibt eine Info-Zeile - respektiert wie LogException die Einstellung
+        ''' EnableDiagnosticLogging, damit im Normalbetrieb (z.B. Immich-HTTP-Meldungen) keine
+        ''' diagnostics.log anwächst, solange der Nutzer das Logging nicht in den Einstellungen
+        ''' aktiviert hat.</summary>
         Public Shared Sub LogAlways(area As String, message As String)
+            If Not AppSettingsService.Load().EnableDiagnosticLogging Then Return
             Try
                 Dim entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{area}] {message}" & Environment.NewLine
                 SyncLock _writeLock

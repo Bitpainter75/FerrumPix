@@ -14,6 +14,7 @@
         <conv:RatingStarGlyphConverter x:Key="RatingStarGlyphConverter"/>
         <conv:BoolToWidthConverter x:Key="BoolToWidthConverter"/>
         <conv:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter"/>
+        <conv:ColorToBrushConverter x:Key="ColorToBrushConverter"/>
     </Application.Resources>
     <Application.Styles>
         <FluentTheme>
