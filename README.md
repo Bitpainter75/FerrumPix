@@ -37,7 +37,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 
 <img src="Screenshots/Editor_Resize.png" />
 
-**Editor** (non-destructive, with undo/redo)
+**Editor** 
 - Crop (with presets), image resize, rotate/straighten (with auto canvas expand), flip, and canvas resize with anchor picker
 - Adjust: exposure, brightness, contrast, highlights/shadows, whites/blacks, tone curve (RGB, luminance, and the individual red/green/blue channels)
 - Color: white balance, temperature/tint, vibrance/saturation, split toning, and an 8-band HSL color mixer — pick a color band on a color wheel, then dial in its hue/saturation with a shared pair of sliders
