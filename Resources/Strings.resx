@@ -2607,4 +2607,19 @@
   <data name="ndere_Bildgr_e_c4636b19" xml:space="preserve">
     <value>Resizing image...</value>
   </data>
+  <data name="Belichtungszeit_43161f59" xml:space="preserve">
+    <value>Exposure time</value>
+  </data>
+  <data name="Aufnahmedatum_cbc22bf5" xml:space="preserve">
+    <value>Date taken</value>
+  </data>
+  <data name="Software_9ad05227" xml:space="preserve">
+    <value>Software</value>
+  </data>
+  <data name="Copyright_a420abf6" xml:space="preserve">
+    <value>Copyright</value>
+  </data>
+  <data name="Kleinbild_0ea90523" xml:space="preserve">
+    <value>35 mm equiv.</value>
+  </data>
 </root>

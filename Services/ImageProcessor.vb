@@ -1248,7 +1248,12 @@ Namespace Services
                 Return source
             End If
 
-            Dim exposure = CSng(Math.Pow(2.0, adj.Exposure / 100.0 * 4.0))
+            ' Belichtung ist ein reiner Kanal-Faktor und wandert deshalb aus der Farbmatrix in die
+            ' Tonwertkurve unten: Dort greift die weiche Schulter. In der Matrix wurde alles über Weiß
+            ' hart abgeschnitten - eine um +1 EV angehobene Aufnahme verlor ihre Lichter ersatzlos.
+            ' Skalare Verstärkung und die (lineare) Sättigungs-/Temperaturmatrix sind vertauschbar,
+            ' das Ergebnis bleibt in der Bildmitte also dasselbe.
+            Dim exposureGain = CSng(Math.Pow(2.0, adj.Exposure / 100.0 * 4.0))
 
             ' Temperatur: warm = mehr Rot/weniger Blau, kalt = mehr Blau/weniger Rot
             Dim tempR = 1.0F + adj.Temperature / 200.0F
@@ -1265,28 +1270,23 @@ Namespace Services
             Dim invSat = 1.0F - sat
 
             Dim colorMatrix = New Single() {
-                (lumR * invSat + sat) * tempR * exposure, lumG * invSat * tempR * exposure, lumB * invSat * tempR * exposure, 0, 0,
-                lumR * invSat * exposure, (lumG * invSat + sat) * tintG * exposure, lumB * invSat * exposure, 0, 0,
-                lumR * invSat * tempB * exposure, lumG * invSat * tempB * exposure, (lumB * invSat + sat) * tempB * exposure, 0, 0,
+                (lumR * invSat + sat) * tempR, lumG * invSat * tempR, lumB * invSat * tempR, 0, 0,
+                lumR * invSat, (lumG * invSat + sat) * tintG, lumB * invSat, 0, 0,
+                lumR * invSat * tempB, lumG * invSat * tempB, (lumB * invSat + sat) * tempB, 0, 0,
                 0, 0, 0, 1, 0
             }
 
-            Dim contrast = Math.Max(0.0F, 1.0F + adj.Contrast / 100.0F * 0.5F)
-            ' Helligkeit und Kontrast im üblichen Fotobereich halten, damit die Vorschau nicht ausreißt.
-            ' SkiaSharps ColorMatrix arbeitet auf normalisierten [0,1]-Farbwerten - auch der Verschiebungs-
-            ' anteil (5. Spalte) ist in dieser Skala anzugeben, nicht in 0-255. Ohne die Division durch 255
-            ' würde bereits eine kleine Helligkeits-/Kontraständerung das Bild sofort auf Weiß/Schwarz ziehen.
-            Dim brightness = adj.Brightness / 100.0F * 48.0F / 255.0F
-            Dim contrastOffset = brightness + (1.0F - contrast) * (128.0F / 255.0F)
-            Dim contrastMatrix = New Single() {
-                contrast, 0, 0, 0, contrastOffset,
-                0, contrast, 0, 0, contrastOffset,
-                0, 0, contrast, 0, contrastOffset,
-                0, 0, 0, 1, 0
-            }
+            ' Kontrast: Faktor 0,25 … 1,75. Mit dem früheren Halbfaktor (0,5 … 1,5) hob der Vollausschlag
+            ' die Streuung nur um gut ein Drittel an - zu zaghaft für einen Regler am Anschlag.
+            Dim contrast = Math.Max(0.0F, 1.0F + adj.Contrast / 100.0F * 0.75F)
+            ' Helligkeit in Tonwertstufen (80 von 255) statt der früheren 48: Der Vollausschlag verschob ein
+            ' normal belichtetes Foto sonst nur um knapp ein Fünftel des Tonwertumfangs.
+            Dim brightness = adj.Brightness / 100.0F * 80.0F / 255.0F
+
+            Dim toneLut = BuildToneCurveLut(exposureGain, contrast, brightness)
 
             Dim colorFilter = SKColorFilter.CreateColorMatrix(colorMatrix)
-            Dim contrastFilter = SKColorFilter.CreateColorMatrix(contrastMatrix)
+            Dim toneFilter = SKColorFilter.CreateTable(IdentityByteTable, toneLut, toneLut, toneLut)
             Dim paint = New SKPaint With {.ColorFilter = colorFilter}
 
             Dim result = New SKBitmap(source.Width, source.Height)
@@ -1297,16 +1297,66 @@ Namespace Services
                 paint.Dispose()
                 colorFilter.Dispose()
 
-                Using contrastPaint = New SKPaint With {.ColorFilter = contrastFilter}
+                Using tonePaint = New SKPaint With {.ColorFilter = toneFilter}
                     Using canvas = New SKCanvas(result)
-                        canvas.DrawBitmap(stage, 0, 0, contrastPaint)
+                        canvas.DrawBitmap(stage, 0, 0, tonePaint)
                     End Using
                 End Using
             End Using
 
-            contrastFilter.Dispose()
+            toneFilter.Dispose()
 
             Return result
+        End Function
+
+        ''' <summary>Grundbreite von Fuß und Schulter der Tonwertkurve, in Anteilen des Tonwertumfangs.</summary>
+        Private Const ToneShoulderBase As Single = 0.12F
+        Private Const ToneShoulderMax As Single = 0.4F
+
+        ''' <summary>Belichtung, Kontrast und Helligkeit als eine gemeinsame Tonwertkurve. Der lineare Teil
+        ''' bleibt unverändert - die Kurve knickt erst kurz vor Schwarz und Weiß ab und nähert sich den
+        ''' Enden asymptotisch, statt dort abgeschnitten zu werden. Vorher wurde hart geklemmt: Kontrast am
+        ''' Anschlag riss rund ein Fünftel der Pixel auf reines Schwarz oder Weiß, und Belichtung +50
+        ''' (= +2 EV) brannte vier Fünftel des Bildes ersatzlos weiß aus. Die Schulter wird nur so weit
+        ''' eingeblendet, wie die Einstellung überhaupt aus dem Tonwertumfang herausläuft - eine Einstellung,
+        ''' die ohnehin nirgends anstößt, geht damit unverändert durch.</summary>
+        Private Shared Function BuildToneCurveLut(exposureGain As Single, contrast As Single, brightness As Single) As Byte()
+            Dim low = ToneTransfer(0.0F, exposureGain, contrast, brightness)
+            Dim high = ToneTransfer(1.0F, exposureGain, contrast, brightness)
+            Dim overshootHigh = Math.Max(0.0F, high - 1.0F)
+            Dim overshootLow = Math.Max(0.0F, -low)
+
+            ' Schulter und Fuß wachsen mit dem, was hinausläuft: Eine feste, schmale Schulter reicht für
+            ' Kontrast und Helligkeit, presst aber bei +1 EV die halbe Tonwertskala in die obersten 12% -
+            ' das bleibt optisch Weiß. Je weiter die Einstellung übersteuert, desto früher setzt die
+            ' Kurve an und desto mehr Zeichnung bleibt in Lichtern bzw. Tiefen.
+            Dim shoulder = Clamp(ToneShoulderBase + 0.5F * overshootHigh, ToneShoulderBase, ToneShoulderMax)
+            Dim toe = Clamp(ToneShoulderBase + 0.5F * overshootLow, ToneShoulderBase, ToneShoulderMax)
+            Dim rolloff = Clamp((overshootHigh + overshootLow) / ToneShoulderBase, 0.0F, 1.0F)
+
+            Dim lut = New Byte(255) {}
+            For i As Integer = 0 To 255
+                Dim y = ToneTransfer(i / 255.0F, exposureGain, contrast, brightness)
+                Dim hard = Clamp(y, 0.0F, 1.0F)
+                Dim soft = SoftShoulder(y, toe, shoulder)
+                lut(i) = ClampToByte(255.0F * (hard + (soft - hard) * rolloff))
+            Next
+            Return lut
+        End Function
+
+        Private Shared Function ToneTransfer(x As Single, exposureGain As Single, contrast As Single, brightness As Single) As Single
+            Dim y = x * exposureGain
+            y = (y - 0.5F) * contrast + 0.5F
+            Return y + brightness
+        End Function
+
+        ''' Identisch im mittleren Bereich, exponentiell auslaufend zu Schwarz und Weiß - erreicht die
+        ''' Enden nie ganz, sodass in den Lichtern und Tiefen Zeichnung bleibt statt einer Fläche.
+        Private Shared Function SoftShoulder(y As Single, toe As Single, shoulder As Single) As Single
+            Dim knee = 1.0F - shoulder
+            If y > knee Then Return CSng(1.0 - shoulder * Math.Exp(-(y - knee) / shoulder))
+            If y < toe Then Return CSng(toe * Math.Exp((y - toe) / toe))
+            Return y
         End Function
 
         Private Shared Function ProcessBitmap(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
@@ -3929,7 +3979,23 @@ Namespace Services
         Private Shared Function ApplyDustScratches(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
-            If strength > 0 Then Return ApplyMedianBlur(source, strength * 0.75F)
+
+            If strength > 0 Then
+                ' Der Median-Radius ist zwangsläufig ganzzahlig. Durch den früheren 0,75-Faktor erreichte er
+                ' über den ganzen Reglerweg nur die Stufen 1 und 2 und stand ab etwa 35 fest - die Werte 50
+                ' und 100 lieferten pixelgleiche Bilder, die obere Reglerhälfte tat also nichts. Jetzt läuft
+                ' der Radius über seinen vollen Bereich, und die Zwischenstufen kommen aus der Deckkraft,
+                ' mit der das Medianbild über das Original gelegt wird.
+                Using median = ApplyMedianBlur(source, strength)
+                    Dim blended = CloneBitmap(source)
+                    Using canvas = New SKCanvas(blended)
+                        Using paint = New SKPaint With {.Color = New SKColor(255, 255, 255, ClampToByte(255.0F * strength))}
+                            canvas.DrawBitmap(median, 0, 0, paint)
+                        End Using
+                    End Using
+                    Return blended
+                End Using
+            End If
 
             Dim result = CloneBitmap(source)
             Dim random = New Random(source.Width * 997 Xor source.Height * 331)
