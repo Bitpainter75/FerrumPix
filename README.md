@@ -27,7 +27,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 <img src="Screenshots/Viewer.png" />
 
 **Viewer**
-- Fullscreen view (including F11 toggle) with fast switching between images, zoom/pan, rotate/flip
+- Fullscreen view (including F11 toggle) with fast switching between images, zoom/pan, and an on-screen rotation (Ctrl+L / Ctrl+R — a view rotation, not written back to the file); flipping and permanent rotation live in the editor
 - Slideshow with configurable interval, filmstrip navigation
 - Inline video playback (play/pause, seek, mute) in both windowed and fullscreen mode
 - Rate, favorite, tag, and delete images directly from the viewer; jump straight into the editor
@@ -55,6 +55,11 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - Color mixer at the top of the insert panel: a color wheel with saturation/brightness field, overlapping fill and background swatches with a swap gesture, the stroke color beside them, plus opacity, hex input, shared recent colors, and an eyedropper that samples straight from the image into whichever swatch is active
 - Info sidebar with the same General/EXIF/IPTC/XMP/ICC tabs and live histogram as the viewer
 - Before/after comparison slider
+- **How saving works — the editor is not a non-destructive one.** While the editor is open, every adjustment and
+  every object stays live and reversible (undo/redo, edit history, before/after). Saving, however, renders the
+  result into pixels: *Save* writes them back into the source file, *Save as* writes a new file and leaves the
+  original untouched. No edit recipe is stored alongside the image, so reopening a saved file does not bring the
+  sliders and objects back. If you want to keep the original intact, use *Save as*.
 
 <img src="Screenshots/Editor_Text.png" />
 
