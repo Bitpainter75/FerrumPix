@@ -4000,7 +4000,7 @@ Namespace ViewModels
                 .FillColor = AppSettingsService.NormalizeHexColor(preset.FillColor, "#FFFFFFFF"),
                 .StrokeColor = "#FF000000",
                 .StrokeWidth = 0,
-                .FontSizePixels = CSng(Math.Max(8, Math.Min(500, preset.FontSizePixels))),
+                .FontSizePixels = CSng(Math.Max(8, Math.Min(5000, preset.FontSizePixels))),
                 .FontFamily = If(String.IsNullOrWhiteSpace(preset.FontFamily), "Arial", preset.FontFamily),
                 .Opacity = CSng(Math.Max(0, Math.Min(100, preset.Opacity))),
                 .RotationDegrees = CSng(Math.Max(-180, Math.Min(180, preset.RotationDegrees))),

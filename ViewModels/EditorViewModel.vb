@@ -791,7 +791,7 @@ Namespace ViewModels
             _annotationRotation = Math.Max(-180, Math.Min(180, preset.RotationDegrees))
             _annotationOpacity = Math.Max(0, Math.Min(100, preset.Opacity))
             _annotationFontFamily = If(String.IsNullOrWhiteSpace(preset.FontFamily), "Arial", preset.FontFamily)
-            _annotationFontSize = Math.Max(8, Math.Min(500, preset.FontSizePixels))
+            _annotationFontSize = Math.Max(8, Math.Min(5000, preset.FontSizePixels))
             _annotationFillColor = NormalizeAvaloniaColor(preset.FillColor, "#FFFFFFFF")
 
             Me.RaisePropertyChanged(NameOf(AnnotationText))
@@ -3131,7 +3131,7 @@ Namespace ViewModels
                 Return _annotationFontSize
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationFontSize, Math.Max(8, Math.Min(500, value)))
+                Me.RaiseAndSetIfChanged(_annotationFontSize, Math.Max(8, Math.Min(5000, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationFontSizePixels))
                 UpdatePendingTextAnnotationSize()
                 SyncSelectedAnnotation()

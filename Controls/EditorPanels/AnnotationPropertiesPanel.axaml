@@ -93,12 +93,12 @@
               IsVisible="{Binding ShowFontControls}">
             <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-            <icons:RoundSlider Grid.Column="1" Minimum="8" Maximum="500"
+            <icons:RoundSlider Grid.Column="1" Minimum="8" Maximum="5000"
                                DefaultValue="8"
                                Value="{Binding AnnotationFontSizePixels}" Margin="0,0" />
             <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                      Value="{Binding AnnotationFontSizePixels, Mode=TwoWay}"
-                                     Minimum="8" Maximum="500" Increment="1"
+                                     Minimum="8" Maximum="5000" Increment="1"
                                      FormatString="F0" />
         </Grid>
         <!-- Beim QR-Code werden Hintergrund und Vordergrund über den Farbmischer gesetzt. -->

@@ -635,7 +635,7 @@ Namespace Services
                     .RotationDegrees = Math.Max(-180, Math.Min(180, preset.RotationDegrees)),
                     .Opacity = Math.Max(0, Math.Min(100, preset.Opacity)),
                     .FontFamily = If(preset.FontFamily, "Arial").Trim(),
-                    .FontSizePixels = Math.Max(8, Math.Min(500, preset.FontSizePixels)),
+                    .FontSizePixels = Math.Max(8, Math.Min(5000, preset.FontSizePixels)),
                     .FillColor = NormalizeHexColor(preset.FillColor, "#FFFFFFFF")
                 })
             Next
