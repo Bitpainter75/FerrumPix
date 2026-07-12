@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.FilmNegativePanel">
+    <Expander Header="Filmnegativ" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/contrast-2.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="icon-btn"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetNegativeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Filmnegativ zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="6" Margin="0,8,0,0">
+            <CheckBox Content="Negativ in Positiv umkehren"
+                      IsChecked="{Binding NegativeEnabled}"
+                      FontSize="{DynamicResource FP.Font.Small}"
+                      ToolTip.Tip="Gescanntes Filmnegativ umrechnen: die orange Maske des Filmträgers wird herausgerechnet, dann wird jeder Kanal umgekehrt." />
+            <CheckBox Content="Schwarzweiß-Negativ"
+                      IsChecked="{Binding NegativeMonochrome}"
+                      FontSize="{DynamicResource FP.Font.Small}"
+                      ToolTip.Tip="Für S/W-Filme: das Ergebnis wird neutral grau, ein eingefärbter Filmträger hinterlässt also keinen Farbstich." />
+
+            <Grid ColumnDefinitions="74,Auto,*,Auto" VerticalAlignment="Center" Margin="0,2,0,0">
+                <TextBlock Text="Filmbasis"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <Border Grid.Column="1"
+                        Width="24" Height="24"
+                        CornerRadius="4"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource FP.Border}"
+                        Background="{Binding NegativeBaseBrush}"
+                        IsVisible="{Binding HasNegativeBaseColor}"
+                        VerticalAlignment="Center" />
+                <Button Grid.Column="2"
+                        Classes="ghost" Padding="8,5"
+                        Margin="6,0,6,0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        BorderBrush="{DynamicResource FP.Accent}"
+                        Command="{Binding PickNegativeBaseCommand}"
+                        ToolTip.Tip="Pipette: auf den unbelichteten Filmrand zwischen den Bildern klicken. Die Vorschau zeigt dafür kurz wieder das rohe Negativ.">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="Aufnehmen" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="3"
+                        Classes="icon-btn"
+                        Width="28" Height="28" Padding="0"
+                        Command="{Binding AutoNegativeBaseCommand}"
+                        ToolTip.Tip="Filmbasis automatisch aus dem Bild messen">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
+                        Width="14" Height="14" />
+                </Button>
+            </Grid>
+
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Gradation" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                           ToolTip.Tip="Steilheit der Dichtekurve: nach links flauer und heller, nach rechts kräftiger und dunkler." />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                   Value="{Binding NegativeGamma}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding NegativeGamma, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+        </StackPanel>
+    </Expander>
+</UserControl>

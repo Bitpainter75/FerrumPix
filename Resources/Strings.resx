@@ -2625,4 +2625,115 @@
   <data name="Luminanz_6637e6e3" xml:space="preserve">
     <value>Luminance</value>
   </data>
+  <data name="Filmnegativ_d7d1414c" xml:space="preserve">
+    <value>Film negative</value>
+  </data>
+  <data name="Filmnegativ_zur_cksetzen_7db0758c" xml:space="preserve">
+    <value>Reset film negative</value>
+  </data>
+  <data name="Negativ_in_Positiv_umkehren_c35f617c" xml:space="preserve">
+    <value>Convert negative to positive</value>
+  </data>
+  <data name="Gescanntes_Filmnegativ_umrechnen_die_orange_Mask_b17b0de4" xml:space="preserve">
+    <value>Converts a scanned film negative: the orange mask of the film base is removed, then each channel is inverted.</value>
+  </data>
+  <data name="Schwarzwei_Negativ_8dc8ab88" xml:space="preserve">
+    <value>Black and white negative</value>
+  </data>
+  <data name="F_r_S_W_Filme_das_Ergebnis_wird_neutral_grau_ein_25b16056" xml:space="preserve">
+    <value>For B&amp;W film: the result is neutral gray, so a tinted film base leaves no color cast.</value>
+  </data>
+  <data name="Filmbasis_5d4b3ee3" xml:space="preserve">
+    <value>Film base</value>
+  </data>
+  <data name="Aufnehmen_8c5c4d42" xml:space="preserve">
+    <value>Pick</value>
+  </data>
+  <data name="Pipette_auf_den_unbelichteten_Filmrand_zwischen__a410569a" xml:space="preserve">
+    <value>Eyedropper: click the unexposed film edge between the frames. The preview briefly shows the raw negative again.</value>
+  </data>
+  <data name="Filmbasis_automatisch_aus_dem_Bild_messen_df13236a" xml:space="preserve">
+    <value>Measure the film base from the image automatically</value>
+  </data>
+  <data name="Gradation_0c8018aa" xml:space="preserve">
+    <value>Gradation</value>
+  </data>
+  <data name="Steilheit_der_Dichtekurve_nach_links_flauer_und__1c1a692f" xml:space="preserve">
+    <value>Steepness of the density curve: flatter and brighter to the left, punchier and darker to the right.</value>
+  </data>
+  <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
+    <value>Apply filter...</value>
+  </data>
+  <data name="Filter_anwenden_573991ed" xml:space="preserve">
+    <value>Apply filter</value>
+  </data>
+  <data name="Dateien_a41c619e" xml:space="preserve">
+    <value>files</value>
+  </data>
+  <data name="W_hle_den_Look_und_wohin_die_Bilder_geschrieben__99bb404c" xml:space="preserve">
+    <value>Choose the look and where the images are written.</value>
+  </data>
+  <data name="Anwenden_b18093c4" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Lightroom_xmp_e98c9654" xml:space="preserve">
+    <value>Lightroom (.xmp)</value>
+  </data>
+  <data name="Vorgabe_894dedf4" xml:space="preserve">
+    <value>Preset</value>
+  </data>
+  <data name="Keine_Vorgabe_gespeichert_199861dd" xml:space="preserve">
+    <value>No preset saved</value>
+  </data>
+  <data name="Preset_Datei_w_hlen_70a144fa" xml:space="preserve">
+    <value>Choose preset file</value>
+  </data>
+  <data name="LUT_w_hlen_0025fa8e" xml:space="preserve">
+    <value>Choose LUT</value>
+  </data>
+  <data name="Lightroom_Preset_w_hlen_2390b675" xml:space="preserve">
+    <value>Choose Lightroom preset</value>
+  </data>
+  <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
+    <value>Overwrite originals</value>
+  </data>
+  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
+    <value>Writes the filter directly into the image files. Unchecked, new files are created and the originals stay untouched.</value>
+  </data>
+  <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
+    <value>Append the preset name to the file name</value>
+  </data>
+  <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
+    <value>photo.jpg becomes photo_Vintage.jpg</value>
+  </data>
+  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
+    <value>Applying filter...</value>
+  </data>
+  <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
+    <value>The selected preset could not be read.</value>
+  </data>
+  <data name="Kein_Zielordner_angegeben_2ae2c246" xml:space="preserve">
+    <value>No target folder specified.</value>
+  </data>
+  <data name="Men_f_r_die_Auswahl_b6974b1c" xml:space="preserve">
+    <value>Menu for the selection</value>
+  </data>
+  <data name="Vorschau_fehlgeschlagen_7e6d3891" xml:space="preserve">
+    <value>Preview failed: </value>
+  </data>
+  <data name="Pixel_die_links_abgeschnitten_werden_65b95e37" xml:space="preserve">
+    <value>Pixels cropped from the left</value>
+  </data>
+  <data name="Pixel_die_oben_abgeschnitten_werden_ce9abf2c" xml:space="preserve">
+    <value>Pixels cropped from the top</value>
+  </data>
+  <data name="Pixel_die_rechts_abgeschnitten_werden_58dea9f4" xml:space="preserve">
+    <value>Pixels cropped from the right</value>
+  </data>
+  <data name="Pixel_die_unten_abgeschnitten_werden_849ecfb2" xml:space="preserve">
+    <value>Pixels cropped from the bottom</value>
+  </data>
+  <data name="ICC_Farbprofil_3cffd024" xml:space="preserve">
+    <value>ICC colour profile</value>
+  </data>
 </root>

@@ -748,6 +748,7 @@
                                             <MenuItem Name="GridContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
                                             <MenuItem Name="GridContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
                                             <MenuItem Name="GridContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
+                                            <MenuItem Name="GridContextApplyFilterMenuItem" Header="Filter anwenden..." Click="OnContextApplyFilter"/>
                                             <MenuItem Name="GridContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
                                             <MenuItem Name="GridContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
                                             <MenuItem Name="GridContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
@@ -1116,6 +1117,7 @@
                                             <MenuItem Name="ListContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
                                             <MenuItem Name="ListContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
                                             <MenuItem Name="ListContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
+                                            <MenuItem Name="ListContextApplyFilterMenuItem" Header="Filter anwenden..." Click="OnContextApplyFilter"/>
                                             <MenuItem Name="ListContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
                                             <MenuItem Name="ListContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
                                             <MenuItem Name="ListContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
@@ -1374,6 +1376,41 @@
         <Border Grid.Row="2" Grid.Column="2" Classes="statusbar" Height="60" Padding="20,10">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+                    <!-- Zeigt dasselbe Menü wie ein Rechtsklick auf ein Bild: dort stecken inzwischen die
+                         meisten Stapelfunktionen, und ein Rechtsklick ist nicht auf jedem Gerät bequem.
+                         Die Einträge tragen keine IsVisible-Bindungen - OnGalleryMenuButtonClick setzt
+                         jede Sichtbarkeit über UpdateGalleryItemContextMenu selbst. -->
+                    <Button Classes="icon-btn" Width="34" Height="34"
+                            Click="OnGalleryMenuButtonClick"
+                            IsEnabled="{Binding HasSelection}"
+                            ToolTip.Tip="Menü für die Auswahl">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Name="MenuContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
+                                <MenuItem Name="MenuContextEditMenuItem" Header="Anpassen" Click="OnContextEdit"/>
+                                <Separator Name="MenuContextTopSeparator"/>
+                                <MenuItem Name="MenuContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
+                                <MenuItem Name="MenuContextRenameMenuItem" Header="Umbenennen" Click="OnContextRename"/>
+                                <MenuItem Name="MenuContextCopyMenuItem" Header="Kopieren" Click="OnContextCopy"/>
+                                <MenuItem Name="MenuContextCutMenuItem" Header="Ausschneiden" Click="OnContextCut"/>
+                                <MenuItem Name="MenuContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste"/>
+                                <MenuItem Name="MenuContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate"/>
+                                <MenuItem Name="MenuContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
+                                <MenuItem Name="MenuContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
+                                <MenuItem Name="MenuContextApplyFilterMenuItem" Header="Filter anwenden..." Click="OnContextApplyFilter"/>
+                                <MenuItem Name="MenuContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
+                                <MenuItem Name="MenuContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
+                                <MenuItem Name="MenuContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
+                                <Separator Name="MenuContextPathSeparator"/>
+                                <MenuItem Name="MenuContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
+                                <MenuItem Name="MenuContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
+                                <Separator Name="MenuContextDeleteSeparator"/>
+                                <MenuItem Name="MenuContextDeleteMenuItem" Header="Löschen" Click="OnContextDelete"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/menu-2.svg"
+                                       Width="20" Height="20"/>
+                    </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding SelectAllCommand}"
                             ToolTip.Tip="Alle auswählen">

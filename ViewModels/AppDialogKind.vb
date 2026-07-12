@@ -13,6 +13,7 @@ Namespace ViewModels
         Search
         BatchConvert
         BatchResize
+        BatchFilter
         WatermarkPreset
     End Enum
 

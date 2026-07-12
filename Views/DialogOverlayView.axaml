@@ -60,8 +60,14 @@
                               HorizontalAlignment="Stretch"/>
                 </StackPanel>
 
-                <!-- Speichern unter -->
-                <StackPanel Grid.Row="3"
+                <views:BatchFilterDialogView Grid.Row="3"
+                                             Margin="0,16,0,0"
+                                             IsVisible="{Binding DialogShowsBatchFilter}"/>
+
+                <!-- Speichern unter. Eigene Zeile, weil der Stapel-Filter diesen Block ZUSAMMEN mit
+                     seiner eigenen Auswahl (Zeile 3) zeigt - alle anderen Dialoge belegen nur eine der
+                     beiden Zeilen, und leere Auto-Zeilen fallen auf null Höhe zusammen. -->
+                <StackPanel Grid.Row="4"
                             Spacing="14"
                             Margin="0,14,0,0"
                             IsVisible="{Binding DialogShowsSaveAsOptions}">

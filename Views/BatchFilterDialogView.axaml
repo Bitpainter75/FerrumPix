@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.BatchFilterDialogView">
+    <StackPanel Spacing="14">
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="12">
+
+            <TextBlock Text="Quelle"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Classes="segmented"
+                        Classes.active="{Binding IsDialogFilterSourceFilter}"
+                        Click="OnFilterSourceClick"
+                        Tag="Filter">Filter</Button>
+                <Button Classes="segmented"
+                        Classes.active="{Binding IsDialogFilterSourceLightroom}"
+                        Click="OnFilterSourceClick"
+                        Tag="Lightroom">Lightroom (.xmp)</Button>
+                <Button Classes="segmented"
+                        Classes.active="{Binding IsDialogFilterSourceLut}"
+                        Click="OnFilterSourceClick"
+                        Tag="Lut">LUT (.cube)</Button>
+            </StackPanel>
+
+            <TextBlock Grid.Row="1"
+                       Text="Vorgabe"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <ComboBox ItemsSource="{Binding DialogFilterChoices}"
+                          SelectedItem="{Binding DialogSelectedFilterChoice, Mode=TwoWay}"
+                          PlaceholderText="Keine Vorgabe gespeichert"
+                          MinHeight="36"
+                          HorizontalAlignment="Stretch"/>
+                <Button Grid.Column="1"
+                        Classes="icon-btn"
+                        Width="38"
+                        Height="36"
+                        IsVisible="{Binding IsDialogFilterFileVisible}"
+                        Click="OnBrowseFilterFileClick"
+                        ToolTip.Tip="Preset-Datei wählen">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg"
+                                   Width="18" Height="18"/>
+                </Button>
+            </Grid>
+
+            <TextBlock Grid.Row="2"
+                       Text="Stärke"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding IsDialogFilterStrengthVisible}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <Grid Grid.Row="2" Grid.Column="1"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12"
+                  IsVisible="{Binding IsDialogFilterStrengthVisible}">
+                <icons:RoundSlider Minimum="0"
+                                   Maximum="100"
+                                   Value="{Binding DialogFilterStrength, Mode=TwoWay}"
+                                   VerticalAlignment="Center"
+                                   Height="28"
+                                   MinHeight="0"
+                                   Width="220"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding DialogFilterStrength, StringFormat={}{0}%}"
+                           MinWidth="42"
+                           TextAlignment="Right"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+            </Grid>
+        </Grid>
+
+        <CheckBox Content="Originale überschreiben"
+                  IsChecked="{Binding DialogBatchFilterOverwrite, Mode=TwoWay}"
+                  ToolTip.Tip="Schreibt den Filter direkt in die Bilddateien. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
+
+        <CheckBox Content="Namen der Vorgabe an den Dateinamen anhängen"
+                  IsChecked="{Binding DialogBatchFilterAppendName, Mode=TwoWay}"
+                  IsVisible="{Binding IsDialogFilterAppendNameVisible}"
+                  ToolTip.Tip="foto.jpg wird zu foto_Vintage.jpg"/>
+    </StackPanel>
+</UserControl>

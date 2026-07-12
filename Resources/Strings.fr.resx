@@ -2624,4 +2624,115 @@
   <data name="Luminanz_6637e6e3" xml:space="preserve">
     <value>Luminance</value>
   </data>
+  <data name="Filmnegativ_d7d1414c" xml:space="preserve">
+    <value>Négatif argentique</value>
+  </data>
+  <data name="Filmnegativ_zur_cksetzen_7db0758c" xml:space="preserve">
+    <value>Réinitialiser le négatif</value>
+  </data>
+  <data name="Negativ_in_Positiv_umkehren_c35f617c" xml:space="preserve">
+    <value>Convertir le négatif en positif</value>
+  </data>
+  <data name="Gescanntes_Filmnegativ_umrechnen_die_orange_Mask_b17b0de4" xml:space="preserve">
+    <value>Convertit un négatif scanné : le masque orange du support est retiré, puis chaque canal est inversé.</value>
+  </data>
+  <data name="Schwarzwei_Negativ_8dc8ab88" xml:space="preserve">
+    <value>Négatif noir et blanc</value>
+  </data>
+  <data name="F_r_S_W_Filme_das_Ergebnis_wird_neutral_grau_ein_25b16056" xml:space="preserve">
+    <value>Pour les films N&amp;B : le résultat est gris neutre, un support teinté ne laisse donc aucune dominante.</value>
+  </data>
+  <data name="Filmbasis_5d4b3ee3" xml:space="preserve">
+    <value>Support du film</value>
+  </data>
+  <data name="Aufnehmen_8c5c4d42" xml:space="preserve">
+    <value>Prélever</value>
+  </data>
+  <data name="Pipette_auf_den_unbelichteten_Filmrand_zwischen__a410569a" xml:space="preserve">
+    <value>Pipette : cliquez sur le bord de film non exposé entre les images. L'aperçu réaffiche brièvement le négatif brut.</value>
+  </data>
+  <data name="Filmbasis_automatisch_aus_dem_Bild_messen_df13236a" xml:space="preserve">
+    <value>Mesurer automatiquement le support à partir de l'image</value>
+  </data>
+  <data name="Gradation_0c8018aa" xml:space="preserve">
+    <value>Gradation</value>
+  </data>
+  <data name="Steilheit_der_Dichtekurve_nach_links_flauer_und__1c1a692f" xml:space="preserve">
+    <value>Pente de la courbe de densité : plus plate et claire à gauche, plus contrastée et sombre à droite.</value>
+  </data>
+  <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
+    <value>Appliquer un filtre...</value>
+  </data>
+  <data name="Filter_anwenden_573991ed" xml:space="preserve">
+    <value>Appliquer un filtre</value>
+  </data>
+  <data name="Dateien_a41c619e" xml:space="preserve">
+    <value>fichiers</value>
+  </data>
+  <data name="W_hle_den_Look_und_wohin_die_Bilder_geschrieben__99bb404c" xml:space="preserve">
+    <value>Choisissez le rendu et l'endroit où les images seront écrites.</value>
+  </data>
+  <data name="Anwenden_b18093c4" xml:space="preserve">
+    <value>Appliquer</value>
+  </data>
+  <data name="Lightroom_xmp_e98c9654" xml:space="preserve">
+    <value>Lightroom (.xmp)</value>
+  </data>
+  <data name="Vorgabe_894dedf4" xml:space="preserve">
+    <value>Préréglage</value>
+  </data>
+  <data name="Keine_Vorgabe_gespeichert_199861dd" xml:space="preserve">
+    <value>Aucun préréglage enregistré</value>
+  </data>
+  <data name="Preset_Datei_w_hlen_70a144fa" xml:space="preserve">
+    <value>Choisir un fichier de préréglage</value>
+  </data>
+  <data name="LUT_w_hlen_0025fa8e" xml:space="preserve">
+    <value>Choisir une LUT</value>
+  </data>
+  <data name="Lightroom_Preset_w_hlen_2390b675" xml:space="preserve">
+    <value>Choisir un préréglage Lightroom</value>
+  </data>
+  <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
+    <value>Écraser les originaux</value>
+  </data>
+  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
+    <value>Écrit le filtre directement dans les fichiers image. Sans la case cochée, de nouveaux fichiers sont créés et les originaux restent intacts.</value>
+  </data>
+  <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
+    <value>Ajouter le nom du préréglage au nom du fichier</value>
+  </data>
+  <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
+    <value>photo.jpg devient photo_Vintage.jpg</value>
+  </data>
+  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
+    <value>Application du filtre...</value>
+  </data>
+  <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
+    <value>Le préréglage sélectionné n'a pas pu être lu.</value>
+  </data>
+  <data name="Kein_Zielordner_angegeben_2ae2c246" xml:space="preserve">
+    <value>Aucun dossier de destination indiqué.</value>
+  </data>
+  <data name="Men_f_r_die_Auswahl_b6974b1c" xml:space="preserve">
+    <value>Menu pour la sélection</value>
+  </data>
+  <data name="Vorschau_fehlgeschlagen_7e6d3891" xml:space="preserve">
+    <value>Échec de l'aperçu : </value>
+  </data>
+  <data name="Pixel_die_links_abgeschnitten_werden_65b95e37" xml:space="preserve">
+    <value>Pixels rognés à gauche</value>
+  </data>
+  <data name="Pixel_die_oben_abgeschnitten_werden_ce9abf2c" xml:space="preserve">
+    <value>Pixels rognés en haut</value>
+  </data>
+  <data name="Pixel_die_rechts_abgeschnitten_werden_58dea9f4" xml:space="preserve">
+    <value>Pixels rognés à droite</value>
+  </data>
+  <data name="Pixel_die_unten_abgeschnitten_werden_849ecfb2" xml:space="preserve">
+    <value>Pixels rognés en bas</value>
+  </data>
+  <data name="ICC_Farbprofil_3cffd024" xml:space="preserve">
+    <value>Profil colorimétrique ICC</value>
+  </data>
 </root>

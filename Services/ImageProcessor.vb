@@ -598,6 +598,25 @@ Namespace Services
     End Class
 
     Public Class ImageAdjustments
+
+        ''' <summary>Die eingebauten Filter, in der Reihenfolge, in der sie im Editor stehen. "Keine" ist
+        ''' der neutrale Eintrag. Einzige Quelle der Namen: sie sind gleichzeitig die Schlüssel, auf die
+        ''' ImageProcessor.ApplyFilterPreset schaltet, und werden im Editor UND in der Stapelverarbeitung
+        ''' der Galerie angeboten.</summary>
+        Public Shared ReadOnly FilterPresetNames As String() = {
+            "Keine", "S/W", "Warm", "Kühl", "Fade", "Kontrast", "Sepia", "Matt", "Cross", "Dramatisch",
+            "Weich", "Noir", "Duoton", "Polaroid", "VHS", "Alt"
+        }
+
+        ''' <summary>Die Stärke, mit der ein frisch gewählter Filter startet. S/W und Sepia sind Umwandlungen -
+        ''' halb angewendet ergeben sie nur ein blasses Bild, sie starten deshalb voll. Alle übrigen sind
+        ''' Looks, die bei voller Stärke überzeichnen, und starten auf der Hälfte.</summary>
+        Public Shared Function DefaultFilterStrength(preset As String) As Single
+            Dim isConversion = String.Equals(preset, "S/W", StringComparison.OrdinalIgnoreCase) OrElse
+                               String.Equals(preset, "Sepia", StringComparison.OrdinalIgnoreCase)
+            Return If(isConversion, 100.0F, 50.0F)
+        End Function
+
         Public Property SourceWidthPixels As Integer = 0
         Public Property SourceHeightPixels As Integer = 0
         Public Property Exposure As Single = 0
@@ -631,6 +650,22 @@ Namespace Services
         Public Property BorderCornerRadius As Single = 0
         Public Property BorderEffect As String = "Einfach"
         Public Property Clarity As Single = 0
+
+        ''' <summary>Gescanntes Filmnegativ in ein Positiv umkehren.</summary>
+        Public Property NegativeEnabled As Boolean = False
+        ''' <summary>Schwarzweiß-Negativ: ein gemeinsamer Basiswert für alle drei Kanäle. Die kanalweise
+        ''' Normalisierung würde bei einem Graustufenscan sonst das Kanalrauschen zu einem Farbstich
+        ''' aufziehen - es gibt hier keine Maske, die sie herausrechnen müsste.</summary>
+        Public Property NegativeMonochrome As Boolean = False
+        ''' <summary>Farbe des unbelichteten Filmträgers ("orange Maske") = die hellste Stelle des Scans.
+        ''' Leer: wird beim Verarbeiten aus dem Bild geschätzt (siehe AnalyzeFilmNegative).</summary>
+        Public Property NegativeBaseColor As String = ""
+        ''' <summary>Dichteste (= dunkelste) Stelle des Negativs, entspricht dem hellsten Motivdetail.
+        ''' Leer: wird geschätzt.</summary>
+        Public Property NegativeDensityColor As String = ""
+        ''' <summary>Gradation der Dichtekurve, -100..100 (0 = neutral), wirkt als Gamma 2^(v/100).</summary>
+        Public Property NegativeGamma As Single = 0
+
         Public Property CurveRgbPoints As String = "0,0;255,255"
         Public Property CurveRedPoints As String = "0,0;255,255"
         Public Property CurveGreenPoints As String = "0,0;255,255"
@@ -753,6 +788,11 @@ Namespace Services
                 .BorderCornerRadius = BorderCornerRadius,
                 .BorderEffect = BorderEffect,
                 .Clarity = Clarity,
+                .NegativeEnabled = NegativeEnabled,
+                .NegativeMonochrome = NegativeMonochrome,
+                .NegativeBaseColor = NegativeBaseColor,
+                .NegativeDensityColor = NegativeDensityColor,
+                .NegativeGamma = NegativeGamma,
                 .CurveRgbPoints = CurveRgbPoints,
                 .CurveRedPoints = CurveRedPoints,
                 .CurveGreenPoints = CurveGreenPoints,
@@ -1309,8 +1349,8 @@ Namespace Services
             Dim toneFilter = SKColorFilter.CreateTable(IdentityByteTable, toneLut, toneLut, toneLut)
             Dim paint = New SKPaint With {.ColorFilter = colorFilter}
 
-            Dim result = New SKBitmap(source.Width, source.Height)
-            Using stage = New SKBitmap(source.Width, source.Height)
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using stage = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
                 Using canvas = New SKCanvas(stage)
                     canvas.DrawBitmap(source, 0, 0, paint)
                 End Using
@@ -1395,6 +1435,10 @@ Namespace Services
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
             processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+            ' Die Umkehr steht VOR allen Farbanpassungen: Belichtung, Weißabgleich, Kurven und Filter
+            ' sollen auf dem fertigen Positiv arbeiten - auf dem Negativ wären sie seitenverkehrt
+            ' (Aufhellen würde abdunkeln) und für den Nutzer unbrauchbar.
+            processed = ReplaceBitmap(processed, ApplyFilmNegative(processed, adj))
             processed = ReplaceBitmap(processed, ApplyColorAdjustments(processed, adj))
             processed = ReplaceBitmap(processed, ApplyTonalLUT(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCurve(processed, adj))
@@ -1628,6 +1672,7 @@ Namespace Services
                 adj.Vibrance, adj.Vignette, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather,
                 adj.VignetteCenterX, adj.VignetteCenterY, adj.Grain, adj.BorderSize, adj.BorderColor,
                 adj.BorderCornerRadius, adj.BorderEffect, adj.Clarity,
+                adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
                 adj.RedHue, adj.RedSaturation, adj.RedLuminance, adj.OrangeHue, adj.OrangeSaturation, adj.OrangeLuminance,
                 adj.YellowHue, adj.YellowSaturation, adj.YellowLuminance, adj.GreenHue, adj.GreenSaturation, adj.GreenLuminance,
@@ -2083,6 +2128,13 @@ Namespace Services
         ''' ApplyAnnotations) ist die tatsächliche Bildschirm-Bounding-Box in unrotierten
         ''' rect-Koordinaten nicht trivial zu bestimmen - dort bleibt es beim sicheren,
         ''' bildschirmfüllenden Fallback.
+        ''' <summary>Grenzen, in denen das Glühen gerechnet wird (siehe DrawAnnotationEffects). Die Kosten
+        ''' hängen an FLÄCHE × RADIUS, deshalb müssen beide gedeckelt werden: Skias Dilate kostet linear im
+        ''' Radius, und der Radius wächst mit der Objektgröße - aber auch ein kleiner Radius auf einer sehr
+        ''' großen Maske ist teuer. Was darüber liegt, wird verkleinert gerechnet und wieder hochgezogen.</summary>
+        Private Const MaxGlowDilatePx As Single = 12.0F
+        Private Const MaxGlowDim As Single = 512.0F
+
         Private Shared Sub DrawAnnotationEffects(canvas As SKCanvas, kind As String, annotation As ImageAnnotation, rect As SKRect, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, alphaFactor As Single, canvasWidth As Integer, canvasHeight As Integer)
             ' Bewusst relativ zur Objekt-Bounding-Box (nicht zur ganzen Canvas wie bei RetouchRadius/
             ' BrushSize) skaliert: bei kleinem Text auf einem großen Foto wäre ein an der Canvas-Größe
@@ -2129,29 +2181,68 @@ Namespace Services
 
                 If annotation.GlowEnabled Then
                     Dim glowColor = ApplyAlpha(ParseColor(annotation.GlowColor, SKColors.Yellow), alphaFactor * Clamp(annotation.GlowStrength, 0, 100) / 100.0F)
-                    ' Silhouette einfärben -> nach außen vergrößern (Dilate) -> weichzeichnen. Als
-                    ' verkettete ImageFilter, damit das Glühen sichtbar über die Objektkante hinausreicht.
-                    Using glowColorFilter = SKColorFilter.CreateBlendMode(glowColor, SKBlendMode.SrcIn)
-                        Using coloredFilter = SKImageFilter.CreateColorFilter(glowColorFilter)
-                            Dim spreadFilter As SKImageFilter = coloredFilter
-                            Dim dilatedOwned As SKImageFilter = Nothing
-                            Try
-                                If glowDilate > 0 Then
-                                    dilatedOwned = SKImageFilter.CreateDilate(glowDilate, glowDilate, coloredFilter)
-                                    spreadFilter = dilatedOwned
-                                End If
-                                Using glowImageFilter = SKImageFilter.CreateBlur(glowSigma, glowSigma, spreadFilter)
-                                    ' Bewusst SrcOver statt additiv (Plus): Das Overlay zeichnet das Glühen auf
-                                    ' Transparenz (Plus und SrcOver liefern dort dasselbe) und blendet es dann per
-                                    ' SrcOver übers Foto - beim gebackenen Bild würde Plus die Glow-Farbe hingegen
-                                    ' aufs Foto ADDIEREN und dadurch auswaschen. SrcOver macht beide Pfade gleich kräftig.
-                                    Using paint = New SKPaint With {.ImageFilter = glowImageFilter, .BlendMode = SKBlendMode.SrcOver}
-                                        canvas.DrawBitmap(mask, maskLeft, maskTop, paint)
+
+                    ' Das Glühen wird in KLEINERER Auflösung gerechnet und danach hochskaliert. Grund: Skias
+                    ' Dilate kostet linear im Radius, und der Radius hängt an der Objektgröße - ein großer
+                    ' Text mit vollem Glühen kam auf Radius 180 und brauchte über zehn Sekunden PRO Render,
+                    ' bei jedem Reglertick neu. Das Ergebnis ist ohnehin ein weichgezeichneter Klumpen
+                    ' (Dilate + Gauß) und enthält keine hohen Frequenzen, die beim Verkleinern verlorengehen
+                    ' könnten: klein gerechnet und wieder hochgezogen sieht es genauso aus - nur schnell.
+                    Dim glowScale = 1.0F
+                    If glowDilate > MaxGlowDilatePx Then glowScale = MaxGlowDilatePx / CSng(glowDilate)
+                    Dim longestSide = CSng(Math.Max(maskWidth, maskHeight))
+                    If longestSide > MaxGlowDim Then glowScale = Math.Min(glowScale, MaxGlowDim / longestSide)
+                    Dim glowW = Math.Max(1, CInt(Math.Round(maskWidth * glowScale)))
+                    Dim glowH = Math.Max(1, CInt(Math.Round(maskHeight * glowScale)))
+                    Dim scaledDilate = Math.Max(0, CInt(Math.Round(glowDilate * glowScale)))
+                    Dim scaledSigma = Math.Max(0.1F, glowSigma * glowScale)
+
+                    Using smallMask = New SKBitmap(glowW, glowH, SKColorType.Rgba8888, SKAlphaType.Premul)
+                        Using smallCanvas = New SKCanvas(smallMask)
+                            smallCanvas.Clear(SKColors.Transparent)
+                            Using scalePaint = New SKPaint With {.IsAntialias = True}
+                                DrawBitmapSampled(smallCanvas, mask,
+                                                  New SKRect(0, 0, maskWidth, maskHeight),
+                                                  New SKRect(0, 0, glowW, glowH), SamplingHigh, scalePaint)
+                            End Using
+                        End Using
+
+                        ' Silhouette einfärben -> nach außen vergrößern (Dilate) -> weichzeichnen. Als
+                        ' verkettete ImageFilter, damit das Glühen sichtbar über die Objektkante hinausreicht.
+                        Using glowSmall = New SKBitmap(glowW, glowH, SKColorType.Rgba8888, SKAlphaType.Premul)
+                            Using glowCanvas = New SKCanvas(glowSmall)
+                                glowCanvas.Clear(SKColors.Transparent)
+                                Using glowColorFilter = SKColorFilter.CreateBlendMode(glowColor, SKBlendMode.SrcIn)
+                                    Using coloredFilter = SKImageFilter.CreateColorFilter(glowColorFilter)
+                                        Dim spreadFilter As SKImageFilter = coloredFilter
+                                        Dim dilatedOwned As SKImageFilter = Nothing
+                                        Try
+                                            If scaledDilate > 0 Then
+                                                dilatedOwned = SKImageFilter.CreateDilate(scaledDilate, scaledDilate, coloredFilter)
+                                                spreadFilter = dilatedOwned
+                                            End If
+                                            Using glowImageFilter = SKImageFilter.CreateBlur(scaledSigma, scaledSigma, spreadFilter)
+                                                Using paint = New SKPaint With {.ImageFilter = glowImageFilter}
+                                                    glowCanvas.DrawBitmap(smallMask, 0, 0, paint)
+                                                End Using
+                                            End Using
+                                        Finally
+                                            dilatedOwned?.Dispose()
+                                        End Try
                                     End Using
                                 End Using
-                            Finally
-                                dilatedOwned?.Dispose()
-                            End Try
+                            End Using
+
+                            ' Bewusst SrcOver statt additiv (Plus): Das Overlay zeichnet das Glühen auf
+                            ' Transparenz (Plus und SrcOver liefern dort dasselbe) und blendet es dann per
+                            ' SrcOver übers Foto - beim gebackenen Bild würde Plus die Glow-Farbe hingegen
+                            ' aufs Foto ADDIEREN und dadurch auswaschen. SrcOver macht beide Pfade gleich kräftig.
+                            Using paint = New SKPaint With {.BlendMode = SKBlendMode.SrcOver, .IsAntialias = True}
+                                DrawBitmapSampled(canvas, glowSmall,
+                                                  New SKRect(0, 0, glowW, glowH),
+                                                  New SKRect(maskLeft, maskTop, maskLeft + maskWidth, maskTop + maskHeight),
+                                                  SamplingHigh, paint)
+                            End Using
                         End Using
                     End Using
                 End If
@@ -2806,7 +2897,7 @@ Namespace Services
                 New SKPointI(1, 1), SKShaderTileMode.Clamp, False)
 
             Dim paint = New SKPaint With {.ImageFilter = imageFilter}
-            Dim result = New SKBitmap(source.Width, source.Height)
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 canvas.DrawBitmap(source, 0, 0, paint)
             End Using
@@ -3834,7 +3925,27 @@ Namespace Services
             Return result
         End Function
 
-        ' Kantenerhaltender Medianfilter - echte Rauschunterdrückung statt gleichmäßigem Weichzeichnen.
+        ''' <summary>Der Wert an Position <paramref name="mid"/> der sortierten Fensterwerte, gelesen aus dem
+        ''' Histogramm: der kleinste Tonwert, bis zu dem mehr als <paramref name="mid"/> Werte liegen. Das ist
+        ''' exakt das, was `sortierteListe(mid)` liefert - nur ohne die Liste und ohne das Sortieren.</summary>
+        Private Shared Function HistogramMedian(histogram As Integer(), mid As Integer) As Byte
+            Dim running As Integer = 0
+            For v As Integer = 0 To 255
+                running += histogram(v)
+                If running > mid Then Return CByte(v)
+            Next
+            Return 255
+        End Function
+
+        ''' <summary>Kantenerhaltender Medianfilter - echte Rauschunterdrückung statt gleichmäßigem
+        ''' Weichzeichnen.
+        ''' Das Fenster wandert als HISTOGRAMM mit: beim Schritt nach rechts wird nur die austretende Spalte
+        ''' ab- und die eintretende zugezählt, statt für jedes Pixel alle (2r+1)² Werte neu einzusammeln und
+        ''' zu sortieren. Die vorherige Fassung baute pro Pixel drei Listen auf und rief `List.Sort` -
+        ''' bei Radius 3 also 49 Elemente, sortiert, 2,56 Millionen Mal. Das war die Zähigkeit, die man an
+        ''' den Reglern für Rauschreduzierung und Staub/Kratzer gespürt hat.
+        ''' Der Median ist exakt, das Ergebnis daher BITGLEICH zur alten Fassung - kein Kompromiss auf
+        ''' Kosten der Bildqualität.</summary>
         Private Shared Function ApplyMedianBlur(source As SKBitmap, amount As Single) As SKBitmap
             Dim clamped = Clamp(amount, 0, 1)
             Dim radius = Math.Max(1, CInt(Math.Round(1 + clamped * 2)))
@@ -3849,31 +3960,57 @@ Namespace Services
             Dim stride As Integer = 0
             If TryBorrowBgraBuffer(source, srcBuf, stride) Then
                 Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                ' Jede Zeile bekommt eigene Fensterlisten - parallel dürfen sie nicht geteilt werden.
+                ' Jede Zeile bekommt eigene Histogramme - parallel dürfen sie nicht geteilt werden.
                 ForEachRow(w, h, Sub(y)
-                                     Dim rWin As New List(Of Byte)()
-                                     Dim gWin As New List(Of Byte)()
-                                     Dim bWin As New List(Of Byte)()
+                                     Dim histB = New Integer(255) {}
+                                     Dim histG = New Integer(255) {}
+                                     Dim histR = New Integer(255) {}
+                                     Dim count As Integer = 0
                                      Dim rowOffset = y * stride
-                                     For x As Integer = 0 To w - 1
-                                         rWin.Clear() : gWin.Clear() : bWin.Clear()
-                                         Dim centerO = rowOffset + x * 4
-                                         Dim alpha = srcBuf(centerO + 3)
-                                         For yy As Integer = Math.Max(0, y - radius) To Math.Min(h - 1, y + radius)
-                                             Dim yyRowOffset = yy * stride
-                                             For xx As Integer = Math.Max(0, x - radius) To Math.Min(w - 1, x + radius)
-                                                 Dim oo = yyRowOffset + xx * 4
-                                                 bWin.Add(srcBuf(oo))
-                                                 gWin.Add(srcBuf(oo + 1))
-                                                 rWin.Add(srcBuf(oo + 2))
-                                             Next
+                                     Dim yFrom = Math.Max(0, y - radius)
+                                     Dim yTo = Math.Min(h - 1, y + radius)
+
+                                     ' Startfenster für x = 0 aufbauen; danach nur noch verschieben.
+                                     For xx As Integer = 0 To Math.Min(w - 1, radius)
+                                         For yy As Integer = yFrom To yTo
+                                             Dim oo = yy * stride + xx * 4
+                                             histB(srcBuf(oo)) += 1
+                                             histG(srcBuf(oo + 1)) += 1
+                                             histR(srcBuf(oo + 2)) += 1
+                                             count += 1
                                          Next
-                                         rWin.Sort() : gWin.Sort() : bWin.Sort()
-                                         Dim mid = rWin.Count \ 2
-                                         dstBuf(centerO) = bWin(mid)
-                                         dstBuf(centerO + 1) = gWin(mid)
-                                         dstBuf(centerO + 2) = rWin(mid)
-                                         dstBuf(centerO + 3) = alpha
+                                     Next
+
+                                     For x As Integer = 0 To w - 1
+                                         If x > 0 Then
+                                             Dim leaving = x - radius - 1
+                                             If leaving >= 0 Then
+                                                 For yy As Integer = yFrom To yTo
+                                                     Dim oo = yy * stride + leaving * 4
+                                                     histB(srcBuf(oo)) -= 1
+                                                     histG(srcBuf(oo + 1)) -= 1
+                                                     histR(srcBuf(oo + 2)) -= 1
+                                                     count -= 1
+                                                 Next
+                                             End If
+                                             Dim entering = x + radius
+                                             If entering <= w - 1 Then
+                                                 For yy As Integer = yFrom To yTo
+                                                     Dim oo = yy * stride + entering * 4
+                                                     histB(srcBuf(oo)) += 1
+                                                     histG(srcBuf(oo + 1)) += 1
+                                                     histR(srcBuf(oo + 2)) += 1
+                                                     count += 1
+                                                 Next
+                                             End If
+                                         End If
+
+                                         Dim centerO = rowOffset + x * 4
+                                         Dim mid = count \ 2
+                                         dstBuf(centerO) = HistogramMedian(histB, mid)
+                                         dstBuf(centerO + 1) = HistogramMedian(histG, mid)
+                                         dstBuf(centerO + 2) = HistogramMedian(histR, mid)
+                                         dstBuf(centerO + 3) = srcBuf(centerO + 3)
                                      Next
                                  End Sub)
                 CommitBgraBuffer(result, dstBuf)
@@ -4036,6 +4173,147 @@ Namespace Services
                 Next
             End Using
             Return result
+        End Function
+
+        ''' <summary>Rechnet ein gescanntes Filmnegativ in ein Positiv um. Jeder Kanal wird zwischen der
+        ''' Filmbasis (dem hellsten Wert des Scans = unbelichteter Träger = Schatten der Szene) und dem
+        ''' dichtesten Wert (= hellstes Motivdetail) normiert und umgekehrt. Weil jeder Kanal auf seine
+        ''' EIGENE Basis normiert wird, fällt die orange Maske des Farbnegativfilms von selbst heraus -
+        ''' eine bloße 255-x-Umkehr würde sie als kräftigen Blaustich stehen lassen.</summary>
+        Private Shared Function ApplyFilmNegative(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If Not adj.NegativeEnabled Then Return source
+
+            Dim stats = ResolveFilmNegativeStats(source, adj)
+            Dim gamma = CSng(Math.Pow(2.0, adj.NegativeGamma / 100.0))
+            Dim redLut = BuildFilmNegativeLut(stats.BaseColor.Red, stats.DensityColor.Red, gamma)
+            Dim greenLut = BuildFilmNegativeLut(stats.BaseColor.Green, stats.DensityColor.Green, gamma)
+            Dim blueLut = BuildFilmNegativeLut(stats.BaseColor.Blue, stats.DensityColor.Blue, gamma)
+
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim tableFilter = SKColorFilter.CreateTable(IdentityByteTable, redLut, greenLut, blueLut)
+            Dim filter = tableFilter
+            Dim grayFilter As SKColorFilter = Nothing
+            If adj.NegativeMonochrome Then
+                ' S/W-Negativ: erst wie beim Farbfilm kanalweise auf die eigene Basis normieren (das
+                ' nimmt auch dem S/W-Träger seinen leichten Eigenfarbton), dann entsättigen. Nur so ist
+                ' das Ergebnis wirklich neutral - eine gemeinsame Graubasis für alle Kanäle würde einen
+                ' farbigen Träger als Farbstich stehen lassen.
+                grayFilter = SKColorFilter.CreateColorMatrix(New Single() {
+                    0.299F, 0.587F, 0.114F, 0, 0,
+                    0.299F, 0.587F, 0.114F, 0, 0,
+                    0.299F, 0.587F, 0.114F, 0, 0,
+                    0, 0, 0, 1, 0
+                })
+                filter = SKColorFilter.CreateCompose(grayFilter, tableFilter)
+            End If
+
+            Using paint = New SKPaint With {.ColorFilter = filter}
+                Using canvas = New SKCanvas(result)
+                    canvas.DrawBitmap(source, 0, 0, paint)
+                End Using
+            End Using
+
+            If Not Object.ReferenceEquals(filter, tableFilter) Then filter.Dispose()
+            grayFilter?.Dispose()
+            tableFilter.Dispose()
+            Return result
+        End Function
+
+        ''' <summary>Tonwerttabelle eines Kanals: <paramref name="baseValue"/> (Filmbasis) wird zu Schwarz,
+        ''' <paramref name="densityValue"/> (der dichteste, also dunkelste Wert) zu Weiß. Dazwischen wird in
+        ''' Dichte gerechnet, nicht linear: die Silberschicht dämpft das Licht multiplikativ, der Logarithmus
+        ''' ist also die natürliche Achse des Films. Eine lineare Umkehr staucht dagegen die Lichter und
+        ''' erzeugt den typischen flauen, milchigen Scan-Look.</summary>
+        Private Shared Function BuildFilmNegativeLut(baseValue As Byte, densityValue As Byte, gamma As Single) As Byte()
+            ' Basis und Dichtepunkt dürfen weder null noch identisch sein, sonst hat die Kurve keine
+            ' Spanne (und der Logarithmus keinen definierten Wert).
+            Dim baseLevel = Math.Max(2.0, CDbl(baseValue))
+            Dim densityLevel = Math.Min(Math.Max(1.0, CDbl(densityValue)), baseLevel - 1.0)
+            Dim span = Math.Log(baseLevel / densityLevel)
+
+            Dim lut = New Byte(255) {}
+            Dim invGamma = 1.0 / Math.Max(0.05, CDbl(gamma))
+            For i As Integer = 0 To 255
+                Dim level = Math.Max(1.0, CDbl(i))
+                ' 0 an der Filmbasis (dort war kein Licht -> Schwarz), 1 am dichtesten Punkt (-> Weiß).
+                Dim t = Clamp(CSng(Math.Log(baseLevel / level) / span), 0.0F, 1.0F)
+                lut(i) = ClampToByte(255.0 * Math.Pow(t, invGamma))
+            Next
+            Return lut
+        End Function
+
+        Private Shared Function ResolveFilmNegativeStats(source As SKBitmap, adj As ImageAdjustments) As (BaseColor As SKColor, DensityColor As SKColor)
+            Dim hasBase = Not String.IsNullOrWhiteSpace(adj.NegativeBaseColor)
+            Dim hasDensity = Not String.IsNullOrWhiteSpace(adj.NegativeDensityColor)
+            If hasBase AndAlso hasDensity Then
+                Return (ParseColor(adj.NegativeBaseColor, SKColors.White), ParseColor(adj.NegativeDensityColor, SKColors.Black))
+            End If
+
+            ' Normalerweise misst der Editor einmal beim Einschalten und legt die Werte in den
+            ' Anpassungen ab - dann sind Vorschau und Export garantiert identisch. Kommen hier trotzdem
+            ' leere Werte an (Stapelverarbeitung, wiederhergestellte Anpassungen), wird eben aus dem
+            ' Bild geschätzt, das gerade vorliegt.
+            Dim measured = AnalyzeFilmNegativeCore(source)
+            Return (If(hasBase, ParseColor(adj.NegativeBaseColor, measured.BaseColor), measured.BaseColor),
+                    If(hasDensity, ParseColor(adj.NegativeDensityColor, measured.DensityColor), measured.DensityColor))
+        End Function
+
+        ''' <summary>Schätzt Filmbasis und dichtesten Punkt eines Negativscans. Misst auf dem BESCHNITTENEN
+        ''' Bild, weil der Beschnitt in der Pipeline vor der Umkehr liegt: ein weggeschnittener schwarzer
+        ''' Scannerrand darf den Dichtepunkt nicht mehr bestimmen.</summary>
+        Public Shared Function AnalyzeFilmNegative(source As SKBitmap, adj As ImageAdjustments) As (BaseColor As SKColor, DensityColor As SKColor)
+            If source Is Nothing Then Return (SKColors.White, SKColors.Black)
+            Dim cropped = ApplyCrop(source, If(adj, New ImageAdjustments()))
+            Try
+                Return AnalyzeFilmNegativeCore(cropped)
+            Finally
+                If Not Object.ReferenceEquals(cropped, source) Then cropped?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Filmbasis = das hellste Tonwertniveau je Kanal (unbelichteter Träger), dichtester Punkt
+        ''' = das dunkelste. Beides als Perzentil statt als Min/Max: ein einzelnes Staubkorn oder ein Kratzer
+        ''' würde sonst die gesamte Umrechnung des Bildes festlegen.</summary>
+        Private Shared Function AnalyzeFilmNegativeCore(bmp As SKBitmap) As (BaseColor As SKColor, DensityColor As SKColor)
+            Dim histR = New Integer(255) {}
+            Dim histG = New Integer(255) {}
+            Dim histB = New Integer(255) {}
+            Dim total As Integer = 0
+
+            Dim buffer As Byte() = Nothing
+            Dim stride As Integer = 0
+            If bmp IsNot Nothing AndAlso TryBorrowBgraBuffer(bmp, buffer, stride) Then
+                ' Perzentile sind ab gut hunderttausend Stichproben stabil - jedes Pixel eines 40-MP-Scans
+                ' anzufassen würde die Messung nur verlangsamen, nicht verbessern.
+                Dim stepPx = Math.Max(1, CInt(Math.Sqrt(bmp.Width * CDbl(bmp.Height) / 250000.0)))
+                For y As Integer = 0 To bmp.Height - 1 Step stepPx
+                    Dim row = y * stride
+                    For x As Integer = 0 To bmp.Width - 1 Step stepPx
+                        Dim o = row + x * 4
+                        If buffer(o + 3) < 8 Then Continue For
+                        histB(buffer(o)) += 1
+                        histG(buffer(o + 1)) += 1
+                        histR(buffer(o + 2)) += 1
+                        total += 1
+                    Next
+                Next
+            End If
+
+            If total = 0 Then Return (SKColors.White, SKColors.Black)
+            Dim baseColor = New SKColor(HistogramPercentile(histR, total, 0.995), HistogramPercentile(histG, total, 0.995), HistogramPercentile(histB, total, 0.995), 255)
+            Dim densityColor = New SKColor(HistogramPercentile(histR, total, 0.005), HistogramPercentile(histG, total, 0.005), HistogramPercentile(histB, total, 0.005), 255)
+            Return (baseColor, densityColor)
+        End Function
+
+        ''' <summary>Kleinster Tonwert, unterhalb dessen <paramref name="fraction"/> aller gezählten Pixel liegen.</summary>
+        Private Shared Function HistogramPercentile(histogram As Integer(), total As Integer, fraction As Double) As Byte
+            Dim target = Math.Max(1L, Math.Min(CLng(total), CLng(Math.Round(total * fraction))))
+            Dim running As Long = 0
+            For i As Integer = 0 To 255
+                running += histogram(i)
+                If running >= target Then Return CByte(i)
+            Next
+            Return 255
         End Function
 
         Private Shared Function ApplyCurve(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
@@ -5055,7 +5333,7 @@ Namespace Services
 
             Dim colorFilter = SKColorFilter.CreateTable(IdentityByteTable, lut, lut, lut)
             Dim paint = New SKPaint With {.ColorFilter = colorFilter}
-            Dim result = New SKBitmap(source.Width, source.Height)
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 canvas.DrawBitmap(source, 0, 0, paint)
             End Using

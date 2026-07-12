@@ -44,6 +44,9 @@
         <SolidColorBrush x:Key="FP.Text.Secondary" Color="#A6AFB7"/>
         <SolidColorBrush x:Key="FP.Text.Muted" Color="#6C7780"/>
         <SolidColorBrush x:Key="FP.Text.Accent" Color="#F08A1A"/>
+        <!-- Für Zustände, die der Nutzer NICHT übersehen darf (fehlgeschlagene Vorschau). Bewusst kein
+             Orange: das ist die Akzentfarbe der App und liest sich als "aktiv", nicht als "kaputt". -->
+        <SolidColorBrush x:Key="FP.Text.Danger" Color="#FF6B6B"/>
 
         <SolidColorBrush x:Key="FP.Border.Subtle" Color="#182028"/>
         <SolidColorBrush x:Key="FP.Border.Normal" Color="#26313B"/>
@@ -117,6 +120,16 @@
     <Style Selector="TextBlock.muted">
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Caption}"/>
+    </Style>
+    <!-- Die Statuszeile des Editors. Die Farbe MUSS aus einer Klasse kommen und darf nicht am TextBlock
+         stehen: ein lokal gesetztes Foreground schlägt jeden Style-Setter, die Fehlerfarbe käme dann nie
+         durch. Der zweite, spezifischere Selektor steht danach und gewinnt bei gesetzter Klasse. -->
+    <Style Selector="TextBlock.status-text">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="TextBlock.status-text.failed">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Danger}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="TextBlock.section-header">
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>

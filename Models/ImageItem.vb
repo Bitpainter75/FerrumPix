@@ -40,13 +40,61 @@ Namespace Models
         Private Shared _runningThumbnailWorkers As Integer = 0
         Private Shared _runningBackgroundWorkers As Integer = 0
 
+        Private _filePath As String
         Public Property FilePath As String
+            Get
+                Return _filePath
+            End Get
+            Set(value As String)
+                If String.Equals(_filePath, value, StringComparison.Ordinal) Then Return
+                _filePath = value
+                _extensionLower = Nothing
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Private _extensionLower As String = Nothing
+
+        ''' <summary>Die Dateiendung, einmal kleingeschrieben. Der RAW-Filter der Galerie rief sonst
+        ''' `IO.Path.GetExtension(...).ToLowerInvariant()` pro Element bei jedem Filterlauf - also bei jedem
+        ''' Tastendruck in der Suche, über den ganzen Ordner.</summary>
+        Public ReadOnly Property ExtensionLower As String
+            Get
+                If _extensionLower Is Nothing Then
+                    _extensionLower = If(_filePath Is Nothing, "", IO.Path.GetExtension(_filePath).ToLowerInvariant())
+                End If
+                Return _extensionLower
+            End Get
+        End Property
+
+        Private _fileName As String
         Public Property FileName As String
+            Get
+                Return _fileName
+            End Get
+            Set(value As String)
+                If String.Equals(_fileName, value, StringComparison.Ordinal) Then Return
+                _fileName = value
+                RaisePropertyChanged()
+                InvalidateSearchText()
+            End Set
+        End Property
+
         Public Property FileSize As Long
         Public Property DateModified As DateTime
         Public Property IsFolder As Boolean
         Public Property IsParentFolderEntry As Boolean
-        Public Property Tags As New List(Of String)()
+        Private _tags As New List(Of String)()
+        Public Property Tags As List(Of String)
+            Get
+                Return _tags
+            End Get
+            Set(value As List(Of String))
+                _tags = If(value, New List(Of String)())
+                RaisePropertyChanged()
+                InvalidateSearchText()
+            End Set
+        End Property
 
         Public ReadOnly Property IsSelectableEntry As Boolean
             Get
@@ -143,14 +191,35 @@ Namespace Models
             End Get
         End Property
 
+        Private _searchTextCache As String = Nothing
+
+        ''' <summary>Der Text, gegen den die Galerie-Suche filtert. Gecacht, weil er sonst bei JEDEM Zugriff
+        ''' neu gebaut würde - eine String-Interpolation, ein `New String("★"c, n)` und ein `String.Join` über
+        ''' die Stichwörter, pro Element, pro Tastendruck. Bei ein paar tausend Fotos im Ordner ist das der
+        ''' Hauptteil der Arbeit beim Tippen.
+        ''' Der Cache verfällt über <see cref="InvalidateSearchText"/> bei jeder Änderung an Dateiname,
+        ''' Bewertung, Favorit oder Stichwörtern - die vier Quellen, aus denen er sich speist. Die
+        ''' Stichwortliste wird nirgends an Ort und Stelle verändert, sondern immer komplett zugewiesen;
+        ''' sonst müsste sie eine beobachtbare Sammlung sein.</summary>
         Public ReadOnly Property SearchText As String
             Get
-                Dim ratingToken = $"{Rating} Sterne {Rating} Stern rating:{Rating} bewertung:{Rating} {New String("★"c, Math.Max(0, Math.Min(5, Rating)))}"
-                Dim favoriteToken = If(IsFavorite, "favorit favorite fav is:favorite", "")
-                If Tags Is Nothing OrElse Tags.Count = 0 Then Return FileName & " " & ratingToken & " " & favoriteToken
-                Return FileName & " " & String.Join(" ", Tags) & " " & ratingToken & " " & favoriteToken
+                If _searchTextCache Is Nothing Then
+                    Dim ratingToken = $"{Rating} Sterne {Rating} Stern rating:{Rating} bewertung:{Rating} {New String("★"c, Math.Max(0, Math.Min(5, Rating)))}"
+                    Dim favoriteToken = If(IsFavorite, "favorit favorite fav is:favorite", "")
+                    If Tags Is Nothing OrElse Tags.Count = 0 Then
+                        _searchTextCache = FileName & " " & ratingToken & " " & favoriteToken
+                    Else
+                        _searchTextCache = FileName & " " & String.Join(" ", Tags) & " " & ratingToken & " " & favoriteToken
+                    End If
+                End If
+                Return _searchTextCache
             End Get
         End Property
+
+        Private Sub InvalidateSearchText()
+            _searchTextCache = Nothing
+            RaisePropertyChanged(NameOf(SearchText))
+        End Sub
 
         Private _rating As Integer
         Public Property Rating As Integer
@@ -161,6 +230,7 @@ Namespace Models
                 If _rating = value Then Return
                 _rating = value
                 RaisePropertyChanged()
+                InvalidateSearchText()
             End Set
         End Property
 
@@ -173,6 +243,7 @@ Namespace Models
                 If _isFavorite = value Then Return
                 _isFavorite = value
                 RaisePropertyChanged()
+                InvalidateSearchText()
             End Set
         End Property
 
@@ -577,15 +648,6 @@ Namespace Models
                     End If
                 Next
             End If
-        End Sub
-
-        Private Sub UntrackResident()
-            SyncLock _thumbnailQueueLock
-                If _residentLruNode IsNot Nothing Then
-                    _residentLru.Remove(_residentLruNode)
-                    _residentLruNode = Nothing
-                End If
-            End SyncLock
         End Sub
 
         Public Sub New(filePath As String)
@@ -1110,14 +1172,23 @@ Namespace Models
         End Sub
 
         Public Sub ClearThumbnail()
-            Dim bmp = _thumbnail
-            _thumbnail = Nothing
-            _inViewportQueue = False
-            _inBackgroundQueue = False
-            _isThumbnailLoading = False
-            _evictThumbnailAfterLoad = False
-            _thumbState = 0
-            UntrackResident()
+            Dim bmp As Bitmap = Nothing
+            SyncLock _thumbnailQueueLock
+                bmp = _thumbnail
+                _thumbnail = Nothing
+                If _inViewportQueue Then _viewportQueue.Remove(Me)
+                If _inBackgroundQueue Then _backgroundQueue.Remove(Me)
+                _inViewportQueue = False
+                _inBackgroundQueue = False
+                _isThumbnailLoading = False
+                _evictThumbnailAfterLoad = False
+                _isPinnedVisible = False
+                _thumbState = 0
+                If _residentLruNode IsNot Nothing Then
+                    _residentLru.Remove(_residentLruNode)
+                    _residentLruNode = Nothing
+                End If
+            End SyncLock
             ' Siehe TouchResident: Dispose erst nach der UI-Benachrichtigung, damit ein noch an
             ' dieses Bitmap gebundenes Image.Source nicht während eines Layoutdurchlaufs auf ein
             ' bereits disposed Bitmap zugreift.

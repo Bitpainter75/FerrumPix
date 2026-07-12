@@ -41,7 +41,9 @@
                     </Button>
                     <StackPanel Margin="26,0,0,0" VerticalAlignment="Center" >
                         <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource FP.Text.Secondary}"
+                        <TextBlock Text="{Binding StatusText}"
+                                   Classes="status-text"
+                                   Classes.failed="{Binding PreviewFailed}"
                                    FontSize="{DynamicResource FP.Font.Caption}" />
                     </StackPanel>
                 </StackPanel>
@@ -853,6 +855,13 @@
                                 <panels:CurvePanel />
                             </Border>
 
+                            <!-- FILMNEGATIV (ausklappbar) - gehört zu "Anpassen": die Umkehr ist eine
+                                 Dichteoperation, auf der Belichtung und Kurve erst aufsetzen. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowLightAdjustments}">
+                                <panels:FilmNegativePanel />
+                            </Border>
+
                             <!-- COLOR GRADING (ausklappbar) -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowColorAdjustments}">
@@ -919,7 +928,9 @@
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                         <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource FP.Text.Secondary}"
+                        <TextBlock Text="{Binding StatusText}"
+                                   Classes="status-text"
+                                   Classes.failed="{Binding PreviewFailed}"
                                    FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />

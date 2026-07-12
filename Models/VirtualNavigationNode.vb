@@ -22,6 +22,11 @@ Namespace Models
         Public Property IsRemovable As Boolean
         Public Property Children As ObservableCollection(Of VirtualNavigationNode)
 
+        ''' <summary>Aufgeklappt im Navigationsbaum. Der TreeViewItem-Style der Galerie bindet IsExpanded
+        ''' für JEDEN Baum - Ordner, Suchen und Immich. Ohne diese Eigenschaft lief die Bindung für die
+        ''' beiden virtuellen Bäume ins Leere (Avalonia meldete das nur ins Log, sichtbar war nichts).</summary>
+        Public Property IsExpanded As Boolean
+
         ''' True für einen konkreten Immich-Album-Knoten (umbenennbar, Upload-Ziel).
         Public ReadOnly Property IsImmichAlbumNode As Boolean
             Get

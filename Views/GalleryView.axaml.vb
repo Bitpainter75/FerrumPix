@@ -1087,6 +1087,17 @@ Namespace Views
             GetVm()?.DuplicateSelectedCommand.Execute(Nothing)
         End Sub
 
+        Public Sub OnContextApplyFilter(sender As Object, e As RoutedEventArgs)
+            Dim item = GetItemFromSender(sender)
+            Dim vm = GetVm()
+            If item IsNot Nothing AndAlso vm IsNot Nothing AndAlso
+               (vm.SelectedItems Is Nothing OrElse Not vm.SelectedItems.Contains(item)) Then
+                vm.SelectOnly(item)
+                _selectionAnchor = item
+            End If
+            vm?.ApplyFilterSelectedCommand.Execute(Nothing)
+        End Sub
+
         Public Sub OnContextBatchConvert(sender As Object, e As RoutedEventArgs)
             Dim item = GetItemFromSender(sender)
             Dim vm = GetVm()
@@ -1177,9 +1188,11 @@ Namespace Views
             If item IsNot Nothing Then item.IsVisible = visible
         End Sub
 
+        ''' Dieselben Sichtbarkeitsregeln für alle drei Kopien des Menüs: Kachel-Ansicht (GridContext*),
+        ''' Listen-Ansicht (ListContext*) und den Menü-Button der Werkzeugleiste (MenuContext*). Nicht
+        ''' gefundene Namen überspringt SetMenuItemVisible, deshalb darf hier alles nebeneinander stehen.
         Private Sub UpdateGalleryItemContextMenu(sender As Object, item As ImageItem)
-            Dim border = TryCast(sender, Border)
-            Dim menu = border?.ContextMenu
+            Dim menu = TryCast(sender, Control)?.ContextMenu
             If menu Is Nothing OrElse item Is Nothing Then Return
 
             Dim vm = GetVm()
@@ -1216,6 +1229,7 @@ Namespace Views
             SetMenuItemVisible(menu, "GridContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
             SetMenuItemVisible(menu, "GridContextResizeMenuItem", showResize)
             SetMenuItemVisible(menu, "GridContextApplyWatermarkMenuItem", showResize)
+            SetMenuItemVisible(menu, "GridContextApplyFilterMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "GridContextBatchConvertMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "GridContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "GridContextCreateCollageMenuItem", showCollage)
@@ -1234,6 +1248,7 @@ Namespace Views
             SetMenuItemVisible(menu, "ListContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
             SetMenuItemVisible(menu, "ListContextResizeMenuItem", showResize)
             SetMenuItemVisible(menu, "ListContextApplyWatermarkMenuItem", showResize)
+            SetMenuItemVisible(menu, "ListContextApplyFilterMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextBatchConvertMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextCreateCollageMenuItem", showCollage)
@@ -1241,6 +1256,48 @@ Namespace Views
             SetMenuItemVisible(menu, "ListContextCopyPathMenuItem", showSingleItemActions)
             SetMenuItemVisible(menu, "ListContextRevealMenuItem", showSingleItemActions)
             SetMenuControlVisible(menu, "ListContextDeleteSeparator", Not isParentEntry AndAlso item.CanFileOperationDelete)
+            SetMenuItemVisible(menu, "MenuContextOpenMenuItem", showSingleItemActions)
+            SetMenuItemVisible(menu, "MenuContextEditMenuItem", showSingleItemActions AndAlso item.CanEditFile AndAlso item.IsImage)
+            SetMenuControlVisible(menu, "MenuContextTopSeparator", showSingleItemActions)
+            SetMenuItemVisible(menu, "MenuContextCreateFolderMenuItem", Not isParentEntry AndAlso Not isVirtual AndAlso vm IsNot Nothing AndAlso vm.CanPasteIntoFolder(vm.CurrentFolder))
+            SetMenuItemVisible(menu, "MenuContextRenameMenuItem", showRename)
+            SetMenuItemVisible(menu, "MenuContextCopyMenuItem", Not isParentEntry AndAlso item.CanFileOperationCopy)
+            SetMenuItemVisible(menu, "MenuContextCutMenuItem", Not isParentEntry AndAlso item.CanFileOperationRename)
+            SetMenuItemVisible(menu, "MenuContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
+            SetMenuItemVisible(menu, "MenuContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
+            SetMenuItemVisible(menu, "MenuContextResizeMenuItem", showResize)
+            SetMenuItemVisible(menu, "MenuContextApplyWatermarkMenuItem", showResize)
+            SetMenuItemVisible(menu, "MenuContextApplyFilterMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "MenuContextBatchConvertMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "MenuContextRemoveMetadataMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "MenuContextCreateCollageMenuItem", showCollage)
+            SetMenuControlVisible(menu, "MenuContextPathSeparator", showSingleItemActions)
+            SetMenuItemVisible(menu, "MenuContextCopyPathMenuItem", showSingleItemActions)
+            SetMenuItemVisible(menu, "MenuContextRevealMenuItem", showSingleItemActions)
+            SetMenuControlVisible(menu, "MenuContextDeleteSeparator", Not isParentEntry AndAlso item.CanFileOperationDelete)
+            SetMenuItemVisible(menu, "MenuContextDeleteMenuItem", Not isParentEntry AndAlso item.CanFileOperationDelete)
+        End Sub
+
+        ''' Der Menü-Button der Werkzeugleiste zeigt dasselbe Menü wie ein Rechtsklick auf das Bild - viele
+        ''' Funktionen stecken inzwischen nur dort. Anders als in den Kachel-/Listen-Vorlagen ist der
+        ''' DataContext hier das ViewModel, nicht das Bild: die IsVisible-Bindungen der Einträge
+        ''' (CanEditFile, CanFileOperationCopy, ...) hängen aber am Bild, deshalb wird er vor dem Öffnen
+        ''' auf das ausgewählte Element gesetzt.
+        Private Sub OnGalleryMenuButtonClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim vm = GetVm()
+            If button Is Nothing OrElse vm Is Nothing Then Return
+
+            Dim item = If(vm.SelectedItem, vm.SelectedItems?.FirstOrDefault())
+            If item Is Nothing Then Return
+
+            _contextMenuItem = item
+            Dim menu = button.ContextMenu
+            If menu Is Nothing Then Return
+            menu.DataContext = item
+            UpdateGalleryItemContextMenu(button, item)
+            menu.Open(button)
+            e.Handled = True
         End Sub
 
         Private Sub SetMenuItemVisible(menu As ContextMenu, name As String, visible As Boolean)
@@ -1507,9 +1564,11 @@ Namespace Views
                         CopySelectionToClipboard(True)
                         e.Handled = True
                         Return
+                    ' e.Handled vor dem Await - sonst läuft die Weiterleitung mit einem scheinbar
+                    ' unbehandelten Ereignis weiter (siehe MainWindow.OnWindowKeyDown).
                     Case Key.V
-                        Await PasteClipboardIntoFolder(vm.CurrentFolder)
                         e.Handled = True
+                        Await PasteClipboardIntoFolder(vm.CurrentFolder)
                         Return
                     Case Key.F
                         FocusSearchBox()

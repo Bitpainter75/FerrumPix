@@ -4,7 +4,7 @@
 
 FerrumPix is a desktop photo management and editing application for Linux and Windows, built with [Avalonia UI](https://avaloniaui.net/) and VB.NET. Project Website [FerrumPix.app](https://ferrumpix.app/) 
 
-> **Status:** Active development (current base version: 0.8.0), but already feature-rich in the core areas gallery, viewer, editor, settings, and Immich integration. The current focus is less on basic functionality and more on stabilization, UX refinement, performance, and structural cleanup as the application grows.
+> **Status:** Active development (current base version: 0.9.0), but already feature-rich in the core areas gallery, viewer, editor, settings, and Immich integration. The current focus is less on basic functionality and more on stabilization, UX refinement, performance, and structural cleanup as the application grows.
 
 ## Features
 
@@ -17,7 +17,9 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - File operations: copy/cut/paste, drag&drop with external file managers, rename/batch rename, duplicate, create folder, delete to the OS trash by default (with confirmation), batch selection, reveal in file manager, copy path; conflict dialogs include overwrite/skip choices for the whole batch
 - Batch rename: pattern-based with counters (`#`, `###`), and placeholders for the original name/extension, file date, EXIF date taken, image width/height, camera, ISO, aperture, and focal length; the last-used pattern is remembered between sessions
 - Batch format conversion: convert selected images to JPG/PNG/WEBP (with quality setting) into a selectable target folder, with the last target folder remembered and auto-numbering on name collisions
+- Batch filtering: apply a built-in filter preset, a Lightroom preset (`.xmp`), or a LUT (`.cube`) to the whole selection — either overwriting the originals or writing new files (target folder or Immich, format and quality, with the preset name appended to the file name, e.g. `photo.jpg` → `photo_Vintage.jpg`)
 - Further batch operations on the selection: resize (target size or scale percentage, with lock-aspect and interpolation choice), apply a saved watermark preset, and strip all metadata from local files
+- A menu button in the footer opens the same menu as a right-click on a photo, so the batch operations are reachable without a right-click
 - Collage creation: Grid, Hero (one large image + the others framing it — top/bottom/left/right/center, position pickable via the same anchor-grid as the editor's canvas tool, or by clicking the desired image in the live preview), and Random (jittered size/rotation per photo) layouts; adjustable width/columns/margin, a per-image border, background color/format/quality, a zoomable/pannable preview with a fit button, and a reshuffle button that randomizes image order (and, in Random mode, size/rotation) across all three layouts
 - Camera RAW support (CR2, CR3, NEF, ARW, DNG, PEF, RW2) alongside standard raster formats, plus SVG and ICO previews
 - SQLite-backed library (metadata, ratings, tags, cached EXIF/dimensions for search)
@@ -41,6 +43,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - Crop (with presets), image resize, rotate/straighten (with auto canvas expand), flip, and canvas resize with anchor picker
 - Optional rulers, draggable guides, and a configurable pixel grid for precision work
 - Adjust: exposure, brightness, contrast, highlights/shadows, whites/blacks, tone curve (RGB, luminance, and the individual red/green/blue channels). Exposure, brightness, and contrast run through a tone curve with a soft toe and shoulder: they stay linear through the mid-tones and bend smoothly towards black and white, so pushing them far keeps drawing in the highlights and shadows instead of clipping them flat
+- Film negative: turn a scanned negative into a positive. Each channel is normalized in density (logarithmically) between the measured film base — the brightest point of the scan, i.e. the unexposed carrier — and the densest point, and inverted there; because every channel is normalized against its own base, the orange mask of color negative film cancels out instead of remaining as a blue cast. The base is measured from the image automatically or picked with the eyedropper from the unexposed film edge; a black-and-white mode keeps the result neutral, and a gradation slider sets the steepness of the density curve. Exposure, white balance, and the tone curve then work on the finished positive
 - Color: white balance, temperature/tint, vibrance/saturation, split toning, and an 8-band HSL color mixer — pick a color band on a color wheel, then dial in its hue, saturation, and luminance with a shared set of sliders
 - Filters: built-in filter presets with a strength slider, plus `.cube` LUT support and Lightroom XMP preset import — including white balance (the relative shift Lightroom stores for presets, not the absolute Kelvin value), the 8-band HSL panel with luminance, split toning, the point curve, and Lightroom's parametric curve, which is folded into the point curve
 - Details: clarity, sharpening, softening/noise reduction (Gaussian/median), structure, haze, glow, grain/noise, and dust/scratch style effects

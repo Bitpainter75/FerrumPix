@@ -4,28 +4,17 @@
              x:Class="FerrumPix.Controls.EditorPanels.InsertPanel">
     <StackPanel Spacing="7">
         <StackPanel Spacing="6" Margin="0,2,0,2">
-            <Expander Header="Farbmischer" IsExpanded="True">
-                <Expander.HeaderTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/color-swatch.svg"
-                                Width="14" Height="14" />
-                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </DataTemplate>
-                </Expander.HeaderTemplate>
-                <!-- Die Beschriftungen wechseln mit dem Objekttyp: beim QR-Code heißt die Füllfarbe
-                     "Hintergrund" und die Konturfarbe "Vordergrund" (siehe FillColorLabel/StrokeColorLabel). -->
-                <icons:ColorMixer Margin="0,8,0,0"
-                                  FillColor="{Binding AnnotationFillColorValue, Mode=TwoWay}"
-                                  StrokeColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}"
-                                  SecondaryFillColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}"
-                                  FillLabel="{Binding FillColorLabel}"
-                                  StrokeLabel="{Binding StrokeColorLabel}"
-                                  ShowFill="{Binding ShowFillColorControls}"
-                                  ShowSecondaryFill="{Binding ShowGradientFillControls}" />
-            </Expander>
+            <!-- Ohne Expander-Kopf, wie der Farbmischer im Anpassen-Werkzeug: er steht ganz oben und
+                 soll nicht wegklappbar sein.
+                 Die Beschriftungen wechseln mit dem Objekttyp: beim QR-Code heißt die Füllfarbe
+                 "Hintergrund" und die Konturfarbe "Vordergrund" (siehe FillColorLabel/StrokeColorLabel). -->
+            <icons:ColorMixer FillColor="{Binding AnnotationFillColorValue, Mode=TwoWay}"
+                              StrokeColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}"
+                              SecondaryFillColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}"
+                              FillLabel="{Binding FillColorLabel}"
+                              StrokeLabel="{Binding StrokeColorLabel}"
+                              ShowFill="{Binding ShowFillColorControls}"
+                              ShowSecondaryFill="{Binding ShowGradientFillControls}" />
         </StackPanel>
 
         <StackPanel Spacing="10">

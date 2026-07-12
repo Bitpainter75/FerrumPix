@@ -397,17 +397,22 @@ Namespace Views
                         vm.Gallery?.SelectAllVisible()
                         e.Handled = True
                         Return
+                    ' e.Handled MUSS vor dem Await stehen. Dieser Handler läuft in der Tunnel-Phase, also
+                    ' VOR der Galerie - aber ein Await gibt die Kontrolle an die Ereignisweiterleitung zurück,
+                    ' und die sieht dann ein noch UNbehandeltes Ereignis. Die Galerie hat einen eigenen
+                    ' Ctrl+V-Handler: das Einfügen lief dadurch zweimal, und jedes markierte Bild landete als
+                    ' "Kopie" UND "Kopie 2" im Ordner.
                     Case Key.C
-                        Await CopyGallerySelectionToClipboard(vm, False)
                         e.Handled = True
+                        Await CopyGallerySelectionToClipboard(vm, False)
                         Return
                     Case Key.X
-                        Await CopyGallerySelectionToClipboard(vm, True)
                         e.Handled = True
+                        Await CopyGallerySelectionToClipboard(vm, True)
                         Return
                     Case Key.V
-                        Await PasteClipboardIntoGallery(vm)
                         e.Handled = True
+                        Await PasteClipboardIntoGallery(vm)
                         Return
                 End Select
             End If

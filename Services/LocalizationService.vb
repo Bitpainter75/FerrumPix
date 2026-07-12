@@ -175,6 +175,13 @@ Namespace Services
                 autoComplete.PlaceholderText = T(autoComplete.PlaceholderText)
             End If
 
+            ' ComboBox erbt ihren Platzhalter ebenfalls nicht von TextBox - ohne diesen Zweig bliebe der
+            ' Text einer noch leeren Auswahlliste deutsch.
+            Dim comboBox = TryCast(node, ComboBox)
+            If comboBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(comboBox.PlaceholderText) Then
+                comboBox.PlaceholderText = T(comboBox.PlaceholderText)
+            End If
+
             Dim control = TryCast(node, Control)
             If control IsNot Nothing Then
                 Dim tip = ToolTip.GetTip(control)

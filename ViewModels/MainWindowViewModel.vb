@@ -470,6 +470,230 @@ Namespace ViewModels
             End Get
         End Property
 
+#Region "Dialog: Filter anwenden (Stapel)"
+
+        Private _dialogFilterSourceKind As String = BatchFilterDialogResult.SourceFilter
+        Private _dialogSelectedFilterChoice As String = ""
+        Private _dialogFilterStrength As Integer = 100
+        Private _dialogBatchFilterOverwrite As Boolean = False
+        Private _dialogBatchFilterAppendName As Boolean = True
+        ''' Anzeigename -> Dateipfad. Bei den eingebauten Filtern leer: sie stehen als Name in den
+        ''' Anpassungen, nicht als Datei.
+        Private ReadOnly _dialogFilterChoicePaths As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+
+        ''' Die Auswahlliste zur aktuellen Quelle - eingebaute Filter, gespeicherte Lightroom-Presets oder
+        ''' gespeicherte LUTs. Wird bei jedem Quellenwechsel neu aufgebaut.
+        Public ReadOnly Property DialogFilterChoices As New ObservableCollection(Of String)()
+
+        Public Property DialogFilterSourceKind As String
+            Get
+                Return _dialogFilterSourceKind
+            End Get
+            Set(value As String)
+                Dim normalized = If(String.IsNullOrWhiteSpace(value), BatchFilterDialogResult.SourceFilter, value.Trim())
+                If String.Equals(_dialogFilterSourceKind, normalized, StringComparison.OrdinalIgnoreCase) Then Return
+                _dialogFilterSourceKind = normalized
+                RebuildDialogFilterChoices()
+                Me.RaisePropertyChanged(NameOf(DialogFilterSourceKind))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceFilter))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceLightroom))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceLut))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterFileVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterStrengthVisible))
+            End Set
+        End Property
+
+        Public Sub SetDialogFilterSourceKind(kind As String)
+            DialogFilterSourceKind = kind
+        End Sub
+
+        Public ReadOnly Property IsDialogFilterSourceFilter As Boolean
+            Get
+                Return String.Equals(_dialogFilterSourceKind, BatchFilterDialogResult.SourceFilter, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogFilterSourceLightroom As Boolean
+            Get
+                Return String.Equals(_dialogFilterSourceKind, BatchFilterDialogResult.SourceLightroom, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogFilterSourceLut As Boolean
+            Get
+                Return String.Equals(_dialogFilterSourceKind, BatchFilterDialogResult.SourceLut, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' Nur Presets aus Dateien lassen sich hinzuladen - die eingebauten Filter sind fest.
+        Public ReadOnly Property IsDialogFilterFileVisible As Boolean
+            Get
+                Return Not IsDialogFilterSourceFilter
+            End Get
+        End Property
+
+        ''' Ein Lightroom-Preset ist eine Sammlung einzelner Regler, kein Effekt mit einem Mischregler -
+        ''' eine "Stärke" gäbe es dort nur als willkürliche Skalierung aller Werte.
+        Public ReadOnly Property IsDialogFilterStrengthVisible As Boolean
+            Get
+                Return Not IsDialogFilterSourceLightroom
+            End Get
+        End Property
+
+        Public Property DialogSelectedFilterChoice As String
+            Get
+                Return _dialogSelectedFilterChoice
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "")
+                If String.Equals(_dialogSelectedFilterChoice, normalized, StringComparison.Ordinal) Then Return
+                _dialogSelectedFilterChoice = normalized
+                ' Jeder eingebaute Filter bringt seine eigene Startstärke mit - genau die, mit der er auch
+                ' im Editor anfängt (S/W und Sepia voll, alle anderen halb). Sonst sähe derselbe Filter im
+                ' Stapel anders aus als in der Einzelbearbeitung.
+                If IsDialogFilterSourceFilter AndAlso normalized.Length > 0 Then
+                    DialogFilterStrength = CInt(ImageAdjustments.DefaultFilterStrength(normalized))
+                End If
+                Me.RaisePropertyChanged(NameOf(DialogSelectedFilterChoice))
+            End Set
+        End Property
+
+        Public Property DialogFilterStrength As Integer
+            Get
+                Return _dialogFilterStrength
+            End Get
+            Set(value As Integer)
+                Me.RaiseAndSetIfChanged(_dialogFilterStrength, Math.Max(0, Math.Min(100, value)))
+            End Set
+        End Property
+
+        ''' Überschreiben blendet Format, Ziel und Namenszusatz aus: die Datei behält Pfad und Endung.
+        Public Property DialogBatchFilterOverwrite As Boolean
+            Get
+                Return _dialogBatchFilterOverwrite
+            End Get
+            Set(value As Boolean)
+                If _dialogBatchFilterOverwrite = value Then Return
+                _dialogBatchFilterOverwrite = value
+                Me.RaisePropertyChanged(NameOf(DialogBatchFilterOverwrite))
+                Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
+                Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterAppendNameVisible))
+            End Set
+        End Property
+
+        Public Property DialogBatchFilterAppendName As Boolean
+            Get
+                Return _dialogBatchFilterAppendName
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogBatchFilterAppendName, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property IsDialogFilterAppendNameVisible As Boolean
+            Get
+                Return Not _dialogBatchFilterOverwrite
+            End Get
+        End Property
+
+        Private Sub RebuildDialogFilterChoices()
+            DialogFilterChoices.Clear()
+            _dialogFilterChoicePaths.Clear()
+
+            If IsDialogFilterSourceFilter Then
+                ' "Keine" ist der neutrale Eintrag des Editors und im Stapel sinnlos.
+                For Each name In ImageAdjustments.FilterPresetNames.Where(Function(n) Not String.Equals(n, "Keine", StringComparison.OrdinalIgnoreCase))
+                    DialogFilterChoices.Add(name)
+                Next
+            Else
+                Dim settings = AppSettingsService.Load()
+                Dim entries = If(IsDialogFilterSourceLightroom,
+                                 settings.LightroomPresets.Select(Function(p) (p.Name, p.Path)),
+                                 settings.LutPresets.Select(Function(p) (p.Name, p.Path)))
+                For Each entry In entries
+                    If String.IsNullOrWhiteSpace(entry.Path) OrElse Not File.Exists(entry.Path) Then Continue For
+                    Dim label = If(String.IsNullOrWhiteSpace(entry.Name), IO.Path.GetFileNameWithoutExtension(entry.Path), entry.Name)
+                    If _dialogFilterChoicePaths.ContainsKey(label) Then Continue For
+                    _dialogFilterChoicePaths(label) = entry.Path
+                    DialogFilterChoices.Add(label)
+                Next
+            End If
+
+            ' Eine LUT ist ein fertiger Look, kein Effekt mit halber Grundstärke: sie startet voll.
+            If Not IsDialogFilterSourceFilter Then DialogFilterStrength = 100
+            DialogSelectedFilterChoice = If(DialogFilterChoices.Count > 0, DialogFilterChoices(0), "")
+        End Sub
+
+        ''' Vom Dialog aufgerufen, wenn der Nutzer eine .xmp/.cube-Datei außerhalb der gespeicherten
+        ''' Vorgaben wählt: der Eintrag kommt oben in die Liste und wird gleich ausgewählt.
+        Public Sub AddDialogFilterFileChoice(path As String)
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            Dim label = IO.Path.GetFileNameWithoutExtension(path)
+            If String.IsNullOrWhiteSpace(label) Then Return
+            If Not _dialogFilterChoicePaths.ContainsKey(label) Then
+                DialogFilterChoices.Insert(0, label)
+            End If
+            _dialogFilterChoicePaths(label) = path
+            DialogSelectedFilterChoice = label
+        End Sub
+
+        ''' <param name="currentFolder">Der Ordner, in dem die Galerie gerade steht. Er ist die naheliegende
+        ''' Vorgabe für neue Dateien - anders als beim Konvertieren, wo der zuletzt gewählte Exportordner
+        ''' gemeint ist. Leer (z.B. in einer Suchliste oder in Immich) fällt es auf diesen zurück.</param>
+        Public Async Function ShowBatchFilterAsync(fileCount As Integer, Optional currentFolder As String = "") As Task(Of BatchFilterDialogResult)
+            _dialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
+            _dialogBatchFilterOverwrite = False
+            _dialogBatchFilterAppendName = True
+            DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
+            DialogJpgQuality = 90
+            DialogSaveAsTarget = "Local"
+            DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
+                                          currentFolder,
+                                          ResolveDefaultSaveAsTargetFolder())
+            ' Nach dem Neuaufbau steht der erste Filter in der Auswahl - dessen Setter setzt die Stärke.
+            RebuildDialogFilterChoices()
+            For Each name In {NameOf(DialogFilterSourceKind), NameOf(IsDialogFilterSourceFilter),
+                              NameOf(IsDialogFilterSourceLightroom), NameOf(IsDialogFilterSourceLut),
+                              NameOf(IsDialogFilterFileVisible), NameOf(IsDialogFilterStrengthVisible),
+                              NameOf(DialogBatchFilterOverwrite), NameOf(DialogBatchFilterAppendName),
+                              NameOf(IsDialogFilterAppendNameVisible), NameOf(DialogShowsSaveAsOptions),
+                              NameOf(IsDialogJpgQualityVisible), NameOf(IsSaveAsImmichAvailable)}
+                Me.RaisePropertyChanged(name)
+            Next
+
+            ' Titel vorab zusammensetzen: ShowDialogAsync übersetzt ihn zwar, aber ein interpolierter Text
+            ' mit der Dateizahl darin hätte in keiner Sprache einen Schlüssel (siehe LocalizationService).
+            Dim title = $"{LocalizationService.T("Filter anwenden")} ({fileCount} {LocalizationService.T("Dateien")})"
+            Dim result = Await ShowDialogAsync(AppDialogKind.BatchFilter,
+                                               title,
+                                               "Wähle den Look und wohin die Bilder geschrieben werden.",
+                                               "",
+                                               "Anwenden",
+                                               "Abbrechen")
+            If result Is Nothing Then Return Nothing
+            If String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice) Then Return Nothing
+
+            If Not _dialogBatchFilterOverwrite Then PersistDialogTargetFolderIfLocal()
+
+            Dim path As String = Nothing
+            _dialogFilterChoicePaths.TryGetValue(_dialogSelectedFilterChoice, path)
+            Return New BatchFilterDialogResult With {
+                .SourceKind = _dialogFilterSourceKind,
+                .DisplayName = _dialogSelectedFilterChoice,
+                .PresetPath = If(path, ""),
+                .Strength = _dialogFilterStrength,
+                .Overwrite = _dialogBatchFilterOverwrite,
+                .AppendNameToFileName = _dialogBatchFilterAppendName,
+                .Format = DialogSelectedFormat,
+                .JpgQuality = DialogJpgQuality,
+                .Target = DialogSaveAsTarget,
+                .TargetFolder = DialogSaveAsTargetFolder
+            }
+        End Function
+
+#End Region
+
         Public Property DialogConfirmText As String
             Get
                 Return _dialogConfirmText
@@ -753,6 +977,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchRename))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSearch))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchResize))
+                Me.RaisePropertyChanged(NameOf(DialogShowsBatchFilter))
                 Me.RaisePropertyChanged(NameOf(DialogShowsWatermarkPreset))
                 Me.RaisePropertyChanged(NameOf(DialogUsesWideLayout))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
@@ -779,15 +1004,26 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.Search AndAlso
                        _dialogKind <> AppDialogKind.BatchConvert AndAlso
                        _dialogKind <> AppDialogKind.BatchResize AndAlso
+                       _dialogKind <> AppDialogKind.BatchFilter AndAlso
                        _dialogKind <> AppDialogKind.WatermarkPreset
             End Get
         End Property
 
         ''' Zeigt den Format+Qualität-Block - sowohl für "Speichern unter" (mit Dateiname) als auch
         ''' für die Stapel-Konvertierung (ohne Dateiname, DialogShowsInput ist dafür oben ausgeschlossen).
+        ''' Format, Qualität, Ziel und Zielordner. Beim Stapel-Filter nur dann, wenn NEUE Dateien
+        ''' geschrieben werden - beim Überschreiben behält jede Datei ihren Pfad und ihre Endung.
         Public ReadOnly Property DialogShowsSaveAsOptions As Boolean
             Get
-                Return _dialogKind = AppDialogKind.SaveAs OrElse _dialogKind = AppDialogKind.BatchConvert
+                Return _dialogKind = AppDialogKind.SaveAs OrElse
+                       _dialogKind = AppDialogKind.BatchConvert OrElse
+                       (_dialogKind = AppDialogKind.BatchFilter AndAlso Not _dialogBatchFilterOverwrite)
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogShowsBatchFilter As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.BatchFilter
             End Get
         End Property
 

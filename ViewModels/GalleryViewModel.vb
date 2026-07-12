@@ -65,6 +65,7 @@ Namespace ViewModels
         Private _collagePreviewImage As Avalonia.Media.Imaging.Bitmap
         Private _collagePreviewRequestId As Integer
         Private ReadOnly _collagePreviewTimer As DispatcherTimer
+        Private ReadOnly _searchDebounceTimer As DispatcherTimer
         Private _thumbnailLoadCts As New CancellationTokenSource()
         Private _activeSearchCts As CancellationTokenSource
         Private ReadOnly _virtualPathSet As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
@@ -248,7 +249,15 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_searchText, value)
-                FilterAndSort()
+                ' Entprellt: siehe _searchDebounceTimer. Das Leeren des Feldes (Abbrechen-Knopf, Ordnerwechsel)
+                ' filtert sofort - dort wartet niemand auf weitere Tastendrücke, und eine sichtbare
+                ' Verzögerung beim Zurücksetzen wirkt wie ein Hänger.
+                _searchDebounceTimer.Stop()
+                If String.IsNullOrEmpty(_searchText) Then
+                    FilterAndSort()
+                Else
+                    _searchDebounceTimer.Start()
+                End If
             End Set
         End Property
 
@@ -898,6 +907,7 @@ Namespace ViewModels
         Public ReadOnly Property ResizeSelectedCommand As ICommand
         Public ReadOnly Property ApplyWatermarkSelectedCommand As ICommand
         Public ReadOnly Property BatchConvertSelectedCommand As ICommand
+        Public ReadOnly Property ApplyFilterSelectedCommand As ICommand
         Public ReadOnly Property RemoveMetadataSelectedCommand As ICommand
         Public ReadOnly Property IncreaseThumbnailSizeCommand As ICommand
         Public ReadOnly Property DecreaseThumbnailSizeCommand As ICommand
@@ -1064,6 +1074,16 @@ Namespace ViewModels
                                                        RefreshCollagePreviewAsync()
                                                    End Sub
 
+            ' Jeder Tastendruck in der Suche filterte bisher sofort den GANZEN Ordner neu, sortierte ihn und
+            ' schob ihn in die gebundene Sammlung. Bei ein paar tausend Fotos ist jeder Buchstabe ein
+            ' vollständiger Neuaufbau der Ansicht. 150 ms sind kurz genug, um beim Tippen nicht zu stören,
+            ' und lang genug, damit eine zügig getippte Eingabe nur EINEN Filterlauf auslöst.
+            _searchDebounceTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(150)}
+            AddHandler _searchDebounceTimer.Tick, Sub()
+                                                       _searchDebounceTimer.Stop()
+                                                       FilterAndSort()
+                                                   End Sub
+
             RefreshCommand = ReactiveCommand.Create(Sub() LoadCurrentFolder())
             ClearSearchCommand = ReactiveCommand.Create(Sub() SearchText = "")
             NavigateForwardCommand = ReactiveCommand.Create(Sub() NavigateForward())
@@ -1087,6 +1107,7 @@ Namespace ViewModels
             ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
             ApplyWatermarkSelectedCommand = ReactiveCommand.Create(Sub() ApplyWatermarkSelected())
             BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() BatchConvertSelected())
+            ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() ApplyFilterSelected())
             RemoveMetadataSelectedCommand = ReactiveCommand.Create(Sub() RemoveMetadataSelected())
             IncreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize += 24)
             DecreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize -= 24)
@@ -3205,9 +3226,9 @@ Namespace ViewModels
             End If
 
             If _filterFileType = "Raw" Then
-                filtered = filtered.Where(Function(i) i.IsFolder OrElse _rawExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant()))
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse _rawExtensions.Contains(i.ExtensionLower))
             ElseIf _filterFileType = "NonRaw" Then
-                filtered = filtered.Where(Function(i) i.IsFolder OrElse Not _rawExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant()))
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse Not _rawExtensions.Contains(i.ExtensionLower))
             End If
 
             Items.ReplaceAll(SortItems(filtered))
@@ -3219,8 +3240,17 @@ Namespace ViewModels
             End If
             Me.RaisePropertyChanged(NameOf(FooterStatusText))
 
-            Dim imageCount = Items.Where(Function(i) i.IsImage).Count()
-            Dim folderCount = Items.Where(Function(i) i.IsFolder AndAlso Not i.IsParentFolderEntry).Count()
+            ' Ein Durchlauf für beide Zahlen statt zweier - die Liste ist hier bereits gefiltert und
+            ' sortiert, sie noch zweimal komplett abzugehen ist reine Zugabe.
+            Dim imageCount = 0
+            Dim folderCount = 0
+            For Each item In Items
+                If item.IsImage Then
+                    imageCount += 1
+                ElseIf item.IsFolder AndAlso Not item.IsParentFolderEntry Then
+                    folderCount += 1
+                End If
+            Next
             If _isVirtualFolder Then
                 StatusText = $"{imageCount} {LocalizationService.T("Bilder")}  •  {CurrentFolderName}"
             Else
@@ -3934,6 +3964,115 @@ Namespace ViewModels
             If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
         End Sub
 
+        ''' <summary>Stapel: einen eingebauten Filter, ein Lightroom-Preset (.xmp) oder eine LUT (.cube) auf
+        ''' die Auswahl anwenden - entweder in die Originale hinein oder in neue Dateien (mit dem Namen der
+        ''' Vorgabe im Dateinamen).</summary>
+        Private Async Sub ApplyFilterSelected()
+            Dim targetItems = GetSelectedBatchEditableImageItems()
+            If targetItems.Count = 0 Then Return
+
+            ' In einer Suchliste oder in Immich gibt es keinen echten Ordner - dann greift die Vorgabe des
+            ' Dialogs (zuletzt genutzter Exportordner).
+            Dim folderHint = If(_isVirtualFolder, "", If(_currentFolder, ""))
+            Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint)
+            If result Is Nothing Then Return
+
+            Dim adjustmentsTemplate = BuildBatchFilterAdjustments(result)
+            If adjustmentsTemplate Is Nothing Then
+                Await _mainVm.ShowMessageAsync("Filter anwenden", "Die gewählte Vorgabe konnte nicht gelesen werden.")
+                Return
+            End If
+
+            StatusText = LocalizationService.T("Wende Filter an...")
+            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
+            ' Jedes Bild bekommt seinen eigenen Klon: ApplyAdjustments schreibt Quellmaße hinein, ein
+            ' geteiltes Objekt würde sie über die Dateien hinweg vermischen.
+            Dim writer = Function(source As String, target As String) ImageProcessor.SaveImage(source, target, adjustmentsTemplate.Clone(), result.JpgQuality, preserveMetadata)
+
+            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
+            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
+            Dim uploadedAssetIds As New List(Of String)()
+            Dim changedCount = 0
+            Dim uploadedCount = 0
+
+            If result.Overwrite Then
+                Dim localPaths = localItems.Where(Function(i) File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
+                changedCount = Await RewriteImagesInPlaceAsync(localPaths, writer)
+                ' In Immich gibt es kein Überschreiben an Ort und Stelle - dort entsteht wie bei den
+                ' übrigen Stapelaktionen ein neues Asset.
+                uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
+                                                                   Function(source) IO.Path.GetExtension(source),
+                                                                   uploadedAssetIds).ConfigureAwait(True)
+                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) gefiltert"
+                RefreshAfterBatchFileRewrite(localPaths)
+                If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
+                Return
+            End If
+
+            Dim suffix = result.FileNameSuffix
+            If String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured Then
+                changedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
+                                                                         Function(source) result.Extension,
+                                                                         uploadedAssetIds, suffix, skipSameExtension:=False).ConfigureAwait(True)
+                uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
+                                                                   Function(source) result.Extension,
+                                                                   uploadedAssetIds, suffix).ConfigureAwait(True)
+                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) gefiltert"
+                If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
+                Return
+            End If
+
+            Dim targetFolder = If(result.TargetFolder, "").Trim()
+            If String.IsNullOrWhiteSpace(targetFolder) Then
+                Await _mainVm.ShowMessageAsync("Filter anwenden", "Kein Zielordner angegeben.")
+                Return
+            End If
+            Dim createFolderError As String = Nothing
+            Try
+                Directory.CreateDirectory(targetFolder)
+            Catch ex As Exception
+                createFolderError = ex.Message
+            End Try
+            If createFolderError IsNot Nothing Then
+                Await _mainVm.ShowMessageAsync("Filter anwenden", createFolderError)
+                Return
+            End If
+
+            changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
+                                                                     Function(source) result.Extension,
+                                                                     suffix, skipSameExtension:=False).ConfigureAwait(True)
+            uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
+                                                                       Function(source) result.Extension,
+                                                                       suffix).ConfigureAwait(True)
+
+            StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) gefiltert"
+            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
+        End Sub
+
+        ''' <summary>Übersetzt die Dialogauswahl in Anpassungen. Lightroom-Presets laufen durch denselben
+        ''' LightroomPresetService wie der Editor - es gibt nur eine Abbildung der crs:-Schlüssel.
+        ''' Nothing, wenn die Preset-Datei fehlt oder nichts Verwertbares enthält.</summary>
+        Private Shared Function BuildBatchFilterAdjustments(result As BatchFilterDialogResult) As ImageAdjustments
+            Select Case result.SourceKind
+                Case BatchFilterDialogResult.SourceLightroom
+                    Return LightroomPresetService.LoadLook(result.PresetPath)
+
+                Case BatchFilterDialogResult.SourceLut
+                    If String.IsNullOrWhiteSpace(result.PresetPath) OrElse Not File.Exists(result.PresetPath) Then Return Nothing
+                    Return New ImageAdjustments With {
+                        .LutPath = result.PresetPath,
+                        .LutStrength = result.Strength
+                    }
+
+                Case Else
+                    If String.IsNullOrWhiteSpace(result.DisplayName) Then Return Nothing
+                    Return New ImageAdjustments With {
+                        .FilterPreset = result.DisplayName,
+                        .FilterStrength = result.Strength
+                    }
+            End Select
+        End Function
+
         Private Async Sub RemoveMetadataSelected()
             Dim targets = GetSelectedEditableImagePaths()
             If targets.Count = 0 Then Return
@@ -4068,7 +4207,8 @@ Namespace ViewModels
             Return Nothing
         End Function
 
-        Private Shared Function CreateImmichBatchOutputPath(sourcePath As String, requestedExtension As String) As String
+        Private Shared Function CreateImmichBatchOutputPath(sourcePath As String, requestedExtension As String,
+                                                            Optional nameSuffix As String = "") As String
             Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(sourcePath), requestedExtension)
             If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
             If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
@@ -4076,22 +4216,26 @@ Namespace ViewModels
             Dim dir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichBatch")
             Directory.CreateDirectory(dir)
             Dim stem = If(String.IsNullOrWhiteSpace(IO.Path.GetFileNameWithoutExtension(sourcePath)), "immich-export", IO.Path.GetFileNameWithoutExtension(sourcePath))
-            Return IO.Path.Combine(dir, $"{stem}-ferrumpix-{Guid.NewGuid():N}{ext}")
+            Return IO.Path.Combine(dir, $"{stem}{If(nameSuffix, "")}-ferrumpix-{Guid.NewGuid():N}{ext}")
         End Function
 
-        Private Shared Function CreateBatchTargetFolderPath(sourcePath As String, targetFolder As String, requestedExtension As String) As String
+        ''' <param name="nameSuffix">Wird an den Dateinamen angehängt ("foto" + "_Vintage" -> "foto_Vintage").
+        ''' Leer lassen, wenn der Name unverändert bleiben soll.</param>
+        Private Shared Function CreateBatchTargetFolderPath(sourcePath As String, targetFolder As String, requestedExtension As String,
+                                                            Optional nameSuffix As String = "") As String
             Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(sourcePath), requestedExtension)
             If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
             If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
 
             Dim stem = If(String.IsNullOrWhiteSpace(IO.Path.GetFileNameWithoutExtension(sourcePath)), "ferrumpix-export", IO.Path.GetFileNameWithoutExtension(sourcePath))
-            Return MakeUniqueFilePath(IO.Path.Combine(targetFolder, stem & ext))
+            Return MakeUniqueFilePath(IO.Path.Combine(targetFolder, stem & If(nameSuffix, "") & ext))
         End Function
 
         Private Async Function ProcessImmichBatchItemsAsync(items As IEnumerable(Of ImageItem),
                                                             writer As Func(Of String, String, Boolean),
                                                             outputExtension As Func(Of String, String),
-                                                            Optional uploadedAssetIds As List(Of String) = Nothing) As Task(Of Integer)
+                                                            Optional uploadedAssetIds As List(Of String) = Nothing,
+                                                            Optional nameSuffix As String = "") As Task(Of Integer)
             Dim uploadedCount = 0
             Dim errorMessage As String = Nothing
             Dim albumId = CurrentImmichAlbumIdForUpload()
@@ -4102,7 +4246,7 @@ Namespace ViewModels
                     Dim source = Await EnsureLocalPathForBatchAsync(item)
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
 
-                    Dim outputPath = CreateImmichBatchOutputPath(source, outputExtension(source))
+                    Dim outputPath = CreateImmichBatchOutputPath(source, outputExtension(source), nameSuffix)
                     Try
                         Dim ok = Await Task.Run(Function() writer(source, outputPath))
                         If Not ok OrElse Not File.Exists(outputPath) Then Continue For
@@ -4131,7 +4275,8 @@ Namespace ViewModels
         Private Async Function ProcessImmichBatchItemsToFolderAsync(items As IEnumerable(Of ImageItem),
                                                                     targetFolder As String,
                                                                     writer As Func(Of String, String, Boolean),
-                                                                    outputExtension As Func(Of String, String)) As Task(Of Integer)
+                                                                    outputExtension As Func(Of String, String),
+                                                                    Optional nameSuffix As String = "") As Task(Of Integer)
             Dim savedCount = 0
             Dim errorMessage As String = Nothing
 
@@ -4141,7 +4286,7 @@ Namespace ViewModels
                     Dim source = Await EnsureLocalPathForBatchAsync(item)
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
 
-                    Dim target = CreateBatchTargetFolderPath(source, targetFolder, outputExtension(source))
+                    Dim target = CreateBatchTargetFolderPath(source, targetFolder, outputExtension(source), nameSuffix)
                     Dim ok = Await Task.Run(Function() writer(source, target))
                     If ok AndAlso File.Exists(target) Then savedCount += 1
                 Next
@@ -4153,10 +4298,15 @@ Namespace ViewModels
             Return savedCount
         End Function
 
+        ''' <param name="skipSameExtension">Beim Konvertieren ist eine Datei, die schon im Zielformat
+        ''' vorliegt, nichts zu tun. Beim Anwenden eines Filters dagegen schon - dort MUSS auch ein JPG
+        ''' nach JPG geschrieben werden.</param>
         Private Async Function ProcessLocalBatchItemsToFolderAsync(items As IEnumerable(Of ImageItem),
                                                                    targetFolder As String,
                                                                    writer As Func(Of String, String, Boolean),
-                                                                   outputExtension As Func(Of String, String)) As Task(Of Integer)
+                                                                   outputExtension As Func(Of String, String),
+                                                                   Optional nameSuffix As String = "",
+                                                                   Optional skipSameExtension As Boolean = True) As Task(Of Integer)
             Dim savedCount = 0
             Dim errorMessage As String = Nothing
 
@@ -4166,9 +4316,9 @@ Namespace ViewModels
                         If item Is Nothing OrElse item.IsImmichAsset OrElse Not File.Exists(item.FilePath) Then Continue For
                         Dim sourceExt = IO.Path.GetExtension(item.FilePath)
                         Dim targetExt = outputExtension(item.FilePath)
-                        If String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
+                        If skipSameExtension AndAlso String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
 
-                        Dim target = CreateBatchTargetFolderPath(item.FilePath, targetFolder, targetExt)
+                        Dim target = CreateBatchTargetFolderPath(item.FilePath, targetFolder, targetExt, nameSuffix)
                         If writer(item.FilePath, target) AndAlso File.Exists(target) Then savedCount += 1
                     Next
                 End Sub)
@@ -4183,7 +4333,9 @@ Namespace ViewModels
         Private Async Function ProcessLocalBatchItemsToImmichAsync(items As IEnumerable(Of ImageItem),
                                                                    writer As Func(Of String, String, Boolean),
                                                                    outputExtension As Func(Of String, String),
-                                                                   Optional uploadedAssetIds As List(Of String) = Nothing) As Task(Of Integer)
+                                                                   Optional uploadedAssetIds As List(Of String) = Nothing,
+                                                                   Optional nameSuffix As String = "",
+                                                                   Optional skipSameExtension As Boolean = True) As Task(Of Integer)
             Dim uploadedCount = 0
             Dim errorMessage As String = Nothing
             Dim albumId = CurrentImmichAlbumIdForUpload()
@@ -4193,9 +4345,9 @@ Namespace ViewModels
                     If item Is Nothing OrElse item.IsImmichAsset OrElse Not File.Exists(item.FilePath) Then Continue For
                     Dim sourceExt = IO.Path.GetExtension(item.FilePath)
                     Dim targetExt = outputExtension(item.FilePath)
-                    If String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
+                    If skipSameExtension AndAlso String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
 
-                    Dim outputPath = CreateImmichBatchOutputPath(item.FilePath, targetExt)
+                    Dim outputPath = CreateImmichBatchOutputPath(item.FilePath, targetExt, nameSuffix)
                     Try
                         Dim ok = Await Task.Run(Function() writer(item.FilePath, outputPath))
                         If Not ok OrElse Not File.Exists(outputPath) Then Continue For

@@ -14,6 +14,7 @@ Namespace Models
         Private _keepLast As Integer = -1
         Private _pinnedFirst As Integer = -1
         Private _pinnedLast As Integer = -1
+        Private ReadOnly _pinnedItems As New HashSet(Of ImageItem)()
 
         ''' <summary>Wie viele Elemente über den sichtbaren Bereich hinaus "warmgehalten" werden,
         ''' als Vielfaches der sichtbaren Anzahl (mindestens minKeepBuffer).</summary>
@@ -62,12 +63,18 @@ Namespace Models
             If _pinnedFirst >= 0 Then
                 For i = _pinnedFirst To _pinnedLast
                     If i < firstVisible OrElse i > lastVisible Then
-                        If i < items.Count Then items(i)?.SetPinnedVisible(False)
+                        If i < items.Count Then
+                            Dim oldItem = items(i)
+                            oldItem?.SetPinnedVisible(False)
+                            If oldItem IsNot Nothing Then _pinnedItems.Remove(oldItem)
+                        End If
                     End If
                 Next
             End If
             For i = firstVisible To lastVisible
-                items(i)?.SetPinnedVisible(True)
+                Dim item = items(i)
+                item?.SetPinnedVisible(True)
+                If item IsNot Nothing Then _pinnedItems.Add(item)
             Next
             _pinnedFirst = firstVisible
             _pinnedLast = lastVisible
@@ -84,6 +91,10 @@ Namespace Models
         ''' <summary>Setzt die Verfolgung zurück (z.B. bei Ordnerwechsel), damit der nächste Aufruf
         ''' nicht fälschlich gegen einen veralteten Keep-Alive-Bereich delta-evicted.</summary>
         Public Sub Reset()
+            For Each item In _pinnedItems
+                item?.SetPinnedVisible(False)
+            Next
+            _pinnedItems.Clear()
             _keepFirst = -1
             _keepLast = -1
             _pinnedFirst = -1

@@ -70,6 +70,15 @@ Namespace ViewModels
         Private _borderCornerRadius As Double = 0
         Private _borderEffect As String = "Einfach"
         Private _clarity As Double = 0
+        Private _negativeEnabled As Boolean = False
+        Private _negativeMonochrome As Boolean = False
+        Private _negativeBaseColor As String = ""
+        Private _negativeDensityColor As String = ""
+        Private _negativeGamma As Double = 0
+        ''' Solange die Pipette auf die Filmbasis wartet, muss die Umkehr aus der VORSCHAU heraus: die
+        ''' Pipette liest die Farbe, die auf dem Schirm steht - im umgerechneten Positiv würde der Nutzer
+        ''' also die Farbe des fertigen Bildes als "Filmbasis" setzen statt die des Filmträgers.
+        Private _suppressNegativeForPick As Boolean = False
         Private ReadOnly _curveRgbPoints As New ObservableCollection(Of Avalonia.Point) From {New Avalonia.Point(0, 0), New Avalonia.Point(255, 255)}
         Private ReadOnly _curveRedPoints As New ObservableCollection(Of Avalonia.Point) From {New Avalonia.Point(0, 0), New Avalonia.Point(255, 255)}
         Private ReadOnly _curveGreenPoints As New ObservableCollection(Of Avalonia.Point) From {New Avalonia.Point(0, 0), New Avalonia.Point(255, 255)}
@@ -310,10 +319,7 @@ Namespace ViewModels
             "Glühlampe", "Leuchtstoff", "Blitz", "Benutzerdefiniert"
         }
 
-        Public Property FilterPresetOptions As New System.Collections.ObjectModel.ObservableCollection(Of String) From {
-            "Keine", "S/W", "Warm", "Kühl", "Fade", "Kontrast", "Sepia", "Matt", "Cross", "Dramatisch", "Weich",
-            "Noir", "Duoton", "Polaroid", "VHS", "Alt"
-        }
+        Public Property FilterPresetOptions As New System.Collections.ObjectModel.ObservableCollection(Of String)(ImageAdjustments.FilterPresetNames)
 
 
         ' Undo-Stack
@@ -674,9 +680,7 @@ Namespace ViewModels
 
             _filterPreset = normalized
             If Not String.Equals(normalized, "Keine", StringComparison.OrdinalIgnoreCase) Then
-                Dim fullStrengthPreset = String.Equals(normalized, "S/W", StringComparison.OrdinalIgnoreCase) OrElse
-                                          String.Equals(normalized, "Sepia", StringComparison.OrdinalIgnoreCase)
-                _filterStrength = If(fullStrengthPreset, 100, 50)
+                _filterStrength = ImageAdjustments.DefaultFilterStrength(normalized)
             End If
 
             Me.RaisePropertyChanged(NameOf(FilterPreset))
@@ -1810,6 +1814,65 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' Filmnegativ umkehren. Beim Einschalten wird das Bild einmal vermessen (Filmbasis und
+        ''' dichtester Punkt), damit die Umkehr sofort mit echten Werten rechnet statt zu raten.
+        Public Property NegativeEnabled As Boolean
+            Get
+                Return _negativeEnabled
+            End Get
+            Set(value As Boolean)
+                If _negativeEnabled = value Then Return
+                CaptureUndoState(NameOf(NegativeEnabled))
+                _negativeEnabled = value
+                If value Then MeasureFilmNegative()
+                RaiseNegativePropertiesChanged()
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property NegativeMonochrome As Boolean
+            Get
+                Return _negativeMonochrome
+            End Get
+            Set(value As Boolean)
+                If _negativeMonochrome = value Then Return
+                CaptureUndoState(NameOf(NegativeMonochrome))
+                _negativeMonochrome = value
+                RaiseNegativePropertiesChanged()
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property NegativeGamma As Double
+            Get
+                Return _negativeGamma
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_negativeGamma, value, NameOf(NegativeGamma))
+            End Set
+        End Property
+
+        ''' Gemessene bzw. aufgenommene Filmbasis als Farbfeld neben der Pipette - ohne diese Rückmeldung
+        ''' wäre für den Nutzer nicht erkennbar, WORAUF die Umkehr sich gerade bezieht.
+        Public ReadOnly Property NegativeBaseBrush As Avalonia.Media.IBrush
+            Get
+                If String.IsNullOrWhiteSpace(_negativeBaseColor) Then
+                    Return Avalonia.Media.Brushes.Transparent
+                End If
+                Try
+                    Return New Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(_negativeBaseColor))
+                Catch
+                    Return Avalonia.Media.Brushes.Transparent
+                End Try
+            End Get
+        End Property
+
+        Public ReadOnly Property HasNegativeBaseColor As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(_negativeBaseColor)
+            End Get
+        End Property
+
         Public Property SplitToningShadowHue As Double
             Get
                 Return _splitToningShadowHue
@@ -2669,9 +2732,7 @@ Namespace ViewModels
                 CaptureUndoState(NameOf(FilterPreset))
                 Me.RaiseAndSetIfChanged(_filterPreset, normalized)
                 If Not String.Equals(normalized, "Keine", StringComparison.OrdinalIgnoreCase) Then
-                    Dim fullStrengthPreset = String.Equals(normalized, "S/W", StringComparison.OrdinalIgnoreCase) OrElse
-                                              String.Equals(normalized, "Sepia", StringComparison.OrdinalIgnoreCase)
-                    _filterStrength = If(fullStrengthPreset, 100, 50)
+                    _filterStrength = ImageAdjustments.DefaultFilterStrength(normalized)
                     Me.RaisePropertyChanged(NameOf(FilterStrength))
                 End If
                 SetLastAppliedFilterPreset(normalized)
@@ -4474,6 +4535,69 @@ Namespace ViewModels
             _pendingColorPickCallback = Nothing
             ColorPickPreview = Nothing
             IsPickingColorFromImage = False
+            EndNegativePickSuppression()
+        End Sub
+
+        ''' Startet die Pipette für die Filmbasis. Die Vorschau zeigt dafür wieder das rohe Negativ, denn
+        ''' die Pipette nimmt die Farbe vom Bildschirm - im bereits umgerechneten Positiv gäbe es den
+        ''' orangen Filmträger, den der Nutzer anklicken soll, gar nicht mehr zu sehen.
+        Private Sub BeginNegativeBasePick()
+            If _negativeEnabled Then
+                _suppressNegativeForPick = True
+                ScheduleToolPreviewUpdate()
+            End If
+            BeginColorPick(Sub(picked)
+                               _suppressNegativeForPick = False
+                               PushUndo()
+                               _negativeBaseColor = $"#FF{picked.R:X2}{picked.G:X2}{picked.B:X2}"
+                               ' Der Dichtepunkt (das andere Ende der Kurve) bleibt gemessen - von Hand
+                               ' ist er nicht sinnvoll zu treffen, er liegt irgendwo im Motiv.
+                               If String.IsNullOrWhiteSpace(_negativeDensityColor) Then MeasureFilmNegative(baseToo:=False)
+                               _negativeEnabled = True
+                               RaiseNegativePropertiesChanged()
+                               SchedulePreviewUpdate()
+                           End Sub)
+        End Sub
+
+        Private Sub EndNegativePickSuppression()
+            If Not _suppressNegativeForPick Then Return
+            _suppressNegativeForPick = False
+            ScheduleToolPreviewUpdate()
+        End Sub
+
+        ''' Vermisst den Scan: Filmbasis (hellste Stelle = unbelichteter Träger) und dichtester Punkt.
+        ''' Bewusst EINMAL im ViewModel statt bei jedem Rendern im Prozessor - die Vorschau ist kleiner
+        ''' als das Original, eine erneute Messung beim Export würde sonst minimal andere Werte liefern
+        ''' und das gespeicherte Bild anders aussehen lassen als die Vorschau.
+        Private Sub MeasureFilmNegative(Optional baseToo As Boolean = True)
+            Dim source = GetPreviewSource()
+            If source Is Nothing Then Return
+            Dim measured = ImageProcessor.AnalyzeFilmNegative(source, GetCurrentAdjustments(forPreview:=True))
+            If baseToo Then _negativeBaseColor = SkColorToHex(measured.BaseColor)
+            _negativeDensityColor = SkColorToHex(measured.DensityColor)
+        End Sub
+
+        Private Shared Function SkColorToHex(color As SKColor) As String
+            Return $"#FF{color.Red:X2}{color.Green:X2}{color.Blue:X2}"
+        End Function
+
+        Private Sub RaiseNegativePropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(NegativeEnabled))
+            Me.RaisePropertyChanged(NameOf(NegativeMonochrome))
+            Me.RaisePropertyChanged(NameOf(NegativeGamma))
+            Me.RaisePropertyChanged(NameOf(NegativeBaseBrush))
+            Me.RaisePropertyChanged(NameOf(HasNegativeBaseColor))
+        End Sub
+
+        Private Sub ResetNegativeInternal()
+            _negativeEnabled = False
+            _negativeMonochrome = False
+            _negativeBaseColor = ""
+            _negativeDensityColor = ""
+            _negativeGamma = 0
+            RaiseNegativePropertiesChanged()
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
         End Sub
 
         Private _selectionClipboardPath As String = Nothing
@@ -4839,6 +4963,22 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _previewFailed As Boolean
+
+        ''' <summary>Die letzte Vorschau ist an einer echten Ausnahme gescheitert (nicht an einem Abbruch,
+        ''' weil der nächste Reglerwert schon unterwegs war). Die Statuszeile färbt sich daraufhin rot -
+        ''' ohne das bliebe das ALTE Bild stehen und meldete "Vorschau bereit", ein defektes Werkzeug wäre
+        ''' also nicht von einem zu unterscheiden, das am Bild nichts ändert. Bleibt gesetzt, bis eine
+        ''' Vorschau wieder durchläuft.</summary>
+        Public Property PreviewFailed As Boolean
+            Get
+                Return _previewFailed
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_previewFailed, value)
+            End Set
+        End Property
+
         ''' <summary>Bildpixel-Koordinate der Maus über dem Bild, für die Fußleiste - leer, wenn die
         ''' Maus das Bild nicht berührt.</summary>
         Public Property MousePositionText As String
@@ -5164,6 +5304,9 @@ Namespace ViewModels
         Public ReadOnly Property SetCurveChannelCommand As ICommand
         Public ReadOnly Property ResetHslCommand As ICommand
         Public ReadOnly Property ResetSplitToningCommand As ICommand
+        Public ReadOnly Property PickNegativeBaseCommand As ICommand
+        Public ReadOnly Property AutoNegativeBaseCommand As ICommand
+        Public ReadOnly Property ResetNegativeCommand As ICommand
         Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
         Public ReadOnly Property SetInfoTabCommand As ICommand
         Public ReadOnly Property SetLayersPanelTabCommand As ICommand
@@ -5369,6 +5512,18 @@ Namespace ViewModels
                                                            PushUndo()
                                                            ResetColorInternal()
                                                        End Sub)
+            PickNegativeBaseCommand = ReactiveCommand.Create(Sub() BeginNegativeBasePick())
+            AutoNegativeBaseCommand = ReactiveCommand.Create(Sub()
+                                                                 PushUndo()
+                                                                 MeasureFilmNegative()
+                                                                 _negativeEnabled = True
+                                                                 RaiseNegativePropertiesChanged()
+                                                                 SchedulePreviewUpdate()
+                                                             End Sub)
+            ResetNegativeCommand = ReactiveCommand.Create(Sub()
+                                                              PushUndo()
+                                                              ResetNegativeInternal()
+                                                          End Sub)
             ResetDetailCommand = ReactiveCommand.Create(Sub()
                                                             PushUndo()
                                                             ResetDetailInternal()
@@ -6164,6 +6319,7 @@ Namespace ViewModels
 
             Try
                 StatusText = LocalizationService.T("Vorschau wird berechnet…")
+                PreviewFailed = False
                 Dim needsComparison = _showBeforeImage
                 Dim result = Await Task.Run(Function()
                                                 token.ThrowIfCancellationRequested()
@@ -6198,6 +6354,7 @@ Namespace ViewModels
                 ComparisonImage = result.Comparison
                 _previewPending = False
                 StatusText = LocalizationService.T("Vorschau bereit")
+                PreviewFailed = False
                 result.Preview = Nothing
                 result.Comparison = Nothing
                 result.Dispose()
@@ -6210,7 +6367,13 @@ Namespace ViewModels
                         StatusText = LocalizationService.T("Vorschau bereit")
                     End If
                 Else
-                    StatusText = LocalizationService.T("Vorschau bereit")
+                    ' Ein Fehler in der Pipeline DARF NICHT wie ein Erfolg aussehen. Vorher stand hier
+                    ' "Vorschau bereit", während das alte Bild stehen blieb - ein kaputtes Werkzeug war
+                    ' dadurch nicht von einem zu unterscheiden, das gerade nichts verändert. Genau so ritt
+                    ' die zerschossene Tonwertkurve (SkiaSharp 3.119.4) unbemerkt durch eine Version.
+                    ' Der Zustand bleibt stehen, bis eine Vorschau wieder durchläuft.
+                    StatusText = LocalizationService.T("Vorschau fehlgeschlagen: ") & ex.Message
+                    PreviewFailed = True
                     LogPreviewError(ex)
                 End If
             Finally
@@ -6339,6 +6502,9 @@ Namespace ViewModels
             Return Await SaveImageAsync(IsCurrentImageRaw OrElse _forceSaveAsOnly)
         End Function
 
+        ''' <remarks>NegativeEnabled: nur die VORSCHAU blendet die Umkehr während der Pipetten-Aufnahme
+        ''' aus (siehe _suppressNegativeForPick). Der kanonische Stand - Undo-Schnappschuss, Speichern -
+        ''' bleibt davon unberührt.</remarks>
         Private Function GetCurrentAdjustments(Optional forPreview As Boolean = False) As ImageAdjustments
             Dim adj = New ImageAdjustments With {
                 .Brightness = CSng(_brightness),
@@ -6372,6 +6538,11 @@ Namespace ViewModels
                 .BorderCornerRadius = CSng(_borderCornerRadius),
                 .BorderEffect = _borderEffect,
                 .Clarity = CSng(_clarity),
+                .NegativeEnabled = _negativeEnabled AndAlso Not (forPreview AndAlso _suppressNegativeForPick),
+                .NegativeMonochrome = _negativeMonochrome,
+                .NegativeBaseColor = _negativeBaseColor,
+                .NegativeDensityColor = _negativeDensityColor,
+                .NegativeGamma = CSng(_negativeGamma),
                 .CurveRgbPoints = PointsToCurveString(_curveRgbPoints),
                 .CurveRedPoints = PointsToCurveString(_curveRedPoints),
                 .CurveGreenPoints = PointsToCurveString(_curveGreenPoints),
@@ -6602,6 +6773,8 @@ Namespace ViewModels
                     Return "Filterstärke"
                 Case NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint)
                     Return "Weißabgleich"
+                Case NameOf(NegativeEnabled), NameOf(NegativeMonochrome), NameOf(NegativeGamma)
+                    Return "Filmnegativ"
                 Case Else
                     Return "Anpassung"
             End Select
@@ -6681,6 +6854,11 @@ Namespace ViewModels
             _borderCornerRadius = adj.BorderCornerRadius
             _borderEffect = If(String.IsNullOrWhiteSpace(adj.BorderEffect), "Einfach", adj.BorderEffect)
             _clarity = adj.Clarity
+            _negativeEnabled = adj.NegativeEnabled
+            _negativeMonochrome = adj.NegativeMonochrome
+            _negativeBaseColor = adj.NegativeBaseColor
+            _negativeDensityColor = adj.NegativeDensityColor
+            _negativeGamma = adj.NegativeGamma
             LoadCurvePointsFromString(_curveRgbPoints, adj.CurveRgbPoints)
             LoadCurvePointsFromString(_curveRedPoints, adj.CurveRedPoints)
             LoadCurvePointsFromString(_curveGreenPoints, adj.CurveGreenPoints)
@@ -6872,6 +7050,11 @@ Namespace ViewModels
             _borderSize = 0
             _borderColor = "#FFFFFFFF"
             _clarity = 0
+            _negativeEnabled = False
+            _negativeMonochrome = False
+            _negativeBaseColor = ""
+            _negativeDensityColor = ""
+            _negativeGamma = 0
             ResetCurvePoints()
             ResetHslFields()
             _rotationDegrees = 0
@@ -8229,6 +8412,7 @@ Namespace ViewModels
                 Case EditorTool.Adjust
                     ResetLightInternal()
                     ResetCurvePoints()
+                    ResetNegativeInternal()
                     RaiseResetButtonStateChanged()
                     SchedulePreviewUpdate()
                 Case EditorTool.Color
@@ -8451,6 +8635,8 @@ Namespace ViewModels
         Private Sub RaiseExtendedAdjustmentProperties()
             For Each name In {
                 NameOf(Clarity), NameOf(ActiveCurvePoints), NameOf(ActiveCurveHistogramCounts),
+                NameOf(NegativeEnabled), NameOf(NegativeMonochrome), NameOf(NegativeGamma),
+                NameOf(NegativeBaseBrush), NameOf(HasNegativeBaseColor),
                 NameOf(RedHue), NameOf(RedSaturation), NameOf(RedLuminance),
                 NameOf(OrangeHue), NameOf(OrangeSaturation), NameOf(OrangeLuminance),
                 NameOf(YellowHue), NameOf(YellowSaturation), NameOf(YellowLuminance),
@@ -8634,103 +8820,21 @@ Namespace ViewModels
 
 
 
+        ''' Übernimmt den Look eines Lightroom-/Camera-Raw-Presets. Die Abbildung der crs:-Schlüssel
+        ''' liegt in LightroomPresetService - die Stapelverarbeitung der Galerie braucht exakt dieselbe.
         Public Sub ApplyLightroomPreset(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
             Try
-                Dim xmpText = File.ReadAllText(xmpPath)
-                Dim values = ParseLightroomXmpValues(xmpText)
-                If values.Count = 0 Then Return
+                Dim look = LightroomPresetService.LoadLook(xmpPath)
+                If look Is Nothing Then Return
 
                 PushUndo()
+                ' Erst den bisherigen Look neutralisieren: ein Preset ersetzt ihn, es mischt sich nicht
+                ' dazu. Beschnitt, Geometrie und Objekte bleiben dabei stehen.
                 ResetFilterInternal()
                 _suppressUndoCapture = True
                 Try
-                    Dim d As Double
-                    If TryGetXmpDouble(values, "Exposure2012", d) Then Exposure = Math.Max(-100, Math.Min(100, d * 25.0))
-                    If TryGetXmpDouble(values, "Contrast2012", d) Then Contrast = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "Highlights2012", d) Then Highlights = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "Shadows2012", d) Then ShadowsLevel = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "Whites2012", d) Then Whites = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "Blacks2012", d) Then Blacks = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "Clarity2012", d) Then Clarity = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "Texture", d) Then [Structure] = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "Dehaze", d) Then Haze = Math.Max(-100, Math.Min(100, -d))
-                    If TryGetXmpDouble(values, "Vibrance", d) Then Vibrance = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "Saturation", d) Then Saturation = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "Sharpness", d) Then Sharpness = Math.Max(0, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "LuminanceSmoothing", d) Then NoiseReduction = Math.Max(0, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "GrainAmount", d) Then Grain = Math.Max(0, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "PostCropVignetteAmount", d) Then Vignette = Math.Max(-150, Math.Min(150, -d))
-
-                    ''' crs:Temperature/crs:WhiteBalance sind NICHT übernehmbar: Lightroom speichert dort
-                    ''' einen absoluten Kelvin-Wert (z.B. 5500) bzw. "As Shot"/"Custom", während der
-                    ''' Temperatur-Regler dieser App eine relative ±100-Verschiebung ist - ohne die
-                    ''' kamera-/aufnahmespezifische Referenztemperatur wäre jede Übernahme falsch.
-                    ''' crs:IncrementalTemperature/-Tint dagegen SIND genau diese relative ±100-Verschiebung
-                    ''' (Lightroom schreibt sie für Nicht-RAW-Dateien, und Presets liegen praktisch immer in
-                    ''' dieser Form vor). Ohne sie ging die Farbstimmung jedes Presets verloren, das seinen
-                    ''' Look über die Weißabgleich-Regler aufbaut. crs:Tint ohne Präfix wird weiterhin
-                    ''' akzeptiert, ist bei RAW-Presets aber ebenfalls relativ gemeint.
-                    If TryGetXmpDouble(values, "IncrementalTemperature", d) Then
-                        Temperature = Math.Max(-100, Math.Min(100, d))
-                    End If
-                    If TryGetXmpDouble(values, "IncrementalTint", d) Then
-                        Tint = Math.Max(-100, Math.Min(100, d))
-                    ElseIf TryGetXmpDouble(values, "Tint", d) Then
-                        Tint = Math.Max(-100, Math.Min(100, d))
-                    End If
-
-                    If TryGetXmpDouble(values, "HueAdjustmentRed", d) Then RedHue = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SaturationAdjustmentRed", d) Then RedSaturation = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "LuminanceAdjustmentRed", d) Then RedLuminance = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "HueAdjustmentOrange", d) Then OrangeHue = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SaturationAdjustmentOrange", d) Then OrangeSaturation = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "LuminanceAdjustmentOrange", d) Then OrangeLuminance = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "HueAdjustmentYellow", d) Then YellowHue = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SaturationAdjustmentYellow", d) Then YellowSaturation = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "LuminanceAdjustmentYellow", d) Then YellowLuminance = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "HueAdjustmentGreen", d) Then GreenHue = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SaturationAdjustmentGreen", d) Then GreenSaturation = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "LuminanceAdjustmentGreen", d) Then GreenLuminance = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "HueAdjustmentAqua", d) Then AquaHue = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SaturationAdjustmentAqua", d) Then AquaSaturation = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "LuminanceAdjustmentAqua", d) Then AquaLuminance = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "HueAdjustmentBlue", d) Then BlueHue = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SaturationAdjustmentBlue", d) Then BlueSaturation = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "LuminanceAdjustmentBlue", d) Then BlueLuminance = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "HueAdjustmentPurple", d) Then PurpleHue = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SaturationAdjustmentPurple", d) Then PurpleSaturation = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "LuminanceAdjustmentPurple", d) Then PurpleLuminance = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "HueAdjustmentMagenta", d) Then MagentaHue = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SaturationAdjustmentMagenta", d) Then MagentaSaturation = Math.Max(-100, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "LuminanceAdjustmentMagenta", d) Then MagentaLuminance = Math.Max(-100, Math.Min(100, d))
-
-                    ''' crs:SplitToning*Hue ist bereits 0..360, *Saturation 0..100 - beides deckungsgleich
-                    ''' mit den Split-Toning-Reglern dieser App, keine Skalierung nötig. Balance ist bei
-                    ''' beiden Systemen -100..100.
-                    If TryGetXmpDouble(values, "SplitToningShadowHue", d) Then SplitToningShadowHue = Math.Max(0, Math.Min(360, d))
-                    If TryGetXmpDouble(values, "SplitToningShadowSaturation", d) Then SplitToningShadowSaturation = Math.Max(0, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SplitToningHighlightHue", d) Then SplitToningHighlightHue = Math.Max(0, Math.Min(360, d))
-                    If TryGetXmpDouble(values, "SplitToningHighlightSaturation", d) Then SplitToningHighlightSaturation = Math.Max(0, Math.Min(100, d))
-                    If TryGetXmpDouble(values, "SplitToningBalance", d) Then SplitToningBalance = Math.Max(-100, Math.Min(100, d))
-
-                    ''' Tonwertkurven liegen als verschachtelte rdf:Seq/rdf:li-Listen vor, nicht als
-                    ''' einfache Attribute - der Attribut-Regex oben kann sie nicht erfassen, daher eine
-                    ''' eigene, gezielte Extraktion je Kurven-Element.
-                    ''' Neben der Punktkurve führt Lightroom eine zweite, PARAMETRISCHE Kurve: vier
-                    ''' Zonenregler (Schatten/Dunkel/Licht/Lichter), deren Zonengrenzen selbst wieder
-                    ''' Parameter sind. Beide wirken übereinander. Wird sie ignoriert, fehlt Presets, die
-                    ''' ihren Tonwert-Look darüber aufbauen, genau dieser Teil. Sie wird deshalb in die
-                    ''' Punktkurve eingerechnet - eine Annäherung an Adobes Kurvenform, kein exakter Nachbau.
-                    Dim rgbCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012")
-                    Dim combinedCurve = ApplyParametricCurve(values, rgbCurve)
-                    If combinedCurve IsNot Nothing Then LoadCurvePointsFromString(_curveRgbPoints, combinedCurve)
-                    Dim redCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Red")
-                    If redCurve IsNot Nothing Then LoadCurvePointsFromString(_curveRedPoints, redCurve)
-                    Dim greenCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Green")
-                    If greenCurve IsNot Nothing Then LoadCurvePointsFromString(_curveGreenPoints, greenCurve)
-                    Dim blueCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Blue")
-                    If blueCurve IsNot Nothing Then LoadCurvePointsFromString(_curveBluePoints, blueCurve)
+                    ApplyLookAdjustments(look)
                 Finally
                     _suppressUndoCapture = False
                 End Try
@@ -8742,6 +8846,49 @@ Namespace ViewModels
             Catch ex As Exception
                 StatusText = LocalizationService.T("Lightroom-Preset konnte nicht geladen werden: ") & ex.Message
             End Try
+        End Sub
+
+        ''' Schreibt die Look-Felder eines ImageAdjustments in die Regler des Editors - über die
+        ''' öffentlichen Eigenschaften, damit Vorschau und Bindings genauso benachrichtigt werden wie bei
+        ''' Handbedienung. Geometrie, Beschnitt, Objekte und Auswahl fasst es NICHT an.
+        Private Sub ApplyLookAdjustments(look As ImageAdjustments)
+            Exposure = look.Exposure
+            Contrast = look.Contrast
+            Highlights = look.Highlights
+            ShadowsLevel = look.ShadowsLevel
+            Whites = look.Whites
+            Blacks = look.Blacks
+            Clarity = look.Clarity
+            [Structure] = look.[Structure]
+            Haze = look.Haze
+            Vibrance = look.Vibrance
+            Saturation = look.Saturation
+            Sharpness = look.Sharpness
+            NoiseReduction = look.NoiseReduction
+            Grain = look.Grain
+            Vignette = look.Vignette
+            Temperature = look.Temperature
+            Tint = look.Tint
+
+            RedHue = look.RedHue : RedSaturation = look.RedSaturation : RedLuminance = look.RedLuminance
+            OrangeHue = look.OrangeHue : OrangeSaturation = look.OrangeSaturation : OrangeLuminance = look.OrangeLuminance
+            YellowHue = look.YellowHue : YellowSaturation = look.YellowSaturation : YellowLuminance = look.YellowLuminance
+            GreenHue = look.GreenHue : GreenSaturation = look.GreenSaturation : GreenLuminance = look.GreenLuminance
+            AquaHue = look.AquaHue : AquaSaturation = look.AquaSaturation : AquaLuminance = look.AquaLuminance
+            BlueHue = look.BlueHue : BlueSaturation = look.BlueSaturation : BlueLuminance = look.BlueLuminance
+            PurpleHue = look.PurpleHue : PurpleSaturation = look.PurpleSaturation : PurpleLuminance = look.PurpleLuminance
+            MagentaHue = look.MagentaHue : MagentaSaturation = look.MagentaSaturation : MagentaLuminance = look.MagentaLuminance
+
+            SplitToningShadowHue = look.SplitToningShadowHue
+            SplitToningShadowSaturation = look.SplitToningShadowSaturation
+            SplitToningHighlightHue = look.SplitToningHighlightHue
+            SplitToningHighlightSaturation = look.SplitToningHighlightSaturation
+            SplitToningBalance = look.SplitToningBalance
+
+            LoadCurvePointsFromString(_curveRgbPoints, look.CurveRgbPoints)
+            LoadCurvePointsFromString(_curveRedPoints, look.CurveRedPoints)
+            LoadCurvePointsFromString(_curveGreenPoints, look.CurveGreenPoints)
+            LoadCurvePointsFromString(_curveBluePoints, look.CurveBluePoints)
         End Sub
 
         Public Sub SaveLightroomPresetToSettings(xmpPath As String)
@@ -8849,137 +8996,6 @@ Namespace ViewModels
                              LocalizationService.T("LUTs importiert: ") & count.ToString(),
                              LocalizationService.T("Keine .cube-Dateien im Ordner gefunden"))
         End Sub
-
-        ''' <summary>Rechnet Lightrooms parametrische Kurve in die Punktkurve ein und liefert die
-        ''' kombinierten Punkte. Ohne parametrische Werte kommt die Punktkurve unverändert zurück (bzw.
-        ''' Nothing, wenn das Preset auch keine Punktkurve mitbringt - dann bleibt die aktuelle stehen).
-        ''' Die vier Regler heben oder senken je eine Tonwertzone; die Zonengrenzen stehen in den
-        ''' *Split-Werten (Voreinstellung 25/50/75). Zwischen den Zonenmitten wird linear überblendet,
-        ''' Schwarz- und Weißpunkt bleiben verankert - die Feinform übernimmt ohnehin die Spline-
-        ''' Interpolation der Kurve selbst.</summary>
-        Private Shared Function ApplyParametricCurve(values As Dictionary(Of String, String), pointCurve As String) As String
-            ' "Shadows" ist in VB der Shadowing-Modifier und als Variablenname nicht zulässig - daher
-            ' die -Amount-Endungen.
-            Dim shadowsAmount = GetXmpDoubleOrDefault(values, "ParametricShadows", 0)
-            Dim darksAmount = GetXmpDoubleOrDefault(values, "ParametricDarks", 0)
-            Dim lightsAmount = GetXmpDoubleOrDefault(values, "ParametricLights", 0)
-            Dim highlightsAmount = GetXmpDoubleOrDefault(values, "ParametricHighlights", 0)
-            If shadowsAmount = 0 AndAlso darksAmount = 0 AndAlso lightsAmount = 0 AndAlso highlightsAmount = 0 Then Return pointCurve
-
-            Dim shadowSplit = GetXmpDoubleOrDefault(values, "ParametricShadowSplit", 25) * 2.55
-            Dim midtoneSplit = GetXmpDoubleOrDefault(values, "ParametricMidtoneSplit", 50) * 2.55
-            Dim highlightSplit = GetXmpDoubleOrDefault(values, "ParametricHighlightSplit", 75) * 2.55
-
-            ' Vollausschlag eines Zonenreglers verschiebt seine Zone um diesen Betrag (von 255).
-            Const MaxParametricShift As Double = 50.0
-
-            Dim nodesX = {0.0, shadowSplit / 2.0, (shadowSplit + midtoneSplit) / 2.0,
-                          (midtoneSplit + highlightSplit) / 2.0, (highlightSplit + 255.0) / 2.0, 255.0}
-            Dim nodesY = {0.0, shadowsAmount / 100.0 * MaxParametricShift, darksAmount / 100.0 * MaxParametricShift,
-                          lightsAmount / 100.0 * MaxParametricShift, highlightsAmount / 100.0 * MaxParametricShift, 0.0}
-
-            Dim basePoints = ParseCurvePointString(pointCurve)
-            Dim result As New List(Of String)()
-            For Each x In {0, 32, 64, 96, 128, 160, 192, 224, 255}
-                Dim y = InterpolatePoints(basePoints, x) + InterpolateNodes(nodesX, nodesY, x)
-                result.Add($"{x},{CInt(Math.Max(0, Math.Min(255, Math.Round(y))))}")
-            Next
-            Return String.Join(";", result)
-        End Function
-
-        Private Shared Function GetXmpDoubleOrDefault(values As Dictionary(Of String, String), name As String, fallback As Double) As Double
-            Dim d As Double
-            If TryGetXmpDouble(values, name, d) Then Return d
-            Return fallback
-        End Function
-
-        ''' Zerlegt "x,y;x,y;..." wieder in Punkte. Leer/Nothing ergibt die Identität (0,0)-(255,255).
-        Private Shared Function ParseCurvePointString(text As String) As List(Of (X As Double, Y As Double))
-            Dim points As New List(Of (X As Double, Y As Double))()
-            If Not String.IsNullOrWhiteSpace(text) Then
-                For Each part In text.Split(";"c)
-                    Dim xy = part.Split(","c)
-                    If xy.Length <> 2 Then Continue For
-                    Dim px, py As Double
-                    If Double.TryParse(xy(0).Trim(), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, px) AndAlso
-                       Double.TryParse(xy(1).Trim(), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, py) Then
-                        points.Add((px, py))
-                    End If
-                Next
-            End If
-            If points.Count < 2 Then
-                points.Clear()
-                points.Add((0, 0))
-                points.Add((255, 255))
-            End If
-            Return points
-        End Function
-
-        Private Shared Function InterpolatePoints(points As List(Of (X As Double, Y As Double)), x As Double) As Double
-            If x <= points(0).X Then Return points(0).Y
-            For i = 1 To points.Count - 1
-                If x <= points(i).X Then
-                    Dim span = points(i).X - points(i - 1).X
-                    If span <= 0 Then Return points(i).Y
-                    Dim t = (x - points(i - 1).X) / span
-                    Return points(i - 1).Y + (points(i).Y - points(i - 1).Y) * t
-                End If
-            Next
-            Return points(points.Count - 1).Y
-        End Function
-
-        Private Shared Function InterpolateNodes(nodesX As Double(), nodesY As Double(), x As Double) As Double
-            For i = 1 To nodesX.Length - 1
-                If x <= nodesX(i) Then
-                    Dim span = nodesX(i) - nodesX(i - 1)
-                    If span <= 0 Then Return nodesY(i)
-                    Dim t = (x - nodesX(i - 1)) / span
-                    Return nodesY(i - 1) + (nodesY(i) - nodesY(i - 1)) * t
-                End If
-            Next
-            Return nodesY(nodesY.Length - 1)
-        End Function
-
-        Private Shared Function ParseLightroomXmpValues(text As String) As Dictionary(Of String, String)
-            Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
-            If String.IsNullOrWhiteSpace(text) Then Return result
-            ''' Nur "crs:"-Attribute (Camera Raw Settings) - ohne den Namespace-Zwang würde jedes
-            ''' andere XMP-Attribut mit gleichem lokalen Namen (z.B. xmp:CreatorTool, photoshop:...)
-            ''' denselben Dictionary-Key überschreiben und crs:-Werte stillschweigend verfälschen.
-            For Each m As Match In Regex.Matches(text, "crs:(?<name>[A-Za-z0-9]+)\s*=\s*""(?<value>[^""]*)""")
-                result(m.Groups("name").Value) = m.Groups("value").Value
-            Next
-            Return result
-        End Function
-
-        Private Shared Function TryGetXmpDouble(values As Dictionary(Of String, String), name As String, ByRef result As Double) As Boolean
-            Dim raw As String = Nothing
-            If Not values.TryGetValue(name, raw) Then Return False
-            raw = raw.Replace("+", "")
-            Return Double.TryParse(raw, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, result)
-        End Function
-
-        ''' Extrahiert eine crs:ToneCurvePV2012[Red|Green|Blue]-Punktliste (rdf:Seq aus rdf:li-Einträgen
-        ''' "x, y") und liefert sie im gleichen "x,y;x,y;..."-Format, das LoadCurvePointsFromString erwartet.
-        ''' Nothing wenn das Element fehlt oder keine gültigen Punkte enthält.
-        Private Shared Function ParseLightroomCurvePoints(text As String, elementName As String) As String
-            Dim blockMatch = Regex.Match(text, $"<crs:{elementName}>(?<body>.*?)</crs:{elementName}>", RegexOptions.Singleline)
-            If Not blockMatch.Success Then Return Nothing
-
-            Dim points As New List(Of String)()
-            For Each liMatch As Match In Regex.Matches(blockMatch.Groups("body").Value, "<rdf:li>(?<point>[^<]*)</rdf:li>")
-                Dim parts = liMatch.Groups("point").Value.Split(","c)
-                If parts.Length <> 2 Then Continue For
-                Dim px As Double
-                Dim py As Double
-                If Double.TryParse(parts(0).Trim(), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, px) AndAlso
-                   Double.TryParse(parts(1).Trim(), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, py) Then
-                    points.Add(px.ToString(Globalization.CultureInfo.InvariantCulture) & "," & py.ToString(Globalization.CultureInfo.InvariantCulture))
-                End If
-            Next
-            If points.Count < 2 Then Return Nothing
-            Return String.Join(";", points)
-        End Function
 
         Private Shared Function HasInvalidFileNameChars(fileName As String) As Boolean
             If String.IsNullOrEmpty(fileName) Then Return True
