@@ -21,7 +21,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - Collage creation: Grid, Hero (one large image + the others framing it — top/bottom/left/right/center, position pickable via the same anchor-grid as the editor's canvas tool, or by clicking the desired image in the live preview), and Random (jittered size/rotation per photo) layouts; adjustable width/columns/margin, a per-image border, background color/format/quality, a zoomable/pannable preview with a fit button, and a reshuffle button that randomizes image order (and, in Random mode, size/rotation) across all three layouts
 - Camera RAW support (CR2, CR3, NEF, ARW, DNG, PEF, RW2) alongside standard raster formats, plus SVG and ICO previews
 - SQLite-backed library (metadata, ratings, tags, cached EXIF/dimensions for search)
-- EXIF display (via MetadataExtractor); gallery tiles show small badges for present EXIF, IPTC, XMP, and embedded ICC-profile metadata
+- EXIF display (via MetadataExtractor); gallery tiles show small badges for present EXIF, IPTC, XMP, and embedded ICC-profile metadata. Hovering a badge shows a curated summary rather than the first tags the reader happens to return: the EXIF overlay lists exactly the fields the library indexes and that search, filters, and sorting work on (camera, lens, focal length — 35 mm equivalent where the camera reports one — aperture, exposure time, ISO, date taken, dimensions, GPS), IPTC and XMP follow a priority list, and the ICC badge names the colour profile itself
 - Video files (MP4, MOV, MKV, AVI, WebM, M4V) show a poster-frame thumbnail with a play badge
 
 <img src="Screenshots/Viewer.png" />
@@ -31,7 +31,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - Slideshow with configurable interval, filmstrip navigation
 - Inline video playback (play/pause, seek, mute) in both windowed and fullscreen mode
 - Rate, favorite, tag, and delete images directly from the viewer; jump straight into the editor
-- Info sidebar with General/EXIF/IPTC/XMP tabs and a live histogram
+- Info sidebar with General/EXIF/IPTC/XMP/ICC tabs and a live histogram
 
 <img src="Screenshots/Editor_Crop.png" />
 
@@ -40,9 +40,9 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 **Editor** 
 - Crop (with presets), image resize, rotate/straighten (with auto canvas expand), flip, and canvas resize with anchor picker
 - Optional rulers, draggable guides, and a configurable pixel grid for precision work
-- Adjust: exposure, brightness, contrast, highlights/shadows, whites/blacks, tone curve (RGB, luminance, and the individual red/green/blue channels)
-- Color: white balance, temperature/tint, vibrance/saturation, split toning, and an 8-band HSL color mixer — pick a color band on a color wheel, then dial in its hue/saturation with a shared pair of sliders
-- Filters: built-in filter presets with a strength slider, plus Lightroom XMP preset import and `.cube` LUT support
+- Adjust: exposure, brightness, contrast, highlights/shadows, whites/blacks, tone curve (RGB, luminance, and the individual red/green/blue channels). Exposure, brightness, and contrast run through a tone curve with a soft toe and shoulder: they stay linear through the mid-tones and bend smoothly towards black and white, so pushing them far keeps drawing in the highlights and shadows instead of clipping them flat
+- Color: white balance, temperature/tint, vibrance/saturation, split toning, and an 8-band HSL color mixer — pick a color band on a color wheel, then dial in its hue, saturation, and luminance with a shared set of sliders
+- Filters: built-in filter presets with a strength slider, plus `.cube` LUT support and Lightroom XMP preset import — including white balance (the relative shift Lightroom stores for presets, not the absolute Kelvin value), the 8-band HSL panel with luminance, split toning, the point curve, and Lightroom's parametric curve, which is folded into the point curve
 - Details: clarity, sharpening, softening/noise reduction (Gaussian/median), structure, haze, glow, grain/noise, and dust/scratch style effects
 - Effects/Frame: vignette (size, transition, roundness, feather, freely placeable center) and border/frame controls with six edge styles (solid, dashed, jagged, double, dotted, wavy), color picker, and rounded-corner support
 - Paint tool: brush, eraser, blur, and clone stamp, each with its own remembered size/hardness/opacity; the stamp takes its source from an Alt+click and keeps the offset for the whole stroke, with a dashed ring marking the sampling point
@@ -53,7 +53,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 - Watermarks can be stored as named presets (text or image, with anchor, offset, size, rotation, opacity, font, and color) and reapplied later, including as a batch operation from the gallery
 - Side panel with three tabs: the active tool, the object list (reorder front/back, duplicate, show/hide, delete; drag-handles for move/resize/rotate on canvas), and a running history of the applied steps
 - Color mixer at the top of the insert panel: a color wheel with saturation/brightness field, overlapping fill and background swatches with a swap gesture, the stroke color beside them, plus opacity, hex input, shared recent colors, and an eyedropper that samples straight from the image into whichever swatch is active
-- Info sidebar with the same General/EXIF/IPTC/XMP tabs and live histogram as the viewer
+- Info sidebar with the same General/EXIF/IPTC/XMP/ICC tabs and live histogram as the viewer
 - Before/after comparison slider
 
 <img src="Screenshots/Editor_Text.png" />
