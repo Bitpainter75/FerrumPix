@@ -80,20 +80,28 @@ Namespace ViewModels
         Private _suppressCurvePointsChanged As Boolean
         Private _redHue As Double = 0
         Private _redSaturation As Double = 0
+        Private _redLuminance As Double = 0
         Private _orangeHue As Double = 0
         Private _orangeSaturation As Double = 0
+        Private _orangeLuminance As Double = 0
         Private _yellowHue As Double = 0
         Private _yellowSaturation As Double = 0
+        Private _yellowLuminance As Double = 0
         Private _greenHue As Double = 0
         Private _greenSaturation As Double = 0
+        Private _greenLuminance As Double = 0
         Private _aquaHue As Double = 0
         Private _aquaSaturation As Double = 0
+        Private _aquaLuminance As Double = 0
         Private _blueHue As Double = 0
         Private _blueSaturation As Double = 0
+        Private _blueLuminance As Double = 0
         Private _purpleHue As Double = 0
         Private _purpleSaturation As Double = 0
+        Private _purpleLuminance As Double = 0
         Private _magentaHue As Double = 0
         Private _magentaSaturation As Double = 0
+        Private _magentaLuminance As Double = 0
         Private _retouchRadius As Double = 24.0
         Private _brushSize As Double = 24.0
         Private _brushHardness As Double = 100
@@ -2197,6 +2205,15 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property RedLuminance As Double
+            Get
+                Return _redLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableHslDouble(_redLuminance, value, NameOf(RedLuminance))
+            End Set
+        End Property
+
         Public Property OrangeHue As Double
             Get
                 Return _orangeHue
@@ -2212,6 +2229,15 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 SetUndoableHslDouble(_orangeSaturation, value, NameOf(OrangeSaturation))
+            End Set
+        End Property
+
+        Public Property OrangeLuminance As Double
+            Get
+                Return _orangeLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableHslDouble(_orangeLuminance, value, NameOf(OrangeLuminance))
             End Set
         End Property
 
@@ -2233,6 +2259,15 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property YellowLuminance As Double
+            Get
+                Return _yellowLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableHslDouble(_yellowLuminance, value, NameOf(YellowLuminance))
+            End Set
+        End Property
+
         Public Property GreenHue As Double
             Get
                 Return _greenHue
@@ -2248,6 +2283,15 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 SetUndoableHslDouble(_greenSaturation, value, NameOf(GreenSaturation))
+            End Set
+        End Property
+
+        Public Property GreenLuminance As Double
+            Get
+                Return _greenLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableHslDouble(_greenLuminance, value, NameOf(GreenLuminance))
             End Set
         End Property
 
@@ -2269,6 +2313,15 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property AquaLuminance As Double
+            Get
+                Return _aquaLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableHslDouble(_aquaLuminance, value, NameOf(AquaLuminance))
+            End Set
+        End Property
+
         Public Property BlueHue As Double
             Get
                 Return _blueHue
@@ -2284,6 +2337,15 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 SetUndoableHslDouble(_blueSaturation, value, NameOf(BlueSaturation))
+            End Set
+        End Property
+
+        Public Property BlueLuminance As Double
+            Get
+                Return _blueLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableHslDouble(_blueLuminance, value, NameOf(BlueLuminance))
             End Set
         End Property
 
@@ -2305,6 +2367,15 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property PurpleLuminance As Double
+            Get
+                Return _purpleLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableHslDouble(_purpleLuminance, value, NameOf(PurpleLuminance))
+            End Set
+        End Property
+
         Public Property MagentaHue As Double
             Get
                 Return _magentaHue
@@ -2320,6 +2391,15 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 SetUndoableHslDouble(_magentaSaturation, value, NameOf(MagentaSaturation))
+            End Set
+        End Property
+
+        Public Property MagentaLuminance As Double
+            Get
+                Return _magentaLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableHslDouble(_magentaLuminance, value, NameOf(MagentaLuminance))
             End Set
         End Property
 
@@ -2339,6 +2419,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectedHslBandLabel))
                 Me.RaisePropertyChanged(NameOf(ActiveHslHue))
                 Me.RaisePropertyChanged(NameOf(ActiveHslSaturation))
+                Me.RaisePropertyChanged(NameOf(ActiveHslLuminance))
             End Set
         End Property
 
@@ -2407,6 +2488,33 @@ Namespace ViewModels
                     Case "Purple" : PurpleSaturation = value
                     Case "Magenta" : MagentaSaturation = value
                     Case Else : RedSaturation = value
+                End Select
+            End Set
+        End Property
+
+        Public Property ActiveHslLuminance As Double
+            Get
+                Select Case _selectedHslBand
+                    Case "Orange" : Return OrangeLuminance
+                    Case "Yellow" : Return YellowLuminance
+                    Case "Green" : Return GreenLuminance
+                    Case "Aqua" : Return AquaLuminance
+                    Case "Blue" : Return BlueLuminance
+                    Case "Purple" : Return PurpleLuminance
+                    Case "Magenta" : Return MagentaLuminance
+                    Case Else : Return RedLuminance
+                End Select
+            End Get
+            Set(value As Double)
+                Select Case _selectedHslBand
+                    Case "Orange" : OrangeLuminance = value
+                    Case "Yellow" : YellowLuminance = value
+                    Case "Green" : GreenLuminance = value
+                    Case "Aqua" : AquaLuminance = value
+                    Case "Blue" : BlueLuminance = value
+                    Case "Purple" : PurpleLuminance = value
+                    Case "Magenta" : MagentaLuminance = value
+                    Case Else : RedLuminance = value
                 End Select
             End Set
         End Property
@@ -4883,14 +4991,14 @@ Namespace ViewModels
 
         Public ReadOnly Property HasHslChanges As Boolean
             Get
-                Return _redHue <> 0 OrElse _redSaturation <> 0 OrElse
-                       _orangeHue <> 0 OrElse _orangeSaturation <> 0 OrElse
-                       _yellowHue <> 0 OrElse _yellowSaturation <> 0 OrElse
-                       _greenHue <> 0 OrElse _greenSaturation <> 0 OrElse
-                       _aquaHue <> 0 OrElse _aquaSaturation <> 0 OrElse
-                       _blueHue <> 0 OrElse _blueSaturation <> 0 OrElse
-                       _purpleHue <> 0 OrElse _purpleSaturation <> 0 OrElse
-                       _magentaHue <> 0 OrElse _magentaSaturation <> 0
+                Return _redHue <> 0 OrElse _redSaturation <> 0 OrElse _redLuminance <> 0 OrElse
+                       _orangeHue <> 0 OrElse _orangeSaturation <> 0 OrElse _orangeLuminance <> 0 OrElse
+                       _yellowHue <> 0 OrElse _yellowSaturation <> 0 OrElse _yellowLuminance <> 0 OrElse
+                       _greenHue <> 0 OrElse _greenSaturation <> 0 OrElse _greenLuminance <> 0 OrElse
+                       _aquaHue <> 0 OrElse _aquaSaturation <> 0 OrElse _aquaLuminance <> 0 OrElse
+                       _blueHue <> 0 OrElse _blueSaturation <> 0 OrElse _blueLuminance <> 0 OrElse
+                       _purpleHue <> 0 OrElse _purpleSaturation <> 0 OrElse _purpleLuminance <> 0 OrElse
+                       _magentaHue <> 0 OrElse _magentaSaturation <> 0 OrElse _magentaLuminance <> 0
             End Get
         End Property
 
@@ -6165,20 +6273,28 @@ Namespace ViewModels
                 .CurveLuminancePoints = PointsToCurveString(_curveLuminancePoints),
                 .RedHue = CSng(_redHue),
                 .RedSaturation = CSng(_redSaturation),
+                .RedLuminance = CSng(_redLuminance),
                 .OrangeHue = CSng(_orangeHue),
                 .OrangeSaturation = CSng(_orangeSaturation),
+                .OrangeLuminance = CSng(_orangeLuminance),
                 .YellowHue = CSng(_yellowHue),
                 .YellowSaturation = CSng(_yellowSaturation),
+                .YellowLuminance = CSng(_yellowLuminance),
                 .GreenHue = CSng(_greenHue),
                 .GreenSaturation = CSng(_greenSaturation),
+                .GreenLuminance = CSng(_greenLuminance),
                 .AquaHue = CSng(_aquaHue),
                 .AquaSaturation = CSng(_aquaSaturation),
+                .AquaLuminance = CSng(_aquaLuminance),
                 .BlueHue = CSng(_blueHue),
                 .BlueSaturation = CSng(_blueSaturation),
+                .BlueLuminance = CSng(_blueLuminance),
                 .PurpleHue = CSng(_purpleHue),
                 .PurpleSaturation = CSng(_purpleSaturation),
+                .PurpleLuminance = CSng(_purpleLuminance),
                 .MagentaHue = CSng(_magentaHue),
                 .MagentaSaturation = CSng(_magentaSaturation),
+                .MagentaLuminance = CSng(_magentaLuminance),
                 .SplitToningShadowHue = CSng(_splitToningShadowHue),
                 .SplitToningShadowSaturation = CSng(_splitToningShadowSaturation),
                 .SplitToningHighlightHue = CSng(_splitToningHighlightHue),
@@ -6247,14 +6363,15 @@ Namespace ViewModels
         End Function
 
         ''' Wie SetUndoableDouble, aber zusätzlich für die 16 HSL-Bandregler (RedHue...MagentaSaturation):
-        ''' der Farbrad-Bandmischer (HslWheelPicker + ActiveHslHue/ActiveHslSaturation) zeigt/bearbeitet
-        ''' immer nur das GERADE per Rad ausgewählte Band, muss also bei JEDER Bandänderung benachrichtigt
-        ''' werden, egal ob die Änderung von diesem Reglerpaar selbst oder direkt (Undo/Reset) kommt.
+        ''' der Farbrad-Bandmischer (HslWheelPicker + ActiveHslHue/ActiveHslSaturation/ActiveHslLuminance)
+        ''' zeigt/bearbeitet immer nur das GERADE per Rad ausgewählte Band, muss also bei JEDER Bandänderung
+        ''' benachrichtigt werden, egal ob die Änderung von diesen Reglern selbst oder direkt (Undo/Reset) kommt.
         Private Function SetUndoableHslDouble(ByRef field As Double, value As Double, propertyName As String) As Boolean
             Dim changed = SetUndoableDouble(field, value, propertyName)
             If changed Then
                 Me.RaisePropertyChanged(NameOf(ActiveHslHue))
                 Me.RaisePropertyChanged(NameOf(ActiveHslSaturation))
+                Me.RaisePropertyChanged(NameOf(ActiveHslLuminance))
             End If
             Return changed
         End Function
@@ -6465,20 +6582,28 @@ Namespace ViewModels
             LoadCurvePointsFromString(_curveLuminancePoints, adj.CurveLuminancePoints)
             _redHue = adj.RedHue
             _redSaturation = adj.RedSaturation
+            _redLuminance = adj.RedLuminance
             _orangeHue = adj.OrangeHue
             _orangeSaturation = adj.OrangeSaturation
+            _orangeLuminance = adj.OrangeLuminance
             _yellowHue = adj.YellowHue
             _yellowSaturation = adj.YellowSaturation
+            _yellowLuminance = adj.YellowLuminance
             _greenHue = adj.GreenHue
             _greenSaturation = adj.GreenSaturation
+            _greenLuminance = adj.GreenLuminance
             _aquaHue = adj.AquaHue
             _aquaSaturation = adj.AquaSaturation
+            _aquaLuminance = adj.AquaLuminance
             _blueHue = adj.BlueHue
             _blueSaturation = adj.BlueSaturation
+            _blueLuminance = adj.BlueLuminance
             _purpleHue = adj.PurpleHue
             _purpleSaturation = adj.PurpleSaturation
+            _purpleLuminance = adj.PurpleLuminance
             _magentaHue = adj.MagentaHue
             _magentaSaturation = adj.MagentaSaturation
+            _magentaLuminance = adj.MagentaLuminance
             _splitToningShadowHue = adj.SplitToningShadowHue
             _splitToningShadowSaturation = adj.SplitToningShadowSaturation
             _splitToningHighlightHue = adj.SplitToningHighlightHue
@@ -8125,14 +8250,14 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetHslFields()
-            _redHue = 0 : _redSaturation = 0
-            _orangeHue = 0 : _orangeSaturation = 0
-            _yellowHue = 0 : _yellowSaturation = 0
-            _greenHue = 0 : _greenSaturation = 0
-            _aquaHue = 0 : _aquaSaturation = 0
-            _blueHue = 0 : _blueSaturation = 0
-            _purpleHue = 0 : _purpleSaturation = 0
-            _magentaHue = 0 : _magentaSaturation = 0
+            _redHue = 0 : _redSaturation = 0 : _redLuminance = 0
+            _orangeHue = 0 : _orangeSaturation = 0 : _orangeLuminance = 0
+            _yellowHue = 0 : _yellowSaturation = 0 : _yellowLuminance = 0
+            _greenHue = 0 : _greenSaturation = 0 : _greenLuminance = 0
+            _aquaHue = 0 : _aquaSaturation = 0 : _aquaLuminance = 0
+            _blueHue = 0 : _blueSaturation = 0 : _blueLuminance = 0
+            _purpleHue = 0 : _purpleSaturation = 0 : _purpleLuminance = 0
+            _magentaHue = 0 : _magentaSaturation = 0 : _magentaLuminance = 0
         End Sub
 
         Private Sub RaiseLightPropertiesChanged()
@@ -8162,11 +8287,15 @@ Namespace ViewModels
         Private Sub RaiseExtendedAdjustmentProperties()
             For Each name In {
                 NameOf(Clarity), NameOf(ActiveCurvePoints), NameOf(ActiveCurveHistogramCounts),
-                NameOf(RedHue), NameOf(RedSaturation), NameOf(OrangeHue), NameOf(OrangeSaturation),
-                NameOf(YellowHue), NameOf(YellowSaturation), NameOf(GreenHue), NameOf(GreenSaturation),
-                NameOf(AquaHue), NameOf(AquaSaturation), NameOf(BlueHue), NameOf(BlueSaturation),
-                NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(MagentaHue), NameOf(MagentaSaturation),
-                NameOf(ActiveHslHue), NameOf(ActiveHslSaturation),
+                NameOf(RedHue), NameOf(RedSaturation), NameOf(RedLuminance),
+                NameOf(OrangeHue), NameOf(OrangeSaturation), NameOf(OrangeLuminance),
+                NameOf(YellowHue), NameOf(YellowSaturation), NameOf(YellowLuminance),
+                NameOf(GreenHue), NameOf(GreenSaturation), NameOf(GreenLuminance),
+                NameOf(AquaHue), NameOf(AquaSaturation), NameOf(AquaLuminance),
+                NameOf(BlueHue), NameOf(BlueSaturation), NameOf(BlueLuminance),
+                NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(PurpleLuminance),
+                NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance),
+                NameOf(ActiveHslHue), NameOf(ActiveHslSaturation), NameOf(ActiveHslLuminance),
                 NameOf(SplitToningShadowHue), NameOf(SplitToningShadowSaturation),
                 NameOf(SplitToningHighlightHue), NameOf(SplitToningHighlightSaturation), NameOf(SplitToningBalance),
                 NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)}
@@ -8369,30 +8498,48 @@ Namespace ViewModels
                     If TryGetXmpDouble(values, "GrainAmount", d) Then Grain = Math.Max(0, Math.Min(100, d))
                     If TryGetXmpDouble(values, "PostCropVignetteAmount", d) Then Vignette = Math.Max(-150, Math.Min(150, -d))
 
-                    ''' crs:Tint ist wie beim Regler eine relative Grün/Magenta-Verschiebung, daher
-                    ''' 1:1 übernehmbar. crs:Temperature/crs:WhiteBalance dagegen NICHT: Lightroom
-                    ''' speichert dort einen absoluten Kelvin-Wert (z.B. 5500) bzw. "As Shot"/"Custom",
-                    ''' während der Temperatur-Regler dieser App eine relative ±100-Verschiebung ist -
-                    ''' ohne die kamera-/aufnahmespezifische Referenztemperatur wäre jede Übernahme
-                    ''' falsch (würde bei praktisch jedem Preset auf den Anschlag springen).
-                    If TryGetXmpDouble(values, "Tint", d) Then Tint = Math.Max(-100, Math.Min(100, d))
+                    ''' crs:Temperature/crs:WhiteBalance sind NICHT übernehmbar: Lightroom speichert dort
+                    ''' einen absoluten Kelvin-Wert (z.B. 5500) bzw. "As Shot"/"Custom", während der
+                    ''' Temperatur-Regler dieser App eine relative ±100-Verschiebung ist - ohne die
+                    ''' kamera-/aufnahmespezifische Referenztemperatur wäre jede Übernahme falsch.
+                    ''' crs:IncrementalTemperature/-Tint dagegen SIND genau diese relative ±100-Verschiebung
+                    ''' (Lightroom schreibt sie für Nicht-RAW-Dateien, und Presets liegen praktisch immer in
+                    ''' dieser Form vor). Ohne sie ging die Farbstimmung jedes Presets verloren, das seinen
+                    ''' Look über die Weißabgleich-Regler aufbaut. crs:Tint ohne Präfix wird weiterhin
+                    ''' akzeptiert, ist bei RAW-Presets aber ebenfalls relativ gemeint.
+                    If TryGetXmpDouble(values, "IncrementalTemperature", d) Then
+                        Temperature = Math.Max(-100, Math.Min(100, d))
+                    End If
+                    If TryGetXmpDouble(values, "IncrementalTint", d) Then
+                        Tint = Math.Max(-100, Math.Min(100, d))
+                    ElseIf TryGetXmpDouble(values, "Tint", d) Then
+                        Tint = Math.Max(-100, Math.Min(100, d))
+                    End If
 
                     If TryGetXmpDouble(values, "HueAdjustmentRed", d) Then RedHue = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "SaturationAdjustmentRed", d) Then RedSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "LuminanceAdjustmentRed", d) Then RedLuminance = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "HueAdjustmentOrange", d) Then OrangeHue = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "SaturationAdjustmentOrange", d) Then OrangeSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "LuminanceAdjustmentOrange", d) Then OrangeLuminance = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "HueAdjustmentYellow", d) Then YellowHue = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "SaturationAdjustmentYellow", d) Then YellowSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "LuminanceAdjustmentYellow", d) Then YellowLuminance = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "HueAdjustmentGreen", d) Then GreenHue = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "SaturationAdjustmentGreen", d) Then GreenSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "LuminanceAdjustmentGreen", d) Then GreenLuminance = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "HueAdjustmentAqua", d) Then AquaHue = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "SaturationAdjustmentAqua", d) Then AquaSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "LuminanceAdjustmentAqua", d) Then AquaLuminance = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "HueAdjustmentBlue", d) Then BlueHue = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "SaturationAdjustmentBlue", d) Then BlueSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "LuminanceAdjustmentBlue", d) Then BlueLuminance = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "HueAdjustmentPurple", d) Then PurpleHue = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "SaturationAdjustmentPurple", d) Then PurpleSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "LuminanceAdjustmentPurple", d) Then PurpleLuminance = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "HueAdjustmentMagenta", d) Then MagentaHue = Math.Max(-100, Math.Min(100, d))
                     If TryGetXmpDouble(values, "SaturationAdjustmentMagenta", d) Then MagentaSaturation = Math.Max(-100, Math.Min(100, d))
+                    If TryGetXmpDouble(values, "LuminanceAdjustmentMagenta", d) Then MagentaLuminance = Math.Max(-100, Math.Min(100, d))
 
                     ''' crs:SplitToning*Hue ist bereits 0..360, *Saturation 0..100 - beides deckungsgleich
                     ''' mit den Split-Toning-Reglern dieser App, keine Skalierung nötig. Balance ist bei
@@ -8406,8 +8553,14 @@ Namespace ViewModels
                     ''' Tonwertkurven liegen als verschachtelte rdf:Seq/rdf:li-Listen vor, nicht als
                     ''' einfache Attribute - der Attribut-Regex oben kann sie nicht erfassen, daher eine
                     ''' eigene, gezielte Extraktion je Kurven-Element.
+                    ''' Neben der Punktkurve führt Lightroom eine zweite, PARAMETRISCHE Kurve: vier
+                    ''' Zonenregler (Schatten/Dunkel/Licht/Lichter), deren Zonengrenzen selbst wieder
+                    ''' Parameter sind. Beide wirken übereinander. Wird sie ignoriert, fehlt Presets, die
+                    ''' ihren Tonwert-Look darüber aufbauen, genau dieser Teil. Sie wird deshalb in die
+                    ''' Punktkurve eingerechnet - eine Annäherung an Adobes Kurvenform, kein exakter Nachbau.
                     Dim rgbCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012")
-                    If rgbCurve IsNot Nothing Then LoadCurvePointsFromString(_curveRgbPoints, rgbCurve)
+                    Dim combinedCurve = ApplyParametricCurve(values, rgbCurve)
+                    If combinedCurve IsNot Nothing Then LoadCurvePointsFromString(_curveRgbPoints, combinedCurve)
                     Dim redCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Red")
                     If redCurve IsNot Nothing Then LoadCurvePointsFromString(_curveRedPoints, redCurve)
                     Dim greenCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Green")
@@ -8532,6 +8685,96 @@ Namespace ViewModels
                              LocalizationService.T("LUTs importiert: ") & count.ToString(),
                              LocalizationService.T("Keine .cube-Dateien im Ordner gefunden"))
         End Sub
+
+        ''' <summary>Rechnet Lightrooms parametrische Kurve in die Punktkurve ein und liefert die
+        ''' kombinierten Punkte. Ohne parametrische Werte kommt die Punktkurve unverändert zurück (bzw.
+        ''' Nothing, wenn das Preset auch keine Punktkurve mitbringt - dann bleibt die aktuelle stehen).
+        ''' Die vier Regler heben oder senken je eine Tonwertzone; die Zonengrenzen stehen in den
+        ''' *Split-Werten (Voreinstellung 25/50/75). Zwischen den Zonenmitten wird linear überblendet,
+        ''' Schwarz- und Weißpunkt bleiben verankert - die Feinform übernimmt ohnehin die Spline-
+        ''' Interpolation der Kurve selbst.</summary>
+        Private Shared Function ApplyParametricCurve(values As Dictionary(Of String, String), pointCurve As String) As String
+            ' "Shadows" ist in VB der Shadowing-Modifier und als Variablenname nicht zulässig - daher
+            ' die -Amount-Endungen.
+            Dim shadowsAmount = GetXmpDoubleOrDefault(values, "ParametricShadows", 0)
+            Dim darksAmount = GetXmpDoubleOrDefault(values, "ParametricDarks", 0)
+            Dim lightsAmount = GetXmpDoubleOrDefault(values, "ParametricLights", 0)
+            Dim highlightsAmount = GetXmpDoubleOrDefault(values, "ParametricHighlights", 0)
+            If shadowsAmount = 0 AndAlso darksAmount = 0 AndAlso lightsAmount = 0 AndAlso highlightsAmount = 0 Then Return pointCurve
+
+            Dim shadowSplit = GetXmpDoubleOrDefault(values, "ParametricShadowSplit", 25) * 2.55
+            Dim midtoneSplit = GetXmpDoubleOrDefault(values, "ParametricMidtoneSplit", 50) * 2.55
+            Dim highlightSplit = GetXmpDoubleOrDefault(values, "ParametricHighlightSplit", 75) * 2.55
+
+            ' Vollausschlag eines Zonenreglers verschiebt seine Zone um diesen Betrag (von 255).
+            Const MaxParametricShift As Double = 50.0
+
+            Dim nodesX = {0.0, shadowSplit / 2.0, (shadowSplit + midtoneSplit) / 2.0,
+                          (midtoneSplit + highlightSplit) / 2.0, (highlightSplit + 255.0) / 2.0, 255.0}
+            Dim nodesY = {0.0, shadowsAmount / 100.0 * MaxParametricShift, darksAmount / 100.0 * MaxParametricShift,
+                          lightsAmount / 100.0 * MaxParametricShift, highlightsAmount / 100.0 * MaxParametricShift, 0.0}
+
+            Dim basePoints = ParseCurvePointString(pointCurve)
+            Dim result As New List(Of String)()
+            For Each x In {0, 32, 64, 96, 128, 160, 192, 224, 255}
+                Dim y = InterpolatePoints(basePoints, x) + InterpolateNodes(nodesX, nodesY, x)
+                result.Add($"{x},{CInt(Math.Max(0, Math.Min(255, Math.Round(y))))}")
+            Next
+            Return String.Join(";", result)
+        End Function
+
+        Private Shared Function GetXmpDoubleOrDefault(values As Dictionary(Of String, String), name As String, fallback As Double) As Double
+            Dim d As Double
+            If TryGetXmpDouble(values, name, d) Then Return d
+            Return fallback
+        End Function
+
+        ''' Zerlegt "x,y;x,y;..." wieder in Punkte. Leer/Nothing ergibt die Identität (0,0)-(255,255).
+        Private Shared Function ParseCurvePointString(text As String) As List(Of (X As Double, Y As Double))
+            Dim points As New List(Of (X As Double, Y As Double))()
+            If Not String.IsNullOrWhiteSpace(text) Then
+                For Each part In text.Split(";"c)
+                    Dim xy = part.Split(","c)
+                    If xy.Length <> 2 Then Continue For
+                    Dim px, py As Double
+                    If Double.TryParse(xy(0).Trim(), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, px) AndAlso
+                       Double.TryParse(xy(1).Trim(), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, py) Then
+                        points.Add((px, py))
+                    End If
+                Next
+            End If
+            If points.Count < 2 Then
+                points.Clear()
+                points.Add((0, 0))
+                points.Add((255, 255))
+            End If
+            Return points
+        End Function
+
+        Private Shared Function InterpolatePoints(points As List(Of (X As Double, Y As Double)), x As Double) As Double
+            If x <= points(0).X Then Return points(0).Y
+            For i = 1 To points.Count - 1
+                If x <= points(i).X Then
+                    Dim span = points(i).X - points(i - 1).X
+                    If span <= 0 Then Return points(i).Y
+                    Dim t = (x - points(i - 1).X) / span
+                    Return points(i - 1).Y + (points(i).Y - points(i - 1).Y) * t
+                End If
+            Next
+            Return points(points.Count - 1).Y
+        End Function
+
+        Private Shared Function InterpolateNodes(nodesX As Double(), nodesY As Double(), x As Double) As Double
+            For i = 1 To nodesX.Length - 1
+                If x <= nodesX(i) Then
+                    Dim span = nodesX(i) - nodesX(i - 1)
+                    If span <= 0 Then Return nodesY(i)
+                    Dim t = (x - nodesX(i - 1)) / span
+                    Return nodesY(i - 1) + (nodesY(i) - nodesY(i - 1)) * t
+                End If
+            Next
+            Return nodesY(nodesY.Length - 1)
+        End Function
 
         Private Shared Function ParseLightroomXmpValues(text As String) As Dictionary(Of String, String)
             Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)

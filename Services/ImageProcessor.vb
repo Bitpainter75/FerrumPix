@@ -638,20 +638,28 @@ Namespace Services
         Public Property CurveLuminancePoints As String = "0,0;255,255"
         Public Property RedHue As Single = 0
         Public Property RedSaturation As Single = 0
+        Public Property RedLuminance As Single = 0
         Public Property OrangeHue As Single = 0
         Public Property OrangeSaturation As Single = 0
+        Public Property OrangeLuminance As Single = 0
         Public Property YellowHue As Single = 0
         Public Property YellowSaturation As Single = 0
+        Public Property YellowLuminance As Single = 0
         Public Property GreenHue As Single = 0
         Public Property GreenSaturation As Single = 0
+        Public Property GreenLuminance As Single = 0
         Public Property AquaHue As Single = 0
         Public Property AquaSaturation As Single = 0
+        Public Property AquaLuminance As Single = 0
         Public Property BlueHue As Single = 0
         Public Property BlueSaturation As Single = 0
+        Public Property BlueLuminance As Single = 0
         Public Property PurpleHue As Single = 0
         Public Property PurpleSaturation As Single = 0
+        Public Property PurpleLuminance As Single = 0
         Public Property MagentaHue As Single = 0
         Public Property MagentaSaturation As Single = 0
+        Public Property MagentaLuminance As Single = 0
         Public Property SplitToningShadowHue As Single = 0
         Public Property SplitToningShadowSaturation As Single = 0
         Public Property SplitToningHighlightHue As Single = 0
@@ -700,10 +708,14 @@ Namespace Services
         End Function
 
         Public Function HasHslChanges() As Boolean
-            Return RedHue <> 0 OrElse RedSaturation <> 0 OrElse OrangeHue <> 0 OrElse OrangeSaturation <> 0 OrElse
-                   YellowHue <> 0 OrElse YellowSaturation <> 0 OrElse GreenHue <> 0 OrElse GreenSaturation <> 0 OrElse
-                   AquaHue <> 0 OrElse AquaSaturation <> 0 OrElse BlueHue <> 0 OrElse BlueSaturation <> 0 OrElse
-                   PurpleHue <> 0 OrElse PurpleSaturation <> 0 OrElse MagentaHue <> 0 OrElse MagentaSaturation <> 0
+            Return RedHue <> 0 OrElse RedSaturation <> 0 OrElse RedLuminance <> 0 OrElse
+                   OrangeHue <> 0 OrElse OrangeSaturation <> 0 OrElse OrangeLuminance <> 0 OrElse
+                   YellowHue <> 0 OrElse YellowSaturation <> 0 OrElse YellowLuminance <> 0 OrElse
+                   GreenHue <> 0 OrElse GreenSaturation <> 0 OrElse GreenLuminance <> 0 OrElse
+                   AquaHue <> 0 OrElse AquaSaturation <> 0 OrElse AquaLuminance <> 0 OrElse
+                   BlueHue <> 0 OrElse BlueSaturation <> 0 OrElse BlueLuminance <> 0 OrElse
+                   PurpleHue <> 0 OrElse PurpleSaturation <> 0 OrElse PurpleLuminance <> 0 OrElse
+                   MagentaHue <> 0 OrElse MagentaSaturation <> 0 OrElse MagentaLuminance <> 0
         End Function
 
         Public Function Clone() As ImageAdjustments
@@ -748,20 +760,28 @@ Namespace Services
                 .CurveLuminancePoints = CurveLuminancePoints,
                 .RedHue = RedHue,
                 .RedSaturation = RedSaturation,
+                .RedLuminance = RedLuminance,
                 .OrangeHue = OrangeHue,
                 .OrangeSaturation = OrangeSaturation,
+                .OrangeLuminance = OrangeLuminance,
                 .YellowHue = YellowHue,
                 .YellowSaturation = YellowSaturation,
+                .YellowLuminance = YellowLuminance,
                 .GreenHue = GreenHue,
                 .GreenSaturation = GreenSaturation,
+                .GreenLuminance = GreenLuminance,
                 .AquaHue = AquaHue,
                 .AquaSaturation = AquaSaturation,
+                .AquaLuminance = AquaLuminance,
                 .BlueHue = BlueHue,
                 .BlueSaturation = BlueSaturation,
+                .BlueLuminance = BlueLuminance,
                 .PurpleHue = PurpleHue,
                 .PurpleSaturation = PurpleSaturation,
+                .PurpleLuminance = PurpleLuminance,
                 .MagentaHue = MagentaHue,
                 .MagentaSaturation = MagentaSaturation,
+                .MagentaLuminance = MagentaLuminance,
                 .SplitToningShadowHue = SplitToningShadowHue,
                 .SplitToningShadowSaturation = SplitToningShadowSaturation,
                 .SplitToningHighlightHue = SplitToningHighlightHue,
@@ -1609,9 +1629,10 @@ Namespace Services
                 adj.VignetteCenterX, adj.VignetteCenterY, adj.Grain, adj.BorderSize, adj.BorderColor,
                 adj.BorderCornerRadius, adj.BorderEffect, adj.Clarity,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
-                adj.RedHue, adj.RedSaturation, adj.OrangeHue, adj.OrangeSaturation, adj.YellowHue, adj.YellowSaturation,
-                adj.GreenHue, adj.GreenSaturation, adj.AquaHue, adj.AquaSaturation, adj.BlueHue, adj.BlueSaturation,
-                adj.PurpleHue, adj.PurpleSaturation, adj.MagentaHue, adj.MagentaSaturation,
+                adj.RedHue, adj.RedSaturation, adj.RedLuminance, adj.OrangeHue, adj.OrangeSaturation, adj.OrangeLuminance,
+                adj.YellowHue, adj.YellowSaturation, adj.YellowLuminance, adj.GreenHue, adj.GreenSaturation, adj.GreenLuminance,
+                adj.AquaHue, adj.AquaSaturation, adj.AquaLuminance, adj.BlueHue, adj.BlueSaturation, adj.BlueLuminance,
+                adj.PurpleHue, adj.PurpleSaturation, adj.PurpleLuminance, adj.MagentaHue, adj.MagentaSaturation, adj.MagentaLuminance,
                 adj.SplitToningShadowHue, adj.SplitToningShadowSaturation,
                 adj.SplitToningHighlightHue, adj.SplitToningHighlightSaturation, adj.SplitToningBalance,
                 adj.RotationDegrees, adj.StraightenDegrees, adj.StraightenExpandCanvas, adj.FlipHorizontal, adj.FlipVertical,
@@ -4207,9 +4228,13 @@ Namespace Services
             RgbToHsl(r, g, b, h, s, l)
             Dim hueShift As Single = 0
             Dim satShift As Single = 0
-            GetHslBandAdjustments(h, adj, hueShift, satShift)
+            Dim lumShift As Single = 0
+            GetHslBandAdjustments(h, adj, hueShift, satShift, lumShift)
             h = (h + hueShift + 360.0) Mod 360.0
             s = Math.Max(0.0, Math.Min(1.0, s * (1.0 + satShift / 100.0)))
+            ' Luminanz multiplikativ wie die Sättigung: -100 zieht das Farbband nach Schwarz, +100
+            ' verdoppelt seine Helligkeit. Graue Pixel haben keinen Farbton und bleiben unberührt.
+            l = Math.Max(0.0, Math.Min(1.0, l * (1.0 + lumShift / 100.0)))
             Return HslToRgb(h, s, l, a)
         End Function
 
@@ -4243,24 +4268,24 @@ Namespace Services
             Return result
         End Function
 
-        Private Shared Sub GetHslBandAdjustments(hue As Double, adj As ImageAdjustments, ByRef hueShift As Single, ByRef satShift As Single)
+        Private Shared Sub GetHslBandAdjustments(hue As Double, adj As ImageAdjustments, ByRef hueShift As Single, ByRef satShift As Single, ByRef lumShift As Single)
             Select Case hue
                 Case < 15, >= 345
-                    hueShift = adj.RedHue : satShift = adj.RedSaturation
+                    hueShift = adj.RedHue : satShift = adj.RedSaturation : lumShift = adj.RedLuminance
                 Case < 45
-                    hueShift = adj.OrangeHue : satShift = adj.OrangeSaturation
+                    hueShift = adj.OrangeHue : satShift = adj.OrangeSaturation : lumShift = adj.OrangeLuminance
                 Case < 75
-                    hueShift = adj.YellowHue : satShift = adj.YellowSaturation
+                    hueShift = adj.YellowHue : satShift = adj.YellowSaturation : lumShift = adj.YellowLuminance
                 Case < 165
-                    hueShift = adj.GreenHue : satShift = adj.GreenSaturation
+                    hueShift = adj.GreenHue : satShift = adj.GreenSaturation : lumShift = adj.GreenLuminance
                 Case < 195
-                    hueShift = adj.AquaHue : satShift = adj.AquaSaturation
+                    hueShift = adj.AquaHue : satShift = adj.AquaSaturation : lumShift = adj.AquaLuminance
                 Case < 255
-                    hueShift = adj.BlueHue : satShift = adj.BlueSaturation
+                    hueShift = adj.BlueHue : satShift = adj.BlueSaturation : lumShift = adj.BlueLuminance
                 Case < 285
-                    hueShift = adj.PurpleHue : satShift = adj.PurpleSaturation
+                    hueShift = adj.PurpleHue : satShift = adj.PurpleSaturation : lumShift = adj.PurpleLuminance
                 Case Else
-                    hueShift = adj.MagentaHue : satShift = adj.MagentaSaturation
+                    hueShift = adj.MagentaHue : satShift = adj.MagentaSaturation : lumShift = adj.MagentaLuminance
             End Select
         End Sub
 

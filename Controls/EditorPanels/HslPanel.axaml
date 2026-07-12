@@ -60,6 +60,18 @@
                                              Minimum="-100" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
+                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Luminanz"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       DefaultValue="0"
+                                       Value="{Binding ActiveHslLuminance}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding ActiveHslLuminance, Mode=TwoWay}"
+                                             Minimum="-100" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
             </StackPanel>
         </StackPanel>
     </Expander>

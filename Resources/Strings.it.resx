@@ -2621,4 +2621,7 @@
   <data name="Kleinbild_0ea90523" xml:space="preserve">
     <value>equiv. 35 mm</value>
   </data>
+  <data name="Luminanz_6637e6e3" xml:space="preserve">
+    <value>Luminanza</value>
+  </data>
 </root>
