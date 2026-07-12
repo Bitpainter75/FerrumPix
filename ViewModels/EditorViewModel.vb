@@ -4564,6 +4564,15 @@ Namespace ViewModels
                     _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / baseHeight * 100.0))
                 End If
             End If
+            ' Ein Textobjekt hat keine freie Box: sie ist immer der gemessene Textkasten. Der Griff ändert
+            ' den Schriftgrad (das macht die View im Anschluss), das Rechteck folgt der Schrift. Ohne das
+            ' bliebe hier die gezogene Größe stehen, sobald der Schriftgrad auf denselben ganzen Pixel
+            ' gerundet wird - und der Rahmen stünde wieder neben dem Text.
+            If isTextual Then
+                Dim fitted = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
+                _annotationWidthPercent = fitted.WidthPercent
+                _annotationHeightPercent = fitted.HeightPercent
+            End If
             If ShowWatermarkAnchorControls Then
                 Dim offset = ComputeAnnotationOffsetPercent(EffectiveAnnotationKind, xPercent, yPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
                 _annotationXPercent = ClampAnnotationOffsetPercent(offset.X)
@@ -7174,20 +7183,27 @@ Namespace ViewModels
                 Dim heightPx = fontSizePx + (lineCount - 1) * lineHeight + Math.Max(0.0F, font.Metrics.Descent) + padding
                 Dim widthPercent = widthPx / baseWidth * 100.0
                 Dim heightPercent = heightPx / baseHeight * 100.0
-                Return (Math.Max(MinTextAnnotationWidthPercent, Math.Min(60.0, widthPercent)),
-                        Math.Max(MinTextAnnotationHeightPercent, Math.Min(60.0, heightPercent)))
+                ' Bis zur vollen Bildbreite/-höhe: ein Deckel unterhalb davon (früher 60%) hätte das
+                ' Rechteck vom Text abgekoppelt, sobald der Text groß wird - und genau dann stimmen
+                ' Mitte und rechte Kante des Rahmens nicht mehr mit dem Text überein. Läuft eine Zeile
+                ' über die Bildbreite hinaus, greift bei dieser Breite der Umbruch in DrawWrappedText.
+                Return (Math.Max(MinTextAnnotationWidthPercent, Math.Min(100.0, widthPercent)),
+                        Math.Max(MinTextAnnotationHeightPercent, Math.Min(100.0, heightPercent)))
                 End Using
             End Using
         End Function
 
         Private Sub UpdatePendingTextAnnotationSize()
             If HasSelectedAnnotation Then
-                UpdateSelectedTextAnnotationSizeIfNeeded()
+                SyncSelectedTextAnnotationSize()
                 Return
             End If
             If Not HasPendingInsertKind Then Return
             Dim kind = NormalizeAnnotationKind(_pendingInsertKind)
             If kind <> "Text" AndAlso kind <> "Watermark" Then Return
+            ' Ein Wasserzeichen aus einer Bilddatei trägt keinen Text - seine Box darf nicht auf eine
+            ' Textbreite springen.
+            If IsWatermarkImageSource Then Return
 
             Dim size = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
             _annotationWidthPercent = size.WidthPercent
@@ -7198,26 +7214,35 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
         End Sub
 
-        ''' Vergrößert (nie automatisch verkleinert) die gespeicherte Box eines bereits platzierten
-        ''' Text-/Wasserzeichen-Objekts, wenn der aktuelle Textinhalt/Schriftgrad größer ist als die
-        ''' zuletzt gespeicherte Größe - damit Hit-Test und gebackenes Rendering nie hinter dem
-        ''' sichtbaren Text zurückbleiben. Während LoadSelectedAnnotationIntoEditor die Felder aus dem
-        ''' Modell befüllt, stehen hier noch die Werte des vorher selektierten Objekts - daher kein
-        ''' Aufruf während _isLoadingAnnotation (die echte Größe wird dort direkt gesetzt).
-        Private Sub UpdateSelectedTextAnnotationSizeIfNeeded()
+        ''' <summary>Legt die Box eines platzierten Text-/Wasserzeichen-Objekts exakt um seine Glyphen -
+        ''' sie folgt dem Text in BEIDE Richtungen. Früher wuchs sie nur (Math.Max gegen den alten Wert)
+        ''' und blieb nach kleinerem Schriftgrad oder kürzerem Text zu groß stehen. Dann liegen Mitte und
+        ''' rechte Kante des Rahmens neben Mitte und rechter Kante des Textes, und der Rahmen taugt nicht
+        ''' mehr zum Ausrichten - genau das ist der Zweck des Rechtecks.
+        ''' Während LoadSelectedAnnotationIntoEditor die Felder aus dem Modell befüllt, stehen hier noch
+        ''' die Werte des vorher selektierten Objekts - daher kein Aufruf während _isLoadingAnnotation.</summary>
+        Private Sub SyncSelectedTextAnnotationSize()
             If _isLoadingAnnotation Then Return
             If Not IsTextualAnnotationKind(SelectedAnnotationKind) Then Return
+            If IsWatermarkImageSource Then Return
+
             Dim size = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
-            Dim newWidth = Math.Min(90.0, Math.Max(_annotationWidthPercent, size.WidthPercent))
-            Dim newHeight = Math.Min(90.0, Math.Max(_annotationHeightPercent, size.HeightPercent))
-            If newWidth > _annotationWidthPercent OrElse newHeight > _annotationHeightPercent Then
-                _annotationWidthPercent = newWidth
-                _annotationHeightPercent = newHeight
-                Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
-                Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
-                Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
-                Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+            If Math.Abs(size.WidthPercent - _annotationWidthPercent) < 0.0001 AndAlso
+               Math.Abs(size.HeightPercent - _annotationHeightPercent) < 0.0001 Then Return
+
+            _annotationWidthPercent = size.WidthPercent
+            _annotationHeightPercent = size.HeightPercent
+            ' Die Box kann jetzt auch schrumpfen: die Position muss neu in die Bildgrenzen geklemmt
+            ' werden, sonst bliebe ein am Rand ausgerichtetes Objekt am alten (größeren) Rand hängen.
+            If Not ShowWatermarkAnchorControls Then
+                _annotationXPercent = ClampAnnotationPositionPercent(_annotationXPercent, _annotationWidthPercent)
+                _annotationYPercent = ClampAnnotationPositionPercent(_annotationYPercent, _annotationHeightPercent)
+                Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
+                Me.RaisePropertyChanged(NameOf(AnnotationYPercent))
+                Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
+                Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
             End If
+            RaiseAnnotationSizeChanged()
         End Sub
 
         ''' <summary>Maße des aktuell angezeigten Bildes, also nach dem bereits angewendeten Beschnitt.

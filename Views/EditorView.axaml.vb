@@ -62,6 +62,9 @@ Namespace Views
         Private _textDragInitialRect As Avalonia.Rect
         Private _textDragPointerStart As Avalonia.Point
         Private _textDragAspect As Double = 1.0
+        ' Schriftgrad beim Griff der Maus: der Ziehvorgang skaliert IHN, nicht den zuletzt gesetzten -
+        ' sonst multiplizierte sich die Skalierung Frame für Frame in sich selbst hinein.
+        Private _textDragInitialFontSize As Double = 0
         Private _textRotateStartAngle As Double
         Private _textRotateStartRotation As Double
         Private _textRotateCenter As Avalonia.Point
@@ -463,6 +466,16 @@ Namespace Views
                 AddHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
             End If
             _filmstripController.Reset()
+        End Sub
+
+        ''' <summary>Der KeyDown-Handler hängt an dieser UserControl - er sieht eine Taste nur, wenn der
+        ''' Tastaturfokus INNERHALB der EditorView liegt. Beim Öffnen des Editors blieb er bisher dort,
+        ''' wo er vorher war (Galerie/Viewer), und keins der Editor-Kürzel griff, bis man zufällig einen
+        ''' fokussierbaren Regler oder ein Filmstreifen-Bild angeklickt hatte. Galerie und Viewer holen
+        ''' sich den Fokus aus demselben Grund beim Anhängen.</summary>
+        Protected Overrides Sub OnAttachedToVisualTree(e As Avalonia.VisualTreeAttachmentEventArgs)
+            MyBase.OnAttachedToVisualTree(e)
+            Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
         End Sub
 
         ''' EditorViewModel lebt für die gesamte App-Laufzeit (eine Instanz, wiederverwendet bei
@@ -2314,6 +2327,7 @@ Namespace Views
             _textDragInitialRect = rect
             _textDragPointerStart = pos
             _textDragAspect = If(rect.Height > 0, rect.Width / rect.Height, 1.0)
+            _textDragInitialFontSize = vm.AnnotationFontSize
             _isTextDragging = True
             e.Pointer.Capture(overlay)
             If mode = TextDragMode.Rotate Then
@@ -2664,26 +2678,47 @@ Namespace Views
             Dim baseWidth = vm.CurrentImage.PixelSize.Width
             Dim baseHeight = vm.CurrentImage.PixelSize.Height
             If baseWidth <= 0 OrElse baseHeight <= 0 OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-            Dim pixelWidth = textRect.Width / imageRect.Width * baseWidth
-            Dim pixelHeight = textRect.Height / imageRect.Height * baseHeight
+
+            ' Beim Textobjekt zuerst die Schrift skalieren: das Rechteck ist bei ihm kein freier Rahmen,
+            ' sondern der gemessene Textkasten - das ViewModel setzt es aus der Schrift neu. Beim
+            ' Verschieben bleibt die Schrift unangetastet (siehe ScaleSelectedTextFontFromDrag).
+            If IsSelectedAnnotationTextLayer(vm) Then ScaleSelectedTextFontFromDrag(textRect, vm)
+
             vm.SetSelectedAnnotationRectPixels(
                 (textRect.Left - imageRect.Left) / imageRect.Width * baseWidth,
                 (textRect.Top - imageRect.Top) / imageRect.Height * baseHeight,
-                pixelWidth,
-                pixelHeight)
+                textRect.Width / imageRect.Width * baseWidth,
+                textRect.Height / imageRect.Height * baseHeight)
+        End Sub
 
-            Dim selectedKind = If(vm.SelectedAnnotationKind, "")
-            Dim isTextLayer = selectedKind.Equals("Text", StringComparison.OrdinalIgnoreCase) OrElse
-                              (selectedKind.Equals("Watermark", StringComparison.OrdinalIgnoreCase) AndAlso vm.ShowTextContentControls)
-            If isTextLayer Then
-                Dim textValue = If(vm.AnnotationText, "").Trim()
-                Dim longestLine = 1
-                For Each line In textValue.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
-                    longestLine = Math.Max(longestLine, Math.Max(1, line.Trim().Length))
-                Next
-                Dim fitFontSize = Math.Max(8.0, Math.Min(pixelHeight * 0.68, pixelWidth / Math.Max(1.0, longestLine * 0.72)))
-                vm.AnnotationFontSizePixels = CInt(Math.Round(fitFontSize))
-            End If
+        ''' <summary>Skaliert den Schriftgrad eines Textobjekts aus dem gezogenen Griff - gleichmäßig aus
+        ''' dem Wert bei Zieh-Beginn und dem Verhältnis zum Rechteck bei Zieh-Beginn.
+        ''' Beim VERSCHIEBEN passiert nichts: früher wurde die Schriftgröße bei jedem Frame aus dem
+        ''' Rechteck geschätzt (Höhe · 0,68 bzw. Breite / Zeichenzahl), auch wenn sich das Rechteck gar
+        ''' nicht änderte. Solange die Box deutlich größer war als der Text, fiel das kaum auf; seit sie
+        ''' den Text eng umschließt, liefert die Schätzung einen kleineren Wert als den echten Schriftgrad
+        ''' - und der Text wurde bei jedem Verschieben ein Stück kleiner.</summary>
+        Private Sub ScaleSelectedTextFontFromDrag(textRect As Avalonia.Rect, vm As EditorViewModel)
+            If _textDragMode = TextDragMode.Move OrElse _textDragMode = TextDragMode.Rotate OrElse _textDragMode = TextDragMode.None Then Return
+            If _textDragInitialFontSize <= 0 Then Return
+            If _textDragInitialRect.Width <= 0 OrElse _textDragInitialRect.Height <= 0 Then Return
+
+            Dim widthScale = textRect.Width / _textDragInitialRect.Width
+            Dim heightScale = textRect.Height / _textDragInitialRect.Height
+            Dim scale As Double
+            Select Case _textDragMode
+                Case TextDragMode.Left, TextDragMode.Right
+                    scale = widthScale
+                Case TextDragMode.Top, TextDragMode.Bottom
+                    scale = heightScale
+                Case Else
+                    ' Eckgriff ohne Seitenverhältnis-Zwang: die Schrift soll in das gezogene Rechteck
+                    ' passen, nicht darüber hinausschießen - also die kleinere der beiden Skalen.
+                    scale = Math.Min(widthScale, heightScale)
+            End Select
+            If Double.IsNaN(scale) OrElse Double.IsInfinity(scale) OrElse scale <= 0 Then Return
+
+            vm.AnnotationFontSizePixels = CInt(Math.Round(Math.Max(8.0, _textDragInitialFontSize * scale)))
         End Sub
 
         ''' True, wenn der Zeiger auf dem Griff oder der Trennlinie des Vergleichsreglers steht. Geprüft
