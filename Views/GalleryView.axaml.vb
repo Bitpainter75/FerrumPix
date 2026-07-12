@@ -879,6 +879,9 @@ Namespace Views
                 Case "Xmp"
                     vm.HoveredMetadataTitle = "XMP"
                     vm.HoveredMetadataText = item.XmpMetadataSummary
+                Case "Icc"
+                    vm.HoveredMetadataTitle = "ICC"
+                    vm.HoveredMetadataText = item.IccMetadataSummary
                 Case Else
                     vm.HoveredMetadataTitle = ""
                     vm.HoveredMetadataText = ""

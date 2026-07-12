@@ -14,7 +14,9 @@
         <Grid RowDefinitions="Auto,*" RowSpacing="14">
             <StackPanel Spacing="0">
                 <TextBlock Text="Info" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                <StackPanel Orientation="Horizontal" Spacing="18" Margin="0,14,0,0">
+                <!-- Spacing knapper als sonst: fünf Reiter müssen in die 320px breite Seitenleiste passen,
+                     auch bei längeren Übersetzungen von "Allgemein". -->
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,14,0,0">
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="General" Classes.active="{Binding IsInfoTabGeneral}">
                         <TextBlock Text="Allgemein"/>
                     </Button>
@@ -26,6 +28,9 @@
                     </Button>
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="Xmp" Classes.active="{Binding IsInfoTabXmp}">
                         <TextBlock Text="XMP"/>
+                    </Button>
+                    <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="Icc" Classes.active="{Binding IsInfoTabIcc}">
+                        <TextBlock Text="ICC"/>
                     </Button>
                 </StackPanel>
                 <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,7,0,0"/>
@@ -154,6 +159,27 @@
                     <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabXmp}" Margin="0,0,12,0">
                         <TextBlock Text="XMP" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                         <ItemsControl ItemsSource="{Binding ExifInfo.XmpTags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type services:ExifTag}">
+                                    <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="0,0,0,1" Padding="0,8">
+                                        <Grid ColumnDefinitions="170,*">
+                                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource FP.Text.Muted}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabIcc}" Margin="0,0,12,0">
+                        <TextBlock Text="ICC-Farbprofil" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding ExifInfo.IccTags}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel/>

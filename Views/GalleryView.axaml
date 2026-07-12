@@ -979,6 +979,8 @@
                                                                 Background="Transparent"
                                                                 IsVisible="{Binding HasIccProfile}"
                                                                 Tag="Icc"
+                                                                PointerEntered="OnMetadataBadgePointerEntered"
+                                                                PointerExited="OnMetadataBadgePointerExited"
                                                                 ToolTip.Tip="ICC-Farbprofil vorhanden">
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/ICC.svg"
                                                                        Classes="gallery-meta-icon"

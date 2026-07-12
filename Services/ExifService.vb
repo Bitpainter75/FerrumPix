@@ -49,6 +49,10 @@ Namespace Services
         Public Property ExifSummary As String = ""
         Public Property IptcSummary As String = ""
         Public Property XmpSummary As String = ""
+        Public Property IccSummary As String = ""
+        ''' <summary>Format+Sprache, in denen die Summary-Texte erzeugt wurden (siehe
+        ''' ExifService.CurrentSummaryFormat) - der Katalog erkennt daran veraltete Einträge.</summary>
+        Public Property SummaryFormat As String = ""
     End Class
 
     Public Class ExifData
@@ -79,6 +83,10 @@ Namespace Services
         Public Property ExifTags As New List(Of ExifTag)()
         Public Property IptcTags As New List(Of ExifTag)()
         Public Property XmpTags As New List(Of ExifTag)()
+        ''' <summary>Die Tags des eingebetteten ICC-Profils, zusätzlich zu ihrem Auftritt im
+        ''' EXIF-Tag-Baum - für die Zusammenfassung am ICC-Badge (Profilname, Farbraum, Rendering
+        ''' Intent), die sonst zwischen den EXIF-Einträgen untergehen würde.</summary>
+        Public Property IccTags As New List(Of ExifTag)()
         ''' <summary>True, wenn die Datei ein eingebettetes ICC-Farbprofil trägt (MetadataExtractor
         ''' IccDirectory). Steuert das ICC-Badge in der Galerie - analog zu den EXIF/IPTC/XMP-Badges.</summary>
         Public Property HasIccProfile As Boolean
@@ -160,6 +168,7 @@ Namespace Services
                 .ExifTags = source.ExifTags,
                 .IptcTags = source.IptcTags,
                 .XmpTags = source.XmpTags,
+                .IccTags = source.IccTags,
                 .HasIccProfile = source.HasIccProfile
             }
         End Function
@@ -182,6 +191,11 @@ Namespace Services
                     ' im EXIF-Tag-Baum (Else-Zweig unten) - das Flag ist rein additiv.
                     If String.Equals(dirType, "MetadataExtractor.Formats.Icc.IccDirectory", StringComparison.Ordinal) Then
                         data.HasIccProfile = True
+                        For Each metaTag In metaDir.Tags
+                            If Not String.IsNullOrWhiteSpace(metaTag.Description) Then
+                                data.IccTags.Add(New ExifTag(metaTag.Name, CleanIccDescription(metaTag.Description)))
+                            End If
+                        Next
                     End If
 
                     If String.Equals(dirType, "MetadataExtractor.Formats.Iptc.IptcDirectory", StringComparison.Ordinal) Then
@@ -201,41 +215,34 @@ Namespace Services
                     End If
                 Next
 
-                Dim exifSub = metaDirectories.OfType(Of ExifSubIfdDirectory)().FirstOrDefault()
-                Dim exifIfd = metaDirectories.OfType(Of ExifIfd0Directory)().FirstOrDefault()
-                Dim gpsDir = metaDirectories.OfType(Of GpsDirectory)().FirstOrDefault()
+                data.DateTaken = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagDateTimeOriginal)
+                data.FocalLength = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagFocalLength)
+                data.FocalLength35mm = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.Tag35MMFilmEquivFocalLength)
+                data.Aperture = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagFNumber)
+                data.ShutterSpeed = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExposureTime)
+                data.ISO = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagIsoEquivalent)
+                data.ImageWidth = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExifImageWidth)
+                data.ImageHeight = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExifImageHeight)
+                data.ColorSpace = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagColorSpace)
+                data.Lens = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagLensModel)
 
-                If exifSub IsNot Nothing Then
-                    data.DateTaken = GetTagDesc(exifSub, ExifSubIfdDirectory.TagDateTimeOriginal)
-                    data.FocalLength = GetTagDesc(exifSub, ExifSubIfdDirectory.TagFocalLength)
-                    data.FocalLength35mm = GetTagDesc(exifSub, ExifSubIfdDirectory.Tag35MMFilmEquivFocalLength)
-                    data.Aperture = GetTagDesc(exifSub, ExifSubIfdDirectory.TagFNumber)
-                    data.ShutterSpeed = GetTagDesc(exifSub, ExifSubIfdDirectory.TagExposureTime)
-                    data.ISO = GetTagDesc(exifSub, ExifSubIfdDirectory.TagIsoEquivalent)
-                    data.ImageWidth = GetTagDesc(exifSub, ExifSubIfdDirectory.TagExifImageWidth)
-                    data.ImageHeight = GetTagDesc(exifSub, ExifSubIfdDirectory.TagExifImageHeight)
-                    data.ColorSpace = GetTagDesc(exifSub, ExifSubIfdDirectory.TagColorSpace)
-                    data.Lens = GetTagDesc(exifSub, ExifSubIfdDirectory.TagLensModel)
+                Dim make = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagMake)
+                Dim model = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagModel)
+                data.Camera = (make & " " & model).Trim()
+                data.Software = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagSoftware)
+                data.Copyright = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagCopyright)
+                data.DateModifiedExif = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagDateTime)
+                If String.IsNullOrEmpty(data.DateTaken) Then
+                    data.DateTaken = data.DateModifiedExif
                 End If
 
-                If exifIfd IsNot Nothing Then
-                    Dim make = GetTagDesc(exifIfd, ExifIfd0Directory.TagMake)
-                    Dim model = GetTagDesc(exifIfd, ExifIfd0Directory.TagModel)
-                    data.Camera = (make & " " & model).Trim()
-                    data.Software = GetTagDesc(exifIfd, ExifIfd0Directory.TagSoftware)
-                    data.Copyright = GetTagDesc(exifIfd, ExifIfd0Directory.TagCopyright)
-                    data.DateModifiedExif = GetTagDesc(exifIfd, ExifIfd0Directory.TagDateTime)
-                    If String.IsNullOrEmpty(data.DateTaken) Then
-                        data.DateTaken = data.DateModifiedExif
-                    End If
-                End If
-
-                If gpsDir IsNot Nothing Then
+                For Each gpsDir In metaDirectories.OfType(Of GpsDirectory)()
                     Dim geoLoc = gpsDir.GetGeoLocation()
                     If geoLoc IsNot Nothing Then
                         data.GPS = $"{geoLoc.Latitude:F5}°, {geoLoc.Longitude:F5}°"
+                        Exit For
                     End If
-                End If
+                Next
 
             Catch
                 ' Kein EXIF oder Lesefehler
@@ -281,16 +288,173 @@ Namespace Services
             Return result
         End Function
 
-        Public Shared Function BuildCatalogSummary(data As ExifData) As ExifCatalogSummary
+        ''' <summary>Erhöhen, sobald sich Auswahl oder Formatierung der Summary-Texte ändert. Zusammen mit
+        ''' der Anzeigesprache bildet die Zahl den in der Bibliothek mitgeschriebenen Formatstempel
+        ''' (siehe CurrentSummaryFormat): Katalogeinträge aus einer älteren App-Version oder aus einer
+        ''' anderen Sprache werden daran erkannt und einmalig neu erzeugt - sonst blieben die alten
+        ''' Texte kleben, weil unveränderte Dateien nie erneut eingelesen werden.</summary>
+        Public Const SummaryFormatVersion As Integer = 2
+
+        Public Shared ReadOnly Property CurrentSummaryFormat As String
+            Get
+                Return $"{SummaryFormatVersion}:{LocalizationService.EffectiveLanguage}"
+            End Get
+        End Property
+
+        Private Const MaxSummaryLines As Integer = 10
+        Private Const MaxSummaryValueLength As Integer = 80
+
+        ''' <summary>Die Reihenfolge, in der MetadataExtractor die Tags liefert, ist technisch und nicht
+        ''' inhaltlich sortiert - die ersten Einträge sind bei JPEGs Kompression/Datenpräzision und bei
+        ''' Lightroom-XMP dutzende crs:*-Reglerwerte, während Autor, Stichwörter oder Copyright weit
+        ''' hinten stehen. Deshalb bestimmt eine Prioritätsliste je Kategorie, was ins Badge-Overlay
+        ''' kommt; erst wenn davon nichts zutrifft, fällt die Zusammenfassung auf die Rohreihenfolge
+        ''' zurück, damit exotische Dateien nicht mit leerem Overlay dastehen.</summary>
+        Private Shared ReadOnly IptcPriorityNames As String() = {
+            "Object Name", "Headline", "Caption/Abstract", "Keywords", "By-line", "By-line Title",
+            "Credit", "Source", "Copyright Notice", "City", "Sub-location", "Province/State",
+            "Country/Primary Location Name", "Date Created", "Special Instructions"
+        }
+
+        Private Shared ReadOnly XmpPriorityNames As String() = {
+            "xmp:Rating", "xmp:Label", "dc:title", "dc:description", "dc:creator", "dc:subject",
+            "lr:hierarchicalSubject", "dc:rights", "photoshop:Headline", "photoshop:City",
+            "photoshop:Country", "photoshop:DateCreated", "xmp:CreatorTool", "xmp:ModifyDate"
+        }
+
+        ''' Das Nützliche am ICC-Profil ist der Profilname (sagt "Adobe RGB (1998)" statt nur
+        ''' "Farbprofil vorhanden") plus Farbraum und Rendering Intent - der Rest sind Kurven und
+        ''' Matrizen ohne Aussagewert für die Galerie.
+        Private Shared ReadOnly IccPriorityNames As String() = {
+            "Profile Description", "Class", "Color space", "Profile Connection Space",
+            "Rendering Intent", "Primary Platform", "Device manufacturer", "Device model",
+            "Profile Date/Time", "Version", "Copyright"
+        }
+
+        Public Shared Function BuildCatalogSummary(data As ExifData, Optional fields As ExifSearchFields = Nothing) As ExifCatalogSummary
             Return New ExifCatalogSummary With {
                 .HasExifMetadata = data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0,
                 .HasIptcMetadata = data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0,
                 .HasXmpMetadata = data IsNot Nothing AndAlso data.XmpTags IsNot Nothing AndAlso data.XmpTags.Count > 0,
                 .HasIccProfile = data IsNot Nothing AndAlso data.HasIccProfile,
-                .ExifSummary = BuildMetadataSummary(If(data?.ExifTags, Nothing), 6),
-                .IptcSummary = BuildMetadataSummary(If(data?.IptcTags, Nothing), 6),
-                .XmpSummary = BuildMetadataSummary(If(data?.XmpTags, Nothing), 6)
+                .ExifSummary = BuildExifSummary(data, fields),
+                .IptcSummary = BuildTagSummary(If(data?.IptcTags, Nothing), IptcPriorityNames),
+                .XmpSummary = BuildTagSummary(If(data?.XmpTags, Nothing), XmpPriorityNames),
+                .IccSummary = BuildTagSummary(If(data?.IccTags, Nothing), IccPriorityNames),
+                .SummaryFormat = CurrentSummaryFormat
             }
+        End Function
+
+        ''' <summary>Die EXIF-Zeilen sind bewusst genau die Felder, die auch in der Bibliothek als eigene
+        ''' Spalten liegen und auf die Suche, Filter und Sortierung zugreifen (ExifSearchFields) - was
+        ''' das Overlay zeigt, ist damit auch das, wonach man suchen kann. Die Werte stammen aus den
+        ''' bereits formatierten Anzeige-Strings ("f/2,8", "1/250 s"), die Maße bevorzugt aus den
+        ''' echten Pixelmaßen der Suchfelder statt aus dem oft fehlenden EXIF-Größentag.</summary>
+        Public Shared Function BuildExifSummary(data As ExifData, Optional fields As ExifSearchFields = Nothing) As String
+            If data Is Nothing Then Return ""
+
+            Dim lines As New List(Of String)()
+            AppendSummaryLine(lines, LocalizationService.T("Kamera"), data.Camera)
+            AppendSummaryLine(lines, LocalizationService.T("Objektiv"), data.Lens)
+            AppendSummaryLine(lines, LocalizationService.T("Brennweite"), FormatFocalLength(data))
+            AppendSummaryLine(lines, LocalizationService.T("Blende"), data.Aperture)
+            AppendSummaryLine(lines, LocalizationService.T("Belichtungszeit"), data.ShutterSpeed)
+            AppendSummaryLine(lines, "ISO", data.ISO)
+            AppendSummaryLine(lines, LocalizationService.T("Aufnahmedatum"), FormatExifDate(data.DateTaken))
+            AppendSummaryLine(lines, LocalizationService.T("Abmessungen"), FormatDimensions(data, fields))
+            AppendSummaryLine(lines, "GPS", data.GPS)
+            AppendSummaryLine(lines, LocalizationService.T("Software"), data.Software)
+            AppendSummaryLine(lines, LocalizationService.T("Copyright"), data.Copyright)
+
+            If lines.Count > 0 Then Return String.Join(Environment.NewLine, lines)
+
+            ' Kein einziges Aufnahmefeld gefüllt (z.B. gescanntes PNG): lieber die technischen Rohtags
+            ' zeigen als ein leeres Overlay unter einem Badge, das "EXIF vorhanden" meldet.
+            Return BuildMetadataSummary(data.ExifTags, MaxSummaryLines)
+        End Function
+
+        Private Shared Function FormatFocalLength(data As ExifData) As String
+            Dim equivalent = If(data.FocalLength35mm, "").Trim()
+            Dim actual = If(data.FocalLength, "").Trim()
+            If Not ParseLeadingDouble(equivalent).HasValue Then Return actual
+            If actual.Length = 0 OrElse String.Equals(equivalent, actual, StringComparison.OrdinalIgnoreCase) Then Return equivalent
+            ' Handykameras melden 4,2 mm - erst das Kleinbild-Äquivalent (28 mm) ist einordenbar, deshalb
+            ' steht es vorn; die echte Brennweite bleibt dahinter sichtbar.
+            Return $"{equivalent} ({LocalizationService.T("Kleinbild")}) · {actual}"
+        End Function
+
+        Private Shared Function FormatExifDate(raw As String) As String
+            Dim parsed = ParseExifDateTime(raw)
+            If Not parsed.HasValue Then Return If(raw, "")
+            Return parsed.Value.ToString("g", LocalizationService.EffectiveCulture)
+        End Function
+
+        Private Shared Function FormatDimensions(data As ExifData, fields As ExifSearchFields) As String
+            Dim width = If(fields?.ImageWidth, ParseLeadingInt(data.ImageWidth))
+            Dim height = If(fields?.ImageHeight, ParseLeadingInt(data.ImageHeight))
+            If Not width.HasValue OrElse Not height.HasValue Then Return ""
+            Return $"{width.Value} × {height.Value}"
+        End Function
+
+        Private Shared Sub AppendSummaryLine(lines As List(Of String), label As String, value As String)
+            If lines.Count >= MaxSummaryLines Then Return
+            If String.IsNullOrWhiteSpace(value) Then Return
+            lines.Add($"{label}: {TrimSummaryValue(value)}")
+        End Sub
+
+        ''' <summary>Wählt aus einer Tag-Liste die inhaltlich tragenden Einträge in der Reihenfolge der
+        ''' Prioritätsliste aus. Mehrfach indizierte XMP-Werte (dc:subject[1], dc:subject[2], ...) werden
+        ''' dabei zu einer Zeile zusammengefasst, sonst würde eine einzige Stichwortliste das ganze
+        ''' Overlay füllen.</summary>
+        Private Shared Function BuildTagSummary(tags As IEnumerable(Of ExifTag), priorityNames As String()) As String
+            Dim grouped = GroupTags(tags)
+            If grouped.Count = 0 Then Return ""
+
+            Dim lines As New List(Of String)()
+            Dim used As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+            For Each wanted In priorityNames
+                If lines.Count >= MaxSummaryLines Then Exit For
+                For Each tag In grouped
+                    If Not String.Equals(tag.Name, wanted, StringComparison.OrdinalIgnoreCase) Then Continue For
+                    If Not used.Add(tag.Name) Then Continue For
+                    lines.Add($"{tag.Name}: {TrimSummaryValue(tag.Value)}")
+                    Exit For
+                Next
+            Next
+
+            If lines.Count = 0 Then
+                Return BuildMetadataSummary(grouped, MaxSummaryLines)
+            End If
+
+            Return String.Join(Environment.NewLine, lines)
+        End Function
+
+        Private Shared Function GroupTags(tags As IEnumerable(Of ExifTag)) As List(Of ExifTag)
+            Dim result As New List(Of ExifTag)()
+            Dim byName As New Dictionary(Of String, ExifTag)(StringComparer.OrdinalIgnoreCase)
+
+            For Each tag In If(tags, Enumerable.Empty(Of ExifTag)())
+                If tag Is Nothing OrElse String.IsNullOrWhiteSpace(tag.Name) OrElse String.IsNullOrWhiteSpace(tag.Value) Then Continue For
+                Dim name = Regex.Replace(tag.Name.Trim(), "\[\d+\]$", "")
+                Dim value = tag.Value.Trim()
+                Dim existing As ExifTag = Nothing
+                If byName.TryGetValue(name, existing) Then
+                    existing.Value &= ", " & value
+                Else
+                    Dim entry = New ExifTag(name, value)
+                    byName(name) = entry
+                    result.Add(entry)
+                End If
+            Next
+
+            Return result
+        End Function
+
+        Private Shared Function TrimSummaryValue(value As String) As String
+            Dim trimmed = If(value, "").Trim()
+            If trimmed.Length > MaxSummaryValueLength Then trimmed = trimmed.Substring(0, MaxSummaryValueLength) & "..."
+            Return trimmed
         End Function
 
         Public Shared Function BuildMetadataSummary(tags As IEnumerable(Of ExifTag), maxItems As Integer) As String
@@ -299,12 +463,7 @@ Namespace Services
                                   Not String.IsNullOrWhiteSpace(t.Name) AndAlso
                                   Not String.IsNullOrWhiteSpace(t.Value)).
                 Take(Math.Max(1, maxItems)).
-                Select(Function(t)
-                           Dim name = t.Name.Trim()
-                           Dim value = t.Value.Trim()
-                           If value.Length > 48 Then value = value.Substring(0, 48) & "..."
-                           Return $"{name}: {value}"
-                       End Function).
+                Select(Function(t) $"{t.Name.Trim()}: {TrimSummaryValue(t.Value)}").
                 ToList()
             Return String.Join(Environment.NewLine, entries)
         End Function
@@ -334,7 +493,11 @@ Namespace Services
         ''' entsprechen. Der Rohwert bleibt in ExifData.FocalLength und in der EXIF-Liste sichtbar.</summary>
         Public Shared Function GetComparableFocalLength(data As ExifData) As String
             If data Is Nothing Then Return ""
-            If Not String.IsNullOrWhiteSpace(data.FocalLength35mm) Then Return data.FocalLength35mm
+            ' Nicht auf "nicht leer" prüfen: Steht der Tag zwar im Bild, ist aber unbrauchbar belegt,
+            ' liefert MetadataExtractor den Text "Unknown". Der gewann hier gegen die echte Brennweite,
+            ' und da aus ihm keine Zahl zu holen ist, blieb FocalLengthMm im Katalog leer - solche Bilder
+            ' fielen aus jedem Brennweiten-Filter heraus, obwohl der Wert in der Datei steht.
+            If ParseLeadingDouble(data.FocalLength35mm).HasValue Then Return data.FocalLength35mm
             Return data.FocalLength
         End Function
 
@@ -370,9 +533,29 @@ Namespace Services
             Return Nothing
         End Function
 
-        Private Shared Function GetTagDesc(metaDir As MetadataExtractor.Directory, tagType As Integer) As String
-            Dim desc = metaDir.GetDescription(tagType)
-            Return If(desc, "")
+        ''' <summary>Sucht einen Tag über ALLE Verzeichnisse des angegebenen Typs und liefert den ersten
+        ''' belegten Wert. RAW-Dateien (DNG/ARW/NEF) bringen mehrere "Exif SubIFD"-Verzeichnisse mit - neben
+        ''' dem der Aufnahme noch je eines für Vorschaubild- und Rohbild-Ebene. Das zuvor verwendete
+        ''' FirstOrDefault() erwischte davon regelmäßig ein Ebenen-Verzeichnis ohne Aufnahmedaten, weshalb
+        ''' Blende, ISO, Belichtungszeit und Objektiv bei RAWs leer blieben - und zwar nicht nur in der
+        ''' Anzeige, sondern auch in Suche, Filter und Sortierung, die auf denselben Feldern arbeiten.</summary>
+        Private Shared Function GetTagDescAcross(Of TDirectory As MetadataExtractor.Directory)(
+                metaDirectories As IEnumerable(Of MetadataExtractor.Directory), tagType As Integer) As String
+            For Each metaDir In metaDirectories.OfType(Of TDirectory)()
+                Dim desc = metaDir.GetDescription(tagType)
+                If Not String.IsNullOrWhiteSpace(desc) Then Return desc
+            Next
+            Return ""
+        End Function
+
+        ''' <summary>ICC-v4-Profile hinterlegen ihren Namen mehrsprachig; MetadataExtractor gibt das roh als
+        ''' "1 enUS(sRGB IEC61966-2.1)" aus. Da der Profilname der eigentlich interessante Wert am
+        ''' ICC-Badge ist, wird die Sprachverpackung entfernt - passt das Muster nicht, bleibt der Text
+        ''' unangetastet.</summary>
+        Private Shared Function CleanIccDescription(description As String) As String
+            Dim match = Regex.Match(If(description, "").Trim(), "^\d+\s+\w+\((.+)\)$")
+            If match.Success Then Return match.Groups(1).Value.Trim()
+            Return If(description, "").Trim()
         End Function
 
         Private Shared Sub CollectXmpTags(metaDir As MetadataExtractor.Directory, data As ExifData)

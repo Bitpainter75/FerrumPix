@@ -354,6 +354,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property IsInfoTabIcc As Boolean
+            Get
+                Return _selectedInfoTab = InfoSidebarTab.Icc
+            End Get
+        End Property
+
         Public Property RotationAngle As Double
             Get
                 Return _rotationAngle
@@ -1084,6 +1090,8 @@ Namespace ViewModels
                     SelectedInfoTab = InfoSidebarTab.Iptc
                 Case "xmp"
                     SelectedInfoTab = InfoSidebarTab.Xmp
+                Case "icc"
+                    SelectedInfoTab = InfoSidebarTab.Icc
                 Case Else
                     SelectedInfoTab = InfoSidebarTab.General
             End Select
@@ -1094,6 +1102,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsInfoTabExif))
             Me.RaisePropertyChanged(NameOf(IsInfoTabIptc))
             Me.RaisePropertyChanged(NameOf(IsInfoTabXmp))
+            Me.RaisePropertyChanged(NameOf(IsInfoTabIcc))
         End Sub
 
         Private Shared Function BuildImageInfo(imagePath As String, imageWidth As Integer, imageHeight As Integer) As ExifData
@@ -1176,7 +1185,7 @@ Namespace ViewModels
                          Dim histogram As Bitmap = Nothing
                          If loadHistogram Then histogram = ImageProcessor.BuildHistogramImage(imagePath, 240, 120)
                          Dim exifForSearch = ExifService.ExtractSearchFields(info, imagePath)
-                         LibraryService.Instance.SyncExifData(imagePath, exifForSearch, ExifService.BuildCatalogSummary(info))
+                         LibraryService.Instance.SyncExifData(imagePath, exifForSearch, ExifService.BuildCatalogSummary(info, exifForSearch))
 
                          Dispatcher.UIThread.Post(Sub()
                                                        If token <> _infoPanelLoadToken Then Return

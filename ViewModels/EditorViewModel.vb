@@ -4749,6 +4749,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property IsInfoTabIcc As Boolean
+            Get
+                Return _selectedInfoTab = InfoSidebarTab.Icc
+            End Get
+        End Property
+
         Public Property SelectedLayersPanelTab As LayersPanelTab
             Get
                 Return _selectedLayersPanelTab
@@ -5490,7 +5496,7 @@ Namespace ViewModels
             ' Nebenläufig persistieren, damit das im Editor geöffnete Bild ab jetzt über EXIF
             ' durchsuchbar ist - blockiert nicht die UI.
             Dim exifForSearch = ExifService.ExtractSearchFields(data, imagePath)
-            Dim catalogSummary = ExifService.BuildCatalogSummary(data)
+            Dim catalogSummary = ExifService.BuildCatalogSummary(data, exifForSearch)
             Task.Run(Sub() LibraryService.Instance.SyncExifData(imagePath, exifForSearch, catalogSummary))
 
             Return data
@@ -8317,6 +8323,8 @@ Namespace ViewModels
                     SelectedInfoTab = InfoSidebarTab.Iptc
                 Case "xmp"
                     SelectedInfoTab = InfoSidebarTab.Xmp
+                Case "icc"
+                    SelectedInfoTab = InfoSidebarTab.Icc
                 Case Else
                     SelectedInfoTab = InfoSidebarTab.General
             End Select
@@ -8327,6 +8335,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsInfoTabExif))
             Me.RaisePropertyChanged(NameOf(IsInfoTabIptc))
             Me.RaisePropertyChanged(NameOf(IsInfoTabXmp))
+            Me.RaisePropertyChanged(NameOf(IsInfoTabIcc))
         End Sub
 
 

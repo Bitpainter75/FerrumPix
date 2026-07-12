@@ -1254,7 +1254,8 @@ Namespace ViewModels
                     _dialogBatchRenameExifCache(p) = data
                     ' Dieser Lesevorgang war ohnehin fällig (Muster-Vorschau) - direkt mit dem
                     ' Katalog-Eintrag abgleichen, statt die Gelegenheit ungenutzt verstreichen zu lassen.
-                    LibraryService.Instance.SyncExifData(p, ExifService.ExtractSearchFields(data, p), ExifService.BuildCatalogSummary(data))
+                    Dim searchFields = ExifService.ExtractSearchFields(data, p)
+                    LibraryService.Instance.SyncExifData(p, searchFields, ExifService.BuildCatalogSummary(data, searchFields))
                 Next
             End Sub)
 

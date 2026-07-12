@@ -2173,10 +2173,7 @@ Namespace ViewModels
                 Dim data = ExifService.ReadExif(meta.FilePath)
                 Dim fields = ExifService.ExtractSearchFields(data, meta.FilePath)
                 Dim xmpRating = ExifService.GetXmpRating(data)
-                Dim catalogSummary = ExifService.BuildCatalogSummary(data)
-                Dim exifSummary = catalogSummary.ExifSummary
-                Dim iptcSummary = catalogSummary.IptcSummary
-                Dim xmpSummary = catalogSummary.XmpSummary
+                Dim catalogSummary = ExifService.BuildCatalogSummary(data, fields)
                 LibraryService.Instance.SyncExifData(meta.FilePath, fields, catalogSummary)
                 If xmpRating.HasValue Then
                     LibraryService.Instance.SetRating(meta.FilePath, xmpRating.Value)
@@ -2193,9 +2190,11 @@ Namespace ViewModels
                 meta.GpsLongitude = fields.GpsLongitude
                 meta.ImageWidth = fields.ImageWidth
                 meta.ImageHeight = fields.ImageHeight
-                meta.ExifSummary = exifSummary
-                meta.IptcSummary = iptcSummary
-                meta.XmpSummary = xmpSummary
+                meta.ExifSummary = catalogSummary.ExifSummary
+                meta.IptcSummary = catalogSummary.IptcSummary
+                meta.XmpSummary = catalogSummary.XmpSummary
+                meta.IccSummary = catalogSummary.IccSummary
+                meta.SummaryFormat = catalogSummary.SummaryFormat
                 meta.ScannedSourceModifiedAt = File.GetLastWriteTime(meta.FilePath).ToString("o")
             Catch
             End Try
@@ -2838,7 +2837,7 @@ Namespace ViewModels
                                                                Dim data = ExifService.ReadExif(item.FilePath)
                                                                Dim fields = ExifService.ExtractSearchFields(data, item.FilePath)
                                                                Dim xmpRating = ExifService.GetXmpRating(data)
-                                                               Dim catalogSummary = ExifService.BuildCatalogSummary(data)
+                                                               Dim catalogSummary = ExifService.BuildCatalogSummary(data, fields)
                                                                Dim hasExif = catalogSummary.HasExifMetadata
                                                                Dim hasIptc = catalogSummary.HasIptcMetadata
                                                                Dim hasXmp = catalogSummary.HasXmpMetadata
@@ -2846,6 +2845,7 @@ Namespace ViewModels
                                                                Dim exifSummary = catalogSummary.ExifSummary
                                                                Dim iptcSummary = catalogSummary.IptcSummary
                                                                Dim xmpSummary = catalogSummary.XmpSummary
+                                                               Dim iccSummary = catalogSummary.IccSummary
                                                                LibraryService.Instance.SyncExifData(item.FilePath, fields, catalogSummary)
                                                                If xmpRating.HasValue Then
                                                                    LibraryService.Instance.SetRating(item.FilePath, xmpRating.Value)
@@ -2874,6 +2874,7 @@ Namespace ViewModels
                                                                                                           item.ExifMetadataSummary = exifSummary
                                                                                                           item.IptcMetadataSummary = iptcSummary
                                                                                                           item.XmpMetadataSummary = xmpSummary
+                                                                                                          item.IccMetadataSummary = iccSummary
                                                                                                       End Sub)
                                                            Catch
                                                            End Try
@@ -3042,14 +3043,17 @@ Namespace ViewModels
                                      m.GpsLatitude.HasValue OrElse
                                      m.GpsLongitude.HasValue)
 
-                                ''' Einmalige Selbstheilung für Katalog-Einträge aus einer Version vor den
-                                ''' ExifSummary/IptcSummary/XmpSummary-Spalten: Flag ist gesetzt, aber der
-                                ''' Zusammenfassungstext fehlt noch - ohne diesen Nachtrag bliebe das
-                                ''' Metadaten-Hover-Overlay für Alt-Einträge dauerhaft leer.
+                                ''' Einmalige Selbstheilung für Katalog-Einträge, deren Zusammenfassungstexte
+                                ''' fehlen (Version vor den Summary-Spalten) oder aus einem älteren Format bzw.
+                                ''' einer anderen Anzeigesprache stammen (SummaryFormat-Stempel). Unveränderte
+                                ''' Dateien werden sonst nie wieder eingelesen - die alten Texte blieben also
+                                ''' dauerhaft im Overlay stehen.
                                 Dim needsSummaryBackfill =
                                     (m.HasExifMetadata AndAlso String.IsNullOrEmpty(m.ExifSummary)) OrElse
                                     (m.HasIptcMetadata AndAlso String.IsNullOrEmpty(m.IptcSummary)) OrElse
-                                    (m.HasXmpMetadata AndAlso String.IsNullOrEmpty(m.XmpSummary))
+                                    (m.HasXmpMetadata AndAlso String.IsNullOrEmpty(m.XmpSummary)) OrElse
+                                    (m.HasIccProfile AndAlso String.IsNullOrEmpty(m.IccSummary)) OrElse
+                                    Not String.Equals(m.SummaryFormat, ExifService.CurrentSummaryFormat, StringComparison.Ordinal)
 
                                 item.ImageWidth = m.ImageWidth.Value
                                 item.ImageHeight = m.ImageHeight.Value
@@ -3065,6 +3069,7 @@ Namespace ViewModels
                                 item.ExifMetadataSummary = m.ExifSummary
                                 item.IptcMetadataSummary = m.IptcSummary
                                 item.XmpMetadataSummary = m.XmpSummary
+                                item.IccMetadataSummary = m.IccSummary
                                 needsRefresh = needsMetadataFlagBackfill OrElse needsSummaryBackfill
                             Else
                                 needsRefresh = True

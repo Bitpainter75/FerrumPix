@@ -29,12 +29,17 @@ Namespace Services
         Public Property HasIptcMetadata As Boolean
         Public Property HasXmpMetadata As Boolean
         Public Property HasIccProfile As Boolean
-        ''' Vorformatierte "Name: Wert"-Zeilen (siehe GalleryViewModel.BuildMetadataSummary) für das
+        ''' Vorformatierte "Name: Wert"-Zeilen (siehe ExifService.BuildCatalogSummary) für das
         ''' Metadaten-Hover-Overlay - werden separat von den Has*Metadata-Flags gecacht, da diese sonst
         ''' bei jedem warmen Cache-Treffer leer blieben (Overlay zeigte "vorhanden", aber keinen Inhalt).
         Public Property ExifSummary As String = ""
         Public Property IptcSummary As String = ""
         Public Property XmpSummary As String = ""
+        Public Property IccSummary As String = ""
+        ''' <summary>Format+Sprache der obigen Summary-Texte (ExifService.CurrentSummaryFormat). Weicht der
+        ''' Stempel vom aktuellen ab, stammt der Eintrag aus einer älteren App-Version oder einer anderen
+        ''' Anzeigesprache und wird beim nächsten Ordner-Scan einmalig neu erzeugt.</summary>
+        Public Property SummaryFormat As String = ""
         ''' <summary>Dateisystem-LastWriteTime (ISO-8601), das zum Zeitpunkt der letzten erfolgreichen
         ''' EXIF-Extraktion galt. Dient als Invalidierungs-Schlüssel: stimmt dieser Wert noch mit dem
         ''' aktuellen Dateisystem-Änderungsdatum überein, müssen EXIF-Daten nicht erneut gelesen werden.</summary>
@@ -109,7 +114,9 @@ Namespace Services
             ("ExifSummary", "TEXT"),
             ("IptcSummary", "TEXT"),
             ("XmpSummary", "TEXT"),
-            ("HasIccProfile", "INTEGER NOT NULL DEFAULT 0")
+            ("HasIccProfile", "INTEGER NOT NULL DEFAULT 0"),
+            ("IccSummary", "TEXT"),
+            ("SummaryFormat", "TEXT")
         }
 
         Private Shared Sub EnsureExifColumns(conn As SqliteConnection)
@@ -319,8 +326,7 @@ Namespace Services
                 Return
             End If
 
-            SetExifData(filePath, exif, summary.HasExifMetadata, summary.HasIptcMetadata, summary.HasXmpMetadata,
-                        summary.ExifSummary, summary.IptcSummary, summary.XmpSummary, summary.HasIccProfile)
+            SetExifData(filePath, exif, summary)
         End Sub
 
         Private Shared Function ExifDataMatches(existing As LibraryImageMeta, exif As ExifSearchFields, summary As ExifCatalogSummary) As Boolean
@@ -331,6 +337,8 @@ Namespace Services
                    String.Equals(existing.ExifSummary, If(summary.ExifSummary, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.IptcSummary, If(summary.IptcSummary, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.XmpSummary, If(summary.XmpSummary, ""), StringComparison.Ordinal) AndAlso
+                   String.Equals(existing.IccSummary, If(summary.IccSummary, ""), StringComparison.Ordinal) AndAlso
+                   String.Equals(existing.SummaryFormat, If(summary.SummaryFormat, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.DateTaken, If(exif.DateTaken, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.DateModifiedExif, If(exif.DateModifiedExif, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.Camera, If(exif.Camera, ""), StringComparison.Ordinal) AndAlso
@@ -352,16 +360,8 @@ Namespace Services
         End Function
 
         ''' nächsten Ordner-Scan entscheidet, ob diese EXIF-Daten noch aktuell sind.</summary>
-        Public Sub SetExifData(filePath As String,
-                               exif As ExifSearchFields,
-                               Optional hasExifMetadata As Boolean = False,
-                               Optional hasIptcMetadata As Boolean = False,
-                               Optional hasXmpMetadata As Boolean = False,
-                               Optional exifSummary As String = "",
-                               Optional iptcSummary As String = "",
-                               Optional xmpSummary As String = "",
-                               Optional hasIccProfile As Boolean = False)
-            If String.IsNullOrWhiteSpace(filePath) OrElse exif Is Nothing Then Return
+        Public Sub SetExifData(filePath As String, exif As ExifSearchFields, summary As ExifCatalogSummary)
+            If String.IsNullOrWhiteSpace(filePath) OrElse exif Is Nothing OrElse summary Is Nothing Then Return
 
             Dim fileCreatedAt = ""
             Dim scannedSourceModifiedAt = ""
@@ -378,8 +378,8 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ExifSummary,IptcSummary,XmpSummary,HasIccProfile) " &
-                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$hasIccProfile) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
                         "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
@@ -389,6 +389,7 @@ Namespace Services
                         "HasIptcMetadata=excluded.HasIptcMetadata, HasXmpMetadata=excluded.HasXmpMetadata, " &
                         "ScannedSourceModifiedAt=excluded.ScannedSourceModifiedAt, " &
                         "ExifSummary=excluded.ExifSummary, IptcSummary=excluded.IptcSummary, XmpSummary=excluded.XmpSummary, " &
+                        "IccSummary=excluded.IccSummary, SummaryFormat=excluded.SummaryFormat, " &
                         "HasIccProfile=excluded.HasIccProfile"
                     cmd.Parameters.AddWithValue("$p", filePath)
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
@@ -404,21 +405,23 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$width", NullableToDbValue(exif.ImageWidth))
                     cmd.Parameters.AddWithValue("$height", NullableToDbValue(exif.ImageHeight))
                     cmd.Parameters.AddWithValue("$fileCreatedAt", fileCreatedAt)
-                    cmd.Parameters.AddWithValue("$hasExifMetadata", If(hasExifMetadata, 1, 0))
-                    cmd.Parameters.AddWithValue("$hasIptcMetadata", If(hasIptcMetadata, 1, 0))
-                    cmd.Parameters.AddWithValue("$hasXmpMetadata", If(hasXmpMetadata, 1, 0))
+                    cmd.Parameters.AddWithValue("$hasExifMetadata", If(summary.HasExifMetadata, 1, 0))
+                    cmd.Parameters.AddWithValue("$hasIptcMetadata", If(summary.HasIptcMetadata, 1, 0))
+                    cmd.Parameters.AddWithValue("$hasXmpMetadata", If(summary.HasXmpMetadata, 1, 0))
                     cmd.Parameters.AddWithValue("$scannedSourceModifiedAt", scannedSourceModifiedAt)
-                    cmd.Parameters.AddWithValue("$exifSummary", If(exifSummary, ""))
-                    cmd.Parameters.AddWithValue("$iptcSummary", If(iptcSummary, ""))
-                    cmd.Parameters.AddWithValue("$xmpSummary", If(xmpSummary, ""))
-                    cmd.Parameters.AddWithValue("$hasIccProfile", If(hasIccProfile, 1, 0))
+                    cmd.Parameters.AddWithValue("$exifSummary", If(summary.ExifSummary, ""))
+                    cmd.Parameters.AddWithValue("$iptcSummary", If(summary.IptcSummary, ""))
+                    cmd.Parameters.AddWithValue("$xmpSummary", If(summary.XmpSummary, ""))
+                    cmd.Parameters.AddWithValue("$iccSummary", If(summary.IccSummary, ""))
+                    cmd.Parameters.AddWithValue("$summaryFormat", If(summary.SummaryFormat, ""))
+                    cmd.Parameters.AddWithValue("$hasIccProfile", If(summary.HasIccProfile, 1, 0))
                     cmd.ExecuteNonQuery()
                 End Using
             End Using
         End Sub
 
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -446,7 +449,9 @@ Namespace Services
                 .ExifSummary = If(reader.IsDBNull(21), "", reader.GetString(21)),
                 .IptcSummary = If(reader.IsDBNull(22), "", reader.GetString(22)),
                 .XmpSummary = If(reader.IsDBNull(23), "", reader.GetString(23)),
-                .HasIccProfile = Not reader.IsDBNull(24) AndAlso reader.GetInt32(24) <> 0
+                .HasIccProfile = Not reader.IsDBNull(24) AndAlso reader.GetInt32(24) <> 0,
+                .IccSummary = If(reader.IsDBNull(25), "", reader.GetString(25)),
+                .SummaryFormat = If(reader.IsDBNull(26), "", reader.GetString(26))
             }
         End Function
 

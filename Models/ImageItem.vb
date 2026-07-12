@@ -382,6 +382,20 @@ Namespace Models
             End Set
         End Property
 
+        Private _iccMetadataSummary As String = ""
+        Public Property IccMetadataSummary As String
+            Get
+                Return _iccMetadataSummary
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _iccMetadataSummary = value Then Return
+                _iccMetadataSummary = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(CurrentMetadataOverlayText))
+            End Set
+        End Property
+
         Private _hoveredMetadataKind As String = ""
         Public Property HoveredMetadataKind As String
             Get
@@ -403,6 +417,7 @@ Namespace Models
                     Case "Exif" : Return "EXIF"
                     Case "Iptc" : Return "IPTC"
                     Case "Xmp" : Return "XMP"
+                    Case "Icc" : Return "ICC"
                     Case Else : Return ""
                 End Select
             End Get
@@ -414,6 +429,7 @@ Namespace Models
                     Case "Exif" : Return ExifMetadataSummary
                     Case "Iptc" : Return IptcMetadataSummary
                     Case "Xmp" : Return XmpMetadataSummary
+                    Case "Icc" : Return IccMetadataSummary
                     Case Else : Return ""
                 End Select
             End Get

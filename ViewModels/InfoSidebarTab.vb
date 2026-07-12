@@ -5,6 +5,7 @@ Namespace ViewModels
         Exif
         Iptc
         Xmp
+        Icc
     End Enum
 
 End Namespace
