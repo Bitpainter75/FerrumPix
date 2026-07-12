@@ -27,49 +27,57 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,62" VerticalAlignment="Center">
                 <TextBlock Text="Links" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="95"
+                <icons:RoundSlider Grid.Column="1" Minimum="0"
+                                   Maximum="{Binding CropMaxHorizontalPixels}"
                                    DefaultValue="0"
-                                   Value="{Binding CropLeft}" Margin="0,0" />
+                                   Value="{Binding CropLeftPixels}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding CropLeft, Mode=TwoWay}"
-                                         Minimum="0" Maximum="95" Increment="1"
-                                         FormatString="F0" />
+                                         Value="{Binding CropLeftPixels, Mode=TwoWay}"
+                                         Minimum="0" Maximum="{Binding CropMaxHorizontalPixels}"
+                                         Increment="1" FormatString="F0"
+                                         ToolTip.Tip="Pixel, die links abgeschnitten werden" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,62" VerticalAlignment="Center">
                 <TextBlock Text="Oben" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="95"
+                <icons:RoundSlider Grid.Column="1" Minimum="0"
+                                   Maximum="{Binding CropMaxVerticalPixels}"
                                    DefaultValue="0"
-                                   Value="{Binding CropTop}" Margin="0,0" />
+                                   Value="{Binding CropTopPixels}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding CropTop, Mode=TwoWay}"
-                                         Minimum="0" Maximum="95" Increment="1"
-                                         FormatString="F0" />
+                                         Value="{Binding CropTopPixels, Mode=TwoWay}"
+                                         Minimum="0" Maximum="{Binding CropMaxVerticalPixels}"
+                                         Increment="1" FormatString="F0"
+                                         ToolTip.Tip="Pixel, die oben abgeschnitten werden" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,62" VerticalAlignment="Center">
                 <TextBlock Text="Rechts" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="95"
+                <icons:RoundSlider Grid.Column="1" Minimum="0"
+                                   Maximum="{Binding CropMaxHorizontalPixels}"
                                    DefaultValue="0"
-                                   Value="{Binding CropRight}" Margin="0,0" />
+                                   Value="{Binding CropRightPixels}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding CropRight, Mode=TwoWay}"
-                                         Minimum="0" Maximum="95" Increment="1"
-                                         FormatString="F0" />
+                                         Value="{Binding CropRightPixels, Mode=TwoWay}"
+                                         Minimum="0" Maximum="{Binding CropMaxHorizontalPixels}"
+                                         Increment="1" FormatString="F0"
+                                         ToolTip.Tip="Pixel, die rechts abgeschnitten werden" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="74,*,62" VerticalAlignment="Center">
                 <TextBlock Text="Unten" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="95"
+                <icons:RoundSlider Grid.Column="1" Minimum="0"
+                                   Maximum="{Binding CropMaxVerticalPixels}"
                                    DefaultValue="0"
-                                   Value="{Binding CropBottom}" Margin="0,0" />
+                                   Value="{Binding CropBottomPixels}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding CropBottom, Mode=TwoWay}"
-                                         Minimum="0" Maximum="95" Increment="1"
-                                         FormatString="F0" />
+                                         Value="{Binding CropBottomPixels, Mode=TwoWay}"
+                                         Minimum="0" Maximum="{Binding CropMaxVerticalPixels}"
+                                         Increment="1" FormatString="F0"
+                                         ToolTip.Tip="Pixel, die unten abgeschnitten werden" />
             </Grid>
             <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"

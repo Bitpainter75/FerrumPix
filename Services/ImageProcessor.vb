@@ -1719,22 +1719,25 @@ Namespace Services
         End Function
 
         Private Shared Function ApplyCrop(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            Dim leftPct = Clamp(adj.CropLeftPercent, 0, 95) / 100.0F
-            Dim topPct = Clamp(adj.CropTopPercent, 0, 95) / 100.0F
-            Dim rightPct = Clamp(adj.CropRightPercent, 0, 95) / 100.0F
-            Dim bottomPct = Clamp(adj.CropBottomPercent, 0, 95) / 100.0F
+            Dim leftPct = Clamp(adj.CropLeftPercent, 0, 100) / 100.0F
+            Dim topPct = Clamp(adj.CropTopPercent, 0, 100) / 100.0F
+            Dim rightPct = Clamp(adj.CropRightPercent, 0, 100) / 100.0F
+            Dim bottomPct = Clamp(adj.CropBottomPercent, 0, 100) / 100.0F
 
             If leftPct = 0 AndAlso topPct = 0 AndAlso rightPct = 0 AndAlso bottomPct = 0 Then Return source
 
-            Dim left = CInt(Math.Round(source.Width * leftPct))
-            Dim top = CInt(Math.Round(source.Height * topPct))
-            Dim right = source.Width - CInt(Math.Round(source.Width * rightPct))
-            Dim bottom = source.Height - CInt(Math.Round(source.Height * bottomPct))
-
-            If right <= left + 1 OrElse bottom <= top + 1 Then Return source
+            ' Der Beschnitt kommt pixelgenau aus dem Editor, wird aber prozentual transportiert (die
+            ' Vorschau ist kleiner als das Original). Deshalb hier hart in gültige Pixelgrenzen zwingen,
+            ' statt bei zu engem Ausschnitt den Beschnitt stillschweigend fallen zu lassen: mindestens
+            ' ein Pixel bleibt stehen, die linke/obere Kante gewinnt.
+            Dim left = Math.Max(0, Math.Min(CInt(Math.Round(source.Width * leftPct)), source.Width - 1))
+            Dim top = Math.Max(0, Math.Min(CInt(Math.Round(source.Height * topPct)), source.Height - 1))
+            Dim right = Math.Max(left + 1, Math.Min(source.Width - CInt(Math.Round(source.Width * rightPct)), source.Width))
+            Dim bottom = Math.Max(top + 1, Math.Min(source.Height - CInt(Math.Round(source.Height * bottomPct)), source.Height))
 
             Dim cropWidth = right - left
             Dim cropHeight = bottom - top
+            If cropWidth = source.Width AndAlso cropHeight = source.Height Then Return source
             Dim result = New SKBitmap(cropWidth, cropHeight, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 Dim srcRect = New SKRect(left, top, right, bottom)

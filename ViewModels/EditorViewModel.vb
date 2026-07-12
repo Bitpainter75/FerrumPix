@@ -2723,7 +2723,7 @@ Namespace ViewModels
                 Return _cropLeft
             End Get
             Set(value As Double)
-                Dim clamped = ClampCropEdge(value, _cropRight)
+                Dim clamped = ClampCropEdge(value, _cropRight, MaxCropEdgePercent(EffectiveImageWidthPixels))
                 If Math.Abs(_cropLeft - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_cropLeft, clamped)
                 AfterCropChanged()
@@ -2736,7 +2736,7 @@ Namespace ViewModels
                 Return _cropTop
             End Get
             Set(value As Double)
-                Dim clamped = ClampCropEdge(value, _cropBottom)
+                Dim clamped = ClampCropEdge(value, _cropBottom, MaxCropEdgePercent(EffectiveImageHeightPixels))
                 If Math.Abs(_cropTop - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_cropTop, clamped)
                 AfterCropChanged()
@@ -2749,7 +2749,7 @@ Namespace ViewModels
                 Return _cropRight
             End Get
             Set(value As Double)
-                Dim clamped = ClampCropEdge(value, _cropLeft)
+                Dim clamped = ClampCropEdge(value, _cropLeft, MaxCropEdgePercent(EffectiveImageWidthPixels))
                 If Math.Abs(_cropRight - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_cropRight, clamped)
                 AfterCropChanged()
@@ -2762,12 +2762,77 @@ Namespace ViewModels
                 Return _cropBottom
             End Get
             Set(value As Double)
-                Dim clamped = ClampCropEdge(value, _cropTop)
+                Dim clamped = ClampCropEdge(value, _cropTop, MaxCropEdgePercent(EffectiveImageHeightPixels))
                 If Math.Abs(_cropBottom - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_cropBottom, clamped)
                 AfterCropChanged()
                 RaiseResetButtonStateChanged()
             End Set
+        End Property
+
+        ''' <summary>Die Kantenregler des Zuschneiden-Panels arbeiten in Pixeln des angezeigten Bildes.
+        ''' Intern bleibt der Beschnitt prozentual, weil Presets, das Ziehen im Overlay und die
+        ''' gespeicherten Adjustments auflösungsunabhängig sein müssen.</summary>
+        Public Property CropLeftPixels As Integer
+            Get
+                Return PercentToPixels(_cropLeft, EffectiveImageWidthPixels)
+            End Get
+            Set(value As Integer)
+                Dim basePixels = EffectiveImageWidthPixels
+                If basePixels <= 0 Then Return
+                CropLeft = PixelsToPercent(value, basePixels)
+                Me.RaisePropertyChanged(NameOf(CropLeftPixels))
+            End Set
+        End Property
+
+        Public Property CropTopPixels As Integer
+            Get
+                Return PercentToPixels(_cropTop, EffectiveImageHeightPixels)
+            End Get
+            Set(value As Integer)
+                Dim basePixels = EffectiveImageHeightPixels
+                If basePixels <= 0 Then Return
+                CropTop = PixelsToPercent(value, basePixels)
+                Me.RaisePropertyChanged(NameOf(CropTopPixels))
+            End Set
+        End Property
+
+        Public Property CropRightPixels As Integer
+            Get
+                Return PercentToPixels(_cropRight, EffectiveImageWidthPixels)
+            End Get
+            Set(value As Integer)
+                Dim basePixels = EffectiveImageWidthPixels
+                If basePixels <= 0 Then Return
+                CropRight = PixelsToPercent(value, basePixels)
+                Me.RaisePropertyChanged(NameOf(CropRightPixels))
+            End Set
+        End Property
+
+        Public Property CropBottomPixels As Integer
+            Get
+                Return PercentToPixels(_cropBottom, EffectiveImageHeightPixels)
+            End Get
+            Set(value As Integer)
+                Dim basePixels = EffectiveImageHeightPixels
+                If basePixels <= 0 Then Return
+                CropBottom = PixelsToPercent(value, basePixels)
+                Me.RaisePropertyChanged(NameOf(CropBottomPixels))
+            End Set
+        End Property
+
+        ''' Obergrenze der Kantenregler: alles bis auf ein Pixel des angezeigten Bildes. Die tatsächliche
+        ''' Grenze gegen die Gegenkante zieht der Setter, wie schon bei den Prozentwerten.
+        Public ReadOnly Property CropMaxHorizontalPixels As Integer
+            Get
+                Return Math.Max(1, EffectiveImageWidthPixels - 1)
+            End Get
+        End Property
+
+        Public ReadOnly Property CropMaxVerticalPixels As Integer
+            Get
+                Return Math.Max(1, EffectiveImageHeightPixels - 1)
+            End Get
         End Property
 
         Public Property CropWidthPixels As Integer
@@ -5967,19 +6032,32 @@ Namespace ViewModels
         ''' Kanten in den verbleibenden Ausschnitt hineingerechnet - erst dadurch lässt sich mehrfach
         ''' hintereinander zuschneiden. Danach ist der offene Beschnitt leer: das Auswahlrechteck legt
         ''' sich wieder um das ganze (neue) Bild, statt im alten Maßstab stehen zu bleiben.
+        ''' Addiert werden ganze Pixel des Originals: angewendeter und offener Beschnitt liegen im
+        ''' selben Raster (kein Neuabtasten dazwischen), also darf hier nichts runden. Nur das Ergebnis
+        ''' geht wieder als Prozent in die Adjustments.
         ''' </summary>
         Private Async Function ApplyCropAsync() As Task
             If Not HasCropChanges Then Return
             PushUndo()
             ClearActiveSelectionForGeometry()
 
-            Dim remainingWidth = 1.0 - (_appliedCropLeft + _appliedCropRight) / 100.0
-            Dim remainingHeight = 1.0 - (_appliedCropTop + _appliedCropBottom) / 100.0
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            If baseWidth > 0 AndAlso baseHeight > 0 Then
+                Dim leftPx = PercentToPixels(_appliedCropLeft, baseWidth) + CropLeftPixels
+                Dim rightPx = PercentToPixels(_appliedCropRight, baseWidth) + CropRightPixels
+                Dim topPx = PercentToPixels(_appliedCropTop, baseHeight) + CropTopPixels
+                Dim bottomPx = PercentToPixels(_appliedCropBottom, baseHeight) + CropBottomPixels
 
-            _appliedCropLeft += _cropLeft * remainingWidth
-            _appliedCropRight += _cropRight * remainingWidth
-            _appliedCropTop += _cropTop * remainingHeight
-            _appliedCropBottom += _cropBottom * remainingHeight
+                ' Ein Pixel muss stehen bleiben, sonst hätte das Ergebnis keine Fläche mehr.
+                rightPx = Math.Min(rightPx, Math.Max(0, baseWidth - 1 - leftPx))
+                bottomPx = Math.Min(bottomPx, Math.Max(0, baseHeight - 1 - topPx))
+
+                _appliedCropLeft = PixelsToPercent(leftPx, baseWidth)
+                _appliedCropRight = PixelsToPercent(rightPx, baseWidth)
+                _appliedCropTop = PixelsToPercent(topPx, baseHeight)
+                _appliedCropBottom = PixelsToPercent(bottomPx, baseHeight)
+            End If
 
             _cropLeft = 0
             _cropTop = 0
@@ -7017,12 +7095,17 @@ Namespace ViewModels
             RequestOverlayStateNotify()
         End Sub
 
-        Private Shared Function ClampPercent(value As Double) As Double
-            Return Math.Max(0, Math.Min(95, value))
+        ''' Grenze einer Beschnittkante: alles bis auf ein Pixel darf weg. Früher waren es pauschal 95%,
+        ''' was bei Pixeleingabe willkürlich wirkt (bei 6000 px blieben zwangsweise 300 px stehen).
+        Private Shared Function MaxCropEdgePercent(basePixels As Integer) As Double
+            If basePixels <= 1 Then Return 0
+            Return 100.0 - (100.0 / basePixels)
         End Function
 
-        Private Shared Function ClampCropEdge(value As Double, oppositeEdge As Double) As Double
-            Return Math.Max(0, Math.Min(95 - ClampPercent(oppositeEdge), ClampPercent(value)))
+        Private Shared Function ClampCropEdge(value As Double, oppositeEdge As Double, maxTotal As Double) As Double
+            Dim limit = Math.Max(0, maxTotal)
+            Dim opposite = Math.Max(0, Math.Min(limit, oppositeEdge))
+            Return Math.Max(0, Math.Min(limit - opposite, value))
         End Function
 
         Private Sub AfterCropChanged()
@@ -7033,6 +7116,12 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseCropPropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(CropLeftPixels))
+            Me.RaisePropertyChanged(NameOf(CropTopPixels))
+            Me.RaisePropertyChanged(NameOf(CropRightPixels))
+            Me.RaisePropertyChanged(NameOf(CropBottomPixels))
+            Me.RaisePropertyChanged(NameOf(CropMaxHorizontalPixels))
+            Me.RaisePropertyChanged(NameOf(CropMaxVerticalPixels))
             Me.RaisePropertyChanged(NameOf(CropWidthPixels))
             Me.RaisePropertyChanged(NameOf(CropHeightPixels))
             Me.RaisePropertyChanged(NameOf(OutputSizeText))
@@ -7132,13 +7221,15 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Maße des aktuell angezeigten Bildes, also nach dem bereits angewendeten Beschnitt.
-        ''' Bezugsgröße für das Auswahlrechteck, die Größenanzeige und die Pixel-Eingabefelder.</summary>
+        ''' Bezugsgröße für das Auswahlrechteck, die Größenanzeige und die Pixel-Eingabefelder.
+        ''' Gerechnet wird kantenweise in ganzen Pixeln - exakt so, wie ImageProcessor.ApplyCrop das
+        ''' Original beschneidet. Ein "remaining"-Prozentsatz auf die Gesamtbreite kann davon um ein
+        ''' Pixel abweichen, und dann zeigte das Panel eine andere Größe an, als die Datei bekommt.</summary>
         Public ReadOnly Property EffectiveImageWidthPixels As Integer
             Get
                 Dim width = GetBaseWidth()
                 If width <= 0 Then Return 0
-                Dim remaining = 1.0 - (_appliedCropLeft + _appliedCropRight) / 100.0
-                Return Math.Max(1, CInt(Math.Round(width * Math.Max(0.01, remaining))))
+                Return Math.Max(1, width - PercentToPixels(_appliedCropLeft, width) - PercentToPixels(_appliedCropRight, width))
             End Get
         End Property
 
@@ -7146,31 +7237,45 @@ Namespace ViewModels
             Get
                 Dim height = GetBaseHeight()
                 If height <= 0 Then Return 0
-                Dim remaining = 1.0 - (_appliedCropTop + _appliedCropBottom) / 100.0
-                Return Math.Max(1, CInt(Math.Round(height * Math.Max(0.01, remaining))))
+                Return Math.Max(1, height - PercentToPixels(_appliedCropTop, height) - PercentToPixels(_appliedCropBottom, height))
             End Get
         End Property
 
         ''' Maße nach dem angewendeten UND dem noch offenen Beschnitt - das, was ein "Anwenden" ergäbe.
+        ''' Der offene Beschnitt liegt im selben Pixelraster wie das angezeigte Bild (zwischen angewendetem
+        ''' und offenem Beschnitt wird nicht neu abgetastet), also ist das reine Ganzzahl-Arithmetik.
         Private Function GetCroppedWidth() As Integer
             Dim width = EffectiveImageWidthPixels
             If width <= 0 Then Return 0
-            Dim remaining = 1.0 - (_cropLeft + _cropRight) / 100.0
-            Return Math.Max(1, CInt(Math.Round(width * Math.Max(0.01, remaining))))
+            Return Math.Max(1, width - CropLeftPixels - CropRightPixels)
         End Function
 
         Private Function GetCroppedHeight() As Integer
             Dim height = EffectiveImageHeightPixels
             If height <= 0 Then Return 0
-            Dim remaining = 1.0 - (_cropTop + _cropBottom) / 100.0
-            Return Math.Max(1, CInt(Math.Round(height * Math.Max(0.01, remaining))))
+            Return Math.Max(1, height - CropTopPixels - CropBottomPixels)
+        End Function
+
+        ''' Pixel <-> Prozent: die Prozentwerte sind nur das auflösungsunabhängige Transportformat (die
+        ''' Vorschau ist kleiner als das Original, Presets gelten für jede Bildgröße). Gerundet wird
+        ''' überall mit derselben Regel, damit der Umweg über Prozent den eingegebenen Pixel zurückgibt.
+        Private Shared Function PercentToPixels(percent As Double, basePixels As Integer) As Integer
+            If basePixels <= 0 Then Return 0
+            Return Math.Max(0, Math.Min(basePixels, CInt(Math.Round(basePixels * percent / 100.0))))
+        End Function
+
+        Private Shared Function PixelsToPercent(pixels As Integer, basePixels As Integer) As Double
+            If basePixels <= 0 Then Return 0
+            Return Math.Max(0, Math.Min(basePixels, pixels)) / CDbl(basePixels) * 100.0
         End Function
 
         Private Sub SetCropValues(left As Double, top As Double, right As Double, bottom As Double)
-            _cropLeft = ClampPercent(left)
-            _cropRight = ClampCropEdge(right, _cropLeft)
-            _cropTop = ClampPercent(top)
-            _cropBottom = ClampCropEdge(bottom, _cropTop)
+            Dim maxHorizontal = MaxCropEdgePercent(EffectiveImageWidthPixels)
+            Dim maxVertical = MaxCropEdgePercent(EffectiveImageHeightPixels)
+            _cropLeft = ClampCropEdge(left, 0, maxHorizontal)
+            _cropRight = ClampCropEdge(right, _cropLeft, maxHorizontal)
+            _cropTop = ClampCropEdge(top, 0, maxVertical)
+            _cropBottom = ClampCropEdge(bottom, _cropTop, maxVertical)
             Me.RaisePropertyChanged(NameOf(CropLeft))
             Me.RaisePropertyChanged(NameOf(CropTop))
             Me.RaisePropertyChanged(NameOf(CropRight))
@@ -7187,23 +7292,21 @@ Namespace ViewModels
             Dim baseHeight = EffectiveImageHeightPixels
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return
 
-            Dim leftPx = CInt(Math.Round(baseWidth * _cropLeft / 100.0))
-            Dim topPx = CInt(Math.Round(baseHeight * _cropTop / 100.0))
+            Dim leftPx = CropLeftPixels
+            Dim topPx = CropTopPixels
             Dim clampedWidth = Math.Max(1, Math.Min(Math.Max(1, widthPixels), Math.Max(1, baseWidth - leftPx)))
             Dim clampedHeight = Math.Max(1, Math.Min(Math.Max(1, heightPixels), Math.Max(1, baseHeight - topPx)))
             Dim rightPx = Math.Max(0, baseWidth - leftPx - clampedWidth)
             Dim bottomPx = Math.Max(0, baseHeight - topPx - clampedHeight)
 
-            SetCropValues(leftPx / CDbl(baseWidth) * 100.0,
-                          topPx / CDbl(baseHeight) * 100.0,
-                          rightPx / CDbl(baseWidth) * 100.0,
-                          bottomPx / CDbl(baseHeight) * 100.0)
+            SetCropValues(PixelsToPercent(leftPx, baseWidth),
+                          PixelsToPercent(topPx, baseHeight),
+                          PixelsToPercent(rightPx, baseWidth),
+                          PixelsToPercent(bottomPx, baseHeight))
         End Sub
 
         Private Sub ApplyCropPreset(preset As String)
-            Dim width = GetBaseWidth()
-            Dim height = GetBaseHeight()
-            If width <= 0 OrElse height <= 0 Then Return
+            If EffectiveImageWidthPixels <= 0 OrElse EffectiveImageHeightPixels <= 0 Then Return
 
             Select Case If(preset, "").Trim()
                 Case "Original", "Frei"
@@ -7221,26 +7324,31 @@ Namespace ViewModels
             End Select
         End Sub
 
+        ''' Zielformat mittig aus dem ANGEZEIGTEN Bild schneiden (nicht aus dem Original - nach einem
+        ''' ersten Beschnitt hat das Original ein anderes Seitenverhältnis). Der Rest wird in ganzen
+        ''' Pixeln aufgeteilt; bei ungerader Differenz bekommt die rechte/untere Kante das Pixel mehr.
         Private Sub ApplyCenteredAspectCrop(targetAspect As Double)
-            Dim width = CDbl(GetBaseWidth())
-            Dim height = CDbl(GetBaseHeight())
+            Dim width = EffectiveImageWidthPixels
+            Dim height = EffectiveImageHeightPixels
             If width <= 0 OrElse height <= 0 OrElse targetAspect <= 0 Then Return
 
-            Dim currentAspect = width / height
-            If Math.Abs(currentAspect - targetAspect) < 0.001 Then
-                SetCropValues(0, 0, 0, 0)
-                Return
+            Dim targetWidth = width
+            Dim targetHeight = height
+            If width / CDbl(height) > targetAspect Then
+                targetWidth = Math.Max(1, Math.Min(width, CInt(Math.Round(height * targetAspect))))
+            Else
+                targetHeight = Math.Max(1, Math.Min(height, CInt(Math.Round(width / targetAspect))))
             End If
 
-            If currentAspect > targetAspect Then
-                Dim targetWidth = height * targetAspect
-                Dim eachSide = (width - targetWidth) / width * 50.0
-                SetCropValues(eachSide, 0, eachSide, 0)
-            Else
-                Dim targetHeight = width / targetAspect
-                Dim eachSide = (height - targetHeight) / height * 50.0
-                SetCropValues(0, eachSide, 0, eachSide)
-            End If
+            Dim leftPx = (width - targetWidth) \ 2
+            Dim rightPx = width - targetWidth - leftPx
+            Dim topPx = (height - targetHeight) \ 2
+            Dim bottomPx = height - targetHeight - topPx
+
+            SetCropValues(PixelsToPercent(leftPx, width),
+                          PixelsToPercent(topPx, height),
+                          PixelsToPercent(rightPx, width),
+                          PixelsToPercent(bottomPx, height))
         End Sub
 
         Private Sub SetResizeValues(width As Integer, height As Integer)
@@ -7938,7 +8046,18 @@ Namespace ViewModels
             RaiseResetButtonStateChanged()
         End Sub
 
+        ''' <summary>Beschnitt aus dem gezogenen Rahmen im Bild. Die Werte rasten auf ganze Bildpixel ein:
+        ''' geschnitten werden ohnehin nur ganze Pixel, und der Rahmen wird aus genau diesen Prozentwerten
+        ''' gezeichnet - ohne Einrasten stünde er bei hohem Zoom neben der Kante, die tatsächlich fällt.</summary>
         Public Sub SetCropPercentages(left As Double, top As Double, right As Double, bottom As Double)
+            Dim width = EffectiveImageWidthPixels
+            Dim height = EffectiveImageHeightPixels
+            If width > 0 AndAlso height > 0 Then
+                left = PixelsToPercent(PercentToPixels(left, width), width)
+                right = PixelsToPercent(PercentToPixels(right, width), width)
+                top = PixelsToPercent(PercentToPixels(top, height), height)
+                bottom = PixelsToPercent(PercentToPixels(bottom, height), height)
+            End If
             SetCropValues(left, top, right, bottom)
         End Sub
 
