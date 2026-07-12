@@ -35,7 +35,7 @@ FerrumPix is a desktop photo management and editing application for Linux and Wi
 
 <img src="Screenshots/Editor_Crop.png" />
 
-<img src="Screenshots/Editor_Resize.png" />
+<img src="Screenshots/Editor_Edit.png" />
 
 **Editor** 
 - Crop (with presets), image resize, rotate/straighten (with auto canvas expand), flip, and canvas resize with anchor picker
