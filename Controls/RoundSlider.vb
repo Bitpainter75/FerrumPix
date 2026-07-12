@@ -210,7 +210,7 @@ Namespace Controls
 
         Protected Overrides Sub OnPointerWheelChanged(e As PointerWheelEventArgs)
             MyBase.OnPointerWheelChanged(e)
-            Dim increment = If(WheelIncrement > 0, WheelIncrement, Math.Max(0.1, (Maximum - Minimum) * 0.0025))
+            Dim increment = If(WheelIncrement > 0, WheelIncrement, 1.0)
             Value = ClampValue(Value + e.Delta.Y * increment)
             e.Handled = True
         End Sub

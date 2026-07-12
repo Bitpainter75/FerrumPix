@@ -211,6 +211,7 @@ Namespace ViewModels
         Private _annotationShadowEnabled As Boolean = False
         Private _annotationShadowOffsetX As Double = 2
         Private _annotationShadowOffsetY As Double = 2
+        Private _annotationShadowLightAngle As Double = 225
         Private _annotationShadowBlur As Double = 6
         Private _annotationShadowStrength As Double = 100
         Private _annotationShadowColor As String = "#80000000"
@@ -3388,7 +3389,10 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationShadowOffsetX, Math.Max(-100, Math.Min(100, value)))
-                Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+                If _isLoadingAnnotation Then
+                    _annotationShadowLightAngle = ComputeShadowLightAngle(_annotationShadowOffsetX, _annotationShadowOffsetY)
+                    Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+                End If
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -3399,20 +3403,25 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationShadowOffsetY, Math.Max(-100, Math.Min(100, value)))
-                Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+                If _isLoadingAnnotation Then
+                    _annotationShadowLightAngle = ComputeShadowLightAngle(_annotationShadowOffsetX, _annotationShadowOffsetY)
+                    Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+                End If
                 SyncSelectedAnnotation()
             End Set
         End Property
 
         Public Property AnnotationShadowLightAngle As Double
             Get
-                Dim shadowAngle = Math.Atan2(_annotationShadowOffsetY, _annotationShadowOffsetX) * 180.0 / Math.PI
-                Return (shadowAngle + 180.0 + 360.0) Mod 360.0
+                Return _annotationShadowLightAngle
             End Get
             Set(value As Double)
+                Dim normalized = NormalizeDegrees(value)
+                If Math.Abs(normalized - _annotationShadowLightAngle) < 0.0001 Then Return
+                _annotationShadowLightAngle = normalized
                 Dim distance = Math.Sqrt(_annotationShadowOffsetX * _annotationShadowOffsetX + _annotationShadowOffsetY * _annotationShadowOffsetY)
                 If distance < 1 Then distance = 6
-                Dim shadowAngle = (value + 180.0) * Math.PI / 180.0
+                Dim shadowAngle = (_annotationShadowLightAngle + 180.0) * Math.PI / 180.0
                 _annotationShadowOffsetX = Math.Max(-100, Math.Min(100, Math.Cos(shadowAngle) * distance))
                 _annotationShadowOffsetY = Math.Max(-100, Math.Min(100, Math.Sin(shadowAngle) * distance))
                 Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetX))
@@ -3421,6 +3430,16 @@ Namespace ViewModels
                 SyncSelectedAnnotation()
             End Set
         End Property
+
+        Private Shared Function ComputeShadowLightAngle(offsetX As Double, offsetY As Double) As Double
+            Dim shadowAngle = Math.Atan2(offsetY, offsetX) * 180.0 / Math.PI
+            Return NormalizeDegrees(shadowAngle + 180.0)
+        End Function
+
+        Private Shared Function NormalizeDegrees(value As Double) As Double
+            If Double.IsNaN(value) OrElse Double.IsInfinity(value) Then Return 0
+            Return (value Mod 360.0 + 360.0) Mod 360.0
+        End Function
 
         Public Property AnnotationShadowBlur As Double
             Get
@@ -6981,6 +7000,7 @@ Namespace ViewModels
             _annotationShadowEnabled = False
             _annotationShadowOffsetX = 2
             _annotationShadowOffsetY = 2
+            _annotationShadowLightAngle = ComputeShadowLightAngle(_annotationShadowOffsetX, _annotationShadowOffsetY)
             _annotationShadowBlur = 6
             _annotationShadowStrength = 100
             _annotationShadowColor = "#80000000"
