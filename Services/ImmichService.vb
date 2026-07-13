@@ -1106,11 +1106,21 @@ Namespace Services
                 Dim client = GetClient()
                 Using resp = Await client.GetAsync(ApiUrl($"assets/{Uri.EscapeDataString(assetId)}/original"), HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(False)
                     If Not resp.IsSuccessStatusCode Then Return Nothing
-                    Dim tempPath = targetPath & ".part"
-                    Using fs = File.Create(tempPath)
-                        Await resp.Content.CopyToAsync(fs, cancellationToken).ConfigureAwait(False)
-                    End Using
-                    File.Move(tempPath, targetPath, overwrite:=True)
+                    ' Die Zwischendatei je Abruf eindeutig benennen: laden zwei Stellen dasselbe Asset
+                    ' gleichzeitig (Viewer und Filmstreifen, Stapelverarbeitung), griffen sie sonst nach
+                    ' derselben „{assetId}.part" und eine von beiden stürbe an „file in use".
+                    Dim tempPath = $"{targetPath}.{Guid.NewGuid():N}.part"
+                    Try
+                        Using fs = File.Create(tempPath)
+                            Await resp.Content.CopyToAsync(fs, cancellationToken).ConfigureAwait(False)
+                        End Using
+                        File.Move(tempPath, targetPath, overwrite:=True)
+                    Finally
+                        Try
+                            If File.Exists(tempPath) Then File.Delete(tempPath)
+                        Catch
+                        End Try
+                    End Try
                     Return targetPath
                 End Using
             Catch ex As OperationCanceledException

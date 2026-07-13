@@ -40,8 +40,13 @@ Namespace Services
             If Not App.IsVideoPlaybackAvailable Then Return Nothing
             If Not IsSupportedVideo(filePath) OrElse Not File.Exists(filePath) Then Return Nothing
 
+            Dim name = Path.GetFileName(filePath)
             Dim surface = HeadlessVideoSurface.Acquire(GetSharedLibVlc(), timeoutMs)
-            If surface Is Nothing Then Return Nothing
+            If surface Is Nothing Then
+                ' Es gibt genau EINE Headless-Oberfläche; hier wartete jemand anderes zu lange auf sie.
+                DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: Headless-Oberfläche nicht bekommen (belegt)")
+                Return Nothing
+            End If
 
             Dim tempPath = Path.Combine(Path.GetTempPath(), $"ferrumpix_vthumb_{Guid.NewGuid():N}.png")
             Dim media As Media = Nothing
@@ -51,7 +56,10 @@ Namespace Services
             Dim player = surface.MediaPlayer
 
             Try
-                media = New Media(GetSharedLibVlc(), filePath, FromType.FromPath, {":avcodec-hw=none"})
+                ' input-repeat: kurze Clips (ein paar Sekunden) sind sonst durchgelaufen, bevor der erste
+                ' Schnappschuss gelingt - danach steht der Player und JEDER weitere Versuch scheitert, bis
+                ' der Zeitrahmen abläuft. In der Schleife zu bleiben heißt: es gibt immer noch ein Bild.
+                media = New Media(GetSharedLibVlc(), filePath, FromType.FromPath, {":avcodec-hw=none", ":input-repeat=65535"})
                 player.Mute = True
 
                 playingHandler = Sub(s As Object, e As EventArgs) playingSignal.Set()
@@ -59,9 +67,18 @@ Namespace Services
                 AddHandler player.Playing, playingHandler
                 AddHandler player.EncounteredError, errorHandler
 
-                If Not player.Play(media) Then Return Nothing
-                If Not playingSignal.Wait(timeoutMs) Then Return Nothing
-                If Not player.IsPlaying Then Return Nothing
+                If Not player.Play(media) Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: Play() abgelehnt")
+                    Return Nothing
+                End If
+                If Not playingSignal.Wait(timeoutMs) Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: kein Playing-Ereignis binnen {timeoutMs} ms")
+                    Return Nothing
+                End If
+                If Not player.IsPlaying Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: Wiedergabe kam nicht zustande (EncounteredError)")
+                    Return Nothing
+                End If
 
                 ' Etwas in die Datei hineinseeken, damit nicht zufällig ein schwarzes
                 ' Startbild als Thumbnail landet, danach kurz warten, bis der Frame an der
@@ -74,20 +91,25 @@ Namespace Services
                     Thread.Sleep(150)
                 End If
 
+                Dim attempts = 0
                 Dim deadline = Environment.TickCount64 + timeoutMs
                 Do
                     Try
+                        attempts += 1
                         If player.TakeSnapshot(0, tempPath, CUInt(Math.Max(1, maxDimension)), 0UI) AndAlso
                            File.Exists(tempPath) AndAlso New FileInfo(tempPath).Length > 0 Then
                             Return ApplyVideoOrientation(File.ReadAllBytes(tempPath), GetVideoOrientation(media))
                         End If
-                    Catch
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Video.Thumbnail", ex)
                     End Try
                     Thread.Sleep(150)
                 Loop While Environment.TickCount64 < deadline
 
+                DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: kein Schnappschuss nach {attempts} Versuchen (Länge {length} ms)")
                 Return Nothing
-            Catch
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Video.Thumbnail", ex)
                 Return Nothing
             Finally
                 If playingHandler IsNot Nothing Then RemoveHandler player.Playing, playingHandler

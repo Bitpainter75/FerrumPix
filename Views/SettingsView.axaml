@@ -86,15 +86,11 @@
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="18" MaxWidth="960" Margin="0,0,0,0">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Einstellungen" FontSize="{DynamicResource FP.Font.Display}" FontWeight="SemiBold"/>
-                    <TextBlock Text="Alle Optionen für Oberfläche, Galerie und Bildansicht." Foreground="{DynamicResource FP.Text.Secondary}"/>
-                </StackPanel>
 
                 <Border x:Name="GeneralSection" Classes="section">
                     <StackPanel Spacing="16">
-                        <Border Height="170" Background="{DynamicResource FP.Bg.Input}" BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="8" Padding="0, 22">
-                            <Grid>
+                        <Border Height="180" BorderThickness="0" Padding="0, 20" Margin="-22,0,0,0" >
+                            <Grid HorizontalAlignment="Center">
                                 <Image Source="avares://FerrumPix/Assets/FerrumPix_SettingsDark.png"
                                        Stretch="Uniform"
                                        HorizontalAlignment="Left"
@@ -106,12 +102,10 @@
                             </Grid>
                         </Border>
 
-                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" ColumnSpacing="12">
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" ColumnSpacing="12" >
                             <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}"/>
                             <TextBlock Grid.Column="1" Text="{Binding DisplayVersion}"/>
                         </Grid>
-
-                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
@@ -125,8 +119,6 @@
                                 </StackPanel>
                             </Button>
                         </Grid>
-
-                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
