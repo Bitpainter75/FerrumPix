@@ -14,7 +14,7 @@ FerrumPix is in active development. The gallery, viewer, editor, settings and Im
 - View photos fullscreen with zoom, pan, filmstrip navigation, metadata and histogram.
 - Edit photos with crop, resize, rotate, color tools, tone curves, filters, text, shapes, paint tools and selections.
 - Run batch work from the gallery, including rename, convert, resize, watermark, metadata removal and filters.
-- Work with RAW files, common image formats and video thumbnails.
+- Work with common image and video formats.
 - Connect to a self-hosted Immich server for browsing, upload, download, editing and metadata sync.
 
 ## Gallery
