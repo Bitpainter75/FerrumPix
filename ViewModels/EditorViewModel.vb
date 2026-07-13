@@ -252,6 +252,8 @@ Namespace ViewModels
         ' Maske Nothing (dann greift der einfache Rechteck-Pfad).
         Private _selectionMode As String = "Rectangle"
         Private _selectionTolerance As Double = 15
+        ' Weiche Kante der Auswahl in Bildpixeln (0 = harte Kante). Die MASKE bleibt hart gespeichert.
+        Private _selectionFeather As Double = 0
         Private _selectionCombineMode As String = "New"
         Private _selectionMask As SKBitmap = Nothing
         Private _selectionMaskRect As SKRectI = SKRectI.Empty
@@ -548,7 +550,7 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowSelectedSvgOverlay As Boolean
             Get
-                Return _selectedAnnotationOverlayImage IsNot Nothing
+                Return _selectedAnnotationOverlayImage IsNot Nothing AndAlso Not IsObjectAdjustTool(_currentTool)
             End Get
         End Property
 
@@ -1608,6 +1610,7 @@ Namespace ViewModels
                 End If
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
+                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
                 RaiseToolContextProperties()
                 ' Werkzeugwechsel kann das Ziel der Regler umschalten (Objekt <-> Bild).
                 RefreshObjectAdjustMode()
@@ -3892,6 +3895,22 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Weiche Kante der Auswahl in Bildpixeln. Wirkt auf Anpassungen innerhalb der Auswahl,
+        ''' auf „Kopieren" und auf „Auswahl füllen" - die gespeicherte Maske bleibt pixelgenau, weich wird
+        ''' erst das Ergebnis. Darum lässt sich der Wert jederzeit nachträglich ändern.</summary>
+        Public Property SelectionFeather As Double
+            Get
+                Return _selectionFeather
+            End Get
+            Set(value As Double)
+                Dim clamped = Math.Max(0, Math.Min(200, value))
+                If Math.Abs(_selectionFeather - clamped) < 0.0001 Then Return
+                CaptureUndoState("SelectionFeather")
+                Me.RaiseAndSetIfChanged(_selectionFeather, clamped)
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
         Private Sub SetSelectionMaskData(mask As SKBitmap, rectPx As SKRectI)
             If _selectionMask IsNot Nothing AndAlso Not Object.ReferenceEquals(_selectionMask, mask) Then _selectionMask.Dispose()
             _selectionMask = mask
@@ -4469,6 +4488,14 @@ Namespace ViewModels
         ''' das Auswahlrechteck zu und sichert ihn als temporäre PNG (Muster wie VideoPreviewService) -
         ''' gemeinsame Grundlage für den direkten "Kopieren"-Button und für Strg+C/Strg+V.
         Private Function CropSelectionToTempFile() As String
+            Dim placement As SKRectI
+            Return CropSelectionToTempFile(placement)
+        End Function
+
+        ''' <param name="placementPx">Das Rechteck, an dem das Ergebnis im Bild sitzt. Mit weicher Kante ist
+        ''' es GRÖSSER als die Auswahl - die Kante läuft nach außen aus, und der Ausschnitt muss den Platz
+        ''' dafür mitbringen, sonst wäre die weiche Kante an der Auswahlgrenze abgeschnitten.</param>
+        Private Function CropSelectionToTempFile(ByRef placementPx As SKRectI) As String
             If Not _hasActiveSelection OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return Nothing
             Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
@@ -4479,17 +4506,93 @@ Namespace ViewModels
             Dim width = CInt(Math.Round(baseWidth * _selectionWidthPercent / 100.0))
             Dim height = CInt(Math.Round(baseHeight * _selectionHeightPercent / 100.0))
             If width <= 0 OrElse height <= 0 Then Return Nothing
+            placementPx = New SKRectI(left, top, left + width, top + height)
 
             Dim tempPath = IO.Path.Combine(IO.Path.GetTempPath(), $"ferrumpix_selection_{Guid.NewGuid():N}.png")
             Dim adj = GetCurrentAdjustments()
-            If _selectionMask IsNot Nothing Then
-                ' Unregelmäßige Auswahl (Ellipse/Lasso/Zauberstab): mit Maske freischneiden.
-                If Not ImageProcessor.ExtractRegionToFileMasked(_currentImagePath, adj, _selectionMaskRect, _selectionMask, tempPath) Then Return Nothing
+            If _selectionMask IsNot Nothing OrElse _selectionFeather > 0.05 Then
+                ' Maskierte Auswahl: unregelmäßige Auswahl immer, Rechtecke sobald eine weiche Kante aktiv ist.
+                Dim ownsMask As Boolean
+                Dim maskRect As SKRectI
+                Dim mask = GetSelectionMaskForOutput(maskRect, ownsMask)
+                Try
+                    If mask Is Nothing Then Return Nothing
+                    placementPx = maskRect
+                    If Not ImageProcessor.ExtractRegionToFileMasked(_currentImagePath, adj, maskRect, mask, tempPath) Then Return Nothing
+                Finally
+                    If ownsMask Then mask.Dispose()
+                End Try
             Else
-                Dim pixelRect = New SKRectI(left, top, left + width, top + height)
-                If Not ImageProcessor.ExtractRegionToFile(_currentImagePath, adj, pixelRect, tempPath) Then Return Nothing
+                If Not ImageProcessor.ExtractRegionToFile(_currentImagePath, adj, placementPx, tempPath) Then Return Nothing
             End If
             Return tempPath
+        End Function
+
+        ''' <summary>Die Maske, mit der ausgeschnitten oder gefüllt wird: ohne weiche Kante die gespeicherte
+        ''' (harte, pixelgenaue) Maske selbst, mit weicher Kante eine weichgezeichnete, nach außen erweiterte
+        ''' Kopie samt passendem Rechteck. <paramref name="ownsMask"/> sagt dem Aufrufer, ob er sie freigeben
+        ''' muss - die gespeicherte Maske darf er NICHT freigeben.</summary>
+        Private Function GetSelectionMaskForOutput(ByRef rectPx As SKRectI, ByRef ownsMask As Boolean) As SKBitmap
+            ownsMask = False
+            If _selectionMask IsNot Nothing Then
+                rectPx = _selectionMaskRect
+                If _selectionFeather <= 0.05 Then Return _selectionMask
+
+                Dim expanded As SKRectI
+                Dim feathered = ImageProcessor.BuildFeatheredMask(_selectionMask, _selectionMaskRect, CSng(_selectionFeather), expanded)
+                If feathered Is Nothing Then Return _selectionMask
+                ownsMask = True
+                Return ClampOutputMaskToImage(feathered, expanded, rectPx)
+            End If
+
+            rectPx = SelectionRectPixels()
+            If rectPx.Width <= 0 OrElse rectPx.Height <= 0 OrElse _selectionFeather <= 0.05 Then Return Nothing
+
+            Using hardMask = CreateSolidMask(rectPx.Width, rectPx.Height)
+                Dim expanded As SKRectI
+                Dim feathered = ImageProcessor.BuildFeatheredMask(hardMask, rectPx, CSng(_selectionFeather), expanded)
+                If feathered Is Nothing Then Return Nothing
+                ownsMask = True
+                Return ClampOutputMaskToImage(feathered, expanded, rectPx)
+            End Using
+        End Function
+
+        Private Function ClampOutputMaskToImage(mask As SKBitmap, expandedRect As SKRectI, ByRef clampedRect As SKRectI) As SKBitmap
+            clampedRect = expandedRect
+            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            If mask Is Nothing OrElse bw <= 0 OrElse bh <= 0 Then Return mask
+
+            Dim left = Math.Max(0, expandedRect.Left)
+            Dim top = Math.Max(0, expandedRect.Top)
+            Dim right = Math.Min(bw, expandedRect.Right)
+            Dim bottom = Math.Min(bh, expandedRect.Bottom)
+            If left = expandedRect.Left AndAlso top = expandedRect.Top AndAlso
+               right = expandedRect.Right AndAlso bottom = expandedRect.Bottom Then
+                Return mask
+            End If
+
+            Dim width = right - left, height = bottom - top
+            If width <= 0 OrElse height <= 0 Then Return mask
+
+            Dim cropped = New SKBitmap(width, height, SKColorType.Alpha8, SKAlphaType.Premul)
+            Using canvas = New SKCanvas(cropped)
+                canvas.Clear(SKColors.Transparent)
+                Dim srcLeft = left - expandedRect.Left
+                Dim srcTop = top - expandedRect.Top
+                canvas.DrawBitmap(mask,
+                                  New SKRect(srcLeft, srcTop, srcLeft + width, srcTop + height),
+                                  New SKRect(0, 0, width, height))
+            End Using
+            mask.Dispose()
+            clampedRect = New SKRectI(left, top, right, bottom)
+            Return cropped
+        End Function
+
+        Private Function PixelRectToPercent(rectPx As SKRectI) As (X As Double, Y As Double, W As Double, H As Double)
+            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            If bw <= 0 OrElse bh <= 0 Then Return (0, 0, 0, 0)
+            Return (rectPx.Left * 100.0 / bw, rectPx.Top * 100.0 / bh,
+                    rectPx.Width * 100.0 / bw, rectPx.Height * 100.0 / bh)
         End Function
 
         Private _nextSelectionObjectNumber As Integer = 1
@@ -4534,9 +4637,13 @@ Namespace ViewModels
         End Sub
 
         Public Sub CopySelectionToNewObject()
-            Dim tempPath = CropSelectionToTempFile()
+            Dim placement As SKRectI
+            Dim tempPath = CropSelectionToTempFile(placement)
             If tempPath Is Nothing Then Return
-            AddSelectionImageAnnotationAt(tempPath, _selectionXPercent, _selectionYPercent, _selectionWidthPercent, _selectionHeightPercent)
+            ' Das Objekt sitzt am AUSGESCHNITTENEN Rechteck - mit weicher Kante ist das größer als die
+            ' Auswahl. An den Auswahlwerten platziert, würde der Ausschnitt gestaucht.
+            Dim p = PixelRectToPercent(placement)
+            AddSelectionImageAnnotationAt(tempPath, p.X, p.Y, p.W, p.H)
             AddHistoryEntry("Auswahl kopiert")
         End Sub
 
@@ -4674,13 +4781,15 @@ Namespace ViewModels
         End Sub
 
         Public Function CopySelectionToClipboardFile() As String
-            Dim tempPath = CropSelectionToTempFile()
+            Dim placement As SKRectI
+            Dim tempPath = CropSelectionToTempFile(placement)
             If tempPath Is Nothing Then Return Nothing
+            Dim p = PixelRectToPercent(placement)
             _selectionClipboardPath = tempPath
-            _selectionClipboardXPercent = _selectionXPercent
-            _selectionClipboardYPercent = _selectionYPercent
-            _selectionClipboardWidthPercent = _selectionWidthPercent
-            _selectionClipboardHeightPercent = _selectionHeightPercent
+            _selectionClipboardXPercent = p.X
+            _selectionClipboardYPercent = p.Y
+            _selectionClipboardWidthPercent = p.W
+            _selectionClipboardHeightPercent = p.H
             _selectionClipboardPasteCount = 0
             Return tempPath
         End Function
@@ -4700,14 +4809,24 @@ Namespace ViewModels
         Public Sub FillSelection()
             If Not _hasActiveSelection Then Return
 
-            ' Unregelmäßige Auswahl: die Füllung entsteht als maskierte PNG und wird als bewegliches
-            ' Bild-Objekt eingefügt (Vollfarbe). Verläufe bleiben dem Rechteck vorbehalten.
-            If _selectionMask IsNot Nothing Then
+            ' Maskierte Auswahl: unregelmäßige Auswahl immer, Rechtecke sobald eine weiche Kante aktiv ist.
+            If _selectionMask IsNot Nothing OrElse _selectionFeather > 0.05 Then
                 Dim tempPath = IO.Path.Combine(IO.Path.GetTempPath(), $"ferrumpix_fill_{Guid.NewGuid():N}.png")
-                If ImageProcessor.RenderMaskedFillToFile(_selectionMask, _annotationFillColor, tempPath) Then
-                    AddSelectionImageAnnotationAt(tempPath, _selectionXPercent, _selectionYPercent, _selectionWidthPercent, _selectionHeightPercent)
-                    AddHistoryEntry("Auswahl gefüllt")
-                End If
+                Dim ownsMask As Boolean
+                Dim maskRect As SKRectI
+                Dim mask = GetSelectionMaskForOutput(maskRect, ownsMask)
+                Try
+                    If mask Is Nothing Then Return
+                    If ImageProcessor.RenderMaskedFillToFile(mask, _annotationFillColor, _annotationFillKind,
+                                                             _annotationFillColor2, CSng(_annotationGradientAngle),
+                                                             _annotationGradientInverted, tempPath) Then
+                        Dim p = PixelRectToPercent(maskRect)
+                        AddSelectionImageAnnotationAt(tempPath, p.X, p.Y, p.W, p.H)
+                        AddHistoryEntry("Auswahl gefüllt")
+                    End If
+                Finally
+                    If ownsMask Then mask.Dispose()
+                End Try
                 Return
             End If
 
@@ -6121,11 +6240,11 @@ Namespace ViewModels
             End Select
         End Function
 
-        ''' Ob das selektierte Text-/Wasserzeichen-Objekt aktuell per Live-Overlay dargestellt wird
+        ''' Ob das selektierte Objekt aktuell per Live-Overlay dargestellt wird
         ''' und deshalb im gebackenen Vorschaubild ausgeblendet werden muss (siehe GetCurrentAdjustments).
         Private Function ComputesOverlayHidesSelection() As Boolean
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
-            If _currentTool <> EditorTool.Text AndAlso _currentTool <> EditorTool.Insert AndAlso _currentTool <> EditorTool.Geometry AndAlso _currentTool <> EditorTool.Selection Then Return False
+            If Not IsLayerTool(_currentTool) OrElse IsObjectAdjustTool(_currentTool) Then Return False
             Dim selected = _annotations(_selectedAnnotationIndex)
             Return IsTextualAnnotationKind(selected.Kind) OrElse UsesRenderedSelectionOverlay(selected)
         End Function
@@ -6790,7 +6909,8 @@ Namespace ViewModels
                 .SelectionMaskTop = _selectionMaskRect.Top,
                 .SelectionMaskRight = _selectionMaskRect.Right,
                 .SelectionMaskBottom = _selectionMaskRect.Bottom,
-                .SelectionMaskPngBase64 = EncodeSelectionMaskBase64()
+                .SelectionMaskPngBase64 = EncodeSelectionMaskBase64(),
+                .SelectionFeatherPixels = CSng(_selectionFeather)
             }
 
             ' Während die Text-/Wasserzeichen-Ebene per Canvas-Overlay live bearbeitet wird, zeigt das
@@ -7120,6 +7240,8 @@ Namespace ViewModels
             End If
             ClearSelectionMask()
             _hasActiveSelection = adj.HasActiveSelection
+            _selectionFeather = adj.SelectionFeatherPixels
+            Me.RaisePropertyChanged(NameOf(SelectionFeather))
             _selectionXPercent = adj.SelectionXPercent
             _selectionYPercent = adj.SelectionYPercent
             _selectionWidthPercent = adj.SelectionWidthPercent

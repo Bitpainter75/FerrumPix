@@ -2804,4 +2804,7 @@
   <data name="Die_Regler_wirken_auf_das_markierte_Objekt_Ohne__f07120c1" xml:space="preserve">
     <value>Die Regler wirken auf das markierte Objekt. Ohne markiertes Objekt auf das ganze Bild.</value>
   </data>
+  <data name="L_sst_die_Auswahlkante_ber_die_angegebene_Anzahl_fc252c93" xml:space="preserve">
+    <value>Lässt die Auswahlkante über die angegebene Anzahl Bildpixel weich auslaufen (0 = harte Kante)</value>
+  </data>
 </root>

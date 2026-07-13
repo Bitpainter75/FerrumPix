@@ -770,6 +770,11 @@ Namespace Services
         Public Property SelectionMaskBottom As Integer = 0
         Public Property SelectionMaskPngBase64 As String = ""
 
+        ''' <summary>Weiche Kante der Auswahl in BILDpixeln. Die gespeicherte Maske bleibt hart und
+        ''' pixelgenau - weich wird die Kante erst bei der Verwendung (Anpassungs-Skopus, Kopieren, Füllen).
+        ''' So lässt sich der Wert jederzeit ändern, ohne die Auswahl neu zu ziehen.</summary>
+        Public Property SelectionFeatherPixels As Single = 0
+
         Public Shared Function IsIdentityCurve(pointsCsv As String) As Boolean
             Return String.IsNullOrWhiteSpace(pointsCsv) OrElse String.Equals(pointsCsv.Trim(), "0,0;255,255", StringComparison.Ordinal)
         End Function
@@ -804,7 +809,7 @@ Namespace Services
             "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
-            "SelectionMaskPngBase64"
+            "SelectionMaskPngBase64", "SelectionFeatherPixels"
         }
 
         Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing
@@ -959,7 +964,8 @@ Namespace Services
                 .SelectionMaskTop = SelectionMaskTop,
                 .SelectionMaskRight = SelectionMaskRight,
                 .SelectionMaskBottom = SelectionMaskBottom,
-                .SelectionMaskPngBase64 = SelectionMaskPngBase64
+                .SelectionMaskPngBase64 = SelectionMaskPngBase64,
+                .SelectionFeatherPixels = SelectionFeatherPixels
             }
         End Function
     End Class
@@ -1263,6 +1269,23 @@ Namespace Services
                     End If
                     DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
                 End Using
+
+                If HasObjectAdjustments(renderAnnotation) Then
+                    Dim objectAdj = renderAnnotation.Adjustments.ExtractPixelAdjustments()
+                    objectAdj.SourceWidthPixels = width
+                    objectAdj.SourceHeightPixels = height
+                    Using processed = ProcessBitmapBase(bitmap, objectAdj)
+                        Return New AnnotationOverlayRender With {
+                            .Image = ToAvaloniaBitmap(processed),
+                            .BitmapWidth = width,
+                            .BitmapHeight = height,
+                            .ObjectX = leftPad,
+                            .ObjectY = topPad,
+                            .ObjectWidth = objW,
+                            .ObjectHeight = objH
+                        }
+                    End Using
+                End If
 
                 Return New AnnotationOverlayRender With {
                     .Image = ToAvaloniaBitmap(bitmap),
@@ -1629,7 +1652,63 @@ Namespace Services
         ''' (<paramref name="targetW"/>×<paramref name="targetH"/>). Unregelmäßige Auswahlen kommen aus der
         ''' gespeicherten Alpha8-Maske (Basisbild-Pixel, per Nearest-Sampling auf die Zielgröße gebracht),
         ''' Rechtecke direkt aus den Prozentwerten. Liefert Nothing, wenn keine nutzbare Auswahl vorliegt.</summary>
+        ''' <summary>Weiche Kante: zeichnet die Alpha8-Maske mit Weichzeichner in eine neue Maske gleicher
+        ''' Größe. Skias Sigma entspricht etwa dem halben Radius. Nothing, wenn nichts zu tun ist.</summary>
+        Private Shared Function BlurAlphaMask(mask As SKBitmap, radiusPixels As Single) As SKBitmap
+            If mask Is Nothing OrElse radiusPixels <= 0.05F Then Return Nothing
+            Dim sigma = Math.Max(0.1F, radiusPixels * 0.5F)
+            Dim result = New SKBitmap(mask.Width, mask.Height, SKColorType.Alpha8, SKAlphaType.Premul)
+            Using canvas = New SKCanvas(result)
+                canvas.Clear(SKColors.Transparent)
+                Using paint = New SKPaint()
+                    paint.ImageFilter = SKImageFilter.CreateBlur(sigma, sigma)
+                    paint.Color = SKColors.White
+                    canvas.DrawBitmap(mask, 0, 0, paint)
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Liefert eine weichgezeichnete Kopie der Maske - um den Radius nach AUSSEN erweitert,
+        ''' damit die Kante symmetrisch ausläuft und nicht am Maskenrand abgeschnitten wird (ein Lasso berührt
+        ''' seinen Rahmen per Definition). <paramref name="expandedRect"/> ist das dazugehörige, ebenfalls
+        ''' erweiterte Bildrechteck. Nothing, wenn keine weiche Kante gewünscht ist.</summary>
+        Public Shared Function BuildFeatheredMask(mask As SKBitmap, rect As SKRectI, radiusPixels As Single,
+                                                  ByRef expandedRect As SKRectI) As SKBitmap
+            expandedRect = rect
+            If mask Is Nothing OrElse radiusPixels <= 0.05F Then Return Nothing
+
+            Dim pad = Math.Max(1, CInt(Math.Ceiling(radiusPixels * 2.0F)))
+            Dim padded = New SKBitmap(mask.Width + 2 * pad, mask.Height + 2 * pad, SKColorType.Alpha8, SKAlphaType.Premul)
+            Using canvas = New SKCanvas(padded)
+                canvas.Clear(SKColors.Transparent)
+                canvas.DrawBitmap(mask, pad, pad)
+            End Using
+
+            Dim blurred = BlurAlphaMask(padded, radiusPixels)
+            padded.Dispose()
+            If blurred Is Nothing Then Return Nothing
+
+            expandedRect = New SKRectI(rect.Left - pad, rect.Top - pad, rect.Right + pad, rect.Bottom + pad)
+            Return blurred
+        End Function
+
+        ''' <summary>Die Skopus-Maske in Zielgröße, mit weicher Kante falls eingestellt. Hier darf die Kante
+        ''' frei nach außen auslaufen: die Maske hat bereits die volle Bildgröße, es wird nichts abgeschnitten.
+        ''' Der Radius wird auf die Zielgröße mitskaliert - sonst wäre die Kante in der (kleineren) Vorschau
+        ''' breiter als im gespeicherten Bild.</summary>
         Private Shared Function BuildSelectionScopeMask(adj As ImageAdjustments, targetW As Integer, targetH As Integer) As SKBitmap
+            Dim mask = BuildSelectionScopeMaskCore(adj, targetW, targetH)
+            If mask Is Nothing OrElse adj.SelectionFeatherPixels <= 0.05F Then Return mask
+
+            Dim scale = If(adj.SourceWidthPixels > 0, targetW / CSng(adj.SourceWidthPixels), 1.0F)
+            Dim blurred = BlurAlphaMask(mask, adj.SelectionFeatherPixels * scale)
+            If blurred Is Nothing Then Return mask
+            mask.Dispose()
+            Return blurred
+        End Function
+
+        Private Shared Function BuildSelectionScopeMaskCore(adj As ImageAdjustments, targetW As Integer, targetH As Integer) As SKBitmap
             If targetW <= 0 OrElse targetH <= 0 Then Return Nothing
             Dim baseW = adj.SourceWidthPixels
             Dim scale = If(baseW > 0, targetW / CDbl(baseW), 1.0)
@@ -1795,6 +1874,7 @@ Namespace Services
                 adj.SelectionWidthPercent, adj.SelectionHeightPercent, adj.SelectionShapeMode,
                 adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
                 If(String.IsNullOrEmpty(adj.SelectionMaskPngBase64), 0, adj.SelectionMaskPngBase64.Length),
+                adj.SelectionFeatherPixels,
                 String.Join(";", adj.RetouchSpots.Select(Function(s) $"{s.XPixels},{s.YPixels},{s.RadiusPixels}"))
             })
         End Function
@@ -3910,18 +3990,64 @@ Namespace Services
         ''' <summary>Füllt die Maske mit einer einzelnen Farbe (Alpha = Farb-Alpha × Masken-Alpha). Grundlage
         ''' für "Auswahl mit Farbe füllen".</summary>
         Public Shared Function RenderMaskedFill(mask As SKBitmap, colorHex As String) As SKBitmap
+            Return RenderMaskedFill(mask, colorHex, "Solid", "", 0, False)
+        End Function
+
+        ''' <summary>Füllt die Maske mit Vollfarbe oder Verlauf (Alpha = Füll-Alpha × Masken-Alpha).
+        ''' Grundlage für "Auswahl füllen", inklusive weicher Rechteckkante.</summary>
+        Public Shared Function RenderMaskedFill(mask As SKBitmap, colorHex As String, fillKind As String,
+                                                color2Hex As String, gradientAngleDegrees As Single,
+                                                gradientInverted As Boolean) As SKBitmap
             Dim col = ParseColor(colorHex, SKColors.White)
             Dim w = mask.Width, h = mask.Height
-            Dim result = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-            Dim mstride As Integer
-            Dim mbuf = ReadMaskBytes(mask, mstride)
-            For y = 0 To h - 1
-                For x = 0 To w - 1
-                    Dim m = CInt(mbuf(y * mstride + x))
-                    result.SetPixel(x, y, New SKColor(col.Red, col.Green, col.Blue, CByte(CInt(col.Alpha) * m \ 255)))
-                Next
-            Next
-            Return result
+            Dim fill = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+            Using canvas = New SKCanvas(fill)
+                canvas.Clear(SKColors.Transparent)
+                Dim rect = New SKRect(0, 0, w, h)
+                Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
+                If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
+                    Dim col2 = ParseColor(color2Hex, col)
+                    Using shader = CreateFillGradientShader(rect, normalizedFillKind, col, col2, gradientAngleDegrees, gradientInverted)
+                        Using paint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                            canvas.DrawRect(rect, paint)
+                        End Using
+                    End Using
+                Else
+                    Using paint = New SKPaint With {.Color = col, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                        canvas.DrawRect(rect, paint)
+                    End Using
+                End If
+            End Using
+
+            Try
+                Return ApplyMaskCutout(fill, mask)
+            Finally
+                fill.Dispose()
+            End Try
+        End Function
+
+        Public Shared Function RenderMaskedFillToFile(mask As SKBitmap, colorHex As String, fillKind As String,
+                                                      color2Hex As String, gradientAngleDegrees As Single,
+                                                      gradientInverted As Boolean, targetPngPath As String) As Boolean
+            Try
+                If mask Is Nothing Then Return False
+                Using filled = RenderMaskedFill(mask, colorHex, fillKind, color2Hex, gradientAngleDegrees, gradientInverted)
+                    Return SaveBitmapPng(filled, targetPngPath)
+                End Using
+            Catch ex As Exception
+                Return False
+            End Try
+        End Function
+
+        Public Shared Function RenderMaskedFillToFile(mask As SKBitmap, colorHex As String, targetPngPath As String) As Boolean
+            Try
+                If mask Is Nothing Then Return False
+                Using filled = RenderMaskedFill(mask, colorHex)
+                    Return SaveBitmapPng(filled, targetPngPath)
+                End Using
+            Catch ex As Exception
+                Return False
+            End Try
         End Function
 
         Private Shared Function SaveBitmapPng(bmp As SKBitmap, targetPngPath As String) As Boolean
@@ -3968,17 +4094,6 @@ Namespace Services
 
         ''' <summary>Speichert eine mit <paramref name="colorHex"/> gefüllte Maske als PNG - Grundlage für ein
         ''' Füll-Objekt in exakter Auswahlgröße.</summary>
-        Public Shared Function RenderMaskedFillToFile(mask As SKBitmap, colorHex As String, targetPngPath As String) As Boolean
-            Try
-                If mask Is Nothing Then Return False
-                Using filled = RenderMaskedFill(mask, colorHex)
-                    Return SaveBitmapPng(filled, targetPngPath)
-                End Using
-            Catch ex As Exception
-                Return False
-            End Try
-        End Function
-
         ' Baut aus dem Alpha-Kanal eines gezeichneten RGBA-Bitmaps die Alpha8-Maske (weiche Kanten bleiben
         ' als Teil-Alpha erhalten - dadurch werden Ellipse/Lasso-Auswahlen antialiased ausgeschnitten).
         Private Shared Function AlphaMaskFrom(rgba As SKBitmap) As SKBitmap

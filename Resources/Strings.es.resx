@@ -2804,4 +2804,7 @@
   <data name="Die_Regler_wirken_auf_das_markierte_Objekt_Ohne__f07120c1" xml:space="preserve">
     <value>Los controles actúan sobre el objeto seleccionado. Sin objeto seleccionado, actúan sobre toda la imagen.</value>
   </data>
+  <data name="L_sst_die_Auswahlkante_ber_die_angegebene_Anzahl_fc252c93" xml:space="preserve">
+    <value>Difumina el borde de la selección a lo largo del número de píxeles indicado (0 = borde duro)</value>
+  </data>
 </root>

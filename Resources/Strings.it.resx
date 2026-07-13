@@ -2804,4 +2804,7 @@
   <data name="Die_Regler_wirken_auf_das_markierte_Objekt_Ohne__f07120c1" xml:space="preserve">
     <value>I cursori agiscono sull'oggetto selezionato. Senza un oggetto selezionato agiscono sull'intera immagine.</value>
   </data>
+  <data name="L_sst_die_Auswahlkante_ber_die_angegebene_Anzahl_fc252c93" xml:space="preserve">
+    <value>Sfuma il bordo della selezione per il numero di pixel indicato (0 = bordo netto)</value>
+  </data>
 </root>

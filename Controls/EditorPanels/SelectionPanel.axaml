@@ -106,6 +106,20 @@
                                      Minimum="0" Maximum="100" Increment="1"
                                      FormatString="F0" />
         </Grid>
+        <!-- Weiche Kante: wirkt auf Anpassungen in der Auswahl, auf Kopieren und auf Füllen. Die Maske
+             selbst bleibt hart gespeichert, der Wert ist deshalb jederzeit nachträglich änderbar. -->
+        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <TextBlock Text="Weiche Kante" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                       ToolTip.Tip="Lässt die Auswahlkante über die angegebene Anzahl Bildpixel weich auslaufen (0 = harte Kante)" />
+            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
+                               DefaultValue="0"
+                               Value="{Binding SelectionFeather}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding SelectionFeather, Mode=TwoWay}"
+                                     Minimum="0" Maximum="200" Increment="1"
+                                     FormatString="F0" />
+        </Grid>
         <Button Classes="ghost"
                 HorizontalAlignment="Stretch"
                 Padding="10,6"
