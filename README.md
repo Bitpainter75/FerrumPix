@@ -35,8 +35,6 @@ Video files can show thumbnails and play inline when the needed video support is
 
 ## Editor
 
-<img src="Screenshots/Editor_Crop.png" />
-
 <img src="Screenshots/Editor_Edit.png" />
 
 The editor covers the most common photo work:
