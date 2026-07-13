@@ -2793,4 +2793,13 @@
   <data name="Album_gel_scht_0_69f50494" xml:space="preserve">
     <value>Album deleted: {0}</value>
   </data>
+  <data name="Auswahl_aufheben_Strg_D_oder_Esc_cdb5d463" xml:space="preserve">
+    <value>Deselect (Ctrl+D or Esc)</value>
+  </data>
+  <data name="Auswahl_im_Bild_erstellen_dann_kopieren_oder_f_l_f8265df4" xml:space="preserve">
+    <value>Make a selection in the image, then copy or fill it. Ctrl+A selects everything, Ctrl+D deselects, Esc cancels while you are dragging.</value>
+  </data>
+  <data name="Drehen_und_Spiegeln_wirken_auf_das_markierte_Obj_3f7bd53d" xml:space="preserve">
+    <value>Rotate and flip act on the selected object. With no object selected, they act on the whole image.</value>
+  </data>
 </root>

@@ -83,12 +83,12 @@
             <Button Classes="ghost" Padding="8,6"
                     IsEnabled="{Binding HasActiveSelection}"
                     Command="{Binding ClearSelectionCommand}"
-                    ToolTip.Tip="Auswahl aufheben">
+                    ToolTip.Tip="Auswahl aufheben (Strg+D oder Esc)">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg" Width="16" Height="16" />
             </Button>
         </StackPanel>
 
-        <TextBlock Text="Auswahl im Bild erstellen, dann kopieren oder füllen."
+        <TextBlock Text="Auswahl im Bild erstellen, dann kopieren oder füllen. Strg+A wählt alles aus, Strg+D hebt die Auswahl auf, Esc bricht das Aufziehen ab."
                    Foreground="{DynamicResource FP.Text.Secondary}"
                    FontSize="{DynamicResource FP.Font.Small}"
                    TextWrapping="Wrap" />

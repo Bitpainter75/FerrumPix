@@ -691,6 +691,7 @@ Namespace Services
                     If items IsNot Nothing Then
                         For Each a In items
                             If a Is Nothing OrElse String.IsNullOrEmpty(a.Id) Then Continue For
+                            If Not IsBrowsableAsset(a.Visibility) Then Continue For
                             result.Page.Items.Add(MapAsset(a))
                         Next
                     End If
@@ -842,6 +843,7 @@ Namespace Services
                         If items IsNot Nothing Then
                             For Each a In items
                                 If a Is Nothing OrElse String.IsNullOrEmpty(a.Id) Then Continue For
+                                If Not IsBrowsableAsset(a.Visibility) Then Continue For
                                 result.Items.Add(MapAsset(a))
                             Next
                         End If
@@ -859,6 +861,20 @@ Namespace Services
                 DiagnosticLogService.LogException("Immich.GetAssetsPage", ex)
             End Try
             Return result
+        End Function
+
+        ''' <summary>Gehört ein Asset in die Galerie? Immich führt neben den normalen Assets auch
+        ''' „versteckte" (visibility=hidden): vor allem die Videospur von Bewegtfotos (Motion Photos,
+        ''' „MVIMG_…mp4"/„…-MP.mp4"), die zum Standbild gehört. Für die gibt es serverseitig KEIN
+        ''' Vorschaubild - der Thumbnail-Endpunkt antwortet mit 404 „Asset media not found" -, und Immichs
+        ''' eigene Oberfläche zeigt sie gar nicht erst an. Ungefiltert landeten sie bei uns als Kacheln
+        ''' ohne Bild in der Galerie. „locked" (Sicherer Ordner) bleibt aus demselben Grund draußen.
+        ''' Archivierte Assets sind ausdrücklich KEIN Sonderfall - die haben ein Vorschaubild und dürfen
+        ''' angezeigt werden.</summary>
+        Private Shared Function IsBrowsableAsset(visibility As String) As Boolean
+            If String.IsNullOrWhiteSpace(visibility) Then Return True   ' älterer Server ohne das Feld
+            Return Not (String.Equals(visibility, "hidden", StringComparison.OrdinalIgnoreCase) OrElse
+                        String.Equals(visibility, "locked", StringComparison.OrdinalIgnoreCase))
         End Function
 
         Private Shared Function MapAsset(a As ImmichAssetDto) As ImmichAsset
@@ -1057,9 +1073,17 @@ Namespace Services
                 Dim client = GetClient()
                 Dim url = ApiUrl($"assets/{Uri.EscapeDataString(assetId)}/thumbnail?size={sizeKey}")
                 Using resp = Await client.GetAsync(url, cancellationToken).ConfigureAwait(False)
-                    If Not resp.IsSuccessStatusCode Then Return Nothing
+                    ' Fehlschläge NICHT verschlucken: eine leere Kachel sieht sonst genauso aus wie ein Bild,
+                    ' das der Server (noch) nicht hat, und man rät, statt den Statuscode zu lesen.
+                    If Not resp.IsSuccessStatusCode Then
+                        DiagnosticLogService.LogAlways("Immich.Thumbnail", $"HTTP {CInt(resp.StatusCode)} size={sizeKey} asset={assetId}")
+                        Return Nothing
+                    End If
                     Dim bytes = Await resp.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(False)
-                    If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
+                    If bytes Is Nothing OrElse bytes.Length = 0 Then
+                        DiagnosticLogService.LogAlways("Immich.Thumbnail", $"leere Antwort size={sizeKey} asset={assetId}")
+                        Return Nothing
+                    End If
                     Await TryWriteCacheAsync(cachePath, bytes, cancellationToken).ConfigureAwait(False)
                     Return bytes
                 End Using
@@ -1459,6 +1483,8 @@ Namespace Services
         Private Class ImmichAssetDto
             Public Property Id As String
             Public Property Type As String
+            ''' "timeline" | "archive" | "hidden" | "locked" (siehe IsBrowsableAsset).
+            Public Property Visibility As String
             Public Property OriginalFileName As String
             Public Property FileCreatedAt As String
             Public Property UpdatedAt As String

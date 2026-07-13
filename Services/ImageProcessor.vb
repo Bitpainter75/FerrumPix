@@ -104,6 +104,10 @@ Namespace Services
         Private _fontFamily As String = "Arial"
         Private _opacity As Single = 100
         Private _rotationDegrees As Single = 0
+        ' Spiegelung des Objekts um seine eigene Mitte (nicht um die Bildmitte): das Drehen-Werkzeug
+        ' wirkt mit seinen vier Knöpfen auf das markierte Objekt, und Spiegeln können die Anfasser nicht.
+        Private _flipHorizontal As Boolean = False
+        Private _flipVertical As Boolean = False
         Private _anchor As String = ""
         Private _isVisible As Boolean = True
         Private _hardnessPercent As Single = 100
@@ -364,6 +368,24 @@ Namespace Services
             End Set
         End Property
 
+        Public Property FlipHorizontal As Boolean
+            Get
+                Return _flipHorizontal
+            End Get
+            Set(value As Boolean)
+                SetField(_flipHorizontal, value)
+            End Set
+        End Property
+
+        Public Property FlipVertical As Boolean
+            Get
+                Return _flipVertical
+            End Get
+            Set(value As Boolean)
+                SetField(_flipVertical, value)
+            End Set
+        End Property
+
         Public Property Anchor As String
             Get
                 Return _anchor
@@ -566,6 +588,8 @@ Namespace Services
                 .FontFamily = FontFamily,
                 .Opacity = Opacity,
                 .RotationDegrees = RotationDegrees,
+                .FlipHorizontal = FlipHorizontal,
+                .FlipVertical = FlipVertical,
                 .Anchor = Anchor,
                 .IsVisible = IsVisible,
                 .HardnessPercent = HardnessPercent,
@@ -2045,6 +2069,15 @@ Namespace Services
                     canvas.Save()
                     If Math.Abs(renderAnnotation.RotationDegrees) > 0.01F Then
                         canvas.RotateDegrees(renderAnnotation.RotationDegrees, rect.MidX, rect.MidY)
+                    End If
+                    ' Spiegeln um die eigene Mitte - NACH der Drehung, damit „gedreht und gespiegelt" das
+                    ' Objekt nicht zusätzlich verschiebt. Schatten/Glühen und die Füllung folgen mit, weil
+                    ' alles Weitere auf derselben Leinwand-Transformation zeichnet.
+                    If renderAnnotation.FlipHorizontal OrElse renderAnnotation.FlipVertical Then
+                        canvas.Translate(rect.MidX, rect.MidY)
+                        canvas.Scale(If(renderAnnotation.FlipHorizontal, -1.0F, 1.0F),
+                                     If(renderAnnotation.FlipVertical, -1.0F, 1.0F))
+                        canvas.Translate(-rect.MidX, -rect.MidY)
                     End If
 
                     If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then

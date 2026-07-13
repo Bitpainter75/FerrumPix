@@ -1824,6 +1824,19 @@ Namespace Views
             overlay.Height = 0
         End Sub
 
+        ''' <summary>Bricht ein laufendes Aufziehen/Lasso/Verschieben ab (Esc), ohne es zu übernehmen: die
+        ''' Kandidatenform wird verworfen und die bestehende Auswahl steht wieder da, wie sie war. Ein
+        ''' Verschieben ist zu diesem Zeitpunkt schon im ViewModel angekommen - dafür ist Rückgängig da.</summary>
+        Private Sub CancelSelectionDrag()
+            _isSelectionDragging = False
+            _isLassoDrawing = False
+            _isSelectionMoveDragging = False
+            _selectionDragReplacesExisting = False
+            _lassoPoints.Clear()
+            HideSelectionDragOverlay()
+            UpdateSelectionOverlayVisibility()
+        End Sub
+
         Private Sub CommitSelectionDrag()
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
@@ -2281,8 +2294,12 @@ Namespace Views
                                  -bottomPad * scaleY)
         End Function
 
+        ''' <summary>Werkzeuge, in denen der Objektrahmen samt Griffen sichtbar ist. Das Drehen-Werkzeug
+        ''' gehört dazu, weil seine Knöpfe auf das markierte Objekt wirken - man muss sehen (und weiter
+        ''' anfassen können), was man dreht. Das Drehen-Werkzeug selbst greift nicht auf die Leinwand zu.</summary>
         Private Shared Function IsLayerPlacementTool(tool As EditorTool) As Boolean
-            Return tool = EditorTool.Text OrElse tool = EditorTool.Geometry OrElse tool = EditorTool.Insert OrElse tool = EditorTool.Selection
+            Return tool = EditorTool.Text OrElse tool = EditorTool.Geometry OrElse tool = EditorTool.Insert OrElse
+                   tool = EditorTool.Selection OrElse tool = EditorTool.Rotate OrElse tool = EditorTool.Transform
         End Function
 
 
@@ -2840,9 +2857,22 @@ Namespace Views
                             vm.SaveAsCommand.Execute(Nothing)
                         End If
                         e.Handled = True
+                    Case Key.A
+                        ' Strg+A wählt das ganze Bild aus - aber nur dort, wo eine Auswahl überhaupt etwas
+                        ' bewirkt (Auswahl-Werkzeug und die Werkzeuge, deren Regler auf die Auswahl wirken).
+                        ' In einem Textfeld bleibt es das gewohnte „alles markieren".
+                        If Not isTextInputFocused AndAlso IsSelectionScopeTool(vm.CurrentTool) Then
+                            vm.SelectAll()
+                            e.Handled = True
+                        End If
                     Case Key.D
+                        ' Belegt bleibt „Objekt duplizieren", solange eines markiert ist; sonst hebt Strg+D
+                        ' die Auswahl auf (wie in den üblichen Bildbearbeitungen).
                         If vm.HasSelectedAnnotation Then
                             vm.DuplicateSelectedAnnotationCommand.Execute(Nothing)
+                            e.Handled = True
+                        ElseIf Not isTextInputFocused AndAlso vm.HasActiveSelection Then
+                            vm.ClearSelection()
                             e.Handled = True
                         End If
                     Case Key.P
@@ -2918,9 +2948,15 @@ Namespace Views
                     Case Key.Escape
                         If vm.IsPickingColorFromImage Then
                             vm.CancelColorPick()
+                        ElseIf _isSelectionDragging OrElse _isLassoDrawing OrElse _isSelectionMoveDragging Then
+                            ' Ein laufendes Aufziehen/Ziehen abbrechen, ohne es zu übernehmen - vorher
+                            ' verließ Esc mitten im Zug den Editor.
+                            CancelSelectionDrag()
                         ElseIf vm.HasSelectedAnnotation OrElse Not String.IsNullOrEmpty(vm.PendingInsertKind) Then
                             vm.SelectedAnnotationIndex = -1
                             vm.PendingInsertKind = ""
+                        ElseIf IsSelectionScopeTool(vm.CurrentTool) AndAlso vm.HasActiveSelection Then
+                            vm.ClearSelection()
                         Else
                             vm.BackToViewerCommand.Execute(Nothing)
                         End If

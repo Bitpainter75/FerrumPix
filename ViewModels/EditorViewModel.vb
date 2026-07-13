@@ -210,6 +210,8 @@ Namespace ViewModels
         Private _annotationFontFamily As String = "Arial"
         Private _annotationOpacity As Double = 100
         Private _annotationRotation As Double = 0
+        Private _annotationFlipH As Boolean = False
+        Private _annotationFlipV As Boolean = False
         Private _annotationAnchor As String = "BottomRight"
         Private _annotationIsVisible As Boolean = True
         Private _annotationXPercent As Double = 35
@@ -1006,8 +1008,15 @@ Namespace ViewModels
                 End If
                 _selectedAnnotationIndex = clamped
                 If clamped >= 0 Then
-                    PendingInsertKind = PlacementKindForAnnotation(_annotations(clamped))
+                    ' Im Drehen-Werkzeug wird KEIN Platzierungstyp scharfgestellt: dort will man ein Objekt
+                    ' drehen, nicht ein weiteres anlegen - der nächste Klick auf freie Fläche würde sonst
+                    ' eines setzen.
+                    PendingInsertKind = If(IsObjectTransformTool(_currentTool), "", PlacementKindForAnnotation(_annotations(clamped)))
                     Dim targetTool = AnnotationKindToTool(_annotations(clamped).Kind)
+                    ' Im Drehen-Werkzeug NICHT ins Werkzeug des Objekts springen: dort markiert man ein Objekt,
+                    ' um es zu drehen oder zu spiegeln. Ein Sprung nach „Text"/„Einfügen" würde einen Klick auf
+                    ' das Objekt aussehen lassen, als hätte er gar nicht selektiert.
+                    If IsObjectTransformTool(_currentTool) Then targetTool = _currentTool
                     If targetTool <> _currentTool Then
                         _overlayNotifySuppressDepth += 1
                         Try
@@ -1272,6 +1281,8 @@ Namespace ViewModels
             AnnotationFontFamily = "Arial"
             AnnotationOpacity = 100
             AnnotationRotation = 0
+            AnnotationFlipHorizontal = False
+            AnnotationFlipVertical = False
             Dim defaultSize = GetDefaultAnnotationSizePercent(normalizedKind, rawKind)
             _annotationWidthPercent = defaultSize.WidthPercent
             _annotationHeightPercent = defaultSize.HeightPercent
@@ -3253,6 +3264,27 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' Spiegelung des markierten Objekts um seine eigene Mitte (Drehen-Werkzeug, Knöpfe Horizontal/Vertikal).
+        Public Property AnnotationFlipHorizontal As Boolean
+            Get
+                Return _annotationFlipH
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_annotationFlipH, value)
+                SyncSelectedAnnotation(refreshOverlay:=False)
+            End Set
+        End Property
+
+        Public Property AnnotationFlipVertical As Boolean
+            Get
+                Return _annotationFlipV
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_annotationFlipV, value)
+                SyncSelectedAnnotation(refreshOverlay:=False)
+            End Set
+        End Property
+
         Public Property AnnotationIsVisible As Boolean
             Get
                 Return _annotationIsVisible
@@ -3887,24 +3919,47 @@ Namespace ViewModels
                 Return
             End If
 
+            ' Randpixel einsammeln (die MASKE bleibt davon unberührt - das hier ist nur die Ameisenlinie).
+            Dim w = _selectionMask.Width, h = _selectionMask.Height
+            Dim stride = _selectionMaskBytesStride
+            Dim bytes = _selectionMaskBytes
             Dim edgeXs As New List(Of Double)()
             Dim edgeYs As New List(Of Double)()
-            Dim edgeSampleStep = Math.Max(1, Math.Min(_selectionMask.Width, _selectionMask.Height) \ 900)
 
-            For y = 0 To _selectionMask.Height - 1
-                For x = 0 To _selectionMask.Width - 1
-                    If _selectionMaskBytes(y * _selectionMaskBytesStride + x) = 0 Then Continue For
-                    Dim isEdge = x = 0 OrElse y = 0 OrElse x = _selectionMask.Width - 1 OrElse y = _selectionMask.Height - 1 OrElse
-                                 _selectionMaskBytes(y * _selectionMaskBytesStride + x - 1) = 0 OrElse
-                                 _selectionMaskBytes(y * _selectionMaskBytesStride + x + 1) = 0 OrElse
-                                 _selectionMaskBytes((y - 1) * _selectionMaskBytesStride + x) = 0 OrElse
-                                 _selectionMaskBytes((y + 1) * _selectionMaskBytesStride + x) = 0
-                    If isEdge AndAlso ((x + y) Mod edgeSampleStep) = 0 Then
-                        edgeXs.Add((x + 0.5) * 100.0 / Math.Max(1, _selectionMask.Width))
-                        edgeYs.Add((y + 0.5) * 100.0 / Math.Max(1, _selectionMask.Height))
+            For y = 0 To h - 1
+                Dim row = y * stride
+                Dim up = row - stride
+                Dim down = row + stride
+                For x = 0 To w - 1
+                    If bytes(row + x) = 0 Then Continue For
+                    Dim isEdge = x = 0 OrElse y = 0 OrElse x = w - 1 OrElse y = h - 1 OrElse
+                                 bytes(row + x - 1) = 0 OrElse
+                                 bytes(row + x + 1) = 0 OrElse
+                                 bytes(up + x) = 0 OrElse
+                                 bytes(down + x) = 0
+                    If isEdge Then
+                        edgeXs.Add((x + 0.5) * 100.0 / w)
+                        edgeYs.Add((y + 0.5) * 100.0 / h)
                     End If
                 Next
             Next
+
+            ' Ausdünnen erst NACH dem Einsammeln, und gleichmäßig entlang des Randes. Die alte Regel
+            ' „(x+y) Mod Schritt = 0" ließ ganze Diagonalstreifen der Kontur weg - die Ameisenlinie sah
+            ' dadurch löchrig aus, obwohl die Maske exakt war. Die Obergrenze hält das Zeichnen flüssig:
+            ' das Overlay malt je Punkt ein Kästchen und frischt zwölfmal pro Sekunde auf.
+            Const MaxEdgePoints As Integer = 4000
+            If edgeXs.Count > MaxEdgePoints Then
+                Dim step_ = CInt(Math.Ceiling(edgeXs.Count / CDbl(MaxEdgePoints)))
+                Dim thinnedX As New List(Of Double)(MaxEdgePoints + 1)
+                Dim thinnedY As New List(Of Double)(MaxEdgePoints + 1)
+                For i = 0 To edgeXs.Count - 1 Step step_
+                    thinnedX.Add(edgeXs(i))
+                    thinnedY.Add(edgeYs(i))
+                Next
+                edgeXs = thinnedX
+                edgeYs = thinnedY
+            End If
 
             _selectionMaskEdgePointsX = edgeXs.ToArray()
             _selectionMaskEdgePointsY = edgeYs.ToArray()
@@ -3940,13 +3995,18 @@ Namespace ViewModels
             Return New SKRectI(Math.Max(0, left), Math.Max(0, top), Math.Min(bw, right), Math.Min(bh, bottom))
         End Function
 
+        ''' <summary>Übernimmt das Auswahlrechteck aus Bildpixeln - OHNE Mindestgröße. Das Rechteck ist der
+        ''' Bezugsrahmen der Maske: Overlay-Ränder, Ausschneiden und Füllen rechnen alle relativ dazu. Eine
+        ''' Untergrenze (früher 0,5 % der Bildbreite = 30 px bei 6000 px) hätte bei kleinen Zauberstab-/
+        ''' Lasso-Auswahlen das Rechteck größer gemacht als die Maske - die Ameisenlinie säße dann daneben
+        ''' und ein kopierter Ausschnitt käme verzerrt heraus. Die Aufrufer verwerfen leere Rechtecke selbst.</summary>
         Private Sub SetSelectionBoundsFromPixels(rectPx As SKRectI)
             Dim bw = GetBaseWidth(), bh = GetBaseHeight()
             If bw <= 0 OrElse bh <= 0 Then Return
             _selectionXPercent = Math.Max(0, rectPx.Left * 100.0 / bw)
             _selectionYPercent = Math.Max(0, rectPx.Top * 100.0 / bh)
-            _selectionWidthPercent = Math.Max(0.5, rectPx.Width * 100.0 / bw)
-            _selectionHeightPercent = Math.Max(0.5, rectPx.Height * 100.0 / bh)
+            _selectionWidthPercent = rectPx.Width * 100.0 / bw
+            _selectionHeightPercent = rectPx.Height * 100.0 / bh
             Me.RaisePropertyChanged(NameOf(SelectionXPercent))
             Me.RaisePropertyChanged(NameOf(SelectionYPercent))
             Me.RaisePropertyChanged(NameOf(SelectionWidthPercent))
@@ -4056,9 +4116,23 @@ Namespace ViewModels
                                                                    seedX, seedY, CSng(_selectionTolerance / 100.0), bounds)
                 If mask Is Nothing OrElse bounds.Width <= 0 OrElse bounds.Height <= 0 Then Return
                 PushUndo()
-                Dim outline = BuildMaskOutlinePercent(mask, bounds)
-                ApplySelectionCandidate(mask, bounds, "MagicWand", outline.Xs, outline.Ys)
+                ' Kein Polygonzug: für maskenbasierte Auswahlen zeichnet das Overlay die Ameisenlinie aus den
+                ' Maskenrändern und die Treffererkennung fragt die Maske selbst (siehe HasSelectionMask).
+                ApplySelectionCandidate(mask, bounds, "MagicWand", Nothing, Nothing)
             End Using
+        End Sub
+
+        ''' <summary>Wählt das ganze Bild aus (Strg+A). Als reines Rechteck ohne Maske - das ist die
+        ''' pixelgenaue und zugleich billigste Darstellung einer Voll-Auswahl; „Umkehren" macht daraus bei
+        ''' Bedarf eine echte Maske.</summary>
+        Public Sub SelectAll()
+            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            If bw <= 0 OrElse bh <= 0 Then Return
+            PushUndo()
+            ClearSelectionMask()
+            SetSelectionBoundsFromPercent(0, 0, 100, 100)
+            SetSelectionShape("Rectangle", Nothing, Nothing)
+            HasActiveSelection = True
         End Sub
 
         Public Sub ClearSelection(Optional captureUndo As Boolean = True)
@@ -4167,8 +4241,7 @@ Namespace ViewModels
 
                 ClearSelectionMask()
                 SetSelectionBoundsFromPixels(resultRect)
-                Dim outline = BuildMaskOutlinePercent(combined, resultRect)
-                SetSelectionShape("MagicWand", outline.Xs, outline.Ys)
+                SetSelectionShape("MagicWand", Nothing, Nothing)
                 SetSelectionMaskData(combined, resultRect)
                 HasActiveSelection = True
             End Using
@@ -4184,12 +4257,22 @@ Namespace ViewModels
 
         Private Shared Function CreateSolidMask(width As Integer, height As Integer) As SKBitmap
             Dim mask = New SKBitmap(width, height, SKColorType.Alpha8, SKAlphaType.Premul)
-            Dim stride = mask.RowBytes
-            Dim buffer = Enumerable.Repeat(CByte(255), stride * height).ToArray()
-            Marshal.Copy(buffer, 0, mask.GetPixels(), buffer.Length)
+            ' Nicht über Enumerable.Repeat(...).ToArray(): das baute bei einer bildgroßen Maske (24 MP) ein
+            ' 24-MB-Array über einen Iterator auf. Erase füllt den Puffer direkt.
+            mask.Erase(New SKColor(0, 0, 0, 255))
             Return mask
         End Function
 
+        ''' <summary>Verknüpft zwei Alpha8-Masken (Hinzufügen/Abziehen/Schnittmenge) pixelgenau - kein
+        ''' Sampling, kein Runden: jedes Ergebnispixel entsteht aus genau den beiden Quellpixeln an derselben
+        ''' BILDkoordinate. Die Masken decken unterschiedliche Bildausschnitte ab, deshalb die Rechnerei mit
+        ''' den Rechtecken.
+        '''
+        ''' Zeilenweise statt Pixel-für-Pixel: pro Zeile wird EINMAL ausgerechnet, welcher Abschnitt von
+        ''' beiden Masken überhaupt überdeckt wird, der Rest der Zeile ist per Definition 0 bzw. eine reine
+        ''' Kopie. Die alte Fassung rief für JEDES Pixel zweimal eine Funktion mit vier Bereichsprüfungen -
+        ''' auf einem 24-MP-Bild waren das 1,4 Sekunden auf dem UI-Thread (gemessen), bei jedem Klick auf
+        ''' Hinzufügen/Abziehen/Umkehren.</summary>
         Private Shared Function CombineSelectionMasks(existingMask As SKBitmap,
                                                       existingRect As SKRectI,
                                                       candidateMask As SKBitmap,
@@ -4199,30 +4282,76 @@ Namespace ViewModels
             Dim result = New SKBitmap(resultRect.Width, resultRect.Height, SKColorType.Alpha8, SKAlphaType.Premul)
             Dim existingBytes = ReadMaskBytes(existingMask)
             Dim candidateBytes = ReadMaskBytes(candidateMask)
+            Dim eStride = existingMask.RowBytes, eW = existingMask.Width, eH = existingMask.Height
+            Dim cStride = candidateMask.RowBytes, cW = candidateMask.Width, cH = candidateMask.Height
             Dim resultStride = result.RowBytes
             Dim resultBytes = New Byte(resultStride * result.Height - 1) {}
 
+            ' Versatz der jeweiligen Maske gegenüber dem Ergebnisrechteck (in Ergebnis-Spalten/-Zeilen).
+            Dim eDx = resultRect.Left - existingRect.Left, eDy = resultRect.Top - existingRect.Top
+            Dim cDx = resultRect.Left - candidateRect.Left, cDy = resultRect.Top - candidateRect.Top
+
+            ' Spaltenbereiche, in denen die jeweilige Maske Pixel hat (halboffen: [von, bis)).
+            Dim eColFrom = Math.Max(0, -eDx), eColTo = Math.Min(resultRect.Width, eW - eDx)
+            Dim cColFrom = Math.Max(0, -cDx), cColTo = Math.Min(resultRect.Width, cW - cDx)
+
+            Dim mode = If(combineMode, "")
+
             For y = 0 To resultRect.Height - 1
-                For x = 0 To resultRect.Width - 1
-                    Dim imageX = resultRect.Left + x
-                    Dim imageY = resultRect.Top + y
-                    Dim a = SampleMask(existingBytes, existingMask.RowBytes, existingMask.Width, existingMask.Height,
-                                       imageX - existingRect.Left, imageY - existingRect.Top)
-                    Dim b = SampleMask(candidateBytes, candidateMask.RowBytes, candidateMask.Width, candidateMask.Height,
-                                       imageX - candidateRect.Left, imageY - candidateRect.Top)
-                    Dim value As Integer
-                    Select Case combineMode
-                        Case "Add"
-                            value = Math.Max(a, b)
-                        Case "Subtract"
-                            value = Math.Max(0, a - b)
-                        Case "Intersect"
-                            value = Math.Min(a, b)
-                        Case Else
-                            value = b
-                    End Select
-                    resultBytes(y * resultStride + x) = CByte(value)
-                Next
+                Dim rRow = y * resultStride
+                Dim eY = y + eDy, cY = y + cDy
+                Dim eRow = If(eY >= 0 AndAlso eY < eH, eY * eStride, -1)
+                Dim cRow = If(cY >= 0 AndAlso cY < cH, cY * cStride, -1)
+
+                Select Case mode
+                    Case "Add"
+                        ' Bestehendes übernehmen, Kandidat drüberlegen (Maximum) - beides nur dort, wo es liegt.
+                        If eRow >= 0 Then
+                            For x = eColFrom To eColTo - 1
+                                resultBytes(rRow + x) = existingBytes(eRow + x + eDx)
+                            Next
+                        End If
+                        If cRow >= 0 Then
+                            For x = cColFrom To cColTo - 1
+                                Dim b = candidateBytes(cRow + x + cDx)
+                                If b > resultBytes(rRow + x) Then resultBytes(rRow + x) = b
+                            Next
+                        End If
+
+                    Case "Subtract"
+                        ' Ergebnis ist das Bestehende minus dem Kandidaten; außerhalb des Bestehenden: 0.
+                        If eRow >= 0 Then
+                            For x = eColFrom To eColTo - 1
+                                resultBytes(rRow + x) = existingBytes(eRow + x + eDx)
+                            Next
+                            If cRow >= 0 Then
+                                Dim from = Math.Max(eColFrom, cColFrom), too = Math.Min(eColTo, cColTo)
+                                For x = from To too - 1
+                                    Dim a = CInt(resultBytes(rRow + x)) - CInt(candidateBytes(cRow + x + cDx))
+                                    resultBytes(rRow + x) = CByte(Math.Max(0, a))
+                                Next
+                            End If
+                        End If
+
+                    Case "Intersect"
+                        ' Nur wo BEIDE liegen, sonst 0 (Array ist bereits genullt).
+                        If eRow >= 0 AndAlso cRow >= 0 Then
+                            Dim from = Math.Max(eColFrom, cColFrom), too = Math.Min(eColTo, cColTo)
+                            For x = from To too - 1
+                                Dim a = existingBytes(eRow + x + eDx)
+                                Dim b = candidateBytes(cRow + x + cDx)
+                                resultBytes(rRow + x) = If(a < b, a, b)
+                            Next
+                        End If
+
+                    Case Else
+                        ' "New": nur der Kandidat zählt.
+                        If cRow >= 0 Then
+                            For x = cColFrom To cColTo - 1
+                                resultBytes(rRow + x) = candidateBytes(cRow + x + cDx)
+                            Next
+                        End If
+                End Select
             Next
 
             Marshal.Copy(resultBytes, 0, result.GetPixels(), resultBytes.Length)
@@ -4235,15 +4364,14 @@ Namespace ViewModels
             Return buffer
         End Function
 
-        Private Shared Function SampleMask(buffer As Byte(), stride As Integer, width As Integer, height As Integer, x As Integer, y As Integer) As Integer
-            If x < 0 OrElse y < 0 OrElse x >= width OrElse y >= height Then Return 0
-            Return CInt(buffer(y * stride + x))
-        End Function
-
+        ''' <summary>Ist überhaupt noch etwas ausgewählt? Liest die Maske direkt aus dem unverwalteten
+        ''' Speicher, statt sie erst in ein Byte-Array zu kopieren (bei 24 MP wären das 24 MB nur für die
+        ''' Frage „irgendein Pixel &gt; 0?").</summary>
         Private Shared Function MaskHasVisiblePixels(mask As SKBitmap) As Boolean
-            Dim buffer = ReadMaskBytes(mask)
-            For Each value In buffer
-                If value > 0 Then Return True
+            If mask Is Nothing OrElse mask.Width <= 0 OrElse mask.Height <= 0 Then Return False
+            Dim span = mask.GetPixelSpan()
+            For i = 0 To span.Length - 1
+                If span(i) > 0 Then Return True
             Next
             Return False
         End Function
@@ -4303,110 +4431,19 @@ Namespace ViewModels
                 Dim bw = GetBaseWidth()
                 Dim bh = GetBaseHeight()
                 If bw > 0 AndAlso bh > 0 Then
-                    Dim dxPx = CInt(Math.Round(actualDx * bw / 100.0))
-                    Dim dyPx = CInt(Math.Round(actualDy * bh / 100.0))
-                    _selectionMaskRect = New SKRectI(_selectionMaskRect.Left + dxPx,
-                                                     _selectionMaskRect.Top + dyPx,
-                                                     _selectionMaskRect.Right + dxPx,
-                                                     _selectionMaskRect.Bottom + dyPx)
+                    ' Die neue Maskenposition AUS DER absoluten Prozentposition ableiten, nicht die gerundete
+                    ' Einzelverschiebung aufaddieren: beim langsamen Ziehen sind die Schritte Bruchteile eines
+                    ' Pixels und runden jedes Mal auf 0 - das Rechteck (und die Ameisenlinie) wanderte dann,
+                    ' während die Maske stehenblieb. Breite/Höhe kommen aus der Maske selbst, damit die
+                    ' Bitmap-Maße unangetastet bleiben.
+                    Dim left = CInt(Math.Round(bw * _selectionXPercent / 100.0))
+                    Dim top = CInt(Math.Round(bh * _selectionYPercent / 100.0))
+                    _selectionMaskRect = New SKRectI(left, top,
+                                                     left + _selectionMaskRect.Width,
+                                                     top + _selectionMaskRect.Height)
                 End If
             End If
         End Sub
-
-        Private Function BuildMaskOutlinePercent(mask As SKBitmap, bounds As SKRectI) As (Xs As Double(), Ys As Double())
-            Dim bw = GetBaseWidth()
-            Dim bh = GetBaseHeight()
-            If mask Is Nothing OrElse bw <= 0 OrElse bh <= 0 Then
-                Return (BuildBoundsOutlineXPercent(bounds), BuildBoundsOutlineYPercent(bounds))
-            End If
-
-            Dim stride = mask.RowBytes
-            Dim buffer = New Byte(stride * mask.Height - 1) {}
-            Marshal.Copy(mask.GetPixels(), buffer, 0, buffer.Length)
-
-            Dim sampleStep = Math.Max(1, Math.Min(mask.Width, mask.Height) \ 180)
-            Dim edgePoints As New List(Of SKPoint)()
-            For y = 0 To mask.Height - 1
-                For x = 0 To mask.Width - 1
-                    If buffer(y * stride + x) = 0 Then Continue For
-                    Dim isEdge = x = 0 OrElse y = 0 OrElse x = mask.Width - 1 OrElse y = mask.Height - 1 OrElse
-                                 buffer(y * stride + x - 1) = 0 OrElse
-                                 buffer(y * stride + x + 1) = 0 OrElse
-                                 buffer((y - 1) * stride + x) = 0 OrElse
-                                 buffer((y + 1) * stride + x) = 0
-                    If isEdge AndAlso ((x + y) Mod sampleStep = 0) Then
-                        edgePoints.Add(New SKPoint(bounds.Left + x + 0.5F, bounds.Top + y + 0.5F))
-                    End If
-                Next
-            Next
-
-            Dim hull = BuildConvexHull(edgePoints)
-            If hull.Count < 3 Then Return (BuildBoundsOutlineXPercent(bounds), BuildBoundsOutlineYPercent(bounds))
-
-            Dim xs(hull.Count - 1) As Double
-            Dim ys(hull.Count - 1) As Double
-            For i = 0 To hull.Count - 1
-                xs(i) = hull(i).X * 100.0 / bw
-                ys(i) = hull(i).Y * 100.0 / bh
-            Next
-            Return (xs, ys)
-        End Function
-
-        Private Shared Function BuildConvexHull(points As List(Of SKPoint)) As List(Of SKPoint)
-            If points Is Nothing OrElse points.Count <= 3 Then Return If(points, New List(Of SKPoint)())
-            Dim sorted = points.
-                OrderBy(Function(p) p.X).
-                ThenBy(Function(p) p.Y).
-                ToList()
-
-            Dim lower As New List(Of SKPoint)()
-            For Each p In sorted
-                While lower.Count >= 2 AndAlso Cross(lower(lower.Count - 2), lower(lower.Count - 1), p) <= 0
-                    lower.RemoveAt(lower.Count - 1)
-                End While
-                lower.Add(p)
-            Next
-
-            Dim upper As New List(Of SKPoint)()
-            For i = sorted.Count - 1 To 0 Step -1
-                Dim p = sorted(i)
-                While upper.Count >= 2 AndAlso Cross(upper(upper.Count - 2), upper(upper.Count - 1), p) <= 0
-                    upper.RemoveAt(upper.Count - 1)
-                End While
-                upper.Add(p)
-            Next
-
-            lower.RemoveAt(lower.Count - 1)
-            upper.RemoveAt(upper.Count - 1)
-            lower.AddRange(upper)
-            Return lower
-        End Function
-
-        Private Shared Function Cross(o As SKPoint, a As SKPoint, b As SKPoint) As Single
-            Return (a.X - o.X) * (b.Y - o.Y) - (a.Y - o.Y) * (b.X - o.X)
-        End Function
-
-        Private Function BuildBoundsOutlineXPercent(bounds As SKRectI) As Double()
-            Dim bw = GetBaseWidth()
-            If bw <= 0 Then Return Nothing
-            Return New Double() {
-                bounds.Left * 100.0 / bw,
-                bounds.Right * 100.0 / bw,
-                bounds.Right * 100.0 / bw,
-                bounds.Left * 100.0 / bw
-            }
-        End Function
-
-        Private Function BuildBoundsOutlineYPercent(bounds As SKRectI) As Double()
-            Dim bh = GetBaseHeight()
-            If bh <= 0 Then Return Nothing
-            Return New Double() {
-                bounds.Top * 100.0 / bh,
-                bounds.Top * 100.0 / bh,
-                bounds.Bottom * 100.0 / bh,
-                bounds.Bottom * 100.0 / bh
-            }
-        End Function
 
         ''' Schneidet den aktuell verarbeiteten Bildinhalt (alle Anpassungen/Objekte gebacken) auf
         ''' das Auswahlrechteck zu, sichert ihn als temporäre PNG (Muster wie VideoPreviewService)
@@ -5417,7 +5454,10 @@ Namespace ViewModels
                                                                        _overlayNotifySuppressDepth += 1
                                                                        Try
                                                                            PendingInsertKind = ""
-                                                                           SelectedAnnotationIndex = -1
+                                                                           ' Ins Drehen-Werkzeug nimmt man das markierte Objekt MIT - dort wirken
+                                                                           ' Drehen/Spiegeln genau darauf. Für alle anderen Werkzeuge bleibt es
+                                                                           ' beim Abwählen wie bisher.
+                                                                           If Not IsObjectTransformTool(parsed) Then SelectedAnnotationIndex = -1
                                                                            CurrentTool = parsed
                                                                            SelectedLayersPanelTab = LayersPanelTab.Tool
                                                                        Finally
@@ -7106,19 +7146,43 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Drehen/Spiegeln wirkt auf das MARKIERTE OBJEKT, wenn eines markiert ist - Text, Bild,
+        ''' Form, eine aus der Auswahl kopierte Fläche, alles gleichermaßen. Die Anfasser am Objekt können
+        ''' nur frei drehen und skalieren; exakte 90°-Schritte und Spiegeln gibt es nur hier. Ohne markiertes
+        ''' Objekt bleibt es beim bisherigen Verhalten: das ganze Bild dreht/spiegelt sich.</summary>
         Private Sub DoRotate(degrees As Integer)
+            If HasSelectedAnnotation Then
+                PushUndo()
+                ' Objektdrehung läuft in [-180, 180]; nach 180 kippt sie auf -180 (identische Lage).
+                Dim rotated = ((_annotationRotation + degrees + 180.0) Mod 360.0 + 360.0) Mod 360.0 - 180.0
+                AnnotationRotation = rotated
+                AddHistoryEntry(If(degrees < 0, "Objekt links gedreht", "Objekt rechts gedreht"))
+                Return
+            End If
             _rotationDegrees = ((_rotationDegrees + degrees) Mod 360 + 360) Mod 360
             RaiseResetButtonStateChanged()
             UpdatePreview()
         End Sub
 
         Private Sub DoFlipH()
+            If HasSelectedAnnotation Then
+                PushUndo()
+                AnnotationFlipHorizontal = Not _annotationFlipH
+                AddHistoryEntry("Objekt horizontal gespiegelt")
+                Return
+            End If
             _flipH = Not _flipH
             RaiseResetButtonStateChanged()
             UpdatePreview()
         End Sub
 
         Private Sub DoFlipV()
+            If HasSelectedAnnotation Then
+                PushUndo()
+                AnnotationFlipVertical = Not _annotationFlipV
+                AddHistoryEntry("Objekt vertikal gespiegelt")
+                Return
+            End If
             _flipV = Not _flipV
             RaiseResetButtonStateChanged()
             UpdatePreview()
@@ -7269,6 +7333,8 @@ Namespace ViewModels
             _annotationFontFamily = "Arial"
             _annotationOpacity = 100
             _annotationRotation = 0
+            _annotationFlipH = False
+            _annotationFlipV = False
             _annotationAnchor = "BottomRight"
             _annotationIsVisible = True
             _annotationXPercent = 35
@@ -8121,8 +8187,20 @@ Namespace ViewModels
             Return normalized = "Brush" OrElse normalized = "Eraser"
         End Function
 
+        ''' <summary>Werkzeuge, in denen ein markiertes Objekt markiert BLEIBT. Das Drehen-Werkzeug gehört
+        ''' dazu, seit seine vier Knöpfe (90° links/rechts, Spiegeln) auf das markierte Objekt wirken - würde
+        ''' der Wechsel dorthin die Markierung aufheben, gäbe es nie ein Objekt zu drehen.</summary>
         Private Shared Function IsLayerTool(tool As EditorTool) As Boolean
-            Return tool = EditorTool.Text OrElse tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse tool = EditorTool.Insert OrElse tool = EditorTool.Selection
+            Return tool = EditorTool.Text OrElse tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse
+                   tool = EditorTool.Insert OrElse tool = EditorTool.Selection OrElse
+                   IsObjectTransformTool(tool)
+        End Function
+
+        ''' <summary>Das Drehen-Werkzeug: hier wirken Drehen/Spiegeln auf das markierte Objekt. Es darf weder
+        ''' die Markierung verlieren (Werkzeugwechsel) noch beim Anklicken eines Objekts in dessen Werkzeug
+        ''' springen - sonst könnte man ein Objekt hier gar nicht auswählen.</summary>
+        Public Shared Function IsObjectTransformTool(tool As EditorTool) As Boolean
+            Return tool = EditorTool.Rotate OrElse tool = EditorTool.Transform
         End Function
 
         Private Sub LoadSelectedAnnotationIntoEditor()
@@ -8145,6 +8223,8 @@ Namespace ViewModels
                     AnnotationFontFamily = a.FontFamily
                     AnnotationOpacity = a.Opacity
                     AnnotationRotation = a.RotationDegrees
+                    AnnotationFlipHorizontal = a.FlipHorizontal
+                    AnnotationFlipVertical = a.FlipVertical
                     _annotationAnchor = NormalizeAnnotationAnchor(a.Anchor)
                     AnnotationIsVisible = a.IsVisible
                     AnnotationXPercent = AnnotationStoredXToPercent(a)
@@ -8204,6 +8284,8 @@ Namespace ViewModels
             a.FontFamily = _annotationFontFamily
             a.Opacity = CSng(_annotationOpacity)
             a.RotationDegrees = CSng(_annotationRotation)
+            a.FlipHorizontal = _annotationFlipH
+            a.FlipVertical = _annotationFlipV
             a.Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             a.IsVisible = _annotationIsVisible
             a.XPixels = CSng(AnnotationXPixels)

@@ -2792,4 +2792,13 @@
   <data name="Album_gel_scht_0_69f50494" xml:space="preserve">
     <value>Album eliminato: {0}</value>
   </data>
+  <data name="Auswahl_aufheben_Strg_D_oder_Esc_cdb5d463" xml:space="preserve">
+    <value>Deseleziona (Ctrl+D o Esc)</value>
+  </data>
+  <data name="Auswahl_im_Bild_erstellen_dann_kopieren_oder_f_l_f8265df4" xml:space="preserve">
+    <value>Crea una selezione nell'immagine, poi copiala o riempila. Ctrl+A seleziona tutto, Ctrl+D deseleziona, Esc annulla mentre trascini.</value>
+  </data>
+  <data name="Drehen_und_Spiegeln_wirken_auf_das_markierte_Obj_3f7bd53d" xml:space="preserve">
+    <value>Ruota e specchia agiscono sull'oggetto selezionato. Senza un oggetto selezionato agiscono sull'intera immagine.</value>
+  </data>
 </root>
