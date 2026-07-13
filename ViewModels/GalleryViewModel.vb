@@ -1438,6 +1438,37 @@ Namespace ViewModels
             StatusText = String.Format(LocalizationService.T("Album umbenannt: {0}"), name.Trim())
         End Sub
 
+        ''' <summary>Löscht ein Immich-Album - nur die Zusammenstellung, die Fotos bleiben in Immich. Hängt am
+        ''' selben Schalter wie das Löschen von Fotos („Löschen in Immich erlauben"), weil auch das auf dem
+        ''' Server wirkt. Steht das gelöschte Album gerade offen, fällt die Ansicht auf „Alle Fotos" zurück.</summary>
+        Public Async Sub DeleteImmichAlbum(node As VirtualNavigationNode)
+            If node Is Nothing OrElse Not node.IsImmichAlbumNode OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
+            Dim settings = AppSettingsService.Load()
+            If Not settings.ImmichAllowDelete Then
+                StatusText = LocalizationService.T("Löschen in Immich ist in den Einstellungen nicht erlaubt")
+                Return
+            End If
+
+            If Not settings.DeleteSkipConfirmation Then
+                Dim message = String.Format(LocalizationService.T("Album {0} löschen? Die Fotos darin bleiben in Immich erhalten."), node.Name)
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Album löschen"), message,
+                                                      LocalizationService.T("Löschen"), LocalizationService.T("Abbrechen")) Then Return
+            End If
+
+            If Not Await ImmichService.DeleteAlbumAsync(node.Id) Then
+                StatusText = LocalizationService.T("Album konnte nicht gelöscht werden")
+                Return
+            End If
+
+            Dim wasOpen = SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Id, node.Id, StringComparison.Ordinal)
+            RefreshImmichAlbumsAsync()
+            If wasOpen Then
+                Dim allNode = ImmichTree.FirstOrDefault(Function(n) String.Equals(n.Kind, "ImmichAll", StringComparison.Ordinal))
+                If allNode IsNot Nothing Then Await OpenVirtualNavigationNode(allNode)
+            End If
+            StatusText = String.Format(LocalizationService.T("Album gelöscht: {0}"), node.Name)
+        End Sub
+
         ''' <summary>Lädt lokale Dateien nach Immich hoch und ordnet sie - falls ein Album-Knoten übergeben
         ''' wurde - diesem zu. Aktualisiert danach Baum und (falls betroffen) die offene Ansicht.</summary>
         Public Async Sub UploadToImmich(node As VirtualNavigationNode, filePaths As IEnumerable(Of String))
@@ -3415,6 +3446,12 @@ Namespace ViewModels
 
         Public Sub DeleteSelected()
             If _isVirtualFolder Then
+                ' Immich-Items haben keinen Dateipfad (Pseudo-Pfad) - sie werden auf dem Server gelöscht,
+                ' alles andere in der virtuellen Ansicht (Suchliste) wie gewohnt lokal.
+                Dim immichItems = GetSelectedImageItems().Where(Function(i) i.IsImmichAsset).ToList()
+                If immichItems.Count > 0 Then
+                    Dim ignored = DeleteImmichAssetsAsync(immichItems)
+                End If
                 Dim virtualTargets = GetSelectedPaths().Where(Function(p) File.Exists(p)).ToList()
                 DeletePaths(virtualTargets)
                 Return
@@ -3424,6 +3461,81 @@ Namespace ViewModels
                 targets.Add(SelectedFolderNode.FullPath)
             End If
             DeletePaths(targets)
+        End Sub
+
+        ''' <summary>Löscht Assets auf dem Immich-Server. Standardmäßig abgeschaltet: ohne die Einstellung
+        ''' "Löschen in Immich erlauben" bleibt ein Entf in der Galerie bei Immich-Bildern wirkungslos -
+        ''' niemand soll aus Versehen Bilder vom Server werfen. "Endgültig löschen" umgeht zusätzlich den
+        ''' Immich-Papierkorb; die Rückfrage folgt derselben Einstellung wie beim lokalen Löschen.</summary>
+        Private Async Function DeleteImmichAssetsAsync(items As List(Of ImageItem)) As Task
+            Dim settings = AppSettingsService.Load()
+            If Not settings.ImmichAllowDelete Then
+                StatusText = LocalizationService.T("Löschen in Immich ist in den Einstellungen nicht erlaubt")
+                Return
+            End If
+
+            Dim assetIds = items.Select(Function(i) i.ImmichAssetId).
+                Where(Function(id) Not String.IsNullOrWhiteSpace(id)).
+                Distinct(StringComparer.Ordinal).
+                ToList()
+            If assetIds.Count = 0 Then Return
+
+            Dim permanent = settings.ImmichDeletePermanently
+            If Not settings.DeleteSkipConfirmation Then
+                Dim verb = If(permanent,
+                              LocalizationService.T("endgültig aus Immich löschen"),
+                              LocalizationService.T("in den Immich-Papierkorb verschieben"))
+                Dim message = If(items.Count = 1,
+                                 $"{items(0).FileName} {verb}?",
+                                 $"{items.Count} {LocalizationService.T("Elemente")} {verb}?")
+                Dim confirmText = If(permanent, LocalizationService.T("Löschen"), LocalizationService.T("In den Papierkorb"))
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Aus Immich löschen"), message, confirmText, LocalizationService.T("Abbrechen")) Then Return
+            End If
+
+            IsLoading = True
+            Try
+                Dim ok = Await ImmichService.DeleteAssetsAsync(assetIds, force:=permanent)
+                If Not ok Then
+                    StatusText = LocalizationService.T("Löschen in Immich fehlgeschlagen")
+                    Return
+                End If
+
+                ClearSelection()
+                RemoveImmichItems(assetIds)
+                RefreshImmichAlbumsAsync()
+                StatusText = String.Format(LocalizationService.T("{0} aus Immich gelöscht"), assetIds.Count)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.DeleteFlow", ex)
+                StatusText = LocalizationService.T("Löschen in Immich fehlgeschlagen")
+            Finally
+                IsLoading = False
+            End Try
+        End Function
+
+        ''' <summary>Die Einstellung „Löschen in Immich erlauben" entscheidet, ob Kontextmenü und Kachel-Knopf
+        ''' bei Immich-Bildern ein Löschen anbieten (ImageItem.CanFileOperationDelete) und ob der Baum „Album
+        ''' löschen" zeigt (VirtualNavigationNode.CanDeleteImmichAlbum) - wird sie umgelegt, während die
+        ''' Galerie offen ist, müssen beide das mitbekommen. Die Album-Knoten baut RefreshImmichAlbumsAsync
+        ''' dafür neu auf (der Knoten hat keine Benachrichtigung).</summary>
+        Public Sub RefreshImmichDeletePermission()
+            For Each item In _allItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImmichAsset)
+                item.RefreshFileOperationFlags()
+            Next
+            If HasImmich Then RefreshImmichAlbumsAsync()
+        End Sub
+
+        ''' <summary>Nimmt gelöschte Immich-Assets aus der Ansicht - auch aus der Dedup-Menge der virtuellen
+        ''' Ansicht, sonst bliebe deren Pseudo-Pfad belegt und dasselbe Bild käme nach einem erneuten Upload
+        ''' nicht mehr in die Liste. Wird auch vom Betrachter gerufen, der auf demselben Bestand arbeitet.</summary>
+        Public Sub RemoveImmichItems(assetIds As IEnumerable(Of String))
+            Dim gone = If(assetIds, Enumerable.Empty(Of String)()).Where(Function(id) Not String.IsNullOrWhiteSpace(id)).ToHashSet(StringComparer.Ordinal)
+            If gone.Count = 0 Then Return
+
+            For Each item In _allItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImmichAsset AndAlso gone.Contains(i.ImmichAssetId)).ToList()
+                _virtualPathSet.Remove(item.FilePath)
+            Next
+            _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso i.IsImmichAsset AndAlso gone.Contains(i.ImmichAssetId))
+            FilterAndSort()
         End Sub
 
         Public Sub DeletePaths(paths As IEnumerable(Of String))
@@ -4219,6 +4331,22 @@ Namespace ViewModels
             Return IO.Path.Combine(dir, $"{stem}{If(nameSuffix, "")}-ferrumpix-{Guid.NewGuid():N}{ext}")
         End Function
 
+        ''' <summary>Zielpfad für ein Asset, das ERSETZT wird: Immich übernimmt den Dateinamen des Uploads als
+        ''' Originalnamen des Assets, also muss er der alte bleiben - weder der Guid-Name aus
+        ''' CreateImmichBatchOutputPath noch ein Filtersuffix haben in einer aktualisierten Bibliothek etwas
+        ''' verloren. Eindeutigkeit stellt stattdessen ein eigener Unterordner je Bild her.</summary>
+        Private Shared Function CreateImmichReplaceOutputPath(item As ImageItem, requestedExtension As String) As String
+            Dim originalName = If(String.IsNullOrWhiteSpace(item.ImmichOriginalFileName), item.ImmichAssetId, item.ImmichOriginalFileName)
+            Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(originalName), requestedExtension)
+            If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
+            If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
+
+            Dim dir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichBatch", Guid.NewGuid().ToString("N"))
+            Directory.CreateDirectory(dir)
+            Dim stem = If(String.IsNullOrWhiteSpace(IO.Path.GetFileNameWithoutExtension(originalName)), "immich-export", IO.Path.GetFileNameWithoutExtension(originalName))
+            Return IO.Path.Combine(dir, stem & ext)
+        End Function
+
         ''' <param name="nameSuffix">Wird an den Dateinamen angehängt ("foto" + "_Vintage" -> "foto_Vintage").
         ''' Leer lassen, wenn der Name unverändert bleiben soll.</param>
         Private Shared Function CreateBatchTargetFolderPath(sourcePath As String, targetFolder As String, requestedExtension As String,
@@ -4231,6 +4359,8 @@ Namespace ViewModels
             Return MakeUniqueFilePath(IO.Path.Combine(targetFolder, stem & If(nameSuffix, "") & ext))
         End Function
 
+        ''' <param name="uploadedAssetIds">Sammelt die IDs der Assets, die danach in der Ansicht stehen sollen -
+        ''' im Update-Modus sind das die ERSETZTEN (ab Immich v3 mit neuer ID), sonst die neu angelegten.</param>
         Private Async Function ProcessImmichBatchItemsAsync(items As IEnumerable(Of ImageItem),
                                                             writer As Func(Of String, String, Boolean),
                                                             outputExtension As Func(Of String, String),
@@ -4239,6 +4369,9 @@ Namespace ViewModels
             Dim uploadedCount = 0
             Dim errorMessage As String = Nothing
             Dim albumId = CurrentImmichAlbumIdForUpload()
+            ' Update-Modus: die Stapelverarbeitung ersetzt die bearbeiteten Assets, statt neben jedes
+            ' Original eine bearbeitete Kopie zu legen (siehe Einstellung "Vorhandene Assets aktualisieren").
+            Dim updateExisting = AppSettingsService.Load().ImmichUpdateExistingAssets
 
             Try
                 For Each item In If(items, Enumerable.Empty(Of ImageItem)())
@@ -4246,20 +4379,31 @@ Namespace ViewModels
                     Dim source = Await EnsureLocalPathForBatchAsync(item)
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
 
-                    Dim outputPath = CreateImmichBatchOutputPath(source, outputExtension(source), nameSuffix)
+                    Dim outputPath = If(updateExisting,
+                                        CreateImmichReplaceOutputPath(item, outputExtension(source)),
+                                        CreateImmichBatchOutputPath(source, outputExtension(source), nameSuffix))
                     Try
                         Dim ok = Await Task.Run(Function() writer(source, outputPath))
                         If Not ok OrElse Not File.Exists(outputPath) Then Continue For
 
-                        Dim newAssetId = Await ImmichService.UploadAssetAsync(outputPath)
+                        Dim newAssetId As String
+                        If updateExisting Then
+                            newAssetId = Await ImmichService.ReplaceAssetAsync(item.ImmichAssetId, outputPath)
+                        Else
+                            newAssetId = Await ImmichService.UploadAssetAsync(outputPath)
+                        End If
                         If String.IsNullOrEmpty(newAssetId) Then Continue For
                         uploadedAssetIds?.Add(newAssetId)
-                        If Not String.IsNullOrEmpty(albumId) Then Await ImmichService.AddAssetsToAlbumAsync(albumId, {newAssetId})
+                        ' Beim Ersetzen bringt PUT /assets/copy die Albenzugehörigkeit selbst mit.
+                        If Not updateExisting AndAlso Not String.IsNullOrEmpty(albumId) Then Await ImmichService.AddAssetsToAlbumAsync(albumId, {newAssetId})
                         Await ImmichService.WaitForThumbnailReadyAsync(newAssetId)
                         uploadedCount += 1
                     Finally
                         Try
                             If File.Exists(outputPath) Then File.Delete(outputPath)
+                            ' Ersetzte Assets bekommen einen eigenen Unterordner (Namensgleichheit), der mit weg muss.
+                            Dim outputDir = IO.Path.GetDirectoryName(outputPath)
+                            If updateExisting AndAlso Directory.Exists(outputDir) AndAlso Not Directory.EnumerateFileSystemEntries(outputDir).Any() Then Directory.Delete(outputDir)
                         Catch
                         End Try
                     End Try
@@ -4371,6 +4515,13 @@ Namespace ViewModels
 
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Immich-Upload fehlgeschlagen", errorMessage)
             Return uploadedCount
+        End Function
+
+        ''' <summary>Lädt die gerade offene Immich-Ansicht neu (z.B. nachdem der Editor ein Asset ersetzt
+        ''' hat - die Kachel zeigt sonst das Bild von vorher oder ein Asset, das es nicht mehr gibt).</summary>
+        Public Async Function RefreshImmichViewAsync() As Task
+            If Not _isVirtualFolder OrElse SelectedImmichNode Is Nothing Then Return
+            Await RefreshAfterImmichBatchUploadAsync()
         End Function
 
         Private Async Function RefreshAfterImmichBatchUploadAsync(Optional uploadedAssetIds As IEnumerable(Of String) = Nothing) As Task

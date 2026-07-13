@@ -27,6 +27,8 @@ Namespace ViewModels
         Private _viewerOpenFitToWindow As Boolean = True
         Private _viewerFitBehavior As String = "Always"
         Private _showHiddenFolders As Boolean = False
+        Private _deleteSkipTrash As Boolean = False
+        Private _deleteSkipConfirmation As Boolean = False
         Private _galleryShowFolders As Boolean = True
         Private _galleryShowParentFolder As Boolean = True
         Private _galleryViewMode As String = "Grid"
@@ -61,6 +63,9 @@ Namespace ViewModels
         Private _immichApiKey As String = ""
         Private _immichStoreRatingInDescription As Boolean = False
         Private _immichStoreTagsInDescription As Boolean = False
+        Private _immichUpdateExistingAssets As Boolean = False
+        Private _immichAllowDelete As Boolean = False
+        Private _immichDeletePermanently As Boolean = False
         Private _immichConnectionMessage As String = ""
         Private _immichCacheMessage As String = ""
         Private _immichIsTesting As Boolean = False
@@ -69,6 +74,9 @@ Namespace ViewModels
         Private _savedImmichApiKey As String = ""
         Private _savedImmichStoreRatingInDescription As Boolean = False
         Private _savedImmichStoreTagsInDescription As Boolean = False
+        Private _savedImmichUpdateExistingAssets As Boolean = False
+        Private _savedImmichAllowDelete As Boolean = False
+        Private _savedImmichDeletePermanently As Boolean = False
 
         Private _savedThemeMode As String = "Dark"
         Private _savedAccentColor As String = "#F08A1A"
@@ -80,6 +88,8 @@ Namespace ViewModels
         Private _savedPreserveMetadataOnSave As Boolean = True
         Private _savedThumbnailCacheEnabled As Boolean = True
         Private _savedShowHiddenFolders As Boolean = False
+        Private _savedDeleteSkipTrash As Boolean = False
+        Private _savedDeleteSkipConfirmation As Boolean = False
         Private _savedGalleryShowFolders As Boolean = True
         Private _savedGalleryShowParentFolder As Boolean = True
         Private _savedGalleryViewMode As String = "Grid"
@@ -583,6 +593,31 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Löschen ohne Papierkorb (dauerhaft). Wird von MainWindowViewModel.RequestDeletePaths und
+        ''' vom Immich-Löschen gelesen.</summary>
+        Public Property DeleteSkipTrash As Boolean
+            Get
+                Return _deleteSkipTrash
+            End Get
+            Set(value As Boolean)
+                If _deleteSkipTrash = value Then Return
+                Me.RaiseAndSetIfChanged(_deleteSkipTrash, value)
+                SaveDeleteSettings()
+            End Set
+        End Property
+
+        ''' <summary>Löschen ohne Rückfrage.</summary>
+        Public Property DeleteSkipConfirmation As Boolean
+            Get
+                Return _deleteSkipConfirmation
+            End Get
+            Set(value As Boolean)
+                If _deleteSkipConfirmation = value Then Return
+                Me.RaiseAndSetIfChanged(_deleteSkipConfirmation, value)
+                SaveDeleteSettings()
+            End Set
+        End Property
+
         Public Property ShowHiddenFolders As Boolean
             Get
                 Return _showHiddenFolders
@@ -929,6 +964,48 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Bearbeitungen ersetzen das Quell-Asset, statt ein zweites anzulegen. Schaltet im Editor
+        ''' zugleich „Speichern" für Immich-Bilder frei (siehe EditorViewModel.CanSaveInPlace).</summary>
+        Public Property ImmichUpdateExistingAssets As Boolean
+            Get
+                Return _immichUpdateExistingAssets
+            End Get
+            Set(value As Boolean)
+                If _immichUpdateExistingAssets = value Then Return
+                Me.RaiseAndSetIfChanged(_immichUpdateExistingAssets, value)
+                PersistImmichSettings()
+                _mainVm?.Editor?.RefreshImmichSaveState()
+            End Set
+        End Property
+
+        ''' <summary>Erlaubt der Galerie/dem Betrachter, Assets auf dem Immich-Server zu löschen. Ohne
+        ''' diesen Schalter bleibt Löschen bei Immich-Bildern wirkungslos.</summary>
+        Public Property ImmichAllowDelete As Boolean
+            Get
+                Return _immichAllowDelete
+            End Get
+            Set(value As Boolean)
+                If _immichAllowDelete = value Then Return
+                Me.RaiseAndSetIfChanged(_immichAllowDelete, value)
+                ImageItem.ImmichDeleteAllowed = value
+                PersistImmichSettings()
+                ' Die Kontextmenüs/Kachel-Knöpfe der offenen Galerie zeigen Löschen je nach Berechtigung.
+                _mainVm?.Gallery?.RefreshImmichDeletePermission()
+            End Set
+        End Property
+
+        ''' <summary>True = am Immich-Papierkorb vorbei endgültig löschen.</summary>
+        Public Property ImmichDeletePermanently As Boolean
+            Get
+                Return _immichDeletePermanently
+            End Get
+            Set(value As Boolean)
+                If _immichDeletePermanently = value Then Return
+                Me.RaiseAndSetIfChanged(_immichDeletePermanently, value)
+                PersistImmichSettings()
+            End Set
+        End Property
+
         Public Property ImmichConnectionMessage As String
             Get
                 Return _immichConnectionMessage
@@ -1006,6 +1083,8 @@ Namespace ViewModels
             _jpgSaveQuality = _appSettings.JpgSaveQuality
             _preserveMetadataOnSave = _appSettings.PreserveMetadataOnSave
             _showHiddenFolders = _appSettings.ShowHiddenFolders
+            _deleteSkipTrash = _appSettings.DeleteSkipTrash
+            _deleteSkipConfirmation = _appSettings.DeleteSkipConfirmation
             _galleryShowFolders = _appSettings.GalleryShowFolders
             _galleryShowParentFolder = _appSettings.GalleryShowParentFolder
             _galleryViewMode = AppSettingsService.NormalizeGalleryViewMode(_appSettings.GalleryViewMode)
@@ -1030,7 +1109,11 @@ Namespace ViewModels
             _immichApiKey = _appSettings.ImmichApiKey
             _immichStoreRatingInDescription = _appSettings.ImmichStoreRatingInDescription
             _immichStoreTagsInDescription = _appSettings.ImmichStoreTagsInDescription
+            _immichUpdateExistingAssets = _appSettings.ImmichUpdateExistingAssets
+            _immichAllowDelete = _appSettings.ImmichAllowDelete
+            _immichDeletePermanently = _appSettings.ImmichDeletePermanently
             FolderNode.ShowHiddenFolders = _showHiddenFolders
+            ImageItem.ImmichDeleteAllowed = _immichAllowDelete
             ResetCommand = ReactiveCommand.Create(Sub() ResetToDefaults())
             ApplyCommand = ReactiveCommand.Create(Sub()
                                                      SnapshotSettings()
@@ -1096,6 +1179,9 @@ Namespace ViewModels
                                           s.ImmichApiKey = If(_immichApiKey, "").Trim()
                                           s.ImmichStoreRatingInDescription = _immichStoreRatingInDescription
                                           s.ImmichStoreTagsInDescription = _immichStoreTagsInDescription
+                                          s.ImmichUpdateExistingAssets = _immichUpdateExistingAssets
+                                          s.ImmichAllowDelete = _immichAllowDelete
+                                          s.ImmichDeletePermanently = _immichDeletePermanently
                                       End Sub)
         End Sub
 
@@ -1156,7 +1242,12 @@ Namespace ViewModels
             _savedImmichApiKey = _immichApiKey
             _savedImmichStoreRatingInDescription = _immichStoreRatingInDescription
             _savedImmichStoreTagsInDescription = _immichStoreTagsInDescription
+            _savedImmichUpdateExistingAssets = _immichUpdateExistingAssets
+            _savedImmichAllowDelete = _immichAllowDelete
+            _savedImmichDeletePermanently = _immichDeletePermanently
             _savedShowHiddenFolders = _showHiddenFolders
+            _savedDeleteSkipTrash = _deleteSkipTrash
+            _savedDeleteSkipConfirmation = _deleteSkipConfirmation
             _savedGalleryShowFolders = _galleryShowFolders
             _savedGalleryShowParentFolder = _galleryShowParentFolder
             _savedGalleryViewMode = _galleryViewMode
@@ -1194,8 +1285,13 @@ Namespace ViewModels
             ImmichApiKey = _savedImmichApiKey
             ImmichStoreRatingInDescription = _savedImmichStoreRatingInDescription
             ImmichStoreTagsInDescription = _savedImmichStoreTagsInDescription
+            ImmichUpdateExistingAssets = _savedImmichUpdateExistingAssets
+            ImmichAllowDelete = _savedImmichAllowDelete
+            ImmichDeletePermanently = _savedImmichDeletePermanently
             ImmichEnabled = _savedImmichEnabled
             ShowHiddenFolders = _savedShowHiddenFolders
+            DeleteSkipTrash = _savedDeleteSkipTrash
+            DeleteSkipConfirmation = _savedDeleteSkipConfirmation
             GalleryShowFolders = _savedGalleryShowFolders
             GalleryShowParentFolder = _savedGalleryShowParentFolder
             GalleryViewMode = _savedGalleryViewMode
@@ -1252,7 +1348,12 @@ Namespace ViewModels
             PreserveMetadataOnSave = True
             ImmichStoreRatingInDescription = False
             ImmichStoreTagsInDescription = False
+            ImmichUpdateExistingAssets = False
+            ImmichAllowDelete = False
+            ImmichDeletePermanently = False
             ShowHiddenFolders = False
+            DeleteSkipTrash = False
+            DeleteSkipConfirmation = False
             GalleryShowFolders = True
             GalleryShowParentFolder = True
             GalleryViewMode = "Grid"
@@ -1332,6 +1433,13 @@ Namespace ViewModels
         Private Sub SaveStartupSettings()
             Dim settings = AppSettingsService.Load()
             settings.StartupImageMode = _startupImageMode
+            AppSettingsService.Save(settings)
+        End Sub
+
+        Private Sub SaveDeleteSettings()
+            Dim settings = AppSettingsService.Load()
+            settings.DeleteSkipTrash = _deleteSkipTrash
+            settings.DeleteSkipConfirmation = _deleteSkipConfirmation
             AppSettingsService.Save(settings)
         End Sub
 

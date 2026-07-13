@@ -256,14 +256,42 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Löscht ein Album (DELETE /albums/{id}). Die Fotos darin bleiben in Immich erhalten -
+        ''' ein Album ist nur eine Zusammenstellung, kein Ablageort.</summary>
+        Public Shared Async Function DeleteAlbumAsync(albumId As String, Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(albumId) Then Return False
+            Try
+                Dim client = GetClient()
+                Using resp = Await client.DeleteAsync(ApiUrl("albums/" & Uri.EscapeDataString(albumId)), cancellationToken).ConfigureAwait(False)
+                    If Not resp.IsSuccessStatusCode Then
+                        Dim err = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                        DiagnosticLogService.LogAlways("Immich.DeleteAlbum", $"HTTP {CInt(resp.StatusCode)} album={albumId} {err.Substring(0, Math.Min(300, err.Length))}")
+                    End If
+                    Return resp.IsSuccessStatusCode
+                End Using
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.DeleteAlbum", ex)
+                Return False
+            End Try
+        End Function
+
         ''' <summary>Lädt eine lokale Datei als neues Asset hoch und gibt dessen Asset-ID zurück (auch bei
         ''' „duplicate" - Immich dedupliziert serverseitig per Prüfsumme). Nothing bei Fehler.</summary>
-        Public Shared Async Function UploadAssetAsync(filePath As String, Optional cancellationToken As CancellationToken = Nothing) As Task(Of String)
+        ''' <param name="fileCreatedAtIso">Aufnahmedatum, das Immich dem Asset geben soll. Beim ERSETZEN eines
+        ''' Assets zwingend das des Originals: der Zeitstempel der frisch gerenderten Temp-Datei wäre „jetzt",
+        ''' und ohne EXIF-Aufnahmedatum im Bild (z.B. PNG) rutschte das Foto damit in der Zeitleiste auf heute.</param>
+        Public Shared Async Function UploadAssetAsync(filePath As String,
+                                                      Optional cancellationToken As CancellationToken = Nothing,
+                                                      Optional fileCreatedAtIso As String = Nothing) As Task(Of String)
             If Not IsConfigured OrElse String.IsNullOrWhiteSpace(filePath) OrElse Not File.Exists(filePath) Then Return Nothing
             Try
                 Dim client = GetClient()
                 Dim info = New FileInfo(filePath)
-                Dim createdIso = info.CreationTimeUtc.ToString("o", Globalization.CultureInfo.InvariantCulture)
+                Dim createdIso = If(String.IsNullOrWhiteSpace(fileCreatedAtIso),
+                                    info.CreationTimeUtc.ToString("o", Globalization.CultureInfo.InvariantCulture),
+                                    fileCreatedAtIso)
                 Dim modifiedIso = info.LastWriteTimeUtc.ToString("o", Globalization.CultureInfo.InvariantCulture)
                 Using form = New MultipartFormDataContent()
                     form.Add(New StringContent(createdIso), "fileCreatedAt")
@@ -315,6 +343,218 @@ Namespace Services
                 Return False
             End Try
         End Function
+
+        ''' <summary>Ersetzt das Original eines vorhandenen Assets durch eine lokale Datei und liefert die
+        ''' Asset-ID des Ergebnisses (Nothing bei Fehler).
+        '''
+        ''' Bis Immich v2 erledigt das ein Aufruf (PUT /assets/{id}/original), die Asset-ID bleibt. In v3
+        ''' ist dieser Endpunkt entfallen; der von Immich vorgesehene Weg ist: neu hochladen, die
+        ''' Verknüpfungen (Alben, Favorit, Stack, geteilte Links, Sidecar) per PUT /assets/copy übernehmen,
+        ''' Beschreibung/Bewertung/Stichwörter nachziehen und das alte Asset in den Papierkorb legen. Die
+        ''' Asset-ID ändert sich dabei zwangsläufig - Aufrufer müssen mit der zurückgegebenen ID
+        ''' weiterarbeiten und dürfen die übergebene nicht weiterverwenden.</summary>
+        Public Shared Async Function ReplaceAssetAsync(assetId As String, filePath As String, Optional cancellationToken As CancellationToken = Nothing) As Task(Of String)
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(assetId) OrElse String.IsNullOrWhiteSpace(filePath) OrElse Not File.Exists(filePath) Then Return Nothing
+
+            ' Unbekannte Version (0) wie eine alte behandeln: der Legacy-Aufruf beantwortet die Frage selbst
+            ' - auf einem v3-Server läuft er ins Leere und wir nehmen den Weg darunter.
+            Dim major = Await GetServerMajorVersionAsync(cancellationToken).ConfigureAwait(False)
+            If major < 3 Then
+                If Await ReplaceOriginalLegacyAsync(assetId, filePath, cancellationToken).ConfigureAwait(False) Then
+                    InvalidateAssetCaches(assetId)
+                    Await RefreshAssetDetailCacheAsync(assetId, "nach ReplaceAsset (bis v2)", cancellationToken).ConfigureAwait(False)
+                    Return assetId
+                End If
+            End If
+
+            ' Den Serverzustand des Originals EINMAL holen: er liefert das Aufnahmedatum für den Upload und
+            ' gleich darauf Beschreibung/Bewertung/Stichwörter für das neue Asset.
+            Dim source = Await GetAssetDetailRawAsync(assetId, cancellationToken).ConfigureAwait(False)
+
+            Dim newAssetId = Await UploadAssetAsync(filePath, cancellationToken, fileCreatedAtIso:=source?.FileCreatedAt).ConfigureAwait(False)
+            If String.IsNullOrEmpty(newAssetId) Then Return Nothing
+            ' Immich dedupliziert per Prüfsumme: ist die "neue" Datei byteweise die alte, kommt dieselbe
+            ' ID zurück. Dann gibt es nichts zu kopieren und erst recht nichts zu löschen.
+            If String.Equals(newAssetId, assetId, StringComparison.Ordinal) Then Return assetId
+
+            Await CopyAssetLinksAsync(assetId, newAssetId, cancellationToken).ConfigureAwait(False)
+            Await CopyAssetMetadataAsync(source, newAssetId, cancellationToken).ConfigureAwait(False)
+            ' Immer in den Immich-Papierkorb (force=False), nie endgültig: das Original einer Bearbeitung
+            ' unwiederbringlich zu löschen wäre eine Falle, die niemand erwartet.
+            If Not Await DeleteAssetsAsync({assetId}, force:=False, cancellationToken:=cancellationToken).ConfigureAwait(False) Then
+                DiagnosticLogService.LogAlways("Immich.ReplaceAsset", $"Neues Asset {newAssetId} liegt, altes {assetId} ließ sich nicht löschen")
+            End If
+            Return newAssetId
+        End Function
+
+        ''' <summary>Der Ein-Aufruf-Weg bis Immich v2. False, wenn der Server den Endpunkt nicht (mehr) kennt.</summary>
+        Private Shared Async Function ReplaceOriginalLegacyAsync(assetId As String, filePath As String, cancellationToken As CancellationToken) As Task(Of Boolean)
+            Try
+                Dim client = GetClient()
+                Dim info = New FileInfo(filePath)
+                Using form = New MultipartFormDataContent()
+                    form.Add(New StringContent(info.CreationTimeUtc.ToString("o", Globalization.CultureInfo.InvariantCulture)), "fileCreatedAt")
+                    form.Add(New StringContent(info.LastWriteTimeUtc.ToString("o", Globalization.CultureInfo.InvariantCulture)), "fileModifiedAt")
+                    form.Add(New StringContent(IO.Path.GetFileName(filePath)), "filename")
+                    Using fileStream = File.OpenRead(filePath)
+                        Dim fileContent = New StreamContent(fileStream)
+                        fileContent.Headers.ContentType = New MediaTypeHeaderValue(GuessMimeType(filePath))
+                        form.Add(fileContent, "assetData", IO.Path.GetFileName(filePath))
+                        Using req = New HttpRequestMessage(HttpMethod.Put, ApiUrl($"assets/{Uri.EscapeDataString(assetId)}/original"))
+                            req.Content = form
+                            Using resp = Await client.SendAsync(req, cancellationToken).ConfigureAwait(False)
+                                If resp.IsSuccessStatusCode Then Return True
+                                Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                                DiagnosticLogService.LogAlways("Immich.ReplaceAsset", $"HTTP {CInt(resp.StatusCode)} asset={assetId} {body.Substring(0, Math.Min(300, body.Length))}")
+                                Return False
+                            End Using
+                        End Using
+                    End Using
+                End Using
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.ReplaceAsset", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Überträgt Alben, Favorit, Stack, geteilte Links und Sidecar vom Quell- auf das
+        ''' Zielasset (PUT /assets/copy, ab Immich v3).</summary>
+        Private Shared Async Function CopyAssetLinksAsync(sourceId As String, targetId As String, cancellationToken As CancellationToken) As Task(Of Boolean)
+            Try
+                Dim client = GetClient()
+                Dim body = "{""sourceId"":" & JsonSerializer.Serialize(sourceId) & ",""targetId"":" & JsonSerializer.Serialize(targetId) & "}"
+                Using content = New StringContent(body, Encoding.UTF8, "application/json")
+                    Using resp = Await client.PutAsync(ApiUrl("assets/copy"), content, cancellationToken).ConfigureAwait(False)
+                        If Not resp.IsSuccessStatusCode Then
+                            DiagnosticLogService.LogAlways("Immich.CopyAsset", $"HTTP {CInt(resp.StatusCode)} {sourceId} → {targetId}")
+                        End If
+                        Return resp.IsSuccessStatusCode
+                    End Using
+                End Using
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.CopyAsset", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Zieht Beschreibung, Bewertung und Stichwörter des Quellassets auf das Zielasset nach -
+        ''' PUT /assets/copy deckt die nicht ab. Bewusst der ROHE Serverzustand: liegen Bewertung und
+        ''' Stichwörter (je nach Einstellung) im [FerrumPix]-Block der Beschreibung, kommen sie mit der
+        ''' Beschreibung mit, ohne dass hier zwischen beiden Ablagearten unterschieden werden muss.</summary>
+        Private Shared Async Function CopyAssetMetadataAsync(raw As ImmichAssetDto, targetId As String, cancellationToken As CancellationToken) As Task(Of Boolean)
+            Try
+                If raw Is Nothing Then Return False
+
+                Dim fields As New List(Of String)()
+                Dim description = If(raw.ExifInfo?.Description, "")
+                If Not String.IsNullOrEmpty(description) Then fields.Add("""description"":" & JsonSerializer.Serialize(description))
+                Dim rating = If(raw.ExifInfo?.Rating.HasValue, CInt(Math.Round(raw.ExifInfo.Rating.Value)), 0)
+                If rating >= 1 AndAlso rating <= 5 Then fields.Add("""rating"":" & rating.ToString(Globalization.CultureInfo.InvariantCulture))
+                If fields.Count > 0 Then
+                    Await UpdateAssetAsync(targetId, "{" & String.Join(",", fields) & "}", cancellationToken).ConfigureAwait(False)
+                End If
+
+                For Each tag In If(raw.Tags, New List(Of ImmichTagDto)())
+                    If tag Is Nothing OrElse String.IsNullOrEmpty(tag.Id) Then Continue For
+                    Await TagAssetsAsync(tag.Id, targetId, add:=True, cancellationToken:=cancellationToken).ConfigureAwait(False)
+                Next
+
+                Await RefreshAssetDetailCacheAsync(targetId, $"nach CopyAssetMetadata von {raw.Id}", cancellationToken).ConfigureAwait(False)
+                Return True
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.CopyAssetMetadata", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Löscht Assets auf dem Server. force=False legt sie in den Immich-Papierkorb (dort
+        ''' wiederherstellbar), force=True löscht sie endgültig.</summary>
+        Public Shared Async Function DeleteAssetsAsync(assetIds As IEnumerable(Of String), force As Boolean, Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
+            If Not IsConfigured Then Return False
+            Dim ids = If(assetIds, Enumerable.Empty(Of String)()).Where(Function(s) Not String.IsNullOrWhiteSpace(s)).Distinct(StringComparer.Ordinal).ToList()
+            If ids.Count = 0 Then Return False
+            Try
+                Dim client = GetClient()
+                Dim body = "{""force"":" & If(force, "true", "false") & ",""ids"":[" & String.Join(",", ids.Select(Function(i) JsonSerializer.Serialize(i))) & "]}"
+                Using req = New HttpRequestMessage(HttpMethod.Delete, ApiUrl("assets"))
+                    req.Content = New StringContent(body, Encoding.UTF8, "application/json")
+                    Using resp = Await client.SendAsync(req, cancellationToken).ConfigureAwait(False)
+                        If Not resp.IsSuccessStatusCode Then
+                            Dim err = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                            DiagnosticLogService.LogAlways("Immich.DeleteAssets", $"HTTP {CInt(resp.StatusCode)} force={force} n={ids.Count} {err.Substring(0, Math.Min(300, err.Length))}")
+                            Return False
+                        End If
+                    End Using
+                End Using
+                For Each id In ids
+                    InvalidateAssetCaches(id)
+                Next
+                Return True
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.DeleteAssets", ex)
+                Return False
+            End Try
+        End Function
+
+        ' Die Hauptversion des Servers entscheidet, wie ein vorhandenes Asset ersetzt wird (siehe
+        ' ReplaceAssetAsync). Sie ändert sich nur bei einem Server-Update, daher je Server einmal abfragen.
+        Private Shared _serverMajorVersion As Integer = -1
+        Private Shared _serverVersionKey As String = Nothing
+
+        ''' <summary>Hauptversion des Immich-Servers (GET /server/version), 0 wenn nicht ermittelbar.</summary>
+        Public Shared Async Function GetServerMajorVersionAsync(Optional cancellationToken As CancellationToken = Nothing) As Task(Of Integer)
+            If Not IsConfigured Then Return 0
+            Dim key = NormalizeServerUrl(AppSettingsService.Load().ImmichServerUrl)
+            If _serverMajorVersion >= 0 AndAlso String.Equals(_serverVersionKey, key, StringComparison.Ordinal) Then Return _serverMajorVersion
+            Try
+                Dim client = GetClient()
+                Using resp = Await client.GetAsync(ApiUrl("server/version"), cancellationToken).ConfigureAwait(False)
+                    If Not resp.IsSuccessStatusCode Then Return 0
+                    Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                    Dim dto = JsonSerializer.Deserialize(Of ImmichVersionDto)(body, JsonOptions)
+                    Dim major = If(dto Is Nothing, 0, dto.Major)
+                    _serverMajorVersion = major
+                    _serverVersionKey = key
+                    Return major
+                End Using
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.ServerVersion", ex)
+                Return 0
+            End Try
+        End Function
+
+        ''' <summary>Wirft alles lokal Zwischengespeicherte zu einem Asset weg: die Thumbnail-Dateien beider
+        ''' Größen, die heruntergeladene Temp-Kopie des Originals und den Metadaten-Index-Eintrag. Nach
+        ''' Ersetzen oder Löschen zwingend - sonst zeigt die Galerie das Bild von vorher weiter.</summary>
+        Public Shared Sub InvalidateAssetCaches(assetId As String)
+            If String.IsNullOrWhiteSpace(assetId) Then Return
+            Try
+                For Each sizeKey In {ThumbnailSize, PreviewSize}
+                    Dim cachePath = GetCacheFilePath(assetId, sizeKey)
+                    If File.Exists(cachePath) Then File.Delete(cachePath)
+                Next
+            Catch
+            End Try
+            Try
+                If Directory.Exists(ImmichTempDir) Then
+                    For Each temp In Directory.GetFiles(ImmichTempDir, SafeFileStem(assetId) & ".*")
+                        Try : File.Delete(temp) : Catch : End Try
+                    Next
+                End If
+            Catch
+            End Try
+            ImmichIndexService.Instance.Remove(ServerKey, assetId)
+        End Sub
 
         Private Shared Function GuessMimeType(filePath As String) As String
             Select Case IO.Path.GetExtension(filePath).ToLowerInvariant()
@@ -1192,6 +1432,12 @@ Namespace Services
             Public Property Id As String
             ''' "created" oder "duplicate".
             Public Property Status As String
+        End Class
+
+        Private Class ImmichVersionDto
+            Public Property Major As Integer
+            Public Property Minor As Integer
+            Public Property Patch As Integer
         End Class
 
         Private Class ImmichAlbumDetailDto

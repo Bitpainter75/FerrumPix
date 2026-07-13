@@ -27,6 +27,16 @@ Namespace Models
         ''' beiden virtuellen Bäume ins Leere (Avalonia meldete das nur ins Log, sichtbar war nichts).</summary>
         Public Property IsExpanded As Boolean
 
+        ''' <summary>Album löschbar: nur ein echter Album-Knoten, und nur wenn „Löschen in Immich erlauben"
+        ''' eingeschaltet ist - derselbe Schalter, der auch das Löschen von Fotos freigibt. Die Album-Knoten
+        ''' werden beim Umlegen der Einstellung neu gebaut (GalleryViewModel.RefreshImmichDeletePermission),
+        ''' daher genügt hier ein einfacher Getter ohne Benachrichtigung.</summary>
+        Public ReadOnly Property CanDeleteImmichAlbum As Boolean
+            Get
+                Return IsImmichAlbumNode AndAlso AppSettingsService.Load().ImmichAllowDelete
+            End Get
+        End Property
+
         ''' True für einen konkreten Immich-Album-Knoten (umbenennbar, Upload-Ziel).
         Public ReadOnly Property IsImmichAlbumNode As Boolean
             Get

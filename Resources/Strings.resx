@@ -2736,4 +2736,61 @@
   <data name="ICC_Farbprofil_3cffd024" xml:space="preserve">
     <value>ICC colour profile</value>
   </data>
+  <data name="Vorhandene_Assets_aktualisieren_d34d0335" xml:space="preserve">
+    <value>Update existing assets</value>
+  </data>
+  <data name="Bearbeitungen_ersetzen_das_Immich_Asset_aus_dem__beef823a" xml:space="preserve">
+    <value>Edits replace the Immich asset they came from (albums, keywords, rating and favourite are kept; the original goes to the Immich trash). Only then does Save work for Immich images in the editor. Off: every edit creates a new asset via Save as.</value>
+  </data>
+  <data name="L_schen_in_Immich_erlauben_0e3f9647" xml:space="preserve">
+    <value>Allow deleting in Immich</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Betrachter_auch_auf_69dcc97d" xml:space="preserve">
+    <value>Delete in the gallery and viewer also affects Immich assets - on the server, not just in the local view. Off: Immich images cannot be deleted.</value>
+  </data>
+  <data name="Endg_ltig_l_schen_9df6718d" xml:space="preserve">
+    <value>Delete permanently</value>
+  </data>
+  <data name="Umgeht_den_Immich_Papierkorb_gel_schte_Assets_si_4eea5645" xml:space="preserve">
+    <value>Bypasses the Immich trash: deleted assets are gone immediately and cannot be restored in the Immich web interface either.</value>
+  </data>
+  <data name="Immich_Asset_wird_aktualisiert_c5335822" xml:space="preserve">
+    <value>Updating Immich asset…</value>
+  </data>
+  <data name="Immich_Asset_aktualisiert_8cdc9b52" xml:space="preserve">
+    <value>Immich asset updated</value>
+  </data>
+  <data name="L_schen_in_Immich_ist_in_den_Einstellungen_nicht_03de7033" xml:space="preserve">
+    <value>Deleting in Immich is not allowed in the settings</value>
+  </data>
+  <data name="endg_ltig_aus_Immich_l_schen_dadd0295" xml:space="preserve">
+    <value>delete permanently from Immich</value>
+  </data>
+  <data name="in_den_Immich_Papierkorb_verschieben_0dcc243a" xml:space="preserve">
+    <value>move to the Immich trash</value>
+  </data>
+  <data name="Aus_Immich_l_schen_ce1a03b3" xml:space="preserve">
+    <value>Delete from Immich</value>
+  </data>
+  <data name="L_schen_in_Immich_fehlgeschlagen_3f44e364" xml:space="preserve">
+    <value>Deleting in Immich failed</value>
+  </data>
+  <data name="0_aus_Immich_gel_scht_992314d3" xml:space="preserve">
+    <value>{0} deleted from Immich</value>
+  </data>
+  <data name="In_den_Papierkorb_aeb21f69" xml:space="preserve">
+    <value>Move to trash</value>
+  </data>
+  <data name="Album_l_schen_1be01093" xml:space="preserve">
+    <value>Delete album</value>
+  </data>
+  <data name="Album_0_l_schen_Die_Fotos_darin_bleiben_in_Immic_16a8ca0d" xml:space="preserve">
+    <value>Delete album {0}? The photos in it are kept in Immich.</value>
+  </data>
+  <data name="Album_konnte_nicht_gel_scht_werden_4f27bc20" xml:space="preserve">
+    <value>The album could not be deleted</value>
+  </data>
+  <data name="Album_gel_scht_0_69f50494" xml:space="preserve">
+    <value>Album deleted: {0}</value>
+  </data>
 </root>

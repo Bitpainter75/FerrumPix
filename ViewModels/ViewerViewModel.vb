@@ -1308,6 +1308,12 @@ Namespace ViewModels
         End Sub
 
         Private Sub DeleteCurrent()
+            ' In einer Immich-Sitzung ist _currentImagePath nur die heruntergeladene Temp-Kopie - die zu
+            ' löschen wäre wirkungslos (sie wäre beim nächsten Blättern wieder da). Gemeint ist das Asset.
+            If _isImmichSession Then
+                Dim ignored = DeleteCurrentImmichAssetAsync()
+                Return
+            End If
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             Dim deletedPath = _currentImagePath
             _mainVm.RequestDeletePaths({deletedPath}, Sub()
@@ -1324,6 +1330,54 @@ Namespace ViewModels
                                                            End If
                                                        End Sub)
         End Sub
+
+        ''' <summary>Löscht das gerade gezeigte Immich-Asset auf dem Server. Erfordert die Einstellung
+        ''' "Löschen in Immich erlauben"; "Endgültig löschen" umgeht den Immich-Papierkorb. Danach rückt der
+        ''' Betrachter im Album weiter (bzw. zurück in die Galerie, wenn nichts mehr übrig ist).</summary>
+        Private Async Function DeleteCurrentImmichAssetAsync() As Task
+            Dim assetId = _currentImmichAssetId
+            If String.IsNullOrEmpty(assetId) OrElse _currentIndex < 0 OrElse _currentIndex >= _folderPaths.Count Then Return
+
+            Dim settings = AppSettingsService.Load()
+            If Not settings.ImmichAllowDelete Then
+                StatusInfo = LocalizationService.T("Löschen in Immich ist in den Einstellungen nicht erlaubt")
+                Return
+            End If
+
+            Dim permanent = settings.ImmichDeletePermanently
+            If Not settings.DeleteSkipConfirmation Then
+                Dim verb = If(permanent,
+                              LocalizationService.T("endgültig aus Immich löschen"),
+                              LocalizationService.T("in den Immich-Papierkorb verschieben"))
+                Dim confirmText = If(permanent, LocalizationService.T("Löschen"), LocalizationService.T("In den Papierkorb"))
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Aus Immich löschen"),
+                                                      $"{CurrentFileName} {verb}?",
+                                                      confirmText,
+                                                      LocalizationService.T("Abbrechen")) Then Return
+            End If
+
+            If Not Await ImmichService.DeleteAssetsAsync({assetId}, force:=permanent) Then
+                StatusInfo = LocalizationService.T("Löschen in Immich fehlgeschlagen")
+                Return
+            End If
+
+            Dim idx = _currentIndex
+            _folderPaths.RemoveAt(idx)
+            If idx < _immichSessionItems.Count Then _immichSessionItems.RemoveAt(idx)
+            _mainVm.Gallery?.RemoveImmichItems({assetId})
+
+            If _folderPaths.Count = 0 Then
+                CurrentImage = Nothing
+                CurrentImagePath = ""
+                CurrentFileName = ""
+                _mainVm.CurrentMode = AppMode.Gallery
+                Return
+            End If
+
+            If idx >= _folderPaths.Count Then idx = _folderPaths.Count - 1
+            LoadFilmstrip()
+            LoadImmichAt(idx)
+        End Function
 
         Private Sub RenameCurrent()
             If String.IsNullOrEmpty(_currentImagePath) Then Return

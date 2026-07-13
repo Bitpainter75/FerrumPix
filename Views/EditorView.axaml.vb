@@ -2831,7 +2831,14 @@ Namespace Views
                         vm.RedoCommand.Execute(Nothing)
                         e.Handled = True
                     Case Key.S
-                        If vm.CanSaveInPlace Then vm.SaveCommand.Execute(Nothing)
+                        ' Ist Speichern gesperrt (RAW-Datei, oder Immich-Bild ohne "Vorhandene Assets
+                        ' aktualisieren"), soll Strg+S nicht wirkungslos verpuffen, sondern das anbieten,
+                        ' was hier möglich ist: Speichern unter.
+                        If vm.CanSaveInPlace Then
+                            vm.SaveCommand.Execute(Nothing)
+                        Else
+                            vm.SaveAsCommand.Execute(Nothing)
+                        End If
                         e.Handled = True
                     Case Key.D
                         If vm.HasSelectedAnnotation Then

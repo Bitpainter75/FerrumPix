@@ -588,6 +588,11 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        Public Sub OnImmichDeleteAlbumClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.DeleteImmichAlbum(GetVirtualNodeFromSender(sender))
+            e.Handled = True
+        End Sub
+
         ' --- Drag&Drop lokal → Immich (Datei-Payload auf einen Immich-Knoten ablegen = Upload) ---
 
         Private Function GetImmichDropNode(e As DragEventArgs) As VirtualNavigationNode

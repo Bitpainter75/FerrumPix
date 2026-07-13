@@ -2735,4 +2735,61 @@
   <data name="ICC_Farbprofil_3cffd024" xml:space="preserve">
     <value>Profilo colore ICC</value>
   </data>
+  <data name="Vorhandene_Assets_aktualisieren_d34d0335" xml:space="preserve">
+    <value>Aggiorna le risorse esistenti</value>
+  </data>
+  <data name="Bearbeitungen_ersetzen_das_Immich_Asset_aus_dem__beef823a" xml:space="preserve">
+    <value>Le modifiche sostituiscono la risorsa Immich da cui provengono (album, parole chiave, valutazione e preferito vengono mantenuti; l'originale finisce nel cestino di Immich). Solo così Salva funziona per le immagini di Immich nell'editor. Disattivato: ogni modifica crea una nuova risorsa con Salva con nome.</value>
+  </data>
+  <data name="L_schen_in_Immich_erlauben_0e3f9647" xml:space="preserve">
+    <value>Consenti l'eliminazione in Immich</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Betrachter_auch_auf_69dcc97d" xml:space="preserve">
+    <value>L'eliminazione nella galleria e nel visualizzatore agisce anche sulle risorse Immich, quindi sul server e non solo sulla vista locale. Disattivato: le immagini di Immich non possono essere eliminate.</value>
+  </data>
+  <data name="Endg_ltig_l_schen_9df6718d" xml:space="preserve">
+    <value>Elimina definitivamente</value>
+  </data>
+  <data name="Umgeht_den_Immich_Papierkorb_gel_schte_Assets_si_4eea5645" xml:space="preserve">
+    <value>Ignora il cestino di Immich: le risorse eliminate spariscono subito e non possono essere ripristinate nemmeno nell'interfaccia web di Immich.</value>
+  </data>
+  <data name="Immich_Asset_wird_aktualisiert_c5335822" xml:space="preserve">
+    <value>Aggiornamento della risorsa Immich…</value>
+  </data>
+  <data name="Immich_Asset_aktualisiert_8cdc9b52" xml:space="preserve">
+    <value>Risorsa Immich aggiornata</value>
+  </data>
+  <data name="L_schen_in_Immich_ist_in_den_Einstellungen_nicht_03de7033" xml:space="preserve">
+    <value>L'eliminazione in Immich non è consentita nelle impostazioni</value>
+  </data>
+  <data name="endg_ltig_aus_Immich_l_schen_dadd0295" xml:space="preserve">
+    <value>eliminare definitivamente da Immich</value>
+  </data>
+  <data name="in_den_Immich_Papierkorb_verschieben_0dcc243a" xml:space="preserve">
+    <value>spostare nel cestino di Immich</value>
+  </data>
+  <data name="Aus_Immich_l_schen_ce1a03b3" xml:space="preserve">
+    <value>Elimina da Immich</value>
+  </data>
+  <data name="L_schen_in_Immich_fehlgeschlagen_3f44e364" xml:space="preserve">
+    <value>Eliminazione in Immich non riuscita</value>
+  </data>
+  <data name="0_aus_Immich_gel_scht_992314d3" xml:space="preserve">
+    <value>{0} eliminati da Immich</value>
+  </data>
+  <data name="In_den_Papierkorb_aeb21f69" xml:space="preserve">
+    <value>Sposta nel cestino</value>
+  </data>
+  <data name="Album_l_schen_1be01093" xml:space="preserve">
+    <value>Elimina album</value>
+  </data>
+  <data name="Album_0_l_schen_Die_Fotos_darin_bleiben_in_Immic_16a8ca0d" xml:space="preserve">
+    <value>Eliminare l'album {0}? Le foto al suo interno restano in Immich.</value>
+  </data>
+  <data name="Album_konnte_nicht_gel_scht_werden_4f27bc20" xml:space="preserve">
+    <value>Non è stato possibile eliminare l'album</value>
+  </data>
+  <data name="Album_gel_scht_0_69f50494" xml:space="preserve">
+    <value>Album eliminato: {0}</value>
+  </data>
 </root>

@@ -2735,4 +2735,61 @@
   <data name="ICC_Farbprofil_3cffd024" xml:space="preserve">
     <value>ICC-Farbprofil</value>
   </data>
+  <data name="Vorhandene_Assets_aktualisieren_d34d0335" xml:space="preserve">
+    <value>Vorhandene Assets aktualisieren</value>
+  </data>
+  <data name="Bearbeitungen_ersetzen_das_Immich_Asset_aus_dem__beef823a" xml:space="preserve">
+    <value>Bearbeitungen ersetzen das Immich-Asset, aus dem sie stammen (Alben, Stichwörter, Bewertung und Favorit bleiben erhalten; das Original wandert in den Immich-Papierkorb). Erst damit ist im Editor Speichern für Immich-Bilder möglich. Aus: jede Bearbeitung legt über Speichern unter ein neues Asset an.</value>
+  </data>
+  <data name="L_schen_in_Immich_erlauben_0e3f9647" xml:space="preserve">
+    <value>Löschen in Immich erlauben</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Betrachter_auch_auf_69dcc97d" xml:space="preserve">
+    <value>Löschen wirkt in Galerie und Betrachter auch auf Immich-Assets - also auf den Server, nicht nur auf die lokale Ansicht. Aus: Immich-Bilder lassen sich nicht löschen.</value>
+  </data>
+  <data name="Endg_ltig_l_schen_9df6718d" xml:space="preserve">
+    <value>Endgültig löschen</value>
+  </data>
+  <data name="Umgeht_den_Immich_Papierkorb_gel_schte_Assets_si_4eea5645" xml:space="preserve">
+    <value>Umgeht den Immich-Papierkorb: gelöschte Assets sind sofort weg und lassen sich auch im Immich-Webinterface nicht wiederherstellen.</value>
+  </data>
+  <data name="Immich_Asset_wird_aktualisiert_c5335822" xml:space="preserve">
+    <value>Immich-Asset wird aktualisiert…</value>
+  </data>
+  <data name="Immich_Asset_aktualisiert_8cdc9b52" xml:space="preserve">
+    <value>Immich-Asset aktualisiert</value>
+  </data>
+  <data name="L_schen_in_Immich_ist_in_den_Einstellungen_nicht_03de7033" xml:space="preserve">
+    <value>Löschen in Immich ist in den Einstellungen nicht erlaubt</value>
+  </data>
+  <data name="endg_ltig_aus_Immich_l_schen_dadd0295" xml:space="preserve">
+    <value>endgültig aus Immich löschen</value>
+  </data>
+  <data name="in_den_Immich_Papierkorb_verschieben_0dcc243a" xml:space="preserve">
+    <value>in den Immich-Papierkorb verschieben</value>
+  </data>
+  <data name="Aus_Immich_l_schen_ce1a03b3" xml:space="preserve">
+    <value>Aus Immich löschen</value>
+  </data>
+  <data name="L_schen_in_Immich_fehlgeschlagen_3f44e364" xml:space="preserve">
+    <value>Löschen in Immich fehlgeschlagen</value>
+  </data>
+  <data name="0_aus_Immich_gel_scht_992314d3" xml:space="preserve">
+    <value>{0} aus Immich gelöscht</value>
+  </data>
+  <data name="In_den_Papierkorb_aeb21f69" xml:space="preserve">
+    <value>In den Papierkorb</value>
+  </data>
+  <data name="Album_l_schen_1be01093" xml:space="preserve">
+    <value>Album löschen</value>
+  </data>
+  <data name="Album_0_l_schen_Die_Fotos_darin_bleiben_in_Immic_16a8ca0d" xml:space="preserve">
+    <value>Album {0} löschen? Die Fotos darin bleiben in Immich erhalten.</value>
+  </data>
+  <data name="Album_konnte_nicht_gel_scht_werden_4f27bc20" xml:space="preserve">
+    <value>Album konnte nicht gelöscht werden</value>
+  </data>
+  <data name="Album_gel_scht_0_69f50494" xml:space="preserve">
+    <value>Album gelöscht: {0}</value>
+  </data>
 </root>

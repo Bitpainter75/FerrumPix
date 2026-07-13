@@ -179,11 +179,27 @@ Namespace Models
             End Get
         End Property
 
+        ''' <summary>Spiegel der Einstellung „Löschen in Immich erlauben" (siehe SettingsViewModel). Als
+        ''' statisches Feld, weil die Kachel-Bindung CanFileOperationDelete je Element ausgewertet wird und
+        ''' AppSettingsService.Load() dafür zu teuer wäre.</summary>
+        Public Shared Property ImmichDeleteAllowed As Boolean = False
+
+        ''' <summary>Immich-Assets haben keinen Dateipfad, für sie greift die Pfad-Policy nicht: über sie
+        ''' entscheidet die Einstellung „Löschen in Immich erlauben" - gelöscht wird dann auf dem Server
+        ''' (GalleryViewModel.DeleteImmichAssetsAsync), nicht im Dateisystem.</summary>
         Public ReadOnly Property CanFileOperationDelete As Boolean
             Get
-                Return Not IsParentFolderEntry AndAlso FileOperationPolicy.CanDelete(FilePath)
+                If IsParentFolderEntry Then Return False
+                If IsImmichAsset Then Return ImmichDeleteAllowed
+                Return FileOperationPolicy.CanDelete(FilePath)
             End Get
         End Property
+
+        ''' <summary>Meldet der Oberfläche, dass sich die Löschberechtigung geändert hat (Einstellung
+        ''' umgelegt, während die Galerie offen ist).</summary>
+        Public Sub RefreshFileOperationFlags()
+            RaisePropertyChanged(NameOf(CanFileOperationDelete))
+        End Sub
 
         Public ReadOnly Property CanFileOperationPasteInto As Boolean
             Get

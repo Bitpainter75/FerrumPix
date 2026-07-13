@@ -208,6 +208,25 @@ Namespace Services
             End Try
         End Sub
 
+        ''' <summary>Wirft den Eintrag eines Assets weg (nach Ersetzen oder Löschen auf dem Server - der
+        ''' Eintrag beschreibt dann ein Bild, das es so nicht mehr gibt).</summary>
+        Public Sub Remove(serverKey As String, assetId As String)
+            If String.IsNullOrEmpty(serverKey) OrElse String.IsNullOrEmpty(assetId) Then Return
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "DELETE FROM AssetMeta WHERE ServerKey=$s AND AssetId=$a"
+                        cmd.Parameters.AddWithValue("$s", serverKey)
+                        cmd.Parameters.AddWithValue("$a", assetId)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImmichIndex.Remove", ex)
+            End Try
+        End Sub
+
         ''' <summary>Anzahl gecachter Einträge und ungefähre Dateigröße der Index-DB (für die Einstellungen).</summary>
         Public Function GetInfo() As (Count As Integer, SizeBytes As Long)
             Dim count = 0

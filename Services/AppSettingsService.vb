@@ -156,6 +156,14 @@ Namespace Services
         Public Property ImmichApiKey As String = ""
         Public Property ImmichStoreRatingInDescription As Boolean = False
         Public Property ImmichStoreTagsInDescription As Boolean = False
+        ' Bearbeitete Immich-Bilder: Standard ist, ein neues Asset anzulegen (das Original bleibt
+        ' unangetastet). Mit ImmichUpdateExistingAssets=True ersetzt eine Bearbeitung stattdessen das
+        ' Quell-Asset - erst dann ist im Editor auch „Speichern" (statt nur „Speichern unter") möglich.
+        Public Property ImmichUpdateExistingAssets As Boolean = False
+        ' Löschen wirkt standardmäßig NICHT auf den Server: ein versehentliches Entf in der Galerie soll
+        ' keine Bilder aus Immich entfernen. ImmichDeletePermanently umgeht zusätzlich den Immich-Papierkorb.
+        Public Property ImmichAllowDelete As Boolean = False
+        Public Property ImmichDeletePermanently As Boolean = False
     End Class
 
     Public NotInheritable Class AppSettingsService

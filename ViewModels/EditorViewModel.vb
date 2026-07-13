@@ -28,6 +28,9 @@ Namespace ViewModels
         ' Immich-Album, aus dem das aktuelle Bild stammt - ein Upload des bearbeiteten Bildes nach Immich
         ' landet dann gleich in diesem Album (leer = nur in die Bibliothek).
         Private _immichSourceAlbumId As String = Nothing
+        ''' Originaldateiname des Immich-Assets - die Temp-Kopie heißt nach der Asset-ID, beim
+        ''' Zurückschreiben soll der Name aber erhalten bleiben (siehe SaveBackToImmichAsync).
+        Private _immichSourceFileName As String = Nothing
         Private _currentImage As Bitmap
         Private _previewImage As Bitmap
         Private _comparisonImage As Bitmap
@@ -5173,11 +5176,28 @@ Namespace ViewModels
 
         ''' Steuert, ob der "Speichern"-Button (in-place) aktiv ist - bei RAW-Bildern ist nur
         ''' "Speichern unter" erlaubt (siehe SaveImageAsync/ConfirmSaveBeforeLeavingAsync).
+        ''' Immich-Bilder liegen als Temp-Kopie vor (_forceSaveAsOnly): dort ist "Speichern" nur dann
+        ''' sinnvoll, wenn es das Quell-Asset ersetzen darf - siehe SavesBackToImmich.
         Public ReadOnly Property CanSaveInPlace As Boolean
             Get
-                Return Not IsCurrentImageRaw AndAlso Not _forceSaveAsOnly
+                Return Not IsCurrentImageRaw AndAlso (Not _forceSaveAsOnly OrElse SavesBackToImmich)
             End Get
         End Property
+
+        ''' <summary>True, wenn "Speichern" das Immich-Quell-Asset ersetzt statt eine lokale Datei zu
+        ''' schreiben (Einstellung "Vorhandene Assets aktualisieren"). Ohne die Einstellung bleibt bei
+        ''' Immich-Bildern nur "Speichern unter" - dann entsteht immer ein neues Asset.</summary>
+        Private ReadOnly Property SavesBackToImmich As Boolean
+            Get
+                Return CurrentImmichAssetId() IsNot Nothing AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets
+            End Get
+        End Property
+
+        ''' <summary>Die Einstellung "Vorhandene Assets aktualisieren" gibt den Speichern-Knopf für
+        ''' Immich-Bilder frei; wird sie bei offenem Bild umgelegt, muss der Editor das mitbekommen.</summary>
+        Public Sub RefreshImmichSaveState()
+            Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
+        End Sub
 
         ''' <summary>Asset-ID, falls das aktuelle Bild eine Immich-Temp-Kopie ist (Dateiname-Stamm = UUID),
         ''' sonst Nothing. Damit landen Stichwort-Änderungen im Editor beim richtigen Immich-Asset.</summary>
@@ -5783,6 +5803,7 @@ Namespace ViewModels
             ' unter", egal ob aus Galerie (Flag gesetzt) oder aus dem Viewer (Flag nicht durchgereicht).
             _forceSaveAsOnly = forceSaveAsOnly OrElse ImmichService.IsImmichTempPath(imagePath)
             _immichSourceAlbumId = immichAlbumId
+            _immichSourceFileName = Nothing
             CurrentImagePath = imagePath
             _currentImagePath = imagePath
             SelectedInfoTab = InfoSidebarTab.General
@@ -5894,6 +5915,7 @@ Namespace ViewModels
             Dim asset = Await ImmichService.GetAssetDetailAsync(assetId)
             If asset Is Nothing Then Return
 
+            _immichSourceFileName = asset.FileName
             _rating = asset.Rating
             Me.RaisePropertyChanged(NameOf(Rating))
             _isFavorite = asset.IsFavorite
@@ -6395,7 +6417,9 @@ Namespace ViewModels
 
         Private Async Function SaveImageAsync(saveAs As Boolean) As Task(Of Boolean)
             If String.IsNullOrEmpty(_currentImagePath) Then Return False
-            If Not saveAs AndAlso (IsCurrentImageRaw OrElse _forceSaveAsOnly) Then Return False
+            If Not saveAs AndAlso Not CanSaveInPlace Then Return False
+            ' "Speichern" bei einem Immich-Bild schreibt nicht die Temp-Kopie zurück, sondern das Asset.
+            If Not saveAs AndAlso SavesBackToImmich Then Return Await SaveBackToImmichAsync()
             Dim targetPath = _currentImagePath
             Dim targetQuality = SaveQuality
             Dim saveToImmich As Boolean = False
@@ -6475,6 +6499,80 @@ Namespace ViewModels
             Return False
         End Function
 
+        ''' <summary>"Speichern" bei einem Immich-Bild (nur mit "Vorhandene Assets aktualisieren"): die
+        ''' Bearbeitung wird in eine Temp-Datei gerendert und ersetzt damit das Quell-Asset. Ab Immich v3
+        ''' bekommt das Asset dabei zwangsläufig eine neue ID (siehe ImmichService.ReplaceAssetAsync) -
+        ''' der Editor holt sich danach die Temp-Kopie des ERGEBNISSES und arbeitet auf der weiter,
+        ''' sonst zeigt er eine Datei an, die es auf dem Server so nicht mehr gibt.</summary>
+        Private Async Function SaveBackToImmichAsync() As Task(Of Boolean)
+            Dim assetId = CurrentImmichAssetId()
+            If String.IsNullOrEmpty(assetId) Then Return False
+
+            Dim sourcePath = _currentImagePath
+            Dim fileName = If(String.IsNullOrWhiteSpace(_immichSourceFileName), IO.Path.GetFileName(sourcePath), _immichSourceFileName)
+            Dim uploadDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichUpload")
+            IO.Directory.CreateDirectory(uploadDir)
+            ' Denselben Dateinamen behalten: Immich zeigt ihn als Originalnamen des Assets an.
+            Dim renderPath = IO.Path.Combine(uploadDir, IO.Path.GetFileNameWithoutExtension(fileName) & IO.Path.GetExtension(sourcePath))
+
+            Dim errorMessage As String = Nothing
+            Try
+                StatusText = LocalizationService.T("Wird gespeichert…")
+                Dim adj = GetCurrentAdjustments()
+                Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
+                Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(sourcePath, renderPath, adj, SaveQuality, preserveMetadata))
+                If Not ok Then
+                    StatusText = LocalizationService.T("Speichern fehlgeschlagen")
+                    Return False
+                End If
+
+                StatusText = LocalizationService.T("Immich-Asset wird aktualisiert…")
+                Dim newAssetId = Await ImmichService.ReplaceAssetAsync(assetId, renderPath)
+                If String.IsNullOrEmpty(newAssetId) Then
+                    StatusText = LocalizationService.T("Immich-Upload fehlgeschlagen")
+                    Return False
+                End If
+                Await ImmichService.WaitForThumbnailReadyAsync(newAssetId)
+
+                _hasChanges = False
+                ClearPreviewSource()
+
+                ' Die Temp-Kopie des alten Assets ist mit dem Ersetzen weggeräumt worden. Auf die des neuen
+                ' umschalten (im Filmstreifen an derselben Stelle), damit Vorher/Nachher, erneutes Speichern
+                ' und die Metadaten-Leiste wieder auf dem echten Serverzustand stehen.
+                Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(newAssetId, fileName)
+                If Not String.IsNullOrEmpty(localPath) Then
+                    Dim paths = _folderPaths.ToList()
+                    Dim index = paths.FindIndex(Function(p) String.Equals(p, sourcePath, StringComparison.OrdinalIgnoreCase))
+                    If index >= 0 Then
+                        paths(index) = localPath
+                    Else
+                        paths = New List(Of String) From {localPath}
+                    End If
+                    Await OpenImageAsync(localPath, paths, _thumbCacheScopeId, _thumbCacheScopeName,
+                                         forceSaveAsOnly:=True, immichAlbumId:=_immichSourceAlbumId)
+                End If
+
+                Dim gallery = _mainVm?.Gallery
+                If gallery IsNot Nothing Then Await gallery.RefreshImmichViewAsync()
+
+                StatusText = LocalizationService.T("Immich-Asset aktualisiert")
+                Return True
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.SaveBackToImmich", ex)
+                StatusText = LocalizationService.T("Fehler: ") & ex.Message
+                errorMessage = ex.Message
+            Finally
+                Try
+                    If IO.File.Exists(renderPath) Then IO.File.Delete(renderPath)
+                Catch
+                End Try
+            End Try
+
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Speichern fehlgeschlagen", errorMessage)
+            Return False
+        End Function
+
         Public Async Function ConfirmSaveBeforeLeavingAsync(actionDescription As String) As Task(Of Boolean)
             If Not _hasChanges Then Return True
             If _mainVm Is Nothing Then Return True
@@ -6499,7 +6597,8 @@ Namespace ViewModels
             ' Bei RAW-Bildern ist Speichern-in-place deaktiviert (siehe CanSaveInPlace) - "Speichern"
             ' im Bestätigungsdialog leitet hier deshalb automatisch auf Speichern-unter um, statt
             ' unbedingt in-place zu speichern (das würde sonst versuchen, die RAW-Datei zu überschreiben).
-            Return Await SaveImageAsync(IsCurrentImageRaw OrElse _forceSaveAsOnly)
+            ' Dasselbe gilt für Immich-Bilder, solange sie ihr Asset nicht ersetzen dürfen.
+            Return Await SaveImageAsync(Not CanSaveInPlace)
         End Function
 
         ''' <remarks>NegativeEnabled: nur die VORSCHAU blendet die Umkehr während der Pipetten-Aufnahme

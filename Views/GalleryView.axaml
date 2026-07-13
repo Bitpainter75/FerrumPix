@@ -574,6 +574,7 @@
                                                 <MenuItem Header="Bilder hochladen…" Click="OnImmichUploadClick"/>
                                                 <MenuItem Header="Einfügen (nach Immich)" Click="OnImmichPasteClick"/>
                                                 <MenuItem Header="Album umbenennen" IsVisible="{Binding IsImmichAlbumNode}" Click="OnImmichRenameAlbumClick"/>
+                                                <MenuItem Header="Album löschen" IsVisible="{Binding CanDeleteImmichAlbum}" Click="OnImmichDeleteAlbumClick"/>
                                                 <Separator/>
                                                 <MenuItem Header="Neues Album…" Click="OnImmichNewAlbumClick"/>
                                             </ContextMenu>
