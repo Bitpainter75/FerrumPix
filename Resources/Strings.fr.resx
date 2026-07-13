@@ -2801,4 +2801,7 @@
   <data name="Drehen_und_Spiegeln_wirken_auf_das_markierte_Obj_3f7bd53d" xml:space="preserve">
     <value>La rotation et le miroir s'appliquent à l'objet sélectionné. Sans objet sélectionné, ils s'appliquent à toute l'image.</value>
   </data>
+  <data name="Die_Regler_wirken_auf_das_markierte_Objekt_Ohne__f07120c1" xml:space="preserve">
+    <value>Les curseurs s'appliquent à l'objet sélectionné. Sans objet sélectionné, ils s'appliquent à toute l'image.</value>
+  </data>
 </root>

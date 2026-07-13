@@ -88,7 +88,7 @@
             </Button>
         </StackPanel>
 
-        <TextBlock Text="Auswahl im Bild erstellen, dann kopieren oder füllen. Strg+A wählt alles aus, Strg+D hebt die Auswahl auf, Esc bricht das Aufziehen ab."
+        <TextBlock Text="Auswahl im Bild erstellen, dann kopieren oder füllen."
                    Foreground="{DynamicResource FP.Text.Secondary}"
                    FontSize="{DynamicResource FP.Font.Small}"
                    TextWrapping="Wrap" />

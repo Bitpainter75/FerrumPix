@@ -119,6 +119,9 @@ Namespace Services
         Public Property JpgSaveQuality As Integer = 90
         Public Property PreserveMetadataOnSave As Boolean = True
         Public Property EditorInfoSidebarExpanded As Boolean = True
+        ''' Ob der Vorher/Nachher-Vergleich im Editor zuletzt eingeschaltet war - gemerkter Bedienzustand
+        ''' (wie die Info-Leiste), kein Schalter in den Einstellungen.
+        Public Property EditorShowComparison As Boolean = True
         Public Property ViewerInfoSidebarExpanded As Boolean = True
         ''' Ganzzahliger Versatz auf alle Text-Schriftgrößen (siehe FontScaleService). 0 = Auslieferung.
         Public Property FontSizeOffset As Integer = 0
@@ -810,6 +813,10 @@ Namespace Services
 
         Public Shared Sub SaveEditorInfoSidebarExpanded(value As Boolean)
             Update(Sub(s) s.EditorInfoSidebarExpanded = value)
+        End Sub
+
+        Public Shared Sub SaveEditorShowComparison(value As Boolean)
+            Update(Sub(s) s.EditorShowComparison = value)
         End Sub
 
         Public Shared Sub SaveEditorShowRulers(value As Boolean)

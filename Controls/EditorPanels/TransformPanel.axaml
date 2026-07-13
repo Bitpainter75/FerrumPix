@@ -28,12 +28,6 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <TextBlock Text="Drehen und Spiegeln wirken auf das markierte Objekt. Ohne markiertes Objekt auf das ganze Bild."
-                       IsVisible="{Binding HasSelectedAnnotation}"
-                       Foreground="{DynamicResource FP.Text.Secondary}"
-                       FontSize="{DynamicResource FP.Font.Small}"
-                       TextWrapping="Wrap"
-                       Margin="0,0,0,6" />
             <Grid ColumnDefinitions="*,*">
                 <Button Classes="ghost" Padding="10,7" Margin="0,0,4,0"
                         Command="{Binding RotateLeftCommand}">

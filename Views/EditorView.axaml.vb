@@ -2299,7 +2299,7 @@ Namespace Views
         ''' anfassen können), was man dreht. Das Drehen-Werkzeug selbst greift nicht auf die Leinwand zu.</summary>
         Private Shared Function IsLayerPlacementTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Text OrElse tool = EditorTool.Geometry OrElse tool = EditorTool.Insert OrElse
-                   tool = EditorTool.Selection OrElse tool = EditorTool.Rotate OrElse tool = EditorTool.Transform
+                   tool = EditorTool.Selection OrElse EditorViewModel.IsObjectScopeTool(tool)
         End Function
 
 

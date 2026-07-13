@@ -783,21 +783,6 @@
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowAnnotationProperties}">
-                                <panels:AnnotationPropertiesPanel />
-                            </Border>
-
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowAnnotationProperties}">
-                                <panels:AnnotationShadowPanel />
-                            </Border>
-
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowAnnotationProperties}">
-                                <panels:AnnotationGlowPanel />
-                            </Border>
-
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowCropAdjustments}">
                                 <panels:CropPanel />
                             </Border>
@@ -876,6 +861,21 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowColorAdjustments}">
                                 <panels:SplitToningPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowAnnotationProperties}">
+                                <panels:AnnotationPropertiesPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowAnnotationProperties}">
+                                <panels:AnnotationShadowPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowAnnotationProperties}">
+                                <panels:AnnotationGlowPanel />
                             </Border>
 
                         </StackPanel>

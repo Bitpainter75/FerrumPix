@@ -211,6 +211,11 @@ Namespace ViewModels
         Private _annotationOpacity As Double = 100
         Private _annotationRotation As Double = 0
         Private _annotationFlipH As Boolean = False
+        ' Objekt-Anpassungsmodus: Solange ein Objekt markiert ist UND ein objektfähiges Werkzeug aktiv ist,
+        ' beschreiben die Regler-Felder das Objekt; die Werte des BILDES liegen so lange hier geparkt.
+        Private _objectAdjustIndex As Integer = -1
+        Private _imagePixelAdjustments As ImageAdjustments = Nothing
+        Private _objectAdjustSwapInProgress As Boolean = False
         Private _annotationFlipV As Boolean = False
         Private _annotationAnchor As String = "BottomRight"
         Private _annotationIsVisible As Boolean = True
@@ -300,7 +305,9 @@ Namespace ViewModels
         Private _previewRequestId As Integer
         Private _activePreviewRenders As Integer
         Private _showBeforeImage As Boolean = False
-        Private _comparisonAutoEnabled As Boolean = True
+        ' Zuletzt vom Nutzer gewählter Vergleichs-Zustand; kommt aus den Einstellungen und wird dort beim
+        ' Umschalten wieder hinterlegt (SetComparisonVisibleFromUser).
+        Private _comparisonAutoEnabled As Boolean = AppSettingsService.Load().EditorShowComparison
         Private _folderPaths As New List(Of String)()
         ' Cache-Scope für die Filmstreifen-Thumbnails (Suchlisten-Scope statt je Ursprungsordner) - siehe ViewerViewModel.
         Private _thumbCacheScopeId As String = Nothing
@@ -1011,12 +1018,12 @@ Namespace ViewModels
                     ' Im Drehen-Werkzeug wird KEIN Platzierungstyp scharfgestellt: dort will man ein Objekt
                     ' drehen, nicht ein weiteres anlegen - der nächste Klick auf freie Fläche würde sonst
                     ' eines setzen.
-                    PendingInsertKind = If(IsObjectTransformTool(_currentTool), "", PlacementKindForAnnotation(_annotations(clamped)))
+                    PendingInsertKind = If(IsObjectScopeTool(_currentTool), "", PlacementKindForAnnotation(_annotations(clamped)))
                     Dim targetTool = AnnotationKindToTool(_annotations(clamped).Kind)
                     ' Im Drehen-Werkzeug NICHT ins Werkzeug des Objekts springen: dort markiert man ein Objekt,
                     ' um es zu drehen oder zu spiegeln. Ein Sprung nach „Text"/„Einfügen" würde einen Klick auf
                     ' das Objekt aussehen lassen, als hätte er gar nicht selektiert.
-                    If IsObjectTransformTool(_currentTool) Then targetTool = _currentTool
+                    If IsObjectScopeTool(_currentTool) Then targetTool = _currentTool
                     If targetTool <> _currentTool Then
                         _overlayNotifySuppressDepth += 1
                         Try
@@ -1067,6 +1074,8 @@ Namespace ViewModels
                 UpdateSelectedAnnotationOverlayPreview()
                 RaiseWatermarkUiChanged()
                 UpdateShapeIconStates()
+                ' Ein anderes (oder gar kein) Objekt heißt: die Regler bedienen ein anderes Ziel.
+                RefreshObjectAdjustMode()
                 ' Text-/Wasserzeichen-Ebenen werden während der Selektion über das Live-Overlay
                 ' gerendert und dafür im gebackenen Vorschaubild ausgeblendet (siehe GetCurrentAdjustments).
                 ' NotifyAnnotationOverlayStateChanged rendert beim Verlassen der Selektion sofort statt
@@ -1546,7 +1555,11 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Der Vergleich ist ein Bedienzustand, den der Nutzer setzt - und der über Bildwechsel
+        ''' UND Programmstarts hinweg stehen bleiben soll (gemerkt in den Einstellungen, wie die Info-Leiste;
+        ''' kein Schalter im Einstellungsdialog).</summary>
         Public Sub SetComparisonVisibleFromUser(value As Boolean)
+            If _comparisonAutoEnabled <> value Then AppSettingsService.SaveEditorShowComparison(value)
             _comparisonAutoEnabled = value
             ShowBeforeImage = value
         End Sub
@@ -1596,6 +1609,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 RaiseToolContextProperties()
+                ' Werkzeugwechsel kann das Ziel der Regler umschalten (Objekt <-> Bild).
+                RefreshObjectAdjustMode()
                 RequestOverlayStateNotify()
             End Set
         End Property
@@ -3271,7 +3286,9 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_annotationFlipH, value)
-                SyncSelectedAnnotation(refreshOverlay:=False)
+                ' refreshOverlay:=True - anders als die Drehung (die legt die View als Transformation über das
+                ' Overlay) muss die Spiegelung in das Overlay-Bitmap hineingerendert werden.
+                SyncSelectedAnnotation(refreshOverlay:=True)
             End Set
         End Property
 
@@ -3281,7 +3298,7 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_annotationFlipV, value)
-                SyncSelectedAnnotation(refreshOverlay:=False)
+                SyncSelectedAnnotation(refreshOverlay:=True)
             End Set
         End Property
 
@@ -5457,7 +5474,7 @@ Namespace ViewModels
                                                                            ' Ins Drehen-Werkzeug nimmt man das markierte Objekt MIT - dort wirken
                                                                            ' Drehen/Spiegeln genau darauf. Für alle anderen Werkzeuge bleibt es
                                                                            ' beim Abwählen wie bisher.
-                                                                           If Not IsObjectTransformTool(parsed) Then SelectedAnnotationIndex = -1
+                                                                           If Not IsObjectScopeTool(parsed) Then SelectedAnnotationIndex = -1
                                                                            CurrentTool = parsed
                                                                            SelectedLayersPanelTab = LayersPanelTab.Tool
                                                                        Finally
@@ -6644,7 +6661,26 @@ Namespace ViewModels
         ''' <remarks>NegativeEnabled: nur die VORSCHAU blendet die Umkehr während der Pipetten-Aufnahme
         ''' aus (siehe _suppressNegativeForPick). Der kanonische Stand - Undo-Schnappschuss, Speichern -
         ''' bleibt davon unberührt.</remarks>
+        ''' <summary>Der Anpassungssatz, mit dem gerendert, gespeichert und rückgängig gemacht wird.
+        '''
+        ''' Ist ein Objekt markiert und ein objektfähiges Werkzeug aktiv (Anpassen/Farbe/Details+Effekte/
+        ''' Filter), dann beschreiben die Regler-Felder das OBJEKT, nicht das Bild: die Werte wandern hier in
+        ''' das Objekt, und das Bild bekommt seine eigenen (in _imagePixelAdjustments geparkten) zurück. Nach
+        ''' außen sieht die Pipeline damit immer dasselbe: Bild-Anpassungen + Objekte, die ihre eigenen
+        ''' mitbringen.</summary>
         Private Function GetCurrentAdjustments(Optional forPreview As Boolean = False) As ImageAdjustments
+            Dim adj = BuildAdjustmentsFromFields(forPreview)
+            If Not IsObjectAdjustModeActive() Then Return adj
+
+            Dim objectValues = adj.ExtractPixelAdjustments()
+            If _objectAdjustIndex >= 0 AndAlso _objectAdjustIndex < adj.Annotations.Count Then
+                adj.Annotations(_objectAdjustIndex).Adjustments = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
+            End If
+            adj.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
+            Return adj
+        End Function
+
+        Private Function BuildAdjustmentsFromFields(Optional forPreview As Boolean = False) As ImageAdjustments
             Dim adj = New ImageAdjustments With {
                 .Brightness = CSng(_brightness),
                 .Contrast = CSng(_contrast),
@@ -7144,6 +7180,29 @@ Namespace ViewModels
             RaiseCropPropertiesChanged()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
+            ' Nach Rückgängig/Wiederholen: Bedienen die Regler gerade ein Objekt, dann tragen die Felder
+            ' jetzt die BILD-Werte aus dem Schnappschuss. Also Bildwerte wieder parken und die Werte des
+            ' Objekts (die im Schnappschuss am Objekt hängen) in die Regler holen.
+            If IsObjectAdjustModeActive() AndAlso Not _objectAdjustSwapInProgress Then
+                _objectAdjustSwapInProgress = True
+                Try
+                    If _objectAdjustIndex < 0 OrElse _objectAdjustIndex >= _annotations.Count Then
+                        ' Im wiederhergestellten Stand gibt es das Objekt nicht mehr - Regler bedienen wieder
+                        ' das Bild (dessen Werte stehen bereits in den Feldern).
+                        _imagePixelAdjustments = Nothing
+                        _objectAdjustIndex = -1
+                    Else
+                        _imagePixelAdjustments = adj.ExtractPixelAdjustments()
+                        Dim objectAdj = _annotations(_objectAdjustIndex).Adjustments
+                        Dim keepIndex = _objectAdjustIndex
+                        Dim target = BuildAdjustmentsFromFields()
+                        target.CopyPixelAdjustmentsFrom(If(objectAdj, New ImageAdjustments()))
+                        ApplyAdjustmentsKeepingSelection(target, keepIndex)
+                    End If
+                Finally
+                    _objectAdjustSwapInProgress = False
+                End Try
+            End If
         End Sub
 
         ''' <summary>Drehen/Spiegeln wirkt auf das MARKIERTE OBJEKT, wenn eines markiert ist - Text, Bild,
@@ -8111,6 +8170,9 @@ Namespace ViewModels
 
         Private Sub DeleteAnnotationAt(index As Integer)
             If index < 0 OrElse index >= _annotations.Count Then Return
+            ' Bedienten die Regler gerade dieses Objekt, darf beim Verlassen nichts mehr zurückgeschrieben
+            ' werden - es gibt das Objekt gleich nicht mehr, und der Index zeigte danach auf ein fremdes.
+            If _objectAdjustIndex = index Then DiscardObjectAdjustMode()
             PushUndo()
             _annotations.RemoveAt(index)
             If _selectedAnnotationIndex = index Then
@@ -8193,7 +8255,7 @@ Namespace ViewModels
         Private Shared Function IsLayerTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Text OrElse tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse
                    tool = EditorTool.Insert OrElse tool = EditorTool.Selection OrElse
-                   IsObjectTransformTool(tool)
+                   IsObjectScopeTool(tool)
         End Function
 
         ''' <summary>Das Drehen-Werkzeug: hier wirken Drehen/Spiegeln auf das markierte Objekt. Es darf weder
@@ -8202,6 +8264,112 @@ Namespace ViewModels
         Public Shared Function IsObjectTransformTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Rotate OrElse tool = EditorTool.Transform
         End Function
+
+        ''' <summary>Werkzeuge, deren REGLER auf ein markiertes Objekt wirken statt aufs Bild: Anpassen,
+        ''' Farbe, Details+Effekte, Filter. Ohne markiertes Objekt bleibt alles wie immer (ganzes Bild).
+        ''' „Rahmen" gehört bewusst NICHT dazu - der Rahmen sitzt an den Bildkanten; ein Rahmen um ein Objekt
+        ''' wäre eine eigene, neue Funktion.</summary>
+        Public Shared Function IsObjectAdjustTool(tool As EditorTool) As Boolean
+            Return tool = EditorTool.Adjust OrElse tool = EditorTool.Color OrElse
+                   tool = EditorTool.Effects OrElse tool = EditorTool.Filters
+        End Function
+
+        ''' <summary>Werkzeuge, in denen ein markiertes Objekt das Ziel ist (drehen/spiegeln oder anpassen).
+        ''' In ihnen bleibt die Markierung bestehen, ein Klick markiert, und der Editor springt nicht ins
+        ''' Werkzeug des Objekts.</summary>
+        Public Shared Function IsObjectScopeTool(tool As EditorTool) As Boolean
+            Return IsObjectTransformTool(tool) OrElse IsObjectAdjustTool(tool)
+        End Function
+
+        ''' <summary>Verwirft den Objekt-Modus OHNE Rückschreiben - für den Fall, dass das Objekt gerade
+        ''' verschwindet (Löschen). Die Bildwerte kommen zurück in die Regler.</summary>
+        Private Sub DiscardObjectAdjustMode()
+            If Not IsObjectAdjustModeActive() Then Return
+            _objectAdjustSwapInProgress = True
+            Try
+                Dim restored = BuildAdjustmentsFromFields()
+                restored.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
+                _imagePixelAdjustments = Nothing
+                _objectAdjustIndex = -1
+                ApplyAdjustments(restored)
+            Finally
+                _objectAdjustSwapInProgress = False
+            End Try
+            Me.RaisePropertyChanged(NameOf(IsAdjustingObject))
+        End Sub
+
+        Private Function IsObjectAdjustModeActive() As Boolean
+            Return _objectAdjustIndex >= 0 AndAlso _imagePixelAdjustments IsNot Nothing
+        End Function
+
+        ''' <summary>Hält den Bearbeitungs-Zielwechsel in Gang: Sobald ein Objekt markiert ist UND ein
+        ''' objektfähiges Werkzeug aktiv ist, beschreiben die Regler das Objekt - sonst das Bild. Beim
+        ''' Umschalten werden die Werte des jeweils anderen Ziels geparkt bzw. zurückgeholt, damit weder das
+        ''' Bild die Objektwerte abbekommt noch umgekehrt.</summary>
+        Private Sub RefreshObjectAdjustMode()
+            If _objectAdjustSwapInProgress Then Return
+            ' ApplyAdjustments baut die Objektliste neu auf und hebt dabei die Markierung auf
+            ' (_selectedAnnotationIndex = -1). Der gewünschte Index wird deshalb HIER festgehalten und nach
+            ' jedem Umschalten wiederhergestellt - sonst rechnete der zweite Schritt mit -1 weiter und griff
+            ' ins Leere (Absturz beim Anklicken eines Objekts im Anpassen-Werkzeug).
+            Dim targetIndex = _selectedAnnotationIndex
+            Dim shouldBeActive = targetIndex >= 0 AndAlso
+                                 targetIndex < _annotations.Count AndAlso
+                                 IsObjectAdjustTool(_currentTool)
+
+            If shouldBeActive AndAlso IsObjectAdjustModeActive() AndAlso _objectAdjustIndex = targetIndex Then Return
+            If Not shouldBeActive AndAlso Not IsObjectAdjustModeActive() Then Return
+
+            _objectAdjustSwapInProgress = True
+            Try
+                If IsObjectAdjustModeActive() Then
+                    ' Aktuelle Reglerwerte gehören dem bisherigen Objekt - dort hineinschreiben ...
+                    Dim objectValues = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
+                    If _objectAdjustIndex >= 0 AndAlso _objectAdjustIndex < _annotations.Count Then
+                        _annotations(_objectAdjustIndex).Adjustments = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
+                    End If
+                    ' ... und die geparkten Bildwerte zurück in die Regler.
+                    Dim restored = BuildAdjustmentsFromFields()
+                    restored.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
+                    _imagePixelAdjustments = Nothing
+                    _objectAdjustIndex = -1
+                    ApplyAdjustmentsKeepingSelection(restored, targetIndex)
+                End If
+
+                If shouldBeActive AndAlso targetIndex < _annotations.Count Then
+                    ' Bildwerte parken, Objektwerte in die Regler.
+                    _imagePixelAdjustments = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
+                    _objectAdjustIndex = targetIndex
+                    Dim target = BuildAdjustmentsFromFields()
+                    target.CopyPixelAdjustmentsFrom(If(_annotations(targetIndex).Adjustments, New ImageAdjustments()))
+                    ApplyAdjustmentsKeepingSelection(target, targetIndex)
+                End If
+            Finally
+                _objectAdjustSwapInProgress = False
+            End Try
+
+            Me.RaisePropertyChanged(NameOf(IsAdjustingObject))
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>ApplyAdjustments verwirft die Objektmarkierung (es baut die Objektliste neu auf). Beim
+        ''' Umschalten des Reglerziels darf das markierte Objekt aber nicht verlorengehen - die Markierung
+        ''' wird deshalb direkt am Feld wiederhergestellt (der Property-Setter würde RefreshObjectAdjustMode
+        ''' erneut auslösen).</summary>
+        Private Sub ApplyAdjustmentsKeepingSelection(adj As ImageAdjustments, keepIndex As Integer)
+            ApplyAdjustments(adj)
+            If keepIndex < 0 OrElse keepIndex >= _annotations.Count Then Return
+            _selectedAnnotationIndex = keepIndex
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+            Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
+        End Sub
+
+        ''' <summary>True, während die Regler ein Objekt bedienen.</summary>
+        Public ReadOnly Property IsAdjustingObject As Boolean
+            Get
+                Return IsObjectAdjustModeActive()
+            End Get
+        End Property
 
         Private Sub LoadSelectedAnnotationIntoEditor()
             _isLoadingAnnotation = True

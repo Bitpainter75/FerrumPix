@@ -2802,4 +2802,7 @@
   <data name="Drehen_und_Spiegeln_wirken_auf_das_markierte_Obj_3f7bd53d" xml:space="preserve">
     <value>Rotate and flip act on the selected object. With no object selected, they act on the whole image.</value>
   </data>
+  <data name="Die_Regler_wirken_auf_das_markierte_Objekt_Ohne__f07120c1" xml:space="preserve">
+    <value>The sliders act on the selected object. With no object selected, they act on the whole image.</value>
+  </data>
 </root>

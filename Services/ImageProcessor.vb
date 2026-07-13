@@ -129,6 +129,13 @@ Namespace Services
         Private _glowStrength As Single = 100
         Private _glowColor As String = "#FFFFFF00"
 
+        ''' <summary>Eigene Pixel-Anpassungen dieses Objekts (Belichtung, Farbe, Details, Effekte, Filter …).
+        ''' Nothing = keine. Ist ein Objekt markiert, bedienen die Regler der Werkzeuge Anpassen/Farbe/Details/
+        ''' Effekte/Filter genau diesen Satz statt den des Bildes; ohne Markierung wirken sie wie immer aufs
+        ''' ganze Bild. Enthält NUR Pixel-Anpassungen - Geometrie, Auswahl, Objekte bleiben leer (siehe
+        ''' ImageAdjustments.PixelAdjustmentProperties).</summary>
+        Public Property Adjustments As ImageAdjustments = Nothing
+
         ''' Nur bei Kind "Brush"/"Eraser" befüllt. Kein PropertyChanged: die Liste wächst ausschließlich
         ''' beim Malen, und die Vorschau wird dabei ohnehin explizit angestoßen.
         Public Property Strokes As New List(Of BrushStroke)()
@@ -590,6 +597,7 @@ Namespace Services
                 .RotationDegrees = RotationDegrees,
                 .FlipHorizontal = FlipHorizontal,
                 .FlipVertical = FlipVertical,
+                .Adjustments = If(Adjustments Is Nothing, Nothing, Adjustments.Clone()),
                 .Anchor = Anchor,
                 .IsVisible = IsVisible,
                 .HardnessPercent = HardnessPercent,
@@ -775,6 +783,70 @@ Namespace Services
                    BlueHue <> 0 OrElse BlueSaturation <> 0 OrElse BlueLuminance <> 0 OrElse
                    PurpleHue <> 0 OrElse PurpleSaturation <> 0 OrElse PurpleLuminance <> 0 OrElse
                    MagentaHue <> 0 OrElse MagentaSaturation <> 0 OrElse MagentaLuminance <> 0
+        End Function
+
+        ''' <summary>Felder, die die STRUKTUR beschreiben: Geometrie, Objekte, Retusche, Auswahl, Quellmaße.
+        ''' Alles andere sind Pixel-Anpassungen (Belichtung, Farbe, Details, Effekte, Filter, Kurven, HSL …)
+        ''' - und genau die können auch auf ein einzelnes OBJEKT wirken statt aufs Bild (siehe
+        ''' <see cref="ImageAnnotation.Adjustments"/>).
+        '''
+        ''' „Rahmen" steht bewusst hier: er zieht seinen Rand an den BILDkanten. Ein Rahmen um ein Objekt
+        ''' wäre etwas anderes und gibt es noch nicht - er bliebe sonst als Rahmen ums ganze Bild stehen,
+        ''' während man ein Objekt bearbeitet.</summary>
+        Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
+            "SourceWidthPixels", "SourceHeightPixels",
+            "RotationDegrees", "StraightenDegrees", "StraightenExpandCanvas", "FlipHorizontal", "FlipVertical",
+            "CropLeftPercent", "CropTopPercent", "CropRightPercent", "CropBottomPercent",
+            "ResizeWidth", "ResizeHeight", "LockResizeAspect", "ResizeInterpolation",
+            "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
+            "BorderSize", "BorderColor", "BorderCornerRadius", "BorderEffect",
+            "RetouchSpots", "Annotations",
+            "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
+            "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
+            "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
+            "SelectionMaskPngBase64"
+        }
+
+        Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing
+        Private Shared ReadOnly _pixelPropertiesLock As New Object()
+
+        ''' <summary>Alle Pixel-Anpassungen, per Reflexion aus der Klasse selbst gewonnen: eine neue
+        ''' Einstellung ist damit automatisch dabei und kann nicht vergessen werden.</summary>
+        Public Shared Function PixelAdjustmentProperties() As Reflection.PropertyInfo()
+            SyncLock _pixelPropertiesLock
+                If _pixelProperties Is Nothing Then
+                    _pixelProperties = GetType(ImageAdjustments).
+                        GetProperties(Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance).
+                        Where(Function(p) p.CanRead AndAlso p.CanWrite AndAlso Not StructuralPropertyNames.Contains(p.Name)).
+                        ToArray()
+                End If
+                Return _pixelProperties
+            End SyncLock
+        End Function
+
+        ''' <summary>Übernimmt alle Pixel-Anpassungen aus <paramref name="other"/>; Struktur bleibt unberührt.</summary>
+        Public Sub CopyPixelAdjustmentsFrom(other As ImageAdjustments)
+            If other Is Nothing Then Return
+            For Each p In PixelAdjustmentProperties()
+                p.SetValue(Me, p.GetValue(other))
+            Next
+        End Sub
+
+        ''' <summary>Nur die Pixel-Anpassungen als eigenes Objekt - das ist der Satz, den ein Objekt mitträgt.</summary>
+        Public Function ExtractPixelAdjustments() As ImageAdjustments
+            Dim result = New ImageAdjustments()
+            result.CopyPixelAdjustmentsFrom(Me)
+            Return result
+        End Function
+
+        ''' <summary>True, sobald irgendeine Pixel-Anpassung von der Voreinstellung abweicht. Nur dann muss
+        ''' ein Objekt überhaupt über die (teure) eigene Ebene gerendert werden.</summary>
+        Public Function HasPixelAdjustments() As Boolean
+            Dim neutral = New ImageAdjustments()
+            For Each p In PixelAdjustmentProperties()
+                If Not Object.Equals(p.GetValue(Me), p.GetValue(neutral)) Then Return True
+            Next
+            Return False
         End Function
 
         Public Function Clone() As ImageAdjustments
@@ -1176,6 +1248,16 @@ Namespace Services
             Using bitmap = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
                 Using canvas = New SKCanvas(bitmap)
                     canvas.Clear(SKColors.Transparent)
+                    ' Die DREHUNG legt die View über eine RenderTransform auf das Overlay (oben deshalb auf 0
+                    ' gesetzt) - die SPIEGELUNG aber nicht. Ohne sie zeigte das Overlay ein markiertes Objekt
+                    ' ungespiegelt an, und Spiegeln sah aus, als täte es gar nichts: das gebackene Bild, in
+                    ' dem die Spiegelung längst drin war, blendet das markierte Objekt ja aus.
+                    If renderAnnotation.FlipHorizontal OrElse renderAnnotation.FlipVertical Then
+                        canvas.Translate(rect.MidX, rect.MidY)
+                        canvas.Scale(If(renderAnnotation.FlipHorizontal, -1.0F, 1.0F),
+                                     If(renderAnnotation.FlipVertical, -1.0F, 1.0F))
+                        canvas.Translate(-rect.MidX, -rect.MidY)
+                    End If
                     If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
                         DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, width, height)
                     End If
@@ -2009,6 +2091,46 @@ Namespace Services
             Return scaled
         End Function
 
+        ''' <summary>Trägt das Objekt eigene Pixel-Anpassungen? Nur dann lohnt die eigene Ebene.</summary>
+        Private Shared Function HasObjectAdjustments(annotation As ImageAnnotation) As Boolean
+            Return annotation IsNot Nothing AndAlso annotation.Adjustments IsNot Nothing AndAlso annotation.Adjustments.HasPixelAdjustments()
+        End Function
+
+        ''' <summary>Zeichnet ein Objekt (samt Drehung, Spiegelung, Schatten/Glühen) auf die übergebene
+        ''' Leinwand. Ausgelagert, weil dieselbe Zeichnung entweder direkt aufs Bild geht oder - wenn das
+        ''' Objekt eigene Anpassungen trägt - zuerst auf eine eigene transparente Ebene.</summary>
+        Private Shared Sub DrawAnnotationOnCanvas(canvas As SKCanvas, kind As String, renderAnnotation As ImageAnnotation,
+                                                  rect As SKRect, sourceWidth As Integer, sourceHeight As Integer)
+            Dim x = rect.Left
+            Dim y = rect.Top
+            Dim maxWidth = rect.Width
+            Dim fontSize = Math.Max(8.0F, renderAnnotation.FontSizePixels)
+            Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
+            Dim fill = ApplyAlpha(ParseColor(renderAnnotation.FillColor, SKColors.White), alphaFactor)
+            Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
+            Dim strokeWidth = Math.Max(1.0F, renderAnnotation.StrokeWidth)
+
+            canvas.Save()
+            If Math.Abs(renderAnnotation.RotationDegrees) > 0.01F Then
+                canvas.RotateDegrees(renderAnnotation.RotationDegrees, rect.MidX, rect.MidY)
+            End If
+            ' Spiegeln um die eigene Mitte - NACH der Drehung, damit „gedreht und gespiegelt" das Objekt
+            ' nicht zusätzlich verschiebt. Schatten/Glühen und die Füllung folgen mit, weil alles Weitere
+            ' auf derselben Leinwand-Transformation zeichnet.
+            If renderAnnotation.FlipHorizontal OrElse renderAnnotation.FlipVertical Then
+                canvas.Translate(rect.MidX, rect.MidY)
+                canvas.Scale(If(renderAnnotation.FlipHorizontal, -1.0F, 1.0F),
+                             If(renderAnnotation.FlipVertical, -1.0F, 1.0F))
+                canvas.Translate(-rect.MidX, -rect.MidY)
+            End If
+
+            If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
+                DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, sourceWidth, sourceHeight)
+            End If
+            DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+            canvas.Restore()
+        End Sub
+
         Private Shared Function ApplyAnnotations(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If adj.Annotations Is Nothing OrElse adj.Annotations.Count = 0 Then Return source
 
@@ -2056,35 +2178,27 @@ Namespace Services
                     End If
 
                     Dim rect = ComputeAnnotationRect(source.Width, source.Height, kind, renderAnnotation)
-                    Dim x = rect.Left
-                    Dim y = rect.Top
-                    Dim maxWidth = rect.Width
-                    Dim maxHeight = rect.Height
-                    Dim fontSize = Math.Max(8.0F, renderAnnotation.FontSizePixels)
-                    Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
-                    Dim fill = ApplyAlpha(ParseColor(renderAnnotation.FillColor, SKColors.White), alphaFactor)
-                    Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
-                    Dim strokeWidth = Math.Max(1.0F, renderAnnotation.StrokeWidth)
 
-                    canvas.Save()
-                    If Math.Abs(renderAnnotation.RotationDegrees) > 0.01F Then
-                        canvas.RotateDegrees(renderAnnotation.RotationDegrees, rect.MidX, rect.MidY)
+                    ' Objekt MIT eigenen Anpassungen: erst allein auf eine transparente Ebene zeichnen, dann
+                    ' die Pixel-Pipeline darauf laufen lassen (Belichtung, Farbe, Filter … treffen so nur das
+                    ' Objekt), dann an Ort und Stelle in der Z-Reihenfolge einkomponieren. Ohne eigene
+                    ' Anpassungen wird wie bisher direkt gezeichnet - kein zusätzlicher Speicher, keine Zeit.
+                    If HasObjectAdjustments(annotation) Then
+                        Using layer = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+                            Using layerCanvas = New SKCanvas(layer)
+                                layerCanvas.Clear(SKColors.Transparent)
+                                DrawAnnotationOnCanvas(layerCanvas, kind, renderAnnotation, rect, source.Width, source.Height)
+                            End Using
+                            Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
+                            objectAdj.SourceWidthPixels = source.Width
+                            objectAdj.SourceHeightPixels = source.Height
+                            Using processedLayer = ProcessBitmapBase(layer, objectAdj)
+                                canvas.DrawBitmap(processedLayer, 0, 0)
+                            End Using
+                        End Using
+                    Else
+                        DrawAnnotationOnCanvas(canvas, kind, renderAnnotation, rect, source.Width, source.Height)
                     End If
-                    ' Spiegeln um die eigene Mitte - NACH der Drehung, damit „gedreht und gespiegelt" das
-                    ' Objekt nicht zusätzlich verschiebt. Schatten/Glühen und die Füllung folgen mit, weil
-                    ' alles Weitere auf derselben Leinwand-Transformation zeichnet.
-                    If renderAnnotation.FlipHorizontal OrElse renderAnnotation.FlipVertical Then
-                        canvas.Translate(rect.MidX, rect.MidY)
-                        canvas.Scale(If(renderAnnotation.FlipHorizontal, -1.0F, 1.0F),
-                                     If(renderAnnotation.FlipVertical, -1.0F, 1.0F))
-                        canvas.Translate(-rect.MidX, -rect.MidY)
-                    End If
-
-                    If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
-                        DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, source.Width, source.Height)
-                    End If
-                    DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
-                    canvas.Restore()
                 Next
             End Using
             paintLayer?.Dispose()
