@@ -2808,4 +2808,10 @@
   <data name="L_sst_die_Auswahlkante_ber_die_angegebene_Anzahl_fc252c93" xml:space="preserve">
     <value>Fades the edge of the selection out over the given number of image pixels (0 = hard edge)</value>
   </data>
+  <data name="Fluss_200b8c04" xml:space="preserve">
+    <value>Flow</value>
+  </data>
+  <data name="Mischen_8469987f" xml:space="preserve">
+    <value>Blend</value>
+  </data>
 </root>

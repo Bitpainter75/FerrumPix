@@ -2807,4 +2807,10 @@
   <data name="L_sst_die_Auswahlkante_ber_die_angegebene_Anzahl_fc252c93" xml:space="preserve">
     <value>Adoucit le bord de la sélection sur le nombre de pixels indiqué (0 = bord net)</value>
   </data>
+  <data name="Fluss_200b8c04" xml:space="preserve">
+    <value>Flux</value>
+  </data>
+  <data name="Mischen_8469987f" xml:space="preserve">
+    <value>Fusion</value>
+  </data>
 </root>

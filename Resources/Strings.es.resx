@@ -2807,4 +2807,10 @@
   <data name="L_sst_die_Auswahlkante_ber_die_angegebene_Anzahl_fc252c93" xml:space="preserve">
     <value>Difumina el borde de la selección a lo largo del número de píxeles indicado (0 = borde duro)</value>
   </data>
+  <data name="Fluss_200b8c04" xml:space="preserve">
+    <value>Flujo</value>
+  </data>
+  <data name="Mischen_8469987f" xml:space="preserve">
+    <value>Mezcla</value>
+  </data>
 </root>

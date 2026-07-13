@@ -66,6 +66,9 @@ Namespace Services
         Public Property XPixels As Single
         Public Property YPixels As Single
         Public Property RadiusPixels As Single
+        Public Property StrengthPercent As Single = 100
+        Public Property OpacityPercent As Single = 100
+        Public Property FlowPercent As Single = 100
 
         ''' Klonquelle in Bildpixeln: von hier wird die Textur kopiert. Ein negativer Wert bedeutet
         ''' "kein Quellpunkt gesetzt" - dann greift der Ringmittelwert-Rückfall in ApplyRetouch, der
@@ -82,6 +85,8 @@ Namespace Services
         Public Function Clone() As RetouchSpot
             Return New RetouchSpot With {
                 .XPixels = XPixels, .YPixels = YPixels, .RadiusPixels = RadiusPixels,
+                .StrengthPercent = StrengthPercent, .OpacityPercent = OpacityPercent,
+                .FlowPercent = FlowPercent,
                 .SourceXPixels = SourceXPixels, .SourceYPixels = SourceYPixels
             }
         End Function
@@ -103,6 +108,8 @@ Namespace Services
         Private _fontSizePixels As Single = 48
         Private _fontFamily As String = "Arial"
         Private _opacity As Single = 100
+        Private _blendMode As String = "Normal"
+        Private _flowPercent As Single = 100
         Private _rotationDegrees As Single = 0
         ' Spiegelung des Objekts um seine eigene Mitte (nicht um die Bildmitte): das Drehen-Werkzeug
         ' wirkt mit seinen vier Knöpfen auf das markierte Objekt, und Spiegeln können die Anfasser nicht.
@@ -366,6 +373,24 @@ Namespace Services
             End Set
         End Property
 
+        Public Property BlendMode As String
+            Get
+                Return _blendMode
+            End Get
+            Set(value As String)
+                SetField(_blendMode, If(String.IsNullOrWhiteSpace(value), "Normal", value))
+            End Set
+        End Property
+
+        Public Property FlowPercent As Single
+            Get
+                Return _flowPercent
+            End Get
+            Set(value As Single)
+                SetField(_flowPercent, value)
+            End Set
+        End Property
+
         Public Property RotationDegrees As Single
             Get
                 Return _rotationDegrees
@@ -594,6 +619,8 @@ Namespace Services
                 .FontSizePixels = FontSizePixels,
                 .FontFamily = FontFamily,
                 .Opacity = Opacity,
+                .BlendMode = BlendMode,
+                .FlowPercent = FlowPercent,
                 .RotationDegrees = RotationDegrees,
                 .FlipHorizontal = FlipHorizontal,
                 .FlipVertical = FlipVertical,
@@ -1875,7 +1902,7 @@ Namespace Services
                 adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
                 If(String.IsNullOrEmpty(adj.SelectionMaskPngBase64), 0, adj.SelectionMaskPngBase64.Length),
                 adj.SelectionFeatherPixels,
-                String.Join(";", adj.RetouchSpots.Select(Function(s) $"{s.XPixels},{s.YPixels},{s.RadiusPixels}"))
+                String.Join(";", adj.RetouchSpots.Select(Function(s) $"{s.XPixels},{s.YPixels},{s.RadiusPixels},{s.StrengthPercent},{s.OpacityPercent},{s.FlowPercent}"))
             })
         End Function
 
@@ -2008,14 +2035,18 @@ Namespace Services
                     Dim cx = Clamp(spot.XPixels * scaleX, 0, source.Width)
                     Dim cy = Clamp(spot.YPixels * scaleY, 0, source.Height)
                     Dim radius = Clamp(spot.RadiusPixels * radiusScale, 1, Math.Max(source.Width, source.Height))
+                    Dim flow = Clamp(spot.FlowPercent, 0, 100) / 100.0F
+                    Dim opacity = Clamp(spot.OpacityPercent, 0, 100) / 100.0F
+                    Dim strength = Clamp(spot.StrengthPercent, 0, 100) / 100.0F
+                    Dim alphaFactor = flow * opacity * strength
 
                     If spot.HasCloneSource Then
                         Dim sx = Clamp(spot.SourceXPixels * scaleX, 0, source.Width)
                         Dim sy = Clamp(spot.SourceYPixels * scaleY, 0, source.Height)
-                        DrawCloneStamp(canvas, source, cx, cy, sx, sy, radius)
+                        DrawCloneStamp(canvas, source, cx, cy, sx, sy, radius, alphaFactor)
                     Else
                         Dim fill = AverageSurroundingColor(source, cx, cy, radius)
-                        If fill.HasValue Then DrawSoftDisc(canvas, cx, cy, radius, fill.Value)
+                        If fill.HasValue Then DrawSoftDisc(canvas, cx, cy, radius, fill.Value, alphaFactor)
                     End If
                 Next
             End Using
@@ -2025,11 +2056,11 @@ Namespace Services
         ''' Kopiert eine weich auslaufende Scheibe von (sx, sy) nach (cx, cy). Der Bitmap-Shader wird
         ''' um den Versatz verschoben, ein Radial-Verlauf liefert per DstIn die Kantenmaske.
         Private Shared Sub DrawCloneStamp(canvas As SKCanvas, source As SKBitmap,
-                                          cx As Single, cy As Single, sx As Single, sy As Single, radius As Single)
+                                          cx As Single, cy As Single, sx As Single, sy As Single, radius As Single, flow As Single)
             Dim offset = SKMatrix.CreateTranslation(cx - sx, cy - sy)
             Using bitmapShader = SKShader.CreateBitmap(source, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, offset)
                 Using mask = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
-                                                           {SKColors.White, SKColors.White, SKColors.Transparent},
+                                                           {SKColors.White.WithAlpha(CByte(255 * flow)), SKColors.White.WithAlpha(CByte(255 * flow)), SKColors.Transparent},
                                                            RetouchFeatherStops, SKShaderTileMode.Clamp)
                     Using masked = SKShader.CreateCompose(bitmapShader, mask, SKBlendMode.DstIn)
                         Using paint = New SKPaint With {.Shader = masked, .IsAntialias = True}
@@ -2040,9 +2071,10 @@ Namespace Services
             End Using
         End Sub
 
-        Private Shared Sub DrawSoftDisc(canvas As SKCanvas, cx As Single, cy As Single, radius As Single, fill As SKColor)
+        Private Shared Sub DrawSoftDisc(canvas As SKCanvas, cx As Single, cy As Single, radius As Single, fill As SKColor, flow As Single)
+            Dim alphaFill = fill.WithAlpha(CByte(fill.Alpha * flow))
             Using shader = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
-                                                         {fill, fill, fill.WithAlpha(0)},
+                                                         {alphaFill, alphaFill, fill.WithAlpha(0)},
                                                          RetouchFeatherStops, SKShaderTileMode.Clamp)
                 Using paint = New SKPaint With {.Shader = shader, .IsAntialias = True}
                     canvas.DrawCircle(cx, cy, radius, paint)
@@ -2223,7 +2255,7 @@ Namespace Services
             End If
 
             ' Pinsel- und Radiergummi-Striche werden zuerst auf einer eigenen transparenten
-            ' Ebene komponiert, damit der Radiergummi (SKBlendMode.Clear) nur vorherige Striche
+            ' Ebene komponiert, damit der Radiergummi (SKBlendMode.DstOut) nur vorherige Striche
             ' entfernt und nicht das Foto darunter.
             Dim paintLayer As SKBitmap = Nothing
             If adj.Annotations.Any(Function(a) a IsNot Nothing AndAlso a.IsVisible AndAlso IsPaintKind(a.Kind)) Then
@@ -2237,7 +2269,7 @@ Namespace Services
                         Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
                         Dim strokeWidth = Math.Max(1.0F, Clamp(renderAnnotation.StrokeWidth, 1, Math.Max(source.Width, source.Height)))
                         Dim isEraser = annotation.Kind.Trim().ToLowerInvariant() = "eraser"
-                        DrawBrushStroke(paintCanvas, renderAnnotation.Strokes, source.Width, source.Height, stroke, strokeWidth, renderAnnotation.HardnessPercent, isEraser)
+                        DrawBrushStroke(paintCanvas, renderAnnotation.Strokes, source.Width, source.Height, stroke, strokeWidth, renderAnnotation.HardnessPercent, renderAnnotation.FlowPercent, isEraser)
                     Next
                 End Using
             End If
@@ -2263,18 +2295,22 @@ Namespace Services
                     ' die Pixel-Pipeline darauf laufen lassen (Belichtung, Farbe, Filter … treffen so nur das
                     ' Objekt), dann an Ort und Stelle in der Z-Reihenfolge einkomponieren. Ohne eigene
                     ' Anpassungen wird wie bisher direkt gezeichnet - kein zusätzlicher Speicher, keine Zeit.
-                    If HasObjectAdjustments(annotation) Then
+                    If HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) Then
                         Using layer = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
                             Using layerCanvas = New SKCanvas(layer)
                                 layerCanvas.Clear(SKColors.Transparent)
                                 DrawAnnotationOnCanvas(layerCanvas, kind, renderAnnotation, rect, source.Width, source.Height)
                             End Using
-                            Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
-                            objectAdj.SourceWidthPixels = source.Width
-                            objectAdj.SourceHeightPixels = source.Height
-                            Using processedLayer = ProcessBitmapBase(layer, objectAdj)
-                                canvas.DrawBitmap(processedLayer, 0, 0)
-                            End Using
+                            If HasObjectAdjustments(annotation) Then
+                                Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
+                                objectAdj.SourceWidthPixels = source.Width
+                                objectAdj.SourceHeightPixels = source.Height
+                                Using processedLayer = ProcessBitmapBase(layer, objectAdj)
+                                    DrawAnnotationLayer(canvas, processedLayer, renderAnnotation.BlendMode)
+                                End Using
+                            Else
+                                DrawAnnotationLayer(canvas, layer, renderAnnotation.BlendMode)
+                            End If
                         End Using
                     Else
                         DrawAnnotationOnCanvas(canvas, kind, renderAnnotation, rect, source.Width, source.Height)
@@ -2283,6 +2319,38 @@ Namespace Services
             End Using
             paintLayer?.Dispose()
             Return result
+        End Function
+
+        Private Shared Sub DrawAnnotationLayer(canvas As SKCanvas, layer As SKBitmap, blendModeName As String)
+            Using paint = New SKPaint With {.BlendMode = ResolveAnnotationBlendMode(blendModeName), .IsAntialias = True}
+                canvas.DrawBitmap(layer, 0, 0, paint)
+            End Using
+        End Sub
+
+        Private Shared Function IsNormalAnnotationBlendMode(blendModeName As String) As Boolean
+            Return ResolveAnnotationBlendMode(blendModeName) = SKBlendMode.SrcOver
+        End Function
+
+        Private Shared Function ResolveAnnotationBlendMode(blendModeName As String) As SKBlendMode
+            Select Case If(blendModeName, "Normal").Trim().ToLowerInvariant()
+                Case "multiply" : Return SKBlendMode.Multiply
+                Case "screen" : Return SKBlendMode.Screen
+                Case "overlay" : Return SKBlendMode.Overlay
+                Case "darken" : Return SKBlendMode.Darken
+                Case "lighten" : Return SKBlendMode.Lighten
+                Case "colordodge" : Return SKBlendMode.ColorDodge
+                Case "colorburn" : Return SKBlendMode.ColorBurn
+                Case "hardlight" : Return SKBlendMode.HardLight
+                Case "softlight" : Return SKBlendMode.SoftLight
+                Case "difference" : Return SKBlendMode.Difference
+                Case "exclusion" : Return SKBlendMode.Exclusion
+                Case "plus" : Return SKBlendMode.Plus
+                Case "hue" : Return SKBlendMode.Hue
+                Case "saturation" : Return SKBlendMode.Saturation
+                Case "color" : Return SKBlendMode.Color
+                Case "luminosity" : Return SKBlendMode.Luminosity
+                Case Else : Return SKBlendMode.SrcOver
+            End Select
         End Function
 
         ' Zeichnet ein einzelnes Objekt anhand seiner Art (Kind) - wird sowohl für das normale
@@ -2981,22 +3049,23 @@ Namespace Services
         ''' gesammelt, statt für jeden eine eigene Ebene anzulegen) sind im Punktestring per ";"
         ''' getrennt und werden hier als eigenständige Teilpfade (je ein eigenes MoveTo) gezeichnet -
         ''' eine einzige durchgehende Linie würde sie sonst fälschlich miteinander verbinden.
-        Private Shared Sub DrawBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, stroke As SKColor, strokeWidth As Single, hardnessPercent As Single, isEraser As Boolean)
+        Private Shared Sub DrawBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, stroke As SKColor, strokeWidth As Single, hardnessPercent As Single, flowPercent As Single, isEraser As Boolean)
             If strokes Is Nothing Then Return
 
             Dim resolvedStrokeWidth = Math.Max(1.0F, strokeWidth)
             Dim hardness = Clamp(hardnessPercent, 0, 100) / 100.0F
             Dim blurSigma = resolvedStrokeWidth * (1.0F - hardness) * 0.5F
+            Dim flow = Clamp(flowPercent, 0, 100) / 100.0F
 
             Using paint = New SKPaint With {
-                .Color = stroke,
+                .Color = stroke.WithAlpha(CByte(stroke.Alpha * flow)),
                 .Style = SKPaintStyle.Stroke,
                 .StrokeWidth = resolvedStrokeWidth,
                 .StrokeCap = SKStrokeCap.Round,
                 .StrokeJoin = SKStrokeJoin.Round,
                 .IsAntialias = True
             }
-                If isEraser Then paint.BlendMode = SKBlendMode.Clear
+                If isEraser Then paint.BlendMode = SKBlendMode.DstOut
                 If blurSigma > 0.05F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, blurSigma)
 
                 For Each brushStroke In strokes

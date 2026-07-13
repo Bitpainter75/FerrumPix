@@ -2807,4 +2807,10 @@
   <data name="L_sst_die_Auswahlkante_ber_die_angegebene_Anzahl_fc252c93" xml:space="preserve">
     <value>Lässt die Auswahlkante über die angegebene Anzahl Bildpixel weich auslaufen (0 = harte Kante)</value>
   </data>
+  <data name="Fluss_200b8c04" xml:space="preserve">
+    <value>Fluss</value>
+  </data>
+  <data name="Mischen_8469987f" xml:space="preserve">
+    <value>Mischen</value>
+  </data>
 </root>

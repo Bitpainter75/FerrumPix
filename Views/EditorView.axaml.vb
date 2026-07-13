@@ -807,8 +807,8 @@ Namespace Views
             ' Die Resize-/Rotier-Griffe ragen per Margin über die Bounds des TextOverlay-Borders hinaus,
             ' daher landen Klicks genau darauf hier auf dem Canvas statt auf dem Border - Griff-Erkennung
             ' deshalb zusätzlich hier prüfen. Das muss vor den werkzeugspezifischen Zweigen geschehen:
-            ' das Auswahl-Werkzeug zieht sonst einen neuen Rahmen auf, statt den Griff zu greifen (die
-            ' Griffe sind unter ihm sichtbar, weil Selection zu IsLayerPlacementTool gehört).
+            ' das Verschieben-Werkzeug soll die Griffe greifen, bevor der allgemeine Canvas-Klickpfad
+            ' greift.
             ' Bei verstecktem Overlay liefert GetTextOverlayRect ein leeres Rechteck im Canvas-Ursprung,
             ' dessen Griffpunkte ein Klick oben links zufällig träfe - daher die IsVisible-Prüfung.
             If vm IsNot Nothing AndAlso vm.HasSelectedAnnotation Then
@@ -1227,11 +1227,11 @@ Namespace Views
             If isEraser Then
                 line.Stroke = New SolidColorBrush(Colors.White)
                 line.StrokeDashArray = Nothing
-                line.Opacity = 0.85
+                line.Opacity = Math.Max(0.15, 0.85 * vm.BrushFlow / 100.0)
             Else
                 line.Stroke = vm.AnnotationStrokeBrush
                 line.StrokeDashArray = Nothing
-                line.Opacity = Math.Max(0.15, vm.BrushOpacity / 100.0)
+                line.Opacity = Math.Max(0.15, (vm.BrushOpacity / 100.0) * (vm.BrushFlow / 100.0))
             End If
         End Sub
 
@@ -2294,12 +2294,12 @@ Namespace Views
                                  -bottomPad * scaleY)
         End Function
 
-        ''' <summary>Werkzeuge, in denen der Objektrahmen samt Griffen sichtbar ist. Das Drehen-Werkzeug
-        ''' gehört dazu, weil seine Knöpfe auf das markierte Objekt wirken - man muss sehen (und weiter
-        ''' anfassen können), was man dreht. Das Drehen-Werkzeug selbst greift nicht auf die Leinwand zu.</summary>
+        ''' <summary>Werkzeuge, in denen der Objektrahmen samt Griffen sichtbar ist. Verschieben ist der
+        ''' explizite Objekt-Auswahlmodus; das Drehen-Werkzeug gehört ebenfalls dazu, weil seine Knöpfe
+        ''' auf das markierte Objekt wirken.</summary>
         Private Shared Function IsLayerPlacementTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Text OrElse tool = EditorTool.Geometry OrElse tool = EditorTool.Insert OrElse
-                   tool = EditorTool.Selection OrElse EditorViewModel.IsObjectScopeTool(tool)
+                   tool = EditorTool.Move OrElse EditorViewModel.IsObjectScopeTool(tool)
         End Function
 
 
@@ -2817,6 +2817,25 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        Private Function IsEditorInputControlFocused(source As Object) As Boolean
+            Return IsEditorInputControl(TryCast(source, Control)) OrElse
+                   IsEditorInputControl(TryCast(TopLevel.GetTopLevel(Me)?.FocusManager?.GetFocusedElement(), Control))
+        End Function
+
+        Private Shared Function IsEditorInputControl(control As Control) As Boolean
+            Dim current = control
+            While current IsNot Nothing
+                If TypeOf current Is TextBox OrElse
+                   TypeOf current Is ComboBox OrElse
+                   TypeOf current Is NumericUpDown OrElse
+                   TypeOf current Is Slider Then
+                    Return True
+                End If
+                current = TryCast(current.Parent, Control)
+            End While
+            Return False
+        End Function
+
         Public Sub OnFullscreenClick(sender As Object, e As RoutedEventArgs)
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             mainVm?.EnterFullscreen()
@@ -2838,6 +2857,7 @@ Namespace Views
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
             Dim isTextInputFocused = TypeOf e.Source Is TextBox
+            Dim isInputControlFocused = IsEditorInputControlFocused(e.Source)
 
             If e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
                 Select Case e.Key
@@ -2919,22 +2939,22 @@ Namespace Views
             Else
                 Select Case e.Key
                     Case Key.Left
-                        If vm.HasSelectedAnnotation Then
+                        If vm.HasSelectedAnnotation AndAlso Not isInputControlFocused Then
                             vm.NudgeSelectedAnnotation(-If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 5.0, 1.0), 0)
                             e.Handled = True
                         End If
                     Case Key.Right
-                        If vm.HasSelectedAnnotation Then
+                        If vm.HasSelectedAnnotation AndAlso Not isInputControlFocused Then
                             vm.NudgeSelectedAnnotation(If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 5.0, 1.0), 0)
                             e.Handled = True
                         End If
                     Case Key.Up
-                        If vm.HasSelectedAnnotation Then
+                        If vm.HasSelectedAnnotation AndAlso Not isInputControlFocused Then
                             vm.NudgeSelectedAnnotation(0, -If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 5.0, 1.0))
                             e.Handled = True
                         End If
                     Case Key.Down
-                        If vm.HasSelectedAnnotation Then
+                        If vm.HasSelectedAnnotation AndAlso Not isInputControlFocused Then
                             vm.NudgeSelectedAnnotation(0, If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 5.0, 1.0))
                             e.Handled = True
                         End If

@@ -41,6 +41,39 @@
                                          Minimum="1" Maximum="300" Increment="1"
                                          FormatString="F0" />
             </Grid>
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   DefaultValue="100"
+                                   Value="{Binding BrushHardness}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding BrushHardness, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   DefaultValue="100"
+                                   Value="{Binding BrushOpacity}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding BrushOpacity, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Fluss" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   DefaultValue="100"
+                                   Value="{Binding BrushFlow}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding BrushFlow, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
             <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
                 <TextBlock Text="{Binding RetouchHintText}"
                            Foreground="{DynamicResource FP.Text.Muted}"
@@ -91,6 +124,18 @@
                                    Value="{Binding BrushOpacity}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding BrushOpacity, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Fluss"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   DefaultValue="100"
+                                   Value="{Binding BrushFlow}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding BrushFlow, Mode=TwoWay}"
                                          Minimum="0" Maximum="100" Increment="1"
                                          FormatString="F0" />
             </Grid>

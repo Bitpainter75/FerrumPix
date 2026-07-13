@@ -282,10 +282,22 @@
                     <TextBlock Text="WERKZEUGE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,10,0,4" />
                     <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Verschieben"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Move"
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Move}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pointer.svg"
+                                           Width="18" Height="18" />
+                            <TextBlock Text="Verschieben" FontSize="{DynamicResource FP.Font.Body}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="tool-btn-row"
                             ToolTip.Tip="Auswahl"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Selection"
-                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Selection}">
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Selection}"
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Selection}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rectangle.svg"
                                            Width="18" Height="18" />
@@ -298,7 +310,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Text"
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}"
-                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}">
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/text-size.svg" Width="18" Height="18" />
                             <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Body}" />
@@ -309,7 +321,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Image"
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}"
-                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}">
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg" Width="18" Height="18" />
                             <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Body}" />
@@ -320,7 +332,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="QR"
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}"
-                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}">
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/qrcode.svg" Width="18" Height="18" />
                             <TextBlock Text="QR-Code" FontSize="{DynamicResource FP.Font.Body}" />
@@ -331,7 +343,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Watermark"
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}"
-                            Classes.selected-kind="{Binding SelectedAnnotationKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}">
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copyright.svg" Width="18" Height="18" />
                             <TextBlock Text="Wasserzeichen" FontSize="{DynamicResource FP.Font.Body}" />
@@ -342,7 +354,8 @@
                             ToolTip.Tip="Pinsel"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Brush"
-                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
+                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}"
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg" Width="18" Height="18" />
                             <TextBlock Text="Pinsel" FontSize="{DynamicResource FP.Font.Body}" />
@@ -352,7 +365,8 @@
                             ToolTip.Tip="Radiergummi"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Eraser"
-                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}">
+                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}"
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg" Width="18" Height="18" />
                             <TextBlock Text="Radiergummi" FontSize="{DynamicResource FP.Font.Body}" />
@@ -383,7 +397,8 @@
                             ToolTip.Tip="Formen und Symbole"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Insert"
-                            Classes.active="{Binding IsGeometryToolSelected}">
+                            Classes.active="{Binding IsGeometryToolSelected}"
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Insert}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/cube.svg"
                                            Width="18" Height="18" />

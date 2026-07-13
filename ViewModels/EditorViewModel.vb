@@ -118,6 +118,7 @@ Namespace ViewModels
         Private _brushSize As Double = 24.0
         Private _brushHardness As Double = 100
         Private _brushOpacity As Double = 100
+        Private _brushFlow As Double = 100
         Private _isEraserMode As Boolean = False
 
         ''' Pinsel, Radiergummi, Verwischen und Stempel arbeiten auf denselben Feldern (_brushSize,
@@ -128,8 +129,44 @@ Namespace ViewModels
             Public Property Size As Double = 24.0
             Public Property Hardness As Double = 100
             Public Property Opacity As Double = 100
+            Public Property Flow As Double = 100
             Public Property StrokeColor As String = "#FF000000"
         End Class
+
+        Public NotInheritable Class AnnotationBlendModeOption
+            Public Sub New(key As String, displayName As String)
+                Me.Key = key
+                Me.DisplayName = displayName
+            End Sub
+
+            Public ReadOnly Property Key As String
+            Public ReadOnly Property DisplayName As String
+
+            Public Overrides Function ToString() As String
+                Return DisplayName
+            End Function
+        End Class
+
+        Private Shared ReadOnly _annotationBlendModeOptions As IReadOnlyList(Of AnnotationBlendModeOption) =
+            New List(Of AnnotationBlendModeOption) From {
+                New AnnotationBlendModeOption("Normal", "Normal"),
+                New AnnotationBlendModeOption("Darken", "Abdunkeln"),
+                New AnnotationBlendModeOption("Multiply", "Multiplizieren"),
+                New AnnotationBlendModeOption("ColorBurn", "Farben nachbelichten"),
+                New AnnotationBlendModeOption("Lighten", "Aufhellen"),
+                New AnnotationBlendModeOption("Screen", "Negativ multiplizieren"),
+                New AnnotationBlendModeOption("ColorDodge", "Farben abwedeln"),
+                New AnnotationBlendModeOption("Plus", "Hinzufügen"),
+                New AnnotationBlendModeOption("Overlay", "Ineinanderkopieren"),
+                New AnnotationBlendModeOption("SoftLight", "Weiches Licht"),
+                New AnnotationBlendModeOption("HardLight", "Hartes Licht"),
+                New AnnotationBlendModeOption("Difference", "Differenz"),
+                New AnnotationBlendModeOption("Exclusion", "Ausschluss"),
+                New AnnotationBlendModeOption("Hue", "Farbton"),
+                New AnnotationBlendModeOption("Saturation", "Sättigung"),
+                New AnnotationBlendModeOption("Color", "Farbe"),
+                New AnnotationBlendModeOption("Luminosity", "Luminanz")
+            }
 
         Private _paintToolStates As Dictionary(Of String, PaintToolState) = NewPaintToolStates()
 
@@ -141,6 +178,13 @@ Namespace ViewModels
                 {"Clone", New PaintToolState()}
             }
         End Function
+
+        Private Shared Function NormalizeAnnotationBlendMode(value As String) As String
+            Dim raw = If(value, "Normal").Trim()
+            Dim match = _annotationBlendModeOptions.FirstOrDefault(Function(o) String.Equals(o.Key, raw, StringComparison.OrdinalIgnoreCase))
+            Return If(match?.Key, "Normal")
+        End Function
+
         Private ReadOnly _retouchSpots As New List(Of RetouchSpot)()
         ' Klonquelle in Prozent der Bildkante; negativ = nicht gesetzt. Der Versatz zwischen Quelle und
         ' erstem gesetzten Punkt wird gemerkt und für den restlichen Zug beibehalten ("aligned"), damit
@@ -209,6 +253,7 @@ Namespace ViewModels
         Private _annotationStrokeWidth As Double = 0
         Private _annotationFontFamily As String = "Arial"
         Private _annotationOpacity As Double = 100
+        Private _annotationBlendMode As String = "Normal"
         Private _annotationRotation As Double = 0
         Private _annotationFlipH As Boolean = False
         ' Objekt-Anpassungsmodus: Solange ein Objekt markiert ist UND ein objektfähiges Werkzeug aktiv ist,
@@ -550,7 +595,10 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowSelectedSvgOverlay As Boolean
             Get
-                Return _selectedAnnotationOverlayImage IsNot Nothing AndAlso Not IsObjectAdjustTool(_currentTool)
+                Return _selectedAnnotationOverlayImage IsNot Nothing AndAlso
+                       _currentTool <> EditorTool.Move AndAlso
+                       Not IsObjectAdjustTool(_currentTool) AndAlso
+                       Not SelectedAnnotationRequiresBakedPreview()
             End Get
         End Property
 
@@ -701,7 +749,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(FilterStrength))
             SetLastAppliedFilterPreset(normalized)
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         Private Sub ClearLastAppliedLook()
@@ -1050,8 +1098,10 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
                 Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationKind))
+                Me.RaisePropertyChanged(NameOf(SelectedAnnotationToolbarKind))
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
+                Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
@@ -1291,6 +1341,7 @@ Namespace ViewModels
             AnnotationFontSize = 48
             AnnotationFontFamily = "Arial"
             AnnotationOpacity = 100
+            AnnotationBlendMode = "Normal"
             AnnotationRotation = 0
             AnnotationFlipHorizontal = False
             AnnotationFlipVertical = False
@@ -1361,6 +1412,13 @@ Namespace ViewModels
             Get
                 If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return ""
                 Return If(_annotations(_selectedAnnotationIndex)?.Kind, "")
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectedAnnotationToolbarKind As String
+            Get
+                If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return ""
+                Return ToolbarKindForAnnotation(_annotations(_selectedAnnotationIndex)?.Kind)
             End Get
         End Property
 
@@ -1575,6 +1633,7 @@ Namespace ViewModels
                        _currentTool <> EditorTool.Resize AndAlso
                        _currentTool <> EditorTool.Rotate AndAlso
                        _currentTool <> EditorTool.Transform AndAlso
+                       _currentTool <> EditorTool.Move AndAlso
                        _currentTool <> EditorTool.Selection AndAlso
                        _currentTool <> EditorTool.Text AndAlso
                        _currentTool <> EditorTool.Draw AndAlso
@@ -1635,6 +1694,7 @@ Namespace ViewModels
                     Case EditorTool.Frame : Return "Effekte und Rahmen"
                     Case EditorTool.Filters : Return "Filter"
                     Case EditorTool.Transform : Return "Transformieren"
+                    Case EditorTool.Move : Return "Verschieben"
                     Case EditorTool.Selection : Return "Auswahl"
                     Case EditorTool.Retouch : Return If(_isCloneMode, "Stempel", "Verwischen")
                     Case EditorTool.Draw : Return If(_isEraserMode, "Radiergummi", "Pinsel")
@@ -1651,6 +1711,7 @@ Namespace ViewModels
             Get
                 Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
                 Select Case _currentTool
+                    Case EditorTool.Move : Return base & "pointer.svg"
                     Case EditorTool.Selection : Return base & "rectangle.svg"
                     Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", "blur.svg")
                     Case EditorTool.Draw : Return base & If(_isEraserMode, "eraser.svg", "brush.svg")
@@ -1748,7 +1809,8 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowLayerToolOptions As Boolean
             Get
-                Return _currentTool = EditorTool.Text OrElse _currentTool = EditorTool.Geometry OrElse _currentTool = EditorTool.Insert
+                Return _currentTool = EditorTool.Text OrElse _currentTool = EditorTool.Geometry OrElse
+                       _currentTool = EditorTool.Insert OrElse (_currentTool = EditorTool.Move AndAlso HasSelectedAnnotation)
             End Get
         End Property
 
@@ -1858,7 +1920,7 @@ Namespace ViewModels
                 _negativeEnabled = value
                 If value Then MeasureFilmNegative()
                 RaiseNegativePropertiesChanged()
-                SchedulePreviewUpdate()
+                SchedulePreviewForCurrentTarget()
             End Set
         End Property
 
@@ -1871,7 +1933,7 @@ Namespace ViewModels
                 CaptureUndoState(NameOf(NegativeMonochrome))
                 _negativeMonochrome = value
                 RaiseNegativePropertiesChanged()
-                SchedulePreviewUpdate()
+                SchedulePreviewForCurrentTarget()
             End Set
         End Property
 
@@ -1988,7 +2050,7 @@ Namespace ViewModels
                 If _noiseReductionMethod = method Then Return
                 CaptureUndoState(NameOf(NoiseReductionMethodLabel))
                 Me.RaiseAndSetIfChanged(_noiseReductionMethod, method)
-                SchedulePreviewUpdate()
+                SchedulePreviewForCurrentTarget()
             End Set
         End Property
 
@@ -2709,6 +2771,16 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property BrushFlow As Double
+            Get
+                Return _brushFlow
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_brushFlow, Math.Max(0, Math.Min(100, value)))
+                RaiseResetButtonStateChanged()
+            End Set
+        End Property
+
         Public Property IsEraserMode As Boolean
             Get
                 Return _isEraserMode
@@ -2769,7 +2841,7 @@ Namespace ViewModels
                 End If
                 SetLastAppliedFilterPreset(normalized)
                 RaiseResetButtonStateChanged()
-                SchedulePreviewUpdate()
+                SchedulePreviewForCurrentTarget()
             End Set
         End Property
 
@@ -2793,7 +2865,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_lutPath, normalized)
                 Me.RaisePropertyChanged(NameOf(HasLutApplied))
                 RaiseResetButtonStateChanged()
-                SchedulePreviewUpdate()
+                SchedulePreviewForCurrentTarget()
             End Set
         End Property
 
@@ -3269,6 +3341,36 @@ Namespace ViewModels
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationOpacity, Math.Max(0, Math.Min(100, value)))
                 SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public ReadOnly Property AnnotationBlendModeOptions As IReadOnlyList(Of AnnotationBlendModeOption)
+            Get
+                Return _annotationBlendModeOptions
+            End Get
+        End Property
+
+        Public Property AnnotationBlendMode As String
+            Get
+                Return _annotationBlendMode
+            End Get
+            Set(value As String)
+                Dim normalized = NormalizeAnnotationBlendMode(value)
+                If String.Equals(_annotationBlendMode, normalized, StringComparison.Ordinal) Then Return
+                _annotationBlendMode = normalized
+                Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
+                Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
+                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public Property SelectedAnnotationBlendModeOption As AnnotationBlendModeOption
+            Get
+                Return _annotationBlendModeOptions.FirstOrDefault(Function(o) String.Equals(o.Key, _annotationBlendMode, StringComparison.Ordinal))
+            End Get
+            Set(value As AnnotationBlendModeOption)
+                AnnotationBlendMode = If(value?.Key, "Normal")
             End Set
         End Property
 
@@ -4627,13 +4729,15 @@ Namespace ViewModels
                 .FontSizePixels = CSng(_annotationFontSize),
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
+                .BlendMode = _annotationBlendMode,
                 .RotationDegrees = CSng(_annotationRotation),
                 .IsVisible = _annotationIsVisible
             }
             _annotations.Add(annotation)
+            CurrentTool = EditorTool.Move
             SelectedAnnotationIndex = _annotations.Count - 1
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            RefreshPreviewImmediately()
         End Sub
 
         Public Sub CopySelectionToNewObject()
@@ -4847,13 +4951,15 @@ Namespace ViewModels
                 .StrokeColor = _annotationStrokeColor,
                 .StrokeWidth = 0,
                 .Opacity = CSng(_annotationOpacity),
+                .BlendMode = _annotationBlendMode,
                 .IsVisible = True
             }
             _annotations.Add(annotation)
+            CurrentTool = EditorTool.Move
             SelectedAnnotationIndex = _annotations.Count - 1
             RaiseResetButtonStateChanged()
             AddHistoryEntry("Auswahl gefüllt")
-            SchedulePreviewUpdate()
+            RefreshPreviewImmediately()
         End Sub
 
         ' Setzt X/Y/Breite/Höhe in einem Rutsch (z.B. beim Ziehen/Skalieren im Canvas), damit
@@ -5087,7 +5193,7 @@ Namespace ViewModels
                     Me.RaisePropertyChanged(NameOf(Tint))
                 End If
                 RaiseResetButtonStateChanged()
-                SchedulePreviewUpdate()
+                SchedulePreviewForCurrentTarget()
             End Set
         End Property
 
@@ -5714,7 +5820,7 @@ Namespace ViewModels
                                                                  MeasureFilmNegative()
                                                                  _negativeEnabled = True
                                                                  RaiseNegativePropertiesChanged()
-                                                                 SchedulePreviewUpdate()
+                                                                 SchedulePreviewForCurrentTarget()
                                                              End Sub)
             ResetNegativeCommand = ReactiveCommand.Create(Sub()
                                                               PushUndo()
@@ -5758,7 +5864,7 @@ Namespace ViewModels
                                                            PushUndo()
                                                            ResetCurvePoints()
                                                            RaiseResetButtonStateChanged()
-                                                           SchedulePreviewUpdate()
+                                                           SchedulePreviewForCurrentTarget()
                                                        End Sub)
             SetCurveChannelCommand = ReactiveCommand.Create(Of String)(Sub(channelName) SetCurveChannel(channelName))
             AddHandler _curveRgbPoints.CollectionChanged, AddressOf OnCurvePointsChanged
@@ -6184,6 +6290,15 @@ Namespace ViewModels
             _previewTimer.Start()
         End Sub
 
+        Private Sub RefreshPreviewImmediately()
+            _hasChanges = True
+            _previewTimer.Stop()
+            _previewPending = False
+            If Not TryRenderAnnotationOverlaySync() Then
+                UpdatePreview()
+            End If
+        End Sub
+
         ''' Wie SchedulePreviewUpdate, markiert das Dokument aber NICHT als geändert (_hasChanges) -
         ''' für Werkzeuge mit expliziter "Anwenden"-Bestätigung (Zuschneiden/Bildgröße/Leinwandgröße/
         ''' Drehen): Live-Werte sollen sofort in der Vorschau sichtbar sein (siehe
@@ -6240,12 +6355,24 @@ Namespace ViewModels
             End Select
         End Function
 
+        Private Shared Function AnnotationRequiresBakedPreview(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing Then Return False
+            Return Not String.Equals(If(annotation.BlendMode, "Normal").Trim(), "Normal", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        Private Function SelectedAnnotationRequiresBakedPreview() As Boolean
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
+            Return AnnotationRequiresBakedPreview(_annotations(_selectedAnnotationIndex))
+        End Function
+
         ''' Ob das selektierte Objekt aktuell per Live-Overlay dargestellt wird
         ''' und deshalb im gebackenen Vorschaubild ausgeblendet werden muss (siehe GetCurrentAdjustments).
         Private Function ComputesOverlayHidesSelection() As Boolean
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
+            If _currentTool = EditorTool.Move Then Return False
             If Not IsLayerTool(_currentTool) OrElse IsObjectAdjustTool(_currentTool) Then Return False
             Dim selected = _annotations(_selectedAnnotationIndex)
+            If AnnotationRequiresBakedPreview(selected) Then Return False
             Return IsTextualAnnotationKind(selected.Kind) OrElse UsesRenderedSelectionOverlay(selected)
         End Function
 
@@ -6271,6 +6398,27 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Vorschau bereit")
             Return True
         End Function
+
+        Private Sub RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
+            If SelectedAnnotationRequiresBakedPreview() OrElse IsObjectAdjustTool(_currentTool) Then
+                _previewTimer.Stop()
+                _previewPending = False
+                If Not TryRenderAnnotationOverlaySync() Then
+                    UpdatePreview()
+                End If
+                Return
+            End If
+
+            SchedulePreviewUpdate()
+        End Sub
+
+        Private Sub SchedulePreviewForCurrentTarget()
+            If HasSelectedAnnotation AndAlso IsObjectAdjustTool(_currentTool) Then
+                RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
+            Else
+                SchedulePreviewUpdate()
+            End If
+        End Sub
 
         ''' Wrapper um NotifyAnnotationOverlayStateChanged, der Aufrufe unterdrückt, solange
         ''' _overlayNotifySuppressDepth > 0 - siehe Kommentar am Feld. Aufrufer, die mehrere
@@ -6930,7 +7078,11 @@ Namespace ViewModels
             field = value
             Me.RaisePropertyChanged(propertyName)
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            If HasSelectedAnnotation AndAlso IsObjectAdjustTool(_currentTool) Then
+                RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
+            Else
+                SchedulePreviewUpdate()
+            End If
             Return True
         End Function
 
@@ -7504,6 +7656,7 @@ Namespace ViewModels
             _brushSize = 24.0
             _brushHardness = 100
             _brushOpacity = 100
+            _brushFlow = 100
             _paintToolStates = NewPaintToolStates()
 
             _annotationText = "Text"
@@ -7513,6 +7666,7 @@ Namespace ViewModels
             _annotationFontSize = 48
             _annotationFontFamily = "Arial"
             _annotationOpacity = 100
+            _annotationBlendMode = "Normal"
             _annotationRotation = 0
             _annotationFlipH = False
             _annotationFlipV = False
@@ -7584,6 +7738,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(BrushSize))
             Me.RaisePropertyChanged(NameOf(BrushHardness))
             Me.RaisePropertyChanged(NameOf(BrushOpacity))
+            Me.RaisePropertyChanged(NameOf(BrushFlow))
             Me.RaisePropertyChanged(NameOf(IsEraserMode))
             Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
             Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
@@ -7604,6 +7759,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationFontSizePixels))
             Me.RaisePropertyChanged(NameOf(AnnotationFontFamily))
             Me.RaisePropertyChanged(NameOf(AnnotationOpacity))
+            Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
             Me.RaisePropertyChanged(NameOf(AnnotationRotation))
             Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
             Me.RaisePropertyChanged(NameOf(AnnotationIsVisible))
@@ -8007,6 +8164,7 @@ Namespace ViewModels
                 .FontSizePixels = CSng(If(normalizedKind = "Watermark", Math.Max(8, _annotationFontSize), _annotationFontSize)),
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
+                .BlendMode = _annotationBlendMode,
                 .RotationDegrees = CSng(_annotationRotation),
                 .Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), ""),
                 .IsVisible = _annotationIsVisible,
@@ -8067,6 +8225,7 @@ Namespace ViewModels
                 .FontSizePixels = CSng(_annotationFontSize),
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
+                .BlendMode = _annotationBlendMode,
                 .RotationDegrees = CSng(_annotationRotation),
                 .IsVisible = _annotationIsVisible
             }
@@ -8120,6 +8279,17 @@ Namespace ViewModels
                 Case "Brush", "Eraser" : Return EditorTool.Draw
                 Case "SelectionFill", "SelectionImage" : Return EditorTool.Selection
                 Case Else : Return EditorTool.Insert
+            End Select
+        End Function
+
+        Private Shared Function ToolbarKindForAnnotation(kind As String) As String
+            Select Case NormalizeAnnotationKind(kind)
+                Case "SelectionFill", "SelectionImage"
+                    Return "Selection"
+                Case "Rectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Spiral", "Droplet", "SpeechBubble", "Line", "Arrow", "Symbol", "Svg"
+                    Return "Insert"
+                Case Else
+                    Return NormalizeAnnotationKind(kind)
             End Select
         End Function
 
@@ -8228,7 +8398,12 @@ Namespace ViewModels
             Dim canAppend = _activeStrokeAnnotation IsNot Nothing AndAlso
                              _activeStrokeIsEraser = isEraser AndAlso
                              String.Equals(_activeStrokeAnnotation.Kind, expectedKind, StringComparison.OrdinalIgnoreCase) AndAlso
-                             _annotations.Contains(_activeStrokeAnnotation)
+                             _annotations.Contains(_activeStrokeAnnotation) AndAlso
+                             Math.Abs(_activeStrokeAnnotation.StrokeWidth - CSng(_brushSize)) < 0.001F AndAlso
+                             Math.Abs(_activeStrokeAnnotation.Opacity - CSng(_brushOpacity)) < 0.001F AndAlso
+                             Math.Abs(_activeStrokeAnnotation.FlowPercent - CSng(_brushFlow)) < 0.001F AndAlso
+                             Math.Abs(_activeStrokeAnnotation.HardnessPercent - CSng(_brushHardness)) < 0.001F AndAlso
+                             String.Equals(_activeStrokeAnnotation.StrokeColor, _annotationStrokeColor, StringComparison.OrdinalIgnoreCase)
 
             If canAppend Then
                 Dim existing = _activeStrokeAnnotation
@@ -8256,6 +8431,8 @@ Namespace ViewModels
                     .StrokeColor = _annotationStrokeColor,
                     .StrokeWidth = CSng(_brushSize),
                     .Opacity = CSng(_brushOpacity),
+                    .BlendMode = "Normal",
+                    .FlowPercent = CSng(_brushFlow),
                     .HardnessPercent = CSng(_brushHardness),
                     .FontSizePixels = CSng(_annotationFontSize),
                     .FontFamily = _annotationFontFamily
@@ -8376,7 +8553,7 @@ Namespace ViewModels
         ''' der Wechsel dorthin die Markierung aufheben, gäbe es nie ein Objekt zu drehen.</summary>
         Private Shared Function IsLayerTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Text OrElse tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse
-                   tool = EditorTool.Insert OrElse tool = EditorTool.Selection OrElse
+                   tool = EditorTool.Insert OrElse tool = EditorTool.Move OrElse
                    IsObjectScopeTool(tool)
         End Function
 
@@ -8384,7 +8561,7 @@ Namespace ViewModels
         ''' die Markierung verlieren (Werkzeugwechsel) noch beim Anklicken eines Objekts in dessen Werkzeug
         ''' springen - sonst könnte man ein Objekt hier gar nicht auswählen.</summary>
         Public Shared Function IsObjectTransformTool(tool As EditorTool) As Boolean
-            Return tool = EditorTool.Rotate OrElse tool = EditorTool.Transform
+            Return tool = EditorTool.Rotate OrElse tool = EditorTool.Transform OrElse tool = EditorTool.Move
         End Function
 
         ''' <summary>Werkzeuge, deren REGLER auf ein markiertes Objekt wirken statt aufs Bild: Anpassen,
@@ -8512,6 +8689,7 @@ Namespace ViewModels
                     AnnotationFontSize = a.FontSizePixels
                     AnnotationFontFamily = a.FontFamily
                     AnnotationOpacity = a.Opacity
+                    AnnotationBlendMode = a.BlendMode
                     AnnotationRotation = a.RotationDegrees
                     AnnotationFlipHorizontal = a.FlipHorizontal
                     AnnotationFlipVertical = a.FlipVertical
@@ -8573,6 +8751,7 @@ Namespace ViewModels
             a.FontSizePixels = CSng(_annotationFontSize)
             a.FontFamily = _annotationFontFamily
             a.Opacity = CSng(_annotationOpacity)
+            a.BlendMode = _annotationBlendMode
             a.RotationDegrees = CSng(_annotationRotation)
             a.FlipHorizontal = _annotationFlipH
             a.FlipVertical = _annotationFlipV
@@ -8602,7 +8781,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
             If refreshOverlay Then UpdateSelectedAnnotationOverlayPreview()
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
         End Sub
 
         ''' Bild und Objekt-Rechteck gehören zusammen (die View rechnet das Rechteck in die negativen
@@ -8620,6 +8799,11 @@ Namespace ViewModels
 
             Dim annotation = _annotations(_selectedAnnotationIndex)
             If annotation Is Nothing OrElse Not annotation.IsVisible Then
+                SetSelectedAnnotationOverlay(Nothing)
+                Return
+            End If
+
+            If AnnotationRequiresBakedPreview(annotation) Then
                 SetSelectedAnnotationOverlay(Nothing)
                 Return
             End If
@@ -8776,7 +8960,10 @@ Namespace ViewModels
             Dim spot = New RetouchSpot With {
                 .XPixels = CSng(targetX),
                 .YPixels = CSng(targetY),
-                .RadiusPixels = CSng(_retouchRadius)
+                .RadiusPixels = CSng(_retouchRadius),
+                .StrengthPercent = CSng(_brushHardness),
+                .OpacityPercent = CSng(_brushOpacity),
+                .FlowPercent = CSng(_brushFlow)
             }
 
             If IsCloneMode AndAlso HasCloneSource Then
@@ -9050,7 +9237,7 @@ Namespace ViewModels
             If _suppressCurvePointsChanged Then Return
             CaptureUndoState("Tonwertkurve")
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         Private Sub RaiseCurveChannelStateChanged()
@@ -9138,6 +9325,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(RetouchHintText))
             Me.RaisePropertyChanged(NameOf(ShowSelectionAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowDrawControls))
+            Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
+            Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
+            Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
+            Me.RaisePropertyChanged(NameOf(IsSmudgePaintMode))
+            Me.RaisePropertyChanged(NameOf(BrushFlow))
             Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
             Me.RaisePropertyChanged(NameOf(ShowGeometryControls))
             Me.RaisePropertyChanged(NameOf(ShowTransformAdjustments))
@@ -9199,12 +9391,17 @@ Namespace ViewModels
                     state.Size = _brushSize
                     state.Hardness = _brushHardness
                     state.Opacity = _brushOpacity
+                    state.Flow = _brushFlow
                 Case "Eraser"
                     state.Size = _brushSize
                     state.Hardness = _brushHardness
                     state.Opacity = _brushOpacity
+                    state.Flow = _brushFlow
                 Case "Blur", "Clone"
                     state.Size = _retouchRadius
+                    state.Hardness = _brushHardness
+                    state.Opacity = _brushOpacity
+                    state.Flow = _brushFlow
             End Select
         End Sub
 
@@ -9218,12 +9415,17 @@ Namespace ViewModels
                     BrushSize = state.Size
                     BrushHardness = state.Hardness
                     BrushOpacity = state.Opacity
+                    BrushFlow = state.Flow
                 Case "Eraser"
                     BrushSize = state.Size
                     BrushHardness = state.Hardness
                     BrushOpacity = state.Opacity
+                    BrushFlow = state.Flow
                 Case "Blur", "Clone"
                     RetouchRadius = state.Size
+                    BrushHardness = state.Hardness
+                    BrushOpacity = state.Opacity
+                    BrushFlow = state.Flow
             End Select
         End Sub
 
@@ -9313,7 +9515,7 @@ Namespace ViewModels
                 RaiseExtendedAdjustmentProperties()
                 SetLastAppliedLightroomPreset(xmpPath)
                 StatusText = LocalizationService.T("Lightroom-Preset angewendet")
-                SchedulePreviewUpdate()
+                SchedulePreviewForCurrentTarget()
             Catch ex As Exception
                 StatusText = LocalizationService.T("Lightroom-Preset konnte nicht geladen werden: ") & ex.Message
             End Try
@@ -9424,7 +9626,7 @@ Namespace ViewModels
             End Try
             SetLastAppliedLutPreset(cubePath)
             StatusText = LocalizationService.T("LUT angewendet")
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         Public Sub SaveLutPresetToSettings(cubePath As String)
@@ -9539,6 +9741,7 @@ Namespace ViewModels
         Geometry
         Insert
         Frame
+        Move
         Selection
     End Enum
 
