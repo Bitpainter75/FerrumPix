@@ -2814,4 +2814,10 @@
   <data name="Mischen_8469987f" xml:space="preserve">
     <value>Blend</value>
   </data>
+  <data name="Formen_4007548f" xml:space="preserve">
+    <value>Shapes</value>
+  </data>
+  <data name="Symbole_1030a110" xml:space="preserve">
+    <value>Symbols</value>
+  </data>
 </root>

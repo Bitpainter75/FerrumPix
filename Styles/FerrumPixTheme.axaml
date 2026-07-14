@@ -934,11 +934,11 @@
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <!-- Rechts zwei Pixel mehr als links: bei krummer Anwendungsskalierung (AVALONIA_SCREEN_SCALE_FACTORS,
+        <!-- Rechts etwas mehr Platz als links: bei krummer Anwendungsskalierung (AVALONIA_SCREEN_SCALE_FACTORS,
              siehe AppSettingsService.ApplyApplicationScaleEnvironment) rundet Avalonia die Breite des
              Tooltip-Popups ab, wodurch das letzte Zeichen abgeschnitten wurde ("Anpassen" -> "Anpasse").
              Der Puffer fällt optisch nicht auf und deckt die Rundung in jeder Skalierung ab. -->
-        <Setter Property="Padding" Value="8,4,10,4"/>
+        <Setter Property="Padding" Value="8,4,14,4"/>
         <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Small}"/>
         <Setter Property="MinWidth" Value="0"/>

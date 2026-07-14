@@ -414,6 +414,7 @@ Namespace ViewModels
         End Property
 
         Private ReadOnly _allShapeIcons As New List(Of ShapeIconEntry)()
+        Private ReadOnly _fixedShapeItems As New ObservableCollection(Of ShapeIconEntry)()
         Private ReadOnly _filteredShapeIcons As New BulkObservableCollection(Of ShapeIconEntry)()
         Private ReadOnly _watermarkPresets As New List(Of WatermarkPresetSettings)()
         Public ReadOnly Property SavedLightroomPresets As ObservableCollection(Of LightroomPresetSettings) = New ObservableCollection(Of LightroomPresetSettings)()
@@ -431,6 +432,12 @@ Namespace ViewModels
         Public ReadOnly Property FilteredShapeIcons As BulkObservableCollection(Of ShapeIconEntry)
             Get
                 Return _filteredShapeIcons
+            End Get
+        End Property
+
+        Public ReadOnly Property FixedShapeItems As ObservableCollection(Of ShapeIconEntry)
+            Get
+                Return _fixedShapeItems
             End Get
         End Property
 
@@ -661,6 +668,32 @@ Namespace ViewModels
             Catch
             End Try
             RefreshFilteredShapeIcons()
+        End Sub
+
+        Private Sub LoadFixedShapeItems()
+            _fixedShapeItems.Clear()
+            Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
+            AddFixedShape("Rectangle", "Rechteck", base & "rectangle.svg")
+            AddFixedShape("RoundedRectangle", "Abgerundetes Rechteck", base & "square-rounded.svg")
+            AddFixedShape("Ellipse", "Kreis/Ellipse", base & "circle.svg")
+            AddFixedShape("Triangle", "Dreieck", base & "triangle.svg")
+            AddFixedShape("Diamond", "Raute", base & "diamond.svg")
+            AddFixedShape("Polygon", "Polygon", base & "hexagon.svg")
+            AddFixedShape("Star", "Stern", base & "star.svg")
+            AddFixedShape("DoubleStar", "Doppelstern", base & "stars.svg")
+            AddFixedShape("Arrow", "Pfeil", base & "arrow-right.svg")
+            AddFixedShape("Cloud", "Wolke", base & "cloud.svg")
+            AddFixedShape("Heart", "Herz", base & "heart.svg")
+            AddFixedShape("Spiral", "Spirale", base & "spiral.svg")
+        End Sub
+
+        Private Sub AddFixedShape(kind As String, displayName As String, iconPath As String)
+            _fixedShapeItems.Add(New ShapeIconEntry With {
+                .IconPath = iconPath,
+                .SourceName = displayName,
+                .DisplayName = displayName,
+                .PendingKind = kind
+            })
         End Sub
 
         Private Sub LoadWatermarkPresets()
@@ -1337,7 +1370,9 @@ Namespace ViewModels
             AnnotationFillColor = If(normalizedKind = "Image", "#00FFFFFF",
                                    If(normalizedKind = "Rectangle" OrElse normalizedKind = "Ellipse" OrElse isShape, "#33FFFFFF", "#FFFFFFFF"))
             AnnotationStrokeColor = "#FF000000"
-            AnnotationStrokeWidth = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark" OrElse normalizedKind = "QR" OrElse normalizedKind = "Image", 0, 2)
+            AnnotationStrokeWidth = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark" OrElse normalizedKind = "QR" OrElse normalizedKind = "Image",
+                                       0,
+                                       If(normalizedKind = "Arrow", 5, 2))
             AnnotationText = GetDefaultAnnotationText(normalizedKind, rawKind)
             AnnotationFontSize = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark",
                                     GetDefaultTextAnnotationFontSizePixels(),
@@ -1399,6 +1434,13 @@ Namespace ViewModels
             Dim selectedImagePath = If(_selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count AndAlso
                                         String.Equals(_annotations(_selectedAnnotationIndex).Kind, "Svg", StringComparison.OrdinalIgnoreCase),
                                         _annotations(_selectedAnnotationIndex).ImagePath, "")
+            Dim selectedKind = If(_selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count,
+                                  NormalizeAnnotationKind(_annotations(_selectedAnnotationIndex).Kind),
+                                  "")
+            For Each item In _fixedShapeItems
+                item.IsPending = String.Equals(NormalizeAnnotationKind(item.PendingKind), NormalizeAnnotationKind(_pendingInsertKind), StringComparison.OrdinalIgnoreCase)
+                item.IsSelectedKind = Not String.IsNullOrEmpty(selectedKind) AndAlso String.Equals(NormalizeAnnotationKind(item.PendingKind), selectedKind, StringComparison.OrdinalIgnoreCase)
+            Next
             For Each item In _allShapeIcons
                 item.IsPending = String.Equals(item.PendingKind, _pendingInsertKind, StringComparison.OrdinalIgnoreCase)
                 item.IsSelectedKind = Not String.IsNullOrEmpty(selectedImagePath) AndAlso String.Equals(item.IconPath, selectedImagePath, StringComparison.OrdinalIgnoreCase)
@@ -1733,7 +1775,7 @@ Namespace ViewModels
                     Case EditorTool.Selection : Return base & "rectangle.svg"
                     Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", "blur.svg")
                     Case EditorTool.Draw : Return base & If(_isEraserMode, "eraser.svg", "brush.svg")
-                    Case EditorTool.Geometry, EditorTool.Insert : Return base & "cube.svg"
+                    Case EditorTool.Geometry, EditorTool.Insert : Return base & "shape.svg"
                     Case EditorTool.Text
                         Select Case NormalizeAnnotationKind(If(String.IsNullOrEmpty(_pendingInsertKind), SelectedAnnotationKind, _pendingInsertKind))
                             Case "Image" : Return base & "photo.svg"
@@ -1760,7 +1802,6 @@ Namespace ViewModels
                 Case "Watermark" : Return "Wasserzeichen"
                 Case "Text" : Return "Text"
                 Case Else
-                    ' Formen, Symbole, Linien und Pfeile werden ebenfalls über dieses Werkzeug gesetzt.
                     Return "Formen und Symbole"
             End Select
         End Function
@@ -1836,6 +1877,18 @@ Namespace ViewModels
         Public ReadOnly Property ShowGeometryControls As Boolean
             Get
                 Return _currentTool = EditorTool.Geometry OrElse _currentTool = EditorTool.Insert
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowShapeControls As Boolean
+            Get
+                Return ShowGeometryControls
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowSymbolControls As Boolean
+            Get
+                Return ShowGeometryControls
             End Get
         End Property
 
@@ -5644,6 +5697,7 @@ Namespace ViewModels
             Tags = New ObservableCollection(Of String)()
             TagSuggestions = New ObservableCollection(Of String)(LibraryService.Instance.GetAllTags())
             HistoryItems = New ObservableCollection(Of String)()
+            LoadFixedShapeItems()
             LoadAllShapeIcons()
             LoadWatermarkPresets()
             LoadSavedLightroomPresets()
@@ -8232,7 +8286,7 @@ Namespace ViewModels
             Select Case normalizedKind
                 Case "Line", "Arrow"
                     Return (30.0, 16.0)
-                Case "QR", "Image", "Symbol", "Rectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Spiral", "Droplet", "SpeechBubble"
+                Case "QR", "Image", "Symbol", "Rectangle", "RoundedRectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Polygon", "Star", "DoubleStar", "Spiral", "Droplet", "SpeechBubble", "EllipseSpeechBubble", "RectSpeechBubble", "Heart", "Cloud"
                     Return (22.0, 22.0)
                 Case "Svg"
                     Dim aspect = ImageProcessor.TryGetSvgAspectRatio(ExtractSvgIconPath(rawKind))
@@ -8323,8 +8377,10 @@ Namespace ViewModels
             Select Case NormalizeAnnotationKind(kind)
                 Case "Text", "Image", "QR" : Return EditorTool.Text
                 Case "Watermark" : Return EditorTool.Text
-                Case "Rectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Spiral", "Droplet", "SpeechBubble", "Line", "Arrow", "Symbol", "Svg"
+                Case "Rectangle", "RoundedRectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Polygon", "Star", "DoubleStar", "Spiral", "Droplet", "SpeechBubble", "EllipseSpeechBubble", "RectSpeechBubble", "Heart", "Cloud", "Line", "Arrow"
                     Return EditorTool.Geometry
+                Case "Symbol", "Svg"
+                    Return EditorTool.Insert
                 Case "Brush", "Eraser" : Return EditorTool.Draw
                 Case "SelectionFill", "SelectionImage" : Return EditorTool.Selection
                 Case Else : Return EditorTool.Insert
@@ -8335,7 +8391,7 @@ Namespace ViewModels
             Select Case NormalizeAnnotationKind(kind)
                 Case "SelectionFill", "SelectionImage"
                     Return "Selection"
-                Case "Rectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Spiral", "Droplet", "SpeechBubble", "Line", "Arrow", "Symbol", "Svg"
+                Case "Rectangle", "RoundedRectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Polygon", "Star", "DoubleStar", "Spiral", "Droplet", "SpeechBubble", "EllipseSpeechBubble", "RectSpeechBubble", "Heart", "Cloud", "Line", "Arrow", "Symbol", "Svg"
                     Return "Insert"
                 Case Else
                     Return NormalizeAnnotationKind(kind)
@@ -8347,7 +8403,7 @@ Namespace ViewModels
 
             Dim normalized = NormalizeAnnotationKind(annotation.Kind)
             Select Case normalized
-                Case "Text", "Image", "QR", "Watermark", "Rectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Spiral", "Droplet", "SpeechBubble", "Line", "Arrow", "Symbol"
+                Case "Text", "Image", "QR", "Watermark", "Rectangle", "RoundedRectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Polygon", "Star", "DoubleStar", "Spiral", "Droplet", "SpeechBubble", "EllipseSpeechBubble", "RectSpeechBubble", "Heart", "Cloud", "Line", "Arrow", "Symbol"
                     Return normalized
                 Case "Svg"
                     If Not String.IsNullOrWhiteSpace(annotation.ImagePath) Then Return "Svg:" & annotation.ImagePath
@@ -8366,6 +8422,7 @@ Namespace ViewModels
                 Case "selectionfill" : Return "SelectionFill"
                 Case "selectionimage" : Return "SelectionImage"
                 Case "rectangle", "rect", "rechteck" : Return "Rectangle"
+                Case "roundedrectangle", "rounded-rectangle", "abgerundetesrechteck", "abgerundetes rechteck" : Return "RoundedRectangle"
                 Case "ellipse", "circle", "kreis" : Return "Ellipse"
                 Case "square", "quadrat" : Return "Square"
                 Case "triangle", "dreieck" : Return "Triangle"
@@ -8373,9 +8430,16 @@ Namespace ViewModels
                 Case "pyramid", "pyramide" : Return "Pyramid"
                 Case "trapezoid", "trapez" : Return "Trapezoid"
                 Case "diamond", "raute" : Return "Diamond"
+                Case "polygon", "polygonal", "vieleck" : Return "Polygon"
+                Case "star", "stern" : Return "Star"
+                Case "doublestar", "double-star", "doppelstern" : Return "DoubleStar"
                 Case "spiral", "spirale" : Return "Spiral"
-                Case "droplet", "tropfen" : Return "Droplet"
+                Case "droplet", "drop", "tropfen", "traene", "träne" : Return "Droplet"
                 Case "speechbubble", "speech-bubble", "sprechblase", "bubble" : Return "SpeechBubble"
+                Case "ellipsespeechbubble", "ellipse-speech-bubble", "runde sprechblase", "ellipse sprechblase" : Return "EllipseSpeechBubble"
+                Case "rectspeechbubble", "rect-speech-bubble", "rectangle-speech-bubble", "rechteck sprechblase" : Return "RectSpeechBubble"
+                Case "cloud", "wolke" : Return "Cloud"
+                Case "heart", "herz" : Return "Heart"
                 Case "line", "linie" : Return "Line"
                 Case "arrow", "pfeil" : Return "Arrow"
                 Case "brush", "pinsel", "draw", "malen" : Return "Brush"
@@ -8409,7 +8473,7 @@ Namespace ViewModels
 
         Private Shared Function IsCustomShapeKind(kind As String) As Boolean
             Select Case kind
-                Case "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Spiral", "Droplet", "SpeechBubble", "Svg"
+                Case "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Polygon", "Star", "DoubleStar", "Spiral", "Droplet", "SpeechBubble", "EllipseSpeechBubble", "RectSpeechBubble", "Heart", "Cloud", "RoundedRectangle", "Svg"
                     Return True
                 Case Else
                     Return False
@@ -9387,6 +9451,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(BrushFlow))
             Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
             Me.RaisePropertyChanged(NameOf(ShowGeometryControls))
+            Me.RaisePropertyChanged(NameOf(ShowShapeControls))
+            Me.RaisePropertyChanged(NameOf(ShowSymbolControls))
             Me.RaisePropertyChanged(NameOf(ShowTransformAdjustments))
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
             Me.RaisePropertyChanged(NameOf(IsGeometryToolSelected))

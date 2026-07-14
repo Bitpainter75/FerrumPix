@@ -18,9 +18,41 @@
         </StackPanel>
 
         <StackPanel Spacing="10">
-            <!-- Text, Bild, QR und Wasserzeichen stehen jetzt einzeln in der Werkzeugleiste links. -->
-            <Expander Header="Formen und Symbole" IsExpanded="True"
-                      IsVisible="{Binding ShowGeometryControls}">
+            <!-- Text, Bild, QR und Wasserzeichen stehen einzeln in der Werkzeugleiste links. -->
+            <Expander Header="Formen" IsExpanded="True"
+                      IsVisible="{Binding ShowShapeControls}">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/shape.svg"
+                                Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <ItemsRepeater ItemsSource="{Binding FixedShapeItems}" Margin="0,8,0,0">
+                    <ItemsRepeater.Layout>
+                        <WrapLayout />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate>
+                            <Button Classes="ghost insert-option-btn compact"
+                                    ToolTip.Tip="{Binding DisplayName}"
+                                    Command="{Binding DataContext.SetPendingInsertKindCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding PendingKind}"
+                                    Classes.active="{Binding IsPending}"
+                                    Classes.selected-kind="{Binding IsSelectedKind}">
+                                <icons:SvgIcon Source="{Binding IconPath}" Width="16"
+                                               Height="16" />
+                            </Button>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </Expander>
+
+            <Expander Header="Symbole" IsExpanded="True"
+                      IsVisible="{Binding ShowSymbolControls}">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">

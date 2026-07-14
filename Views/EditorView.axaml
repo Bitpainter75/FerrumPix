@@ -400,7 +400,7 @@
                             Classes.active="{Binding IsGeometryToolSelected}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Insert}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/cube.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/shape.svg"
                                            Width="18" Height="18" />
                             <TextBlock Text="Formen und Symbole" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>

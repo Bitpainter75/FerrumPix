@@ -239,6 +239,7 @@ Namespace Services
                     Case "image", "selectionimage" : Return base & "09_FormenSymbole/077_Bild.svg"
                     Case "qr", "qrcode", "qr-code" : Return base & "03_Editor/37_QR_Code.svg"
                     Case "rectangle", "rect", "selectionfill" : Return base & "09_FormenSymbole/005_Rechteck.svg"
+                    Case "roundedrectangle", "rounded-rectangle" : Return base & "outline/square-rounded.svg"
                     Case "square" : Return base & "09_FormenSymbole/003_Quadrat.svg"
                     Case "triangle" : Return base & "09_FormenSymbole/007_Dreieck.svg"
                     Case "ellipse", "circle" : Return base & "09_FormenSymbole/017_Oval.svg"
@@ -246,9 +247,17 @@ Namespace Services
                     Case "pyramid" : Return base & "09_FormenSymbole/031_Diamant_facette.svg"
                     Case "trapezoid" : Return base & "09_FormenSymbole/013_Trapez.svg"
                     Case "diamond" : Return base & "09_FormenSymbole/011_Raute.svg"
+                    Case "polygon" : Return base & "outline/hexagon.svg"
+                    Case "star" : Return base & "outline/star.svg"
+                    Case "doublestar", "double-star" : Return base & "outline/stars.svg"
                     Case "spiral" : Return base & "09_FormenSymbole/053_Spirale.svg"
                     Case "droplet" : Return base & "09_FormenSymbole/051_Tropfen.svg"
+                    Case "ellipsespeechbubble", "ellipse-speech-bubble" : Return base & "outline/message-circle.svg"
+                    Case "rectspeechbubble", "rect-speech-bubble" : Return base & "outline/message.svg"
                     Case "speechbubble", "speech-bubble", "sprechblase", "bubble" : Return base & "09_FormenSymbole/048_Sprechblase.svg"
+                    Case "heart" : Return base & "outline/heart.svg"
+                    Case "cloud" : Return base & "outline/cloud.svg"
+                    Case "arrow" : Return base & "outline/arrow-right.svg"
                     Case "brush" : Return base & "03_Editor/39_Pinsel.svg"
                     Case "eraser" : Return "avares://FerrumPix/Assets/Icons/outline/eraser.svg"
                     Case Else : Return base & "09_FormenSymbole/005_Rechteck.svg"
@@ -262,6 +271,7 @@ Namespace Services
                 Case "watermark" : Return "Wasserzeichen"
                 Case "image" : Return "Bild"
                 Case "rectangle", "rect" : Return "Rechteck"
+                Case "roundedrectangle", "rounded-rectangle" : Return "Abgerundetes Rechteck"
                 Case "selectionfill", "selectionimage" : Return "Auswahl"
                 Case "ellipse", "circle" : Return "Ellipse"
                 Case "square" : Return "Quadrat"
@@ -270,9 +280,16 @@ Namespace Services
                 Case "pyramid" : Return "Pyramide"
                 Case "trapezoid" : Return "Trapez"
                 Case "diamond" : Return "Raute"
+                Case "polygon" : Return "Polygon"
+                Case "star" : Return "Stern"
+                Case "doublestar", "double-star" : Return "Doppelstern"
                 Case "spiral" : Return "Spirale"
                 Case "droplet" : Return "Tropfen"
+                Case "ellipsespeechbubble", "ellipse-speech-bubble" : Return "Ellipse Sprechblase"
+                Case "rectspeechbubble", "rect-speech-bubble" : Return "Rechteck Sprechblase"
                 Case "speechbubble", "speech-bubble", "sprechblase", "bubble" : Return "Sprechblase"
+                Case "heart" : Return "Herz"
+                Case "cloud" : Return "Wolke"
                 Case "line" : Return "Linie"
                 Case "arrow" : Return "Pfeil"
                 Case "brush" : Return "Pinsel"
@@ -2361,27 +2378,57 @@ Namespace Services
                 Case "rectangle", "rect", "selectionfill"
                     Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                     DrawShape(canvas, rect, fill, stroke, strokeWidth, False, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                Case "roundedrectangle", "rounded-rectangle"
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawRoundedRectangle(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "ellipse", "circle"
                     Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                     DrawShape(canvas, rect, fill, stroke, strokeWidth, True, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "square"
-                    DrawSquare(canvas, rect, fill, stroke, strokeWidth)
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawSquare(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "triangle"
-                    DrawTriangle(canvas, rect, fill, stroke, strokeWidth)
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawTriangle(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "cone"
                     DrawCone(canvas, rect, fill, stroke, strokeWidth)
                 Case "pyramid"
                     DrawPyramid(canvas, rect, fill, stroke, strokeWidth)
                 Case "trapezoid"
-                    DrawTrapezoid(canvas, rect, fill, stroke, strokeWidth)
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawTrapezoid(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "diamond"
-                    DrawDiamond(canvas, rect, fill, stroke, strokeWidth)
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawDiamond(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                Case "polygon"
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawRegularPolygon(canvas, rect, 6, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                Case "star"
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawStar(canvas, rect, 5, 0.45F, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                Case "doublestar", "double-star"
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawStar(canvas, rect, 8, 0.42F, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "spiral"
                     DrawSpiral(canvas, rect, stroke, strokeWidth)
                 Case "droplet"
-                    DrawDroplet(canvas, rect, fill, stroke, strokeWidth)
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawDroplet(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                Case "ellipsespeechbubble", "ellipse-speech-bubble"
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawEllipseSpeechBubble(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                Case "rectspeechbubble", "rect-speech-bubble"
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawRectSpeechBubble(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "speechbubble", "speech-bubble", "bubble"
-                    DrawSpeechBubble(canvas, rect, fill, stroke, strokeWidth)
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawSpeechBubble(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                Case "heart"
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawHeart(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                Case "cloud"
+                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawCloud(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "line"
                     DrawLine(canvas, rect, stroke, strokeWidth, False)
                 Case "arrow"
@@ -2900,20 +2947,39 @@ Namespace Services
             Return SKShader.CreateLinearGradient(startPoint, endPoint, New SKColor() {startColor, endColor}, Nothing, SKShaderTileMode.Clamp)
         End Function
 
-        Private Shared Sub DrawSquare(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single)
+        Private Shared Sub DrawRoundedRectangle(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+            Dim radius = Math.Min(rect.Width, rect.Height) * 0.18F
+            Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
+            If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
+                Using shader = CreateFillGradientShader(rect, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+                    Using fillPaint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                        canvas.DrawRoundRect(rect, radius, radius, fillPaint)
+                    End Using
+                End Using
+            ElseIf fill.Alpha > 0 Then
+                Using fillPaint = New SKPaint With {.Color = fill, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                    canvas.DrawRoundRect(rect, radius, radius, fillPaint)
+                End Using
+            End If
+            Using strokePaint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = strokeWidth, .IsAntialias = True}
+                canvas.DrawRoundRect(rect, radius, radius, strokePaint)
+            End Using
+        End Sub
+
+        Private Shared Sub DrawSquare(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             Dim side = Math.Min(rect.Width, rect.Height)
             Dim x = rect.MidX - side / 2.0F
             Dim y = rect.MidY - side / 2.0F
-            DrawShape(canvas, New SKRect(x, y, x + side, y + side), fill, stroke, strokeWidth, False)
+            DrawShape(canvas, New SKRect(x, y, x + side, y + side), fill, stroke, strokeWidth, False, fillKind, fill2, gradientAngleDegrees, gradientInverted)
         End Sub
 
-        Private Shared Sub DrawTriangle(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single)
+        Private Shared Sub DrawTriangle(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             Using path = New SKPath()
                 path.MoveTo(rect.MidX, rect.Top)
                 path.LineTo(rect.Right, rect.Bottom)
                 path.LineTo(rect.Left, rect.Bottom)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
             End Using
         End Sub
 
@@ -2941,7 +3007,7 @@ Namespace Services
             End Using
         End Sub
 
-        Private Shared Sub DrawTrapezoid(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single)
+        Private Shared Sub DrawTrapezoid(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             Using path = New SKPath()
                 Dim inset = rect.Width * 0.22F
                 path.MoveTo(rect.Left + inset, rect.Top)
@@ -2949,32 +3015,62 @@ Namespace Services
                 path.LineTo(rect.Right, rect.Bottom)
                 path.LineTo(rect.Left, rect.Bottom)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
             End Using
         End Sub
 
-        Private Shared Sub DrawDiamond(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single)
+        Private Shared Sub DrawDiamond(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             Using path = New SKPath()
                 path.MoveTo(rect.MidX, rect.Top)
                 path.LineTo(rect.Right, rect.MidY)
                 path.LineTo(rect.MidX, rect.Bottom)
                 path.LineTo(rect.Left, rect.MidY)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
             End Using
         End Sub
 
-        Private Shared Sub DrawDroplet(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single)
+        Private Shared Sub DrawRegularPolygon(canvas As SKCanvas, rect As SKRect, sides As Integer, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             Using path = New SKPath()
-                path.MoveTo(rect.MidX, rect.Top)
-                path.CubicTo(rect.Right, rect.Top + rect.Height * 0.30F, rect.Right * 0.92F, rect.Bottom * 0.70F, rect.MidX, rect.Bottom)
-                path.CubicTo(rect.Left * 0.08F, rect.Bottom * 0.70F, rect.Left, rect.Top + rect.Height * 0.30F, rect.MidX, rect.Top)
-                path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth)
+                AddRegularPoints(path, rect, Math.Max(3, sides), 0.45F, -Math.PI / 2)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
             End Using
         End Sub
 
-        Private Shared Sub DrawSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single)
+        Private Shared Sub DrawStar(canvas As SKCanvas, rect As SKRect, points As Integer, innerRadiusFactor As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+            Using path = New SKPath()
+                Dim cx = rect.MidX
+                Dim cy = rect.MidY
+                Dim outerRadius = Math.Min(rect.Width, rect.Height) * 0.46F
+                Dim innerRadius = outerRadius * innerRadiusFactor
+                Dim total = Math.Max(3, points) * 2
+                For i = 0 To total - 1
+                    Dim radius = If(i Mod 2 = 0, outerRadius, innerRadius)
+                    Dim angle = -Math.PI / 2 + i * Math.PI / points
+                    Dim x = CSng(cx + Math.Cos(angle) * radius)
+                    Dim y = CSng(cy + Math.Sin(angle) * radius)
+                    If i = 0 Then path.MoveTo(x, y) Else path.LineTo(x, y)
+                Next
+                path.Close()
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+            End Using
+        End Sub
+
+        Private Shared Sub DrawDroplet(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+            Using path = New SKPath()
+                path.MoveTo(rect.MidX, rect.Top + rect.Height * 0.04F)
+                path.CubicTo(rect.Right - rect.Width * 0.08F, rect.Top + rect.Height * 0.34F,
+                             rect.Right - rect.Width * 0.05F, rect.Top + rect.Height * 0.67F,
+                             rect.MidX, rect.Bottom - rect.Height * 0.04F)
+                path.CubicTo(rect.Left + rect.Width * 0.05F, rect.Top + rect.Height * 0.67F,
+                             rect.Left + rect.Width * 0.08F, rect.Top + rect.Height * 0.34F,
+                             rect.MidX, rect.Top + rect.Height * 0.04F)
+                path.Close()
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+            End Using
+        End Sub
+
+        Private Shared Sub DrawSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             Dim tailWidth = rect.Width * 0.18F
             Dim tailHeight = rect.Height * 0.18F
             Dim radius = Math.Min(rect.Width, rect.Height) * 0.18F
@@ -2992,8 +3088,76 @@ Namespace Services
                 path.LineTo(rect.Left, rect.Top + radius)
                 path.QuadTo(rect.Left, rect.Top, rect.Left + radius, rect.Top)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
             End Using
+        End Sub
+
+        Private Shared Sub DrawEllipseSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+            Dim tailHeight = rect.Height * 0.22F
+            Dim insetX = rect.Width * 0.04F
+            Dim ovalRect = New SKRect(rect.Left + insetX, rect.Top + rect.Height * 0.04F, rect.Right - insetX, rect.Bottom - tailHeight)
+            Using path = New SKPath()
+                path.AddOval(ovalRect)
+                path.MoveTo(rect.MidX - rect.Width * 0.08F, ovalRect.Bottom - tailHeight * 0.08F)
+                path.LineTo(rect.MidX + rect.Width * 0.03F, rect.Bottom - rect.Height * 0.04F)
+                path.LineTo(rect.MidX + rect.Width * 0.18F, ovalRect.Bottom - tailHeight * 0.18F)
+                path.Close()
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+            End Using
+        End Sub
+
+        Private Shared Sub DrawRectSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+            Dim tailHeight = rect.Height * 0.20F
+            Dim body = New SKRect(rect.Left + rect.Width * 0.04F,
+                                  rect.Top + rect.Height * 0.05F,
+                                  rect.Right - rect.Width * 0.04F,
+                                  rect.Bottom - tailHeight)
+            Using path = New SKPath()
+                path.MoveTo(body.Left, body.Top)
+                path.LineTo(body.Right, body.Top)
+                path.LineTo(body.Right, body.Bottom)
+                path.LineTo(rect.MidX + rect.Width * 0.16F, body.Bottom)
+                path.LineTo(rect.MidX + rect.Width * 0.03F, rect.Bottom - rect.Height * 0.04F)
+                path.LineTo(rect.MidX - rect.Width * 0.10F, body.Bottom)
+                path.LineTo(body.Left, body.Bottom)
+                path.Close()
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+            End Using
+        End Sub
+
+        Private Shared Sub DrawHeart(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+            Using path = New SKPath()
+                path.MoveTo(rect.MidX, rect.Bottom - rect.Height * 0.10F)
+                path.CubicTo(rect.Left + rect.Width * 0.08F, rect.Top + rect.Height * 0.58F, rect.Left, rect.Top + rect.Height * 0.24F, rect.Left + rect.Width * 0.26F, rect.Top + rect.Height * 0.12F)
+                path.CubicTo(rect.Left + rect.Width * 0.40F, rect.Top + rect.Height * 0.05F, rect.MidX, rect.Top + rect.Height * 0.17F, rect.MidX, rect.Top + rect.Height * 0.32F)
+                path.CubicTo(rect.MidX, rect.Top + rect.Height * 0.17F, rect.Left + rect.Width * 0.60F, rect.Top + rect.Height * 0.05F, rect.Left + rect.Width * 0.74F, rect.Top + rect.Height * 0.12F)
+                path.CubicTo(rect.Right, rect.Top + rect.Height * 0.24F, rect.Right - rect.Width * 0.08F, rect.Top + rect.Height * 0.58F, rect.MidX, rect.Bottom - rect.Height * 0.10F)
+                path.Close()
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+            End Using
+        End Sub
+
+        Private Shared Sub DrawCloud(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+            Using path = New SKPath()
+                path.MoveTo(rect.Left + rect.Width * 0.24F, rect.Bottom - rect.Height * 0.22F)
+                path.CubicTo(rect.Left + rect.Width * 0.07F, rect.Bottom - rect.Height * 0.22F, rect.Left + rect.Width * 0.04F, rect.Top + rect.Height * 0.47F, rect.Left + rect.Width * 0.18F, rect.Top + rect.Height * 0.39F)
+                path.CubicTo(rect.Left + rect.Width * 0.20F, rect.Top + rect.Height * 0.19F, rect.Left + rect.Width * 0.42F, rect.Top + rect.Height * 0.12F, rect.Left + rect.Width * 0.55F, rect.Top + rect.Height * 0.27F)
+                path.CubicTo(rect.Left + rect.Width * 0.66F, rect.Top + rect.Height * 0.20F, rect.Left + rect.Width * 0.82F, rect.Top + rect.Height * 0.28F, rect.Left + rect.Width * 0.83F, rect.Top + rect.Height * 0.44F)
+                path.CubicTo(rect.Right - rect.Width * 0.02F, rect.Top + rect.Height * 0.49F, rect.Right - rect.Width * 0.06F, rect.Bottom - rect.Height * 0.22F, rect.Right - rect.Width * 0.22F, rect.Bottom - rect.Height * 0.22F)
+                path.Close()
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+            End Using
+        End Sub
+
+        Private Shared Sub AddRegularPoints(path As SKPath, rect As SKRect, count As Integer, radiusFactor As Single, startAngle As Double)
+            Dim radius = Math.Min(rect.Width, rect.Height) * radiusFactor
+            For i = 0 To count - 1
+                Dim angle = startAngle + i * Math.PI * 2.0 / count
+                Dim x = CSng(rect.MidX + Math.Cos(angle) * radius)
+                Dim y = CSng(rect.MidY + Math.Sin(angle) * radius)
+                If i = 0 Then path.MoveTo(x, y) Else path.LineTo(x, y)
+            Next
+            path.Close()
         End Sub
 
         Private Shared Sub DrawSpiral(canvas As SKCanvas, rect As SKRect, stroke As SKColor, strokeWidth As Single)
@@ -3022,10 +3186,20 @@ Namespace Services
             End Using
         End Sub
 
-        Private Shared Sub DrawClosedPath(canvas As SKCanvas, path As SKPath, fill As SKColor, stroke As SKColor, strokeWidth As Single)
-            Using fillPaint = New SKPaint With {.Color = fill, .Style = SKPaintStyle.Fill, .IsAntialias = True}
-                If fill.Alpha > 0 Then canvas.DrawPath(path, fillPaint)
-            End Using
+        Private Shared Sub DrawClosedPath(canvas As SKCanvas, path As SKPath, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillBounds As SKRect = Nothing, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+            Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
+            If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
+                Dim bounds = If(fillBounds.IsEmpty, path.Bounds, fillBounds)
+                Using shader = CreateFillGradientShader(bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+                    Using fillPaint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                        canvas.DrawPath(path, fillPaint)
+                    End Using
+                End Using
+            ElseIf fill.Alpha > 0 Then
+                Using fillPaint = New SKPaint With {.Color = fill, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                    canvas.DrawPath(path, fillPaint)
+                End Using
+            End If
             Using strokePaint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = strokeWidth, .IsAntialias = True, .StrokeCap = SKStrokeCap.Round, .StrokeJoin = SKStrokeJoin.Round}
                 canvas.DrawPath(path, strokePaint)
             End Using
@@ -3033,14 +3207,18 @@ Namespace Services
 
         Private Shared Sub DrawLine(canvas As SKCanvas, rect As SKRect, stroke As SKColor, strokeWidth As Single, arrow As Boolean)
             Using paint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = strokeWidth, .StrokeCap = SKStrokeCap.Round, .IsAntialias = True}
-                canvas.DrawLine(rect.Left, rect.Top, rect.Right, rect.Bottom, paint)
                 If arrow Then
-                    Dim angle = Math.Atan2(rect.Bottom - rect.Top, rect.Right - rect.Left)
-                    Dim head = Math.Max(10.0F, strokeWidth * 4.0F)
-                    Dim a1 = angle - Math.PI * 0.78
-                    Dim a2 = angle + Math.PI * 0.78
-                    canvas.DrawLine(rect.Right, rect.Bottom, CSng(rect.Right + Math.Cos(a1) * head), CSng(rect.Bottom + Math.Sin(a1) * head), paint)
-                    canvas.DrawLine(rect.Right, rect.Bottom, CSng(rect.Right + Math.Cos(a2) * head), CSng(rect.Bottom + Math.Sin(a2) * head), paint)
+                    Dim head = Math.Min(rect.Width * 0.28F, Math.Max(12.0F, strokeWidth * 4.0F))
+                    Dim pad = Math.Max(strokeWidth * 0.5F, 1.0F)
+                    Dim start = New SKPoint(rect.Left + pad, rect.MidY)
+                    Dim tip = New SKPoint(rect.Right - pad, rect.MidY)
+                    Dim headBackX = tip.X - head
+                    Dim headHalfHeight = Math.Min(rect.Height * 0.36F, head * 0.55F)
+                    canvas.DrawLine(start, tip, paint)
+                    canvas.DrawLine(tip, New SKPoint(headBackX, tip.Y - headHalfHeight), paint)
+                    canvas.DrawLine(tip, New SKPoint(headBackX, tip.Y + headHalfHeight), paint)
+                Else
+                    canvas.DrawLine(rect.Left, rect.Top, rect.Right, rect.Bottom, paint)
                 End If
             End Using
         End Sub
