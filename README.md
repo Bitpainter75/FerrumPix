@@ -12,7 +12,7 @@ FerrumPix is in active development. The gallery, viewer, editor, settings and Im
 
 - Browse local photo folders with thumbnails, ratings, favorites, tags and saved searches.
 - View photos fullscreen with zoom, pan, filmstrip navigation, metadata and histogram.
-- Edit photos with crop, resize, rotate, color tools, tone curves, filters, text, shapes, paint tools and selections.
+- Edit photos with crop, resize, rotate, color tools, tone curves, filters, text, shapes, symbols, retouch tools, paint tools and selections.
 - Run batch work from the gallery, including rename, convert, resize, watermark, metadata removal and filters.
 - Work with common image and video formats.
 - Connect to a self-hosted Immich server for browsing, upload, download, editing and metadata sync.
@@ -45,7 +45,7 @@ The editor covers the most common photo work:
 - Filters, LUT files and Lightroom `.xmp` preset import.
 - Film negative conversion for scanned negatives.
 - Text, shapes, symbols, images, QR codes and watermarks.
-- Brush, eraser, blur and clone stamp tools.
+- Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools.
 - Rectangle, ellipse, lasso and magic wand selections.
 - Per object editing with opacity, blend modes, shadows, glow and transform controls.
 
