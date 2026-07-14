@@ -97,6 +97,9 @@ Release packaging currently targets Linux and Windows:
 - Portable Linux ZIP
 - Portable Windows ZIP
 
+And as a package in the AUR 
+- https://aur.archlinux.org/packages/ferrumpix-bin
+
 
 The packages are self-contained and include the .NET runtime.
 
