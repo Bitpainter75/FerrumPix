@@ -794,6 +794,26 @@ Namespace ViewModels
             CurrentIndex = _currentIndex
         End Sub
 
+        Public Sub ReloadCurrentImageFromDisk(Optional evictCurrentThumbnail As Boolean = True)
+            If String.IsNullOrEmpty(_currentImagePath) OrElse Not File.Exists(_currentImagePath) Then Return
+
+            If evictCurrentThumbnail Then
+                For Each filmItem In FilmstripItems.Where(Function(i) i IsNot Nothing AndAlso String.Equals(i.FilePath, _currentImagePath, StringComparison.OrdinalIgnoreCase))
+                    filmItem.ClearThumbnail()
+                Next
+            End If
+
+            LoadBitmap()
+            If _isFitToWindow Then UpdateFitZoom()
+            UpdateStatus()
+            LoadInfoPanelData(_currentImagePath)
+            Me.RaisePropertyChanged(NameOf(IsRawFile))
+            Me.RaisePropertyChanged(NameOf(IsVideoFile))
+            Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
+            Me.RaisePropertyChanged(NameOf(HasNoMedia))
+            Me.RaisePropertyChanged(NameOf(CanEdit))
+        End Sub
+
         ' Öffnet das Bild im Editor mit aktivem Zuschneiden-Werkzeug und übernimmt den im
         ' Viewer per Ziehgeste ausgewählten Bildausschnitt als Vorschlag.
         ''' <summary>Filmstreifen-Pfade für den Editor: in einer Immich-Sitzung nur das aktuelle

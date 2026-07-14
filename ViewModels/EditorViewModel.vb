@@ -5953,16 +5953,22 @@ Namespace ViewModels
 
         Public Async Function BackToViewerAsync() As Task
             If Not Await ConfirmSaveBeforeLeavingAsync("den Editor verlässt") Then Return
-            ' Immich-Edit: der Viewer hält seine Album-Sitzung (Pseudo-Pfade) noch. Erneutes OpenImage mit
-            ' dem lokalen Temp-Pfad würde sie durch eine Ein-Bild-Sitzung ersetzen und den Filmstreifen auf
-            ' das aktuelle Foto reduzieren. Stattdessen einfach zurückschalten - das ganze Album bleibt.
+            ' Immich-Edit: nach dem Speichern kann der Viewer noch die alte Temp-Kopie oder das alte Asset
+            ' halten. Deshalb wird hier bewusst frisch auf den Editor-Pfad geöffnet, damit beim Zurückkehren
+            ' der tatsächlich gespeicherte Stand sichtbar ist.
             Dim editorIsImmich = _immichSourceAlbumId IsNot Nothing OrElse ImmichService.IsImmichTempPath(_currentImagePath)
             If editorIsImmich AndAlso _mainVm.Viewer IsNot Nothing AndAlso _mainVm.Viewer.IsImmichSession Then
+                If Not String.IsNullOrEmpty(_currentImagePath) AndAlso IO.File.Exists(_currentImagePath) Then
+                    _mainVm.Viewer.OpenImage(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
+                Else
+                    _mainVm.Viewer.ReloadCurrentImageFromDisk()
+                End If
                 _mainVm.CurrentMode = AppMode.Viewer
                 Return
             End If
             If Not String.IsNullOrEmpty(_currentImagePath) Then
                 _mainVm.Viewer.OpenImage(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
+                _mainVm.Viewer.ReloadCurrentImageFromDisk()
                 _mainVm.CurrentMode = AppMode.Viewer
             Else
                 _mainVm.CurrentMode = AppMode.Viewer
@@ -6828,6 +6834,10 @@ Namespace ViewModels
                                     $"{LocalizationService.T("Gespeichert als")} {IO.Path.GetFileName(targetPath)}",
                                     LocalizationService.T("Gespeichert"))
                     _hasChanges = False
+                    ExifService.Invalidate(targetPath)
+                    If _mainVm?.Viewer IsNot Nothing AndAlso String.Equals(_mainVm.Viewer.CurrentImagePath, targetPath, StringComparison.OrdinalIgnoreCase) Then
+                        _mainVm.Viewer.ReloadCurrentImageFromDisk()
+                    End If
                     ClearPreviewSource()
                     Return True
                 Else
