@@ -425,6 +425,7 @@ Namespace Views
                 Function() TryCast(DataContext, EditorViewModel)?.FilmstripItems,
                 Function() If(TryCast(DataContext, EditorViewModel) Is Nothing, -1, TryCast(DataContext, EditorViewModel).CurrentFilmstripIndex))
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
+            Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnEditorKeyDownTunnel, RoutingStrategies.Tunnel)
             AddHandler Loaded, Sub(s, e)
                 ' Die Symbolgalerie ("Formen und Symbole") enthält mehrere tausend SVGs. Sie werden hier
                 ' einmalig im Hintergrund geparst, damit das Aufklappen später nicht ruckelt.
@@ -453,6 +454,19 @@ Namespace Views
                                                    End Sub
                 End If
             End Sub
+        End Sub
+
+        Private Sub OnEditorKeyDownTunnel(sender As Object, e As KeyEventArgs)
+            If e.Handled OrElse e.Key <> Key.S OrElse Not e.KeyModifiers.HasFlag(KeyModifiers.Control) Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+
+            If vm.CanSaveInPlace Then
+                vm.SaveCommand.Execute(Nothing)
+            Else
+                vm.SaveAsCommand.Execute(Nothing)
+            End If
+            e.Handled = True
         End Sub
 
         Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)
@@ -753,10 +767,18 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
-            If Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             If canvas Is Nothing Then Return
             Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim pointerPoint = e.GetCurrentPoint(Nothing)
+
+            If pointerPoint.Properties.IsRightButtonPressed Then
+                ClearEditorSelections(vm)
+                e.Handled = True
+                Return
+            End If
+
+            If Not pointerPoint.Properties.IsLeftButtonPressed Then Return
 
             If vm IsNot Nothing AndAlso vm.IsPickingColorFromImage Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
@@ -776,6 +798,15 @@ Namespace Views
                 e.Pointer.Capture(canvas)
                 e.Handled = True
                 Return
+            End If
+
+            If vm IsNot Nothing Then
+                Dim imageRect = GetDisplayedImageRect(canvas, vm)
+                If imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso Not imageRect.Contains(e.GetPosition(canvas)) Then
+                    ClearEditorSelections(vm)
+                    e.Handled = True
+                    Return
+                End If
             End If
 
             ' Eine bereits gesetzte Hilfslinie lässt sich direkt im Bild greifen. Das muss vor allen
@@ -989,6 +1020,31 @@ Namespace Views
             e.Pointer.Capture(canvas)
             MoveSlider(e.GetPosition(canvas).X, canvas)
             e.Handled = True
+        End Sub
+
+        Private Sub ClearEditorSelections(vm As EditorViewModel)
+            If vm Is Nothing Then Return
+
+            If _isSelectionDragging OrElse _isLassoDrawing OrElse _isSelectionMoveDragging Then
+                CancelSelectionDrag()
+            End If
+            _isCropDragging = False
+            _cropDragMode = CropDragMode.None
+            _isTextDragging = False
+            _textDragMode = TextDragMode.None
+            HideTextSizeBadge()
+            HideTextSnapGuides()
+
+            If vm.HasSelectedAnnotation OrElse Not String.IsNullOrEmpty(vm.PendingInsertKind) Then
+                vm.SelectedAnnotationIndex = -1
+                vm.PendingInsertKind = ""
+            End If
+            If vm.HasActiveSelection Then vm.ClearSelection()
+            If vm.HasCropChanges Then vm.ClearPendingCrop()
+
+            HideSelectionDragOverlay()
+            UpdateSelectionOverlayVisibility()
+            UpdateSliderLayout()
         End Sub
 
         Private Sub OnSliderPointerMoved(sender As Object, e As PointerEventArgs)
@@ -2331,7 +2387,13 @@ Namespace Views
         End Function
 
         Public Sub OnTextOverlayPointerPressed(sender As Object, e As PointerPressedEventArgs)
-            If Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
+            Dim pointerPoint = e.GetCurrentPoint(Nothing)
+            If pointerPoint.Properties.IsRightButtonPressed Then
+                ClearEditorSelections(TryCast(DataContext, EditorViewModel))
+                e.Handled = True
+                Return
+            End If
+            If Not pointerPoint.Properties.IsLeftButtonPressed Then Return
             Dim overlay = TryCast(sender, Border)
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)

@@ -417,6 +417,16 @@ Namespace Views
                 End Select
             End If
 
+            If vm.CurrentMode = AppMode.Editor AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso e.Key = Key.S Then
+                If vm.Editor.CanSaveInPlace Then
+                    vm.Editor.SaveCommand.Execute(Nothing)
+                Else
+                    vm.Editor.SaveAsCommand.Execute(Nothing)
+                End If
+                e.Handled = True
+                Return
+            End If
+
             If e.Key = Key.Escape Then
                 If vm.CurrentMode = AppMode.Editor Then
                     vm.Editor.BackToViewerCommand.Execute(Nothing)

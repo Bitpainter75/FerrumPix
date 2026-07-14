@@ -1542,10 +1542,25 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_currentImage, value)
                 Me.RaisePropertyChanged(NameOf(DisplayImage))
                 Me.RaisePropertyChanged(NameOf(BeforeDisplayImage))
-                RaiseCropPropertiesChanged()
+                RaiseImageGeometryDependentProperties()
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
+
+        Private Sub RaiseImageGeometryDependentProperties()
+            Me.RaisePropertyChanged(NameOf(EffectiveImageWidthPixels))
+            Me.RaisePropertyChanged(NameOf(EffectiveImageHeightPixels))
+            RaiseCropPropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(ResizeWidth))
+            Me.RaisePropertyChanged(NameOf(ResizeHeight))
+            Me.RaisePropertyChanged(NameOf(CanvasWidth))
+            Me.RaisePropertyChanged(NameOf(CanvasHeight))
+            Me.RaisePropertyChanged(NameOf(OutputSizeText))
+            Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+        End Sub
 
         Public Property PreviewImage As Bitmap
             Get
@@ -5632,7 +5647,7 @@ Namespace ViewModels
                                                UpdatePreview()
                                            End Sub
 
-            _filmstripNavDebouncer = New FilmstripNavigationDebouncer(wrapAround:=False,
+            _filmstripNavDebouncer = New FilmstripNavigationDebouncer(wrapAround:=True,
                                                                         getCurrentIndex:=Function() _currentIndex,
                                                                         getCount:=Function() _folderPaths.Count,
                                                                         commit:=AddressOf NavigateToFilmstripIndexAsync)
@@ -6002,19 +6017,17 @@ Namespace ViewModels
         End Function
 
         Public Async Function NavigateNextAsync() As Task
-            If _currentIndex < _folderPaths.Count - 1 Then
-                If Not Await ConfirmSaveBeforeLeavingAsync("das nächste Bild öffnest") Then Return
-                _currentIndex += 1
-                LoadImageContent(_folderPaths(_currentIndex))
-            End If
+            If _folderPaths.Count = 0 Then Return
+            Dim nextIndex = (_currentIndex + 1) Mod _folderPaths.Count
+            If nextIndex = _currentIndex Then Return
+            Await NavigateToFilmstripIndexAsync(nextIndex)
         End Function
 
         Public Async Function NavigatePreviousAsync() As Task
-            If _currentIndex > 0 Then
-                If Not Await ConfirmSaveBeforeLeavingAsync("das vorherige Bild öffnest") Then Return
-                _currentIndex -= 1
-                LoadImageContent(_folderPaths(_currentIndex))
-            End If
+            If _folderPaths.Count = 0 Then Return
+            Dim previousIndex = ((_currentIndex - 1) Mod _folderPaths.Count + _folderPaths.Count) Mod _folderPaths.Count
+            If previousIndex = _currentIndex Then Return
+            Await NavigateToFilmstripIndexAsync(previousIndex)
         End Function
 
         Private Sub LoadImageContent(path As String)
@@ -6048,6 +6061,9 @@ Namespace ViewModels
             ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
             PreviewImage = Nothing
             ComparisonImage = Nothing
+            CurrentImage = Nothing
+            ExifInfo = Nothing
+            ClearHistogramData()
             PreparePreviewSource(path)
             LoadLibraryMeta(path)
             Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
@@ -6094,6 +6110,9 @@ Namespace ViewModels
             ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
             PreviewImage = Nothing
             ComparisonImage = Nothing
+            CurrentImage = Nothing
+            ExifInfo = Nothing
+            ClearHistogramData()
             PreparePreviewSource(imagePath)
             ' Scope nur bei expliziter Pfadliste (z.B. Suchliste) wirksam, sonst normaler Ordner-Cache.
             _thumbCacheScopeId = If(allPaths IsNot Nothing, cacheScopeId, Nothing)
@@ -8944,6 +8963,12 @@ Namespace ViewModels
             SetCropValues(left, top, right, bottom)
         End Sub
 
+        Public Sub ClearPendingCrop(Optional captureUndo As Boolean = True)
+            If Not HasCropChanges Then Return
+            If captureUndo Then PushUndo()
+            SetCropPercentages(0, 0, 0, 0)
+        End Sub
+
         ''' captureUndo=True markiert den Beginn eines Zuges (Mausklick), False die Zwischenpunkte
         ''' beim Ziehen.
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
@@ -9682,9 +9707,7 @@ Namespace ViewModels
 
         Private Sub RefreshHistogram()
             If String.IsNullOrEmpty(_currentImagePath) Then
-                HistogramImage = Nothing
-                _curveHistogramCounts = (New Integer(255) {}, New Integer(255) {}, New Integer(255) {}, New Integer(255) {})
-                Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
+                ClearHistogramData()
                 Return
             End If
             Dim previewSource = GetPreviewSource()
@@ -9695,6 +9718,12 @@ Namespace ViewModels
                 HistogramImage = ImageProcessor.BuildHistogramImage(_currentImagePath, 240, 120)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(_currentImagePath)
             End If
+            Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
+        End Sub
+
+        Private Sub ClearHistogramData()
+            HistogramImage = Nothing
+            _curveHistogramCounts = (New Integer(255) {}, New Integer(255) {}, New Integer(255) {}, New Integer(255) {})
             Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
         End Sub
 
