@@ -2204,13 +2204,18 @@ Namespace Services
             If spot.HasCloneSource Then
                 Dim sx = Clamp(spot.SourceXPixels * scaleX, 0, source.Width)
                 Dim sy = Clamp(spot.SourceYPixels * scaleY, 0, source.Height)
-                DrawCloneStamp(canvas, source, cx, cy, sx, sy, radius, alphaFactor)
+                ' Der Stempel soll denselben bereits bearbeiteten Stand sehen wie Reparatur und
+                ' Verwischen. Sonst kopiert er nach nachfolgenden Retuschen wieder Textur aus einem
+                ' älteren, retuschefreien Zwischenstand zurück.
+                DrawCloneStamp(canvas, result, cx, cy, sx, sy, radius, alphaFactor)
             ElseIf String.Equals(spot.Mode, "Heal", StringComparison.OrdinalIgnoreCase) Then
                 ' Der Reparaturpinsel arbeitet stroke-akkumuliert: spätere Punkte sollen bereits
-                ' reparierte Pixel als Umgebung sehen. Stempel/Verwischen lesen weiter aus source.
+                ' reparierte Pixel als Umgebung sehen.
                 DrawHealingSpot(result, canvas, result, cx, cy, radius, alphaFactor)
             Else
-                Dim fill = AverageSurroundingColor(source, cx, cy, radius)
+                ' Verwischen soll auf dem bereits retuschierten Ergebnis aufbauen, damit nach einer
+                ' Reparatur nicht wieder Textur aus dem Ursprungsbild "hineingewischt" wird.
+                Dim fill = AverageSurroundingColor(result, cx, cy, radius)
                 If fill.HasValue Then DrawSoftDisc(canvas, cx, cy, radius, fill.Value, alphaFactor)
             End If
         End Sub

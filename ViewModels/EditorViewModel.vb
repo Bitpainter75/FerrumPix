@@ -6166,6 +6166,19 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
         End Sub
 
+        Public Sub ActivateDefaultToolForModeEntry()
+            _overlayNotifySuppressDepth += 1
+            Try
+                PendingInsertKind = ""
+                SelectedAnnotationIndex = -1
+                CurrentTool = EditorTool.Selection
+                SelectedLayersPanelTab = LayersPanelTab.Tool
+            Finally
+                _overlayNotifySuppressDepth -= 1
+            End Try
+            NotifyAnnotationOverlayStateChanged()
+        End Sub
+
         Public Sub NavigateToFilmstripItem(item As ImageItem)
             Dim ignored = NavigateToFilmstripItemAsync(item)
         End Sub

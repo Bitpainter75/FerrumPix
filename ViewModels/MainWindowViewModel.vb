@@ -88,6 +88,10 @@ Namespace ViewModels
                 If previousMode = AppMode.Viewer AndAlso value <> AppMode.Viewer Then
                     Viewer?.StopVideoPlayback()
                 End If
+
+                If previousMode <> AppMode.Editor AndAlso value = AppMode.Editor Then
+                    Editor?.ActivateDefaultToolForModeEntry()
+                End If
             End Set
         End Property
 
