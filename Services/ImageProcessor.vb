@@ -3234,7 +3234,7 @@ Namespace Services
                     canvas.DrawLine(tip, New SKPoint(headBackX, tip.Y - headHalfHeight), paint)
                     canvas.DrawLine(tip, New SKPoint(headBackX, tip.Y + headHalfHeight), paint)
                 Else
-                    canvas.DrawLine(rect.Left, rect.Top, rect.Right, rect.Bottom, paint)
+                    canvas.DrawLine(rect.Left, rect.MidY, rect.Right, rect.MidY, paint)
                 End If
             End Using
         End Sub
