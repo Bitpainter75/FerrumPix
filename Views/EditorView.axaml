@@ -736,12 +736,12 @@
             <Grid RowDefinitions="*">
                 <Grid Grid.Row="0">
                     <ScrollViewer HorizontalContentAlignment="Stretch"
-                                  VerticalScrollBarVisibility="Visible"
-                                  AllowAutoHide="False"
+                                  VerticalScrollBarVisibility="Auto"
+                                  AllowAutoHide="True"
                                   FocusAdorner="{x:Null}"
                                   Margin="0,0,8,0">
                         <StackPanel x:Name="AdjustmentsStackPanel"
-                                    Margin="10,2,4,10"
+                                    Margin="10,2,10,10"
                                     HorizontalAlignment="Stretch">
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowTransformAdjustments}">
