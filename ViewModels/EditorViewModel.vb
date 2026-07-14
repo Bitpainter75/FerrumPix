@@ -610,6 +610,7 @@ Namespace ViewModels
                 Dim previous = _selectedAnnotationOverlayImage
                 Me.RaiseAndSetIfChanged(_selectedAnnotationOverlayImage, value)
                 Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+                Me.RaisePropertyChanged(NameOf(SelectedTextRendersInVisibleOverlay))
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
@@ -1338,7 +1339,9 @@ Namespace ViewModels
             AnnotationStrokeColor = "#FF000000"
             AnnotationStrokeWidth = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark" OrElse normalizedKind = "QR" OrElse normalizedKind = "Image", 0, 2)
             AnnotationText = GetDefaultAnnotationText(normalizedKind, rawKind)
-            AnnotationFontSize = 48
+            AnnotationFontSize = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark",
+                                    GetDefaultTextAnnotationFontSizePixels(),
+                                    48)
             AnnotationFontFamily = "Arial"
             AnnotationOpacity = 100
             AnnotationBlendMode = "Normal"
@@ -3376,6 +3379,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
                 Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+                Me.RaisePropertyChanged(NameOf(SelectedTextRendersInVisibleOverlay))
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -3510,7 +3514,9 @@ Namespace ViewModels
                         Return
                     End If
                 End If
-                Me.RaiseAndSetIfChanged(_annotationWidthPercent, Math.Max(5, Math.Min(90, value)))
+                Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
+                Dim minWidth = If(isTextual, MinTextAnnotationWidthPercent, 5.0)
+                Me.RaiseAndSetIfChanged(_annotationWidthPercent, Math.Max(minWidth, Math.Min(90, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMinimum))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMaximum))
@@ -3536,7 +3542,9 @@ Namespace ViewModels
                         Return
                     End If
                 End If
-                Me.RaiseAndSetIfChanged(_annotationHeightPercent, Math.Max(4, Math.Min(90, value)))
+                Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
+                Dim minHeight = If(isTextual, MinTextAnnotationHeightPercent, 4.0)
+                Me.RaiseAndSetIfChanged(_annotationHeightPercent, Math.Max(minHeight, Math.Min(90, value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMinimum))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMaximum))
@@ -6358,12 +6366,13 @@ Namespace ViewModels
             Return Not UsesRenderedSelectionOverlay(annotation)
         End Function
 
-        ''' Für die View: der selektierte Text steht bereits im Overlay-Bitmap, die Textbox darf ihn nicht
-        ''' ein zweites Mal zeichnen.
-        Public ReadOnly Property SelectedTextRendersInOverlay As Boolean
+        ''' Für die View: der selektierte Text steht bereits im sichtbaren Overlay-Bitmap, die Textbox darf
+        ''' ihn nicht ein zweites Mal zeichnen. Ist das Bitmap noch nicht bereit oder wegen Werkzeug/Modus
+        ''' ausgeblendet, bleibt die TextBox sichtbar, damit Text nie komplett verschwindet.
+        Public ReadOnly Property SelectedTextRendersInVisibleOverlay As Boolean
             Get
                 If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
-                Return TextRendersInOverlay(_annotations(_selectedAnnotationIndex))
+                Return TextRendersInOverlay(_annotations(_selectedAnnotationIndex)) AndAlso ShowSelectedSvgOverlay
             End Get
         End Property
 
@@ -7881,6 +7890,12 @@ Namespace ViewModels
             Return CurrentImage.PixelSize.Height
         End Function
 
+        Private Function GetDefaultTextAnnotationFontSizePixels() As Double
+            Dim minSide = Math.Min(GetBaseWidth(), GetBaseHeight())
+            If minSide <= 0 Then Return 48
+            Return Math.Max(48.0, Math.Min(5000.0, minSide * 0.045))
+        End Function
+
         Private Function EstimateTextAnnotationSizePercent(text As String, fontSizePixels As Double, fontFamily As String) As (WidthPercent As Double, HeightPercent As Double)
             Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
@@ -8159,6 +8174,11 @@ Namespace ViewModels
             If normalizedKind = "Watermark" Then
                 width = _annotationWidthPercent
                 height = _annotationHeightPercent
+            End If
+            If normalizedKind = "Text" OrElse (normalizedKind = "Watermark" AndAlso Not IsWatermarkImageSource) Then
+                Dim textSize = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
+                width = textSize.WidthPercent
+                height = textSize.HeightPercent
             End If
             Dim x = If(normalizedKind = "Watermark",
                        ClampAnnotationOffsetPercent(_annotationXPercent),

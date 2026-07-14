@@ -2302,7 +2302,7 @@ Namespace Views
                 ' Overlay-Bitmap darunter vollständig, die Textbox bleibt nur noch für Eingabe und
                 ' Schreibmarke da und malt selbst nichts (siehe EditorViewModel.TextRendersInOverlay).
                 Dim textColor = ParseAvaloniaColor(vm.AnnotationFillColor, Colors.White)
-                editor.Foreground = If(vm.SelectedTextRendersInOverlay,
+                editor.Foreground = If(vm.SelectedTextRendersInVisibleOverlay,
                                        Brushes.Transparent,
                                        CType(New SolidColorBrush(textColor), IBrush))
                 editor.CaretBrush = New SolidColorBrush(textColor)
