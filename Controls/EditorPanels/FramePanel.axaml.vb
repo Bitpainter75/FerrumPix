@@ -7,7 +7,7 @@ Imports Avalonia.VisualTree
 
 Namespace Controls.EditorPanels
 
-    Public Class SharpnessPanel
+    Public Class FramePanel
         Inherits UserControl
 
         Public Sub New()

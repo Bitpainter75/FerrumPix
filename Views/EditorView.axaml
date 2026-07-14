@@ -241,28 +241,15 @@
                         </StackPanel>
                     </Button>
 
-                    <TextBlock Text="DETAILS UND EFFEKTE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,10,0,4" />
                     <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Details"
+                            ToolTip.Tip="Details und Effekte"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Effects"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Effects}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Details" FontSize="{DynamicResource FP.Font.Body}" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Effekte und Rahmen"
-                            Command="{Binding SetToolCommand}"
-                            CommandParameter="Frame"
-                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Frame}">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/frame.svg" Width="18"
-                                           Height="18" />
-                            <TextBlock Text="Effekte und Rahmen" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Details und Effekte" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -282,24 +269,13 @@
                     <TextBlock Text="WERKZEUGE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,10,0,4" />
                     <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Verschieben"
-                            Command="{Binding SetToolCommand}"
-                            CommandParameter="Move"
-                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Move}">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pointer.svg"
-                                           Width="18" Height="18" />
-                            <TextBlock Text="Verschieben" FontSize="{DynamicResource FP.Font.Body}" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="tool-btn-row"
                             ToolTip.Tip="Auswahl"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Selection"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Selection}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Selection}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rectangle.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pointer.svg"
                                            Width="18" Height="18" />
                             <TextBlock Text="Auswahl" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
@@ -380,6 +356,16 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/blur.svg" Width="18" Height="18" />
                             <TextBlock Text="Verwischen" FontSize="{DynamicResource FP.Font.Body}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Reparaturpinsel"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Repair"
+                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Repair}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/bandage.svg" Width="18" Height="18" />
+                            <TextBlock Text="Reparaturpinsel" FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -485,6 +471,12 @@
                         <Image x:Name="BeforeImageControl"
                                Source="{Binding BeforeDisplayImage}"
                                Stretch="Fill"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <Image x:Name="RetouchLivePatchImage"
+                               Source="{Binding RetouchLivePatchImage}"
+                               Stretch="Fill"
+                               IsHitTestVisible="False"
+                               IsVisible="{Binding HasRetouchLivePatch}"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
                         <Border x:Name="ImageFrameBorder"
                                 Background="Transparent"
@@ -712,6 +704,11 @@
                               StrokeThickness="1" StrokeDashArray="4,3" />
                         <Line x:Name="SnapGuideH" IsVisible="False" IsHitTestVisible="False" Stroke="#FFFF3B8D"
                               StrokeThickness="1" StrokeDashArray="4,3" />
+                        <Polyline x:Name="BrushPreviewOutlineLine"
+                                  IsVisible="False"
+                                  IsHitTestVisible="False"
+                                  StrokeLineCap="Round"
+                                  StrokeJoin="Round" />
                         <Polyline x:Name="BrushPreviewLine"
                                   IsVisible="False"
                                   IsHitTestVisible="False"
@@ -830,12 +827,12 @@
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowDetailAdjustments}">
-                                <panels:SoftenPanel />
+                                <panels:EffectsPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowFrameAdjustments}">
-                                <panels:EffectsPanel />
+                                    IsVisible="{Binding ShowDetailAdjustments}">
+                                <panels:FramePanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"

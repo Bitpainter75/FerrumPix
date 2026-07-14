@@ -35,6 +35,7 @@ Namespace ViewModels
         Private _previewImage As Bitmap
         Private _comparisonImage As Bitmap
         Private _selectedAnnotationOverlayImage As Bitmap
+        Private _retouchLivePatchImage As Bitmap
         Private _selectedAnnotationOverlayMetrics As ImageProcessor.AnnotationOverlayRender
         Private _currentTool As EditorTool = EditorTool.Crop
         Private _brightness As Double = 0
@@ -120,8 +121,10 @@ Namespace ViewModels
         Private _brushOpacity As Double = 100
         Private _brushFlow As Double = 100
         Private _isEraserMode As Boolean = False
+        Private _eraserFillColor As String = "#00FFFFFF"
+        Private _isRepairMode As Boolean = False
 
-        ''' Pinsel, Radiergummi, Verwischen und Stempel arbeiten auf denselben Feldern (_brushSize,
+        ''' Pinsel, Radiergummi, Verwischen, Reparaturpinsel und Stempel arbeiten auf denselben Feldern (_brushSize,
         ''' _retouchRadius, _annotationStrokeColor). Damit beim Wechsel keines die Werte des anderen
         ''' erbt, sichert SetPaintMode den Stand des verlassenen Werkzeugs hier und holt den des neuen
         ''' zurück - beim ersten Aufruf sind das die Startwerte aus ResetEditorUiStateForNewImage.
@@ -131,6 +134,7 @@ Namespace ViewModels
             Public Property Opacity As Double = 100
             Public Property Flow As Double = 100
             Public Property StrokeColor As String = "#FF000000"
+            Public Property EraserFillColor As String = "#00FFFFFF"
         End Class
 
         Public NotInheritable Class AnnotationBlendModeOption
@@ -175,6 +179,7 @@ Namespace ViewModels
                 {"Brush", New PaintToolState()},
                 {"Eraser", New PaintToolState()},
                 {"Blur", New PaintToolState()},
+                {"Repair", New PaintToolState()},
                 {"Clone", New PaintToolState()}
             }
         End Function
@@ -194,8 +199,8 @@ Namespace ViewModels
         Private _cloneOffsetXPixels As Double = 0
         Private _cloneOffsetYPixels As Double = 0
         Private _hasCloneOffset As Boolean = False
-        ' Beide Mal-Modi setzen dieselben RetouchSpots; der Stempel hängt ihnen eine Klonquelle an,
-        ' das Verwischen nicht. Deshalb ein Schalter statt eines zweiten EditorTool-Werts.
+        ' Die Retusche-Modi setzen dieselben RetouchSpots; Stempel hängt ihnen eine Klonquelle an,
+        ' Reparatur markiert sie als Heal, Verwischen bleibt der einfache Weich-Mittelwert.
         Private _isCloneMode As Boolean = False
         Private _filterPreset As String = "Keine"
         Private _filterStrength As Double = 100
@@ -295,7 +300,7 @@ Namespace ViewModels
         ' Auswahlmodus (Untermenü im Auswahl-Werkzeug) und - für Ellipse/Lasso/Zauberstab - die
         ' zugehörige Alpha8-Maske in Bildpixeln samt umschließendem Rechteck. Beim Rechteck ist die
         ' Maske Nothing (dann greift der einfache Rechteck-Pfad).
-        Private _selectionMode As String = "Rectangle"
+        Private _selectionMode As String = "Move"
         Private _selectionTolerance As Double = 15
         ' Weiche Kante der Auswahl in Bildpixeln (0 = harte Kante). Die MASKE bleibt hart gespeichert.
         Private _selectionFeather As Double = 0
@@ -350,6 +355,22 @@ Namespace ViewModels
         Private _previewSource As SKBitmap
         Private _previewRenderCts As CancellationTokenSource
         Private _previewRequestId As Integer
+        Private _lastRetouchLivePreviewUtc As DateTime = DateTime.MinValue
+        Private Const RetouchLivePreviewMinIntervalMs As Double = 70.0
+        Private _retouchStrokeActive As Boolean = False
+        Private _retouchStrokeStartSpotIndex As Integer = 0
+        Private _nextRetouchStrokeId As Integer = 1
+        Private _activeRetouchStrokeId As Integer = 0
+        Private _retouchLiveBitmap As SKBitmap = Nothing
+        Private _retouchLiveSampleBitmap As SKBitmap = Nothing
+        Private _retouchLivePatchRect As SKRectI = SKRectI.Empty
+        Private _retouchLiveMaskBitmapWidth As Integer = 0
+        Private _retouchLiveMaskBitmapHeight As Integer = 0
+        Private _clearRetouchLivePatchAfterPreview As Boolean = False
+        Private _retouchLivePatchLeftPercent As Double = 0
+        Private _retouchLivePatchTopPercent As Double = 0
+        Private _retouchLivePatchWidthPercent As Double = 0
+        Private _retouchLivePatchHeightPercent As Double = 0
         Private _activePreviewRenders As Integer
         Private _showBeforeImage As Boolean = False
         ' Zuletzt vom Nutzer gewählter Vergleichs-Zustand; kommt aus den Einstellungen und wird dort beim
@@ -1481,18 +1502,23 @@ Namespace ViewModels
 
         Public ReadOnly Property SelectedPaintMode As String
             Get
-                If _currentTool = EditorTool.Retouch Then Return If(_isCloneMode, "Clone", "Blur")
+                If _currentTool = EditorTool.Retouch Then Return If(_isCloneMode, "Clone", If(_isRepairMode, "Repair", "Blur"))
                 If _currentTool = EditorTool.Draw AndAlso _isEraserMode Then Return "Eraser"
                 If _currentTool = EditorTool.Draw Then Return "Brush"
                 Return ""
             End Get
         End Property
 
-        ''' True, wenn das Stempel-Werkzeug aktiv ist (klont von einer Quelle) statt des
-        ''' Verwischen-Werkzeugs (mittelt die Umgebung).
+        ''' True, wenn das Stempel-Werkzeug aktiv ist (klont von einer Quelle).
         Public ReadOnly Property IsCloneMode As Boolean
             Get
                 Return _currentTool = EditorTool.Retouch AndAlso _isCloneMode
+            End Get
+        End Property
+
+        Public ReadOnly Property IsRepairMode As Boolean
+            Get
+                Return _currentTool = EditorTool.Retouch AndAlso _isRepairMode AndAlso Not _isCloneMode
             End Get
         End Property
 
@@ -1636,6 +1662,48 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property RetouchLivePatchImage As Bitmap
+            Get
+                Return _retouchLivePatchImage
+            End Get
+            Private Set(value As Bitmap)
+                Dim previous = _retouchLivePatchImage
+                Me.RaiseAndSetIfChanged(_retouchLivePatchImage, value)
+                Me.RaisePropertyChanged(NameOf(HasRetouchLivePatch))
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
+            End Set
+        End Property
+
+        Public ReadOnly Property HasRetouchLivePatch As Boolean
+            Get
+                Return _retouchLivePatchImage IsNot Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property RetouchLivePatchLeftPercent As Double
+            Get
+                Return _retouchLivePatchLeftPercent
+            End Get
+        End Property
+
+        Public ReadOnly Property RetouchLivePatchTopPercent As Double
+            Get
+                Return _retouchLivePatchTopPercent
+            End Get
+        End Property
+
+        Public ReadOnly Property RetouchLivePatchWidthPercent As Double
+            Get
+                Return _retouchLivePatchWidthPercent
+            End Get
+        End Property
+
+        Public ReadOnly Property RetouchLivePatchHeightPercent As Double
+            Get
+                Return _retouchLivePatchHeightPercent
+            End Get
+        End Property
+
         Public ReadOnly Property DisplayImage As Bitmap
             Get
                 Return If(_previewImage, _currentImage)
@@ -1656,13 +1724,25 @@ Namespace ViewModels
                 ' Formate ohne Alphakanal-Unterstützung (z.B. JPEG) können strukturell nie
                 ' transparente Bereiche haben - Schachbrett/Volltonfarbe wäre dort nur an
                 ' Letterbox-/Rundungsrändern fälschlich sichtbar, nie inhaltlich sinnvoll.
-                If Not TransparencyBrushService.HasVisibleTransparency(_currentImagePath) Then
+                If Not TransparencyBrushService.CanHaveTransparency(_currentImagePath) Then
+                    Return Avalonia.Media.Brushes.Transparent
+                End If
+                If Not TransparencyBrushService.HasVisibleTransparency(_currentImagePath) AndAlso Not HasTransparentEraserOutput() Then
                     Return Avalonia.Media.Brushes.Transparent
                 End If
                 Dim settings = AppSettingsService.Load()
                 Return TransparencyBrushService.GetBrush(settings.TransparencyBackgroundMode, settings.TransparencyBackgroundColor)
             End Get
         End Property
+
+        Private Function HasTransparentEraserOutput() As Boolean
+            If _currentTool = EditorTool.Draw AndAlso _isEraserMode AndAlso EraserFillColorValue.A < 250 Then Return True
+            Return _annotations.Any(Function(a)
+                                        If a Is Nothing OrElse Not a.IsVisible OrElse Not String.Equals(a.Kind, "Eraser", StringComparison.OrdinalIgnoreCase) Then Return False
+                                        If String.IsNullOrWhiteSpace(a.EraserFillColor) Then Return True
+                                        Return ParseAvaloniaColorOrDefault(a.EraserFillColor, Avalonia.Media.Colors.Transparent).A < 250
+                                    End Function)
+        End Function
 
         Public Property ShowBeforeImage As Boolean
             Get
@@ -1713,6 +1793,7 @@ Namespace ViewModels
                 Return _currentTool
             End Get
             Set(value As EditorTool)
+                If value = EditorTool.Frame Then value = EditorTool.Effects
                 Dim previousTool = _currentTool
                 Me.RaiseAndSetIfChanged(_currentTool, value)
                 If previousTool <> value Then
@@ -1743,9 +1824,7 @@ Namespace ViewModels
         End Property
 
         ''' <summary>
-        ''' Beschriftet den ersten Tab des rechten Panels. Die Namen sind wörtlich die der
-        ''' Werkzeugleiste - dort steht "Details" für EditorTool.Effects und "Effekte und Rahmen" für
-        ''' EditorTool.Frame, nicht umgekehrt.
+        ''' Beschriftet den ersten Tab des rechten Panels. Die Namen sind wörtlich die der Werkzeugleiste.
         ''' </summary>
         Public ReadOnly Property CurrentToolLabel As String
             Get
@@ -1755,13 +1834,12 @@ Namespace ViewModels
                     Case EditorTool.Rotate : Return "Drehen"
                     Case EditorTool.Adjust : Return "Anpassen"
                     Case EditorTool.Color : Return "Farbe"
-                    Case EditorTool.Effects : Return "Details"
-                    Case EditorTool.Frame : Return "Effekte und Rahmen"
+                    Case EditorTool.Effects, EditorTool.Frame : Return "Details und Effekte"
                     Case EditorTool.Filters : Return "Filter"
                     Case EditorTool.Transform : Return "Transformieren"
                     Case EditorTool.Move : Return "Verschieben"
                     Case EditorTool.Selection : Return "Auswahl"
-                    Case EditorTool.Retouch : Return If(_isCloneMode, "Stempel", "Verwischen")
+                    Case EditorTool.Retouch : Return If(_isCloneMode, "Stempel", If(_isRepairMode, "Reparaturpinsel", "Verwischen"))
                     Case EditorTool.Draw : Return If(_isEraserMode, "Radiergummi", "Pinsel")
                     Case EditorTool.Geometry, EditorTool.Insert : Return "Formen und Symbole"
                     Case EditorTool.Text : Return InsertKindLabel()
@@ -1778,7 +1856,7 @@ Namespace ViewModels
                 Select Case _currentTool
                     Case EditorTool.Move : Return base & "pointer.svg"
                     Case EditorTool.Selection : Return base & "rectangle.svg"
-                    Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", "blur.svg")
+                    Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", If(_isRepairMode, "bandage.svg", "blur.svg"))
                     Case EditorTool.Draw : Return base & If(_isEraserMode, "eraser.svg", "brush.svg")
                     Case EditorTool.Geometry, EditorTool.Insert : Return base & "shape.svg"
                     Case EditorTool.Text
@@ -1843,7 +1921,7 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowFrameAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Frame
+                Return False
             End Get
         End Property
 
@@ -2772,6 +2850,7 @@ Namespace ViewModels
 
         Public ReadOnly Property RetouchHintText As String
             Get
+                If IsRepairMode Then Return "Repariert aus der Umgebung und blendet die ersetzte Textur weich ein."
                 If Not IsCloneMode Then Return "Mittelt die Umgebung des Ziels und blendet sie weich ein."
                 If HasCloneSource Then Return "Quelle gesetzt - Ziehen kopiert die Textur von dort."
                 Return "Alt+Klick ins Bild setzt zuerst die Quelle, aus der kopiert wird."
@@ -2873,6 +2952,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
                 Me.RaisePropertyChanged(NameOf(IsSmudgePaintMode))
                 Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
+                Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
             End Set
         End Property
 
@@ -3322,9 +3402,37 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property EraserFillColor As String
+            Get
+                Return _eraserFillColor
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_eraserFillColor, NormalizeAvaloniaColor(value, "#00FFFFFF"))
+                Me.RaisePropertyChanged(NameOf(EraserFillColorValue))
+                Me.RaisePropertyChanged(NameOf(EraserFillBrush))
+                Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
+                _activeStrokeAnnotation = Nothing
+            End Set
+        End Property
+
+        Public Property EraserFillColorValue As Avalonia.Media.Color
+            Get
+                Return ParseAvaloniaColorOrDefault(_eraserFillColor, Avalonia.Media.Colors.Transparent)
+            End Get
+            Set(value As Avalonia.Media.Color)
+                EraserFillColor = value.ToString()
+            End Set
+        End Property
+
         Public ReadOnly Property AnnotationStrokeBrush As Avalonia.Media.IBrush
             Get
                 Return New Avalonia.Media.SolidColorBrush(AnnotationStrokeColorValue)
+            End Get
+        End Property
+
+        Public ReadOnly Property EraserFillBrush As Avalonia.Media.IBrush
+            Get
+                Return New Avalonia.Media.SolidColorBrush(EraserFillColorValue)
             End Get
         End Property
 
@@ -3910,18 +4018,19 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' Aktueller Auswahlmodus: "Rectangle", "Ellipse", "Lasso" oder "MagicWand". Steuert, wie
-        ''' EditorView den Zeiger interpretiert (Rechteck aufziehen, Freihand zeichnen, klicken) und
+        ''' Aktueller Auswahlmodus: "Move", "Rectangle", "Ellipse", "Lasso" oder "MagicWand". Steuert, wie
+        ''' EditorView den Zeiger interpretiert (Auswahl verschieben, Rechteck aufziehen, Freihand zeichnen, klicken) und
         ''' welche Zusatzregler (Toleranz) sichtbar sind.
         Public Property SelectionMode As String
             Get
                 Return _selectionMode
             End Get
             Set(value As String)
-                Dim v = If(String.IsNullOrWhiteSpace(value), "Rectangle", value)
+                Dim v = If(String.IsNullOrWhiteSpace(value), "Move", value)
                 If _selectionMode = v Then Return
                 Me.RaiseAndSetIfChanged(_selectionMode, v)
                 Me.RaisePropertyChanged(NameOf(ShowMagicWandControls))
+                Me.RaisePropertyChanged(NameOf(IsMoveSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsRectangleSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsEllipseSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsLassoSelectionMode))
@@ -3973,6 +4082,12 @@ Namespace ViewModels
         Public ReadOnly Property IsSelectionCombineIntersect As Boolean
             Get
                 Return _selectionCombineMode = "Intersect"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsMoveSelectionMode As Boolean
+            Get
+                Return _selectionMode = "Move"
             End Get
         End Property
 
@@ -4946,6 +5061,7 @@ Namespace ViewModels
             _negativeGamma = 0
             RaiseNegativePropertiesChanged()
             RaiseResetButtonStateChanged()
+            Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
             SchedulePreviewUpdate()
         End Sub
 
@@ -5757,7 +5873,7 @@ Namespace ViewModels
                                                                    Dim normalizedToolName = If(toolName, "").Trim().ToLowerInvariant()
 
                                                                    Select Case normalizedToolName
-                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "blur", "verwischen", "clone", "stempel"
+                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
                                                                            SetPaintMode(toolName)
                                                                            Return
                                                                        Case "text", "image", "bild", "qr", "qrcode", "qr-code", "watermark", "wasserzeichen"
@@ -6548,6 +6664,8 @@ Namespace ViewModels
 
         Private Sub PreparePreviewSource(imagePath As String)
             InvalidatePreviewWork()
+            DisposeRetouchLiveBuffers()
+            ClearRetouchLivePatch()
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then
                 ClearPreviewSource()
                 Return
@@ -6575,6 +6693,8 @@ Namespace ViewModels
 
         Private Sub ClearPreviewSource()
             InvalidatePreviewWork()
+            DisposeRetouchLiveBuffers()
+            ClearRetouchLivePatch()
             Dim oldSource As SKBitmap = Nothing
             SyncLock _previewSync
                 oldSource = _previewSource
@@ -6795,6 +6915,10 @@ Namespace ViewModels
                 _previewPending = False
                 StatusText = LocalizationService.T("Vorschau bereit")
                 PreviewFailed = False
+                If _clearRetouchLivePatchAfterPreview Then
+                    _clearRetouchLivePatchAfterPreview = False
+                    ClearRetouchLivePatch()
+                End If
                 result.Preview = Nothing
                 result.Comparison = Nothing
                 result.Dispose()
@@ -7750,6 +7874,9 @@ Namespace ViewModels
             _activeStrokeAnnotation = Nothing
             _activeStrokeIsEraser = False
             _isEraserMode = False
+            _eraserFillColor = "#00FFFFFF"
+            _isCloneMode = False
+            _isRepairMode = False
             _retouchRadius = 24.0
             _brushSize = 24.0
             _brushHardness = 100
@@ -7838,6 +7965,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(BrushOpacity))
             Me.RaisePropertyChanged(NameOf(BrushFlow))
             Me.RaisePropertyChanged(NameOf(IsEraserMode))
+            Me.RaisePropertyChanged(NameOf(EraserFillColor))
+            Me.RaisePropertyChanged(NameOf(EraserFillColorValue))
+            Me.RaisePropertyChanged(NameOf(EraserFillBrush))
+            Me.RaisePropertyChanged(NameOf(IsCloneMode))
+            Me.RaisePropertyChanged(NameOf(IsRepairMode))
             Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
             Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
             Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
@@ -8522,7 +8654,8 @@ Namespace ViewModels
                              Math.Abs(_activeStrokeAnnotation.Opacity - CSng(_brushOpacity)) < 0.001F AndAlso
                              Math.Abs(_activeStrokeAnnotation.FlowPercent - CSng(_brushFlow)) < 0.001F AndAlso
                              Math.Abs(_activeStrokeAnnotation.HardnessPercent - CSng(_brushHardness)) < 0.001F AndAlso
-                             String.Equals(_activeStrokeAnnotation.StrokeColor, _annotationStrokeColor, StringComparison.OrdinalIgnoreCase)
+                             String.Equals(_activeStrokeAnnotation.StrokeColor, _annotationStrokeColor, StringComparison.OrdinalIgnoreCase) AndAlso
+                             (Not isEraser OrElse String.Equals(_activeStrokeAnnotation.EraserFillColor, _eraserFillColor, StringComparison.OrdinalIgnoreCase))
 
             If canAppend Then
                 Dim existing = _activeStrokeAnnotation
@@ -8548,6 +8681,7 @@ Namespace ViewModels
                     .HeightPixels = CSng(height),
                     .FillColor = _annotationFillColor,
                     .StrokeColor = _annotationStrokeColor,
+                    .EraserFillColor = If(isEraser, _eraserFillColor, ""),
                     .StrokeWidth = CSng(_brushSize),
                     .Opacity = CSng(_brushOpacity),
                     .BlendMode = "Normal",
@@ -9072,10 +9206,22 @@ Namespace ViewModels
         ''' captureUndo=True markiert den Beginn eines Zuges (Mausklick), False die Zwischenpunkte
         ''' beim Ziehen.
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
-            ' Der Stempel braucht eine Quelle. Ohne sie würde er stillschweigend zum Verwischen -
+            ' Der Stempel braucht eine Quelle. Ohne sie würde er stillschweigend zur Retusche -
             ' der Nutzer soll stattdessen erst Alt+Klick machen (siehe RetouchHintText).
             If IsCloneMode AndAlso Not HasCloneSource Then Return
-            If captureUndo Then PushUndo()
+            If captureUndo Then
+                PushUndo()
+                _retouchStrokeActive = True
+                _retouchStrokeStartSpotIndex = _retouchSpots.Count
+                _activeRetouchStrokeId = _nextRetouchStrokeId
+                _nextRetouchStrokeId += 1
+                _retouchLivePatchRect = SKRectI.Empty
+                _clearRetouchLivePatchAfterPreview = False
+                ClearRetouchLivePatch()
+                _previewTimer.Stop()
+                InvalidatePreviewWork()
+                DisposeRetouchLiveBuffers()
+            End If
 
             Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
@@ -9088,7 +9234,9 @@ Namespace ViewModels
                 .RadiusPixels = CSng(_retouchRadius),
                 .StrengthPercent = CSng(_brushHardness),
                 .OpacityPercent = CSng(_brushOpacity),
-                .FlowPercent = CSng(_brushFlow)
+                .FlowPercent = CSng(_brushFlow),
+                .Mode = If(_isRepairMode AndAlso Not _isCloneMode, "Heal", "Blur"),
+                .StrokeId = If(_isRepairMode AndAlso Not _isCloneMode, _activeRetouchStrokeId, 0)
             }
 
             If IsCloneMode AndAlso HasCloneSource Then
@@ -9117,10 +9265,243 @@ Namespace ViewModels
             _hasChanges = True
 
             ' Nur der Zugbeginn schreibt in die Historie - die Zwischenpunkte eines Zuges würden sonst
-            ' die 30 Einträge fluten. Gerendert wird weiterhin bei jedem Punkt: Retusche ist direkte
-            ' Manipulation und muss auch bei abgeschalteter Live-Vorschau sofort sichtbar sein.
-            If captureUndo Then AddHistoryEntry(If(IsCloneMode, "Stempeln", "Verwischen"))
+            ' die 30 Einträge fluten. Beim Ziehen rendert der Stempel/Retusche live gedrosselt:
+            ' schnell genug für sichtbares Zeichnen, aber ohne für jeden Pointer-Punkt einen kompletten
+            ' Pipeline-Render zu starten.
+            If captureUndo Then AddHistoryEntry(If(IsCloneMode, "Stempeln", If(IsRepairMode, "Reparatur", "Verwischen")))
+            UpdateRetouchLivePreview(spot, captureUndo)
+        End Sub
+
+        Private Sub UpdateRetouchLivePreview(spot As RetouchSpot, forcePublish As Boolean)
+            If spot Is Nothing Then Return
+            If Not _retouchStrokeActive Then
+                ScheduleRetouchPreviewUpdate(forcePublish)
+                Return
+            End If
+
+            If String.Equals(spot.Mode, "Heal", StringComparison.OrdinalIgnoreCase) AndAlso IsRepairMode Then
+                If Not EnsureRetouchMaskPreviewSize() Then
+                    ScheduleRetouchPreviewUpdate(forcePublish)
+                    Return
+                End If
+                ExpandRetouchMaskPatchRect(spot)
+                PublishRetouchMaskPreview(forcePublish)
+                Return
+            End If
+
+            If _retouchLiveBitmap Is Nothing OrElse _retouchLiveSampleBitmap Is Nothing Then
+                If Not InitializeRetouchLiveBuffers() Then
+                    ScheduleRetouchPreviewUpdate(forcePublish)
+                    Return
+                End If
+            End If
+
+            ImageProcessor.ApplyRetouchSpotInPlace(_retouchLiveBitmap, _retouchLiveSampleBitmap, spot, GetBaseWidth(), GetBaseHeight())
+            ExpandRetouchLivePatchRect(spot)
+            PublishRetouchLivePreview(forcePublish)
+        End Sub
+
+        Private Function InitializeRetouchLiveBuffers() As Boolean
+            Dim previewSource = GetPreviewSource()
+            If previewSource Is Nothing Then Return False
+
+            Dim baseAdj = GetCurrentAdjustments(forPreview:=True)
+            baseAdj.RetouchSpots = _retouchSpots.
+                Take(Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count))).
+                Select(Function(s) s.Clone()).
+                ToList()
+
+            Dim rendered = ImageProcessor.RenderPreviewSkBitmap(previewSource, baseAdj)
+            If rendered Is Nothing Then Return False
+            _retouchLiveBitmap = rendered
+
+            ' Zielbild: bisherige Retusche ist sichtbar. Quellbild: retuschefrei, wie im finalen
+            ' Pipeline-Render. Sonst sampeln Stempel/Verwischen/Reparatur live aus bereits
+            ' veränderten Pixeln und springen beim Backen auf die retuschefreie Quelle zurück.
+            Dim sampleAdj = GetCurrentAdjustments(forPreview:=True)
+            sampleAdj.RetouchSpots = New List(Of RetouchSpot)()
+            _retouchLiveSampleBitmap = ImageProcessor.RenderPreviewSkBitmap(previewSource, sampleAdj)
+            If _retouchLiveSampleBitmap Is Nothing Then
+                DisposeRetouchLiveBuffers()
+                Return False
+            End If
+            Return True
+        End Function
+
+        Private Sub PublishRetouchLivePreview(force As Boolean)
+            If _retouchLiveBitmap Is Nothing OrElse _retouchLivePatchRect.IsEmpty Then Return
+            Dim now = DateTime.UtcNow
+            If force OrElse (now - _lastRetouchLivePreviewUtc).TotalMilliseconds >= 24.0 Then
+                _lastRetouchLivePreviewUtc = now
+                Dim patch = ImageProcessor.RenderBitmapPatch(_retouchLiveBitmap, _retouchLivePatchRect)
+                If patch IsNot Nothing Then
+                    RetouchLivePatchImage = patch
+                    UpdateRetouchLivePatchPercentages()
+                End If
+                _previewPending = True
+                StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
+            End If
+        End Sub
+
+        Private Function EnsureRetouchMaskPreviewSize() As Boolean
+            If _retouchLiveMaskBitmapWidth > 0 AndAlso _retouchLiveMaskBitmapHeight > 0 Then Return True
+            Dim previewSource = GetPreviewSource()
+            If previewSource Is Nothing OrElse previewSource.Width <= 0 OrElse previewSource.Height <= 0 Then Return False
+            _retouchLiveMaskBitmapWidth = previewSource.Width
+            _retouchLiveMaskBitmapHeight = previewSource.Height
+            Return True
+        End Function
+
+        Private Sub PublishRetouchMaskPreview(force As Boolean)
+            If _retouchLivePatchRect.IsEmpty OrElse _retouchLiveMaskBitmapWidth <= 0 OrElse _retouchLiveMaskBitmapHeight <= 0 Then Return
+            Dim now = DateTime.UtcNow
+            If force OrElse (now - _lastRetouchLivePreviewUtc).TotalMilliseconds >= 24.0 Then
+                _lastRetouchLivePreviewUtc = now
+                Dim strokeSpots = _retouchSpots.
+                    Skip(Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count))).
+                    Where(Function(s) s IsNot Nothing AndAlso String.Equals(s.Mode, "Heal", StringComparison.OrdinalIgnoreCase)).
+                    Select(Function(s) s.Clone()).
+                    ToList()
+                Dim patch = ImageProcessor.RenderRetouchMaskPatch(strokeSpots,
+                                                                  _retouchLivePatchRect,
+                                                                  _retouchLiveMaskBitmapWidth,
+                                                                  _retouchLiveMaskBitmapHeight,
+                                                                  GetBaseWidth(),
+                                                                  GetBaseHeight())
+                If patch IsNot Nothing Then
+                    RetouchLivePatchImage = patch
+                    UpdateRetouchLivePatchPercentages()
+                End If
+            End If
+        End Sub
+
+        Private Sub ExpandRetouchLivePatchRect(spot As RetouchSpot)
+            If spot Is Nothing OrElse _retouchLiveBitmap Is Nothing Then Return
+
+            Dim scaleX As Single = 1.0F
+            Dim scaleY As Single = 1.0F
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            If baseWidth > 0 AndAlso baseHeight > 0 Then
+                scaleX = _retouchLiveBitmap.Width / CSng(baseWidth)
+                scaleY = _retouchLiveBitmap.Height / CSng(baseHeight)
+            End If
+
+            Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
+            Dim cx = CSng(spot.XPixels * scaleX)
+            Dim cy = CSng(spot.YPixels * scaleY)
+            Dim radius = CSng(Math.Max(2.0F, spot.RadiusPixels * radiusScale + 3.0F))
+            Dim rect = New SKRectI(Math.Max(0, CInt(Math.Floor(cx - radius))),
+                                   Math.Max(0, CInt(Math.Floor(cy - radius))),
+                                   Math.Min(_retouchLiveBitmap.Width, CInt(Math.Ceiling(cx + radius))),
+                                   Math.Min(_retouchLiveBitmap.Height, CInt(Math.Ceiling(cy + radius))))
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+
+            If _retouchLivePatchRect.IsEmpty Then
+                _retouchLivePatchRect = rect
+            Else
+                _retouchLivePatchRect = New SKRectI(Math.Min(_retouchLivePatchRect.Left, rect.Left),
+                                                    Math.Min(_retouchLivePatchRect.Top, rect.Top),
+                                                    Math.Max(_retouchLivePatchRect.Right, rect.Right),
+                                                    Math.Max(_retouchLivePatchRect.Bottom, rect.Bottom))
+            End If
+        End Sub
+
+        Private Sub ExpandRetouchMaskPatchRect(spot As RetouchSpot)
+            If spot Is Nothing OrElse _retouchLiveMaskBitmapWidth <= 0 OrElse _retouchLiveMaskBitmapHeight <= 0 Then Return
+
+            Dim scaleX As Single = 1.0F
+            Dim scaleY As Single = 1.0F
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            If baseWidth > 0 AndAlso baseHeight > 0 Then
+                scaleX = _retouchLiveMaskBitmapWidth / CSng(baseWidth)
+                scaleY = _retouchLiveMaskBitmapHeight / CSng(baseHeight)
+            End If
+
+            Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
+            Dim cx = CSng(spot.XPixels * scaleX)
+            Dim cy = CSng(spot.YPixels * scaleY)
+            Dim radius = CSng(Math.Max(2.0F, spot.RadiusPixels * radiusScale + 3.0F))
+            Dim rect = New SKRectI(Math.Max(0, CInt(Math.Floor(cx - radius))),
+                                   Math.Max(0, CInt(Math.Floor(cy - radius))),
+                                   Math.Min(_retouchLiveMaskBitmapWidth, CInt(Math.Ceiling(cx + radius))),
+                                   Math.Min(_retouchLiveMaskBitmapHeight, CInt(Math.Ceiling(cy + radius))))
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+
+            If _retouchLivePatchRect.IsEmpty Then
+                _retouchLivePatchRect = rect
+            Else
+                _retouchLivePatchRect = New SKRectI(Math.Min(_retouchLivePatchRect.Left, rect.Left),
+                                                    Math.Min(_retouchLivePatchRect.Top, rect.Top),
+                                                    Math.Max(_retouchLivePatchRect.Right, rect.Right),
+                                                    Math.Max(_retouchLivePatchRect.Bottom, rect.Bottom))
+            End If
+        End Sub
+
+        Private Sub UpdateRetouchLivePatchPercentages()
+            Dim bitmapWidth = If(_retouchLiveBitmap IsNot Nothing, _retouchLiveBitmap.Width, _retouchLiveMaskBitmapWidth)
+            Dim bitmapHeight = If(_retouchLiveBitmap IsNot Nothing, _retouchLiveBitmap.Height, _retouchLiveMaskBitmapHeight)
+            If _retouchLivePatchRect.IsEmpty OrElse bitmapWidth <= 0 OrElse bitmapHeight <= 0 Then Return
+
+            _retouchLivePatchLeftPercent = _retouchLivePatchRect.Left / CDbl(bitmapWidth) * 100.0
+            _retouchLivePatchTopPercent = _retouchLivePatchRect.Top / CDbl(bitmapHeight) * 100.0
+            _retouchLivePatchWidthPercent = _retouchLivePatchRect.Width / CDbl(bitmapWidth) * 100.0
+            _retouchLivePatchHeightPercent = _retouchLivePatchRect.Height / CDbl(bitmapHeight) * 100.0
+            Me.RaisePropertyChanged(NameOf(RetouchLivePatchLeftPercent))
+            Me.RaisePropertyChanged(NameOf(RetouchLivePatchTopPercent))
+            Me.RaisePropertyChanged(NameOf(RetouchLivePatchWidthPercent))
+            Me.RaisePropertyChanged(NameOf(RetouchLivePatchHeightPercent))
+        End Sub
+
+        Private Sub ClearRetouchLivePatch()
+            RetouchLivePatchImage = Nothing
+            _retouchLivePatchRect = SKRectI.Empty
+            _retouchLivePatchLeftPercent = 0
+            _retouchLivePatchTopPercent = 0
+            _retouchLivePatchWidthPercent = 0
+            _retouchLivePatchHeightPercent = 0
+            _retouchLiveMaskBitmapWidth = 0
+            _retouchLiveMaskBitmapHeight = 0
+            Me.RaisePropertyChanged(NameOf(RetouchLivePatchLeftPercent))
+            Me.RaisePropertyChanged(NameOf(RetouchLivePatchTopPercent))
+            Me.RaisePropertyChanged(NameOf(RetouchLivePatchWidthPercent))
+            Me.RaisePropertyChanged(NameOf(RetouchLivePatchHeightPercent))
+        End Sub
+
+        Private Sub ScheduleRetouchPreviewUpdate(forceImmediate As Boolean)
+            Dim now = DateTime.UtcNow
+            If forceImmediate OrElse (now - _lastRetouchLivePreviewUtc).TotalMilliseconds >= RetouchLivePreviewMinIntervalMs Then
+                _lastRetouchLivePreviewUtc = now
+                UpdatePreview()
+            Else
+                SchedulePreviewUpdate()
+            End If
+        End Sub
+
+        Public Sub CommitRetouchStroke()
+            If Not _retouchStrokeActive Then Return
+            _retouchStrokeActive = False
+            _lastRetouchLivePreviewUtc = DateTime.MinValue
+            _previewTimer.Stop()
+            _previewPending = False
+            PublishRetouchLivePreview(True)
+            _clearRetouchLivePatchAfterPreview = True
             UpdatePreview()
+            DisposeRetouchLiveBuffers()
+        End Sub
+
+        Private Sub DisposeRetouchLiveBuffers()
+            If _retouchLiveBitmap IsNot Nothing Then
+                _retouchLiveBitmap.Dispose()
+                _retouchLiveBitmap = Nothing
+            End If
+            If _retouchLiveSampleBitmap IsNot Nothing Then
+                _retouchLiveSampleBitmap.Dispose()
+                _retouchLiveSampleBitmap = Nothing
+            End If
+            _retouchLiveMaskBitmapWidth = 0
+            _retouchLiveMaskBitmapHeight = 0
         End Sub
 
         Private Sub ResetHslInternal()
@@ -9204,7 +9585,9 @@ Namespace ViewModels
                     ResetSplitToningInternal()
                 Case EditorTool.Effects
                     ResetDetailInternal()
+                    ResetEffectsInternal()
                 Case EditorTool.Frame
+                    ResetDetailInternal()
                     ResetEffectsInternal()
                 Case EditorTool.Filters
                     ResetFilterInternal()
@@ -9447,12 +9830,16 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFilterAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowRetouchAdjustments))
             Me.RaisePropertyChanged(NameOf(IsCloneMode))
+            Me.RaisePropertyChanged(NameOf(IsRepairMode))
             Me.RaisePropertyChanged(NameOf(RetouchHintText))
             Me.RaisePropertyChanged(NameOf(ShowSelectionAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowDrawControls))
             Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
             Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
             Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
+            Me.RaisePropertyChanged(NameOf(EraserFillColor))
+            Me.RaisePropertyChanged(NameOf(EraserFillColorValue))
+            Me.RaisePropertyChanged(NameOf(EraserFillBrush))
             Me.RaisePropertyChanged(NameOf(IsSmudgePaintMode))
             Me.RaisePropertyChanged(NameOf(BrushFlow))
             Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
@@ -9481,9 +9868,15 @@ Namespace ViewModels
                         IsEraserMode = True
                     Case "blur", "verwischen"
                         _isCloneMode = False
+                        _isRepairMode = False
+                        CurrentTool = EditorTool.Retouch
+                    Case "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche"
+                        _isCloneMode = False
+                        _isRepairMode = True
                         CurrentTool = EditorTool.Retouch
                     Case "clone", "stempel"
                         _isCloneMode = True
+                        _isRepairMode = False
                         CurrentTool = EditorTool.Retouch
                     Case Else
                         CurrentTool = EditorTool.Draw
@@ -9500,7 +9893,8 @@ Namespace ViewModels
             NotifyAnnotationOverlayStateChanged()
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
             Me.RaisePropertyChanged(NameOf(IsCloneMode))
-            ' Verwischen <-> Stempel wechselt das Werkzeug nicht, wohl aber seinen Namen.
+            Me.RaisePropertyChanged(NameOf(IsRepairMode))
+            ' Verwischen <-> Reparatur <-> Stempel wechselt das Werkzeug nicht, wohl aber seinen Namen.
             Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
             Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
             RaiseCloneSourceProperties()
@@ -9524,7 +9918,8 @@ Namespace ViewModels
                     state.Hardness = _brushHardness
                     state.Opacity = _brushOpacity
                     state.Flow = _brushFlow
-                Case "Blur", "Clone"
+                    state.EraserFillColor = _eraserFillColor
+                Case "Blur", "Repair", "Clone"
                     state.Size = _retouchRadius
                     state.Hardness = _brushHardness
                     state.Opacity = _brushOpacity
@@ -9548,7 +9943,8 @@ Namespace ViewModels
                     BrushHardness = state.Hardness
                     BrushOpacity = state.Opacity
                     BrushFlow = state.Flow
-                Case "Blur", "Clone"
+                    EraserFillColor = state.EraserFillColor
+                Case "Blur", "Repair", "Clone"
                     RetouchRadius = state.Size
                     BrushHardness = state.Hardness
                     BrushOpacity = state.Opacity

@@ -69,6 +69,8 @@ Namespace Services
         Public Property StrengthPercent As Single = 100
         Public Property OpacityPercent As Single = 100
         Public Property FlowPercent As Single = 100
+        Public Property Mode As String = "Blur"
+        Public Property StrokeId As Integer = 0
 
         ''' Klonquelle in Bildpixeln: von hier wird die Textur kopiert. Ein negativer Wert bedeutet
         ''' "kein Quellpunkt gesetzt" - dann greift der Ringmittelwert-Rückfall in ApplyRetouch, der
@@ -87,6 +89,8 @@ Namespace Services
                 .XPixels = XPixels, .YPixels = YPixels, .RadiusPixels = RadiusPixels,
                 .StrengthPercent = StrengthPercent, .OpacityPercent = OpacityPercent,
                 .FlowPercent = FlowPercent,
+                .Mode = If(String.IsNullOrWhiteSpace(Mode), "Blur", Mode),
+                .StrokeId = StrokeId,
                 .SourceXPixels = SourceXPixels, .SourceYPixels = SourceYPixels
             }
         End Function
@@ -104,6 +108,7 @@ Namespace Services
         Private _heightPixels As Single = 180
         Private _fillColor As String = "#FFFFFFFF"
         Private _strokeColor As String = "#FF000000"
+        Private _eraserFillColor As String = ""
         Private _strokeWidth As Single = 0
         Private _fontSizePixels As Single = 48
         Private _fontFamily As String = "Arial"
@@ -352,6 +357,16 @@ Namespace Services
             End Get
             Set(value As String)
                 SetField(_strokeColor, If(value, "#FF000000"))
+            End Set
+        End Property
+
+        ''' Farbe, in die der Radiergummi radiert. Leer = altes Verhalten: transparent ausstanzen.
+        Public Property EraserFillColor As String
+            Get
+                Return _eraserFillColor
+            End Get
+            Set(value As String)
+                SetField(_eraserFillColor, If(value, ""))
             End Set
         End Property
 
@@ -633,6 +648,7 @@ Namespace Services
                 .HeightPixels = HeightPixels,
                 .FillColor = FillColor,
                 .StrokeColor = StrokeColor,
+                .EraserFillColor = EraserFillColor,
                 .StrokeWidth = StrokeWidth,
                 .FontSizePixels = FontSizePixels,
                 .FontFamily = FontFamily,
@@ -1178,6 +1194,80 @@ Namespace Services
                     If Not Object.ReferenceEquals(annotated, baseBitmap) Then annotated.Dispose()
                 End Try
             End SyncLock
+        End Function
+
+        Public Shared Function RenderPreviewSkBitmap(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            Return ProcessBitmap(source, adj)
+        End Function
+
+        Public Shared Function CloneForEditing(source As SKBitmap) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            Return CloneBitmap(source)
+        End Function
+
+        Public Shared Function RenderBitmapPatch(source As SKBitmap, rect As SKRectI) As Bitmap
+            If source Is Nothing Then Return Nothing
+
+            Dim clipped = New SKRectI(Math.Max(0, rect.Left),
+                                      Math.Max(0, rect.Top),
+                                      Math.Min(source.Width, rect.Right),
+                                      Math.Min(source.Height, rect.Bottom))
+            If clipped.Width <= 0 OrElse clipped.Height <= 0 Then Return Nothing
+
+            Using patch = New SKBitmap(clipped.Width, clipped.Height, source.ColorType, source.AlphaType)
+                Using canvas = New SKCanvas(patch)
+                    canvas.Clear(SKColors.Transparent)
+                    canvas.DrawBitmap(source,
+                                      New SKRect(clipped.Left, clipped.Top, clipped.Right, clipped.Bottom),
+                                      New SKRect(0, 0, clipped.Width, clipped.Height))
+                End Using
+                Return ToAvaloniaBitmap(patch)
+            End Using
+        End Function
+
+        Public Shared Function RenderRetouchMaskPatch(spots As IEnumerable(Of RetouchSpot),
+                                                      rect As SKRectI,
+                                                      bitmapWidth As Integer,
+                                                      bitmapHeight As Integer,
+                                                      sourceWidthPixels As Integer,
+                                                      sourceHeightPixels As Integer) As Bitmap
+            If spots Is Nothing OrElse bitmapWidth <= 0 OrElse bitmapHeight <= 0 Then Return Nothing
+
+            Dim clipped = New SKRectI(Math.Max(0, rect.Left),
+                                      Math.Max(0, rect.Top),
+                                      Math.Min(bitmapWidth, rect.Right),
+                                      Math.Min(bitmapHeight, rect.Bottom))
+            If clipped.Width <= 0 OrElse clipped.Height <= 0 Then Return Nothing
+
+            Dim scaleX As Single = 1.0F
+            Dim scaleY As Single = 1.0F
+            If sourceWidthPixels > 0 AndAlso sourceHeightPixels > 0 Then
+                scaleX = bitmapWidth / CSng(sourceWidthPixels)
+                scaleY = bitmapHeight / CSng(sourceHeightPixels)
+            End If
+            Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
+
+            Using patch = New SKBitmap(clipped.Width, clipped.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(patch)
+                    canvas.Clear(SKColors.Transparent)
+                    canvas.Translate(-clipped.Left, -clipped.Top)
+                    Using paint = New SKPaint With {
+                        .Color = New SKColor(255, 136, 0, 96),
+                        .Style = SKPaintStyle.Fill,
+                        .IsAntialias = True
+                    }
+                        For Each spot In spots
+                            If spot Is Nothing Then Continue For
+                            Dim cx = Clamp(spot.XPixels * scaleX, 0, bitmapWidth)
+                            Dim cy = Clamp(spot.YPixels * scaleY, 0, bitmapHeight)
+                            Dim radius = Math.Max(1.0F, spot.RadiusPixels * radiusScale)
+                            canvas.DrawCircle(cx, cy, radius, paint)
+                        Next
+                    End Using
+                End Using
+                Return ToAvaloniaBitmap(patch)
+            End Using
         End Function
 
         ''' Schneller, UI-Thread-tauglicher Pfad, der NUR die Annotationen auf ein bereits
@@ -1920,7 +2010,7 @@ Namespace Services
                 adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
                 If(String.IsNullOrEmpty(adj.SelectionMaskPngBase64), 0, adj.SelectionMaskPngBase64.Length),
                 adj.SelectionFeatherPixels,
-                String.Join(";", adj.RetouchSpots.Select(Function(s) $"{s.XPixels},{s.YPixels},{s.RadiusPixels},{s.StrengthPercent},{s.OpacityPercent},{s.FlowPercent}"))
+                String.Join(";", adj.RetouchSpots.Select(Function(s) $"{s.XPixels},{s.YPixels},{s.RadiusPixels},{s.StrengthPercent},{s.OpacityPercent},{s.FlowPercent},{If(s.Mode, "")},{s.SourceXPixels},{s.SourceYPixels},{s.StrokeId}"))
             })
         End Function
 
@@ -2029,9 +2119,10 @@ Namespace Services
 
         ''' <summary>
         ''' Retuschiert die gesetzten Punkte. Punkte mit Klonquelle kopieren die Textur von dort
-        ''' herüber; Punkte ohne Quelle mitteln - wie früher - einen Ring um das Ziel und blenden die
-        ''' Mischfarbe ein. Gemalt wird beides über Skia-Shader statt Pixel für Pixel: bei Radius 50
-        ''' ersetzt das rund 10.000 SetPixel-Aufrufe je Punkt durch einen DrawCircle.
+        ''' herüber; Punkte ohne Quelle arbeiten als Healing-Pinsel: sie ziehen Textur vom Rand des
+        ''' Pinsels nach innen und gleichen sie farblich an die Umgebung an. Dadurch lassen sich kleine
+        ''' Flecken und einfache störende Bildteile entfernen, ohne nur eine flache Mischfarbe über die
+        ''' Stelle zu legen.
         '''
         ''' Gelesen wird stets aus <paramref name="source"/>, dem unretuschierten Bild. Sonst zöge ein
         ''' Zug, dessen Quelle über bereits geklonte Stellen läuft, seine eigenen Kopien mit.
@@ -2040,35 +2131,93 @@ Namespace Services
             If adj.RetouchSpots Is Nothing OrElse adj.RetouchSpots.Count = 0 Then Return source
 
             Dim result = CloneBitmap(source)
-            Dim scaleX As Single = 1.0F
-            Dim scaleY As Single = 1.0F
-            If adj.SourceWidthPixels > 0 AndAlso adj.SourceHeightPixels > 0 AndAlso source.Width > 0 AndAlso source.Height > 0 Then
-                scaleX = source.Width / CSng(adj.SourceWidthPixels)
-                scaleY = source.Height / CSng(adj.SourceHeightPixels)
-            End If
-            Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
 
             Using canvas = New SKCanvas(result)
+                Dim pendingHeal As New List(Of RetouchSpot)()
+                Dim pendingHealStrokeId As Integer? = Nothing
                 For Each spot In adj.RetouchSpots
-                    Dim cx = Clamp(spot.XPixels * scaleX, 0, source.Width)
-                    Dim cy = Clamp(spot.YPixels * scaleY, 0, source.Height)
-                    Dim radius = Clamp(spot.RadiusPixels * radiusScale, 1, Math.Max(source.Width, source.Height))
-                    Dim flow = Clamp(spot.FlowPercent, 0, 100) / 100.0F
-                    Dim opacity = Clamp(spot.OpacityPercent, 0, 100) / 100.0F
-                    Dim strength = Clamp(spot.StrengthPercent, 0, 100) / 100.0F
-                    Dim alphaFactor = flow * opacity * strength
-
-                    If spot.HasCloneSource Then
-                        Dim sx = Clamp(spot.SourceXPixels * scaleX, 0, source.Width)
-                        Dim sy = Clamp(spot.SourceYPixels * scaleY, 0, source.Height)
-                        DrawCloneStamp(canvas, source, cx, cy, sx, sy, radius, alphaFactor)
-                    Else
-                        Dim fill = AverageSurroundingColor(source, cx, cy, radius)
-                        If fill.HasValue Then DrawSoftDisc(canvas, cx, cy, radius, fill.Value, alphaFactor)
+                    If IsHealingSpot(spot) Then
+                        If pendingHeal.Count > 0 AndAlso pendingHealStrokeId.HasValue AndAlso spot.StrokeId <> pendingHealStrokeId.Value Then
+                            FlushHealingSpots(result, canvas, pendingHeal, adj.SourceWidthPixels, adj.SourceHeightPixels)
+                            pendingHeal.Clear()
+                        End If
+                        pendingHeal.Add(spot)
+                        pendingHealStrokeId = spot.StrokeId
+                        Continue For
                     End If
+
+                    If pendingHeal.Count > 0 Then
+                        FlushHealingSpots(result, canvas, pendingHeal, adj.SourceWidthPixels, adj.SourceHeightPixels)
+                        pendingHeal.Clear()
+                        pendingHealStrokeId = Nothing
+                    End If
+                    DrawRetouchSpot(result, source, canvas, spot, adj.SourceWidthPixels, adj.SourceHeightPixels)
                 Next
+                If pendingHeal.Count > 0 Then
+                    FlushHealingSpots(result, canvas, pendingHeal, adj.SourceWidthPixels, adj.SourceHeightPixels)
+                End If
             End Using
             Return result
+        End Function
+
+        Private Shared Sub FlushHealingSpots(result As SKBitmap, canvas As SKCanvas, pendingHeal As List(Of RetouchSpot),
+                                             sourceWidthPixels As Integer, sourceHeightPixels As Integer)
+            If pendingHeal Is Nothing OrElse pendingHeal.Count = 0 Then Return
+            If pendingHeal.Count = 1 Then
+                DrawRetouchSpot(result, result, canvas, pendingHeal(0), sourceWidthPixels, sourceHeightPixels)
+            Else
+                DrawHealingRegion(result, canvas, result, pendingHeal, sourceWidthPixels, sourceHeightPixels)
+            End If
+        End Sub
+
+        Public Shared Sub ApplyRetouchSpotInPlace(target As SKBitmap, sampleSource As SKBitmap, spot As RetouchSpot,
+                                                  sourceWidthPixels As Integer, sourceHeightPixels As Integer)
+            If target Is Nothing OrElse sampleSource Is Nothing OrElse spot Is Nothing Then Return
+            Using canvas = New SKCanvas(target)
+                If IsHealingSpot(spot) Then
+                    DrawRetouchSpot(target, target, canvas, spot, sourceWidthPixels, sourceHeightPixels)
+                Else
+                    DrawRetouchSpot(target, sampleSource, canvas, spot, sourceWidthPixels, sourceHeightPixels)
+                End If
+            End Using
+        End Sub
+
+        Private Shared Sub DrawRetouchSpot(result As SKBitmap, source As SKBitmap, canvas As SKCanvas,
+                                           spot As RetouchSpot, sourceWidthPixels As Integer, sourceHeightPixels As Integer)
+            If result Is Nothing OrElse source Is Nothing OrElse canvas Is Nothing OrElse spot Is Nothing Then Return
+
+            Dim scaleX As Single = 1.0F
+            Dim scaleY As Single = 1.0F
+            If sourceWidthPixels > 0 AndAlso sourceHeightPixels > 0 AndAlso source.Width > 0 AndAlso source.Height > 0 Then
+                scaleX = source.Width / CSng(sourceWidthPixels)
+                scaleY = source.Height / CSng(sourceHeightPixels)
+            End If
+            Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
+            Dim cx = Clamp(spot.XPixels * scaleX, 0, source.Width)
+            Dim cy = Clamp(spot.YPixels * scaleY, 0, source.Height)
+            Dim radius = Clamp(spot.RadiusPixels * radiusScale, 1, Math.Max(source.Width, source.Height))
+            Dim flow = Clamp(spot.FlowPercent, 0, 100) / 100.0F
+            Dim opacity = Clamp(spot.OpacityPercent, 0, 100) / 100.0F
+            Dim strength = Clamp(spot.StrengthPercent, 0, 100) / 100.0F
+            Dim alphaFactor = flow * opacity * strength
+
+            If spot.HasCloneSource Then
+                Dim sx = Clamp(spot.SourceXPixels * scaleX, 0, source.Width)
+                Dim sy = Clamp(spot.SourceYPixels * scaleY, 0, source.Height)
+                DrawCloneStamp(canvas, source, cx, cy, sx, sy, radius, alphaFactor)
+            ElseIf String.Equals(spot.Mode, "Heal", StringComparison.OrdinalIgnoreCase) Then
+                ' Der Reparaturpinsel arbeitet stroke-akkumuliert: spätere Punkte sollen bereits
+                ' reparierte Pixel als Umgebung sehen. Stempel/Verwischen lesen weiter aus source.
+                DrawHealingSpot(result, canvas, result, cx, cy, radius, alphaFactor)
+            Else
+                Dim fill = AverageSurroundingColor(source, cx, cy, radius)
+                If fill.HasValue Then DrawSoftDisc(canvas, cx, cy, radius, fill.Value, alphaFactor)
+            End If
+        End Sub
+
+        Private Shared Function IsHealingSpot(spot As RetouchSpot) As Boolean
+            Return spot IsNot Nothing AndAlso Not spot.HasCloneSource AndAlso
+                   String.Equals(spot.Mode, "Heal", StringComparison.OrdinalIgnoreCase)
         End Function
 
         ''' Kopiert eine weich auslaufende Scheibe von (sx, sy) nach (cx, cy). Der Bitmap-Shader wird
@@ -2100,12 +2249,1324 @@ Namespace Services
             End Using
         End Sub
 
+        ''' Healing ohne explizite Quelle: Statt radial Pixel vom Rand nach innen zu ziehen
+        ''' (Speichen/Pusteblumenmuster) wird eine kohärente Nachbarfläche außerhalb des Pinsels
+        ''' gewählt und weich eingestempelt. Gibt es keine brauchbare Fläche, fällt der Pinsel auf
+        ''' eine weiche Umgebungsfarbe zurück.
+        Private Shared Sub DrawHealingSpot(result As SKBitmap, canvas As SKCanvas, source As SKBitmap, cx As Single, cy As Single, radius As Single, flow As Single)
+            If flow <= 0.001F OrElse radius <= 0.5F Then Return
+
+            Dim surrounding = AverageSurroundingColor(source, cx, cy, radius, 1.35F, 2.4F)
+            If Not surrounding.HasValue Then Return
+
+            Dim sample = FindHealingPatch(source, cx, cy, radius, surrounding.Value)
+            If sample.Found Then
+                DrawAdjustedHealingPatch(result, source, cx, cy, sample.Center.X, sample.Center.Y, radius, flow, surrounding.Value, sample.Average)
+                Return
+            End If
+
+            DrawSoftDisc(canvas, cx, cy, radius, surrounding.Value, flow)
+        End Sub
+
+        Private Shared Sub DrawHealingRegion(result As SKBitmap, canvas As SKCanvas, source As SKBitmap,
+                                             spots As IReadOnlyList(Of RetouchSpot),
+                                             sourceWidthPixels As Integer, sourceHeightPixels As Integer)
+            If result Is Nothing OrElse source Is Nothing OrElse spots Is Nothing OrElse spots.Count = 0 Then Return
+
+            Dim scaleX As Single = 1.0F
+            Dim scaleY As Single = 1.0F
+            If sourceWidthPixels > 0 AndAlso sourceHeightPixels > 0 AndAlso source.Width > 0 AndAlso source.Height > 0 Then
+                scaleX = source.Width / CSng(sourceWidthPixels)
+                scaleY = source.Height / CSng(sourceHeightPixels)
+            End If
+            Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
+
+            Dim scaled As New List(Of (X As Single, Y As Single, Radius As Single, Flow As Single))()
+            Dim left = source.Width
+            Dim top = source.Height
+            Dim right = 0
+            Dim bottom = 0
+            Dim maxRadius As Single = 1.0F
+            For Each spot In spots
+                If spot Is Nothing Then Continue For
+                Dim radius = Clamp(spot.RadiusPixels * radiusScale + 2.0F, 1, Math.Max(source.Width, source.Height))
+                Dim cx = Clamp(spot.XPixels * scaleX, 0, source.Width)
+                Dim cy = Clamp(spot.YPixels * scaleY, 0, source.Height)
+                Dim flow = Clamp(spot.FlowPercent, 0, 100) / 100.0F *
+                           Clamp(spot.OpacityPercent, 0, 100) / 100.0F *
+                           Clamp(spot.StrengthPercent, 0, 100) / 100.0F
+                If flow <= 0.001F Then Continue For
+                scaled.Add((cx, cy, radius, flow))
+                maxRadius = Math.Max(maxRadius, radius)
+                left = Math.Min(left, CInt(Math.Floor(cx - radius - 2)))
+                top = Math.Min(top, CInt(Math.Floor(cy - radius - 2)))
+                right = Math.Max(right, CInt(Math.Ceiling(cx + radius + 2)))
+                bottom = Math.Max(bottom, CInt(Math.Ceiling(cy + radius + 2)))
+            Next
+            If scaled.Count = 0 Then Return
+
+            left = Math.Max(0, left)
+            top = Math.Max(0, top)
+            right = Math.Min(source.Width, right)
+            bottom = Math.Min(source.Height, bottom)
+            Dim width = right - left
+            Dim height = bottom - top
+            If width <= 0 OrElse height <= 0 Then Return
+
+            Using mask = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using maskCanvas = New SKCanvas(mask)
+                    maskCanvas.Clear(SKColors.Transparent)
+                    maskCanvas.Translate(-left, -top)
+                    For Each s In scaled
+                        Using shader = SKShader.CreateRadialGradient(New SKPoint(s.X, s.Y), s.Radius,
+                                                                     {SKColors.White.WithAlpha(CByte(255 * s.Flow)),
+                                                                      SKColors.White.WithAlpha(CByte(255 * s.Flow)),
+                                                                      SKColors.Transparent},
+                                                                     RetouchFeatherStops, SKShaderTileMode.Clamp)
+                            Using paint = New SKPaint With {.Shader = shader, .IsAntialias = True, .BlendMode = SKBlendMode.SrcOver}
+                                maskCanvas.DrawCircle(s.X, s.Y, s.Radius, paint)
+                            End Using
+                        End Using
+                    Next
+                End Using
+
+                If DrawInpaintedHealingRegion(result, mask, left, top) Then
+                    Return
+                End If
+
+                Dim targetAverage = AverageRegionSurroundingColor(source, mask, left, top, maxRadius)
+                If Not targetAverage.HasValue Then
+                    For Each s In scaled
+                        Dim fill = AverageSurroundingColor(source, s.X, s.Y, s.Radius)
+                        If fill.HasValue Then DrawSoftDisc(canvas, s.X, s.Y, s.Radius, fill.Value, s.Flow)
+                    Next
+                    Return
+                End If
+
+                Dim sample = FindHealingRegionPatch(source, mask, left, top, width, height, maxRadius, targetAverage.Value)
+                If Not sample.Found Then
+                    For Each s In scaled
+                        DrawSoftDisc(canvas, s.X, s.Y, s.Radius, targetAverage.Value, s.Flow)
+                    Next
+                    Return
+                End If
+
+                DrawAdjustedHealingRegion(result, source, mask, left, top, sample.Left, sample.Top,
+                                          targetAverage.Value, sample.Average)
+            End Using
+        End Sub
+
+        Private Shared Function DrawInpaintedHealingRegion(result As SKBitmap, mask As SKBitmap,
+                                                           targetLeft As Integer, targetTop As Integer) As Boolean
+            If result Is Nothing OrElse mask Is Nothing OrElse mask.Width <= 0 OrElse mask.Height <= 0 Then Return False
+
+            Dim width = mask.Width
+            Dim height = mask.Height
+            Dim count = width * height
+            Dim maskAlpha(count - 1) As Byte
+            Dim filled(count - 1) As Boolean
+            Dim queued(count - 1) As Boolean
+            Dim maskedCount = 0
+
+            Using work = CloneBitmap(result)
+                For maskY = 0 To height - 1
+                    Dim y = targetTop + maskY
+                    For mx = 0 To width - 1
+                        Dim index = maskY * width + mx
+                        Dim alpha = mask.GetPixel(mx, maskY).Alpha
+                        maskAlpha(index) = NormalizeHealingMaskAlpha(alpha)
+                        Dim isMasked = alpha > 8 AndAlso y >= 0 AndAlso y < result.Height AndAlso
+                                       targetLeft + mx >= 0 AndAlso targetLeft + mx < result.Width
+                        filled(index) = Not isMasked
+                        If isMasked Then maskedCount += 1
+                    Next
+                Next
+
+                If maskedCount = 0 Then Return False
+
+                If DrawPatchBasedInpaintedHealingRegion(result, work, maskAlpha, targetLeft, targetTop, width, height) Then
+                    Return True
+                End If
+
+                Dim queue As New Queue(Of Integer)()
+                For maskY = 0 To height - 1
+                    For mx = 0 To width - 1
+                        Dim index = maskY * width + mx
+                        If filled(index) OrElse Not HasFilledNeighbor(filled, width, height, mx, maskY) Then Continue For
+                        queue.Enqueue(index)
+                        queued(index) = True
+                    Next
+                Next
+
+                Dim repairedCount = 0
+                While queue.Count > 0
+                    Dim index = queue.Dequeue()
+                    queued(index) = False
+                    If filled(index) Then Continue While
+
+                    Dim mx = index Mod width
+                    Dim maskY = index \ width
+                    Dim x = targetLeft + mx
+                    Dim y = targetTop + maskY
+                    Dim average = AverageUnmaskedRays(work, maskAlpha, targetLeft, targetTop, width, height, mx, maskY)
+                    If Not average.HasValue Then
+                        average = AverageFilledNeighborhood(work, filled, targetLeft, targetTop, width, height, mx, maskY)
+                    End If
+                    If Not average.HasValue Then Continue While
+
+                    work.SetPixel(x, y, average.Value)
+                    filled(index) = True
+                    repairedCount += 1
+
+                    For oy = -1 To 1
+                        For ox = -1 To 1
+                            If ox = 0 AndAlso oy = 0 Then Continue For
+                            Dim nx = mx + ox
+                            Dim ny = maskY + oy
+                            If nx < 0 OrElse ny < 0 OrElse nx >= width OrElse ny >= height Then Continue For
+                            Dim ni = ny * width + nx
+                            If filled(ni) OrElse queued(ni) OrElse maskAlpha(ni) <= 8 Then Continue For
+                            queue.Enqueue(ni)
+                            queued(ni) = True
+                        Next
+                    Next
+                End While
+
+                If repairedCount = 0 Then Return False
+                If ShouldSmoothInpaintedRegion(work, maskAlpha, targetLeft, targetTop, width, height) Then
+                    SmoothInpaintedRegion(work, maskAlpha, targetLeft, targetTop, width, height)
+                End If
+
+                For maskY = 0 To height - 1
+                    Dim y = targetTop + maskY
+                    If y < 0 OrElse y >= result.Height Then Continue For
+                    For mx = 0 To width - 1
+                        Dim index = maskY * width + mx
+                        Dim alpha = maskAlpha(index)
+                        If alpha <= 8 OrElse Not filled(index) Then Continue For
+                        Dim x = targetLeft + mx
+                        If x < 0 OrElse x >= result.Width Then Continue For
+
+                        Dim localAlpha = Clamp(alpha / 255.0F, 0.0F, 1.0F)
+                        If localAlpha <= 0.001F Then Continue For
+                        Dim target = result.GetPixel(x, y)
+                        Dim repaired = work.GetPixel(x, y)
+                        result.SetPixel(x, y, New SKColor(
+                            BlendByte(target.Red, repaired.Red, localAlpha),
+                            BlendByte(target.Green, repaired.Green, localAlpha),
+                            BlendByte(target.Blue, repaired.Blue, localAlpha),
+                            BlendByte(target.Alpha, repaired.Alpha, localAlpha)))
+                    Next
+                Next
+            End Using
+
+            Return True
+        End Function
+
+        Private Shared Function DrawPatchBasedInpaintedHealingRegion(result As SKBitmap, work As SKBitmap,
+                                                                     maskAlpha As Byte(),
+                                                                     targetLeft As Integer, targetTop As Integer,
+                                                                     width As Integer, height As Integer) As Boolean
+            If result Is Nothing OrElse work Is Nothing OrElse maskAlpha Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return False
+
+            Dim known(width * height - 1) As Boolean
+            Dim remaining = 0
+            For i = 0 To known.Length - 1
+                known(i) = maskAlpha(i) <= 8
+                If Not known(i) Then remaining += 1
+            Next
+            If remaining = 0 Then Return False
+
+            Dim repairExtent = Math.Max(width, height)
+            Dim patchRadius = If(repairExtent > 180, 4, 5)
+            Dim maxPasses = Math.Min(repairExtent + patchRadius * 2, 96)
+            Dim maxPatchCopiesPerPass = If(repairExtent > 240, 36, If(repairExtent > 120, 48, 64))
+            Dim repaired = 0
+
+            For pass = 0 To maxPasses - 1
+                Dim boundary As New List(Of Integer)()
+                For maskY = 0 To height - 1
+                    For mx = 0 To width - 1
+                        Dim index = maskY * width + mx
+                        If known(index) Then Continue For
+                        If HasKnownNeighbor(known, width, height, mx, maskY) Then boundary.Add(index)
+                    Next
+                Next
+
+                If boundary.Count = 0 Then Exit For
+                OrderHealingBoundaryByKnownNeighbors(boundary, known, width, height)
+                Dim changedThisPass = 0
+                Dim patchCopiesThisPass = 0
+                For Each index In boundary
+                    If known(index) Then Continue For
+                    Dim mx = index Mod width
+                    Dim maskY = index \ width
+                    Dim sourcePatch = FindBestHealingSourcePatch(work, maskAlpha, known, targetLeft, targetTop,
+                                                                 width, height, mx, maskY, patchRadius)
+                    If Not sourcePatch.Found Then Continue For
+
+                    changedThisPass += CopyHealingPatch(work, maskAlpha, known, targetLeft, targetTop,
+                                                        width, height, mx, maskY, sourcePatch.X, sourcePatch.Y, patchRadius)
+                    patchCopiesThisPass += 1
+                    If patchCopiesThisPass >= maxPatchCopiesPerPass Then Exit For
+                Next
+
+                If changedThisPass = 0 Then Exit For
+                repaired += changedThisPass
+                remaining -= changedThisPass
+                If remaining <= 0 Then Exit For
+            Next
+
+            If repaired = 0 Then Return False
+            BlendInpaintedBoundary(work, maskAlpha, targetLeft, targetTop, width, height)
+            For maskY = 0 To height - 1
+                Dim y = targetTop + maskY
+                If y < 0 OrElse y >= result.Height Then Continue For
+                For mx = 0 To width - 1
+                    Dim index = maskY * width + mx
+                    If maskAlpha(index) <= 8 OrElse Not known(index) Then Continue For
+                    Dim x = targetLeft + mx
+                    If x < 0 OrElse x >= result.Width Then Continue For
+
+                    Dim localAlpha = Clamp(maskAlpha(index) / 255.0F, 0.0F, 1.0F)
+                    Dim target = result.GetPixel(x, y)
+                    Dim repairedColor = work.GetPixel(x, y)
+                    result.SetPixel(x, y, New SKColor(
+                        BlendByte(target.Red, repairedColor.Red, localAlpha),
+                        BlendByte(target.Green, repairedColor.Green, localAlpha),
+                        BlendByte(target.Blue, repairedColor.Blue, localAlpha),
+                        BlendByte(target.Alpha, repairedColor.Alpha, localAlpha)))
+                Next
+            Next
+
+            Return True
+        End Function
+
+        Private Shared Sub BlendInpaintedBoundary(work As SKBitmap, maskAlpha As Byte(),
+                                                  targetLeft As Integer, targetTop As Integer,
+                                                  width As Integer, height As Integer)
+            If work Is Nothing OrElse maskAlpha Is Nothing Then Return
+
+            Dim nextColors(width * height - 1) As SKColor
+            Dim hasNext(width * height - 1) As Boolean
+            For maskY = 0 To height - 1
+                Dim y = targetTop + maskY
+                If y < 0 OrElse y >= work.Height Then Continue For
+                For mx = 0 To width - 1
+                    Dim index = maskY * width + mx
+                    If maskAlpha(index) <= 8 OrElse Not IsMaskBoundary(maskAlpha, width, height, mx, maskY) Then Continue For
+                    Dim x = targetLeft + mx
+                    If x < 0 OrElse x >= work.Width Then Continue For
+
+                    Dim avg = AverageBoundaryBlendColor(work, maskAlpha, targetLeft, targetTop, width, height, mx, maskY)
+                    If avg.HasValue Then
+                        nextColors(index) = avg.Value
+                        hasNext(index) = True
+                    End If
+                Next
+            Next
+
+            For maskY = 0 To height - 1
+                Dim y = targetTop + maskY
+                If y < 0 OrElse y >= work.Height Then Continue For
+                For mx = 0 To width - 1
+                    Dim index = maskY * width + mx
+                    If Not hasNext(index) Then Continue For
+                    Dim x = targetLeft + mx
+                    If x < 0 OrElse x >= work.Width Then Continue For
+                    Dim current = work.GetPixel(x, y)
+                    Dim blended = nextColors(index)
+                    work.SetPixel(x, y, New SKColor(
+                        BlendByte(current.Red, blended.Red, 0.45F),
+                        BlendByte(current.Green, blended.Green, 0.45F),
+                        BlendByte(current.Blue, blended.Blue, 0.45F),
+                        BlendByte(current.Alpha, blended.Alpha, 0.45F)))
+                Next
+            Next
+        End Sub
+
+        Private Shared Function IsMaskBoundary(maskAlpha As Byte(), width As Integer, height As Integer,
+                                               mx As Integer, my As Integer) As Boolean
+            For oy = -1 To 1
+                For ox = -1 To 1
+                    If ox = 0 AndAlso oy = 0 Then Continue For
+                    Dim nx = mx + ox
+                    Dim ny = my + oy
+                    If nx < 0 OrElse ny < 0 OrElse nx >= width OrElse ny >= height Then Return True
+                    If maskAlpha(ny * width + nx) <= 8 Then Return True
+                Next
+            Next
+            Return False
+        End Function
+
+        Private Shared Function AverageBoundaryBlendColor(work As SKBitmap, maskAlpha As Byte(),
+                                                          targetLeft As Integer, targetTop As Integer,
+                                                          width As Integer, height As Integer,
+                                                          mx As Integer, my As Integer) As SKColor?
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
+            Dim weightSum = 0
+            For oy = -2 To 2
+                For ox = -2 To 2
+                    Dim nx = mx + ox
+                    Dim ny = my + oy
+                    Dim x = targetLeft + nx
+                    Dim y = targetTop + ny
+                    If x < 0 OrElse y < 0 OrElse x >= work.Width OrElse y >= work.Height Then Continue For
+
+                    Dim weight = If(Math.Abs(ox) <= 1 AndAlso Math.Abs(oy) <= 1, 3, 1)
+                    If nx >= 0 AndAlso ny >= 0 AndAlso nx < width AndAlso ny < height AndAlso
+                       maskAlpha(ny * width + nx) > 8 Then
+                        weight += 1
+                    End If
+
+                    Dim c = work.GetPixel(x, y)
+                    sr += CInt(c.Red) * weight
+                    sg += CInt(c.Green) * weight
+                    sb += CInt(c.Blue) * weight
+                    sa += CInt(c.Alpha) * weight
+                    weightSum += weight
+                Next
+            Next
+            If weightSum = 0 Then Return Nothing
+            Return New SKColor(CByte(sr \ weightSum), CByte(sg \ weightSum),
+                               CByte(sb \ weightSum), CByte(sa \ weightSum))
+        End Function
+
+        Private Shared Sub OrderHealingBoundaryByKnownNeighbors(boundary As List(Of Integer), known As Boolean(),
+                                                                width As Integer, height As Integer)
+            If boundary Is Nothing OrElse boundary.Count < 2 Then Return
+            boundary.Sort(Function(a, b)
+                              Dim ax = a Mod width
+                              Dim ay = a \ width
+                              Dim bx = b Mod width
+                              Dim by = b \ width
+                              Return CountKnownNeighbors(known, width, height, bx, by).CompareTo(
+                                     CountKnownNeighbors(known, width, height, ax, ay))
+                          End Function)
+        End Sub
+
+        Private Shared Function CountKnownNeighbors(known As Boolean(), width As Integer, height As Integer,
+                                                    mx As Integer, my As Integer) As Integer
+            Dim count = 0
+            For oy = -1 To 1
+                For ox = -1 To 1
+                    If ox = 0 AndAlso oy = 0 Then Continue For
+                    Dim nx = mx + ox
+                    Dim ny = my + oy
+                    If nx < 0 OrElse ny < 0 OrElse nx >= width OrElse ny >= height Then
+                        count += 1
+                    ElseIf known(ny * width + nx) Then
+                        count += 1
+                    End If
+                Next
+            Next
+            Return count
+        End Function
+
+        Private Shared Function FindBestHealingSourcePatch(work As SKBitmap, maskAlpha As Byte(), known As Boolean(),
+                                                           targetLeft As Integer, targetTop As Integer,
+                                                           width As Integer, height As Integer,
+                                                           mx As Integer, my As Integer,
+                                                           patchRadius As Integer) As (X As Integer, Y As Integer, Found As Boolean)
+            Dim targetX = targetLeft + mx
+            Dim targetY = targetTop + my
+            Dim extent = Math.Max(width, height)
+            Dim searchRadius = Math.Min(88, Math.Max(28, extent \ 3))
+            Dim stepSize = If(extent > 240, 12, If(extent > 120, 8, 6))
+            Dim bestX = 0
+            Dim bestY = 0
+            Dim bestScore = Double.MaxValue
+            Dim found = False
+            Dim evaluated = 0
+            Dim maxEvaluations = If(extent > 240, 180, If(extent > 120, 260, 360))
+
+            Dim minY = Math.Max(patchRadius, targetY - searchRadius)
+            Dim maxY = Math.Min(work.Height - patchRadius - 1, targetY + searchRadius)
+            Dim minX = Math.Max(patchRadius, targetX - searchRadius)
+            Dim maxX = Math.Min(work.Width - patchRadius - 1, targetX + searchRadius)
+            Dim offsetSeed = Math.Abs((targetX * 31 + targetY * 17) Mod stepSize)
+
+            For sy = minY + offsetSeed To maxY Step stepSize
+                For sx = minX + ((offsetSeed * 3) Mod stepSize) To maxX Step stepSize
+                    If Math.Abs(sx - targetX) <= patchRadius AndAlso Math.Abs(sy - targetY) <= patchRadius Then Continue For
+                    If Not IsOriginalKnownPatch(maskAlpha, targetLeft, targetTop, width, height, sx, sy, patchRadius) Then Continue For
+
+                    Dim score = HealingPatchScore(work, maskAlpha, known, targetLeft, targetTop,
+                                                  width, height, mx, my, sx, sy, patchRadius)
+                    evaluated += 1
+                    If score < bestScore Then
+                        bestScore = score
+                        bestX = sx
+                        bestY = sy
+                        found = True
+                    End If
+                    If evaluated >= maxEvaluations Then Exit For
+                Next
+                If evaluated >= maxEvaluations Then Exit For
+            Next
+
+            If found AndAlso extent <= 160 Then
+                For sy = Math.Max(patchRadius, bestY - 4) To Math.Min(work.Height - patchRadius - 1, bestY + 4) Step 2
+                    For sx = Math.Max(patchRadius, bestX - 4) To Math.Min(work.Width - patchRadius - 1, bestX + 4) Step 2
+                        If Not IsOriginalKnownPatch(maskAlpha, targetLeft, targetTop, width, height, sx, sy, patchRadius) Then Continue For
+                        Dim score = HealingPatchScore(work, maskAlpha, known, targetLeft, targetTop,
+                                                      width, height, mx, my, sx, sy, patchRadius)
+                        If score < bestScore Then
+                            bestScore = score
+                            bestX = sx
+                            bestY = sy
+                        End If
+                    Next
+                Next
+            End If
+
+            Return (bestX, bestY, found)
+        End Function
+
+        Private Shared Function HealingPatchScore(work As SKBitmap, maskAlpha As Byte(), known As Boolean(),
+                                                  targetLeft As Integer, targetTop As Integer,
+                                                  width As Integer, height As Integer,
+                                                  mx As Integer, my As Integer,
+                                                  sx As Integer, sy As Integer,
+                                                  patchRadius As Integer) As Double
+            Dim score = 0.0
+            Dim count = 0
+            Dim targetX = targetLeft + mx
+            Dim targetY = targetTop + my
+
+            For oy = -patchRadius To patchRadius
+                Dim oySq = oy * oy
+                Dim ty = targetY + oy
+                Dim py = sy + oy
+                If ty < 0 OrElse ty >= work.Height OrElse py < 0 OrElse py >= work.Height Then Continue For
+                For ox = -patchRadius To patchRadius
+                    If ox * ox + oySq > patchRadius * patchRadius Then Continue For
+                    Dim tx = targetX + ox
+                    Dim px = sx + ox
+                    If tx < 0 OrElse tx >= work.Width OrElse px < 0 OrElse px >= work.Width Then Continue For
+
+                    Dim lx = mx + ox
+                    Dim ly = my + oy
+                    Dim targetKnown = True
+                    If lx >= 0 AndAlso ly >= 0 AndAlso lx < width AndAlso ly < height Then
+                        targetKnown = known(ly * width + lx)
+                    End If
+                    If Not targetKnown Then Continue For
+
+                    Dim distance = Math.Max(Math.Abs(ox), Math.Abs(oy))
+                    Dim weight = If(distance <= 1, 5.0, If(distance <= 3, 2.0, 1.0))
+                    score += ColorDistanceSquared(work.GetPixel(tx, ty), work.GetPixel(px, py)) * weight
+                    count += CInt(weight)
+                Next
+            Next
+
+            If count < Math.Max(8, patchRadius * patchRadius \ 2) Then Return Double.MaxValue
+            Dim dx = sx - targetX
+            Dim dy = sy - targetY
+            Dim distancePenalty = Math.Sqrt(dx * dx + dy * dy) * 1.8
+            Return score / count + distancePenalty
+        End Function
+
+        Private Shared Function CopyHealingPatch(work As SKBitmap, maskAlpha As Byte(), known As Boolean(),
+                                                 targetLeft As Integer, targetTop As Integer,
+                                                 width As Integer, height As Integer,
+                                                 mx As Integer, my As Integer,
+                                                 sx As Integer, sy As Integer,
+                                                 patchRadius As Integer) As Integer
+            Dim copied = 0
+            Dim targetX = targetLeft + mx
+            Dim targetY = targetTop + my
+
+            For oy = -patchRadius To patchRadius
+                Dim oySq = oy * oy
+                Dim y = targetY + oy
+                Dim py = sy + oy
+                If y < 0 OrElse y >= work.Height OrElse py < 0 OrElse py >= work.Height Then Continue For
+                For ox = -patchRadius To patchRadius
+                    If ox * ox + oySq > patchRadius * patchRadius Then Continue For
+                    Dim lx = mx + ox
+                    Dim ly = my + oy
+                    If lx < 0 OrElse ly < 0 OrElse lx >= width OrElse ly >= height Then Continue For
+                    Dim index = ly * width + lx
+                    If known(index) OrElse maskAlpha(index) <= 8 Then Continue For
+
+                    Dim x = targetX + ox
+                    Dim px = sx + ox
+                    If x < 0 OrElse x >= work.Width OrElse px < 0 OrElse px >= work.Width Then Continue For
+
+                    work.SetPixel(x, y, work.GetPixel(px, py))
+                    known(index) = True
+                    copied += 1
+                Next
+            Next
+
+            Return copied
+        End Function
+
+        Private Shared Function IsOriginalKnownPatch(maskAlpha As Byte(),
+                                                     targetLeft As Integer, targetTop As Integer,
+                                                     width As Integer, height As Integer,
+                                                     sx As Integer, sy As Integer,
+                                                     patchRadius As Integer) As Boolean
+            For oy = -patchRadius To patchRadius
+                Dim y = sy + oy
+                Dim oySq = oy * oy
+                For ox = -patchRadius To patchRadius
+                    If ox * ox + oySq > patchRadius * patchRadius Then Continue For
+                    Dim x = sx + ox
+                    Dim mx = x - targetLeft
+                    Dim my = y - targetTop
+                    If mx >= 0 AndAlso my >= 0 AndAlso mx < width AndAlso my < height AndAlso
+                       maskAlpha(my * width + mx) > 8 Then Return False
+                Next
+            Next
+            Return True
+        End Function
+
+        Private Shared Function HasKnownNeighbor(known As Boolean(), width As Integer, height As Integer,
+                                                 mx As Integer, my As Integer) As Boolean
+            For oy = -1 To 1
+                For ox = -1 To 1
+                    If ox = 0 AndAlso oy = 0 Then Continue For
+                    Dim nx = mx + ox
+                    Dim ny = my + oy
+                    If nx < 0 OrElse ny < 0 OrElse nx >= width OrElse ny >= height Then Return True
+                    If known(ny * width + nx) Then Return True
+                Next
+            Next
+            Return False
+        End Function
+
+        Private Shared Function ShouldSmoothInpaintedRegion(work As SKBitmap, maskAlpha As Byte(),
+                                                            targetLeft As Integer, targetTop As Integer,
+                                                            width As Integer, height As Integer) As Boolean
+            Dim stepSize = Math.Max(1, Math.Max(width, height) \ 28)
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0
+            Dim sr2 As Long = 0, sg2 As Long = 0, sb2 As Long = 0
+            Dim count = 0
+
+            For maskY = 0 To height - 1 Step stepSize
+                Dim y = targetTop + maskY
+                If y < 0 OrElse y >= work.Height Then Continue For
+                For mx = 0 To width - 1 Step stepSize
+                    If maskAlpha(maskY * width + mx) < 255 Then Continue For
+                    Dim x = targetLeft + mx
+                    If x < 0 OrElse x >= work.Width Then Continue For
+                    Dim c = work.GetPixel(x, y)
+                    sr += c.Red : sg += c.Green : sb += c.Blue
+                    sr2 += CInt(c.Red) * CInt(c.Red)
+                    sg2 += CInt(c.Green) * CInt(c.Green)
+                    sb2 += CInt(c.Blue) * CInt(c.Blue)
+                    count += 1
+                Next
+            Next
+
+            If count < 12 Then Return False
+            Dim ar = CDbl(sr) / count
+            Dim ag = CDbl(sg) / count
+            Dim ab = CDbl(sb) / count
+            Dim variance = Math.Max(0.0, CDbl(sr2) / count - ar * ar) +
+                           Math.Max(0.0, CDbl(sg2) / count - ag * ag) +
+                           Math.Max(0.0, CDbl(sb2) / count - ab * ab)
+            Return variance < 95.0
+        End Function
+
+        Private Shared Sub SmoothInpaintedRegion(work As SKBitmap, maskAlpha As Byte(),
+                                                 targetLeft As Integer, targetTop As Integer,
+                                                 width As Integer, height As Integer)
+            If work Is Nothing OrElse maskAlpha Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return
+
+            Dim iterations = If(Math.Max(width, height) > 72, 4, 3)
+            For iteration = 1 To iterations
+                Dim nextColors(width * height - 1) As SKColor
+                Dim hasNext(width * height - 1) As Boolean
+
+                For maskY = 0 To height - 1
+                    Dim y = targetTop + maskY
+                    If y < 0 OrElse y >= work.Height Then Continue For
+                    For mx = 0 To width - 1
+                        Dim index = maskY * width + mx
+                        If maskAlpha(index) < 255 Then Continue For
+                        Dim x = targetLeft + mx
+                        If x < 0 OrElse x >= work.Width Then Continue For
+
+                        Dim smoothed = AverageRepairNeighborhood(work, maskAlpha, targetLeft, targetTop, width, height, mx, maskY)
+                        If smoothed.HasValue Then
+                            nextColors(index) = smoothed.Value
+                            hasNext(index) = True
+                        End If
+                    Next
+                Next
+
+                For maskY = 0 To height - 1
+                    Dim y = targetTop + maskY
+                    If y < 0 OrElse y >= work.Height Then Continue For
+                    For mx = 0 To width - 1
+                        Dim index = maskY * width + mx
+                        If Not hasNext(index) Then Continue For
+                        Dim x = targetLeft + mx
+                        If x < 0 OrElse x >= work.Width Then Continue For
+                        work.SetPixel(x, y, nextColors(index))
+                    Next
+                Next
+            Next
+        End Sub
+
+        Private Shared Function AverageRepairNeighborhood(work As SKBitmap, maskAlpha As Byte(),
+                                                          targetLeft As Integer, targetTop As Integer,
+                                                          width As Integer, height As Integer,
+                                                          mx As Integer, my As Integer) As SKColor?
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
+            Dim weightSum = 0
+
+            For oy = -2 To 2
+                For ox = -2 To 2
+                    Dim nx = mx + ox
+                    Dim ny = my + oy
+                    Dim x = targetLeft + nx
+                    Dim y = targetTop + ny
+                    If x < 0 OrElse y < 0 OrElse x >= work.Width OrElse y >= work.Height Then Continue For
+
+                    Dim distance = Math.Max(Math.Abs(ox), Math.Abs(oy))
+                    Dim weight = If(distance = 0, 8, If(distance = 1, 4, 1))
+                    If nx >= 0 AndAlso ny >= 0 AndAlso nx < width AndAlso ny < height Then
+                        Dim alpha = maskAlpha(ny * width + nx)
+                        If alpha <= 8 Then
+                            weight = 1
+                        ElseIf alpha < 255 Then
+                            weight = 2
+                        End If
+                    End If
+
+                    Dim c = work.GetPixel(x, y)
+                    sr += CInt(c.Red) * weight
+                    sg += CInt(c.Green) * weight
+                    sb += CInt(c.Blue) * weight
+                    sa += CInt(c.Alpha) * weight
+                    weightSum += weight
+                Next
+            Next
+
+            If weightSum = 0 Then Return Nothing
+            Return New SKColor(CByte(sr \ weightSum), CByte(sg \ weightSum),
+                               CByte(sb \ weightSum), CByte(sa \ weightSum))
+        End Function
+
+        Private Shared Function NormalizeHealingMaskAlpha(alpha As Byte) As Byte
+            If alpha <= 8 Then Return 0
+            If alpha >= 24 Then Return 255
+            Return CByte(Math.Min(255, CInt(alpha) * 11))
+        End Function
+
+        Private Shared Function HasFilledNeighbor(filled As Boolean(), width As Integer, height As Integer,
+                                                  mx As Integer, my As Integer) As Boolean
+            For oy = -1 To 1
+                For ox = -1 To 1
+                    If ox = 0 AndAlso oy = 0 Then Continue For
+                    Dim nx = mx + ox
+                    Dim ny = my + oy
+                    If nx < 0 OrElse ny < 0 OrElse nx >= width OrElse ny >= height Then Return True
+                    If filled(ny * width + nx) Then Return True
+                Next
+            Next
+            Return False
+        End Function
+
+        Private Shared Function AverageFilledNeighborhood(work As SKBitmap, filled As Boolean(),
+                                                          targetLeft As Integer, targetTop As Integer,
+                                                          width As Integer, height As Integer,
+                                                          mx As Integer, my As Integer) As SKColor?
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
+            Dim weightSum = 0
+
+            For oy = -2 To 2
+                For ox = -2 To 2
+                    If ox = 0 AndAlso oy = 0 Then Continue For
+                    Dim nx = mx + ox
+                    Dim ny = my + oy
+                    Dim x = targetLeft + nx
+                    Dim y = targetTop + ny
+                    If x < 0 OrElse y < 0 OrElse x >= work.Width OrElse y >= work.Height Then Continue For
+                    If nx >= 0 AndAlso ny >= 0 AndAlso nx < width AndAlso ny < height AndAlso
+                       Not filled(ny * width + nx) Then Continue For
+
+                    Dim distance = Math.Max(Math.Abs(ox), Math.Abs(oy))
+                    Dim weight = If(distance <= 1, 4, 1)
+                    Dim c = work.GetPixel(x, y)
+                    sr += CInt(c.Red) * weight
+                    sg += CInt(c.Green) * weight
+                    sb += CInt(c.Blue) * weight
+                    sa += CInt(c.Alpha) * weight
+                    weightSum += weight
+                Next
+            Next
+
+            If weightSum = 0 Then Return Nothing
+            Return New SKColor(CByte(sr \ weightSum), CByte(sg \ weightSum),
+                               CByte(sb \ weightSum), CByte(sa \ weightSum))
+        End Function
+
+        Private Shared Function AverageUnmaskedRays(work As SKBitmap, maskAlpha As Byte(),
+                                                    targetLeft As Integer, targetTop As Integer,
+                                                    width As Integer, height As Integer,
+                                                    mx As Integer, my As Integer) As SKColor?
+            Dim directions = {
+                (X:=0, Y:=-1, Weight:=7),
+                (X:=-1, Y:=0, Weight:=5),
+                (X:=1, Y:=0, Weight:=5),
+                (X:=0, Y:=1, Weight:=4),
+                (X:=-1, Y:=-1, Weight:=3),
+                (X:=1, Y:=-1, Weight:=3),
+                (X:=-1, Y:=1, Weight:=2),
+                (X:=1, Y:=1, Weight:=2)
+            }
+            Dim samples As New List(Of (Color As SKColor, Weight As Integer))()
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
+            Dim weightSum = 0
+            Dim maxDistance = Math.Max(width, height)
+
+            For Each direction In directions
+                For distance = 1 To maxDistance
+                    Dim nx = mx + direction.X * distance
+                    Dim ny = my + direction.Y * distance
+                    Dim x = targetLeft + nx
+                    Dim y = targetTop + ny
+                    If x < 0 OrElse y < 0 OrElse x >= work.Width OrElse y >= work.Height Then Exit For
+
+                    If nx >= 0 AndAlso ny >= 0 AndAlso nx < width AndAlso ny < height AndAlso
+                       maskAlpha(ny * width + nx) > 8 Then Continue For
+
+                    Dim weight = Math.Max(1, (direction.Weight * 256) \ (distance * distance))
+                    Dim c = work.GetPixel(x, y)
+                    samples.Add((c, weight))
+                    Exit For
+                Next
+            Next
+
+            If samples.Count = 0 Then Return Nothing
+            Dim median = MedianSampleColor(samples)
+            Dim accepted = 0
+            For Each sample In samples
+                If samples.Count > 3 AndAlso ColorDistanceSquared(sample.Color, median) > 62 * 62 Then Continue For
+                sr += CInt(sample.Color.Red) * sample.Weight
+                sg += CInt(sample.Color.Green) * sample.Weight
+                sb += CInt(sample.Color.Blue) * sample.Weight
+                sa += CInt(sample.Color.Alpha) * sample.Weight
+                weightSum += sample.Weight
+                accepted += 1
+            Next
+
+            If accepted = 0 Then
+                For Each sample In samples
+                    sr += CInt(sample.Color.Red) * sample.Weight
+                    sg += CInt(sample.Color.Green) * sample.Weight
+                    sb += CInt(sample.Color.Blue) * sample.Weight
+                    sa += CInt(sample.Color.Alpha) * sample.Weight
+                    weightSum += sample.Weight
+                Next
+            End If
+
+            If weightSum = 0 Then Return Nothing
+            Return New SKColor(CByte(sr \ weightSum), CByte(sg \ weightSum),
+                               CByte(sb \ weightSum), CByte(sa \ weightSum))
+        End Function
+
+        Private Shared Function MedianSampleColor(samples As List(Of (Color As SKColor, Weight As Integer))) As SKColor
+            Dim reds As New List(Of Integer)(samples.Count)
+            Dim greens As New List(Of Integer)(samples.Count)
+            Dim blues As New List(Of Integer)(samples.Count)
+            Dim alphas As New List(Of Integer)(samples.Count)
+            For Each sample In samples
+                reds.Add(sample.Color.Red)
+                greens.Add(sample.Color.Green)
+                blues.Add(sample.Color.Blue)
+                alphas.Add(sample.Color.Alpha)
+            Next
+            reds.Sort()
+            greens.Sort()
+            blues.Sort()
+            alphas.Sort()
+            Dim mid = samples.Count \ 2
+            Return New SKColor(CByte(reds(mid)), CByte(greens(mid)), CByte(blues(mid)), CByte(alphas(mid)))
+        End Function
+
+        Private Shared Function FindHealingRegionPatch(source As SKBitmap, mask As SKBitmap,
+                                                       targetLeft As Integer, targetTop As Integer,
+                                                       width As Integer, height As Integer,
+                                                       radius As Single,
+                                                       targetAverage As SKColor) As (Left As Integer, Top As Integer, Average As SKColor, Found As Boolean)
+            Dim cx = targetLeft + width / 2.0F
+            Dim cy = targetTop + height / 2.0F
+            Dim reach = Math.Max(width, height) / 2.0F + radius
+            Dim distances = {Math.Max(reach * 1.12F, radius * 1.65F),
+                             Math.Max(reach * 1.38F, radius * 2.05F),
+                             Math.Max(reach * 1.68F, radius * 2.55F)}
+            Dim bestLeft = 0
+            Dim bestTop = 0
+            Dim bestAverage = SKColors.Transparent
+            Dim bestScore = Double.MaxValue
+            Dim found = False
+            Dim targetStats = SampleRingPatchStats(source, cx, cy, Math.Max(width, height) * 0.55F, Math.Max(width, height) * 0.95F)
+
+            Dim avoid = New SKRectI(Math.Max(0, targetLeft - CInt(Math.Ceiling(radius))),
+                                    Math.Max(0, targetTop - CInt(Math.Ceiling(radius))),
+                                    Math.Min(source.Width, targetLeft + width + CInt(Math.Ceiling(radius))),
+                                    Math.Min(source.Height, targetTop + height + CInt(Math.Ceiling(radius))))
+
+            For Each distance In distances
+                For i = 0 To 31
+                    Dim angle = (Math.PI * 2.0 * i) / 24.0
+                    Dim sampleCenterX = cx + CSng(Math.Cos(angle) * distance)
+                    Dim sampleCenterY = cy + CSng(Math.Sin(angle) * distance)
+                    Dim sampleLeft = CInt(Math.Round(sampleCenterX - width / 2.0F))
+                    Dim sampleTop = CInt(Math.Round(sampleCenterY - height / 2.0F))
+                    Dim sampleRect = New SKRectI(sampleLeft, sampleTop, sampleLeft + width, sampleTop + height)
+                    If sampleRect.Left < 0 OrElse sampleRect.Top < 0 OrElse
+                       sampleRect.Right >= source.Width OrElse sampleRect.Bottom >= source.Height Then Continue For
+                    If RectsIntersect(avoid, sampleRect) Then Continue For
+
+                    Dim stats = SampleMaskedSourceStats(source, mask, sampleLeft, sampleTop)
+                    If stats.Count <= 0 Then Continue For
+                    Dim boundaryScore = RegionBoundaryScore(source, targetLeft, targetTop, sampleLeft, sampleTop, width, height)
+                    Dim colorDistance = ColorDistanceSquared(stats.Average, targetAverage)
+                    Dim varianceDelta = If(targetStats.Count > 0, Math.Abs(stats.Variance - targetStats.Variance), 0.0)
+                    Dim outlierPenalty = MaskedPatchOutlierPenalty(source, mask, sampleLeft, sampleTop, targetAverage)
+                    Dim textureBonus = If(targetStats.Count > 0 AndAlso targetStats.Variance > 120.0,
+                                          Math.Min(stats.Variance, targetStats.Variance) * 0.22,
+                                          0.0)
+                    Dim score = boundaryScore * 1.7 + colorDistance * 0.5 + varianceDelta * 0.035 + outlierPenalty - textureBonus
+                    If score < bestScore Then
+                        bestScore = score
+                        bestLeft = sampleLeft
+                        bestTop = sampleTop
+                        bestAverage = stats.Average
+                        found = True
+                    End If
+                Next
+            Next
+
+            Return (bestLeft, bestTop, bestAverage, found)
+        End Function
+
+        Private Shared Function RegionBoundaryScore(source As SKBitmap, targetLeft As Integer, targetTop As Integer,
+                                                    sampleLeft As Integer, sampleTop As Integer,
+                                                    width As Integer, height As Integer) As Double
+            Dim stepSize = Math.Max(2, CInt(Math.Round(Math.Max(width, height) / 12.0)))
+            Dim score = 0.0
+            Dim count = 0
+            For x = 0 To width - 1 Step stepSize
+                AddBoundaryPairScore(source, targetLeft + x, targetTop - 1, sampleLeft + x, sampleTop - 1, score, count)
+                AddBoundaryPairScore(source, targetLeft + x, targetTop + height, sampleLeft + x, sampleTop + height, score, count)
+            Next
+            For y = 0 To height - 1 Step stepSize
+                AddBoundaryPairScore(source, targetLeft - 1, targetTop + y, sampleLeft - 1, sampleTop + y, score, count)
+                AddBoundaryPairScore(source, targetLeft + width, targetTop + y, sampleLeft + width, sampleTop + y, score, count)
+            Next
+            If count = 0 Then Return Double.MaxValue
+            Return score / count
+        End Function
+
+        Private Shared Function RectsIntersect(a As SKRectI, b As SKRectI) As Boolean
+            Return a.Left < b.Right AndAlso b.Left < a.Right AndAlso
+                   a.Top < b.Bottom AndAlso b.Top < a.Bottom
+        End Function
+
+        Private Shared Sub AddBoundaryPairScore(source As SKBitmap, tx As Integer, ty As Integer,
+                                                sx As Integer, sy As Integer,
+                                                ByRef score As Double, ByRef count As Integer)
+            If tx < 0 OrElse ty < 0 OrElse tx >= source.Width OrElse ty >= source.Height OrElse
+               sx < 0 OrElse sy < 0 OrElse sx >= source.Width OrElse sy >= source.Height Then Return
+            score += ColorDistanceSquared(source.GetPixel(tx, ty), source.GetPixel(sx, sy))
+            count += 1
+        End Sub
+
+        Private Shared Sub DrawAdjustedHealingRegion(result As SKBitmap, source As SKBitmap, mask As SKBitmap,
+                                                     targetLeft As Integer, targetTop As Integer,
+                                                     sampleLeft As Integer, sampleTop As Integer,
+                                                     targetAverage As SKColor, sourceAverage As SKColor)
+            Dim dr = Math.Max(-56, Math.Min(56, CInt(targetAverage.Red) - CInt(sourceAverage.Red)))
+            Dim dg = Math.Max(-56, Math.Min(56, CInt(targetAverage.Green) - CInt(sourceAverage.Green)))
+            Dim db = Math.Max(-56, Math.Min(56, CInt(targetAverage.Blue) - CInt(sourceAverage.Blue)))
+
+            For maskY = 0 To mask.Height - 1
+                Dim y = targetTop + maskY
+                Dim sy = sampleTop + maskY
+                If y < 0 OrElse y >= result.Height OrElse sy < 0 OrElse sy >= source.Height Then Continue For
+                For mx = 0 To mask.Width - 1
+                    Dim maskAlpha = mask.GetPixel(mx, maskY).Alpha
+                    If maskAlpha = 0 Then Continue For
+
+                    Dim x = targetLeft + mx
+                    Dim sx = sampleLeft + mx
+                    If x < 0 OrElse x >= result.Width OrElse sx < 0 OrElse sx >= source.Width Then Continue For
+
+                    Dim localAlpha = maskAlpha / 255.0F
+                    Dim sample = source.GetPixel(sx, sy)
+                    sample = SuppressHealingOutlier(sample, sourceAverage, targetAverage)
+                    Dim target = result.GetPixel(x, y)
+                    If ColorDistanceSquared(target, targetAverage) > 90 * 90 Then
+                        localAlpha = 1.0F
+                    End If
+
+                    result.SetPixel(x, y, New SKColor(
+                        BlendByte(target.Red, ClampByte(CInt(sample.Red) + dr), localAlpha),
+                        BlendByte(target.Green, ClampByte(CInt(sample.Green) + dg), localAlpha),
+                        BlendByte(target.Blue, ClampByte(CInt(sample.Blue) + db), localAlpha),
+                        BlendByte(target.Alpha, sample.Alpha, localAlpha)))
+                Next
+            Next
+        End Sub
+
+        Private Shared Function FindHealingPatch(source As SKBitmap, cx As Single, cy As Single, radius As Single,
+                                                 targetColor As SKColor) As (Center As SKPoint, Average As SKColor, Found As Boolean)
+            If source Is Nothing OrElse source.Width <= 0 OrElse source.Height <= 0 Then Return (New SKPoint(0, 0), SKColors.Transparent, False)
+
+            Dim patchRadius = Math.Max(2.0F, radius * 0.82F)
+            Dim distances = {Math.Max(radius * 2.25F, radius + 8.0F), radius * 3.0F, radius * 3.85F}
+            Dim targetStats = SampleRingPatchStats(source, cx, cy, radius * 1.05F, radius * 1.75F)
+            Dim best = New SKPoint(0, 0)
+            Dim bestAverage = SKColors.Transparent
+            Dim bestScore = Double.MaxValue
+            Dim found = False
+
+            For Each sampleDistance In distances
+                For i = 0 To 15
+                    Dim angle = (Math.PI * 2.0 * i) / 16.0
+                    Dim candidate = New SKPoint(cx + CSng(Math.Cos(angle) * sampleDistance),
+                                                cy + CSng(Math.Sin(angle) * sampleDistance))
+
+                    If candidate.X - patchRadius < 0 OrElse candidate.Y - patchRadius < 0 OrElse
+                       candidate.X + patchRadius >= source.Width OrElse candidate.Y + patchRadius >= source.Height Then Continue For
+
+                    Dim overlapDx = candidate.X - cx
+                    Dim overlapDy = candidate.Y - cy
+                    If overlapDx * overlapDx + overlapDy * overlapDy < (radius * 2.12F) * (radius * 2.12F) Then Continue For
+
+                    Dim boundaryScore = HealingBoundaryScore(source, cx, cy, candidate.X, candidate.Y, radius)
+                    If boundaryScore = Double.MaxValue Then Continue For
+
+                    Dim quickStats = SamplePatchStats(source, candidate.X, candidate.Y, Math.Max(2.0F, radius * 0.38F))
+                    If quickStats.Count <= 0 Then Continue For
+                    Dim outlierPenalty = PatchOutlierPenalty(source, candidate.X, candidate.Y, patchRadius, targetColor)
+
+                    Dim stats = quickStats
+                    If boundaryScore < bestScore * 0.8 OrElse Not found Then
+                        stats = SamplePatchStats(source, candidate.X, candidate.Y, patchRadius)
+                        If stats.Count <= 0 Then Continue For
+                    End If
+
+                    Dim colorDistance = ColorDistanceSquared(stats.Average, targetColor)
+                    Dim varianceDelta = If(targetStats.Count > 0, Math.Abs(stats.Variance - targetStats.Variance), stats.Variance)
+                    Dim score = boundaryScore * 1.85 + colorDistance * 0.45 + varianceDelta * 0.06 + outlierPenalty
+                    If score < bestScore Then
+                        bestScore = score
+                        best = candidate
+                        bestAverage = stats.Average
+                        found = True
+                    End If
+                Next
+            Next
+
+            Return (best, bestAverage, found)
+        End Function
+
+        Private Shared Function HealingBoundaryScore(source As SKBitmap, cx As Single, cy As Single,
+                                                     sx As Single, sy As Single, radius As Single) As Double
+            Dim samples = 20
+            Dim score = 0.0
+            Dim count = 0
+            For i = 0 To samples - 1
+                Dim angle = (Math.PI * 2.0 * i) / samples
+                Dim dx = CSng(Math.Cos(angle))
+                Dim dy = CSng(Math.Sin(angle))
+                Dim tx = CInt(Math.Round(cx + dx * radius * 1.08F))
+                Dim ty = CInt(Math.Round(cy + dy * radius * 1.08F))
+                Dim px = CInt(Math.Round(sx + dx * radius * 0.92F))
+                Dim py = CInt(Math.Round(sy + dy * radius * 0.92F))
+                If tx < 0 OrElse ty < 0 OrElse tx >= source.Width OrElse ty >= source.Height OrElse
+                   px < 0 OrElse py < 0 OrElse px >= source.Width OrElse py >= source.Height Then Continue For
+
+                score += ColorDistanceSquared(source.GetPixel(tx, ty), source.GetPixel(px, py))
+                count += 1
+            Next
+            If count = 0 Then Return Double.MaxValue
+            Return score / count
+        End Function
+
+        Private Shared Sub DrawAdjustedHealingPatch(result As SKBitmap, source As SKBitmap,
+                                                    cx As Single, cy As Single, sx As Single, sy As Single,
+                                                    radius As Single, flow As Single,
+                                                    targetAverage As SKColor, sourceAverage As SKColor)
+            If result Is Nothing OrElse source Is Nothing OrElse flow <= 0.001F Then Return
+
+            Dim left = Math.Max(0, CInt(Math.Floor(cx - radius)))
+            Dim top = Math.Max(0, CInt(Math.Floor(cy - radius)))
+            Dim right = Math.Min(result.Width - 1, CInt(Math.Ceiling(cx + radius)))
+            Dim bottom = Math.Min(result.Height - 1, CInt(Math.Ceiling(cy + radius)))
+            If right < left OrElse bottom < top Then Return
+
+            Dim radiusSq = radius * radius
+            Dim hardRadius = radius * 0.74F
+            Dim hardSq = hardRadius * hardRadius
+            Dim featherRange = Math.Max(0.001F, radius - hardRadius)
+            Dim dr = CInt(targetAverage.Red) - CInt(sourceAverage.Red)
+            Dim dg = CInt(targetAverage.Green) - CInt(sourceAverage.Green)
+            Dim db = CInt(targetAverage.Blue) - CInt(sourceAverage.Blue)
+            dr = Math.Max(-56, Math.Min(56, dr))
+            dg = Math.Max(-56, Math.Min(56, dg))
+            db = Math.Max(-56, Math.Min(56, db))
+
+            For y = top To bottom
+                Dim dy = CSng(y) - cy
+                For x = left To right
+                    Dim dx = CSng(x) - cx
+                    Dim distSq = dx * dx + dy * dy
+                    If distSq > radiusSq Then Continue For
+
+                    Dim srcX = CInt(Math.Round(sx + dx))
+                    Dim srcY = CInt(Math.Round(sy + dy))
+                    If srcX < 0 OrElse srcY < 0 OrElse srcX >= source.Width OrElse srcY >= source.Height Then Continue For
+
+                    Dim distance = CSng(Math.Sqrt(distSq))
+                    Dim localAlpha = flow
+                    If distSq > hardSq Then
+                        localAlpha *= Clamp((radius - distance) / featherRange, 0.0F, 1.0F)
+                    End If
+                    Dim sample = source.GetPixel(srcX, srcY)
+                    sample = SuppressHealingOutlier(sample, sourceAverage, targetAverage)
+                    Dim target = result.GetPixel(x, y)
+                    If ColorDistanceSquared(target, targetAverage) > 90 * 90 Then
+                        localAlpha = Math.Max(localAlpha, flow * 0.9F)
+                    End If
+                    If localAlpha <= 0.001F Then Continue For
+
+                    result.SetPixel(x, y, New SKColor(
+                        BlendByte(target.Red, ClampByte(CInt(sample.Red) + dr), localAlpha),
+                        BlendByte(target.Green, ClampByte(CInt(sample.Green) + dg), localAlpha),
+                        BlendByte(target.Blue, ClampByte(CInt(sample.Blue) + db), localAlpha),
+                        BlendByte(target.Alpha, sample.Alpha, localAlpha)))
+                Next
+            Next
+        End Sub
+
+        Private Shared Function PatchOutlierPenalty(source As SKBitmap, cx As Single, cy As Single,
+                                                    radius As Single, targetAverage As SKColor) As Double
+            Dim stepSize = Math.Max(1, CInt(Math.Round(radius / 2.0F)))
+            Dim radiusSq = radius * radius
+            Dim outliers = 0
+            Dim count = 0
+            For y = Math.Max(0, CInt(Math.Floor(cy - radius))) To Math.Min(source.Height - 1, CInt(Math.Ceiling(cy + radius))) Step stepSize
+                Dim dy = CSng(y) - cy
+                For x = Math.Max(0, CInt(Math.Floor(cx - radius))) To Math.Min(source.Width - 1, CInt(Math.Ceiling(cx + radius))) Step stepSize
+                    Dim dx = CSng(x) - cx
+                    If dx * dx + dy * dy > radiusSq Then Continue For
+                    count += 1
+                    If ColorDistanceSquared(source.GetPixel(x, y), targetAverage) > 90 * 90 Then outliers += 1
+                Next
+            Next
+            If count = 0 Then Return 1000000.0
+            Dim ratio = CDbl(outliers) / count
+            Return ratio * ratio * 180000.0
+        End Function
+
+        Private Shared Function SampleMaskedSourceStats(source As SKBitmap, mask As SKBitmap,
+                                                        sampleLeft As Integer, sampleTop As Integer) As (Average As SKColor, Variance As Double, Count As Integer)
+            Dim stepSize = Math.Max(1, CInt(Math.Round(Math.Max(mask.Width, mask.Height) / 18.0)))
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0
+            Dim sr2 As Long = 0, sg2 As Long = 0, sb2 As Long = 0
+            Dim count = 0
+            For maskY = 0 To mask.Height - 1 Step stepSize
+                Dim sy = sampleTop + maskY
+                If sy < 0 OrElse sy >= source.Height Then Continue For
+                For mx = 0 To mask.Width - 1 Step stepSize
+                    If mask.GetPixel(mx, maskY).Alpha < 24 Then Continue For
+                    Dim sx = sampleLeft + mx
+                    If sx < 0 OrElse sx >= source.Width Then Continue For
+                    Dim c = source.GetPixel(sx, sy)
+                    sr += c.Red : sg += c.Green : sb += c.Blue
+                    sr2 += CInt(c.Red) * CInt(c.Red)
+                    sg2 += CInt(c.Green) * CInt(c.Green)
+                    sb2 += CInt(c.Blue) * CInt(c.Blue)
+                    count += 1
+                Next
+            Next
+            If count = 0 Then Return (SKColors.Transparent, Double.MaxValue, 0)
+            Dim ar = CDbl(sr) / count
+            Dim ag = CDbl(sg) / count
+            Dim ab = CDbl(sb) / count
+            Dim variance = Math.Max(0.0, (CDbl(sr2) / count - ar * ar) +
+                                     (CDbl(sg2) / count - ag * ag) +
+                                     (CDbl(sb2) / count - ab * ab))
+            Return (New SKColor(CByte(Math.Round(ar)), CByte(Math.Round(ag)), CByte(Math.Round(ab))), variance, count)
+        End Function
+
+        Private Shared Function MaskedPatchOutlierPenalty(source As SKBitmap, mask As SKBitmap,
+                                                          sampleLeft As Integer, sampleTop As Integer,
+                                                          targetAverage As SKColor) As Double
+            Dim stepSize = Math.Max(1, CInt(Math.Round(Math.Max(mask.Width, mask.Height) / 16.0)))
+            Dim outliers = 0
+            Dim count = 0
+            For maskY = 0 To mask.Height - 1 Step stepSize
+                Dim sy = sampleTop + maskY
+                If sy < 0 OrElse sy >= source.Height Then Continue For
+                For mx = 0 To mask.Width - 1 Step stepSize
+                    If mask.GetPixel(mx, maskY).Alpha < 24 Then Continue For
+                    Dim sx = sampleLeft + mx
+                    If sx < 0 OrElse sx >= source.Width Then Continue For
+                    count += 1
+                    If ColorDistanceSquared(source.GetPixel(sx, sy), targetAverage) > 92 * 92 Then outliers += 1
+                Next
+            Next
+            If count = 0 Then Return 1000000.0
+            Dim ratio = CDbl(outliers) / count
+            Return ratio * ratio * 220000.0
+        End Function
+
+        Private Shared Function AverageRegionSurroundingColor(source As SKBitmap, mask As SKBitmap,
+                                                              left As Integer, top As Integer,
+                                                              radius As Single) As SKColor?
+            Dim reach = Math.Max(3, CInt(Math.Ceiling(radius * 1.5F)))
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
+            Dim count = 0
+            Dim minX = Math.Max(0, left - reach)
+            Dim minY = Math.Max(0, top - reach)
+            Dim maxX = Math.Min(source.Width - 1, left + mask.Width + reach)
+            Dim maxY = Math.Min(source.Height - 1, top + mask.Height + reach)
+            For y = minY To maxY
+                For x = minX To maxX
+                    Dim mx = x - left
+                    Dim my = y - top
+                    If mx >= 0 AndAlso my >= 0 AndAlso mx < mask.Width AndAlso my < mask.Height AndAlso
+                       mask.GetPixel(mx, my).Alpha > 0 Then Continue For
+
+                    Dim nearMask = False
+                    For oy = -reach To reach Step Math.Max(1, reach \ 3)
+                        If nearMask Then Exit For
+                        For ox = -reach To reach Step Math.Max(1, reach \ 3)
+                            Dim nx = mx + ox
+                            Dim ny = my + oy
+                            If nx >= 0 AndAlso ny >= 0 AndAlso nx < mask.Width AndAlso ny < mask.Height AndAlso
+                               mask.GetPixel(nx, ny).Alpha > 32 Then
+                                nearMask = True
+                                Exit For
+                            End If
+                        Next
+                    Next
+                    If Not nearMask Then Continue For
+
+                    Dim c = source.GetPixel(x, y)
+                    sr += c.Red : sg += c.Green : sb += c.Blue : sa += c.Alpha
+                    count += 1
+                Next
+            Next
+            If count = 0 Then Return Nothing
+            Return New SKColor(CByte(sr \ count), CByte(sg \ count), CByte(sb \ count), CByte(sa \ count))
+        End Function
+
+        Private Shared Function SuppressHealingOutlier(sample As SKColor, sourceAverage As SKColor, targetAverage As SKColor) As SKColor
+            If ColorDistanceSquared(sample, targetAverage) <= 92 * 92 Then Return sample
+
+            Dim repaired = New SKColor(
+                BlendByte(sample.Red, sourceAverage.Red, 0.78F),
+                BlendByte(sample.Green, sourceAverage.Green, 0.78F),
+                BlendByte(sample.Blue, sourceAverage.Blue, 0.78F),
+                sample.Alpha)
+            If ColorDistanceSquared(repaired, targetAverage) <= ColorDistanceSquared(sample, targetAverage) Then Return repaired
+            Return New SKColor(sourceAverage.Red, sourceAverage.Green, sourceAverage.Blue, sample.Alpha)
+        End Function
+
+        Private Shared Function SamplePatchStats(source As SKBitmap, cx As Single, cy As Single, radius As Single,
+                                                 Optional sourceBuffer As Byte() = Nothing,
+                                                 Optional sourceStride As Integer = 0,
+                                                 Optional hasBuffer As Boolean = False) As (Average As SKColor, Variance As Double, Count As Integer)
+            Dim stepSize = Math.Max(1, CInt(Math.Round(radius / 2.25F)))
+            Dim radiusSq = radius * radius
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0
+            Dim sr2 As Long = 0, sg2 As Long = 0, sb2 As Long = 0
+            Dim count = 0
+
+            For y = Math.Max(0, CInt(Math.Floor(cy - radius))) To Math.Min(source.Height - 1, CInt(Math.Ceiling(cy + radius))) Step stepSize
+                Dim dy = CSng(y) - cy
+                For x = Math.Max(0, CInt(Math.Floor(cx - radius))) To Math.Min(source.Width - 1, CInt(Math.Ceiling(cx + radius))) Step stepSize
+                    Dim dx = CSng(x) - cx
+                    If dx * dx + dy * dy > radiusSq Then Continue For
+                    Dim c = ReadPixel(source, x, y, sourceBuffer, sourceStride, hasBuffer)
+                    sr += c.Red : sg += c.Green : sb += c.Blue
+                    sr2 += CInt(c.Red) * CInt(c.Red)
+                    sg2 += CInt(c.Green) * CInt(c.Green)
+                    sb2 += CInt(c.Blue) * CInt(c.Blue)
+                    count += 1
+                Next
+            Next
+
+            If count = 0 Then Return (SKColors.Transparent, Double.MaxValue, 0)
+            Dim ar = CDbl(sr) / count
+            Dim ag = CDbl(sg) / count
+            Dim ab = CDbl(sb) / count
+            Dim variance = Math.Max(0.0, (CDbl(sr2) / count - ar * ar) +
+                                     (CDbl(sg2) / count - ag * ag) +
+                                     (CDbl(sb2) / count - ab * ab))
+            Return (New SKColor(CByte(Math.Round(ar)), CByte(Math.Round(ag)), CByte(Math.Round(ab))), variance, count)
+        End Function
+
+        Private Shared Function SampleRingPatchStats(source As SKBitmap, cx As Single, cy As Single,
+                                                     innerRadius As Single, outerRadius As Single) As (Average As SKColor, Variance As Double, Count As Integer)
+            Dim stepSize = Math.Max(1, CInt(Math.Round((outerRadius - innerRadius) / 1.5F)))
+            Dim innerSq = innerRadius * innerRadius
+            Dim outerSq = outerRadius * outerRadius
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0
+            Dim sr2 As Long = 0, sg2 As Long = 0, sb2 As Long = 0
+            Dim count = 0
+
+            For y = Math.Max(0, CInt(Math.Floor(cy - outerRadius))) To Math.Min(source.Height - 1, CInt(Math.Ceiling(cy + outerRadius))) Step stepSize
+                Dim dy = CSng(y) - cy
+                For x = Math.Max(0, CInt(Math.Floor(cx - outerRadius))) To Math.Min(source.Width - 1, CInt(Math.Ceiling(cx + outerRadius))) Step stepSize
+                    Dim dx = CSng(x) - cx
+                    Dim dSq = dx * dx + dy * dy
+                    If dSq < innerSq OrElse dSq > outerSq Then Continue For
+                    Dim c = source.GetPixel(x, y)
+                    sr += c.Red : sg += c.Green : sb += c.Blue
+                    sr2 += CInt(c.Red) * CInt(c.Red)
+                    sg2 += CInt(c.Green) * CInt(c.Green)
+                    sb2 += CInt(c.Blue) * CInt(c.Blue)
+                    count += 1
+                Next
+            Next
+
+            If count = 0 Then Return (SKColors.Transparent, Double.MaxValue, 0)
+            Dim ar = CDbl(sr) / count
+            Dim ag = CDbl(sg) / count
+            Dim ab = CDbl(sb) / count
+            Dim variance = Math.Max(0.0, (CDbl(sr2) / count - ar * ar) +
+                                     (CDbl(sg2) / count - ag * ag) +
+                                     (CDbl(sb2) / count - ab * ab))
+            Return (New SKColor(CByte(Math.Round(ar)), CByte(Math.Round(ag)), CByte(Math.Round(ab))), variance, count)
+        End Function
+
+        Private Shared Function ReadPixel(source As SKBitmap, x As Integer, y As Integer,
+                                          sourceBuffer As Byte(), sourceStride As Integer, hasBuffer As Boolean) As SKColor
+            If hasBuffer AndAlso sourceBuffer IsNot Nothing AndAlso sourceStride > 0 Then
+                Dim index = y * sourceStride + x * 4
+                Return New SKColor(sourceBuffer(index + 2), sourceBuffer(index + 1), sourceBuffer(index), sourceBuffer(index + 3))
+            End If
+            Return source.GetPixel(x, y)
+        End Function
+
+        Private Shared Function ColorDistanceSquared(a As SKColor, b As SKColor) As Double
+            Dim dr = CInt(a.Red) - CInt(b.Red)
+            Dim dg = CInt(a.Green) - CInt(b.Green)
+            Dim db = CInt(a.Blue) - CInt(b.Blue)
+            Return dr * dr + dg * dg + db * db
+        End Function
+
         ''' Mittelt den Ring zwischen dem 1,25- und dem 2-fachen Radius um das Ziel - der Rückfall,
         ''' wenn keine Klonquelle gesetzt wurde. Liefert Nothing, wenn der Ring komplett außerhalb
         ''' des Bildes liegt.
-        Private Shared Function AverageSurroundingColor(source As SKBitmap, cx As Single, cy As Single, radius As Single) As SKColor?
-            Dim inner = radius * 1.25F
-            Dim outer = radius * 2.0F
+        Private Shared Function AverageSurroundingColor(source As SKBitmap, cx As Single, cy As Single, radius As Single,
+                                                        Optional innerFactor As Single = 1.25F,
+                                                        Optional outerFactor As Single = 2.0F) As SKColor?
+            Dim inner = radius * innerFactor
+            Dim outer = radius * outerFactor
             Dim innerSq = inner * inner
             Dim outerSq = outer * outer
 
@@ -2130,6 +3591,16 @@ Namespace Services
             Next
             If count = 0 Then Return Nothing
             Return New SKColor(CByte(sr \ count), CByte(sg \ count), CByte(sb \ count), CByte(sa \ count))
+        End Function
+
+        Private Shared Function ClampByte(value As Integer) As Byte
+            If value <= 0 Then Return 0
+            If value >= 255 Then Return 255
+            Return CByte(value)
+        End Function
+
+        Private Shared Function BlendByte(dst As Byte, src As Byte, alpha As Single) As Byte
+            Return ClampByte(CInt(Math.Round(dst + (CInt(src) - CInt(dst)) * alpha)))
         End Function
 
         Private Shared Function ApplyResize(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
@@ -2272,27 +3743,6 @@ Namespace Services
                 scaleY = source.Height / CSng(adj.SourceHeightPixels)
             End If
 
-            ' Pinsel- und Radiergummi-Striche werden zuerst auf einer eigenen transparenten
-            ' Ebene komponiert, damit der Radiergummi (SKBlendMode.DstOut) nur vorherige Striche
-            ' entfernt und nicht das Foto darunter.
-            Dim paintLayer As SKBitmap = Nothing
-            If adj.Annotations.Any(Function(a) a IsNot Nothing AndAlso a.IsVisible AndAlso IsPaintKind(a.Kind)) Then
-                paintLayer = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
-                Using paintCanvas = New SKCanvas(paintLayer)
-                    paintCanvas.Clear(SKColors.Transparent)
-                    For Each annotation In adj.Annotations
-                        If annotation Is Nothing OrElse Not annotation.IsVisible OrElse Not IsPaintKind(annotation.Kind) Then Continue For
-                        Dim renderAnnotation = ScaleAnnotationForSource(annotation, scaleX, scaleY)
-                        Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
-                        Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
-                        Dim strokeWidth = Math.Max(1.0F, Clamp(renderAnnotation.StrokeWidth, 1, Math.Max(source.Width, source.Height)))
-                        Dim isEraser = annotation.Kind.Trim().ToLowerInvariant() = "eraser"
-                        DrawBrushStroke(paintCanvas, renderAnnotation.Strokes, source.Width, source.Height, stroke, strokeWidth, renderAnnotation.HardnessPercent, renderAnnotation.FlowPercent, isEraser)
-                    Next
-                End Using
-            End If
-
-            Dim paintLayerDrawn = False
             Using canvas = New SKCanvas(result)
                 For Each annotation In adj.Annotations
                     If annotation Is Nothing OrElse Not annotation.IsVisible Then Continue For
@@ -2300,10 +3750,16 @@ Namespace Services
                     Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
 
                     If IsPaintKind(kind) Then
-                        If Not paintLayerDrawn AndAlso paintLayer IsNot Nothing Then
-                            canvas.DrawBitmap(paintLayer, 0, 0)
-                            paintLayerDrawn = True
+                        Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
+                        Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
+                        Dim strokeWidth = Math.Max(1.0F, Clamp(renderAnnotation.StrokeWidth, 1, Math.Max(source.Width, source.Height)))
+                        Dim isEraser = kind = "eraser"
+                        Dim eraserFill As SKColor? = Nothing
+                        If isEraser AndAlso Not String.IsNullOrWhiteSpace(renderAnnotation.EraserFillColor) Then
+                            eraserFill = ApplyAlpha(ParseColor(renderAnnotation.EraserFillColor, SKColors.Transparent), alphaFactor)
                         End If
+                        DrawBrushStroke(canvas, renderAnnotation.Strokes, source.Width, source.Height, stroke, strokeWidth,
+                                        renderAnnotation.HardnessPercent, renderAnnotation.FlowPercent, isEraser, eraserFill)
                         Continue For
                     End If
 
@@ -2335,7 +3791,6 @@ Namespace Services
                     End If
                 Next
             End Using
-            paintLayer?.Dispose()
             Return result
         End Function
 
@@ -3243,23 +4698,32 @@ Namespace Services
         ''' gesammelt, statt für jeden eine eigene Ebene anzulegen) sind im Punktestring per ";"
         ''' getrennt und werden hier als eigenständige Teilpfade (je ein eigenes MoveTo) gezeichnet -
         ''' eine einzige durchgehende Linie würde sie sonst fälschlich miteinander verbinden.
-        Private Shared Sub DrawBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, stroke As SKColor, strokeWidth As Single, hardnessPercent As Single, flowPercent As Single, isEraser As Boolean)
+        Private Shared Sub DrawBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, stroke As SKColor, strokeWidth As Single, hardnessPercent As Single, flowPercent As Single, isEraser As Boolean, Optional eraserFill As SKColor? = Nothing)
             If strokes Is Nothing Then Return
 
             Dim resolvedStrokeWidth = Math.Max(1.0F, strokeWidth)
             Dim hardness = Clamp(hardnessPercent, 0, 100) / 100.0F
             Dim blurSigma = resolvedStrokeWidth * (1.0F - hardness) * 0.5F
             Dim flow = Clamp(flowPercent, 0, 100) / 100.0F
+            Dim paintColor = stroke
+            Dim blendMode = SKBlendMode.SrcOver
+            If isEraser Then
+                If eraserFill.HasValue AndAlso eraserFill.Value.Alpha > 0 Then
+                    paintColor = eraserFill.Value
+                Else
+                    blendMode = SKBlendMode.DstOut
+                End If
+            End If
 
             Using paint = New SKPaint With {
-                .Color = stroke.WithAlpha(CByte(stroke.Alpha * flow)),
+                .Color = paintColor.WithAlpha(CByte(paintColor.Alpha * flow)),
                 .Style = SKPaintStyle.Stroke,
                 .StrokeWidth = resolvedStrokeWidth,
                 .StrokeCap = SKStrokeCap.Round,
                 .StrokeJoin = SKStrokeJoin.Round,
                 .IsAntialias = True
             }
-                If isEraser Then paint.BlendMode = SKBlendMode.DstOut
+                paint.BlendMode = blendMode
                 If blurSigma > 0.05F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, blurSigma)
 
                 For Each brushStroke In strokes

@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.SharpnessPanel">
-    <Expander Header="Schärfe" IsExpanded="True">
+    <Expander Header="Schärfe und Weichzeichnen" IsExpanded="True">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -28,12 +28,33 @@
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
             <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                <TextBlock Text="Schärfe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                    Value="{Binding Sharpness}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Sharpness, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Weichzeichnen" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   Value="{Binding NoiseReduction}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding NoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+                <TextBlock Text="Methode" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <ComboBox Name="NoiseReductionMethodComboBox"
+                          Grid.Column="1"
+                          ItemsSource="{Binding NoiseReductionMethodOptions}"
+                          SelectedItem="{Binding NoiseReductionMethodLabel}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          Margin="6,0,0,0"
+                          HorizontalAlignment="Stretch"
+                          DropDownOpened="OnMatchWidthDropDownOpened"
+                          ToolTip.Tip="Gaussian: gleichmäßiges Weichzeichnen. Median: kantenerhaltend, echte Rauschunterdrückung." />
             </Grid>
         </StackPanel>
     </Expander>

@@ -19,6 +19,12 @@
                    FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Stretch">
             <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionModeCommand}" CommandParameter="Move"
+                    Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Move}"
+                    ToolTip.Tip="Verschieben">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pointer.svg" Width="16" Height="16" />
+            </Button>
+            <Button Classes="ghost" Padding="8,6"
                     Command="{Binding SetSelectionModeCommand}" CommandParameter="Rectangle"
                     Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Rectangle}"
                     ToolTip.Tip="Rechteck aufziehen">

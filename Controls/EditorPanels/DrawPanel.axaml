@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.DrawPanel">
-    <!-- Kopfzeile folgt dem gewählten Werkzeug: Pinsel, Radiergummi, Verwischen oder Stempel. -->
+    <!-- Kopfzeile folgt dem gewählten Werkzeug: Pinsel, Radiergummi, Verwischen, Reparaturpinsel oder Stempel. -->
     <Expander Header="{Binding CurrentToolLabel}" IsExpanded="True">
         <Expander.HeaderTemplate>
             <DataTemplate>
@@ -14,9 +14,9 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-        <!-- Die Werkzeugwahl (Pinsel, Radiergummi, Verwischen, Stempel) steht in der Werkzeugleiste
+        <!-- Die Werkzeugwahl (Pinsel, Radiergummi, Verwischen, Reparaturpinsel, Stempel) steht in der Werkzeugleiste
              links; hier stehen nur noch die Einstellungen des gewählten Werkzeugs. -->
-        <!-- Radius, Hinweis und Zurücksetzen gelten für Verwischen und Stempel gleichermaßen. -->
+        <!-- Radius, Hinweis und Zurücksetzen gelten für Verwischen, Reparaturpinsel und Stempel gleichermaßen. -->
         <StackPanel Spacing="2" IsVisible="{Binding ShowRetouchAdjustments}">
             <Grid ColumnDefinitions="74,*,Auto,44" VerticalAlignment="Center">
                 <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -144,6 +144,12 @@
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:ColorPickerButton Grid.Column="1"
                                          SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="74,*" VerticalAlignment="Top" IsVisible="{Binding IsEraserPaintMode}">
+                <TextBlock Text="Hintergrundfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:ColorPickerButton Grid.Column="1"
+                                         SelectedColor="{Binding EraserFillColorValue, Mode=TwoWay}" />
             </Grid>
         </StackPanel>
         </StackPanel>

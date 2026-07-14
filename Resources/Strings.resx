@@ -2820,4 +2820,13 @@
   <data name="Symbole_1030a110" xml:space="preserve">
     <value>Symbols</value>
   </data>
+  <data name="Reparaturpinsel_27ce0d94" xml:space="preserve">
+    <value>Repair brush</value>
+  </data>
+  <data name="Details_und_Effekte_bd11dba4" xml:space="preserve">
+    <value>Details and effects</value>
+  </data>
+  <data name="Sch_rfe_und_Weichzeichnen_3b02f909" xml:space="preserve">
+    <value>Sharpness and softening</value>
+  </data>
 </root>

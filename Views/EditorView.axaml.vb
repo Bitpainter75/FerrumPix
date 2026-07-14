@@ -69,6 +69,7 @@ Namespace Views
         Private _textRotateStartRotation As Double
         Private _textRotateCenter As Avalonia.Point
         Private _isBrushDrawing As Boolean = False
+        Private _hideBrushPreviewAfterBake As Boolean = False
         Private ReadOnly _brushPoints As New List(Of Avalonia.Point)()
         Private _isRetouching As Boolean = False
         Private _lastRetouchPoint As Avalonia.Point
@@ -95,6 +96,7 @@ Namespace Views
         Private Shared ReadOnly GuideBrush As IBrush = New SolidColorBrush(Color.Parse("#FF00C8FF"))
         Private Shared ReadOnly GuideCursorVertical As New Cursor(StandardCursorType.SizeWestEast)
         Private Shared ReadOnly GuideCursorHorizontal As New Cursor(StandardCursorType.SizeNorthSouth)
+        Private Shared ReadOnly TransparentEraserPreviewBrush As IBrush = BuildTransparentEraserPreviewBrush()
 
         Private ReadOnly _filmstripController As FilmstripInteractionController
 
@@ -542,12 +544,22 @@ Namespace Views
                     ResetZoomForNewGeometry(TryCast(sender, EditorViewModel))
                 Case NameOf(EditorViewModel.DisplayImage)
                     UpdateSliderLayout()
+                    HideBrushPreviewLineAfterBake()
+                Case NameOf(EditorViewModel.RetouchLivePatchImage),
+                     NameOf(EditorViewModel.HasRetouchLivePatch),
+                     NameOf(EditorViewModel.RetouchLivePatchLeftPercent),
+                     NameOf(EditorViewModel.RetouchLivePatchTopPercent),
+                     NameOf(EditorViewModel.RetouchLivePatchWidthPercent),
+                     NameOf(EditorViewModel.RetouchLivePatchHeightPercent)
+                    UpdateSliderLayout()
                 Case NameOf(EditorViewModel.ShowBeforeImage)
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.CurrentTool)
                     UpdateCropOverlayVisibility()
                     UpdateTextOverlayVisibility()
                     UpdateSelectionOverlayVisibility()
+                    _hideBrushPreviewAfterBake = False
+                    ShowBrushPreviewLine(False)
                 Case NameOf(EditorViewModel.SelectedAnnotationIndex),
                      NameOf(EditorViewModel.HasSelectedAnnotation)
                     UpdateTextOverlayVisibility()
@@ -714,6 +726,8 @@ Namespace Views
                 End If
             End If
 
+            PositionRetouchLivePatch(ix, iy, iw, ih, vm)
+
             Dim frame = Me.FindControl(Of Border)("ImageFrameBorder")
             If frame IsNot Nothing Then
                 Avalonia.Controls.Canvas.SetLeft(frame, ix)
@@ -766,6 +780,24 @@ Namespace Views
             UpdateGridOverlay()
         End Sub
 
+        Private Sub PositionRetouchLivePatch(ix As Double, iy As Double, iw As Double, ih As Double, vm As EditorViewModel)
+            Dim patch = Me.FindControl(Of Image)("RetouchLivePatchImage")
+            If patch Is Nothing OrElse vm Is Nothing Then Return
+
+            patch.IsVisible = vm.HasRetouchLivePatch
+            If Not vm.HasRetouchLivePatch Then Return
+
+            Dim left = ix + vm.RetouchLivePatchLeftPercent / 100.0 * iw
+            Dim top = iy + vm.RetouchLivePatchTopPercent / 100.0 * ih
+            Dim width = Math.Max(1.0, vm.RetouchLivePatchWidthPercent / 100.0 * iw)
+            Dim height = Math.Max(1.0, vm.RetouchLivePatchHeightPercent / 100.0 * ih)
+
+            Avalonia.Controls.Canvas.SetLeft(patch, left)
+            Avalonia.Controls.Canvas.SetTop(patch, top)
+            patch.Width = width
+            patch.Height = height
+        End Sub
+
         Private Sub OnSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             If canvas Is Nothing Then Return
@@ -773,7 +805,13 @@ Namespace Views
             Dim pointerPoint = e.GetCurrentPoint(Nothing)
 
             If pointerPoint.Properties.IsRightButtonPressed Then
-                ClearEditorSelections(vm)
+                Dim pos = e.GetPosition(canvas)
+                _panStartX = pos.X
+                _panStartY = pos.Y
+                _panStartOffsetX = _panX
+                _panStartOffsetY = _panY
+                _isPanDragging = True
+                e.Pointer.Capture(canvas)
                 e.Handled = True
                 Return
             End If
@@ -897,9 +935,25 @@ Namespace Views
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
                 Dim rawPos = e.GetPosition(canvas)
                 Dim pos = ClampPointToRect(rawPos, imageRect)
+                If vm.SelectionMode = "Move" Then
+                    Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
+                    Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
+                    Const hitSlopPixels As Double = 10.0
+                    Dim hitSlopXPercent = hitSlopPixels / imageRect.Width * 100.0
+                    Dim hitSlopYPercent = hitSlopPixels / imageRect.Height * 100.0
+                    Dim hitIndex = vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent)
+                    If hitIndex >= 0 Then
+                        vm.SelectedAnnotationIndex = hitIndex
+                        If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
+                        e.Handled = True
+                        Return
+                    ElseIf vm.HasSelectedAnnotation Then
+                        vm.SelectedAnnotationIndex = -1
+                    End If
+                End If
                 Dim clickedInsideSelection = vm.HasActiveSelection AndAlso vm.SelectionMode <> "MagicWand" AndAlso IsPointInsideSelection(rawPos, imageRect, vm)
                 If clickedInsideSelection Then
-                    If vm.SelectionCombineMode = "New" Then
+                    If vm.SelectionMode = "Move" OrElse vm.SelectionCombineMode = "New" Then
                         _isSelectionMoveDragging = True
                         _selectionMoveLastPoint = pos
                         e.Pointer.Capture(canvas)
@@ -911,10 +965,14 @@ Namespace Views
                 End If
                 _selectionDragReplacesExisting = vm.HasActiveSelection AndAlso
                                                  vm.SelectionMode <> "MagicWand" AndAlso
+                                                 vm.SelectionMode <> "Move" AndAlso
                                                  vm.SelectionCombineMode = "New" AndAlso
                                                  Not clickedInsideSelection
                 If _selectionDragReplacesExisting Then SetCurrentSelectionOverlayVisible(False)
                 Select Case vm.SelectionMode
+                    Case "Move"
+                        ' Verschieben ist der Default im Auswahlpanel: außerhalb einer bestehenden Auswahl
+                        ' wird keine neue Auswahl gestartet.
                     Case "MagicWand"
                         ' Einzelklick: zusammenhängende Farbfläche wählen (kein Ziehen).
                         Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
@@ -963,6 +1021,7 @@ Namespace Views
             If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Draw AndAlso String.IsNullOrEmpty(vm.PendingInsertKind) Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+                _hideBrushPreviewAfterBake = False
                 _brushPoints.Clear()
                 AddBrushPoint(e.GetPosition(canvas), imageRect)
                 _isBrushDrawing = True
@@ -1223,11 +1282,17 @@ Namespace Views
             If wasSelectionDragging OrElse wasLassoDrawing Then UpdateSelectionOverlayVisibility()
             If _isBrushDrawing Then
                 Dim vm = TryCast(DataContext, EditorViewModel)
-                vm?.AddBrushStroke(_brushPoints, vm.IsEraserMode)
+                Dim shouldWaitForBakedPreview = vm IsNot Nothing AndAlso _brushPoints.Count >= 2
+                If vm IsNot Nothing Then vm.AddBrushStroke(_brushPoints, vm.IsEraserMode)
                 _brushPoints.Clear()
-                ShowBrushPreviewLine(False)
+                _hideBrushPreviewAfterBake = shouldWaitForBakedPreview
+                If Not _hideBrushPreviewAfterBake Then ShowBrushPreviewLine(False)
             End If
             _isBrushDrawing = False
+            If _isRetouching Then
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                vm?.CommitRetouchStroke()
+            End If
             _isRetouching = False
             _cropDragMode = CropDragMode.None
             e.Pointer.Capture(Nothing)
@@ -1258,14 +1323,27 @@ Namespace Views
 
         Private Sub ShowBrushPreviewLine(visible As Boolean)
             Dim line = Me.FindControl(Of Polyline)("BrushPreviewLine")
-            If line Is Nothing Then Return
-            line.IsVisible = visible
-            If Not visible Then line.Points = New Avalonia.Collections.AvaloniaList(Of Avalonia.Point)()
+            Dim outline = Me.FindControl(Of Polyline)("BrushPreviewOutlineLine")
+            If line IsNot Nothing Then
+                line.IsVisible = visible
+                If Not visible Then line.Points = New Avalonia.Collections.AvaloniaList(Of Avalonia.Point)()
+            End If
+            If outline IsNot Nothing Then
+                outline.IsVisible = False
+                If Not visible Then outline.Points = New Avalonia.Collections.AvaloniaList(Of Avalonia.Point)()
+            End If
+        End Sub
+
+        Private Sub HideBrushPreviewLineAfterBake()
+            If Not _hideBrushPreviewAfterBake Then Return
+            _hideBrushPreviewAfterBake = False
+            ShowBrushPreviewLine(False)
         End Sub
 
         Private Sub UpdateBrushPreviewLine(imageRect As Avalonia.Rect, vm As EditorViewModel)
             If Not _isBrushDrawing Then Return
             Dim line = Me.FindControl(Of Polyline)("BrushPreviewLine")
+            Dim outline = Me.FindControl(Of Polyline)("BrushPreviewOutlineLine")
             If line Is Nothing OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
 
             Dim pts As New Avalonia.Collections.AvaloniaList(Of Avalonia.Point)()
@@ -1273,23 +1351,61 @@ Namespace Views
                 pts.Add(New Avalonia.Point(imageRect.Left + p.X / 100.0 * imageRect.Width, imageRect.Top + p.Y / 100.0 * imageRect.Height))
             Next
             line.Points = pts
+            If outline IsNot Nothing Then outline.Points = pts
 
             Dim isEraser = vm.IsEraserMode
             Dim scale = 1.0
             If vm.CurrentImage IsNot Nothing AndAlso vm.CurrentImage.PixelSize.Width > 0 AndAlso vm.CurrentImage.PixelSize.Height > 0 Then
                 scale = Math.Min(imageRect.Width / vm.CurrentImage.PixelSize.Width, imageRect.Height / vm.CurrentImage.PixelSize.Height)
             End If
-            line.StrokeThickness = Math.Max(1.0, vm.BrushSize * scale)
+            Dim strokeThickness = Math.Max(1.0, vm.BrushSize * scale)
+            line.StrokeThickness = strokeThickness
             If isEraser Then
-                line.Stroke = New SolidColorBrush(Colors.White)
+                Dim eraserFill = vm.EraserFillColorValue
+                If eraserFill.A <= 0 Then
+                    line.Stroke = TransparentEraserPreviewBrush
+                Else
+                    line.Stroke = New SolidColorBrush(eraserFill)
+                End If
                 line.StrokeDashArray = Nothing
-                line.Opacity = Math.Max(0.15, 0.85 * vm.BrushFlow / 100.0)
+                line.Opacity = Math.Max(0.15, Math.Min(1.0, vm.BrushFlow / 100.0))
+                If outline IsNot Nothing Then
+                    outline.IsVisible = True
+                    outline.Stroke = New SolidColorBrush(Color.Parse("#CC1A1D24"))
+                    outline.StrokeThickness = strokeThickness + 2.0
+                    outline.StrokeDashArray = Nothing
+                    outline.Opacity = 0.72
+                End If
             Else
                 line.Stroke = vm.AnnotationStrokeBrush
                 line.StrokeDashArray = Nothing
                 line.Opacity = Math.Max(0.15, (vm.BrushOpacity / 100.0) * (vm.BrushFlow / 100.0))
+                If outline IsNot Nothing Then outline.IsVisible = False
             End If
         End Sub
+
+        Private Shared Function BuildTransparentEraserPreviewBrush() As IBrush
+            Const tileSize As Double = 12.0
+            Dim half = tileSize / 2.0
+            Dim group As New DrawingGroup()
+            group.Children.Add(New GeometryDrawing With {
+                .Brush = New SolidColorBrush(Color.FromRgb(224, 224, 224)),
+                .Geometry = New RectangleGeometry(New Avalonia.Rect(0, 0, tileSize, tileSize))
+            })
+            group.Children.Add(New GeometryDrawing With {
+                .Brush = New SolidColorBrush(Color.FromRgb(142, 142, 142)),
+                .Geometry = New RectangleGeometry(New Avalonia.Rect(0, 0, half, half))
+            })
+            group.Children.Add(New GeometryDrawing With {
+                .Brush = New SolidColorBrush(Color.FromRgb(142, 142, 142)),
+                .Geometry = New RectangleGeometry(New Avalonia.Rect(half, half, half, half))
+            })
+            Return New DrawingBrush(group) With {
+                .TileMode = TileMode.Tile,
+                .Stretch = Stretch.None,
+                .DestinationRect = New RelativeRect(New Avalonia.Rect(0, 0, tileSize, tileSize), RelativeUnit.Absolute)
+            }
+        End Function
 
         Private Sub UpdateBrushCursorPreview(position As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel)
             Dim cursor = Me.FindControl(Of Ellipse)("BrushCursorPreview")
