@@ -28,7 +28,7 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
                 <TextBlock Text="Weißabgleich"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="NoWrap" />
@@ -40,7 +40,7 @@
                           Margin="6,0,0,0"
                           DropDownOpened="OnMatchWidthDropDownOpened" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Temperatur"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -49,7 +49,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Temperature, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
@@ -57,7 +57,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Tint, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Dynamik" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
@@ -65,7 +65,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Vibrance, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Sättigung"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

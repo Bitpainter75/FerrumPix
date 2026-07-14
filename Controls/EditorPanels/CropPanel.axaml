@@ -27,7 +27,7 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="74,*,62" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,62" VerticalAlignment="Center">
                 <TextBlock Text="Links" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0"
@@ -40,7 +40,7 @@
                                          Increment="1" FormatString="F0"
                                          ToolTip.Tip="Pixel, die links abgeschnitten werden" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,62" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,62" VerticalAlignment="Center">
                 <TextBlock Text="Oben" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0"
@@ -53,7 +53,7 @@
                                          Increment="1" FormatString="F0"
                                          ToolTip.Tip="Pixel, die oben abgeschnitten werden" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,62" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,62" VerticalAlignment="Center">
                 <TextBlock Text="Rechts" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0"
@@ -66,7 +66,7 @@
                                          Increment="1" FormatString="F0"
                                          ToolTip.Tip="Pixel, die rechts abgeschnitten werden" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,62" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,62" VerticalAlignment="Center">
                 <TextBlock Text="Unten" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0"
@@ -79,7 +79,7 @@
                                          Increment="1" FormatString="F0"
                                          ToolTip.Tip="Pixel, die unten abgeschnitten werden" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <NumericUpDown Classes="combo-like" Grid.Column="1"
@@ -89,7 +89,7 @@
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <NumericUpDown Classes="combo-like" Grid.Column="1"

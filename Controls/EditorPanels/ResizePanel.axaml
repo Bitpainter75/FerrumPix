@@ -2,7 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.ResizePanel">
-    <Expander Header="Bildgröße" IsExpanded="True">
+    <StackPanel Spacing="7">
+        <Border Classes="adjustment-group">
+            <Expander Header="Bildgröße" IsExpanded="True">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -27,7 +29,7 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <NumericUpDown Classes="combo-like" Grid.Column="1"
@@ -37,7 +39,7 @@
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <NumericUpDown Classes="combo-like" Grid.Column="1"
@@ -49,7 +51,7 @@
             </Grid>
             <CheckBox Content="Seitenverhältnis beibehalten"
                       IsChecked="{Binding LockResizeAspect}" FontSize="{DynamicResource FP.Font.Small}" />
-            <Grid ColumnDefinitions="90,*" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="108,*" VerticalAlignment="Center">
                 <TextBlock Text="Neuberechnung"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
@@ -140,7 +142,11 @@
                     <TextBlock Text="Bildgröße anwenden" />
                 </StackPanel>
             </Button>
-            <Separator Margin="0,4" />
+        </StackPanel>
+            </Expander>
+        </Border>
+
+        <Border Classes="adjustment-group">
             <Expander Header="Leinwand" IsExpanded="True">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
@@ -166,7 +172,7 @@
                     </DataTemplate>
                 </Expander.HeaderTemplate>
                 <StackPanel Spacing="8" Margin="0,8,0,0">
-                    <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                         <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <NumericUpDown Classes="combo-like" Grid.Column="1"
@@ -176,7 +182,7 @@
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     </Grid>
-                    <Grid ColumnDefinitions="74,*,Auto" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                         <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <NumericUpDown Classes="combo-like" Grid.Column="1"
@@ -188,14 +194,14 @@
                     </Grid>
                     <CheckBox Content="Seitenverhältnis beibehalten"
                               IsChecked="{Binding LockCanvasAspect}" FontSize="{DynamicResource FP.Font.Small}" />
-                    <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
                         <TextBlock Text="Hintergrund"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:ColorPickerButton Grid.Column="1"
                                                  SelectedColor="{Binding CanvasBackgroundColorValue, Mode=TwoWay}" />
                     </Grid>
-                    <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
                         <TextBlock Text="Position" Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Top" Margin="0,10,0,0" />
                         <Border Grid.Column="1" BorderBrush="{DynamicResource FP.Border.Normal}"
@@ -314,6 +320,6 @@
                     </Button>
                 </StackPanel>
             </Expander>
-        </StackPanel>
-    </Expander>
+        </Border>
+    </StackPanel>
 </UserControl>

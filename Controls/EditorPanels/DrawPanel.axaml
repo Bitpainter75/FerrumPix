@@ -18,7 +18,7 @@
              links; hier stehen nur noch die Einstellungen des gewählten Werkzeugs. -->
         <!-- Radius, Hinweis und Zurücksetzen gelten für Verwischen, Reparaturpinsel und Stempel gleichermaßen. -->
         <StackPanel Spacing="2" IsVisible="{Binding ShowRetouchAdjustments}">
-            <Grid ColumnDefinitions="74,*,Auto,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,Auto,44" VerticalAlignment="Center">
                 <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
@@ -41,7 +41,7 @@
                                          Minimum="1" Maximum="300" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -52,7 +52,7 @@
                                          Minimum="0" Maximum="100" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -63,7 +63,7 @@
                                          Minimum="0" Maximum="100" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Fluss" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -93,7 +93,7 @@
             </Grid>
         </StackPanel>
         <StackPanel Spacing="2" IsVisible="{Binding ShowBrushStrokeAdjustments}">
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
@@ -104,7 +104,7 @@
                                          Minimum="1" Maximum="300" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -115,7 +115,7 @@
                                          Minimum="0" Maximum="100" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Deckkraft"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -127,7 +127,7 @@
                                          Minimum="0" Maximum="100" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Fluss"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -139,13 +139,13 @@
                                          Minimum="0" Maximum="100" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Top" IsVisible="{Binding IsBrushPaintMode}">
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Top" IsVisible="{Binding IsBrushPaintMode}">
                 <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:ColorPickerButton Grid.Column="1"
                                          SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
             </Grid>
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Top" IsVisible="{Binding IsEraserPaintMode}">
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Top" IsVisible="{Binding IsEraserPaintMode}">
                 <TextBlock Text="Hintergrundfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:ColorPickerButton Grid.Column="1"

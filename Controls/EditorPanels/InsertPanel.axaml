@@ -44,8 +44,8 @@
                                     CommandParameter="{Binding PendingKind}"
                                     Classes.active="{Binding IsPending}"
                                     Classes.selected-kind="{Binding IsSelectedKind}">
-                                <icons:SvgIcon Source="{Binding IconPath}" Width="16"
-                                               Height="16" />
+                                <icons:SvgIcon Source="{Binding IconPath}" Width="17"
+                                               Height="17" />
                             </Button>
                         </DataTemplate>
                     </ItemsRepeater.ItemTemplate>
@@ -79,7 +79,7 @@
                 </Grid>
                 <!-- Über viertausend Symbole: ein ItemsControl legt für jedes sofort einen Knopf an.
                      Der ItemsRepeater mit WrapLayout erzeugt nur die tatsächlich sichtbaren. -->
-                <ScrollViewer MaxHeight="152" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto">
                     <ItemsRepeater ItemsSource="{Binding FilteredShapeIcons}">
                         <ItemsRepeater.Layout>
                             <WrapLayout />
@@ -92,8 +92,8 @@
                                         CommandParameter="{Binding PendingKind}"
                                         Classes.active="{Binding IsPending}"
                                         Classes.selected-kind="{Binding IsSelectedKind}">
-                                    <icons:SvgIcon Source="{Binding IconPath}" Width="16"
-                                                   Height="16" />
+                                    <icons:SvgIcon Source="{Binding IconPath}" Width="17"
+                                                   Height="17" />
                                 </Button>
                             </DataTemplate>
                         </ItemsRepeater.ItemTemplate>

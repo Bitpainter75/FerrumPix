@@ -16,7 +16,7 @@
              KeyUp="OnKeyUp"
              PointerReleased="OnGlobalPointerReleased">
 
-    <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="190,*,300,320">
+    <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="190,*,330,320">
 
         <Border Grid.Row="0" Grid.ColumnSpan="4" Classes="toolbar" Height="60" Padding="24,0">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
@@ -733,46 +733,15 @@
         </Border>
 
         <Border Grid.Row="1" Grid.Column="2" Classes="panel-right">
-            <Grid RowDefinitions="Auto,Auto,*">
-                <Grid Grid.Row="0" Margin="14,14,14,0" ColumnDefinitions="*,Auto">
-                    <StackPanel Orientation="Horizontal" Spacing="18">
-                        <Button Classes="info-tab" Command="{Binding SetLayersPanelTabCommand}" CommandParameter="Tool"
-                                Classes.active="{Binding IsToolTabSelected}">
-                            <TextBlock Text="{Binding CurrentToolLabel}" />
-                        </Button>
-                        <Button Classes="info-tab" Command="{Binding SetLayersPanelTabCommand}"
-                                CommandParameter="Layers" Classes.active="{Binding IsLayersTabSelected}">
-                            <TextBlock Text="Objekte" />
-                        </Button>
-                        <Button Classes="info-tab" Command="{Binding SetLayersPanelTabCommand}"
-                                CommandParameter="History" Classes.active="{Binding IsHistoryTabSelected}"
-                                IsVisible="False">
-                            <TextBlock Text="Verlauf" />
-                        </Button>
-                    </StackPanel>
-                    <Button Grid.Column="1"
-                            Classes="icon-btn"
-                            Width="28"
-                            Height="28"
-                            Padding="0"
-                            Command="{Binding ResetCurrentToolCommand}"
-                            IsVisible="{Binding IsToolTabSelected}"
-                            ToolTip.Tip="Alle Einstellungen dieses Werkzeugs zurücksetzen">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                            Width="14" Height="14" />
-                    </Button>
-                </Grid>
-
-                <Border Grid.Row="1" Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="14,10,14,0" />
-
-                <Grid Grid.Row="2">
+            <Grid RowDefinitions="*">
+                <Grid Grid.Row="0">
                     <ScrollViewer HorizontalContentAlignment="Stretch"
-                                  VerticalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Visible"
+                                  AllowAutoHide="False"
                                   FocusAdorner="{x:Null}"
-                                  IsVisible="{Binding IsToolTabSelected}">
+                                  Margin="0,0,8,0">
                         <StackPanel x:Name="AdjustmentsStackPanel"
-                                    Margin="14,10,14,10"
+                                    Margin="10,2,4,10"
                                     HorizontalAlignment="Stretch">
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowTransformAdjustments}">
@@ -799,10 +768,8 @@
                                 <panels:CropPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowResizeAdjustments}">
-                                <panels:ResizePanel />
-                            </Border>
+                            <panels:ResizePanel Margin="0,7,0,0"
+                                                IsVisible="{Binding ShowResizeAdjustments}" />
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowLightAdjustments}">
@@ -892,8 +859,6 @@
 
                         </StackPanel>
                     </ScrollViewer>
-
-                    <panels:LayersHistoryPanel IsVisible="{Binding !IsToolTabSelected}" />
                 </Grid>
             </Grid>
         </Border>

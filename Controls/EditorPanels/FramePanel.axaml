@@ -28,7 +28,7 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="25"
@@ -36,7 +36,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding BorderSize, Mode=TwoWay}" Minimum="0" Maximum="25" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -44,7 +44,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding BorderCornerRadius, Mode=TwoWay}" Minimum="0" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
                 <TextBlock Text="Rahmenart" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <ComboBox Grid.Column="1"
@@ -54,7 +54,7 @@
                           Margin="6,0,0,0"
                           DropDownOpened="OnMatchWidthDropDownOpened" />
             </Grid>
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Top">
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
                 <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">

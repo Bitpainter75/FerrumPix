@@ -28,7 +28,7 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Lichter Ton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
@@ -36,7 +36,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding SplitToningHighlightHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Lichter Sätt." Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -44,7 +44,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding SplitToningHighlightSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Schatten Ton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
@@ -52,7 +52,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding SplitToningShadowHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Schatten Sätt." Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -60,7 +60,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding SplitToningShadowSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Balance" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"

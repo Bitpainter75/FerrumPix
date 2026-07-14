@@ -27,7 +27,7 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Schärfe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -35,7 +35,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Sharpness, Mode=TwoWay}" Minimum="0" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Weichzeichnen" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -43,7 +43,7 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding NoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
             </Grid>
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
                 <TextBlock Text="Methode" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <ComboBox Name="NoiseReductionMethodComboBox"

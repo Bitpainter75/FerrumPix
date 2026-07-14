@@ -28,7 +28,7 @@
                 </DataTemplate>
             </Expander.HeaderTemplate>
             <StackPanel Spacing="2" Margin="0,8,0,0">
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Klarheit" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
@@ -36,7 +36,7 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding Clarity, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Körnung" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -44,7 +44,7 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding Grain, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Staub/Kratzer" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
@@ -52,7 +52,7 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding DustScratches, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Dunst" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
@@ -60,7 +60,7 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding Haze, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Rauschen" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -68,7 +68,7 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AddNoise, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Struktur" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
@@ -76,7 +76,7 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding Structure, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Glühen" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"

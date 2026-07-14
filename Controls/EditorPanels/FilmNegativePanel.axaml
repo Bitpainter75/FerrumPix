@@ -37,7 +37,7 @@
                       FontSize="{DynamicResource FP.Font.Small}"
                       ToolTip.Tip="Für S/W-Filme: das Ergebnis wird neutral grau, ein eingefärbter Filmträger hinterlässt also keinen Farbstich." />
 
-            <Grid ColumnDefinitions="74,Auto,*,Auto" VerticalAlignment="Center" Margin="0,2,0,0">
+            <Grid ColumnDefinitions="92,Auto,*,Auto" VerticalAlignment="Center" Margin="0,2,0,0">
                 <TextBlock Text="Filmbasis"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -75,7 +75,7 @@
                 </Button>
             </Grid>
 
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Gradation" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                            ToolTip.Tip="Steilheit der Dichtekurve: nach links flauer und heller, nach rechts kräftiger und dunkler." />

@@ -229,8 +229,8 @@
         <Setter Property="Margin" Value="0,0,6,6"/>
     </Style>
     <Style Selector="Button.insert-option-btn.compact">
-        <Setter Property="Width" Value="34"/>
-        <Setter Property="Height" Value="34"/>
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
         <Setter Property="Margin" Value="0,0,4,4"/>
     </Style>
     <Style Selector="Button.insert-option-btn /template/ ContentPresenter">
@@ -1074,8 +1074,8 @@
     </Style>
     <Style Selector="Border.adjustment-group">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="10,8"/>
     </Style>
@@ -1085,6 +1085,9 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Border.adjustment-group Expander:pointerover">
+        <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
     <!-- Blendet die Zurücksetzen-Buttons in den Expander-Köpfen aus; zurückgesetzt wird zentral über
          den Knopf in der Panel-Kopfzeile. Buttons, die zum Inhalt einer Gruppe gehören statt sie

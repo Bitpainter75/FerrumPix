@@ -37,7 +37,7 @@
             <!-- Die Regler stehen enger beieinander als Rad und Beschriftung darüber - wie in den
                  übrigen Anpassungs-Panels. -->
             <StackPanel Spacing="2">
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
@@ -48,7 +48,7 @@
                                              Minimum="-100" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Sättigung"
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -60,7 +60,7 @@
                                              Minimum="-100" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
-                <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Luminanz"
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

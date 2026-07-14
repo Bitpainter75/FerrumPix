@@ -16,7 +16,7 @@
         </Expander.HeaderTemplate>
         <StackPanel Spacing="10" Margin="0,8,0,0">
             <StackPanel Spacing="6" IsVisible="{Binding ShowWatermarkPresetControls}">
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
                 <TextBlock Text="Vorlage" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <ComboBox Grid.Column="1"
@@ -26,7 +26,7 @@
                           FontSize="{DynamicResource FP.Font.Small}"
                           HorizontalAlignment="Stretch" />
             </Grid>
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
                 <TextBlock Text="Name" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBox Grid.Column="1"
@@ -35,7 +35,7 @@
                          HorizontalAlignment="Stretch"
                          FontSize="{DynamicResource FP.Font.Small}" />
             </Grid>
-            <Grid ColumnDefinitions="74,*">
+            <Grid ColumnDefinitions="92,*">
                 <StackPanel Grid.Column="1" Margin="6,0,0,0" Orientation="Horizontal" Spacing="6">
                     <Button Classes="ghost" Padding="8,4" Click="OnWatermarkSavePresetClick">
                         <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}" />
@@ -45,7 +45,7 @@
                     </Button>
                 </StackPanel>
             </Grid>
-            <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
                 <TextBlock Text="Quelle" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <StackPanel Grid.Column="1" Margin="6,0,0,0" Orientation="Horizontal" Spacing="6">
@@ -60,7 +60,7 @@
         </StackPanel>
 
         <!-- Bild-Werkzeug: derselbe Weg wie beim Wasserzeichen - Datei wählen, Objekt erscheint. -->
-        <Grid ColumnDefinitions="74,*" VerticalAlignment="Center"
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
               IsVisible="{Binding ShowImageSourceControls}">
             <TextBlock Text="Quelle" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -77,7 +77,7 @@
                  TextWrapping="Wrap"
                  MaxHeight="70"
                  IsVisible="{Binding ShowTextContentControls}" />
-        <Grid ColumnDefinitions="74,*" VerticalAlignment="Center"
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
               IsVisible="{Binding ShowFontControls}">
             <TextBlock Text="Schrift" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -89,7 +89,7 @@
                       HorizontalAlignment="Stretch"
                       DropDownOpened="OnMatchWidthDropDownOpened" />
         </Grid>
-        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowFontControls}">
             <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -102,7 +102,7 @@
                                      FormatString="F0" />
         </Grid>
         <!-- Beim QR-Code werden Hintergrund und Vordergrund über den Farbmischer gesetzt. -->
-        <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowFillColorPicker}">
             <TextBlock Text="{Binding FillColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"
@@ -112,7 +112,7 @@
                     SelectedColor="{Binding AnnotationFillColorValue, Mode=TwoWay}" />
             </StackPanel>
         </Grid>
-        <Grid ColumnDefinitions="74,*" VerticalAlignment="Center"
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
               IsVisible="{Binding ShowFillColorControls}">
             <TextBlock Text="Füllart" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -138,7 +138,7 @@
                 </Button>
             </StackPanel>
         </Grid>
-        <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowGradientFillControls}">
             <TextBlock Text="Verlauf bis" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -147,7 +147,7 @@
                     SelectedColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}" />
             </StackPanel>
         </Grid>
-        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowLinearGradientAngleControl}">
             <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -163,7 +163,7 @@
         <CheckBox Content="Verlauf invertieren"
                   IsChecked="{Binding AnnotationGradientInverted}" FontSize="{DynamicResource FP.Font.Small}"
                   IsVisible="{Binding ShowRadialGradientControl}" />
-        <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowStrokeColorPicker}">
             <TextBlock Text="{Binding StrokeColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"
@@ -173,7 +173,7 @@
                     SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
             </StackPanel>
         </Grid>
-        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowStrokeWidthControls}">
             <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
@@ -185,7 +185,7 @@
                                      Minimum="0" Maximum="100" Increment="1"
                                      FormatString="F0" />
         </Grid>
-        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
             <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -196,7 +196,7 @@
                                      Minimum="0" Maximum="100" Increment="1"
                                      FormatString="F0" />
         </Grid>
-        <Grid ColumnDefinitions="74,*" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
             <TextBlock Text="Mischen" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <ComboBox Grid.Column="1"
@@ -206,7 +206,7 @@
                       FontSize="{DynamicResource FP.Font.Small}"
                       HorizontalAlignment="Stretch" />
         </Grid>
-        <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
             <TextBlock Text="Drehung" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
@@ -218,7 +218,7 @@
                                      Minimum="-180" Maximum="180" Increment="0.01"
                                      FormatString="F2" />
         </Grid>
-        <Grid ColumnDefinitions="74,*" VerticalAlignment="Top"
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowWatermarkAnchorControls}">
             <TextBlock Text="Anker" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -298,7 +298,7 @@
             </Border>
         </Grid>
         <StackPanel Spacing="6">
-            <Grid ColumnDefinitions="74,*,44">
+            <Grid ColumnDefinitions="92,*,44">
                 <TextBlock Text="{Binding AnnotationXLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1"
@@ -315,7 +315,7 @@
                                              Increment="1"
                                              FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44">
+            <Grid ColumnDefinitions="92,*,44">
                 <TextBlock Text="{Binding AnnotationYLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1"
@@ -332,7 +332,7 @@
                                              Increment="1"
                                              FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44">
+            <Grid ColumnDefinitions="92,*,44">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1"
@@ -349,7 +349,7 @@
                                          Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="74,*,44">
+            <Grid ColumnDefinitions="92,*,44">
                 <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1"

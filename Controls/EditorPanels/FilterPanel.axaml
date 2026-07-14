@@ -32,7 +32,7 @@
                       HorizontalAlignment="Stretch"
                       FontSize="{DynamicResource FP.Font.Small}"
                       DropDownOpened="OnMatchWidthDropDownOpened" />
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"

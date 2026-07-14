@@ -43,7 +43,7 @@
                     <TextBlock Text="Ordner laden" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </Grid>
-            <Grid ColumnDefinitions="74,*,44" VerticalAlignment="Center"
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                   IsVisible="{Binding HasLutApplied}">
                 <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
