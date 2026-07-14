@@ -677,11 +677,16 @@ Namespace ViewModels
             AddFixedShape("RoundedRectangle", "Abgerundetes Rechteck", base & "square-rounded.svg")
             AddFixedShape("Ellipse", "Kreis/Ellipse", base & "circle.svg")
             AddFixedShape("Triangle", "Dreieck", base & "triangle.svg")
-            AddFixedShape("Diamond", "Raute", base & "diamond.svg")
+            AddFixedShape("Trapezoid", "Trapez", base & "trapezoid.svg")
+            AddFixedShape("Diamond", "Raute", base & "square-rotated.svg")
             AddFixedShape("Polygon", "Polygon", base & "hexagon.svg")
             AddFixedShape("Star", "Stern", base & "star.svg")
-            AddFixedShape("DoubleStar", "Doppelstern", base & "stars.svg")
+            AddFixedShape("DoubleStar", "Doppelstern", base & "eight-point-star.svg")
+            AddFixedShape("Line", "Linie", base & "line-shape.svg")
             AddFixedShape("Arrow", "Pfeil", base & "arrow-right.svg")
+            AddFixedShape("SpeechBubble", "Sprechblase", base & "speech-bubble-shape.svg")
+            AddFixedShape("EllipseSpeechBubble", "Ellipsen-Sprechblase", base & "ellipse-speech-bubble-shape.svg")
+            AddFixedShape("Droplet", "Tropfen", base & "droplet-shape.svg")
             AddFixedShape("Cloud", "Wolke", base & "cloud.svg")
             AddFixedShape("Heart", "Herz", base & "heart.svg")
             AddFixedShape("Spiral", "Spirale", base & "spiral.svg")
@@ -1372,7 +1377,7 @@ Namespace ViewModels
             AnnotationStrokeColor = "#FF000000"
             AnnotationStrokeWidth = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark" OrElse normalizedKind = "QR" OrElse normalizedKind = "Image",
                                        0,
-                                       If(normalizedKind = "Arrow", 5, 2))
+                                       If(normalizedKind = "Arrow" OrElse normalizedKind = "Line", 5, 2))
             AnnotationText = GetDefaultAnnotationText(normalizedKind, rawKind)
             AnnotationFontSize = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark",
                                     GetDefaultTextAnnotationFontSizePixels(),
@@ -5622,6 +5627,7 @@ Namespace ViewModels
         ' Commands
         Public ReadOnly Property SetToolCommand As ICommand
         Public ReadOnly Property SetPendingInsertKindCommand As ICommand
+        Public ReadOnly Property ClearShapeIconSearchCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property AddTagCommand As ICommand
@@ -5795,7 +5801,7 @@ Namespace ViewModels
                                                                                     PendingInsertKind = kind
                                                                                 End If
                                                                             End Sub)
-
+            ClearShapeIconSearchCommand = ReactiveCommand.Create(Sub() ShapeIconSearchText = "")
 
             SaveCommand = ReactiveCommand.Create(Async Function() As Task
                                                      Await SaveImageAsync(False)

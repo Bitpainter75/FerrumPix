@@ -245,18 +245,19 @@ Namespace Services
                     Case "ellipse", "circle" : Return base & "09_FormenSymbole/017_Oval.svg"
                     Case "cone" : Return base & "09_FormenSymbole/018_Halbkreis.svg"
                     Case "pyramid" : Return base & "09_FormenSymbole/031_Diamant_facette.svg"
-                    Case "trapezoid" : Return base & "09_FormenSymbole/013_Trapez.svg"
-                    Case "diamond" : Return base & "09_FormenSymbole/011_Raute.svg"
+                    Case "trapezoid" : Return base & "outline/trapezoid.svg"
+                    Case "diamond" : Return base & "outline/square-rotated.svg"
                     Case "polygon" : Return base & "outline/hexagon.svg"
                     Case "star" : Return base & "outline/star.svg"
-                    Case "doublestar", "double-star" : Return base & "outline/stars.svg"
+                    Case "doublestar", "double-star" : Return base & "outline/eight-point-star.svg"
                     Case "spiral" : Return base & "09_FormenSymbole/053_Spirale.svg"
-                    Case "droplet" : Return base & "09_FormenSymbole/051_Tropfen.svg"
-                    Case "ellipsespeechbubble", "ellipse-speech-bubble" : Return base & "outline/message-circle.svg"
+                    Case "droplet" : Return base & "outline/droplet-shape.svg"
+                    Case "ellipsespeechbubble", "ellipse-speech-bubble" : Return base & "outline/ellipse-speech-bubble-shape.svg"
                     Case "rectspeechbubble", "rect-speech-bubble" : Return base & "outline/message.svg"
-                    Case "speechbubble", "speech-bubble", "sprechblase", "bubble" : Return base & "09_FormenSymbole/048_Sprechblase.svg"
+                    Case "speechbubble", "speech-bubble", "sprechblase", "bubble" : Return base & "outline/speech-bubble-shape.svg"
                     Case "heart" : Return base & "outline/heart.svg"
                     Case "cloud" : Return base & "outline/cloud.svg"
+                    Case "line" : Return base & "outline/line-shape.svg"
                     Case "arrow" : Return base & "outline/arrow-right.svg"
                     Case "brush" : Return base & "03_Editor/39_Pinsel.svg"
                     Case "eraser" : Return "avares://FerrumPix/Assets/Icons/outline/eraser.svg"
@@ -3059,11 +3060,14 @@ Namespace Services
         Private Shared Sub DrawDroplet(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
             Using path = New SKPath()
                 path.MoveTo(rect.MidX, rect.Top + rect.Height * 0.04F)
-                path.CubicTo(rect.Right - rect.Width * 0.08F, rect.Top + rect.Height * 0.34F,
-                             rect.Right - rect.Width * 0.05F, rect.Top + rect.Height * 0.67F,
-                             rect.MidX, rect.Bottom - rect.Height * 0.04F)
-                path.CubicTo(rect.Left + rect.Width * 0.05F, rect.Top + rect.Height * 0.67F,
-                             rect.Left + rect.Width * 0.08F, rect.Top + rect.Height * 0.34F,
+                path.CubicTo(rect.Right - rect.Width * 0.18F, rect.Top + rect.Height * 0.34F,
+                             rect.Right - rect.Width * 0.06F, rect.Top + rect.Height * 0.58F,
+                             rect.Right - rect.Width * 0.22F, rect.Top + rect.Height * 0.79F)
+                path.CubicTo(rect.Right - rect.Width * 0.38F, rect.Bottom - rect.Height * 0.01F,
+                             rect.Left + rect.Width * 0.38F, rect.Bottom - rect.Height * 0.01F,
+                             rect.Left + rect.Width * 0.22F, rect.Top + rect.Height * 0.79F)
+                path.CubicTo(rect.Left + rect.Width * 0.06F, rect.Top + rect.Height * 0.58F,
+                             rect.Left + rect.Width * 0.18F, rect.Top + rect.Height * 0.34F,
                              rect.MidX, rect.Top + rect.Height * 0.04F)
                 path.Close()
                 DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
@@ -3071,36 +3075,47 @@ Namespace Services
         End Sub
 
         Private Shared Sub DrawSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
-            Dim tailWidth = rect.Width * 0.18F
-            Dim tailHeight = rect.Height * 0.18F
-            Dim radius = Math.Min(rect.Width, rect.Height) * 0.18F
+            Dim tailHeight = rect.Height * 0.20F
+            Dim radius = Math.Min(rect.Width, rect.Height) * 0.12F
+            Dim body = New SKRect(rect.Left + rect.Width * 0.04F,
+                                  rect.Top + rect.Height * 0.06F,
+                                  rect.Right - rect.Width * 0.04F,
+                                  rect.Bottom - tailHeight)
             Using path = New SKPath()
-                path.MoveTo(rect.Left + radius, rect.Top)
-                path.LineTo(rect.Right - radius, rect.Top)
-                path.QuadTo(rect.Right, rect.Top, rect.Right, rect.Top + radius)
-                path.LineTo(rect.Right, rect.Bottom - radius - tailHeight)
-                path.QuadTo(rect.Right, rect.Bottom - tailHeight, rect.Right - radius, rect.Bottom - tailHeight)
-                path.LineTo(rect.MidX + tailWidth * 0.25F, rect.Bottom - tailHeight)
-                path.LineTo(rect.MidX, rect.Bottom)
-                path.LineTo(rect.MidX - tailWidth * 0.35F, rect.Bottom - tailHeight)
-                path.LineTo(rect.Left + radius, rect.Bottom - tailHeight)
-                path.QuadTo(rect.Left, rect.Bottom - tailHeight, rect.Left, rect.Bottom - radius - tailHeight)
-                path.LineTo(rect.Left, rect.Top + radius)
-                path.QuadTo(rect.Left, rect.Top, rect.Left + radius, rect.Top)
+                path.MoveTo(body.Left + radius, body.Top)
+                path.LineTo(body.Right - radius, body.Top)
+                path.QuadTo(body.Right, body.Top, body.Right, body.Top + radius)
+                path.LineTo(body.Right, body.Bottom - radius)
+                path.QuadTo(body.Right, body.Bottom, body.Right - radius, body.Bottom)
+                path.LineTo(rect.Left + rect.Width * 0.46F, body.Bottom)
+                path.LineTo(rect.Left + rect.Width * 0.24F, rect.Bottom - rect.Height * 0.04F)
+                path.LineTo(rect.Left + rect.Width * 0.27F, body.Bottom)
+                path.LineTo(body.Left + radius, body.Bottom)
+                path.QuadTo(body.Left, body.Bottom, body.Left, body.Bottom - radius)
+                path.LineTo(body.Left, body.Top + radius)
+                path.QuadTo(body.Left, body.Top, body.Left + radius, body.Top)
                 path.Close()
                 DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
             End Using
         End Sub
 
         Private Shared Sub DrawEllipseSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
-            Dim tailHeight = rect.Height * 0.22F
-            Dim insetX = rect.Width * 0.04F
-            Dim ovalRect = New SKRect(rect.Left + insetX, rect.Top + rect.Height * 0.04F, rect.Right - insetX, rect.Bottom - tailHeight)
             Using path = New SKPath()
-                path.AddOval(ovalRect)
-                path.MoveTo(rect.MidX - rect.Width * 0.08F, ovalRect.Bottom - tailHeight * 0.08F)
-                path.LineTo(rect.MidX + rect.Width * 0.03F, rect.Bottom - rect.Height * 0.04F)
-                path.LineTo(rect.MidX + rect.Width * 0.18F, ovalRect.Bottom - tailHeight * 0.18F)
+                path.MoveTo(rect.MidX, rect.Top + rect.Height * 0.07F)
+                path.CubicTo(rect.Right - rect.Width * 0.12F, rect.Top + rect.Height * 0.07F,
+                             rect.Right - rect.Width * 0.03F, rect.Top + rect.Height * 0.28F,
+                             rect.Right - rect.Width * 0.04F, rect.Top + rect.Height * 0.48F)
+                path.CubicTo(rect.Right - rect.Width * 0.05F, rect.Top + rect.Height * 0.70F,
+                             rect.Right - rect.Width * 0.25F, rect.Top + rect.Height * 0.84F,
+                             rect.Right - rect.Width * 0.45F, rect.Top + rect.Height * 0.86F)
+                path.LineTo(rect.Left + rect.Width * 0.24F, rect.Bottom - rect.Height * 0.05F)
+                path.LineTo(rect.Left + rect.Width * 0.32F, rect.Top + rect.Height * 0.82F)
+                path.CubicTo(rect.Left + rect.Width * 0.13F, rect.Top + rect.Height * 0.72F,
+                             rect.Left + rect.Width * 0.04F, rect.Top + rect.Height * 0.56F,
+                             rect.Left + rect.Width * 0.04F, rect.Top + rect.Height * 0.40F)
+                path.CubicTo(rect.Left + rect.Width * 0.04F, rect.Top + rect.Height * 0.20F,
+                             rect.Left + rect.Width * 0.18F, rect.Top + rect.Height * 0.07F,
+                             rect.MidX, rect.Top + rect.Height * 0.07F)
                 path.Close()
                 DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
             End Using
@@ -3206,7 +3221,8 @@ Namespace Services
         End Sub
 
         Private Shared Sub DrawLine(canvas As SKCanvas, rect As SKRect, stroke As SKColor, strokeWidth As Single, arrow As Boolean)
-            Using paint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = strokeWidth, .StrokeCap = SKStrokeCap.Round, .IsAntialias = True}
+            Dim effectiveStrokeWidth = If(arrow, strokeWidth, Math.Max(2.0F, strokeWidth))
+            Using paint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = effectiveStrokeWidth, .StrokeCap = SKStrokeCap.Round, .IsAntialias = True}
                 If arrow Then
                     Dim head = Math.Min(rect.Width * 0.28F, Math.Max(12.0F, strokeWidth * 4.0F))
                     Dim pad = Math.Max(strokeWidth * 0.5F, 1.0F)
