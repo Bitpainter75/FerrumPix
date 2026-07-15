@@ -120,6 +120,8 @@ Namespace ViewModels
         Private _brushHardness As Double = 100
         Private _brushOpacity As Double = 100
         Private _brushFlow As Double = 100
+        Private _brushPreset As String = "soft"
+        Private _brushPresets As System.Collections.ObjectModel.ObservableCollection(Of BrushPresetItem) = Nothing
         Private _isEraserMode As Boolean = False
         Private _eraserFillColor As String = "#00FFFFFF"
         Private _isRepairMode As Boolean = False
@@ -135,6 +137,33 @@ Namespace ViewModels
             Public Property Flow As Double = 100
             Public Property StrokeColor As String = "#FF000000"
             Public Property EraserFillColor As String = "#00FFFFFF"
+        End Class
+
+        ''' <summary>Ein Eintrag im visuellen Pinsel-Picker: stabiler Key, angezeigter Name, gerendertes
+        ''' Beispielstrich-Bild und Auswahlzustand (für die Hervorhebung der aktiven Kachel).</summary>
+        Public NotInheritable Class BrushPresetItem
+            Inherits ViewModelBase
+
+            Private _isSelected As Boolean
+
+            Public Sub New(key As String, label As String, preview As Avalonia.Media.Imaging.Bitmap)
+                Me.Key = key
+                Me.Label = label
+                Me.Preview = preview
+            End Sub
+
+            Public ReadOnly Property Key As String
+            Public ReadOnly Property Label As String
+            Public ReadOnly Property Preview As Avalonia.Media.Imaging.Bitmap
+
+            Public Property IsSelected As Boolean
+                Get
+                    Return _isSelected
+                End Get
+                Set(value As Boolean)
+                    Me.RaiseAndSetIfChanged(_isSelected, value)
+                End Set
+            End Property
         End Class
 
         Public NotInheritable Class AnnotationBlendModeOption
@@ -2935,6 +2964,54 @@ Namespace ViewModels
                 RaiseResetButtonStateChanged()
             End Set
         End Property
+
+        ''' <summary>Die Pinsel-Varianten für den visuellen Picker (Stufe 2). Lazy erzeugt, weil jede
+        ''' Kachel einen echten Beispielstrich rendert - so entspricht die Vorschau exakt dem Ergebnis.</summary>
+        Public ReadOnly Property BrushPresets As System.Collections.ObjectModel.ObservableCollection(Of BrushPresetItem)
+            Get
+                If _brushPresets Is Nothing Then _brushPresets = BuildBrushPresetItems()
+                Return _brushPresets
+            End Get
+        End Property
+
+        ' Key -> deutscher Ausgangs-Anzeigename (wird über LocalizationService.T() übersetzt).
+        ' Reihenfolge = Reihenfolge im Picker.
+        Private Shared ReadOnly _brushPresetLabels As (Key As String, Label As String)() = {
+            ("soft", "Rund weich"),
+            ("pencil", "Bleistift"),
+            ("marker", "Marker"),
+            ("acrylic", "Acryl körnig"),
+            ("sandpaper", "Sandpapier"),
+            ("smear", "Schmieren"),
+            ("spatter", "Farbkleckse")
+        }
+
+        Private Function BuildBrushPresetItems() As System.Collections.ObjectModel.ObservableCollection(Of BrushPresetItem)
+            Dim items = New System.Collections.ObjectModel.ObservableCollection(Of BrushPresetItem)()
+            ' Helles Grau auf transparentem Grund - lesbar auf dem dunklen Panel, wie in Pinsel-Bibliotheken.
+            Dim previewColor = New SKColor(225, 225, 225, 255)
+            For Each entry In _brushPresetLabels
+                Dim preview As Avalonia.Media.Imaging.Bitmap
+                Using sk = ImageProcessor.RenderBrushStrokePreview(entry.Key, 200, 46, previewColor)
+                    preview = ImageProcessor.ToAvaloniaBitmap(sk)
+                End Using
+                items.Add(New BrushPresetItem(entry.Key, LocalizationService.T(entry.Label), preview) With {.IsSelected = entry.Key = _brushPreset})
+            Next
+            Return items
+        End Function
+
+        Private Sub SelectBrushPreset(key As String)
+            Dim normalized = If(String.IsNullOrWhiteSpace(key), "soft", key.Trim().ToLowerInvariant())
+            If Array.IndexOf(ImageProcessor.BrushPresetKeys, normalized) < 0 Then normalized = "soft"
+            _brushPreset = normalized
+            ' Eine neue Variante beginnt einen neuen Strich-Layer (siehe AddBrushStroke).
+            _activeStrokeAnnotation = Nothing
+            If _brushPresets IsNot Nothing Then
+                For Each item In _brushPresets
+                    item.IsSelected = String.Equals(item.Key, normalized, StringComparison.Ordinal)
+                Next
+            End If
+        End Sub
 
         Public Property IsEraserMode As Boolean
             Get
@@ -5795,6 +5872,7 @@ Namespace ViewModels
         Public ReadOnly Property SetAnnotationFillKindCommand As ICommand
         Public ReadOnly Property SetAnnotationAnchorCommand As ICommand
         Public ReadOnly Property ResetTransformCommand As ICommand
+        Public ReadOnly Property SetBrushPresetCommand As ICommand
         Public ReadOnly Property SetFilterPresetCommand As ICommand
         Public ReadOnly Property ResetFilterCommand As ICommand
         Public ReadOnly Property ResetCurveCommand As ICommand
@@ -6051,6 +6129,7 @@ Namespace ViewModels
                                                                PushUndo()
                                                                ResetTransformInternal()
                                                            End Sub)
+            SetBrushPresetCommand = ReactiveCommand.Create(Of String)(AddressOf SelectBrushPreset)
             SetFilterPresetCommand = ReactiveCommand.Create(Of String)(Sub(preset)
                                                                           PushUndo()
                                                                           ApplyExclusiveFilterPreset(preset)
@@ -8668,6 +8747,7 @@ Namespace ViewModels
                              Math.Abs(_activeStrokeAnnotation.FlowPercent - CSng(_brushFlow)) < 0.001F AndAlso
                              Math.Abs(_activeStrokeAnnotation.HardnessPercent - CSng(_brushHardness)) < 0.001F AndAlso
                              String.Equals(_activeStrokeAnnotation.StrokeColor, _annotationStrokeColor, StringComparison.OrdinalIgnoreCase) AndAlso
+                             String.Equals(_activeStrokeAnnotation.BrushPreset, _brushPreset, StringComparison.Ordinal) AndAlso
                              (Not isEraser OrElse String.Equals(_activeStrokeAnnotation.EraserFillColor, _eraserFillColor, StringComparison.OrdinalIgnoreCase))
 
             If canAppend Then
@@ -8700,6 +8780,18 @@ Namespace ViewModels
                     .BlendMode = "Normal",
                     .FlowPercent = CSng(_brushFlow),
                     .HardnessPercent = CSng(_brushHardness),
+                    .BrushPreset = If(isEraser, "soft", _brushPreset),
+                    .ShadowEnabled = (Not isEraser) AndAlso _annotationShadowEnabled,
+                    .ShadowOffsetXPercent = CSng(_annotationShadowOffsetX),
+                    .ShadowOffsetYPercent = CSng(_annotationShadowOffsetY),
+                    .ShadowBlur = CSng(_annotationShadowBlur),
+                    .ShadowStrength = CSng(_annotationShadowStrength),
+                    .ShadowColor = _annotationShadowColor,
+                    .ShadowSizePercent = CSng(_annotationShadowSize),
+                    .GlowEnabled = (Not isEraser) AndAlso _annotationGlowEnabled,
+                    .GlowBlur = CSng(_annotationGlowBlur),
+                    .GlowStrength = CSng(_annotationGlowStrength),
+                    .GlowColor = _annotationGlowColor,
                     .FontSizePixels = CSng(_annotationFontSize),
                     .FontFamily = _annotationFontFamily
                 }

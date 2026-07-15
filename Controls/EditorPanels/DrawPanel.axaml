@@ -2,156 +2,273 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.DrawPanel">
-    <!-- Kopfzeile folgt dem gewählten Werkzeug: Pinsel, Radiergummi, Verwischen, Reparaturpinsel oder Stempel. -->
-    <Expander Header="{Binding CurrentToolLabel}" IsExpanded="True">
-        <Expander.HeaderTemplate>
-            <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <icons:SvgIcon Source="{Binding DataContext.CurrentToolIconSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                   Width="14" Height="14" />
-                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+    <!-- Getrennte, gerahmte Gruppen wie beim Text-Objekt (Eigenschaften/Schatten/Glühen): Farbe und
+         Pinsel stehen als eigene adjustment-group-Blöcke untereinander, mit Abstand dazwischen. -->
+    <StackPanel>
+
+        <!-- FARBE (nur Pinsel) - Farbrad kopflos, wie der Farbmischer beim Text-Objekt. -->
+        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding IsBrushPaintMode}">
+            <icons:ColorMixer StrokeColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}"
+                              StrokeLabel="Farbe"
+                              ShowFill="False"
+                              ShowSecondaryFill="False" />
+        </Border>
+
+        <!-- PINSEL (nur Pinsel) - Varianten und Parameter in eigener Gruppe. -->
+        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding IsBrushPaintMode}">
+            <Expander Header="{Binding CurrentToolLabel}" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon Source="{Binding DataContext.CurrentToolIconSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <!-- Visueller Pinsel-Picker: gerenderte Beispielstriche je Variante. -->
+                    <ItemsControl ItemsSource="{Binding BrushPresets}" Margin="0,0,0,6">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="3" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Classes="brush-preset"
+                                        Classes.active="{Binding IsSelected}"
+                                        Command="{Binding DataContext.SetBrushPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Key}"
+                                        ToolTip.Tip="{Binding Label}">
+                                    <Grid ColumnDefinitions="78,*" VerticalAlignment="Center">
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   FontSize="{DynamicResource FP.Font.Small}" />
+                                        <Image Grid.Column="1" Source="{Binding Preview}"
+                                               Height="28" Stretch="Fill"
+                                               HorizontalAlignment="Stretch" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
+                                           DefaultValue="24"
+                                           Value="{Binding BrushSize}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushSize, Mode=TwoWay}"
+                                                 Minimum="1" Maximum="300" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushHardness}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushHardness, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Deckkraft"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushOpacity}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushOpacity, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Fluss"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushFlow}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushFlow, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <!-- Kompakter Farb-Button mit Hex, Pipette und zuletzt genutzten Farben. -->
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                        <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:ColorPickerButton Grid.Column="1"
+                                                 SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
+                    </Grid>
                 </StackPanel>
-            </DataTemplate>
-        </Expander.HeaderTemplate>
-        <StackPanel Spacing="2" Margin="0,8,0,0">
-        <!-- Die Werkzeugwahl (Pinsel, Radiergummi, Verwischen, Reparaturpinsel, Stempel) steht in der Werkzeugleiste
-             links; hier stehen nur noch die Einstellungen des gewählten Werkzeugs. -->
-        <!-- Radius, Hinweis und Zurücksetzen gelten für Verwischen, Reparaturpinsel und Stempel gleichermaßen. -->
-        <StackPanel Spacing="2" IsVisible="{Binding ShowRetouchAdjustments}">
-            <Grid ColumnDefinitions="92,*,Auto,44" VerticalAlignment="Center">
-                <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
-                                   DefaultValue="24"
-                                   Value="{Binding RetouchRadius}" Margin="0,0" />
-                <Button Grid.Column="2"
-                        Classes="icon-btn"
-                        Width="28"
-                        Height="28"
-                        Padding="0"
-                        Margin="6,0,6,0"
-                        Command="{Binding ResetRetouchCommand}"
-                        ToolTip.Tip="Alle Retusche-Punkte zurücksetzen">
-                    <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                        Width="14" Height="14" />
-                </Button>
-                <icons:SliderValueUpDown Grid.Column="3" Classes="slider-value"
-                                         Value="{Binding RetouchRadius, Mode=TwoWay}"
-                                         Minimum="1" Maximum="300" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   DefaultValue="100"
-                                   Value="{Binding BrushHardness}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding BrushHardness, Mode=TwoWay}"
-                                         Minimum="0" Maximum="100" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   DefaultValue="100"
-                                   Value="{Binding BrushOpacity}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding BrushOpacity, Mode=TwoWay}"
-                                         Minimum="0" Maximum="100" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Fluss" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   DefaultValue="100"
-                                   Value="{Binding BrushFlow}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding BrushFlow, Mode=TwoWay}"
-                                         Minimum="0" Maximum="100" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
-                <TextBlock Text="{Binding RetouchHintText}"
-                           Foreground="{DynamicResource FP.Text.Muted}"
-                           FontSize="{DynamicResource FP.Font.Caption}"
-                           TextWrapping="Wrap"
-                           VerticalAlignment="Center" />
-                <Button Grid.Column="1"
-                        Classes="ghost"
-                        Padding="8,4"
-                        Margin="8,0,0,0"
-                        IsVisible="{Binding IsCloneMode}"
-                        IsEnabled="{Binding HasCloneSource}"
-                        Command="{Binding ClearCloneSourceCommand}"
-                        ToolTip.Tip="Quellpunkt verwerfen">
-                    <TextBlock Text="Quelle lösen" FontSize="{DynamicResource FP.Font.Caption}" />
-                </Button>
-            </Grid>
-        </StackPanel>
-        <StackPanel Spacing="2" IsVisible="{Binding ShowBrushStrokeAdjustments}">
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
-                                   DefaultValue="24"
-                                   Value="{Binding BrushSize}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding BrushSize, Mode=TwoWay}"
-                                         Minimum="1" Maximum="300" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   DefaultValue="100"
-                                   Value="{Binding BrushHardness}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding BrushHardness, Mode=TwoWay}"
-                                         Minimum="0" Maximum="100" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Deckkraft"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   DefaultValue="100"
-                                   Value="{Binding BrushOpacity}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding BrushOpacity, Mode=TwoWay}"
-                                         Minimum="0" Maximum="100" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Fluss"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   DefaultValue="100"
-                                   Value="{Binding BrushFlow}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding BrushFlow, Mode=TwoWay}"
-                                         Minimum="0" Maximum="100" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*" VerticalAlignment="Top" IsVisible="{Binding IsBrushPaintMode}">
-                <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:ColorPickerButton Grid.Column="1"
-                                         SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*" VerticalAlignment="Top" IsVisible="{Binding IsEraserPaintMode}">
-                <TextBlock Text="Hintergrundfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:ColorPickerButton Grid.Column="1"
-                                         SelectedColor="{Binding EraserFillColorValue, Mode=TwoWay}" />
-            </Grid>
-        </StackPanel>
-        </StackPanel>
-    </Expander>
+            </Expander>
+        </Border>
+
+        <!-- RADIERGUMMI - eigene Gruppe mit Parametern und Hintergrundfarbe. -->
+        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding IsEraserPaintMode}">
+            <Expander Header="{Binding CurrentToolLabel}" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon Source="{Binding DataContext.CurrentToolIconSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
+                                           DefaultValue="24"
+                                           Value="{Binding BrushSize}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushSize, Mode=TwoWay}"
+                                                 Minimum="1" Maximum="300" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushHardness}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushHardness, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Deckkraft"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushOpacity}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushOpacity, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Fluss"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushFlow}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushFlow, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                        <TextBlock Text="Hintergrundfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:ColorPickerButton Grid.Column="1"
+                                                 SelectedColor="{Binding EraserFillColorValue, Mode=TwoWay}" />
+                    </Grid>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+        <!-- VERWISCHEN / REPARATURPINSEL / STEMPEL - gemeinsame Retusche-Parameter. -->
+        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding ShowRetouchAdjustments}">
+            <Expander Header="{Binding CurrentToolLabel}" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon Source="{Binding DataContext.CurrentToolIconSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="92,*,Auto,44" VerticalAlignment="Center">
+                        <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
+                                           DefaultValue="24"
+                                           Value="{Binding RetouchRadius}" Margin="0,0" />
+                        <Button Grid.Column="2"
+                                Classes="icon-btn"
+                                Width="28"
+                                Height="28"
+                                Padding="0"
+                                Margin="6,0,6,0"
+                                Command="{Binding ResetRetouchCommand}"
+                                ToolTip.Tip="Alle Retusche-Punkte zurücksetzen">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                Width="14" Height="14" />
+                        </Button>
+                        <icons:SliderValueUpDown Grid.Column="3" Classes="slider-value"
+                                                 Value="{Binding RetouchRadius, Mode=TwoWay}"
+                                                 Minimum="1" Maximum="300" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushHardness}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushHardness, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushOpacity}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushOpacity, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Fluss" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushFlow}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushFlow, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
+                        <TextBlock Text="{Binding RetouchHintText}"
+                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                   FontSize="{DynamicResource FP.Font.Caption}"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Classes="ghost"
+                                Padding="8,4"
+                                Margin="8,0,0,0"
+                                IsVisible="{Binding IsCloneMode}"
+                                IsEnabled="{Binding HasCloneSource}"
+                                Command="{Binding ClearCloneSourceCommand}"
+                                ToolTip.Tip="Quellpunkt verwerfen">
+                            <TextBlock Text="Quelle lösen" FontSize="{DynamicResource FP.Font.Caption}" />
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+    </StackPanel>
 </UserControl>

@@ -123,6 +123,7 @@ Namespace Services
         Private _anchor As String = ""
         Private _isVisible As Boolean = True
         Private _hardnessPercent As Single = 100
+        Private _brushPreset As String = "soft"
         Private _fillKind As String = "Solid"
         Private _fillColor2 As String = "#FFFFFFFF"
         Private _gradientAngleDegrees As Single = 0
@@ -478,6 +479,18 @@ Namespace Services
             End Set
         End Property
 
+        ' Pinsel-Variante nur für Kind="Brush": "soft" (weicher Rundpinsel, Standard) plus die
+        ' texturierten Stufe-2-Presets "acrylic"/"sandpaper"/"pencil" (Korn-Textur) und "marker"
+        ' (harte, halbtransparente Chisel-Kante). Siehe DrawBrushStroke. Radiergummi ignoriert das.
+        Public Property BrushPreset As String
+            Get
+                Return _brushPreset
+            End Get
+            Set(value As String)
+                SetField(_brushPreset, If(String.IsNullOrWhiteSpace(value), "soft", value.Trim().ToLowerInvariant()))
+            End Set
+        End Property
+
         ' "Solid", "LinearGradient" oder "RadialGradient" - nur für Kind="Rectangle"/"Ellipse" relevant,
         ' siehe DrawShape/CreateFillGradientShader in ApplyAnnotations.
         Public Property FillKind As String
@@ -662,6 +675,7 @@ Namespace Services
                 .Anchor = Anchor,
                 .IsVisible = IsVisible,
                 .HardnessPercent = HardnessPercent,
+                .BrushPreset = BrushPreset,
                 .FillKind = FillKind,
                 .FillColor2 = FillColor2,
                 .GradientAngleDegrees = GradientAngleDegrees,
@@ -2163,11 +2177,7 @@ Namespace Services
         Private Shared Sub FlushHealingSpots(result As SKBitmap, canvas As SKCanvas, pendingHeal As List(Of RetouchSpot),
                                              sourceWidthPixels As Integer, sourceHeightPixels As Integer)
             If pendingHeal Is Nothing OrElse pendingHeal.Count = 0 Then Return
-            If pendingHeal.Count = 1 Then
-                DrawRetouchSpot(result, result, canvas, pendingHeal(0), sourceWidthPixels, sourceHeightPixels)
-            Else
-                DrawHealingRegion(result, canvas, result, pendingHeal, sourceWidthPixels, sourceHeightPixels)
-            End If
+            DrawHealingRegion(result, canvas, result, pendingHeal, sourceWidthPixels, sourceHeightPixels)
         End Sub
 
         Public Shared Sub ApplyRetouchSpotInPlace(target As SKBitmap, sampleSource As SKBitmap, spot As RetouchSpot,
@@ -2175,7 +2185,7 @@ Namespace Services
             If target Is Nothing OrElse sampleSource Is Nothing OrElse spot Is Nothing Then Return
             Using canvas = New SKCanvas(target)
                 If IsHealingSpot(spot) Then
-                    DrawRetouchSpot(target, target, canvas, spot, sourceWidthPixels, sourceHeightPixels)
+                    DrawHealingRegion(target, canvas, target, {spot}, sourceWidthPixels, sourceHeightPixels)
                 Else
                     DrawRetouchSpot(target, sampleSource, canvas, spot, sourceWidthPixels, sourceHeightPixels)
                 End If
@@ -2208,10 +2218,6 @@ Namespace Services
                 ' Verwischen. Sonst kopiert er nach nachfolgenden Retuschen wieder Textur aus einem
                 ' älteren, retuschefreien Zwischenstand zurück.
                 DrawCloneStamp(canvas, result, cx, cy, sx, sy, radius, alphaFactor)
-            ElseIf String.Equals(spot.Mode, "Heal", StringComparison.OrdinalIgnoreCase) Then
-                ' Der Reparaturpinsel arbeitet stroke-akkumuliert: spätere Punkte sollen bereits
-                ' reparierte Pixel als Umgebung sehen.
-                DrawHealingSpot(result, canvas, result, cx, cy, radius, alphaFactor)
             Else
                 ' Verwischen soll auf dem bereits retuschierten Ergebnis aufbauen, damit nach einer
                 ' Reparatur nicht wieder Textur aus dem Ursprungsbild "hineingewischt" wird.
@@ -2252,25 +2258,6 @@ Namespace Services
                     canvas.DrawCircle(cx, cy, radius, paint)
                 End Using
             End Using
-        End Sub
-
-        ''' Healing ohne explizite Quelle: Statt radial Pixel vom Rand nach innen zu ziehen
-        ''' (Speichen/Pusteblumenmuster) wird eine kohärente Nachbarfläche außerhalb des Pinsels
-        ''' gewählt und weich eingestempelt. Gibt es keine brauchbare Fläche, fällt der Pinsel auf
-        ''' eine weiche Umgebungsfarbe zurück.
-        Private Shared Sub DrawHealingSpot(result As SKBitmap, canvas As SKCanvas, source As SKBitmap, cx As Single, cy As Single, radius As Single, flow As Single)
-            If flow <= 0.001F OrElse radius <= 0.5F Then Return
-
-            Dim surrounding = AverageSurroundingColor(source, cx, cy, radius, 1.35F, 2.4F)
-            If Not surrounding.HasValue Then Return
-
-            Dim sample = FindHealingPatch(source, cx, cy, radius, surrounding.Value)
-            If sample.Found Then
-                DrawAdjustedHealingPatch(result, source, cx, cy, sample.Center.X, sample.Center.Y, radius, flow, surrounding.Value, sample.Average)
-                Return
-            End If
-
-            DrawSoftDisc(canvas, cx, cy, radius, surrounding.Value, flow)
         End Sub
 
         Private Shared Sub DrawHealingRegion(result As SKBitmap, canvas As SKCanvas, source As SKBitmap,
@@ -3222,158 +3209,6 @@ Namespace Services
             Next
         End Sub
 
-        Private Shared Function FindHealingPatch(source As SKBitmap, cx As Single, cy As Single, radius As Single,
-                                                 targetColor As SKColor) As (Center As SKPoint, Average As SKColor, Found As Boolean)
-            If source Is Nothing OrElse source.Width <= 0 OrElse source.Height <= 0 Then Return (New SKPoint(0, 0), SKColors.Transparent, False)
-
-            Dim patchRadius = Math.Max(2.0F, radius * 0.82F)
-            Dim distances = {Math.Max(radius * 2.25F, radius + 8.0F), radius * 3.0F, radius * 3.85F}
-            Dim targetStats = SampleRingPatchStats(source, cx, cy, radius * 1.05F, radius * 1.75F)
-            Dim best = New SKPoint(0, 0)
-            Dim bestAverage = SKColors.Transparent
-            Dim bestScore = Double.MaxValue
-            Dim found = False
-
-            For Each sampleDistance In distances
-                For i = 0 To 15
-                    Dim angle = (Math.PI * 2.0 * i) / 16.0
-                    Dim candidate = New SKPoint(cx + CSng(Math.Cos(angle) * sampleDistance),
-                                                cy + CSng(Math.Sin(angle) * sampleDistance))
-
-                    If candidate.X - patchRadius < 0 OrElse candidate.Y - patchRadius < 0 OrElse
-                       candidate.X + patchRadius >= source.Width OrElse candidate.Y + patchRadius >= source.Height Then Continue For
-
-                    Dim overlapDx = candidate.X - cx
-                    Dim overlapDy = candidate.Y - cy
-                    If overlapDx * overlapDx + overlapDy * overlapDy < (radius * 2.12F) * (radius * 2.12F) Then Continue For
-
-                    Dim boundaryScore = HealingBoundaryScore(source, cx, cy, candidate.X, candidate.Y, radius)
-                    If boundaryScore = Double.MaxValue Then Continue For
-
-                    Dim quickStats = SamplePatchStats(source, candidate.X, candidate.Y, Math.Max(2.0F, radius * 0.38F))
-                    If quickStats.Count <= 0 Then Continue For
-                    Dim outlierPenalty = PatchOutlierPenalty(source, candidate.X, candidate.Y, patchRadius, targetColor)
-
-                    Dim stats = quickStats
-                    If boundaryScore < bestScore * 0.8 OrElse Not found Then
-                        stats = SamplePatchStats(source, candidate.X, candidate.Y, patchRadius)
-                        If stats.Count <= 0 Then Continue For
-                    End If
-
-                    Dim colorDistance = ColorDistanceSquared(stats.Average, targetColor)
-                    Dim varianceDelta = If(targetStats.Count > 0, Math.Abs(stats.Variance - targetStats.Variance), stats.Variance)
-                    Dim score = boundaryScore * 1.85 + colorDistance * 0.45 + varianceDelta * 0.06 + outlierPenalty
-                    If score < bestScore Then
-                        bestScore = score
-                        best = candidate
-                        bestAverage = stats.Average
-                        found = True
-                    End If
-                Next
-            Next
-
-            Return (best, bestAverage, found)
-        End Function
-
-        Private Shared Function HealingBoundaryScore(source As SKBitmap, cx As Single, cy As Single,
-                                                     sx As Single, sy As Single, radius As Single) As Double
-            Dim samples = 20
-            Dim score = 0.0
-            Dim count = 0
-            For i = 0 To samples - 1
-                Dim angle = (Math.PI * 2.0 * i) / samples
-                Dim dx = CSng(Math.Cos(angle))
-                Dim dy = CSng(Math.Sin(angle))
-                Dim tx = CInt(Math.Round(cx + dx * radius * 1.08F))
-                Dim ty = CInt(Math.Round(cy + dy * radius * 1.08F))
-                Dim px = CInt(Math.Round(sx + dx * radius * 0.92F))
-                Dim py = CInt(Math.Round(sy + dy * radius * 0.92F))
-                If tx < 0 OrElse ty < 0 OrElse tx >= source.Width OrElse ty >= source.Height OrElse
-                   px < 0 OrElse py < 0 OrElse px >= source.Width OrElse py >= source.Height Then Continue For
-
-                score += ColorDistanceSquared(source.GetPixel(tx, ty), source.GetPixel(px, py))
-                count += 1
-            Next
-            If count = 0 Then Return Double.MaxValue
-            Return score / count
-        End Function
-
-        Private Shared Sub DrawAdjustedHealingPatch(result As SKBitmap, source As SKBitmap,
-                                                    cx As Single, cy As Single, sx As Single, sy As Single,
-                                                    radius As Single, flow As Single,
-                                                    targetAverage As SKColor, sourceAverage As SKColor)
-            If result Is Nothing OrElse source Is Nothing OrElse flow <= 0.001F Then Return
-
-            Dim left = Math.Max(0, CInt(Math.Floor(cx - radius)))
-            Dim top = Math.Max(0, CInt(Math.Floor(cy - radius)))
-            Dim right = Math.Min(result.Width - 1, CInt(Math.Ceiling(cx + radius)))
-            Dim bottom = Math.Min(result.Height - 1, CInt(Math.Ceiling(cy + radius)))
-            If right < left OrElse bottom < top Then Return
-
-            Dim radiusSq = radius * radius
-            Dim hardRadius = radius * 0.74F
-            Dim hardSq = hardRadius * hardRadius
-            Dim featherRange = Math.Max(0.001F, radius - hardRadius)
-            Dim dr = CInt(targetAverage.Red) - CInt(sourceAverage.Red)
-            Dim dg = CInt(targetAverage.Green) - CInt(sourceAverage.Green)
-            Dim db = CInt(targetAverage.Blue) - CInt(sourceAverage.Blue)
-            dr = Math.Max(-56, Math.Min(56, dr))
-            dg = Math.Max(-56, Math.Min(56, dg))
-            db = Math.Max(-56, Math.Min(56, db))
-
-            For y = top To bottom
-                Dim dy = CSng(y) - cy
-                For x = left To right
-                    Dim dx = CSng(x) - cx
-                    Dim distSq = dx * dx + dy * dy
-                    If distSq > radiusSq Then Continue For
-
-                    Dim srcX = CInt(Math.Round(sx + dx))
-                    Dim srcY = CInt(Math.Round(sy + dy))
-                    If srcX < 0 OrElse srcY < 0 OrElse srcX >= source.Width OrElse srcY >= source.Height Then Continue For
-
-                    Dim distance = CSng(Math.Sqrt(distSq))
-                    Dim localAlpha = flow
-                    If distSq > hardSq Then
-                        localAlpha *= Clamp((radius - distance) / featherRange, 0.0F, 1.0F)
-                    End If
-                    Dim sample = source.GetPixel(srcX, srcY)
-                    sample = SuppressHealingOutlier(sample, sourceAverage, targetAverage)
-                    Dim target = result.GetPixel(x, y)
-                    If ColorDistanceSquared(target, targetAverage) > 90 * 90 Then
-                        localAlpha = Math.Max(localAlpha, flow * 0.9F)
-                    End If
-                    If localAlpha <= 0.001F Then Continue For
-
-                    result.SetPixel(x, y, New SKColor(
-                        BlendByte(target.Red, ClampByte(CInt(sample.Red) + dr), localAlpha),
-                        BlendByte(target.Green, ClampByte(CInt(sample.Green) + dg), localAlpha),
-                        BlendByte(target.Blue, ClampByte(CInt(sample.Blue) + db), localAlpha),
-                        BlendByte(target.Alpha, sample.Alpha, localAlpha)))
-                Next
-            Next
-        End Sub
-
-        Private Shared Function PatchOutlierPenalty(source As SKBitmap, cx As Single, cy As Single,
-                                                    radius As Single, targetAverage As SKColor) As Double
-            Dim stepSize = Math.Max(1, CInt(Math.Round(radius / 2.0F)))
-            Dim radiusSq = radius * radius
-            Dim outliers = 0
-            Dim count = 0
-            For y = Math.Max(0, CInt(Math.Floor(cy - radius))) To Math.Min(source.Height - 1, CInt(Math.Ceiling(cy + radius))) Step stepSize
-                Dim dy = CSng(y) - cy
-                For x = Math.Max(0, CInt(Math.Floor(cx - radius))) To Math.Min(source.Width - 1, CInt(Math.Ceiling(cx + radius))) Step stepSize
-                    Dim dx = CSng(x) - cx
-                    If dx * dx + dy * dy > radiusSq Then Continue For
-                    count += 1
-                    If ColorDistanceSquared(source.GetPixel(x, y), targetAverage) > 90 * 90 Then outliers += 1
-                Next
-            Next
-            If count = 0 Then Return 1000000.0
-            Dim ratio = CDbl(outliers) / count
-            Return ratio * ratio * 180000.0
-        End Function
-
         Private Shared Function SampleMaskedSourceStats(source As SKBitmap, mask As SKBitmap,
                                                         sampleLeft As Integer, sampleTop As Integer) As (Average As SKColor, Variance As Double, Count As Integer)
             Dim stepSize = Math.Max(1, CInt(Math.Round(Math.Max(mask.Width, mask.Height) / 18.0)))
@@ -3564,6 +3399,12 @@ Namespace Services
             Return dr * dr + dg * dg + db * db
         End Function
 
+        Private Shared Function MedianByte(values As List(Of Byte)) As Byte
+            If values Is Nothing OrElse values.Count = 0 Then Return 0
+            values.Sort()
+            Return values(values.Count \ 2)
+        End Function
+
         ''' Mittelt den Ring zwischen dem 1,25- und dem 2-fachen Radius um das Ziel - der Rückfall,
         ''' wenn keine Klonquelle gesetzt wurde. Liefert Nothing, wenn der Ring komplett außerhalb
         ''' des Bildes liegt.
@@ -3579,6 +3420,7 @@ Namespace Services
             Dim icy = CInt(Math.Round(cy))
             Dim reach = CInt(Math.Ceiling(outer))
 
+            Dim samples As New List(Of SKColor)()
             Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
             Dim count As Integer = 0
             For yy = Math.Max(0, icy - reach) To Math.Min(source.Height - 1, icy + reach)
@@ -3589,12 +3431,42 @@ Namespace Services
                     Dim dSq = dx * dx + dySq
                     If dSq >= innerSq AndAlso dSq <= outerSq Then
                         Dim c = source.GetPixel(xx, yy)
+                        samples.Add(c)
                         sr += c.Red : sg += c.Green : sb += c.Blue : sa += c.Alpha
                         count += 1
                     End If
                 Next
             Next
             If count = 0 Then Return Nothing
+
+            If samples.Count >= 12 Then
+                Dim reds As New List(Of Byte)(samples.Count)
+                Dim greens As New List(Of Byte)(samples.Count)
+                Dim blues As New List(Of Byte)(samples.Count)
+                For Each sample In samples
+                    reds.Add(sample.Red)
+                    greens.Add(sample.Green)
+                    blues.Add(sample.Blue)
+                Next
+
+                Dim median = New SKColor(MedianByte(reds), MedianByte(greens), MedianByte(blues), CByte(sa \ count))
+                Dim filteredR As Long = 0, filteredG As Long = 0, filteredB As Long = 0, filteredA As Long = 0
+                Dim filteredCount = 0
+                For Each sample In samples
+                    If ColorDistanceSquared(sample, median) > 54 * 54 Then Continue For
+                    filteredR += sample.Red
+                    filteredG += sample.Green
+                    filteredB += sample.Blue
+                    filteredA += sample.Alpha
+                    filteredCount += 1
+                Next
+
+                If filteredCount >= Math.Max(6, samples.Count \ 5) Then
+                    Return New SKColor(CByte(filteredR \ filteredCount), CByte(filteredG \ filteredCount),
+                                       CByte(filteredB \ filteredCount), CByte(filteredA \ filteredCount))
+                End If
+            End If
+
             Return New SKColor(CByte(sr \ count), CByte(sg \ count), CByte(sb \ count), CByte(sa \ count))
         End Function
 
@@ -3763,8 +3635,12 @@ Namespace Services
                         If isEraser AndAlso Not String.IsNullOrWhiteSpace(renderAnnotation.EraserFillColor) Then
                             eraserFill = ApplyAlpha(ParseColor(renderAnnotation.EraserFillColor, SKColors.Transparent), alphaFactor)
                         End If
-                        DrawBrushStroke(canvas, renderAnnotation.Strokes, source.Width, source.Height, stroke, strokeWidth,
-                                        renderAnnotation.HardnessPercent, renderAnnotation.FlowPercent, isEraser, eraserFill)
+                        If (Not isEraser) AndAlso (renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled) Then
+                            DrawBrushStrokeWithEffects(canvas, renderAnnotation, source.Width, source.Height, stroke, strokeWidth)
+                        Else
+                            DrawBrushStroke(canvas, renderAnnotation.Strokes, source.Width, source.Height, stroke, strokeWidth,
+                                            renderAnnotation.HardnessPercent, renderAnnotation.FlowPercent, renderAnnotation.BrushPreset, isEraser, eraserFill)
+                        End If
                         Continue For
                     End If
 
@@ -4703,13 +4579,38 @@ Namespace Services
         ''' gesammelt, statt für jeden eine eigene Ebene anzulegen) sind im Punktestring per ";"
         ''' getrennt und werden hier als eigenständige Teilpfade (je ein eigenes MoveTo) gezeichnet -
         ''' eine einzige durchgehende Linie würde sie sonst fälschlich miteinander verbinden.
-        Private Shared Sub DrawBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, stroke As SKColor, strokeWidth As Single, hardnessPercent As Single, flowPercent As Single, isEraser As Boolean, Optional eraserFill As SKColor? = Nothing)
+        ''' <summary>Bekannte Pinsel-Varianten (Stufe 2). "soft" ist der klassische weiche Rundpinsel;
+        ''' die übrigen sind texturierte Presets. Radiergummi erzwingt immer "soft".</summary>
+        Friend Shared ReadOnly BrushPresetKeys As String() = {"soft", "marker", "acrylic", "sandpaper", "pencil", "smear", "spatter"}
+
+        Private Shared Function NormalizeBrushPreset(preset As String) As String
+            If String.IsNullOrWhiteSpace(preset) Then Return "soft"
+            Dim key = preset.Trim().ToLowerInvariant()
+            Return If(Array.IndexOf(BrushPresetKeys, key) >= 0, key, "soft")
+        End Function
+
+        Private Shared Sub DrawBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, stroke As SKColor, strokeWidth As Single, hardnessPercent As Single, flowPercent As Single, preset As String, isEraser As Boolean, Optional eraserFill As SKColor? = Nothing)
             If strokes Is Nothing Then Return
 
+            ' Der Radiergummi bleibt immer der weiche Rundpinsel - Korn/Textur hätte dort keinen Sinn.
+            Dim key = If(isEraser, "soft", NormalizeBrushPreset(preset))
             Dim resolvedStrokeWidth = Math.Max(1.0F, strokeWidth)
             Dim hardness = Clamp(hardnessPercent, 0, 100) / 100.0F
             Dim blurSigma = resolvedStrokeWidth * (1.0F - hardness) * 0.5F
             Dim flow = Clamp(flowPercent, 0, 100) / 100.0F
+
+            ' Texturierte Presets laufen über eine eigene Ebene, in die eine Korn-Textur gestanzt wird.
+            If key = "acrylic" OrElse key = "sandpaper" OrElse key = "pencil" Then
+                DrawGrainBrushStroke(canvas, strokes, width, height, stroke, resolvedStrokeWidth, blurSigma, flow, key)
+                Return
+            End If
+
+            ' Schmieren/Farbkleckse werden entlang des Pfades gestempelt (richtungsabhängig bzw. gestreut).
+            If key = "smear" OrElse key = "spatter" Then
+                DrawStampBrushStroke(canvas, strokes, width, height, stroke, resolvedStrokeWidth, blurSigma, flow, key)
+                Return
+            End If
+
             Dim paintColor = stroke
             Dim blendMode = SKBlendMode.SrcOver
             If isEraser Then
@@ -4720,12 +4621,19 @@ Namespace Services
                 End If
             End If
 
+            ' Marker: harte, flache Chisel-Kante und halbtransparent, damit sich überkreuzende Striche
+            ' sichtbar aufbauen (wie ein echter Filzstift). Sonst wie der weiche Rundpinsel.
+            Dim isMarker = key = "marker"
+            Dim effectiveFlow = If(isMarker, flow * 0.72F, flow)
+            Dim cap = If(isMarker, SKStrokeCap.Square, SKStrokeCap.Round)
+            Dim join = If(isMarker, SKStrokeJoin.Bevel, SKStrokeJoin.Round)
+
             Using paint = New SKPaint With {
-                .Color = paintColor.WithAlpha(CByte(paintColor.Alpha * flow)),
+                .Color = paintColor.WithAlpha(CByte(Clamp(paintColor.Alpha * effectiveFlow, 0, 255))),
                 .Style = SKPaintStyle.Stroke,
                 .StrokeWidth = resolvedStrokeWidth,
-                .StrokeCap = SKStrokeCap.Round,
-                .StrokeJoin = SKStrokeJoin.Round,
+                .StrokeCap = cap,
+                .StrokeJoin = join,
                 .IsAntialias = True
             }
                 paint.BlendMode = blendMode
@@ -4749,6 +4657,411 @@ Namespace Services
                 Next
             End Using
         End Sub
+
+        ''' <summary>Zeichnet einen Pinselstrich mit Schatten und/oder Glühen: der Strich (inkl. Textur/
+        ''' Preset) wird zunächst auf eine eigene Ebene gerendert, dann werden daraus per DropShadowOnly
+        ''' aus der echten Silhouette Glühen (Halo, ohne Versatz) und Schatten (mit Versatz) unter den
+        ''' Strich komponiert. Größe/Blur/Versatz skalieren mit der Strichbreite.</summary>
+        Private Shared Sub DrawBrushStrokeWithEffects(canvas As SKCanvas, ann As ImageAnnotation, width As Integer, height As Integer, strokeColor As SKColor, strokeWidth As Single)
+            If ann.Strokes Is Nothing Then Return
+            Dim minX = Single.MaxValue, minY = Single.MaxValue
+            Dim maxX = Single.MinValue, maxY = Single.MinValue
+            Dim any = False
+            For Each bs In ann.Strokes
+                If bs Is Nothing OrElse bs.Points.Count < 1 Then Continue For
+                For Each p In bs.Points
+                    minX = Math.Min(minX, p.X) : minY = Math.Min(minY, p.Y)
+                    maxX = Math.Max(maxX, p.X) : maxY = Math.Max(maxY, p.Y)
+                    any = True
+                Next
+            Next
+            If Not any Then Return
+
+            Dim objSize = Math.Max(1.0F, strokeWidth)
+            Dim shadowDx = If(ann.ShadowEnabled, Clamp(ann.ShadowOffsetXPercent, -100, 100) / 100.0F * objSize, 0.0F)
+            Dim shadowDy = If(ann.ShadowEnabled, Clamp(ann.ShadowOffsetYPercent, -100, 100) / 100.0F * objSize, 0.0F)
+            Dim shadowSigma = If(ann.ShadowEnabled, Clamp(ann.ShadowBlur, 0, 100) / 100.0F * objSize * 0.6F, 0.0F)
+            Dim glowSigma = If(ann.GlowEnabled, Clamp(ann.GlowBlur, 0, 100) / 100.0F * objSize * 0.8F, 0.0F)
+
+            Dim pad = objSize + Math.Abs(shadowDx) + Math.Abs(shadowDy) + Math.Max(shadowSigma, glowSigma) * 3.0F + 4.0F
+            Dim left = CInt(Math.Floor(Clamp(minX - pad, 0, width)))
+            Dim top = CInt(Math.Floor(Clamp(minY - pad, 0, height)))
+            Dim right = CInt(Math.Ceiling(Clamp(maxX + pad, 0, width)))
+            Dim bottom = CInt(Math.Ceiling(Clamp(maxY + pad, 0, height)))
+            Dim w = right - left, h = bottom - top
+            If w <= 0 OrElse h <= 0 Then Return
+
+            Using layer = New SKBitmap(w, h, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using lc = New SKCanvas(layer)
+                    lc.Clear(SKColors.Transparent)
+                    lc.Translate(-left, -top)
+                    DrawBrushStroke(lc, ann.Strokes, width, height, strokeColor, strokeWidth,
+                                    ann.HardnessPercent, ann.FlowPercent, ann.BrushPreset, False)
+                End Using
+
+                ' Glühen zuerst (Halo hinter dem Strich), dann Schatten, dann der Strich selbst.
+                If ann.GlowEnabled AndAlso glowSigma > 0.05F Then
+                    Dim glowColor = ApplyAlpha(ParseColor(ann.GlowColor, SKColors.Yellow), Clamp(ann.GlowStrength, 0, 100) / 100.0F)
+                    Using p = New SKPaint()
+                        p.ImageFilter = SKImageFilter.CreateDropShadowOnly(0, 0, glowSigma, glowSigma, glowColor)
+                        canvas.DrawBitmap(layer, left, top, p)
+                    End Using
+                End If
+                If ann.ShadowEnabled Then
+                    Dim shadowColor = ApplyAlpha(ParseColor(ann.ShadowColor, New SKColor(0, 0, 0, 128)), Clamp(ann.ShadowStrength, 0, 100) / 100.0F)
+                    Using p = New SKPaint()
+                        p.ImageFilter = SKImageFilter.CreateDropShadowOnly(shadowDx, shadowDy, Math.Max(0.01F, shadowSigma), Math.Max(0.01F, shadowSigma), shadowColor)
+                        canvas.DrawBitmap(layer, left, top, p)
+                    End Using
+                End If
+                canvas.DrawBitmap(layer, left, top)
+            End Using
+        End Sub
+
+        ' Grain-Cache: je Preset eine deterministisch erzeugte Alpha-Korn-Kachel (256x256), die als
+        ' wiederholender Shader in die Strichform gestanzt wird. Deterministisch, damit Vorschau und
+        ' gebackenes Ergebnis identisch sind und Re-Renders nicht flackern. Wird nie disposed (Cache).
+        Private Shared ReadOnly _grainCacheLock As New Object()
+        Private Shared ReadOnly _grainBitmaps As New Dictionary(Of String, SKBitmap)(StringComparer.Ordinal)
+
+        Private Shared Function Hash01(a As Integer, b As Integer, seed As Integer) As Single
+            ' Ganzzahl-Hash in Long-Arithmetik mit 32-Bit-Maskierung, damit VB keinen Overflow wirft.
+            Dim n As Long = (CLng(a) * 73856093L) Xor (CLng(b) * 19349663L) Xor (CLng(seed) * 83492791L)
+            n = n And &HFFFFFFFFL
+            n = (n Xor (n >> 13)) And &HFFFFFFFFL
+            n = (n * 40503L) And &HFFFFFFFFL
+            n = (n Xor (n >> 7)) And &HFFFFFFFFL
+            Return CSng(n And &HFFFFFFL) / 16777216.0F
+        End Function
+
+        Private Shared Function MapGrainAlpha(key As String, v As Single) As Byte
+            Dim a As Single
+            Select Case key
+                Case "acrylic" : a = v * 1.7F - 0.15F      ' überwiegend deckend, raue Lücken
+                Case "sandpaper" : a = v * 1.35F - 0.2F    ' gröber, mehr Lücken
+                Case Else ' pencil: feines, sparsames Graphitkorn
+                    a = If(v > 0.4F, (v - 0.4F) * 1.5F, 0.0F)
+            End Select
+            Return CByte(Clamp(a * 255.0F, 0, 255))
+        End Function
+
+        Private Shared Function BuildGrainBitmap(key As String) As SKBitmap
+            Const size As Integer = 256
+            Dim cell As Integer = If(key = "sandpaper", 3, If(key = "acrylic", 2, 1))
+            Dim bmp = New SKBitmap(size, size, SKColorType.Rgba8888, SKAlphaType.Unpremul)
+            Dim px(size * size - 1) As SKColor
+            For y As Integer = 0 To size - 1
+                For x As Integer = 0 To size - 1
+                    Dim baseV = Hash01(x \ cell, y \ cell, 12345)
+                    Dim fine = Hash01(x, y, 777)
+                    Dim v = baseV * 0.7F + fine * 0.3F
+                    px(y * size + x) = New SKColor(255, 255, 255, MapGrainAlpha(key, v))
+                Next
+            Next
+            bmp.Pixels = px
+            Return bmp
+        End Function
+
+        Private Shared Function GetGrainBitmap(key As String) As SKBitmap
+            SyncLock _grainCacheLock
+                Dim existing As SKBitmap = Nothing
+                If _grainBitmaps.TryGetValue(key, existing) Then Return existing
+                Dim bmp = BuildGrainBitmap(key)
+                _grainBitmaps(key) = bmp
+                Return bmp
+            End SyncLock
+        End Function
+
+        ''' <summary>Zeichnet texturierte Striche: erst die weiche Strichform auf eine eigene Ebene, dann
+        ''' die Korn-Kachel per DstIn hineingestanzt, dann als Ganzes aufs Bild komponiert. Das Korn wird
+        ''' in globalen Bildkoordinaten gesampelt (Ebene ist entsprechend verschoben), damit sich
+        ''' überlappende Striche dasselbe Texturfeld teilen.</summary>
+        Private Shared Sub DrawGrainBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, color As SKColor, strokeWidth As Single, blurSigma As Single, flow As Single, key As String)
+            Dim minX = Single.MaxValue, minY = Single.MaxValue
+            Dim maxX = Single.MinValue, maxY = Single.MinValue
+            Dim any = False
+            For Each brushStroke In strokes
+                If brushStroke Is Nothing OrElse brushStroke.Points.Count < 2 Then Continue For
+                For Each p In brushStroke.Points
+                    minX = Math.Min(minX, p.X) : minY = Math.Min(minY, p.Y)
+                    maxX = Math.Max(maxX, p.X) : maxY = Math.Max(maxY, p.Y)
+                    any = True
+                Next
+            Next
+            If Not any Then Return
+
+            Dim pad = strokeWidth * 0.6F + blurSigma * 3.0F + 2.0F
+            Dim left = CInt(Math.Floor(Clamp(minX - pad, 0, width)))
+            Dim top = CInt(Math.Floor(Clamp(minY - pad, 0, height)))
+            Dim right = CInt(Math.Ceiling(Clamp(maxX + pad, 0, width)))
+            Dim bottom = CInt(Math.Ceiling(Clamp(maxY + pad, 0, height)))
+            Dim w = right - left, h = bottom - top
+            If w <= 0 OrElse h <= 0 Then Return
+
+            Dim layerColor = color.WithAlpha(CByte(Clamp(color.Alpha * flow, 0, 255)))
+            Using layer = New SKBitmap(w, h, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using lc = New SKCanvas(layer)
+                    lc.Clear(SKColors.Transparent)
+                    lc.Translate(-left, -top)
+
+                    Using shapePaint = New SKPaint With {
+                        .Color = layerColor,
+                        .Style = SKPaintStyle.Stroke,
+                        .StrokeWidth = strokeWidth,
+                        .StrokeCap = SKStrokeCap.Round,
+                        .StrokeJoin = SKStrokeJoin.Round,
+                        .IsAntialias = True
+                    }
+                        If blurSigma > 0.05F Then shapePaint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, blurSigma)
+                        For Each brushStroke In strokes
+                            If brushStroke Is Nothing OrElse brushStroke.Points.Count < 2 Then Continue For
+                            Using path = New SKPath()
+                                For i As Integer = 0 To brushStroke.Points.Count - 1
+                                    Dim p = brushStroke.Points(i)
+                                    Dim target = New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height))
+                                    If i = 0 Then path.MoveTo(target) Else path.LineTo(target)
+                                Next
+                                lc.DrawPath(path, shapePaint)
+                            End Using
+                        Next
+                    End Using
+
+                    ' Korn in globalen Koordinaten in die Strichform stanzen.
+                    Using grainShader = SKShader.CreateBitmap(GetGrainBitmap(key), SKShaderTileMode.Repeat, SKShaderTileMode.Repeat)
+                        Using grainPaint = New SKPaint With {.Shader = grainShader, .BlendMode = SKBlendMode.DstIn, .IsAntialias = False}
+                            lc.DrawRect(New SKRect(left, top, right, bottom), grainPaint)
+                        End Using
+                    End Using
+                End Using
+
+                canvas.DrawBitmap(layer, left, top)
+            End Using
+        End Sub
+
+        ''' <summary>Stempelbasierte Striche: der Pfad wird per SKPathMeasure abgetastet und an jedem
+        ''' Schritt eine Form gesetzt. "smear" tupft langgezogene, weiche, zur Strichrichtung gedrehte
+        ''' Ovale (verwischter Zug, der der Kurve folgt); "spatter" setzt einen gebrochenen Kern plus
+        ''' zufällig gestreute Tropfen neben der Linie (viele kleine, wenige große - "zu viel Farbe").
+        ''' Alle Zufallswerte stammen deterministisch aus dem Stempelindex, damit Vorschau, gebackenes
+        ''' Bild und Re-Renders identisch bleiben.</summary>
+        Private Shared Sub DrawStampBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, color As SKColor, strokeWidth As Single, blurSigma As Single, flow As Single, key As String)
+            Dim minX = Single.MaxValue, minY = Single.MaxValue
+            Dim maxX = Single.MinValue, maxY = Single.MinValue
+            Dim any = False
+            For Each brushStroke In strokes
+                If brushStroke Is Nothing OrElse brushStroke.Points.Count < 2 Then Continue For
+                For Each p In brushStroke.Points
+                    minX = Math.Min(minX, p.X) : minY = Math.Min(minY, p.Y)
+                    maxX = Math.Max(maxX, p.X) : maxY = Math.Max(maxY, p.Y)
+                    any = True
+                Next
+            Next
+            If Not any Then Return
+
+            Dim isSmear = key = "smear"
+            Dim spread = If(isSmear, strokeWidth * 1.3F, strokeWidth * 2.2F)
+            Dim pad = spread + blurSigma * 3.0F + 2.0F
+            Dim left = CInt(Math.Floor(Clamp(minX - pad, 0, width)))
+            Dim top = CInt(Math.Floor(Clamp(minY - pad, 0, height)))
+            Dim right = CInt(Math.Ceiling(Clamp(maxX + pad, 0, width)))
+            Dim bottom = CInt(Math.Ceiling(Clamp(maxY + pad, 0, height)))
+            Dim w = right - left, h = bottom - top
+            If w <= 0 OrElse h <= 0 Then Return
+
+            Dim baseAlpha As Single = Clamp(color.Alpha * flow, 0, 255) / 255.0F
+
+            Using layer = New SKBitmap(w, h, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using lc = New SKCanvas(layer)
+                    lc.Clear(SKColors.Transparent)
+                    lc.Translate(-left, -top)
+
+                    Dim strokeOrdinal = 0
+                    For Each brushStroke In strokes
+                        If brushStroke Is Nothing OrElse brushStroke.Points.Count < 2 Then Continue For
+                        Dim pts As New List(Of SKPoint)(brushStroke.Points.Count)
+                        For Each p In brushStroke.Points
+                            pts.Add(New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height)))
+                        Next
+                        Dim seedBase = 4242 + strokeOrdinal * 131
+                        If isSmear Then
+                            DrawSmearStroke(lc, pts, color, strokeWidth, baseAlpha, blurSigma, seedBase)
+                        Else
+                            DrawSpatterStroke(lc, pts, color, strokeWidth, baseAlpha, blurSigma, seedBase)
+                        End If
+                        strokeOrdinal += 1
+                    Next
+                End Using
+
+                canvas.DrawBitmap(layer, left, top)
+            End Using
+        End Sub
+
+        ''' <summary>Schmieren als Trockenpinsel/Borsten: ein weicher, blasser Grundkörper entlang des
+        ''' Zuges plus viele dünne "Borsten"-Linien, die parallel zur Kurve laufen (je Punkt eigene
+        ''' Normale, damit sie Kurven folgen). Zufällige Lücken, Deckkräfte und Anfangs-/End-Beschnitte
+        ''' erzeugen die typischen Striationen und die auslaufenden Ränder. Deterministisch über seedBase.</summary>
+        Private Shared Sub DrawSmearStroke(lc As SKCanvas, pts As List(Of SKPoint), color As SKColor, strokeWidth As Single, baseAlpha As Single, blurSigma As Single, seedBase As Integer, Optional density As Single = 1.0F, Optional emboss As Boolean = False)
+            Dim n = pts.Count
+            If n < 2 Then Return
+
+            ' Per-Punkt-Normale (senkrecht zur lokalen Richtung) für die seitlichen Borsten-Versätze.
+            Dim normals(n - 1) As SKPoint
+            For i As Integer = 0 To n - 1
+                Dim aIdx = Math.Max(0, i - 1), bIdx = Math.Min(n - 1, i + 1)
+                Dim tx = pts(bIdx).X - pts(aIdx).X, ty = pts(bIdx).Y - pts(aIdx).Y
+                Dim tlen = CSng(Math.Sqrt(tx * tx + ty * ty))
+                If tlen < 0.001F Then tlen = 1.0F
+                normals(i) = New SKPoint(-ty / tlen, tx / tlen)
+            Next
+
+            ' Weicher, blasser Grundkörper - gibt dem Schmierer Substanz unter den Striationen.
+            Using body = New SKPaint With {.IsAntialias = True, .Style = SKPaintStyle.Stroke,
+                                           .StrokeCap = SKStrokeCap.Round, .StrokeJoin = SKStrokeJoin.Round,
+                                           .StrokeWidth = strokeWidth * 0.9F,
+                                           .Color = color.WithAlpha(CByte(Clamp(baseAlpha * 0.32F * density * 255.0F, 0, 255)))}
+                body.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(1.0F, strokeWidth * 0.2F + blurSigma))
+                Using bodyPath = New SKPath()
+                    bodyPath.MoveTo(pts(0))
+                    For i As Integer = 1 To n - 1 : bodyPath.LineTo(pts(i)) : Next
+                    lc.DrawPath(bodyPath, body)
+                End Using
+            End Using
+
+            ' 3D-Impasto: jede Borste bekommt eine helle und eine dunkle Kante (fixe Lichtrichtung über
+            ' die Normale), damit sie wie ein aufgetragener Farbwulst wirkt.
+            Dim embossOff = Math.Max(1.0F, strokeWidth * 0.03F)
+
+            Dim bristles = Math.Max(6, CInt(strokeWidth / 1.4F))
+            Using bristle = New SKPaint With {.IsAntialias = True, .Style = SKPaintStyle.Stroke,
+                                              .StrokeCap = SKStrokeCap.Round, .StrokeJoin = SKStrokeJoin.Round,
+                                              .StrokeWidth = Math.Max(1.0F, strokeWidth * 0.055F)}
+                bristle.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(0.5F, strokeWidth * 0.03F + blurSigma))
+                For b As Integer = 0 To bristles - 1
+                    If Hash01(b, 1, seedBase) < 0.1F Then Continue For ' Lücken = Streifen
+                    Dim frac = (b / CSng(bristles - 1)) - 0.5F
+                    Dim offset = frac * strokeWidth * 0.92F + (Hash01(b, 2, seedBase) - 0.5F) * strokeWidth * 0.08F
+                    Dim a = Clamp(baseAlpha * (0.24F + Hash01(b, 3, seedBase) * 0.55F) * density, 0, 1)
+                    ' Zufälliger Beschnitt vorne/hinten -> unterschiedlich lange, auslaufende Borsten.
+                    Dim i0 = CInt(Math.Floor(Hash01(b, 4, seedBase) * 0.28F * (n - 1)))
+                    Dim i1 = CInt(Math.Ceiling((0.55F + Hash01(b, 5, seedBase) * 0.45F) * (n - 1)))
+                    i1 = Math.Min(n - 1, Math.Max(i0 + 1, i1))
+
+                    If emboss Then
+                        ' Schatten (dunkle Kante) auf der einen, Licht (helle Kante) auf der anderen Seite;
+                        ' der Kern liegt zuletzt darüber, sodass nur schmale Kanten herausschauen.
+                        bristle.Color = Shade(color, -0.45F).WithAlpha(CByte(Clamp(a * 0.9F * 255.0F, 0, 255)))
+                        Using sp = BuildOffsetBristlePath(pts, normals, i0, i1, offset + embossOff) : lc.DrawPath(sp, bristle) : End Using
+                        bristle.Color = Shade(color, 0.55F).WithAlpha(CByte(Clamp(a * 0.9F * 255.0F, 0, 255)))
+                        Using hp = BuildOffsetBristlePath(pts, normals, i0, i1, offset - embossOff) : lc.DrawPath(hp, bristle) : End Using
+                    End If
+
+                    bristle.Color = color.WithAlpha(CByte(Clamp(a * 255.0F, 0, 255)))
+                    Using path = BuildOffsetBristlePath(pts, normals, i0, i1, offset)
+                        lc.DrawPath(path, bristle)
+                    End Using
+                Next
+            End Using
+        End Sub
+
+        ''' <summary>Baut den Teilpfad einer Borste: Punkte i0..i1, jeweils um <paramref name="offset"/>
+        ''' entlang der Punkt-Normale seitlich versetzt (folgt so der Kurve).</summary>
+        Private Shared Function BuildOffsetBristlePath(pts As List(Of SKPoint), normals As SKPoint(), i0 As Integer, i1 As Integer, offset As Single) As SKPath
+            Dim path = New SKPath()
+            For i As Integer = i0 To i1
+                Dim px = pts(i).X + normals(i).X * offset
+                Dim py = pts(i).Y + normals(i).Y * offset
+                If i = i0 Then path.MoveTo(px, py) Else path.LineTo(px, py)
+            Next
+            Return path
+        End Function
+
+        ''' <summary>Hellt (factor &gt; 0, Richtung Weiß) oder dunkelt (factor &lt; 0, Richtung Schwarz)
+        ''' eine Farbe ab; Alpha bleibt unberührt.</summary>
+        Private Shared Function Shade(c As SKColor, factor As Single) As SKColor
+            If factor >= 0 Then
+                Dim f = Clamp(factor, 0, 1)
+                Return New SKColor(CByte(c.Red + (255 - c.Red) * f), CByte(c.Green + (255 - c.Green) * f), CByte(c.Blue + (255 - c.Blue) * f), c.Alpha)
+            Else
+                Dim f = 1.0F + Clamp(factor, -1, 0)
+                Return New SKColor(CByte(c.Red * f), CByte(c.Green * f), CByte(c.Blue * f), c.Alpha)
+            End If
+        End Function
+
+        ''' <summary>Farbkleckse: ein satter, durchgehender Kern-Strich plus zufällig um die Linie
+        ''' gestreute Tropfen (r^3-verteilt: viele kleine, wenige große) - der "zu viel Farbe"-Effekt.
+        ''' Deterministisch über seedBase.</summary>
+        Private Shared Sub DrawSpatterStroke(lc As SKCanvas, pts As List(Of SKPoint), color As SKColor, strokeWidth As Single, baseAlpha As Single, blurSigma As Single, seedBase As Integer)
+            Dim n = pts.Count
+            If n < 2 Then Return
+
+            Using path = New SKPath()
+                path.MoveTo(pts(0))
+                For i As Integer = 1 To n - 1 : path.LineTo(pts(i)) : Next
+
+                ' Grundlinie: die streifige Schmier-Struktur mit 3D-Impasto - satt (dichte Borsten) mit
+                ' sichtbaren Striationen und heller/dunkler Kante statt eines glatten Rohrs.
+                DrawSmearStroke(lc, pts, color, strokeWidth, baseAlpha, blurSigma, seedBase, 1.2F, True)
+
+                ' Gestreute Tropfen entlang des Pfades.
+                Using drops = New SKPaint With {.IsAntialias = True, .Style = SKPaintStyle.Fill}
+                    Using pm = New SKPathMeasure(path, False)
+                        Dim length = pm.Length
+                        Dim spacing = Math.Max(1.0F, strokeWidth * 0.5F)
+                        Dim d As Single = 0.0F
+                        Dim stampIndex = 0
+                        Do
+                            Dim pos As SKPoint, tan As SKPoint
+                            If pm.GetPositionAndTangent(d, pos, tan) Then
+                                Dim perpX = -tan.Y, perpY = tan.X
+                                For j As Integer = 0 To 3
+                                    If Hash01(stampIndex, 10 + j, seedBase) < 0.55F Then
+                                        Dim rr = Hash01(stampIndex, 20 + j, seedBase)
+                                        Dim dropR = strokeWidth * (0.03F + rr * rr * rr * 0.33F)
+                                        ' Näher an der Spur: seitlicher Versatz ~1x statt 3x Strichbreite.
+                                        Dim offN = (Hash01(stampIndex, 30 + j, seedBase) - 0.5F) * strokeWidth * 1.5F
+                                        Dim offT = (Hash01(stampIndex, 40 + j, seedBase) - 0.5F) * strokeWidth * 1.2F
+                                        Dim a = baseAlpha * (0.55F + Hash01(stampIndex, 50 + j, seedBase) * 0.45F)
+                                        drops.Color = color.WithAlpha(CByte(Clamp(a * 255.0F, 0, 255)))
+                                        lc.DrawCircle(pos.X + perpX * offN + tan.X * offT, pos.Y + perpY * offN + tan.Y * offT, dropR, drops)
+                                    End If
+                                Next
+                            End If
+                            stampIndex += 1
+                            If d >= length Then Exit Do
+                            d = Math.Min(length, d + spacing)
+                        Loop
+                    End Using
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Rendert einen Beispielstrich einer Pinsel-Variante als kleine Vorschau (z. B. für den
+        ''' Pinsel-Picker). Nutzt dieselbe Zeichenroutine wie das echte Malen, damit die Vorschau exakt
+        ''' dem Ergebnis entspricht. Rückgabe muss vom Aufrufer disposed werden.</summary>
+        Public Shared Function RenderBrushStrokePreview(preset As String, widthPx As Integer, heightPx As Integer, color As SKColor) As SKBitmap
+            Dim w = Math.Max(8, widthPx)
+            Dim h = Math.Max(8, heightPx)
+            Dim bmp = New SKBitmap(w, h, SKColorType.Rgba8888, SKAlphaType.Premul)
+            Using canvas = New SKCanvas(bmp)
+                canvas.Clear(SKColors.Transparent)
+                ' Ein leicht geschwungener Strich quer über die Kachel, wie in Pinsel-Bibliotheken üblich.
+                Dim midY = h / 2.0F
+                Dim amp = h * 0.16F
+                Dim pts As New List(Of StrokePoint)()
+                Dim x0 = w * 0.06F, x1 = w * 0.94F
+                Dim steps = 48
+                For i As Integer = 0 To steps
+                    Dim t = i / CSng(steps)
+                    Dim x = x0 + (x1 - x0) * t
+                    Dim y = midY + CSng(Math.Sin(t * Math.PI * 1.6 - 0.4)) * amp
+                    pts.Add(New StrokePoint(x, y))
+                Next
+                Dim strokeWidth = Math.Max(2.0F, h * 0.34F)
+                Dim strokes = New List(Of BrushStroke) From {New BrushStroke(pts)}
+                DrawBrushStroke(canvas, strokes, w, h, color, strokeWidth, 100.0F, 100.0F, preset, False)
+            End Using
+            Return bmp
+        End Function
 
         Private Shared Sub DrawSingleGlyph(canvas As SKCanvas, glyph As String, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String)
             Dim text = glyph.Trim()

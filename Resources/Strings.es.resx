@@ -2828,4 +2828,25 @@
   <data name="Sch_rfe_und_Weichzeichnen_3b02f909" xml:space="preserve">
     <value>Nitidez y suavizado</value>
   </data>
+  <data name="Rund_weich_43d1629a" xml:space="preserve">
+    <value>Redondo suave</value>
+  </data>
+  <data name="Bleistift_2ada35a2" xml:space="preserve">
+    <value>Lápiz</value>
+  </data>
+  <data name="Marker_4290a803" xml:space="preserve">
+    <value>Marcador</value>
+  </data>
+  <data name="Acryl_k_rnig_202f28eb" xml:space="preserve">
+    <value>Acrílico granulado</value>
+  </data>
+  <data name="Sandpapier_477c5fa2" xml:space="preserve">
+    <value>Papel de lija</value>
+  </data>
+  <data name="Schmieren_46e04e47" xml:space="preserve">
+    <value>Difuminado</value>
+  </data>
+  <data name="Farbkleckse_4b563454" xml:space="preserve">
+    <value>Salpicaduras de pintura</value>
+  </data>
 </root>

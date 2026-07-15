@@ -2828,4 +2828,25 @@
   <data name="Sch_rfe_und_Weichzeichnen_3b02f909" xml:space="preserve">
     <value>Netteté et adoucissement</value>
   </data>
+  <data name="Rund_weich_43d1629a" xml:space="preserve">
+    <value>Rond doux</value>
+  </data>
+  <data name="Bleistift_2ada35a2" xml:space="preserve">
+    <value>Crayon</value>
+  </data>
+  <data name="Marker_4290a803" xml:space="preserve">
+    <value>Marqueur</value>
+  </data>
+  <data name="Acryl_k_rnig_202f28eb" xml:space="preserve">
+    <value>Acrylique granuleux</value>
+  </data>
+  <data name="Sandpapier_477c5fa2" xml:space="preserve">
+    <value>Papier de verre</value>
+  </data>
+  <data name="Schmieren_46e04e47" xml:space="preserve">
+    <value>Estompe</value>
+  </data>
+  <data name="Farbkleckse_4b563454" xml:space="preserve">
+    <value>Éclaboussures de peinture</value>
+  </data>
 </root>

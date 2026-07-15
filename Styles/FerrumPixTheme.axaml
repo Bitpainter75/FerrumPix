@@ -375,6 +375,29 @@
     <Style Selector="Button.ghost.active icons|SvgIcon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- Kachel im visuellen Pinsel-Picker (DrawPanel): volle Breite, Akzentrahmen wenn aktiv -->
+    <Style Selector="Button.brush-preset">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="7,4"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Button.brush-preset /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+    </Style>
+    <Style Selector="Button.brush-preset:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="Button.brush-preset.active /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.brush-preset.active TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+    </Style>
     <Style Selector="Button.segmented">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>

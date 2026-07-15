@@ -748,9 +748,19 @@
                                 <panels:TransformPanel />
                             </Border>
 
+                            <!-- DrawPanel bringt seine eigenen adjustment-group-Rahmen mit (Farbe, Pinsel,
+                                 Werkzeug getrennt), daher hier kein umschließender Rahmen. -->
+                            <panels:DrawPanel IsVisible="{Binding ShowDrawControls}" />
+
+                            <!-- Schatten und Glühen auch für den Pinsel (wie beim Text-Objekt). -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowDrawControls}">
-                                <panels:DrawPanel />
+                                    IsVisible="{Binding IsBrushPaintMode}">
+                                <panels:AnnotationShadowPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding IsBrushPaintMode}">
+                                <panels:AnnotationGlowPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
