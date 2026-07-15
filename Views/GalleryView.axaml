@@ -706,7 +706,8 @@
                             <MenuItem Name="GalleryGridViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
                     </ScrollViewer.ContextMenu>
-                    <StackPanel Margin="12,12,18,20">
+                    <StackPanel Margin="12,12,18,20"
+                                Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
                                       ContextRequested="OnGalleryAreaContextRequested">
@@ -1076,7 +1077,8 @@
                             <MenuItem Name="GalleryListViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
                     </ScrollViewer.ContextMenu>
-                    <StackPanel Margin="12,12,18,150">
+                    <StackPanel Margin="12,12,18,150"
+                                Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
                                       ContextRequested="OnGalleryAreaContextRequested">

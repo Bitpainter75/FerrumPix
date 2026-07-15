@@ -343,8 +343,9 @@ Namespace Views
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                Dim cols = Math.Max(1, GetGridColumnCount())
-                Dim itemSlotHeight = vm.GridItemSlotHeight
+                Dim cols = 1
+                Dim itemSlotHeight = 0.0
+                GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight)
                 Dim firstRow = Math.Max(0, CInt(Math.Floor(Math.Max(0.0, scrollViewer.Offset.Y - 12.0) / itemSlotHeight)) - 1)
                 Dim lastRow = CInt(Math.Ceiling((scrollViewer.Offset.Y + scrollViewer.Bounds.Height - 12.0) / itemSlotHeight)) + 1
                 Dim firstIndex = Math.Max(0, firstRow * cols)
@@ -414,9 +415,10 @@ Namespace Views
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                Dim cols = Math.Max(1, GetGridColumnCount())
+                Dim cols = 1
+                Dim itemSlotHeight = 0.0
+                GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight)
                 Dim row = idx \ cols
-                Dim itemSlotHeight = vm.GridItemSlotHeight
                 Dim itemTop = 12.0 + row * itemSlotHeight
                 Dim itemBottom = itemTop + itemSlotHeight
 
@@ -1751,12 +1753,72 @@ Namespace Views
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.IsGridView Then Return 1
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
-            Dim availableWidth = If(scrollViewer IsNot Nothing AndAlso scrollViewer.Bounds.Width > 0,
-                                    scrollViewer.Bounds.Width - 36,
-                                    Bounds.Width - 36)
+            Dim cols = 1
+            Dim itemSlotHeight = 0.0
+            GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight)
+            Return cols
+        End Function
+
+        Private Sub GetGridLayoutMetrics(scrollViewer As ScrollViewer, vm As GalleryViewModel, ByRef columns As Integer, ByRef itemSlotHeight As Double)
+            columns = 1
+            itemSlotHeight = If(vm IsNot Nothing, Math.Max(1, vm.GridItemSlotHeight), 1)
+            If vm Is Nothing Then Return
+
+            Dim measuredColumns = 0
+            Dim measuredSlotHeight = 0.0
+            If TryGetRenderedGridMetrics(scrollViewer, measuredColumns, measuredSlotHeight) Then
+                columns = Math.Max(1, measuredColumns)
+                itemSlotHeight = Math.Max(1, measuredSlotHeight)
+                Return
+            End If
+
+            Dim itemsControl = scrollViewer?.GetVisualDescendants().OfType(Of ItemsControl)().FirstOrDefault()
+            Dim availableWidth = If(itemsControl IsNot Nothing AndAlso itemsControl.Bounds.Width > 0,
+                                    itemsControl.Bounds.Width,
+                                    If(scrollViewer IsNot Nothing AndAlso scrollViewer.Viewport.Width > 0,
+                                       scrollViewer.Viewport.Width - 30,
+                                       Bounds.Width - 30))
             availableWidth = Math.Max(1, availableWidth)
             Dim itemWidth = Math.Max(1, vm.GridColumnPitch)
-            Return Math.Max(1, CInt(Math.Floor(availableWidth / itemWidth)))
+            columns = Math.Max(1, CInt(Math.Floor(availableWidth / itemWidth)))
+        End Sub
+
+        Private Function TryGetRenderedGridMetrics(scrollViewer As ScrollViewer, ByRef columns As Integer, ByRef itemSlotHeight As Double) As Boolean
+            columns = 0
+            itemSlotHeight = 0
+            If scrollViewer Is Nothing Then Return False
+
+            Dim thumbBorders = scrollViewer.GetVisualDescendants().
+                OfType(Of Border)().
+                Where(Function(b) String.Equals(b.Name, "ThumbBorder", StringComparison.Ordinal) AndAlso b.Bounds.Width > 0 AndAlso b.Bounds.Height > 0).
+                Select(Function(b)
+                           Dim origin = b.TranslatePoint(New Avalonia.Point(0, 0), scrollViewer)
+                           If Not origin.HasValue Then Return Nothing
+                           Return New With {
+                               .Border = b,
+                               .X = origin.Value.X,
+                               .Y = origin.Value.Y
+                           }
+                       End Function).
+                Where(Function(x) x IsNot Nothing).
+                OrderBy(Function(x) x.Y).
+                ThenBy(Function(x) x.X).
+                ToList()
+            If thumbBorders.Count = 0 Then Return False
+
+            Const tolerance As Double = 2.0
+            Dim firstRowY = thumbBorders(0).Y
+            Dim firstRow = thumbBorders.Where(Function(x) Math.Abs(x.Y - firstRowY) <= tolerance).ToList()
+            columns = Math.Max(1, firstRow.Count)
+
+            Dim nextRow = thumbBorders.FirstOrDefault(Function(x) x.Y > firstRowY + tolerance)
+            If nextRow IsNot Nothing Then
+                itemSlotHeight = nextRow.Y - firstRowY
+            Else
+                itemSlotHeight = thumbBorders(0).Border.Bounds.Height + 10.0
+            End If
+
+            Return itemSlotHeight > 0
         End Function
 
         Private Function GetVisibleRowCount() As Integer
@@ -1767,7 +1829,11 @@ Namespace Views
             Dim viewportHeight = If(scrollViewer IsNot Nothing AndAlso scrollViewer.Viewport.Height > 0,
                                     scrollViewer.Viewport.Height,
                                     Bounds.Height)
-            Dim itemHeight = If(vm.IsGridView, Math.Max(1, vm.GridItemSlotHeight), 78.0)
+            Dim itemHeight = 78.0
+            If vm.IsGridView Then
+                Dim cols = 1
+                GetGridLayoutMetrics(scrollViewer, vm, cols, itemHeight)
+            End If
             Return Math.Max(1, CInt(Math.Floor(viewportHeight / itemHeight)))
         End Function
 
@@ -1814,8 +1880,9 @@ Namespace Views
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                Dim cols = Math.Max(1, GetGridColumnCount())
-                Dim itemSlotHeight = vm.GridItemSlotHeight
+                Dim cols = 1
+                Dim itemSlotHeight = 0.0
+                GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight)
                 Dim totalRows = CInt(Math.Ceiling(vm.Items.Count / CDbl(cols)))
                 Dim viewHeight = scrollViewer.Bounds.Height
                 Dim windowRows = CInt(Math.Ceiling(viewHeight / itemSlotHeight)) + 4

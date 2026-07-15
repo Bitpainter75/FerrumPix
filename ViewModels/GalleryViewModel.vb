@@ -1028,6 +1028,7 @@ Namespace ViewModels
         Private _displayWindowLast As Integer = -1
         Private _topSpacerHeight As Double
         Private _bottomSpacerHeight As Double
+        Private _contentHeight As Double
 
         Public Property TopSpacerHeight As Double
             Get
@@ -1046,6 +1047,16 @@ Namespace ViewModels
             Private Set(value As Double)
                 If Math.Abs(_bottomSpacerHeight - value) < 0.1 Then Return
                 Me.RaiseAndSetIfChanged(_bottomSpacerHeight, value)
+            End Set
+        End Property
+
+        Public Property ContentHeight As Double
+            Get
+                Return _contentHeight
+            End Get
+            Private Set(value As Double)
+                If Math.Abs(_contentHeight - value) < 0.1 Then Return
+                Me.RaiseAndSetIfChanged(_contentHeight, value)
             End Set
         End Property
 
@@ -3164,6 +3175,7 @@ Namespace ViewModels
                 _displayWindowLast = -1
                 TopSpacerHeight = 0
                 BottomSpacerHeight = 0
+                ContentHeight = 0
                 Return
             End If
 
@@ -3181,10 +3193,12 @@ Namespace ViewModels
             End If
 
             Dim topRows = firstIndex \ columns
+            Dim totalRows = CInt(Math.Ceiling(Items.Count / CDbl(columns)))
             Dim remainingItems = Math.Max(0, Items.Count - lastIndex - 1)
             Dim bottomRows = CInt(Math.Ceiling(remainingItems / CDbl(columns)))
             TopSpacerHeight = topRows * itemSlotHeight
             BottomSpacerHeight = bottomRows * itemSlotHeight
+            ContentHeight = totalRows * itemSlotHeight
 
             If _displayWindowFirst = firstIndex AndAlso _displayWindowLast = lastIndex Then Return
 
@@ -3227,6 +3241,7 @@ Namespace ViewModels
             _displayWindowLast = -1
             TopSpacerHeight = 0
             BottomSpacerHeight = 0
+            ContentHeight = 0
             If Items Is Nothing OrElse DisplayItems Is Nothing Then Return
             DisplayItems.ReplaceAll(Items.Take(Math.Min(120, Items.Count)))
 
