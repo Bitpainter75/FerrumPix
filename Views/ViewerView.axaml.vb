@@ -12,7 +12,6 @@ Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
 Imports System.ComponentModel
 Imports System.Threading.Tasks
-Imports LibVLCSharp.Shared
 
 Namespace Views
 
@@ -29,16 +28,32 @@ Namespace Views
         Private _cropDragStartNorm As Point
         Private _cropDragCurrentNorm As Point
         Private Const CropDragMinPixels As Double = 12
+        Private Const FullscreenVideoControlsIdleMs As Integer = 2200
+        Private Const FullscreenVideoCursorPollMs As Integer = 120
+        Private ReadOnly _fullscreenVideoControlsHideTimer As DispatcherTimer
+        Private ReadOnly _fullscreenVideoCursorPollTimer As DispatcherTimer
+        Private _fullscreenVideoControlsVisible As Boolean = True
+        Private _lastFullscreenCursorPosition As PixelPoint?
         Private ReadOnly _filmstripController As FilmstripInteractionController
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            _fullscreenVideoControlsHideTimer = New DispatcherTimer With {
+                .Interval = TimeSpan.FromMilliseconds(FullscreenVideoControlsIdleMs)
+            }
+            _fullscreenVideoCursorPollTimer = New DispatcherTimer With {
+                .Interval = TimeSpan.FromMilliseconds(FullscreenVideoCursorPollMs)
+            }
+            AddHandler _fullscreenVideoControlsHideTimer.Tick, AddressOf OnFullscreenVideoControlsIdle
+            AddHandler _fullscreenVideoCursorPollTimer.Tick, AddressOf OnFullscreenVideoCursorPoll
             _filmstripController = New FilmstripInteractionController(Me, New ViewportThumbnailTracker(),
                 Function() GetVm()?.FilmstripItems,
                 Function() If(GetVm() Is Nothing, -1, GetVm().CurrentFilmstripIndex))
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             AddHandler Loaded, Sub(s, e)
                                    Me.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnPointerWheel, Avalonia.Interactivity.RoutingStrategies.Tunnel)
+                                   Me.AddHandler(InputElement.PointerMovedEvent, AddressOf OnGlobalPointerActivity, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo:=True)
+                                   Me.AddHandler(InputElement.PointerPressedEvent, AddressOf OnGlobalPointerActivity, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo:=True)
                                    UpdateInfoSidebarLayout()
                                    _filmstripController.AttachTo(Me.FindControl(Of ListBox)("FilmstripListBox"))
                                    _filmstripController.QueueThumbnailRefresh()
@@ -53,7 +68,9 @@ Namespace Views
                                        seekSlider.AddHandler(InputElement.PointerReleasedEvent, AddressOf OnVideoSeekSliderPointerReleased,
                                                               Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
                                    End If
+                                   UpdateVideoPlaybackBarVisibility()
                                End Sub
+            AddHandler Unloaded, Sub(s, e) StopFullscreenVideoControlTimers()
         End Sub
 
         Private Function GetVm() As ViewerViewModel
@@ -89,16 +106,28 @@ Namespace Views
             End If
         End Sub
 
+        Public Sub OnGlobalPointerActivity(sender As Object, e As PointerEventArgs)
+            NoteFullscreenVideoControlsActivity()
+        End Sub
+
+        Public Sub OnVideoInputPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            NoteFullscreenVideoControlsActivity()
+        End Sub
+
         Public Shadows Sub OnKeyDown(sender As Object, e As KeyEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
             If IsTextInputSource(e.Source) Then Return
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
 
-            If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen AndAlso (e.Key = Key.Escape OrElse e.Key = Key.Space) Then
+            If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen AndAlso (e.Key = Key.Escape OrElse e.Key = Key.Back) Then
                 mainVm.ExitFullscreen()
                 e.Handled = True
                 Return
+            End If
+
+            If e.Key <> Key.Escape Then
+                NoteFullscreenVideoControlsActivity()
             End If
 
             If e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
@@ -420,6 +449,12 @@ Namespace Views
             MyBase.OnAttachedToVisualTree(e)
             _isAttached = True
             RebindViewModel()
+            ApplyVideoLayout()
+            Dispatcher.UIThread.Post(Sub()
+                                         ApplyImageFitMode()
+                                         _filmstripController.ScrollToCurrent()
+                                         UpdateActiveVideoView()
+                                     End Sub, DispatcherPriority.Loaded)
         End Sub
 
         Protected Overrides Sub OnDetachedFromVisualTree(e As VisualTreeAttachmentEventArgs)
@@ -451,6 +486,7 @@ Namespace Views
             _filmstripController.ScrollToCurrent()
             ApplyVideoLayout()
             UpdateActiveVideoView()
+            UpdateVideoPlaybackBarVisibility()
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
@@ -465,6 +501,7 @@ Namespace Views
             If e.PropertyName = NameOf(ViewerViewModel.IsFullscreenMode) Then
                 ApplyFullscreenImageMode()
                 ApplyVideoLayout()
+                ResetFullscreenVideoControlsVisibility()
             End If
 
             ' ShowVideoSurface kippt beim Videoende (Fläche verschwindet) und beim erneuten Abspielen
@@ -472,6 +509,7 @@ Namespace Views
             If e.PropertyName = NameOf(ViewerViewModel.IsVideoFile) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ShowVideoSurface) Then
                 UpdateActiveVideoView()
+                ResetFullscreenVideoControlsVisibility()
             End If
 
             If e.PropertyName = NameOf(ViewerViewModel.CurrentFilmstripIndex) Then
@@ -481,6 +519,94 @@ Namespace Views
             If e.PropertyName = NameOf(ViewerViewModel.IsInfoSidebarVisible) Then
                 UpdateInfoSidebarLayout()
             End If
+        End Sub
+
+        Private Sub NoteFullscreenVideoControlsActivity()
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsFullscreenMode Then
+                StopFullscreenVideoControlTimers()
+                _fullscreenVideoControlsVisible = True
+                UpdateVideoPlaybackBarVisibility()
+                Return
+            End If
+
+            _fullscreenVideoControlsVisible = True
+            UpdateVideoPlaybackBarVisibility()
+            _fullscreenVideoControlsHideTimer.Stop()
+            If vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable Then
+                _fullscreenVideoControlsHideTimer.Start()
+                EnsureFullscreenVideoCursorPolling()
+            End If
+        End Sub
+
+        Private Sub ResetFullscreenVideoControlsVisibility()
+            StopFullscreenVideoControlTimers()
+            _fullscreenVideoControlsVisible = True
+            UpdateVideoPlaybackBarVisibility()
+
+            Dim vm = GetVm()
+            If vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable Then
+                _fullscreenVideoControlsHideTimer.Start()
+                EnsureFullscreenVideoCursorPolling()
+            End If
+        End Sub
+
+        Private Sub OnFullscreenVideoControlsIdle(sender As Object, e As EventArgs)
+            _fullscreenVideoControlsHideTimer.Stop()
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsFullscreenMode Then Return
+
+            _fullscreenVideoControlsVisible = False
+            UpdateVideoPlaybackBarVisibility()
+        End Sub
+
+        Private Sub OnFullscreenVideoCursorPoll(sender As Object, e As EventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse Not vm.IsVideoFile OrElse Not vm.IsVideoPlaybackAvailable Then
+                StopFullscreenVideoControlTimers()
+                Return
+            End If
+
+            Dim current As PixelPoint
+            If Not NativePointerService.TryGetCursorPosition(current) Then Return
+            If Not _lastFullscreenCursorPosition.HasValue Then
+                _lastFullscreenCursorPosition = current
+                Return
+            End If
+
+            Dim previous = _lastFullscreenCursorPosition.Value
+            If Math.Abs(current.X - previous.X) <= 1 AndAlso Math.Abs(current.Y - previous.Y) <= 1 Then Return
+            _lastFullscreenCursorPosition = current
+            NoteFullscreenVideoControlsActivity()
+        End Sub
+
+        Private Sub EnsureFullscreenVideoCursorPolling()
+            If Not _lastFullscreenCursorPosition.HasValue Then
+                Dim current As PixelPoint
+                If NativePointerService.TryGetCursorPosition(current) Then
+                    _lastFullscreenCursorPosition = current
+                End If
+            End If
+
+            If Not _fullscreenVideoCursorPollTimer.IsEnabled Then
+                _fullscreenVideoCursorPollTimer.Start()
+            End If
+        End Sub
+
+        Private Sub StopFullscreenVideoControlTimers()
+            _fullscreenVideoControlsHideTimer.Stop()
+            _fullscreenVideoCursorPollTimer.Stop()
+            _lastFullscreenCursorPosition = Nothing
+        End Sub
+
+        Private Sub UpdateVideoPlaybackBarVisibility()
+            Dim vm = GetVm()
+            Dim bar = Me.FindControl(Of Border)("VideoPlaybackBar")
+            If bar Is Nothing Then Return
+
+            Dim available = vm IsNot Nothing AndAlso vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable
+            Dim visibleInMode = vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse _fullscreenVideoControlsVisible
+            bar.IsVisible = available AndAlso visibleInMode
         End Sub
 
         ''' Positioniert das einzige VideoOverlay-Grid je nach Vollbild-Status: im Fenstermodus
@@ -516,7 +642,7 @@ Namespace Views
 
         Private Sub UpdateActiveVideoView()
             Dim vm = GetVm()
-            Dim videoView = Me.FindControl(Of VideoView)("TheVideoView")
+            Dim videoView = Me.FindControl(Of MpvVideoView)("TheVideoView")
             If videoView Is Nothing Then Return
 
             If _pendingVideoAttachHandler IsNot Nothing Then
@@ -526,24 +652,24 @@ Namespace Views
 
             Dim isVideoActive = vm IsNot Nothing AndAlso vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable
             If Not isVideoActive Then
-                videoView.MediaPlayer = Nothing
+                videoView.Player = Nothing
                 Return
             End If
 
             AttachVideoPlayer(videoView, vm.VideoMediaPlayer, vm)
         End Sub
 
-        ''' Das native Fenster-Handle eines VideoView-Controls entsteht erst, sobald für es
+        ''' Das native Fenster-Handle eines MpvVideoView-Controls entsteht erst, sobald für es
         ''' tatsächlich ein Layout-Durchlauf stattgefunden hat (insbesondere direkt nachdem sein
         ''' Container durch einen Sichtbarkeits-Wechsel gerade erst sichtbar wurde). MediaPlayer
-        ''' vorher zuzuweisen kann "ins Leere" binden (Ton läuft weiter, kein Bild) oder LibVLC
+        ''' vorher zuzuweisen kann "ins Leere" binden (Ton läuft weiter, kein Bild) oder mpv
         ''' dazu bringen, mangels Ausgabeziel kurz ein eigenes Fenster zu erzeugen. Statt einer
         ''' geschätzten Dispatcher-Verzögerung wird hier direkt auf LayoutUpdated gewartet, bis
         ''' das Control tatsächlich eine reale Größe hat.
-        Private Sub AttachVideoPlayer(target As VideoView, mediaPlayer As MediaPlayer, vm As ViewerViewModel)
+        Private Sub AttachVideoPlayer(target As MpvVideoView, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
             If target.Bounds.Width > 0 AndAlso target.Bounds.Height > 0 Then
-                target.MediaPlayer = mediaPlayer
-                vm?.StartPendingVideoAutoplay()
+                target.Player = mediaPlayer
+                StartPendingVideoAutoplayAfterHostReady(target, mediaPlayer, vm)
                 Return
             End If
 
@@ -552,11 +678,20 @@ Namespace Views
                           If target.Bounds.Width <= 0 OrElse target.Bounds.Height <= 0 Then Return
                           RemoveHandler target.LayoutUpdated, handler
                           If Object.ReferenceEquals(_pendingVideoAttachHandler, handler) Then _pendingVideoAttachHandler = Nothing
-                          target.MediaPlayer = mediaPlayer
-                          vm?.StartPendingVideoAutoplay()
+                          target.Player = mediaPlayer
+                          StartPendingVideoAutoplayAfterHostReady(target, mediaPlayer, vm)
                       End Sub
             _pendingVideoAttachHandler = handler
             AddHandler target.LayoutUpdated, handler
+        End Sub
+
+        Private Async Sub StartPendingVideoAutoplayAfterHostReady(target As MpvVideoView, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
+            Await Task.Delay(180)
+            If target Is Nothing OrElse vm Is Nothing Then Return
+            If Not Object.ReferenceEquals(target.Player, mediaPlayer) Then Return
+            If Not Object.ReferenceEquals(vm.VideoMediaPlayer, mediaPlayer) Then Return
+            If Not vm.IsVideoFile Then Return
+            vm.StartPendingVideoAutoplay()
         End Sub
 
         Public Sub OnVideoViewTapped(sender As Object, e As TappedEventArgs)

@@ -799,7 +799,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' Steuert, ob LibVLC bei der Videowiedergabe Hardware-Decoder (VDPAU/VAAPI/DXVA2) oder
+        ''' Steuert, ob libmpv bei der Videowiedergabe Hardware-Decoder (VDPAU/VAAPI/DXVA2) oder
         ''' erzwungenes Software-Decoding verwendet - siehe ViewerViewModel.EnsureMediaPlayer.
         Public Property VideoHardwareAcceleration As Boolean
             Get

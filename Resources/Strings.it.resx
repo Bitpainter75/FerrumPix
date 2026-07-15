@@ -2008,9 +2008,6 @@
   <data name="VHS_d1f8be8f" xml:space="preserve">
     <value>VHS</value>
   </data>
-  <data name="VLC_ist_auf_diesem_System_nicht_installiert_32d60fa1" xml:space="preserve">
-    <value>VLC non è installato su questo sistema</value>
-  </data>
   <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_212f0168" xml:space="preserve">
     <value>Ingrandisce la tela durante la raddrizzatura in modo che nessun angolo dell'immagine venga tagliato, invece di ingrandire l'immagine per compensare.</value>
   </data>
@@ -2037,6 +2034,9 @@
   </data>
   <data name="Videowiedergabe_nicht_verf_gbar_a4f7b807" xml:space="preserve">
     <value>Riproduzione video non disponibile</value>
+  </data>
+  <data name="mpv_ist_auf_diesem_System_nicht_installiert_d7891620" xml:space="preserve">
+    <value>mpv non è installato su questo sistema</value>
   </data>
   <data name="Vollfarbe_3ee0e6c4" xml:space="preserve">
     <value>Colore pieno</value>

@@ -1,277 +1,213 @@
 Imports System
+Imports System.Collections.Generic
+Imports System.Globalization
 Imports System.IO
-Imports System.Linq
+Imports System.Runtime.InteropServices
 Imports System.Threading
-Imports Avalonia
-Imports Avalonia.Controls
-Imports Avalonia.Threading
-Imports LibVLCSharp.Shared
-Imports SkiaSharp
 
 Namespace Services
 
-    ''' Extrahiert ein Standbild aus Videodateien für die Thumbnail-Pipeline, analog zu
-    ''' RawPreviewService/SvgPreviewService. Anders als dort ist die Extraktion über LibVLC
-    ''' event-getrieben (ein kurzlebiger, stummgeschalteter Headless-Player muss erst zu spielen
-    ''' beginnen, bevor ein Frame für einen Snapshot verfügbar ist) statt rein synchron - daher
-    ''' blockiert ExtractPreview den aufrufenden Thread bis zu timeoutMs. Das ist unbedenklich,
-    ''' da diese Methode ausschließlich von den Hintergrund-Thumbnail-Workern aus ImageItem
-    ''' aufgerufen wird, nie vom UI-Thread.
+    ''' Extrahiert ein Standbild aus Videodateien für die Thumbnail-Pipeline über libmpv.
+    ''' Pro Thumbnail wird ein kurzlebiger headless mpv-Handle verwendet; die Aufrufe werden seriell
+    ''' gehalten, weil mehrere parallele Decoder schnell mehr Last erzeugen als der Thumbnail-Cache spart.
     Public Class VideoPreviewService
 
         Private Shared ReadOnly _videoExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
-
-        Private Shared ReadOnly _libVlcLock As New Object()
-        Private Shared _libVlc As LibVLC
+        Private Shared ReadOnly _thumbnailGate As New SemaphoreSlim(1, 1)
 
         Public Shared Function IsSupportedVideo(filePath As String) As Boolean
             If String.IsNullOrEmpty(filePath) Then Return False
             Return _videoExtensions.Contains(Path.GetExtension(filePath).ToLowerInvariant())
         End Function
 
-        Private Shared Function GetSharedLibVlc() As LibVLC
-            SyncLock _libVlcLock
-                If _libVlc Is Nothing Then _libVlc = New LibVLC("--quiet", "--no-audio", "--avcodec-hw=none")
-                Return _libVlc
-            End SyncLock
-        End Function
-
         Public Shared Function ExtractPreview(filePath As String, Optional maxDimension As Integer = 480, Optional timeoutMs As Integer = 4000) As MemoryStream
-            If Not App.IsVideoPlaybackAvailable Then Return Nothing
+            If Not App.IsVideoThumbnailAvailable Then Return Nothing
             If Not IsSupportedVideo(filePath) OrElse Not File.Exists(filePath) Then Return Nothing
 
-            Dim name = Path.GetFileName(filePath)
-            Dim surface = HeadlessVideoSurface.Acquire(GetSharedLibVlc(), timeoutMs)
-            If surface Is Nothing Then
-                ' Es gibt genau EINE Headless-Oberfläche; hier wartete jemand anderes zu lange auf sie.
-                DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: Headless-Oberfläche nicht bekommen (belegt)")
-                Return Nothing
-            End If
+            If Not _thumbnailGate.Wait(Math.Max(timeoutMs, 4000)) Then Return Nothing
+            Try
+                Return ExtractPreviewCore(filePath, maxDimension, timeoutMs)
+            Finally
+                _thumbnailGate.Release()
+            End Try
+        End Function
 
+        Private Shared Function ExtractPreviewCore(filePath As String, maxDimension As Integer, timeoutMs As Integer) As MemoryStream
+            Dim name = Path.GetFileName(filePath)
             Dim tempPath = Path.Combine(Path.GetTempPath(), $"ferrumpix_vthumb_{Guid.NewGuid():N}.png")
-            Dim media As Media = Nothing
-            Dim playingSignal As New ManualResetEventSlim(False)
-            Dim playingHandler As EventHandler(Of EventArgs) = Nothing
-            Dim errorHandler As EventHandler(Of EventArgs) = Nothing
-            Dim player = surface.MediaPlayer
+            Dim handle = IntPtr.Zero
 
             Try
-                ' input-repeat: kurze Clips (ein paar Sekunden) sind sonst durchgelaufen, bevor der erste
-                ' Schnappschuss gelingt - danach steht der Player und JEDER weitere Versuch scheitert, bis
-                ' der Zeitrahmen abläuft. In der Schleife zu bleiben heißt: es gibt immer noch ein Bild.
-                media = New Media(GetSharedLibVlc(), filePath, FromType.FromPath, {":avcodec-hw=none", ":input-repeat=65535"})
-                player.Mute = True
+                MpvInterop.EnsureResolver()
+                handle = MpvInterop.Create()
+                If handle = IntPtr.Zero Then Return Nothing
 
-                playingHandler = Sub(s As Object, e As EventArgs) playingSignal.Set()
-                errorHandler = Sub(s As Object, e As EventArgs) playingSignal.Set()
-                AddHandler player.Playing, playingHandler
-                AddHandler player.EncounteredError, errorHandler
+                SetOption(handle, "terminal", "no")
+                SetOption(handle, "config", "no")
+                SetOption(handle, "input-default-bindings", "no")
+                SetOption(handle, "osc", "no")
+                SetOption(handle, "audio", "no")
+                SetOption(handle, "pause", "yes")
+                SetOption(handle, "keep-open", "yes")
+                SetOption(handle, "hwdec", "no")
+                SetOption(handle, "vo", "null")
 
-                If Not player.Play(media) Then
-                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: Play() abgelehnt")
-                    Return Nothing
-                End If
-                If Not playingSignal.Wait(timeoutMs) Then
-                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: kein Playing-Ereignis binnen {timeoutMs} ms")
-                    Return Nothing
-                End If
-                If Not player.IsPlaying Then
-                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: Wiedergabe kam nicht zustande (EncounteredError)")
+                Dim result = MpvInterop.Initialize(handle)
+                If result < 0 Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: mpv_initialize fehlgeschlagen ({result})")
                     Return Nothing
                 End If
 
-                ' Etwas in die Datei hineinseeken, damit nicht zufällig ein schwarzes
-                ' Startbild als Thumbnail landet, danach kurz warten, bis der Frame an der
-                ' neuen Position tatsächlich dekodiert wurde.
-                Dim length = player.Length
-                If length > 2000 Then
-                    player.Time = Math.Min(1000L, length \ 10L)
-                    Thread.Sleep(300)
-                Else
-                    Thread.Sleep(150)
+                If Command(handle, "loadfile", filePath, "replace") < 0 Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: loadfile fehlgeschlagen")
+                    Return Nothing
                 End If
 
-                Dim attempts = 0
-                Dim deadline = Environment.TickCount64 + timeoutMs
-                Do
-                    Try
-                        attempts += 1
-                        If player.TakeSnapshot(0, tempPath, CUInt(Math.Max(1, maxDimension)), 0UI) AndAlso
-                           File.Exists(tempPath) AndAlso New FileInfo(tempPath).Length > 0 Then
-                            Return ApplyVideoOrientation(File.ReadAllBytes(tempPath), GetVideoOrientation(media))
-                        End If
-                    Catch ex As Exception
-                        DiagnosticLogService.LogException("Video.Thumbnail", ex)
-                    End Try
-                    Thread.Sleep(150)
-                Loop While Environment.TickCount64 < deadline
+                If Not WaitForEvent(handle, timeoutMs, MpvInterop.MpvEventId.FileLoaded) Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: kein FileLoaded binnen {timeoutMs} ms")
+                    Return Nothing
+                End If
 
-                DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: kein Schnappschuss nach {attempts} Versuchen (Länge {length} ms)")
-                Return Nothing
+                Command(handle, "seek", "10", "absolute-percent", "exact")
+                WaitForEvent(handle, Math.Min(timeoutMs, 1500), MpvInterop.MpvEventId.PlaybackRestart)
+
+                If Command(handle, "screenshot-to-file", tempPath, "video") < 0 Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: screenshot-to-file fehlgeschlagen")
+                    Return Nothing
+                End If
+
+                If Not WaitForFile(tempPath, timeoutMs) Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: kein Screenshot binnen {timeoutMs} ms")
+                    Return Nothing
+                End If
+
+                Return ScalePngToMaxDimension(File.ReadAllBytes(tempPath), maxDimension)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Video.Thumbnail", ex)
                 Return Nothing
             Finally
-                If playingHandler IsNot Nothing Then RemoveHandler player.Playing, playingHandler
-                If errorHandler IsNot Nothing Then RemoveHandler player.EncounteredError, errorHandler
-                Try
-                    player.Stop()
-                Catch
-                End Try
-                media?.Dispose()
+                If handle <> IntPtr.Zero Then
+                    Try
+                        MpvInterop.TerminateDestroy(handle)
+                    Catch
+                    End Try
+                End If
                 Try
                     If File.Exists(tempPath) Then File.Delete(tempPath)
                 Catch
                 End Try
-                surface.Release()
             End Try
         End Function
 
-        ''' Der Headless-Snapshot (--vout=dummy) wendet die Rotations-Metadaten des Videos
-        ''' (z.B. hochkant mit dem Handy gefilmt) anders als eine normale Wiedergabe nicht
-        ''' automatisch an - deshalb wird sie hier separat aus den Video-Track-Metadaten gelesen
-        ''' und manuell korrigiert.
-        Private Shared Function GetVideoOrientation(media As Media) As SKEncodedOrigin
-            Try
-                Dim tracks = media.Tracks
-                If tracks Is Nothing Then Return SKEncodedOrigin.TopLeft
-                For Each track In tracks
-                    If track.TrackType = TrackType.Video Then
-                        Return MapVideoOrientation(track.Data.Video.Orientation)
-                    End If
-                Next
-            Catch
-            End Try
-            Return SKEncodedOrigin.TopLeft
+        Private Shared Function WaitForEvent(handle As IntPtr, timeoutMs As Integer, ParamArray acceptedEvents As MpvInterop.MpvEventId()) As Boolean
+            Dim accepted = New HashSet(Of MpvInterop.MpvEventId)(acceptedEvents)
+            Dim deadline = Environment.TickCount64 + timeoutMs
+            Do
+                Dim remaining = deadline - Environment.TickCount64
+                If remaining <= 0 Then Return False
+
+                Dim eventPtr = MpvInterop.WaitEvent(handle, Math.Min(0.1, remaining / 1000.0))
+                If eventPtr = IntPtr.Zero Then Continue Do
+
+                Dim ev = Marshal.PtrToStructure(Of MpvInterop.MpvEvent)(eventPtr)
+                If accepted.Contains(ev.EventId) Then Return ev.Error >= 0
+                If ev.EventId = MpvInterop.MpvEventId.EndFile AndAlso accepted.Contains(MpvInterop.MpvEventId.FileLoaded) Then Return False
+                If ev.EventId = MpvInterop.MpvEventId.Shutdown Then Return False
+            Loop
         End Function
 
-        ''' VideoOrientation (LibVLC) und SKEncodedOrigin (EXIF-Konvention) verwenden dieselben
-        ''' acht Positionsnamen (TopLeft/TopRight/.../LeftBottom) für dieselbe Bedeutung - direkte
-        ''' 1:1-Zuordnung nach Name statt nach den (in den jeweiligen Docs uneinheitlich
-        ''' formulierten) Rotationsgrad-Beschreibungen.
-        Private Shared Function MapVideoOrientation(orientation As VideoOrientation) As SKEncodedOrigin
-            Select Case orientation
-                Case VideoOrientation.TopLeft : Return SKEncodedOrigin.TopLeft
-                Case VideoOrientation.TopRight : Return SKEncodedOrigin.TopRight
-                Case VideoOrientation.BottomRight : Return SKEncodedOrigin.BottomRight
-                Case VideoOrientation.BottomLeft : Return SKEncodedOrigin.BottomLeft
-                Case VideoOrientation.LeftTop : Return SKEncodedOrigin.LeftTop
-                Case VideoOrientation.RightTop : Return SKEncodedOrigin.RightTop
-                Case VideoOrientation.RightBottom : Return SKEncodedOrigin.RightBottom
-                Case VideoOrientation.LeftBottom : Return SKEncodedOrigin.LeftBottom
-                Case Else : Return SKEncodedOrigin.TopLeft
-            End Select
-        End Function
-
-        Private Shared Function ApplyVideoOrientation(pngBytes As Byte(), origin As SKEncodedOrigin) As MemoryStream
-            If origin = SKEncodedOrigin.TopLeft Then Return New MemoryStream(pngBytes)
-            Try
-                Using original = SKBitmap.Decode(pngBytes)
-                    If original Is Nothing Then Return New MemoryStream(pngBytes)
-                    Dim corrected = ImageOrientationService.ApplyOrientation(original, origin)
+        Private Shared Function WaitForFile(path As String, timeoutMs As Integer) As Boolean
+            Dim deadline = Environment.TickCount64 + timeoutMs
+            Do
+                If File.Exists(path) Then
                     Try
+                        If New FileInfo(path).Length > 0 Then Return True
+                    Catch
+                    End Try
+                End If
+                If Environment.TickCount64 >= deadline Then Return False
+                Thread.Sleep(50)
+            Loop
+        End Function
+
+        Private Shared Function ScalePngToMaxDimension(pngBytes As Byte(), maxDimension As Integer) As MemoryStream
+            If maxDimension <= 0 Then Return New MemoryStream(pngBytes)
+
+            Try
+                Using source = SkiaSharp.SKBitmap.Decode(pngBytes)
+                    If source Is Nothing Then Return New MemoryStream(pngBytes)
+                    Dim longest = Math.Max(source.Width, source.Height)
+                    If longest <= maxDimension Then Return New MemoryStream(pngBytes)
+
+                    Dim scale = maxDimension / CDbl(longest)
+                    Dim width = Math.Max(1, CInt(Math.Round(source.Width * scale)))
+                    Dim height = Math.Max(1, CInt(Math.Round(source.Height * scale)))
+                    Using resized = source.Resize(New SkiaSharp.SKImageInfo(width, height), SkiaSharp.SKSamplingOptions.Default)
+                        If resized Is Nothing Then Return New MemoryStream(pngBytes)
                         Dim outStream As New MemoryStream()
-                        Using img = SKImage.FromBitmap(corrected)
-                            Using data = img.Encode(SKEncodedImageFormat.Png, 100)
+                        Using img = SkiaSharp.SKImage.FromBitmap(resized)
+                            Using data = img.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100)
                                 data.SaveTo(outStream)
                             End Using
                         End Using
                         outStream.Position = 0
                         Return outStream
-                    Finally
-                        If Not Object.ReferenceEquals(corrected, original) Then corrected.Dispose()
-                    End Try
+                    End Using
                 End Using
             Catch
                 Return New MemoryStream(pngBytes)
             End Try
         End Function
 
-    End Class
-
-    ''' Stellt einen einzigen, dauerhaft laufenden, für den Nutzer unsichtbaren MediaPlayer für
-    ''' die Standbild-Extraktion bereit. "--vout=dummy" allein verhindert kein sichtbares
-    ''' Fenster: LibVLC wählt die Fenster-BEREITSTELLUNG ("vout window", unter Linux z.B.
-    ''' "xcb_window") unabhängig von der Render-Implementierung ("vout display", korrekt
-    ''' "dummy") - per Log-Diagnose bestätigt, erzeugt LibVLC ohne selbst bereitgestelltes
-    ''' Fenster-Handle trotzdem ein eigenes, kurz sichtbares natives Fenster. Die einzig
-    ''' zuverlässige Lösung: dem MediaPlayer ein echtes, aber weit außerhalb des sichtbaren
-    ''' Bildschirmbereichs positioniertes 1x1px-Fenster als Ziel geben, statt LibVLC eines
-    ''' erzeugen zu lassen. Der Player wird seriell (ein Aufruf zur Zeit, siehe Acquire/Release)
-    ''' für alle Video-Thumbnails wiederverwendet statt pro Anfrage neu erzeugt zu werden, da das
-    ''' Erzeugen des Fensters selbst den UI-Thread braucht und nicht pro Thumbnail wiederholt
-    ''' werden soll.
-    Friend NotInheritable Class HeadlessVideoSurface
-        Private Shared ReadOnly _gate As New SemaphoreSlim(1, 1)
-        Private Shared ReadOnly _createLock As New Object()
-        Private Shared _instance As HeadlessVideoSurface
-
-        Public ReadOnly Property MediaPlayer As MediaPlayer
-
-        Private Sub New(player As MediaPlayer)
-            MediaPlayer = player
+        Private Shared Sub SetOption(handle As IntPtr, name As String, value As String)
+            Using namePtr = New Utf8String(name), valuePtr = New Utf8String(value)
+                Dim result = MpvInterop.SetOptionString(handle, namePtr.Pointer, valuePtr.Pointer)
+                If result < 0 Then Throw New InvalidOperationException($"libmpv option {name} fehlgeschlagen ({result}).")
+            End Using
         End Sub
 
-        ''' Blockiert, bis die einzige Instanz frei ist (max. eine Video-Thumbnail-Extraktion
-        ''' gleichzeitig), und liefert sie zusammen mit dem exklusiven Zugriff. Aufrufer MUSS
-        ''' Release() aufrufen (Try/Finally), sonst bleibt der Zugriff dauerhaft blockiert.
-        Public Shared Function Acquire(libVlc As LibVLC, timeoutMs As Integer) As HeadlessVideoSurface
-            If Not _gate.Wait(Math.Max(timeoutMs, 4000)) Then Return Nothing
+        Private Shared Function Command(handle As IntPtr, ParamArray args As String()) As Integer
+            Dim allocations As New List(Of Utf8String)()
+            Dim ptrs As New List(Of IntPtr)()
             Try
-                Return GetOrCreate(libVlc)
-            Catch
-                _gate.Release()
-                Return Nothing
+                For Each arg In args
+                    Dim utf8 = New Utf8String(arg)
+                    allocations.Add(utf8)
+                    ptrs.Add(utf8.Pointer)
+                Next
+                ptrs.Add(IntPtr.Zero)
+
+                Dim arrayPtr = Marshal.AllocHGlobal(IntPtr.Size * ptrs.Count)
+                Try
+                    For i = 0 To ptrs.Count - 1
+                        Marshal.WriteIntPtr(arrayPtr, i * IntPtr.Size, ptrs(i))
+                    Next
+                    Return MpvInterop.Command(handle, arrayPtr)
+                Finally
+                    Marshal.FreeHGlobal(arrayPtr)
+                End Try
+            Finally
+                For Each allocation In allocations
+                    allocation.Dispose()
+                Next
             End Try
         End Function
 
-        Public Sub Release()
-            _gate.Release()
-        End Sub
+        Private NotInheritable Class Utf8String
+            Implements IDisposable
 
-        Private Shared Function GetOrCreate(libVlc As LibVLC) As HeadlessVideoSurface
-            SyncLock _createLock
-                If _instance IsNot Nothing Then Return _instance
-            End SyncLock
+            Public ReadOnly Property Pointer As IntPtr
 
-            Dim created As HeadlessVideoSurface = Nothing
-            Dispatcher.UIThread.Invoke(Sub()
-                                           SyncLock _createLock
-                                               If _instance IsNot Nothing Then
-                                                   created = _instance
-                                                   Return
-                                               End If
-                                               Dim videoView As New FerrumPix.Controls.VideoView()
-                                               ' KEINE extreme Off-Screen-Position verwenden (z.B. -32000,-32000):
-                                               ' manche Fenstermanager (u.a. KWin) respektieren das nicht und
-                                               ' klemmen das Fenster stattdessen sichtbar in eine Bildschirmecke -
-                                               ' zusätzlich kann das transiente PositionChanged-Ereignisse
-                                               ' auslösen, die versehentlich als Hauptfenster-Position gespeichert
-                                               ' werden. Stattdessen eine normale, immer gültige On-Screen-Position
-                                               ' (0,0) mit Opacity 0 und 1x1px - unsichtbar unabhängig vom
-                                               ' Fenstermanager-Verhalten.
-                                               Dim window As New Window() With {
-                                                   .Width = 1,
-                                                   .Height = 1,
-                                                   .Opacity = 0,
-                                                   .WindowDecorations = WindowDecorations.None,
-                                                   .ShowInTaskbar = False,
-                                                   .CanResize = False,
-                                                   .ShowActivated = False,
-                                                   .Topmost = False,
-                                                   .WindowStartupLocation = WindowStartupLocation.Manual,
-                                                   .Position = New PixelPoint(0, 0),
-                                                   .Content = videoView
-                                               }
-                                               Dim player As New MediaPlayer(libVlc)
-                                               videoView.MediaPlayer = player
-                                               window.Show()
-                                               created = New HeadlessVideoSurface(player)
-                                               _instance = created
-                                           End SyncLock
-                                       End Sub, DispatcherPriority.Send)
-            Return created
-        End Function
+            Public Sub New(value As String)
+                Dim bytes = Text.Encoding.UTF8.GetBytes(If(value, String.Empty) & ChrW(0))
+                Pointer = Marshal.AllocHGlobal(bytes.Length)
+                Marshal.Copy(bytes, 0, Pointer, bytes.Length)
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                If Pointer <> IntPtr.Zero Then Marshal.FreeHGlobal(Pointer)
+            End Sub
+        End Class
 
     End Class
 

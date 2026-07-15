@@ -106,7 +106,7 @@
                                 IsVisible="{Binding ShowVideoUnavailableNotice}">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
                         <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="mpv ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <ScrollViewer Name="ImageScrollViewer"
@@ -372,35 +372,41 @@
                         IsVisible="{Binding ShowVideoUnavailableNotice}">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
                 <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
-                <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
+                <TextBlock Text="mpv ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
             </StackPanel>
 
         </Grid>
 
-        <!-- Einziges, dauerhaft angehängtes VideoView für Fenster- UND Vollbildmodus - wird per
+        <!-- Einziges, dauerhaft angehängtes MpvVideoView für Fenster- UND Vollbildmodus - wird per
              Grid.Row/Column/RowSpan/ColumnSpan/Margin im Code-behind (ApplyVideoLayout) zwischen
              beiden Zuständen umgeschaltet, statt zwei separate VideoViews mit eigenem
              Anhängen/Abhängen-Zyklus zu verwenden. Letzteres führte dazu, dass das native
              Fenster-Handle beim Wechsel nicht zuverlässig rechtzeitig bereitstand (kein Bild,
-             oder LibVLC erzeugte mangels Ziel kurzzeitig ein eigenes Fenster).
+             oder mpv erzeugte mangels Ziel kurzzeitig ein eigenes Fenster).
         -->
         <Grid Name="VideoOverlay"
               Grid.Row="1" Grid.Column="0"
               Margin="88,0,80,0"
               Background="Black"
+              ClipToBounds="True"
               IsVisible="{Binding IsVideoFile}"
               RowDefinitions="*,Auto">
-            <icons:VideoView Name="TheVideoView" Grid.Row="0"
+            <icons:MpvVideoView Name="TheVideoView" Grid.Row="0"
                              IsVisible="{Binding ShowVideoSurface}"
                              Tapped="OnVideoViewTapped"/>
+            <Border Grid.Row="0"
+                    Background="Transparent"
+                    PointerMoved="OnGlobalPointerActivity"
+                    PointerPressed="OnVideoInputPointerPressed"
+                    Tapped="OnVideoViewTapped"/>
             <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                         IsVisible="{Binding ShowVideoUnavailableNotice}">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
                 <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
-                <TextBlock Text="VLC ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
+                <TextBlock Text="mpv ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
             </StackPanel>
-            <Border Grid.Row="1"
-                    IsVisible="{Binding IsVideoPlaybackAvailable}"
+            <Border Name="VideoPlaybackBar"
+                    Grid.Row="1"
                     Background="#CC1A1D24"
                     CornerRadius="8"
                     Padding="12,8"

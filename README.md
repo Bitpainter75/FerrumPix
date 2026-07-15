@@ -29,9 +29,9 @@ Search can combine normal text with metadata such as camera, ISO, aperture, foca
 
 <img src="Screenshots/Viewer.png" />
 
-The viewer opens photos quickly and keeps navigation simple. It supports fullscreen mode, zoom, pan, slideshow, filmstrip navigation, ratings, favorites, tags and deletion.
+The viewer opens photos and videos quickly and keeps navigation simple. It supports fullscreen mode, zoom, pan, slideshow, filmstrip navigation, ratings, favorites, tags and deletion.
 
-Video files can show thumbnails and play inline when the needed video support is available on the system.
+Video files use `libmpv` for inline playback and thumbnails. Linux packages use the system `libmpv`; Windows packages bundle the mpv runtime with FerrumPix.
 
 ## Editor
 
@@ -85,7 +85,7 @@ Settings cover theme, accent color, language, thumbnail quality, export quality,
 - [Microsoft.Data.Sqlite](https://learn.microsoft.com/dotnet/standard/data/sqlite/)
 - [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet)
 - [QRCoder](https://github.com/codebude/QRCoder)
-- [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp)
+- [libmpv](https://mpv.io/)
 - [Tabler Icons](https://github.com/tabler/tabler-icons)
 
 ## Installation
@@ -103,7 +103,7 @@ And as a package in the AUR
 
 The packages are self-contained and include the .NET runtime.
 
-Video playback on Linux needs VLC or `libvlc` installed on the system. Without it, FerrumPix still runs, but video thumbnails and playback are not available.
+Video playback and video thumbnails use `libmpv`. Linux packages use the system `libmpv`; Windows releases bundle the mpv runtime under `runtimes/win-x64/native`.
 
 ## Building From Source
 

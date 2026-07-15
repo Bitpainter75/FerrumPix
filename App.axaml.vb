@@ -13,37 +13,24 @@ Public Class App
 
     Public Shared AppIcon As WindowIcon
 
-    ''' Ob LibVLC erfolgreich initialisiert werden konnte - auf Linux ist libvlc eine vom Nutzer
-    ''' separat zu installierende Systemabhängigkeit (kein Bundling wie unter Windows), daher muss
-    ''' jede Video-Funktion (Thumbnails, Wiedergabe) hierauf prüfen und sauber degradieren statt
-    ''' abzustürzen, wenn VLC nicht installiert ist. Lazy statt beim Start berechnet, damit
-    ''' Core.Initialize() (misst spürbar CPU-Zeit) nur läuft, wenn tatsächlich ein Video-Thumbnail
-    ''' oder eine Wiedergabe angefragt wird, statt bei jedem App-Start unabhängig vom Nutzer.
-    ''' Lazy(Of Boolean) übernimmt Thread-Sicherheit, da der erste Zugriff auch von einem
-    ''' Thumbnail-Hintergrund-Worker (VideoPreviewService) statt vom UI-Thread kommen kann - genau
-    ''' das erzwingt aber trotzdem einen Sprung auf den UI-Thread für den eigentlichen
-    ''' Initialize()-Aufruf: vor dieser Lazy-Umstellung lief Core.Initialize() immer im
-    ''' Initialize()-Lifecycle-Hook von Avalonia, also garantiert auf dem UI-Thread. Ein
-    ''' Erstzugriff von einem Hintergrund-Thumbnail-Worker (z.B. beim Scrollen über Video-Dateien
-    ''' in der Gallery) würde sonst libvlc auf einem Nicht-UI-Thread initialisieren, was hier im
-    ''' Verdacht steht, zu den gemeldeten Abstürzen beim Scrollen über Videos zu führen.
-    Private Shared ReadOnly _videoPlaybackAvailable As New Lazy(Of Boolean)(
+    Private Shared ReadOnly _mpvAvailable As New Lazy(Of Boolean)(
         Function()
             Try
-                If Avalonia.Threading.Dispatcher.UIThread.CheckAccess() Then
-                    LibVLCSharp.Shared.Core.Initialize()
-                Else
-                    Avalonia.Threading.Dispatcher.UIThread.Invoke(Sub() LibVLCSharp.Shared.Core.Initialize(), Avalonia.Threading.DispatcherPriority.Send)
-                End If
-                Return True
+                Return MpvInterop.IsAvailable()
             Catch
                 Return False
             End Try
         End Function, System.Threading.LazyThreadSafetyMode.ExecutionAndPublication)
 
-    Public Shared ReadOnly Property IsVideoPlaybackAvailable As Boolean
+    Public Shared ReadOnly Property IsInlineVideoPlaybackAvailable As Boolean
         Get
-            Return _videoPlaybackAvailable.Value
+            Return _mpvAvailable.Value
+        End Get
+    End Property
+
+    Public Shared ReadOnly Property IsVideoThumbnailAvailable As Boolean
+        Get
+            Return _mpvAvailable.Value
         End Get
     End Property
 
@@ -83,12 +70,6 @@ Public Class App
             win.DataContext = vm
             desktop.MainWindow = win
 
-            ' VideoPreviewService (Video-Thumbnails) erzeugt bei Bedarf ein unsichtbares 1x1px-
-            ' Hilfsfenster mit eigenem MediaPlayer, das nie explizit geschlossen wird - mit dem
-            ' Default OnLastWindowClose würde die App dadurch nach Schließen des Hauptfensters
-            ' unsichtbar im Hintergrund weiterlaufen (nie beendender Prozess), sobald einmal ein
-            ' Video-Thumbnail erzeugt wurde. OnMainWindowClose beendet den Prozess unabhängig
-            ' davon, sobald das eigentliche Hauptfenster schließt.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose
         End If
 

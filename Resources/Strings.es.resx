@@ -2008,9 +2008,6 @@
   <data name="VHS_d1f8be8f" xml:space="preserve">
     <value>VHS</value>
   </data>
-  <data name="VLC_ist_auf_diesem_System_nicht_installiert_32d60fa1" xml:space="preserve">
-    <value>VLC no está instalado en este sistema</value>
-  </data>
   <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_212f0168" xml:space="preserve">
     <value>Al enderezar, agranda el lienzo para que no se recorte ninguna esquina de la imagen, en lugar de acercar la imagen para compensar.</value>
   </data>
@@ -2037,6 +2034,9 @@
   </data>
   <data name="Videowiedergabe_nicht_verf_gbar_a4f7b807" xml:space="preserve">
     <value>Reproducción de vídeo no disponible</value>
+  </data>
+  <data name="mpv_ist_auf_diesem_System_nicht_installiert_d7891620" xml:space="preserve">
+    <value>mpv no está instalado en este sistema</value>
   </data>
   <data name="Vollfarbe_3ee0e6c4" xml:space="preserve">
     <value>Color sólido</value>

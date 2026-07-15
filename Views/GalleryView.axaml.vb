@@ -813,7 +813,7 @@ Namespace Views
             Dim item = TryCast(button?.DataContext, ImageItem)
             Dim vm = GetVm()
             If vm Is Nothing OrElse item Is Nothing Then Return
-            vm.SelectedItem = item
+            vm.SelectOnly(item)
             _selectionAnchor = item
             OpenGalleryItem(item)
             e.Handled = True

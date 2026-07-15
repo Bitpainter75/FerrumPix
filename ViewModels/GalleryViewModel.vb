@@ -3403,14 +3403,17 @@ Namespace ViewModels
         End Property
 
         Public Async Sub OpenSelectedInViewer()
-            Dim images = GetSelectedImageItems()
-            If images.Count > 0 Then
-                Dim first = images(0)
+            Dim selectedMedia = Items.Where(Function(i) i IsNot Nothing AndAlso (i.IsImage OrElse i.IsVideoFile) AndAlso i.IsSelected).ToList()
+            If selectedMedia.Count > 0 Then
+                Dim first = selectedMedia(0)
                 If first.IsImmichAsset Then
                     Await OpenImmichItemInViewerAsync(first)
                     Return
                 End If
-                _mainVm.OpenImageInViewer(first.FilePath, Items.Where(Function(i) i.IsImage).Select(Function(i) i.FilePath).ToList(),
+                _mainVm.OpenImageInViewer(first.FilePath, Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
+                                          cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
+            ElseIf SelectedItem IsNot Nothing AndAlso (SelectedItem.IsImage OrElse SelectedItem.IsVideoFile) Then
+                _mainVm.OpenImageInViewer(SelectedItem.FilePath, Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
                                           cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
             ElseIf SelectedItem IsNot Nothing AndAlso SelectedItem.IsParentFolderEntry Then
                 NavigateToParent()

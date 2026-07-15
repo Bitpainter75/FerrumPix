@@ -272,9 +272,9 @@ Namespace ViewModels
         End Sub
 
         Public Async Sub EnterFullscreen()
-            If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso Gallery.SelectedItem.IsImage Then
+            If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso (Gallery.SelectedItem.IsImage OrElse Gallery.SelectedItem.IsVideoFile) Then
                 _previousModeBeforeFullscreen = AppMode.Gallery
-                OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) i.IsImage).Select(Function(i) i.FilePath).ToList(),
+                OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
                                   cacheScopeId:=Gallery.CurrentThumbnailCacheScopeId, cacheScopeName:=Gallery.CurrentThumbnailCacheScopeName)
             ElseIf CurrentMode = AppMode.Editor AndAlso Not String.IsNullOrEmpty(Editor.CurrentImagePath) Then
                 If Not Await ConfirmEditorLeaveAsync("den Vollbildmodus zu öffnen") Then Return

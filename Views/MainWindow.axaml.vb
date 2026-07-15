@@ -365,8 +365,21 @@ Namespace Views
 
             If vm.IsFullscreen Then
                 Select Case e.Key
-                    Case Key.Escape, Key.Space
+                    Case Key.Escape, Key.Back
                         vm.ExitFullscreen()
+                        e.Handled = True
+                    Case Key.Left, Key.PageUp
+                        vm.Viewer.PreviousCommand.Execute(Nothing)
+                        e.Handled = True
+                    Case Key.Right, Key.PageDown
+                        vm.Viewer.NextCommand.Execute(Nothing)
+                        e.Handled = True
+                    Case Key.Space
+                        If vm.Viewer.IsVideoFile Then
+                            vm.Viewer.PlayPauseVideoCommand.Execute(Nothing)
+                        Else
+                            vm.Viewer.ToggleSlideshowCommand.Execute(Nothing)
+                        End If
                         e.Handled = True
                     Case Key.Delete
                         vm.Viewer.DeleteCurrentCommand.Execute(Nothing)

@@ -11,7 +11,6 @@ Imports Avalonia.Media.Imaging
 Imports Avalonia.Threading
 Imports FerrumPix.Models
 Imports FerrumPix.Services
-Imports LibVLCSharp.Shared
 
 Namespace ViewModels
 
@@ -70,13 +69,15 @@ Namespace ViewModels
         Private _imageViewportWidth As Double
         Private _imageViewportHeight As Double
 
-        Private _libVlc As LibVLC
-        Private _mediaPlayer As MediaPlayer
+        Private _mediaPlayer As MpvPlayer
         Private _isVideoPlaying As Boolean = False
         Private _videoPositionSeconds As Double = 0
         Private _videoDurationSeconds As Double = 0
         Private _isVideoMuted As Boolean = False
         Private _isSeekingVideo As Boolean = False
+        Private _ignoreVideoTimeUpdatesUntilUtc As DateTime = DateTime.MinValue
+        Private _videoPlaybackRuntimeFailed As Boolean = False
+        Private _slideshowVideoEndSequence As Integer = 0
 
         Public Property FilmstripItems As BulkObservableCollection(Of ImageItem)
         Public Property Tags As ObservableCollection(Of String)
@@ -447,13 +448,11 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Ob LibVLC beim App-Start erfolgreich initialisiert wurde. Unter Linux ist libvlc eine
-        ''' vom Nutzer separat zu installierende Systemabhängigkeit - fehlt sie, zeigt der Viewer
-        ''' statt eines leeren/kaputten Wiedergabebereichs einen erklärenden Hinweis
-        ''' (siehe "VLC nicht installiert"-Zustand in ViewerView.axaml).
+        ''' Ob die Inline-Videowiedergabe im Viewer verfügbar ist. Für den Viewer wird libmpv
+        ''' verwendet; fehlt die Bibliothek, zeigt die View stattdessen einen Hinweis.
         Public ReadOnly Property IsVideoPlaybackAvailable As Boolean
             Get
-                Return App.IsVideoPlaybackAvailable
+                Return App.IsInlineVideoPlaybackAvailable AndAlso Not _videoPlaybackRuntimeFailed
             End Get
         End Property
 
@@ -518,7 +517,7 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isVideoMuted, value)
-                If _mediaPlayer IsNot Nothing Then _mediaPlayer.Mute = value
+                If _mediaPlayer IsNot Nothing Then _mediaPlayer.SetMuted(value)
             End Set
         End Property
 
@@ -872,43 +871,26 @@ Namespace ViewModels
 
         Private Sub EnsureMediaPlayer()
             If _mediaPlayer IsNot Nothing Then Return
-            If Not App.IsVideoPlaybackAvailable Then Return
+            If Not IsVideoPlaybackAvailable Then Return
             Try
-                ' "--avcodec-hw=none" erzwingt Software-Decoding: Hardware-beschleunigte Pfade
-                ' (VDPAU/VAAPI/DXVA2) verursachen beim Rendern in ein in eine fremde Toolkit-
-                ' Oberfläche eingebettetes natives Fenster (wie hier über VideoView) auf Linux
-                ' häufig sichtbare Bildartefakte/Kompositions-Fehler - daher ist Software-Decoding
-                ' der Standard, Hardware-Beschleunigung lässt sich in den Einstellungen aktivieren
-                ' (Settings.VideoHardwareAcceleration), falls das auf dem jeweiligen System nicht auftritt.
-                Dim hwAccelArg = If(AppSettingsService.Load().VideoHardwareAcceleration, "--avcodec-hw=any", "--avcodec-hw=none")
-                _libVlc = New LibVLC("--quiet", hwAccelArg)
-                _mediaPlayer = New MediaPlayer(_libVlc)
-                ' Sonst wählt das Ausgabefenster von VLC selbst ButtonPress/PointerMotion/KeyPress aus
-                ' und verschluckt als oberstes natives Kindfenster jede Maus- und Tasteneingabe über dem
-                ' Video. Im Vollbild deckt es das gesamte Fenster ab - die Oberfläche wirkt dann tot und
-                ' lässt sich nur noch über den Fenstermanager (Alt+F4) beenden.
-                _mediaPlayer.EnableMouseInput = False
-                _mediaPlayer.EnableKeyInput = False
-                _mediaPlayer.Mute = _isVideoMuted
+                _mediaPlayer = New MpvPlayer(AppSettingsService.Load().VideoHardwareAcceleration)
+                _mediaPlayer.SetMuted(_isVideoMuted)
                 AddHandler _mediaPlayer.TimeChanged, AddressOf OnVideoTimeChanged
-                AddHandler _mediaPlayer.LengthChanged, AddressOf OnVideoLengthChanged
+                AddHandler _mediaPlayer.DurationChanged, AddressOf OnVideoLengthChanged
                 AddHandler _mediaPlayer.EndReached, AddressOf OnVideoEndReached
-                AddHandler _mediaPlayer.Playing, AddressOf OnVideoPlayingChanged
-                AddHandler _mediaPlayer.Paused, AddressOf OnVideoPausedChanged
-                AddHandler _mediaPlayer.Stopped, AddressOf OnVideoPausedChanged
+                AddHandler _mediaPlayer.PauseChanged, AddressOf OnVideoPauseChanged
+                AddHandler _mediaPlayer.MuteChanged, AddressOf OnVideoMuteChanged
+                AddHandler _mediaPlayer.InitializationFailed, AddressOf OnVideoInitializationFailed
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.EnsureMediaPlayer", ex)
-                _mediaPlayer?.Dispose()
                 _mediaPlayer = Nothing
-                _libVlc?.Dispose()
-                _libVlc = Nothing
             End Try
         End Sub
 
-        ''' Der von der View gemeinsam genutzte MediaPlayer für Fenster- und Vollbild-VideoView -
+        ''' Der von der View gemeinsam genutzte libmpv-Player für Fenster- und Vollbild-VideoView -
         ''' beide Controls sind fest verankert, es wird jeweils nur zugewiesen, welches gerade die
-        ''' .MediaPlayer-Property gesetzt bekommt (siehe ViewerView.axaml.vb, UpdateActiveVideoView).
-        Public ReadOnly Property VideoMediaPlayer As MediaPlayer
+        ''' Player-Property gesetzt bekommt (siehe ViewerView.axaml.vb, UpdateActiveVideoView).
+        Public ReadOnly Property VideoMediaPlayer As MpvPlayer
             Get
                 Return _mediaPlayer
             End Get
@@ -916,11 +898,6 @@ Namespace ViewModels
 
         Private _pendingVideoAutoplay As Boolean = False
 
-        ' Play() darf erst aufgerufen werden, NACHDEM das VideoView der View sein natives
-        ' Fenster-Handle an diesen MediaPlayer gebunden hat (UpdateActiveVideoView in
-        ' ViewerView.axaml.vb, dort per StartPendingVideoAutoplay() ausgelöst) - andernfalls
-        ' beginnt die Wiedergabe/Dekodierung ohne Ausgabeziel, und LibVLC erzeugt kurzzeitig ein
-        ' eigenes, sichtbares Fenster, bis die eigentliche Zuweisung nachzieht.
         Private Sub LoadVideo(path As String)
             EnsureMediaPlayer()
             If _mediaPlayer Is Nothing Then Return
@@ -931,9 +908,7 @@ Namespace ViewModels
                 IsVideoPlaying = False
                 _isVideoEnded = False
                 Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
-                Using media As New Media(_libVlc, path, FromType.FromPath)
-                    _mediaPlayer.Media = media
-                End Using
+                _mediaPlayer.Load(path)
                 _pendingVideoAutoplay = True
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.LoadVideo", ex)
@@ -944,6 +919,7 @@ Namespace ViewModels
             If Not _pendingVideoAutoplay Then Return
             _pendingVideoAutoplay = False
             Try
+                _mediaPlayer?.LoadPending()
                 _mediaPlayer?.Play()
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.StartPendingVideoAutoplay", ex)
@@ -962,95 +938,111 @@ Namespace ViewModels
 
         Public Sub ShutdownVideo()
             If _mediaPlayer IsNot Nothing Then
-                RemoveHandler _mediaPlayer.TimeChanged, AddressOf OnVideoTimeChanged
-                RemoveHandler _mediaPlayer.LengthChanged, AddressOf OnVideoLengthChanged
-                RemoveHandler _mediaPlayer.EndReached, AddressOf OnVideoEndReached
-                RemoveHandler _mediaPlayer.Playing, AddressOf OnVideoPlayingChanged
-                RemoveHandler _mediaPlayer.Paused, AddressOf OnVideoPausedChanged
-                RemoveHandler _mediaPlayer.Stopped, AddressOf OnVideoPausedChanged
-                Try
-                    _mediaPlayer.Stop()
-                Catch
-                End Try
+                DetachMediaPlayerHandlers(_mediaPlayer)
                 _mediaPlayer.Dispose()
                 _mediaPlayer = Nothing
             End If
-            _libVlc?.Dispose()
-            _libVlc = Nothing
+        End Sub
+
+        Private Sub DetachMediaPlayerHandlers(player As MpvPlayer)
+            If player Is Nothing Then Return
+            RemoveHandler player.TimeChanged, AddressOf OnVideoTimeChanged
+            RemoveHandler player.DurationChanged, AddressOf OnVideoLengthChanged
+            RemoveHandler player.EndReached, AddressOf OnVideoEndReached
+            RemoveHandler player.PauseChanged, AddressOf OnVideoPauseChanged
+            RemoveHandler player.MuteChanged, AddressOf OnVideoMuteChanged
+            RemoveHandler player.InitializationFailed, AddressOf OnVideoInitializationFailed
         End Sub
 
         Private Sub ToggleVideoPlayPause()
             If _mediaPlayer Is Nothing Then Return
 
-            ' Nach dem Ende ist die Ausgabefläche ausgeblendet (siehe ShowVideoSurface). Play() erst,
-            ' wenn sie wieder da ist und ihr Handle am Player hängt - das erledigt die View über
-            ' AttachVideoPlayer/StartPendingVideoAutoplay, sobald sie das Layout durchlaufen hat.
             If _isVideoEnded Then
-                _isVideoEnded = False
-                _pendingVideoAutoplay = True
-                Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
+                If String.IsNullOrEmpty(_currentImagePath) Then Return
+                LoadVideo(_currentImagePath)
+                StartPendingVideoAutoplay()
                 Return
             End If
 
-            If _mediaPlayer.IsPlaying Then
-                _mediaPlayer.Pause()
-            Else
-                _mediaPlayer.Play()
-            End If
+            _mediaPlayer.TogglePause()
         End Sub
 
         Private Sub SeekVideo(seconds As Double)
             If _mediaPlayer Is Nothing Then Return
             Try
                 _isSeekingVideo = True
-                _mediaPlayer.Time = CLng(Math.Max(0, seconds) * 1000)
+                _ignoreVideoTimeUpdatesUntilUtc = DateTime.UtcNow.AddMilliseconds(250)
+                _mediaPlayer.Seek(seconds)
                 VideoPositionSeconds = seconds
             Finally
                 _isSeekingVideo = False
             End Try
         End Sub
 
-        Private Sub OnVideoTimeChanged(sender As Object, e As MediaPlayerTimeChangedEventArgs)
+        Private Sub OnVideoTimeChanged(seconds As Double)
             If _isSeekingVideo Then Return
-            Dispatcher.UIThread.Post(Sub() VideoPositionSeconds = e.Time / 1000.0)
+            If DateTime.UtcNow < _ignoreVideoTimeUpdatesUntilUtc Then Return
+            Dispatcher.UIThread.Post(Sub() VideoPositionSeconds = seconds)
         End Sub
 
-        Private Sub OnVideoLengthChanged(sender As Object, e As MediaPlayerLengthChangedEventArgs)
-            Dispatcher.UIThread.Post(Sub() VideoDurationSeconds = Math.Max(0, e.Length / 1000.0))
-        End Sub
-
-        ''' Am Ende bleibt LibVLC im Zustand "Ended" stehen: Play() ist von dort aus wirkungslos, das
-        ''' Video ließe sich nicht erneut starten. Und weil keine Frames mehr kommen, behält das
-        ''' Ausgabefenster den zuletzt gezeichneten Frame samt der Skalierung, die beim Zeichnen galt -
-        ''' nach einem Vollbild-Wechsel steht das Bild danach verzerrt/beschnitten da.
-        '''
-        ''' Stop() räumt beides ab: der Zustand wird "Stopped" (Play() spielt von vorn), und das
-        ''' Ausgabefenster verschwindet. Es MUSS außerhalb des LibVLC-Ereignisfadens laufen, sonst
-        ''' verklemmt sich LibVLC - daher der Umweg über den UI-Faden.
-        Private Sub OnVideoEndReached(sender As Object, e As EventArgs)
+        Private Sub OnVideoInitializationFailed(ex As Exception)
             Dispatcher.UIThread.Post(Sub()
-                                          Try
-                                              _mediaPlayer?.Stop()
-                                          Catch ex As Exception
-                                              DiagnosticLogService.LogException("VideoPlayback.OnVideoEndReached", ex)
-                                          End Try
+                                          DiagnosticLogService.LogException("VideoPlayback.Initialize", ex)
+                                          _videoPlaybackRuntimeFailed = True
+                                          _pendingVideoAutoplay = False
+                                          IsVideoPlaying = False
+                                          _isVideoEnded = False
+
+                                          Dim failedPlayer = _mediaPlayer
+                                          If failedPlayer IsNot Nothing Then
+                                              DetachMediaPlayerHandlers(failedPlayer)
+                                              failedPlayer.Dispose()
+                                              If Object.ReferenceEquals(_mediaPlayer, failedPlayer) Then _mediaPlayer = Nothing
+                                          End If
+
+                                          Me.RaisePropertyChanged(NameOf(IsVideoPlaybackAvailable))
+                                          Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
+                                          Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
+                                      End Sub)
+        End Sub
+
+        Private Sub OnVideoLengthChanged(seconds As Double)
+            Dispatcher.UIThread.Post(Sub() VideoDurationSeconds = Math.Max(0, seconds))
+        End Sub
+
+        Private Sub OnVideoEndReached(reason As Integer, [error] As Integer)
+            Dispatcher.UIThread.Post(Sub()
+                                          If reason <> CInt(MpvInterop.MpvEndFileReason.Eof) Then
+                                              IsVideoPlaying = False
+                                              Return
+                                          End If
+                                          If _isSlideshowPlaying Then
+                                              IsVideoPlaying = False
+                                              VideoPositionSeconds = VideoDurationSeconds
+                                              _slideshowVideoEndSequence += 1
+                                              ContinueSlideshowAfterVideoEndAsync(_slideshowVideoEndSequence)
+                                              Return
+                                          End If
                                           _isVideoEnded = True
                                           Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                                           IsVideoPlaying = False
-                                          ' Die letzte TimeChanged-Position vor EndReached entspricht dem letzten
-                                          ' dekodierten Frame, nicht exakt dem Ende - der Regler blieb dadurch
-                                          ' sichtbar vor 100% stehen, obwohl die (auf ganze Sekunden gerundete)
-                                          ' Zeit-Anzeige schon "Ende/Ende" zeigte.
                                           VideoPositionSeconds = VideoDurationSeconds
                                       End Sub)
         End Sub
 
-        Private Sub OnVideoPlayingChanged(sender As Object, e As EventArgs)
-            Dispatcher.UIThread.Post(Sub() IsVideoPlaying = True)
+        Private Sub OnVideoPauseChanged(isPaused As Boolean)
+            Dispatcher.UIThread.Post(Sub() IsVideoPlaying = Not isPaused AndAlso Not _isVideoEnded)
         End Sub
 
-        Private Sub OnVideoPausedChanged(sender As Object, e As EventArgs)
-            Dispatcher.UIThread.Post(Sub() IsVideoPlaying = False)
+        Private Sub OnVideoMuteChanged(isMuted As Boolean)
+            Dispatcher.UIThread.Post(Sub() IsVideoMuted = isMuted)
+        End Sub
+
+        Private Async Sub ContinueSlideshowAfterVideoEndAsync(sequence As Integer)
+            Await Task.Delay(1000)
+            If Not _isSlideshowPlaying OrElse sequence <> _slideshowVideoEndSequence Then Return
+            If Not IsVideoFile Then Return
+            NavigateNext()
         End Sub
 
         Private Sub LoadFolderContext(folder As String, currentPath As String)
@@ -1518,6 +1510,7 @@ Namespace ViewModels
 
         Public Sub StopSlideshow()
             IsSlideshowPlaying = False
+            _slideshowVideoEndSequence += 1
             If _slideshowTimer IsNot Nothing Then
                 _slideshowTimer.Stop()
                 RemoveHandler _slideshowTimer.Elapsed, AddressOf OnSlideshowTick
@@ -1528,7 +1521,12 @@ Namespace ViewModels
 
         Private Sub OnSlideshowTick(sender As Object, e As ElapsedEventArgs)
             Dispatcher.UIThread.InvokeAsync(Sub()
-                If _folderPaths.Count > 0 Then NavigateNext()
+                If _folderPaths.Count = 0 Then Return
+                If IsVideoFile Then
+                    If Not IsVideoPlaying Then StartPendingVideoAutoplay()
+                    Return
+                End If
+                NavigateNext()
             End Sub)
         End Sub
     End Class
