@@ -1192,6 +1192,11 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
+                Me.RaisePropertyChanged(NameOf(ShowDrawControls))
+                Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
+                Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
+                Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
+                Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
@@ -1282,7 +1287,7 @@ Namespace ViewModels
         ''' (Text, Malen, Formen &amp; Symbole) der Typ ausgewählt wurde.
         Public ReadOnly Property ShowAnnotationProperties As Boolean
             Get
-                Return HasSelectedAnnotation OrElse HasPendingInsertKind
+                Return (HasSelectedAnnotation AndAlso Not IsSelectedStrokeAnnotation()) OrElse HasPendingInsertKind
             End Get
         End Property
 
@@ -1530,8 +1535,28 @@ Namespace ViewModels
             End Get
         End Property
 
+        Private Function SelectedAnnotationNormalizedKind() As String
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return ""
+            Return NormalizeAnnotationKind(_annotations(_selectedAnnotationIndex)?.Kind)
+        End Function
+
+        Private Function IsSelectedBrushAnnotation() As Boolean
+            Return String.Equals(SelectedAnnotationNormalizedKind(), "Brush", StringComparison.Ordinal)
+        End Function
+
+        Private Function IsSelectedEraserAnnotation() As Boolean
+            Return String.Equals(SelectedAnnotationNormalizedKind(), "Eraser", StringComparison.Ordinal)
+        End Function
+
+        Private Function IsSelectedStrokeAnnotation() As Boolean
+            Dim kind = SelectedAnnotationNormalizedKind()
+            Return kind = "Brush" OrElse kind = "Eraser"
+        End Function
+
         Public ReadOnly Property SelectedPaintMode As String
             Get
+                If IsSelectedBrushAnnotation() Then Return "Brush"
+                If IsSelectedEraserAnnotation() Then Return "Eraser"
                 If _currentTool = EditorTool.Retouch Then Return If(_isCloneMode, "Clone", If(_isRepairMode, "Repair", "Blur"))
                 If _currentTool = EditorTool.Draw AndAlso _isEraserMode Then Return "Eraser"
                 If _currentTool = EditorTool.Draw Then Return "Brush"
@@ -1975,12 +2000,13 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowDrawControls As Boolean
             Get
-                Return _currentTool = EditorTool.Draw OrElse _currentTool = EditorTool.Retouch
+                Return _currentTool = EditorTool.Draw OrElse _currentTool = EditorTool.Retouch OrElse IsSelectedStrokeAnnotation()
             End Get
         End Property
 
         Public ReadOnly Property ShowLayerToolOptions As Boolean
             Get
+                If IsSelectedStrokeAnnotation() Then Return False
                 Return _currentTool = EditorTool.Text OrElse _currentTool = EditorTool.Geometry OrElse
                        _currentTool = EditorTool.Insert OrElse (_currentTool = EditorTool.Move AndAlso HasSelectedAnnotation)
             End Get
@@ -2932,6 +2958,7 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_brushSize, Math.Max(1, Math.Min(300, value)))
+                SyncSelectedAnnotationIfStroke()
                 RaiseResetButtonStateChanged()
             End Set
         End Property
@@ -2942,6 +2969,7 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_brushHardness, Math.Max(0, Math.Min(100, value)))
+                SyncSelectedAnnotationIfStroke()
                 RaiseResetButtonStateChanged()
             End Set
         End Property
@@ -2952,6 +2980,7 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_brushOpacity, Math.Max(0, Math.Min(100, value)))
+                SyncSelectedAnnotationIfStroke()
                 RaiseResetButtonStateChanged()
             End Set
         End Property
@@ -2962,6 +2991,7 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_brushFlow, Math.Max(0, Math.Min(100, value)))
+                SyncSelectedAnnotationIfStroke()
                 RaiseResetButtonStateChanged()
             End Set
         End Property
@@ -3012,6 +3042,7 @@ Namespace ViewModels
                     item.IsSelected = String.Equals(item.Key, normalized, StringComparison.Ordinal)
                 Next
             End If
+            SyncSelectedAnnotationIfStroke()
         End Sub
 
         Public Property IsEraserMode As Boolean
@@ -3036,7 +3067,7 @@ Namespace ViewModels
 
         Public ReadOnly Property IsBrushPaintMode As Boolean
             Get
-                Return _currentTool = EditorTool.Draw AndAlso Not _isEraserMode
+                Return IsSelectedBrushAnnotation() OrElse (_currentTool = EditorTool.Draw AndAlso Not _isEraserMode)
             End Get
         End Property
 
@@ -3044,13 +3075,13 @@ Namespace ViewModels
         ''' Strich an (siehe AppendBrushStroke), nur die Farbe braucht der Radiergummi nicht.
         Public ReadOnly Property ShowBrushStrokeAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Draw
+                Return _currentTool = EditorTool.Draw OrElse IsSelectedStrokeAnnotation()
             End Get
         End Property
 
         Public ReadOnly Property IsEraserPaintMode As Boolean
             Get
-                Return _currentTool = EditorTool.Draw AndAlso _isEraserMode
+                Return IsSelectedEraserAnnotation() OrElse (_currentTool = EditorTool.Draw AndAlso _isEraserMode)
             End Get
         End Property
 
@@ -3490,6 +3521,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(EraserFillBrush))
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
                 _activeStrokeAnnotation = Nothing
+                SyncSelectedAnnotationIfStroke()
             End Set
         End Property
 
@@ -9038,6 +9070,7 @@ Namespace ViewModels
             Try
                 If _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
                     Dim a = _annotations(_selectedAnnotationIndex)
+                    Dim normalizedKind = NormalizeAnnotationKind(a.Kind)
                     _watermarkImagePath = If(NormalizeAnnotationKind(a.Kind) = "Watermark", a.ImagePath, "")
                     ' Der Vorlagenname beschreibt das zuvor selektierte Objekt und passt nicht mehr zu
                     ' den gleich geladenen Werten.
@@ -9080,6 +9113,27 @@ Namespace ViewModels
                     AnnotationGlowBlur = a.GlowBlur
                     AnnotationGlowStrength = a.GlowStrength
                     AnnotationGlowColor = a.GlowColor
+                    If normalizedKind = "Brush" OrElse normalizedKind = "Eraser" Then
+                        _isEraserMode = normalizedKind = "Eraser"
+                        _brushSize = Math.Max(1, Math.Min(300, CDbl(a.StrokeWidth)))
+                        _brushHardness = Math.Max(0, Math.Min(100, CDbl(a.HardnessPercent)))
+                        _brushOpacity = Math.Max(0, Math.Min(100, CDbl(a.Opacity)))
+                        _brushFlow = Math.Max(0, Math.Min(100, CDbl(a.FlowPercent)))
+                        _brushPreset = If(String.IsNullOrWhiteSpace(a.BrushPreset), "soft", a.BrushPreset.Trim().ToLowerInvariant())
+                        _eraserFillColor = If(String.IsNullOrWhiteSpace(a.EraserFillColor), "#00FFFFFF", a.EraserFillColor)
+                        If _brushPresets IsNot Nothing Then
+                            For Each item In _brushPresets
+                                item.IsSelected = String.Equals(item.Key, _brushPreset, StringComparison.Ordinal)
+                            Next
+                        End If
+                        Me.RaisePropertyChanged(NameOf(BrushSize))
+                        Me.RaisePropertyChanged(NameOf(BrushHardness))
+                        Me.RaisePropertyChanged(NameOf(BrushOpacity))
+                        Me.RaisePropertyChanged(NameOf(BrushFlow))
+                        Me.RaisePropertyChanged(NameOf(EraserFillColor))
+                        Me.RaisePropertyChanged(NameOf(EraserFillColorValue))
+                        Me.RaisePropertyChanged(NameOf(EraserFillBrush))
+                    End If
                     Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
                     RaiseWatermarkUiChanged()
                 End If
@@ -9110,10 +9164,16 @@ Namespace ViewModels
             End If
             a.FillColor = _annotationFillColor
             a.StrokeColor = _annotationStrokeColor
-            a.StrokeWidth = CSng(_annotationStrokeWidth)
+            a.StrokeWidth = If(normalizedKind = "Brush" OrElse normalizedKind = "Eraser", CSng(_brushSize), CSng(_annotationStrokeWidth))
             a.FontSizePixels = CSng(_annotationFontSize)
             a.FontFamily = _annotationFontFamily
-            a.Opacity = CSng(_annotationOpacity)
+            a.Opacity = If(normalizedKind = "Brush" OrElse normalizedKind = "Eraser", CSng(_brushOpacity), CSng(_annotationOpacity))
+            If normalizedKind = "Brush" OrElse normalizedKind = "Eraser" Then
+                a.HardnessPercent = CSng(_brushHardness)
+                a.FlowPercent = CSng(_brushFlow)
+                a.BrushPreset = If(normalizedKind = "Eraser", "soft", _brushPreset)
+                a.EraserFillColor = _eraserFillColor
+            End If
             a.BlendMode = _annotationBlendMode
             a.RotationDegrees = CSng(_annotationRotation)
             a.FlipHorizontal = _annotationFlipH
@@ -9145,6 +9205,11 @@ Namespace ViewModels
             If refreshOverlay Then UpdateSelectedAnnotationOverlayPreview()
             RaiseResetButtonStateChanged()
             RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
+        End Sub
+
+        Private Sub SyncSelectedAnnotationIfStroke()
+            If _isLoadingAnnotation OrElse Not IsSelectedStrokeAnnotation() Then Return
+            SyncSelectedAnnotation()
         End Sub
 
         ''' Bild und Objekt-Rechteck gehören zusammen (die View rechnet das Rechteck in die negativen

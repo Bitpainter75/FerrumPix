@@ -230,13 +230,14 @@ Namespace Views
                 Return
             End If
 
-            If vm.InitialFolderNode Is Nothing Then Return
+            Dim folderNode = If(vm.SelectedFolderNode, vm.InitialFolderNode)
+            If folderNode Is Nothing Then Return
             _initialSelectionDone = True
             Dispatcher.UIThread.Post(Sub()
                 Dim tree = Me.FindControl(Of TreeView)("FolderTreeView")
                 If tree IsNot Nothing Then
-                    tree.SelectedItem = vm.InitialFolderNode
-                    BringTreeItemIntoView(tree, vm.InitialFolderNode)
+                    RestoreFolderTreeSelection(tree, folderNode)
+                    BringTreeItemIntoView(tree, folderNode)
                 End If
                 If vm.SelectedItem IsNot Nothing Then ScrollToSelectedItem()
             End Sub, DispatcherPriority.Loaded)
@@ -265,7 +266,7 @@ Namespace Views
                                              Dim vm = GetVm()
                                              Dim tree = Me.FindControl(Of TreeView)("FolderTreeView")
                                              If vm IsNot Nothing AndAlso tree IsNot Nothing AndAlso vm.SelectedFolderNode IsNot Nothing Then
-                                                 tree.SelectedItem = vm.SelectedFolderNode
+                                                 RestoreFolderTreeSelection(tree, vm.SelectedFolderNode)
                                                  BringTreeItemIntoView(tree, vm.SelectedFolderNode)
                                              End If
                                          End Sub, DispatcherPriority.Loaded)
@@ -715,9 +716,14 @@ Namespace Views
         Private Sub RestoreFolderTreeSelection(sender As Object, vm As GalleryViewModel)
             Dim tree = TryCast(sender, TreeView)
             If tree Is Nothing OrElse vm.SelectedFolderNode Is Nothing Then Return
+            RestoreFolderTreeSelection(tree, vm.SelectedFolderNode)
+        End Sub
+
+        Private Sub RestoreFolderTreeSelection(tree As TreeView, node As FolderNode)
+            If tree Is Nothing OrElse node Is Nothing Then Return
             _restoringFolderTreeSelection = True
             Try
-                tree.SelectedItem = vm.SelectedFolderNode
+                tree.SelectedItem = node
             Finally
                 _restoringFolderTreeSelection = False
             End Try
