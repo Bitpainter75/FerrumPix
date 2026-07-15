@@ -960,7 +960,6 @@ Namespace ViewModels
             If _isVideoEnded Then
                 If String.IsNullOrEmpty(_currentImagePath) Then Return
                 LoadVideo(_currentImagePath)
-                StartPendingVideoAutoplay()
                 Return
             End If
 

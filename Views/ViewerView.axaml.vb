@@ -65,6 +65,8 @@ Namespace Views
                                    ' erzwingt den Aufruf unabhängig davon.
                                    Dim seekSlider = Me.FindControl(Of Control)("VideoSeekSlider")
                                    If seekSlider IsNot Nothing Then
+                                       seekSlider.AddHandler(InputElement.PointerPressedEvent, AddressOf OnVideoSeekSliderPointerPressed,
+                                                              Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
                                        seekSlider.AddHandler(InputElement.PointerReleasedEvent, AddressOf OnVideoSeekSliderPointerReleased,
                                                               Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
                                    End If
@@ -701,6 +703,15 @@ Namespace Views
         End Sub
 
         Public Sub OnVideoSeekSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            CommitVideoSeek(sender)
+        End Sub
+
+        Public Sub OnVideoSeekSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            If Not e.GetCurrentPoint(TryCast(sender, Control)).Properties.IsLeftButtonPressed Then Return
+            Dispatcher.UIThread.Post(Sub() CommitVideoSeek(sender), DispatcherPriority.Input)
+        End Sub
+
+        Private Sub CommitVideoSeek(sender As Object)
             Dim slider = TryCast(sender, RoundSlider)
             Dim vm = GetVm()
             If slider Is Nothing OrElse vm Is Nothing OrElse vm.SeekVideoCommand Is Nothing Then Return
