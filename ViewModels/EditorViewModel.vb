@@ -413,6 +413,7 @@ Namespace ViewModels
         Private _selectedInfoTab As InfoSidebarTab = InfoSidebarTab.General
         Private _selectedLayersPanelTab As LayersPanelTab = LayersPanelTab.Tool
         Private Const PreviewMaxDimension As Integer = 1600
+        Private Const PreviewDebounceMs As Double = 90.0
         Private Const UndoCaptureWindowMs As Double = 650
         ' Text und Wasserzeichen dürfen kleiner werden als die 5%/4%, die für Formen gelten: ihr Rechteck
         ' wird aus dem Text berechnet und soll ihn eng umschließen. Auf einem 4000-px-Foto wären 5% bereits
@@ -5902,7 +5903,7 @@ Namespace ViewModels
             LoadWatermarkPresets()
             LoadSavedLightroomPresets()
             LoadSavedLutPresets()
-            _previewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(220)}
+            _previewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(PreviewDebounceMs)}
             AddHandler _previewTimer.Tick, Sub()
                                                _previewTimer.Stop()
                                                _previewPending = False
@@ -6587,8 +6588,7 @@ Namespace ViewModels
             _hasChanges = True
             _previewPending = True
             StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
-            _previewTimer.Stop()
-            _previewTimer.Start()
+            RestartPreviewTimer(PreviewDebounceMs)
         End Sub
 
         Private Sub RefreshPreviewImmediately()
@@ -6608,7 +6608,12 @@ Namespace ViewModels
         Private Sub ScheduleToolPreviewUpdate()
             _previewPending = True
             StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
+            RestartPreviewTimer(PreviewDebounceMs)
+        End Sub
+
+        Private Sub RestartPreviewTimer(delayMs As Double)
             _previewTimer.Stop()
+            _previewTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(1.0, delayMs))
             _previewTimer.Start()
         End Sub
 

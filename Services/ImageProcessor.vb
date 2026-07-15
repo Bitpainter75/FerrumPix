@@ -1197,10 +1197,27 @@ Namespace Services
         End Function
 
         Public Shared Function ApplyAdjustments(source As SKBitmap, adj As ImageAdjustments) As Bitmap
+            Return ApplyAdjustments(source, adj, 0)
+        End Function
+
+        Public Shared Function ApplyAdjustments(source As SKBitmap, adj As ImageAdjustments, maxDimension As Integer) As Bitmap
             If source Is Nothing Then Return Nothing
 
+            Dim workingSource = CreatePreviewWorkingBitmap(source, maxDimension)
+            If workingSource Is Nothing Then Return Nothing
+
+            If Not Object.ReferenceEquals(workingSource, source) Then
+                Try
+                    Using processed = ProcessBitmap(workingSource, adj)
+                        Return ToAvaloniaBitmap(processed)
+                    End Using
+                Finally
+                    workingSource.Dispose()
+                End Try
+            End If
+
             SyncLock _baseCacheLock
-                Dim baseBitmap = GetOrComputeBaseLocked(source, adj)
+                Dim baseBitmap = GetOrComputeBaseLocked(workingSource, adj)
                 Dim annotated = ApplyAnnotations(baseBitmap, adj)
                 Try
                     Return ToAvaloniaBitmap(annotated)
@@ -1505,9 +1522,17 @@ Namespace Services
         End Function
 
         Public Shared Function ApplyGeometryAdjustments(source As SKBitmap, adj As ImageAdjustments) As Bitmap
+            Return ApplyGeometryAdjustments(source, adj, 0)
+        End Function
+
+        Public Shared Function ApplyGeometryAdjustments(source As SKBitmap, adj As ImageAdjustments, maxDimension As Integer) As Bitmap
             If source Is Nothing Then Return Nothing
 
-            Dim processed As SKBitmap = CloneBitmap(source)
+            Dim workingSource = CreatePreviewWorkingBitmap(source, maxDimension)
+            If workingSource Is Nothing Then Return Nothing
+
+            Dim processed As SKBitmap = CloneBitmap(workingSource)
+            If Not Object.ReferenceEquals(workingSource, source) Then workingSource.Dispose()
             processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
             processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
@@ -1543,28 +1568,31 @@ Namespace Services
             Try
                 Using original = DecodeOriented(imagePath)
                     If original Is Nothing Then Return Nothing
-
-                    Dim limit = Math.Max(256, maxDimension)
-                    Dim longest = Math.Max(original.Width, original.Height)
-                    If longest <= limit Then
-                        Return CloneBitmap(original)
-                    End If
-
-                    Dim scale = limit / CDbl(longest)
-                    Dim width = Math.Max(1, CInt(Math.Round(original.Width * scale)))
-                    Dim height = Math.Max(1, CInt(Math.Round(original.Height * scale)))
-                    Dim result = New SKBitmap(width, height, original.ColorType, original.AlphaType)
-                    Using canvas = New SKCanvas(result)
-                        canvas.Clear(SKColors.Transparent)
-                        Using paint = New SKPaint With {.IsAntialias = True}
-                            DrawBitmapSampled(canvas, original, New SKRect(0, 0, original.Width, original.Height), New SKRect(0, 0, width, height), SamplingHigh, paint)
-                        End Using
-                    End Using
-                    Return result
+                    Return CreatePreviewWorkingBitmap(original, maxDimension)
                 End Using
             Catch
                 Return Nothing
             End Try
+        End Function
+
+        Public Shared Function CreatePreviewWorkingBitmap(source As SKBitmap, maxDimension As Integer) As SKBitmap
+            If source Is Nothing Then Return Nothing
+
+            Dim limit = If(maxDimension > 0, Math.Max(256, maxDimension), Integer.MaxValue)
+            Dim longest = Math.Max(source.Width, source.Height)
+            If longest <= limit Then Return source
+
+            Dim scale = limit / CDbl(longest)
+            Dim width = Math.Max(1, CInt(Math.Round(source.Width * scale)))
+            Dim height = Math.Max(1, CInt(Math.Round(source.Height * scale)))
+            Dim result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(result)
+                canvas.Clear(SKColors.Transparent)
+                Using paint = New SKPaint With {.IsAntialias = True}
+                    DrawBitmapSampled(canvas, source, New SKRect(0, 0, source.Width, source.Height), New SKRect(0, 0, width, height), SamplingHigh, paint)
+                End Using
+            End Using
+            Return result
         End Function
 
         ' Gibt die Bildabmessungen zurück
