@@ -2849,4 +2849,400 @@
   <data name="Farbkleckse_4b563454" xml:space="preserve">
     <value>Salpicaduras de pintura</value>
   </data>
+  <data name="Ebenen_c8f2bacd" xml:space="preserve">
+    <value>Capas</value>
+  </data>
+  <data name="Ebenen_Panel_3c793049" xml:space="preserve">
+    <value>Panel de capas</value>
+  </data>
+  <data name="Ebene_duplizieren_Strg_D_30ab0842" xml:space="preserve">
+    <value>Duplicar capa (Ctrl+D)</value>
+  </data>
+  <data name="Ebene_nach_vorne_84ecd146" xml:space="preserve">
+    <value>Traer capa al frente</value>
+  </data>
+  <data name="Ebene_nach_hinten_1a9faf5b" xml:space="preserve">
+    <value>Enviar capa atrás</value>
+  </data>
+  <data name="Ebene_l_schen_Entf_063fd7c1" xml:space="preserve">
+    <value>Eliminar capa (Supr)</value>
+  </data>
+  <data name="Ebene_ein_ausblenden_fae4f2cc" xml:space="preserve">
+    <value>Mostrar/ocultar capa</value>
+  </data>
+  <data name="Ebene_l_schen_c4f6ed1f" xml:space="preserve">
+    <value>Eliminar capa</value>
+  </data>
+  <data name="Hintergrund_ein_ausblenden_cfe727b6" xml:space="preserve">
+    <value>Mostrar/ocultar fondo</value>
+  </data>
+  <data name="Doppelklick_zum_Umbenennen_b928fb8b" xml:space="preserve">
+    <value>Doble clic para renombrar</value>
+  </data>
+  <data name="Ebene_umbenennen_F2_86f0a95f" xml:space="preserve">
+    <value>Renombrar capa (F2)</value>
+  </data>
+  <data name="Bearbeitungen_ersetzen_das_Immich_Asset_aus_dem__cc8cfeea" xml:space="preserve">
+    <value>Las ediciones reemplazan el asset de Immich del que provienen (álbumes, etiquetas, valoración y favorito se conservan; el original va a la papelera de Immich). Se aplica a Guardar Y a Guardar como con Immich como destino. Desactivado: cada edición crea un asset nuevo.</value>
+  </data>
+  <data name="Ohne_Datum_f99058be" xml:space="preserve">
+    <value>Sin fecha</value>
+  </data>
+  <data name="Zeitleiste_am_rechten_Rand_4174610b" xml:space="preserve">
+    <value>Línea de tiempo en el borde derecho</value>
+  </data>
+  <data name="Zeigt_Jahre_bzw_Anfangsbuchstaben_passend_zur_So_259307a7" xml:space="preserve">
+    <value>Muestra años o letras iniciales según el orden; hacer clic o arrastrar salta a esa posición.</value>
+  </data>
+  <data name="Immich_und_Ordner_8441d848" xml:space="preserve">
+    <value>Immich y carpetas</value>
+  </data>
+  <data name="Nur_Immich_760b8903" xml:space="preserve">
+    <value>Solo Immich</value>
+  </data>
+  <data name="Nur_Ordner_fe006060" xml:space="preserve">
+    <value>Solo carpetas</value>
+  </data>
+  <data name="Aus_6997e3eb" xml:space="preserve">
+    <value>Desactivado</value>
+  </data>
+  <data name="Personen_78f8fa61" xml:space="preserve">
+    <value>Personas</value>
+  </data>
+  <data name="Orte_b226fcbc" xml:space="preserve">
+    <value>Lugares</value>
+  </data>
+  <data name="Farbetikett_06854c28" xml:space="preserve">
+    <value>Etiqueta de color</value>
+  </data>
+  <data name="Lila_df014f5e" xml:space="preserve">
+    <value>Morado</value>
+  </data>
+  <data name="Kein_Etikett_ea16fedc" xml:space="preserve">
+    <value>Sin etiqueta</value>
+  </data>
+  <data name="ETIKETT_ff958f07" xml:space="preserve">
+    <value>ETIQUETA</value>
+  </data>
+  <data name="Pink_54076359" xml:space="preserve">
+    <value>Rosa</value>
+  </data>
+  <data name="Cyan_8e1fe2d5" xml:space="preserve">
+    <value>Cian</value>
+  </data>
+  <data name="T_rkis_d163b468" xml:space="preserve">
+    <value>Verde azulado</value>
+  </data>
+  <data name="Wird_mit_Immich_abgeglichen_ce6c1ecb" xml:space="preserve">
+    <value>Sincronizando con Immich…</value>
+  </data>
+  <data name="Beim_Ziehen_an_den_Anfassern_bleibt_das_Verh_ltn_01a7585a" xml:space="preserve">
+    <value>Al arrastrar los tiradores se conserva la relación entre ancho y alto - como en Tamaño de imagen. Desactivado: la imagen se estira al tamaño arrastrado (Mayús sigue forzando la relación).</value>
+  </data>
+  <data name="Bewertung_Etikett_dbc10b78" xml:space="preserve">
+    <value>Valoración y etiqueta</value>
+  </data>
+  <data name="Ebene_rastern_ins_Bild_einbacken_57dacf95" xml:space="preserve">
+    <value>Rasterizar capa (fusionar con la imagen)</value>
+  </data>
+  <data name="Ebene_wird_gerastert_4f3960e5" xml:space="preserve">
+    <value>Rasterizando capa…</value>
+  </data>
+  <data name="Ebene_gerastert_4270a25f" xml:space="preserve">
+    <value>Capa rasterizada</value>
+  </data>
+  <data name="Rastern_fehlgeschlagen_a2e9b1b2" xml:space="preserve">
+    <value>Error al rasterizar</value>
+  </data>
+  <data name="Ebenen_Seitenleiste_im_Editor_anzeigen_11fbed0c" xml:space="preserve">
+    <value>Mostrar la barra de capas en el editor</value>
+  </data>
+  <data name="Blendet_das_Ebenen_Panel_neben_der_Info_Leiste_e_145faa21" xml:space="preserve">
+    <value>Muestra u oculta el panel de capas junto a la barra de informacion.</value>
+  </data>
+  <data name="Startabstand_der_Zuschnittslinien_20f30612" xml:space="preserve">
+    <value>Margen inicial de las lineas de recorte</value>
+  </data>
+  <data name="Abstand_der_Zuschnittslinien_zu_den_Bildr_ndern__6e8138da" xml:space="preserve">
+    <value>Distancia de las lineas de recorte a los bordes al abrir la herramienta, en porcentaje. 0 = las lineas quedan en los bordes.</value>
+  </data>
+  <data name="Schreibt_die_neue_Gr_e_direkt_in_die_Bilddateien_e5ca016d" xml:space="preserve">
+    <value>Escribe el nuevo tamaño directamente en los archivos de imagen. Sin marcar, se crean archivos nuevos con elección de formato y los originales quedan intactos.</value>
+  </data>
+  <data name="Gr_e_an_den_Dateinamen_anh_ngen_a3a10221" xml:space="preserve">
+    <value>Añadir el tamaño al nombre de archivo</value>
+  </data>
+  <data name="foto_jpg_wird_zu_foto_1920x1080_jpg_b5f403e4" xml:space="preserve">
+    <value>foto.jpg se convierte en foto_1920x1080.jpg</value>
+  </data>
+  <data name="Bildgr_e_ndern_ccecda91" xml:space="preserve">
+    <value>Cambiar tamaño de imagen</value>
+  </data>
+  <data name="Laufende_Nummer_Stellen_Anzahl_2e2eac8c" xml:space="preserve">
+    <value>Número correlativo (dígitos = cantidad de #)</value>
+  </data>
+  <data name="Urspr_nglicher_Dateiname_cb8c080c" xml:space="preserve">
+    <value>Nombre de archivo original</value>
+  </data>
+  <data name="Dateidatum_35c233c2" xml:space="preserve">
+    <value>Fecha del archivo</value>
+  </data>
+  <data name="Aufnahmedatum_EXIF_3d0d84e8" xml:space="preserve">
+    <value>Fecha de captura (EXIF)</value>
+  </data>
+  <data name="Bildbreite_in_Pixeln_6dba108e" xml:space="preserve">
+    <value>Ancho de imagen en píxeles</value>
+  </data>
+  <data name="Bildh_he_in_Pixeln_32f937c8" xml:space="preserve">
+    <value>Alto de imagen en píxeles</value>
+  </data>
+  <data name="Kameramodell_EXIF_f9781570" xml:space="preserve">
+    <value>Modelo de cámara (EXIF)</value>
+  </data>
+  <data name="ISO_Wert_EXIF_f08c1c8b" xml:space="preserve">
+    <value>Valor ISO (EXIF)</value>
+  </data>
+  <data name="Blende_EXIF_ab648dca" xml:space="preserve">
+    <value>Apertura (EXIF)</value>
+  </data>
+  <data name="Brennweite_EXIF_1188103d" xml:space="preserve">
+    <value>Distancia focal (EXIF)</value>
+  </data>
+  <data name="Tastenk_rzel_58262f7d" xml:space="preserve">
+    <value>Atajos de teclado</value>
+  </data>
+  <data name="bersicht_der_Tasten_und_Mausbelegung_in_Galerie__91d799e1" xml:space="preserve">
+    <value>Resumen de las asignaciones de teclado y ratón en galería, visor y editor.</value>
+  </data>
+  <data name="berall_314c7bca" xml:space="preserve">
+    <value>En todas partes</value>
+  </data>
+  <data name="Vollbild_ein_aus_44f07e8a" xml:space="preserve">
+    <value>Pantalla completa sí/no</value>
+  </data>
+  <data name="Strg_1_5_cce51924" xml:space="preserve">
+    <value>Ctrl+1–5</value>
+  </data>
+  <data name="Bewertung_setzen_dieselbe_Zahl_erneut_oder_Strg__a67aab8f" xml:space="preserve">
+    <value>Establecer valoración (el mismo número otra vez o Ctrl+0 la quita)</value>
+  </data>
+  <data name="Strg_Q_170b2b61" xml:space="preserve">
+    <value>Ctrl+Q</value>
+  </data>
+  <data name="Favorit_ein_aus_1b5c90d6" xml:space="preserve">
+    <value>Favorito sí/no</value>
+  </data>
+  <data name="Pfeiltasten_Bild_auf_ab_Pos1_Ende_089188b4" xml:space="preserve">
+    <value>Teclas de flecha, RePág/AvPág, Inicio, Fin</value>
+  </data>
+  <data name="Auswahl_bewegen_Umschalt_Bereich_erweitern_e675c648" xml:space="preserve">
+    <value>Mover la selección (Mayús: ampliar el rango)</value>
+  </data>
+  <data name="Eingabe_oder_Doppelklick_679e9e9a" xml:space="preserve">
+    <value>Intro o doble clic</value>
+  </data>
+  <data name="Bild_ffnen_4beb4809" xml:space="preserve">
+    <value>Abrir imagen</value>
+  </data>
+  <data name="Leertaste_halten_15b04274" xml:space="preserve">
+    <value>Espacio (mantener)</value>
+  </data>
+  <data name="Schnellvorschau_419601fa" xml:space="preserve">
+    <value>Vista previa rápida</value>
+  </data>
+  <data name="Strg_A_4d8db788" xml:space="preserve">
+    <value>Ctrl+A</value>
+  </data>
+  <data name="Alles_ausw_hlen_becdd6af" xml:space="preserve">
+    <value>Seleccionar todo</value>
+  </data>
+  <data name="Strg_C_Strg_X_Strg_V_b126d0ad" xml:space="preserve">
+    <value>Ctrl+C / Ctrl+X / Ctrl+V</value>
+  </data>
+  <data name="Kopieren_Ausschneiden_Einf_gen_eb819efb" xml:space="preserve">
+    <value>Copiar / Cortar / Pegar</value>
+  </data>
+  <data name="Strg_F_05b84635" xml:space="preserve">
+    <value>Ctrl+F</value>
+  </data>
+  <data name="Suche_fd281588" xml:space="preserve">
+    <value>Buscar</value>
+  </data>
+  <data name="Strg_W_049f6d81" xml:space="preserve">
+    <value>Ctrl+W</value>
+  </data>
+  <data name="Strg_R_fa0fdb7c" xml:space="preserve">
+    <value>Ctrl+R</value>
+  </data>
+  <data name="Strg_D_7de6019a" xml:space="preserve">
+    <value>Ctrl+D</value>
+  </data>
+  <data name="F2_999d0cd6" xml:space="preserve">
+    <value>F2</value>
+  </data>
+  <data name="Entf_50660d74" xml:space="preserve">
+    <value>Supr</value>
+  </data>
+  <data name="Aktualisieren_87c65f26" xml:space="preserve">
+    <value>Actualizar</value>
+  </data>
+  <data name="Esc_1f7a4f9e" xml:space="preserve">
+    <value>Esc</value>
+  </data>
+  <data name="Strg_Mausrad_oder_Rechtsklick_Mausrad_6a8d113a" xml:space="preserve">
+    <value>Ctrl+rueda del ratón o clic derecho+rueda</value>
+  </data>
+  <data name="Kachelgr_e_ndern_e84982b6" xml:space="preserve">
+    <value>Cambiar tamaño de miniaturas</value>
+  </data>
+  <data name="Pfeil_links_rechts_Bild_auf_ab_2b6cba82" xml:space="preserve">
+    <value>Flecha izquierda/derecha, RePág/AvPág</value>
+  </data>
+  <data name="Voriges_n_chstes_Bild_e4168031" xml:space="preserve">
+    <value>Imagen anterior / siguiente</value>
+  </data>
+  <data name="Plus_Minus_d778810e" xml:space="preserve">
+    <value>Más / Menos</value>
+  </data>
+  <data name="Zoomen_dc13332e" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="Bild_einpassen_58bd9313" xml:space="preserve">
+    <value>Ajustar imagen</value>
+  </data>
+  <data name="Leertaste_9eeb28a0" xml:space="preserve">
+    <value>Espacio</value>
+  </data>
+  <data name="Diashow_starten_stoppen_2930a311" xml:space="preserve">
+    <value>Iniciar/detener presentación</value>
+  </data>
+  <data name="Strg_L_Strg_R_cbe928ad" xml:space="preserve">
+    <value>Ctrl+L / Ctrl+R</value>
+  </data>
+  <data name="Nach_links_rechts_drehen_36ee2c3b" xml:space="preserve">
+    <value>Girar a la izquierda / derecha</value>
+  </data>
+  <data name="Strg_I_38b20eaa" xml:space="preserve">
+    <value>Ctrl+I</value>
+  </data>
+  <data name="Info_Leiste_ein_aus_3d1dadd7" xml:space="preserve">
+    <value>Panel de información sí/no</value>
+  </data>
+  <data name="Strg_E_98c415e6" xml:space="preserve">
+    <value>Ctrl+E</value>
+  </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_9acb05b5" xml:space="preserve">
+    <value>Volver a la galería (en pantalla completa: salir de ella)</value>
+  </data>
+  <data name="Am_Mauszeiger_zoomen_2eca988e" xml:space="preserve">
+    <value>Zoom en el puntero</value>
+  </data>
+  <data name="Strg_Z_Strg_Y_46cfa292" xml:space="preserve">
+    <value>Ctrl+Z / Ctrl+Y</value>
+  </data>
+  <data name="R_ckg_ngig_Wiederholen_579d24d3" xml:space="preserve">
+    <value>Deshacer / Rehacer</value>
+  </data>
+  <data name="Strg_S_1f1d1d5c" xml:space="preserve">
+    <value>Ctrl+S</value>
+  </data>
+  <data name="Speichern_wenn_nicht_m_glich_Speichern_unter_e8f908b6" xml:space="preserve">
+    <value>Guardar (si no es posible: Guardar como)</value>
+  </data>
+  <data name="Alles_ausw_hlen_bei_Auswahl_Werkzeugen_4bae08ee" xml:space="preserve">
+    <value>Seleccionar todo (con herramientas de selección)</value>
+  </data>
+  <data name="Strg_C_Strg_V_40af8c6f" xml:space="preserve">
+    <value>Ctrl+C / Ctrl+V</value>
+  </data>
+  <data name="Auswahl_kopieren_einf_gen_ca01fe6e" xml:space="preserve">
+    <value>Copiar / pegar la selección</value>
+  </data>
+  <data name="Objekt_duplizieren_ohne_Objekt_Auswahl_aufheben_56d12fa8" xml:space="preserve">
+    <value>Duplicar objeto; sin objeto: anular la selección</value>
+  </data>
+  <data name="Strg_P_568a12fb" xml:space="preserve">
+    <value>Ctrl+P</value>
+  </data>
+  <data name="Vorschau_anwenden_1445fbbc" xml:space="preserve">
+    <value>Aplicar vista previa</value>
+  </data>
+  <data name="Strg_R_Strg_T_Strg_B_Strg_G_69d0b610" xml:space="preserve">
+    <value>Ctrl+R / Ctrl+T / Ctrl+B / Ctrl+G</value>
+  </data>
+  <data name="Werkzeug_Drehen_Text_Zeichnen_Einf_gen_58b1101d" xml:space="preserve">
+    <value>Herramienta: Girar / Texto / Dibujar / Insertar</value>
+  </data>
+  <data name="Radierer_umschalten_im_Zeichnen_Werkzeug_e3fb53e7" xml:space="preserve">
+    <value>Alternar goma (en la herramienta de dibujo)</value>
+  </data>
+  <data name="Pfeiltasten_5a95be86" xml:space="preserve">
+    <value>Teclas de flecha</value>
+  </data>
+  <data name="Objekt_verschieben_Umschalt_gr_ere_Schritte_1dea48ec" xml:space="preserve">
+    <value>Mover objeto (Mayús: pasos mayores)</value>
+  </data>
+  <data name="Alt_beim_Ziehen_von_Objekten_0833b704" xml:space="preserve">
+    <value>Alt (al arrastrar objetos)</value>
+  </data>
+  <data name="Einrasten_vor_bergehend_aus_ebad018d" xml:space="preserve">
+    <value>Desactivar el ajuste temporalmente</value>
+  </data>
+  <data name="Eckige_Klammern_4cf3f886" xml:space="preserve">
+    <value>Corchetes [ ]</value>
+  </data>
+  <data name="Werkzeuggr_e_kleiner_gr_er_683cfc14" xml:space="preserve">
+    <value>Tamaño de herramienta menor / mayor</value>
+  </data>
+  <data name="Bildausschnitt_verschieben_91308457" xml:space="preserve">
+    <value>Desplazar la vista</value>
+  </data>
+  <data name="Objekt_l_schen_ohne_Objekt_Bild_l_schen_b5e9f927" xml:space="preserve">
+    <value>Eliminar objeto; sin objeto: eliminar imagen</value>
+  </data>
+  <data name="Auswahl_abw_hlen_Zug_abbrechen_Editor_verlassen_55efe80d" xml:space="preserve">
+    <value>Deseleccionar, cancelar el trazo, salir del editor</value>
+  </data>
+  <data name="F11_b9c76142" xml:space="preserve">
+    <value>F11</value>
+  </data>
+  <data name="Konvertieren_nach_1eced4a9" xml:space="preserve">
+    <value>Convertir a</value>
+  </data>
+  <data name="bernehmen_59430842" xml:space="preserve">
+    <value>Transferir</value>
+  </data>
+  <data name="Etikett_ef341fee" xml:space="preserve">
+    <value>Etiqueta</value>
+  </data>
+  <data name="Stichworte_f321211e" xml:space="preserve">
+    <value>Palabras clave</value>
+  </data>
+  <data name="Startet_in_Immich_Alle_Fotos_ohne_Verbindung_gre_ff052108" xml:space="preserve">
+    <value>Inicia en Immich “Todas las fotos”; sin conexión se usa la carpeta Imágenes</value>
+  </data>
+  <data name="Einrast_Abstand_zum_Bildrand_7dca6efd" xml:space="preserve">
+    <value>Margen de ajuste al borde de la imagen</value>
+  </data>
+  <data name="Abstand_der_Einrast_Linien_zu_den_Bildr_ndern_be_44954031" xml:space="preserve">
+    <value>Distancia de las líneas de ajuste a los bordes de la imagen al mover objetos, en porcentaje. 0 = desactivado; los objetos siempre se ajustan a bordes, centro y otros objetos.</value>
+  </data>
+  <data name="Ansicht_nach_links_drehen_Strg_L_ndert_die_Datei_d2498770" xml:space="preserve">
+    <value>Girar imagen a la izquierda (Ctrl+L)</value>
+  </data>
+  <data name="Ansicht_nach_rechts_drehen_Strg_R_ndert_die_Date_a10a7cf2" xml:space="preserve">
+    <value>Girar imagen a la derecha (Ctrl+R)</value>
+  </data>
+  <data name="Bild_nach_links_drehen_Strg_L_c620f690" xml:space="preserve">
+    <value>Girar imagen a la izquierda (Ctrl+L)</value>
+  </data>
+  <data name="Bild_nach_rechts_drehen_Strg_R_4fda3c55" xml:space="preserve">
+    <value>Girar imagen a la derecha (Ctrl+R)</value>
+  </data>
+  <data name="Schreibt_das_Wasserzeichen_direkt_in_die_Bilddat_92c3da24" xml:space="preserve">
+    <value>Escribe la marca de agua directamente en los archivos de imagen. Sin marcar, se crean archivos nuevos y los originales quedan intactos.</value>
+  </data>
+  <data name="Bild_konnte_nicht_gespeichert_werden_19d534fb" xml:space="preserve">
+    <value>No se pudo guardar la imagen</value>
+  </data>
 </root>

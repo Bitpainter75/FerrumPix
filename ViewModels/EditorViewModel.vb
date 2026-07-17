@@ -10,6 +10,7 @@ Imports System.Threading.Tasks
 Imports System.Windows.Input
 Imports Avalonia.Media.Imaging
 Imports Avalonia.Threading
+Imports FerrumPix.Controls
 Imports SkiaSharp
 Imports ReactiveUI
 Imports FerrumPix.Services
@@ -21,10 +22,20 @@ Namespace ViewModels
         Inherits ViewModelBase
 
         Private ReadOnly _mainVm As MainWindowViewModel
+        ' Identität des bearbeiteten Bildes (Filmstreifen, Metadaten, Bewertung, Navigation, Dateiname). Bei
+        ' einem geöffneten .fpx ist das der PROJEKTpfad, während die Pipeline das entpackte Basisbild dekodiert.
         Private _currentImagePath As String = ""
+        ' Überschreibt für .fpx-Projekte die tatsächlich zu dekodierende Bildquelle (das entpackte Basisbild im
+        ' Temp-Ordner). Leer = normales Bild; dann ist RenderSourcePath identisch zu _currentImagePath.
+        Private _renderSourcePathOverride As String = ""
         ' True, wenn die Quelle nicht in-place überschrieben werden darf (z.B. eine Immich-Temp-Kopie):
         ' "Speichern" ist dann gesperrt und leitet überall auf "Speichern unter" um.
         Private _forceSaveAsOnly As Boolean = False
+        ' Pfad der geöffneten .fpx-Projektdatei (leer = normales Bild). Die eigentliche Arbeitsquelle ist das
+        ' entpackte Basisbild im Temp-Ordner; dieser Pfad liefert für "Speichern unter" aber Name, Ordner und
+        ' Formatvorschlag, damit der Dialog den Projektnamen statt "base" vorschlägt.
+        Private _currentFpxPath As String = ""
+        Private _currentFpxTempDir As String = ""
         ' Immich-Album, aus dem das aktuelle Bild stammt - ein Upload des bearbeiteten Bildes nach Immich
         ' landet dann gleich in diesem Album (leer = nur in die Bibliothek).
         Private _immichSourceAlbumId As String = Nothing
@@ -288,6 +299,9 @@ Namespace ViewModels
         Private _annotationFontFamily As String = "Arial"
         Private _annotationOpacity As Double = 100
         Private _annotationBlendMode As String = "Normal"
+        ' Hintergrund-Ebene (Basisbild) im Ebenen-Panel aus-/eingeblendet. Wirkt strukturell übers
+        ' Compositing (siehe ImageProcessor.ApplyAnnotations), nicht als Pixel-Anpassung.
+        Private _backgroundHidden As Boolean = False
         Private _annotationRotation As Double = 0
         Private _annotationFlipH As Boolean = False
         ' Objekt-Anpassungsmodus: Solange ein Objekt markiert ist UND ein objektfähiges Werkzeug aktiv ist,
@@ -296,6 +310,7 @@ Namespace ViewModels
         Private _imagePixelAdjustments As ImageAdjustments = Nothing
         Private _objectAdjustSwapInProgress As Boolean = False
         Private _annotationFlipV As Boolean = False
+        Private _annotationLockAspect As Boolean = True
         Private _annotationAnchor As String = "BottomRight"
         Private _annotationIsVisible As Boolean = True
         Private _annotationXPercent As Double = 35
@@ -347,21 +362,157 @@ Namespace ViewModels
         Private _selectionMaskEdgePointsX As Double() = Nothing
         Private _selectionMaskEdgePointsY As Double() = Nothing
         Private ReadOnly _annotations As New ObservableCollection(Of ImageAnnotation)()
+        ' Raster-Paint-Werkzeuge (Pinsel/Radierer) sind keine Overlay-Objekte und erscheinen nicht im
+        ' Ebenenstapel. Der Renderer wandelt diese Daten nur intern in seine bestehende Zeichenroutine um.
+        Private ReadOnly _pixelEditLayer As New PixelEditLayer()
+
+        ' ARBEITSBILD (Umbau 2026-07-17): voll aufgelöstes Bild, aus dem die Vorschau
+        ' abgeleitet wird; Retusche/Striche/gerasterte Ebenen werden regional eingebacken.
+        ' Besitz: der Service hält das Voll-Bitmap, das Vorschau-Bitmap gehört
+        ' weiter der _previewSource-/Stale-Mechanik (siehe WorkingImageService-Kopf).
+        Private ReadOnly _workingImage As New WorkingImageService()
+
+        ''' Serielle FIFO-Queue für Region-Commits ins Arbeitsbild (Striche, Retusche, Rastern).
+        ''' Die Reihenfolge hält die Undo-Patch-Zuordnung korrekt (je Zug EIN PushUndo direkt
+        ''' vor dem Enqueue); CloneFull (Export) wartet über den Service-Lock automatisch auf
+        ''' einen gerade laufenden Commit.
+        Private _workingCommitChain As Task = Task.CompletedTask
+
+        ''' .fpx mit voll aufgelöstem retouch.png (= gebackenes Arbeitsbild): Pfad-Override für den
+        ''' Arbeitsbild-Decode in PreparePreviewSource (statt des Basisbilds) plus Alpha-Flag aus dem
+        ''' Rezept. Leer bei normalen Bildern; die Maße-Prüfung gegen die Basis passiert beim Decode.
+        Private _workingImageOverridePath As String = ""
+        Private _workingImageOverrideHasAlpha As Boolean = False
+
+        ''' Anzahl der Commits, die gerade in der Queue stecken (UI-Thread-Zugriff): solange > 0
+        ''' sind Undo/Redo gesperrt (siehe CanUndo) - die Undo-Zuordnung wäre sonst unvollständig.
+        Private _pendingWorkingCommits As Integer = 0
+
+        Private Sub EnqueueWorkingCommit(work As Func(Of WorkingImagePatch), onDoneUi As Action(Of WorkingImagePatch))
+            _pendingWorkingCommits += 1
+            Me.RaisePropertyChanged(NameOf(CanUndo))
+            Me.RaisePropertyChanged(NameOf(CanRedo))
+            ' Identität des Arbeitsbilds beim Einreihen merken: kommt der Commit erst NACH einem
+            ' Bildwechsel an die Reihe, verfällt er (sonst malte er in das falsche Bild).
+            Dim initStamp = _workingImage.InitStamp
+            _workingCommitChain = _workingCommitChain.ContinueWith(
+                Sub(prev)
+                    Dim patch As WorkingImagePatch = Nothing
+                    Try
+                        If _workingImage.InitStamp = initStamp Then
+                            ' ms mitloggen: teure Einback-Renders (z. B. Klecks-Pinsel in
+                            ' Vollauflösung, Befund 17.07.) sind sonst im Log unsichtbar -
+                            ' zwischen zwei Einträgen klaffte nur eine unerklärte Lücke.
+                            Dim sw = Diagnostics.Stopwatch.StartNew()
+                            patch = work()
+                            DiagnosticLogService.LogAlways("Editor.WorkingCommit",
+                                $"done rect={If(patch Is Nothing, "-", $"{patch.Rect.Left},{patch.Rect.Top},{patch.Rect.Width}x{patch.Rect.Height}")} ms={sw.ElapsedMilliseconds}")
+                        Else
+                            DiagnosticLogService.LogAlways("Editor.WorkingCommit", "skipped=imageChanged")
+                        End If
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Editor.WorkingCommit", ex)
+                    End Try
+                    Avalonia.Threading.Dispatcher.UIThread.Post(
+                        Sub()
+                            _pendingWorkingCommits = Math.Max(0, _pendingWorkingCommits - 1)
+                            Try
+                                If onDoneUi IsNot Nothing Then onDoneUi(patch)
+                            Finally
+                                Me.RaisePropertyChanged(NameOf(CanUndo))
+                                Me.RaisePropertyChanged(NameOf(CanRedo))
+                            End Try
+                        End Sub)
+                End Sub, TaskScheduler.Default)
+        End Sub
+
+        ' STUFE 2 (Szenen-Renderer): die persistente Szene = Basis + Pixelanpassungen + Striche + ALLE
+        ' Overlay-Objekte in Z-Order (Preview-Aufloesung), gerendert von denselben Routinen wie der
+        ' Export. PreviewImage zeigt IMMER eine Konvertierung dieser Szene; Aenderungen laufen als
+        ' Dirty-Rect-Region-Renders in die Szene (TryRenderSceneRegionSync) statt als separate
+        ' Composite-Patches ueber der Anzeige. Nur auf dem UI-Thread anfassen.
+        Private _sceneSk As SKBitmap = Nothing
+        ' Asynchroner Region-Worker: Regler-Bursts und Drag-Starts duerfen den UI-Thread nicht mit
+        ' 200-800-ms-Effekt-Renders blockieren. Anforderungen sammeln sich als Rect-Union in
+        ' _sceneRegionPendingRect; ein einzelner Worker rendert im Hintergrund und der UI-Thread
+        ' wendet nur noch an (~20 ms). Natuerliche Gegendrossel: solange gerendert wird, waechst
+        ' nur die Union.
+        Private _sceneRegionPendingRect As SKRectI = SKRectI.Empty
+        Private _sceneRegionWorkerBusy As Boolean = False
+        ' Inhalts-Version der Szene: JEDER Szene-Write (sync-Region, Worker-Apply, Vollrender) zaehlt
+        ' hoch. Der Worker verwirft sein Ergebnis, wenn sich der Inhalt seit seinem Snapshot geaendert
+        ' hat, und rendert neu - sonst ueberschreibt ein langer Hintergrund-Render (grosse weiche
+        ' Pinselstriche!) z.B. ein zwischenzeitlich angelegtes Objekt mit seinem alten Stand.
+        Private _sceneContentVersion As Long = 0
+        ' Persistente Anzeige der Szene: EINE WriteableBitmap, in die nur die geaenderten Zeilen
+        ' geblittet werden. Ein neues 40-MB-Bitmap pro Update (fruehere Vollkonvertierung) erzeugte
+        ' GC-/Textur-Upload-Stalls, die Maus-Events schluckten - Regler sprangen grob.
+        Private _sceneDisplay As WriteableBitmap = Nothing
+        ' Sequenz fuer asynchrone Ghost-Renders (Drag-Start): nur das juengste Ergebnis zaehlt.
+        Private _ghostRenderSeq As Long = 0
+
+        ' STUFE 3 (Zoom-Detail): Bei Zoom ueber Szenen-1:1 wird asynchron EINE hochaufgeloeste
+        ' Detail-Szene gerendert (voller Renderer auf separat geladener Quelle, Deckel
+        ' ZoomDetailMaxDimension, Base-Cache unberuehrt) und pro _sceneContentVersion gecacht.
+        ' Angezeigt wird nur der sichtbare Viewport-Ausschnitt (+Rand) als kleines Overlay-Bitmap.
+        ' Quelle+Detail leben nur solange Zoom > 1; alles nur auf dem UI-Thread anfassen.
+        ''' 6144 statt urspruenglich 8192 (Befund: Nachschaerfen bei 45-MP-Bild dauerte 3,5 s
+        ''' pro Versuch) - halbiert grob Renderzeit und Speicher, bleibt 2,4x schaerfer als die Szene.
+        Public Const ZoomDetailMaxDimension As Integer = 6144
+        Private _zoomDetailSource As SKBitmap = Nothing        ' hochaufgeloeste Arbeitsbild-Ableitung (gecacht)
+        Private _zoomDetailSourcePath As String = Nothing
+        ''' Arbeitsbild-Version, aus der _zoomDetailSource abgeleitet wurde: nach einem
+        ''' eingebackenen Commit (Stufe D+) ist der alte Downscale inhaltlich veraltet.
+        Private _zoomDetailSourceWorkingVersion As Long = -1
+        Private _zoomDetailSk As SKBitmap = Nothing            ' fertige Detail-Szene
+        Private _zoomDetailVersion As Long = -1                ' _sceneContentVersion des Detail-Standes
+        Private _zoomDetailRendering As Boolean = False
+        Private _zoomDetailDisposePending As Boolean = False   ' Reset waehrend laufendem Render: deferred
+        Private _zoomDetailRenderSeq As Long = 0
+        Private _zoomDetailImage As Bitmap = Nothing           ' Viewport-Ausschnitt fuer die View
+        Private _zoomDetailFracLeft As Double                  ' Lage des Ausschnitts in Bildanteilen 0..1
+        Private _zoomDetailFracTop As Double
+        Private _zoomDetailFracWidth As Double
+        Private _zoomDetailFracHeight As Double
+        Private _zoomDetailWanted As Boolean = False           ' View meldet: Zoom > Szenen-1:1 aktiv
+        Private _zoomDetailVisLeft As Double                   ' zuletzt gemeldeter sichtbarer Ausschnitt
+        Private _zoomDetailVisTop As Double
+        Private _zoomDetailVisRight As Double
+        Private _zoomDetailVisBottom As Double
+        Private _zoomDetailTimer As DispatcherTimer = Nothing  ' Debounce fuer den teuren Detail-Render
+        Private _zoomDetailExtracting As Boolean = False        ' Guard gegen synchrones PropertyChanged-Reentry
+        ' Vorher/Nachher im Zoom (Nutzerwunsch 2026-07-17): zweites Detail der Vorher-Seite aus dem
+        ' ORIGINAL-Decode (nur Geometrie, keine Farb-Pipeline) - die View clippt beide Details an der
+        ' Vergleichslinie. Vorher-Detail nur, wenn die Maße zur Nachher-Detail-Szene passen.
+        Private _zoomDetailWantBefore As Boolean = False       ' View meldet: Vergleich sichtbar
+        Private _zoomDetailBeforeSource As SKBitmap = Nothing  ' hochaufgeloester Original-Decode (gecacht)
+        Private _zoomDetailBeforeSourcePath As String = Nothing
+        Private _zoomDetailBeforeSk As SKBitmap = Nothing      ' fertige Vorher-Detail-Szene
+        Private _zoomDetailBeforeImage As Bitmap = Nothing     ' Viewport-Ausschnitt Vorher fuer die View
+
+        ''' <summary>Feuert nach einem Region-Blit in die (unveraenderte Instanz der) Szene-Anzeige -
+        ''' die View muss das Image-Control dann per InvalidateVisual neu zeichnen lassen, weil sich
+        ''' fuer das Binding nichts geaendert hat.</summary>
+        Public Event SceneInvalidated As EventHandler
+        ' Anzeige-Reihenfolge fürs Ebenen-Panel: _annotations UMGEKEHRT (vorderste Ebene oben, hinterste
+        ' unten, wie in üblichen Bildbearbeitungen). Wird bei jeder Stapeländerung synchron neu aufgebaut;
+        ' die Auswahl läuft objektbasiert über SelectedLayer, damit Umsortieren/Neuaufbau die Markierung
+        ' nicht verliert. _annotations bleibt die Wahrheit (Index 0 = zuerst gezeichnet = hinten).
+        Private ReadOnly _layerRows As New ObservableCollection(Of ImageAnnotation)()
+        Private _suppressLayerRowSelectionSync As Boolean = False
         Private _selectedAnnotationIndex As Integer = -1
-        ' Verfolgt die Ebene, an die der aktuell laufende Pinsel-/Radiergummi-"Sitzung" noch weitere
-        ' Striche anhängt, statt für jeden einzelnen Strich eine neue Ebene anzulegen (siehe
+        ' Verfolgt den Raster-Paint-Eintrag, an den die aktuell laufende Pinsel-/Radiergummi-"Sitzung"
+        ' noch weitere Striche anhängt, statt für jeden einzelnen Strich einen neuen Eintrag anzulegen (siehe
         ' AddBrushStroke). Per Objektreferenz statt Index verfolgt, damit ein zwischenzeitliches
-        ' Undo/Redo (das _annotations komplett durch geklonte Objekte ersetzt) automatisch über die
+        ' Undo/Redo (das die Rasterliste komplett durch geklonte Objekte ersetzt) automatisch über die
         ' Contains-Prüfung in AddBrushStroke erkannt wird, ohne hier explizit zurückgesetzt werden zu
-        ' müssen. Endet explizit bei Werkzeugwechsel, Pinsel/Radiergummi-Umschalten oder Ebenenwechsel
-        ' (CurrentTool-/IsEraserMode-/SelectedAnnotationIndex-Setter).
-        Private _activeStrokeAnnotation As ImageAnnotation = Nothing
-        Private _activeStrokeIsEraser As Boolean = False
+        ' müssen. Endet explizit bei Werkzeugwechsel oder Pinsel/Radiergummi-Umschalten.
         Private _isLoadingAnnotation As Boolean
         Private _annotationFontOptionsCache As IReadOnlyList(Of String)
         Private _isUpdatingResize As Boolean
         Private _rating As Integer = 0
         Private _isFavorite As Boolean = False
+        Private _colorLabel As String = ""
         Private _newTagText As String = ""
         Private _hasChanges As Boolean
         Private _statusText As String = ""
@@ -371,16 +522,23 @@ Namespace ViewModels
         Private _histogramImage As Bitmap
         Private _exifInfo As ExifData
         Private _previewPending As Boolean
-        Private _overlayHidesSelectionFromPreview As Boolean = False
+        Private _annotationCompositePreviewPending As Boolean
+        Private _annotationCompositePreviewRetries As Integer
+        Private _suppressPreviewDirty As Boolean = False
         ' Verhindert, dass eine einzelne logische Nutzeraktion (z.B. Werkzeugwechsel, der intern
         ' sowohl SelectedAnnotationIndex als auch CurrentTool setzt) NotifyAnnotationOverlayStateChanged
-        ' mehrfach hintereinander auslöst - das würde sonst einen sofortigen Render mit einem kurz
-        ' danach erneut gestarteten, debounce-verzögerten Render racen (siehe RequestOverlayStateNotify).
+        ' mehrfach hintereinander auslöst.
         Private _overlayNotifySuppressDepth As Integer = 0
         Private ReadOnly _previewTimer As DispatcherTimer
         Private ReadOnly _filmstripNavDebouncer As FilmstripNavigationDebouncer
         Private ReadOnly _previewSync As New Object()
         Private ReadOnly _stalePreviewSources As New List(Of SKBitmap)()
+        ''' „Vorher"-Quelle des Vergleichs: eigener Vorschau-Decode der ORIGINAL-Datei. Seit dem
+        ''' Arbeitsbild-Umbau enthält _previewSource (ab Stufe D) gebackene Retusche/Striche -
+        ''' „Vorher" soll aber das echte Original zeigen. Faul erzeugt (nur solange der Regler
+        ''' aktiv ist), entsorgt über die Stale-Liste (in-flight-Renders!) bei Bildwechsel/Regler-aus.
+        Private _comparisonOriginalSource As SKBitmap
+        Private _comparisonOriginalPath As String
         Private _previewSource As SKBitmap
         Private _previewRenderCts As CancellationTokenSource
         Private _previewRequestId As Integer
@@ -400,6 +558,9 @@ Namespace ViewModels
         Private _retouchLivePatchTopPercent As Double = 0
         Private _retouchLivePatchWidthPercent As Double = 0
         Private _retouchLivePatchHeightPercent As Double = 0
+        Private _annotationDirtyRect As SKRectI = SKRectI.Empty
+        Private _annotationPlacementEditActive As Boolean = False
+        Private _annotationPlacementStartDirtyRect As SKRectI = SKRectI.Empty
         Private _activePreviewRenders As Integer
         Private _showBeforeImage As Boolean = False
         ' Zuletzt vom Nutzer gewählter Vergleichs-Zustand; kommt aus den Einstellungen und wird dort beim
@@ -412,7 +573,38 @@ Namespace ViewModels
         Private _currentIndex As Integer = -1
         Private _selectedInfoTab As InfoSidebarTab = InfoSidebarTab.General
         Private _selectedLayersPanelTab As LayersPanelTab = LayersPanelTab.Tool
-        Private Const PreviewMaxDimension As Integer = 1600
+        ' Vorschau-Deckel (längste Kante). Früher 0 = volle Quellauflösung - damit lief die GESAMTE
+        ' Editor-Pipeline z.B. in 49 MP (gemessen: Full-Render 7-8 s, Composite-Patch 1-2 s), und die
+        ' fragile Overlay-Hybrid-Architektur existierte nur, um diese langsamen Patches zu umgehen.
+        ' Jetzt adaptiv an der längsten Monitorkante (min 2560, Fallback 3072): scharf in der
+        ' Fit-Ansicht, ~10x schnellere Pipeline. Detail-Zoom über der Vorschau-Auflösung wird
+        ' übergangsweise weicher, bis der Viewport-1:1-Region-Render kommt (Stufe 3, siehe
+        ' EDITOR_RENDERING_NOTES.md). Export/Speichern rendern unverändert in voller Quellauflösung.
+        Private Shared _previewMaxDimensionResolved As Integer = 0
+
+        Private Shared ReadOnly Property PreviewMaxDimension As Integer
+            Get
+                If _previewMaxDimensionResolved > 0 Then Return _previewMaxDimensionResolved
+                Dim resolved = 3072
+                Try
+                    Dim lifetime = TryCast(Avalonia.Application.Current?.ApplicationLifetime,
+                                           Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)
+                    Dim screens = lifetime?.MainWindow?.Screens
+                    If screens IsNot Nothing Then
+                        Dim longest = 0
+                        For Each s In screens.All
+                            longest = Math.Max(longest, Math.Max(s.Bounds.Width, s.Bounds.Height))
+                        Next
+                        If longest > 0 Then resolved = Math.Max(2560, longest)
+                    End If
+                Catch
+                    ' Kein Fenster/Screen ermittelbar (z.B. sehr früher Aufruf): Fallback bleibt 3072.
+                End Try
+                _previewMaxDimensionResolved = resolved
+                Return resolved
+            End Get
+        End Property
+        Private Const FpxCompositeMaxDimension As Integer = 2560
         Private Const PreviewDebounceMs As Double = 90.0
         Private Const UndoCaptureWindowMs As Double = 650
         ' Text und Wasserzeichen dürfen kleiner werden als die 5%/4%, die für Formen gelten: ihr Rechteck
@@ -433,8 +625,21 @@ Namespace ViewModels
 
 
         ' Undo-Stack
-        Private ReadOnly _undoStack As New Stack(Of ImageAdjustments)()
-        Private ReadOnly _redoStack As New Stack(Of ImageAdjustments)()
+        ''' Undo-Eintrag des Arbeitsbild-Umbaus (Stufe B): Anpassungs-Snapshot plus optionaler
+        ''' Pixel-Patch (Vorher-Ausschnitt eines eingebackenen Region-Commits; belegt ab Stufe D).
+        ''' Ein Patch gehört immer GENAU EINEM Stapel-Eintrag - beim Undo wandert er mit
+        ''' getauschtem Inhalt in den Redo-Eintrag und umgekehrt (Tausch-Schema im Service).
+        Private NotInheritable Class UndoEntry
+            Public Adjustments As ImageAdjustments
+            Public Patch As WorkingImagePatch
+        End Class
+
+        Private ReadOnly _undoStack As New Stack(Of UndoEntry)()
+        Private ReadOnly _redoStack As New Stack(Of UndoEntry)()
+        ''' Zuletzt per PushUndo erzeugter Eintrag: der zugehörige Region-Commit (ab Stufe D)
+        ''' hängt seinen Pixel-Patch hier an. Je Zug genau EIN PushUndo unmittelbar vor dem
+        ''' Commit + strikt serielle Commit-Reihenfolge halten die Zuordnung korrekt.
+        Private _lastPushedUndoEntry As UndoEntry
 
         Public Property FilmstripItems As BulkObservableCollection(Of ImageItem)
         Public Property Tags As ObservableCollection(Of String)
@@ -463,6 +668,46 @@ Namespace ViewModels
                 Return _annotations
             End Get
         End Property
+
+        ''' <summary>Objektstapel in ANZEIGE-Reihenfolge fürs Ebenen-Panel: _annotations umgekehrt (vorderste
+        ''' Ebene zuerst/oben). Wird von RebuildLayerRows synchron gehalten.</summary>
+        Public ReadOnly Property LayerRows As ObservableCollection(Of ImageAnnotation)
+            Get
+                Return _layerRows
+            End Get
+        End Property
+
+        ''' <summary>Die markierte Ebene als Objekt (statt Index) - so bleibt die Markierung beim Umkehren/
+        ''' Neuaufbau der Anzeigeliste erhalten. Setzen übersetzt zurück auf SelectedAnnotationIndex.</summary>
+        Public Property SelectedLayer As ImageAnnotation
+            Get
+                If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return Nothing
+                Return _annotations(_selectedAnnotationIndex)
+            End Get
+            Set(value As ImageAnnotation)
+                ' Während RebuildLayerRows die Liste leert/neu füllt, meldet die ListBox kurz SelectedItem=Nothing.
+                ' Ohne diese Sperre würde das die Selektion bei jeder Stapeländerung fälschlich aufheben.
+                If _suppressLayerRowSelectionSync Then Return
+                If value Is Nothing Then
+                    SelectedAnnotationIndex = -1
+                Else
+                    SelectedAnnotationIndex = _annotations.IndexOf(value)
+                End If
+            End Set
+        End Property
+
+        Private Sub RebuildLayerRows()
+            _suppressLayerRowSelectionSync = True
+            Try
+                _layerRows.Clear()
+                For i = _annotations.Count - 1 To 0 Step -1
+                    _layerRows.Add(_annotations(i))
+                Next
+            Finally
+                _suppressLayerRowSelectionSync = False
+            End Try
+            Me.RaisePropertyChanged(NameOf(SelectedLayer))
+        End Sub
 
         Private ReadOnly _allShapeIcons As New List(Of ShapeIconEntry)()
         Private ReadOnly _fixedShapeItems As New ObservableCollection(Of ShapeIconEntry)()
@@ -651,14 +896,29 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>STUFE 2: Die Szene enthaelt IMMER alle Objekte. Das Selektions-Overlay ist nur noch
+        ''' der transiente Drag-GHOST waehrend eines Placement-Edits (die Szene blendet das aktiv
+        ''' bearbeitete Objekt dann aus, siehe GetSceneAdjustments). Ausserhalb des Ziehens wuerde das
+        ''' Overlay das bereits in der Szene gerenderte Objekt doppeln (Schatten doppelt deckend usw.).</summary>
+        ''' Ghost nach Drag-Ende STEHEN LASSEN, bis der Szene-Render mit dem Objekt gelandet ist
+        ''' (Region-Renders brauchen je nach Effekten 300-700 ms) - sonst fehlt das Objekt für
+        ''' diese Spanne im Bild: das "Flackern nach dem Verschieben" (Nutzer-Befund 2026-07-17).
+        Private _placementGhostLinger As Boolean = False
+
         Public ReadOnly Property ShowSelectedSvgOverlay As Boolean
             Get
                 Return _selectedAnnotationOverlayImage IsNot Nothing AndAlso
-                       _currentTool <> EditorTool.Move AndAlso
-                       Not IsObjectAdjustTool(_currentTool) AndAlso
-                       Not SelectedAnnotationRequiresBakedPreview()
+                       (_annotationPlacementEditActive OrElse _placementGhostLinger)
             End Get
         End Property
+
+        ''' Vom Szene-Worker/Vollrender aufgerufen, sobald frischer Szeneninhalt sichtbar ist:
+        ''' der nachlaufende Ghost darf jetzt weg.
+        Private Sub ClearPlacementGhostLinger()
+            If Not _placementGhostLinger Then Return
+            _placementGhostLinger = False
+            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+        End Sub
 
         Public Property SelectedAnnotationOverlayImage As Bitmap
             Get
@@ -668,7 +928,6 @@ Namespace ViewModels
                 Dim previous = _selectedAnnotationOverlayImage
                 Me.RaiseAndSetIfChanged(_selectedAnnotationOverlayImage, value)
                 Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
-                Me.RaisePropertyChanged(NameOf(SelectedTextRendersInVisibleOverlay))
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
@@ -901,6 +1160,7 @@ Namespace ViewModels
         Private Sub RaiseWatermarkUiChanged()
             Me.RaisePropertyChanged(NameOf(ShowWatermarkPresetControls))
             Me.RaisePropertyChanged(NameOf(ShowImageSourceControls))
+            Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
             Me.RaisePropertyChanged(NameOf(IsWatermarkImageSource))
             Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
             Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
@@ -1146,13 +1406,8 @@ Namespace ViewModels
             Set(value As Integer)
                 Dim clamped = If(value >= 0 AndAlso value < _annotations.Count, value, -1)
                 If clamped = _selectedAnnotationIndex Then Return
-                ' Ebenenwechsel beendet eine laufende Pinsel-/Radiergummi-Mal-Sitzung (siehe
-                ' AddBrushStroke) - außer es ist genau die Ebene, die AddBrushStroke selbst gerade
-                ' neu angelegt und ausgewählt hat.
-                Dim newlySelected = If(clamped >= 0, _annotations(clamped), Nothing)
-                If Not Object.ReferenceEquals(newlySelected, _activeStrokeAnnotation) Then
-                    _activeStrokeAnnotation = Nothing
-                End If
+                ' Ebenenwechsel beendet eine laufende Pinsel-/Radiergummi-Mal-Sitzung (siehe AddBrushStroke).
+                _pixelEditLayer.ResetActiveStroke()
                 _selectedAnnotationIndex = clamped
                 If clamped >= 0 Then
                     ' Im Drehen-Werkzeug wird KEIN Platzierungstyp scharfgestellt: dort will man ein Objekt
@@ -1186,6 +1441,7 @@ Namespace ViewModels
                 ' (Stale-)Position/Größe der vorherigen Selektion aufblitzen, bevor es korrigiert wird.
                 LoadSelectedAnnotationIntoEditor()
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+                Me.RaisePropertyChanged(NameOf(SelectedLayer))
                 Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationToolbarKind))
@@ -1198,6 +1454,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
                 Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
+            Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
@@ -1223,10 +1480,8 @@ Namespace ViewModels
                 UpdateShapeIconStates()
                 ' Ein anderes (oder gar kein) Objekt heißt: die Regler bedienen ein anderes Ziel.
                 RefreshObjectAdjustMode()
-                ' Text-/Wasserzeichen-Ebenen werden während der Selektion über das Live-Overlay
-                ' gerendert und dafür im gebackenen Vorschaubild ausgeblendet (siehe GetCurrentAdjustments).
-                ' NotifyAnnotationOverlayStateChanged rendert beim Verlassen der Selektion sofort statt
-                ' erst nach dem Debounce neu, damit das Objekt ohne sichtbaren Sprung/Verzögerung erscheint.
+                ' Objekt-Layer sind im Editor echte Overlays. Der Wechsel aktualisiert nur den
+                ' Overlay-Zustand, nicht die Pixelvorschau.
                 RequestOverlayStateNotify()
             End Set
         End Property
@@ -1251,6 +1506,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(HasPendingInsertKind))
                 ' Der Objekttyp benennt beim Ebenen-Werkzeug den ersten Tab (siehe InsertKindLabel).
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
+            Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
@@ -1641,6 +1897,14 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ob das Ebenen-Panel rechts eingeblendet ist. Umschaltbar wie die Info-Leiste
+        ''' (ToggleLayersPanelCommand), gemerkt in den Einstellungen (EditorLayersPanelExpanded).</summary>
+        Public ReadOnly Property IsLayersPanelVisible As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorLayersPanelExpanded
+            End Get
+        End Property
+
         Public Property CurrentImagePath As String
             Get
                 Return _currentImagePath
@@ -1653,6 +1917,26 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
             End Set
         End Property
+
+        ''' <summary>Die Datei, die die Pipeline tatsächlich dekodiert: bei einem .fpx das entpackte Basisbild,
+        ''' sonst identisch zu _currentImagePath. Alle Vorschau-/Render-/Speicher-/Histogramm-Pfade lesen HIER,
+        ''' die Identität (Filmstreifen/Metadaten/Navigation) bleibt _currentImagePath.</summary>
+        Private ReadOnly Property RenderSourcePath As String
+            Get
+                Return If(String.IsNullOrEmpty(_renderSourcePathOverride), _currentImagePath, _renderSourcePathOverride)
+            End Get
+        End Property
+
+        Private Shared Function LoadFpxCompositePreview(fpxPath As String) As Bitmap
+            If String.IsNullOrWhiteSpace(fpxPath) Then Return Nothing
+            Try
+                Using preview = FpxService.ExtractComposite(fpxPath)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
 
         ''' Löst das alte Bitmap erst einen Dispatcher-Tick später auf (statt im selben Aufruf), da
         ''' AfterImageControl/BeforeImageControl (siehe EditorView.axaml) dieselbe Quelle noch
@@ -1699,6 +1983,13 @@ Namespace ViewModels
             End Get
             Set(value As Bitmap)
                 Dim previous = _previewImage
+                ' Zeigt PreviewImage kuenftig NICHT mehr auf die Szene-Anzeige (z.B. Nothing beim
+                ' Bildwechsel, FPX-Vorschau), wird die alte Instanz unten disposed - das Feld
+                ' _sceneDisplay MUSS dann mit, sonst greift der naechste Region-Apply auf ein
+                ' dispostes Bitmap zu (Absturz: ObjectDisposedException in EnsureSceneDisplay).
+                If _sceneDisplay IsNot Nothing AndAlso Not Object.ReferenceEquals(value, _sceneDisplay) Then
+                    _sceneDisplay = Nothing
+                End If
                 Me.RaiseAndSetIfChanged(_previewImage, value)
                 Me.RaisePropertyChanged(NameOf(DisplayImage))
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
@@ -1779,11 +2070,20 @@ Namespace ViewModels
                 ' Formate ohne Alphakanal-Unterstützung (z.B. JPEG) können strukturell nie
                 ' transparente Bereiche haben - Schachbrett/Volltonfarbe wäre dort nur an
                 ' Letterbox-/Rundungsrändern fälschlich sichtbar, nie inhaltlich sinnvoll.
-                If Not TransparencyBrushService.CanHaveTransparency(_currentImagePath) Then
+                Dim hasTransparentEditorOutput = HasTransparentEraserOutput() OrElse _backgroundHidden OrElse Not String.IsNullOrEmpty(_currentFpxPath)
+                If Not hasTransparentEditorOutput AndAlso Not TransparencyBrushService.CanHaveTransparency(RenderSourcePath) Then
                     Return Avalonia.Media.Brushes.Transparent
                 End If
-                If Not TransparencyBrushService.HasVisibleTransparency(_currentImagePath) AndAlso Not HasTransparentEraserOutput() Then
-                    Return Avalonia.Media.Brushes.Transparent
+                If Not hasTransparentEditorOutput Then
+                    ' Alpha-Scan im HINTERGRUND (frueher Volldekode im Binding-Getter = UI-Haenger
+                    ' bei grossen PNGs); solange unbekannt, erst mal kein Schachbrett - der Callback
+                    ' zieht den Brush nach, sobald das Ergebnis vorliegt.
+                    Dim hasTransparency As Boolean = False
+                    If Not TransparencyBrushService.TryGetTransparency(RenderSourcePath, hasTransparency,
+                            Sub() Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))) Then
+                        Return Avalonia.Media.Brushes.Transparent
+                    End If
+                    If Not hasTransparency Then Return Avalonia.Media.Brushes.Transparent
                 End If
                 Dim settings = AppSettingsService.Load()
                 Return TransparencyBrushService.GetBrush(settings.TransparencyBackgroundMode, settings.TransparencyBackgroundColor)
@@ -1792,11 +2092,9 @@ Namespace ViewModels
 
         Private Function HasTransparentEraserOutput() As Boolean
             If _currentTool = EditorTool.Draw AndAlso _isEraserMode AndAlso EraserFillColorValue.A < 250 Then Return True
-            Return _annotations.Any(Function(a)
-                                        If a Is Nothing OrElse Not a.IsVisible OrElse Not String.Equals(a.Kind, "Eraser", StringComparison.OrdinalIgnoreCase) Then Return False
-                                        If String.IsNullOrWhiteSpace(a.EraserFillColor) Then Return True
-                                        Return ParseAvaloniaColorOrDefault(a.EraserFillColor, Avalonia.Media.Colors.Transparent).A < 250
-                                    End Function)
+            ' ARBEITSBILD (Stufe D): Radierer-Löcher stecken im Arbeitsbild selbst (DstOut beim
+            ' Region-Commit) - der Service merkt sich das; die alte Strich-Listen-Abfrage entfällt.
+            Return _workingImage.HasAlphaHoles
         End Function
 
         Public Property ShowBeforeImage As Boolean
@@ -1812,6 +2110,11 @@ Namespace ViewModels
                 ' UpdatePreviewAsync) - beim Einschalten deshalb einmalig frisch nachrendern, damit
                 ' nicht kurz ein veralteter Stand (oder gar kein Bild) zu sehen ist.
                 If value AndAlso Not wasShowing Then SchedulePreviewUpdate()
+                ' Beim Ausschalten die „Vorher"-Originalquelle freigeben (~40 MB Vorschau-Bitmap).
+                If wasShowing AndAlso Not value Then
+                    ReleaseComparisonOriginalSource()
+                    TryDisposeStalePreviewSources()
+                End If
             End Set
         End Property
 
@@ -1856,7 +2159,7 @@ Namespace ViewModels
                     ' Werkzeugwechsel beendet eine laufende Pinsel-/Radiergummi-Mal-Sitzung (siehe
                     ' AddBrushStroke) - auch zwischen zwei Ebenen-Werkzeugen (Draw -> Text usw.), wo
                     ' SelectedAnnotationIndex sonst unverändert bliebe.
-                    _activeStrokeAnnotation = Nothing
+                    _pixelEditLayer.ResetActiveStroke()
                 End If
                 If Not IsLayerTool(value) Then SelectedAnnotationIndex = -1
                 If Not CanShowBeforeAfter AndAlso _showBeforeImage Then
@@ -1875,6 +2178,13 @@ Namespace ViewModels
                 ' Werkzeugwechsel kann das Ziel der Regler umschalten (Objekt <-> Bild).
                 RefreshObjectAdjustMode()
                 RequestOverlayStateNotify()
+                ' STEMPEL-LIVE: Live-Puffer (Ziel + Sample, 2 Pipeline-Renders)
+                ' schon beim Werkzeugwechsel asynchron vorwaermen - erst beim ersten Spot gebaut,
+                ' war ein kurzer Zug vorbei, bevor sie landeten (Aenderung erst nach dem Commit
+                ' sichtbar).
+                If value = EditorTool.Retouch AndAlso previousTool <> EditorTool.Retouch Then
+                    BeginRetouchLiveBuffersAsync()
+                End If
             End Set
         End Property
 
@@ -2892,9 +3202,12 @@ Namespace ViewModels
                 Return _retouchRadius
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_retouchRadius, Math.Max(1, Math.Min(300, value)))
+                Me.RaiseAndSetIfChanged(_retouchRadius, Math.Max(1, Math.Min(2000, value)))
                 RaiseResetButtonStateChanged()
-                SchedulePreviewUpdate()
+                ' KEIN SchedulePreviewUpdate (Log 23:16): Der Radius ist ein
+                ' WERKZEUG-Parameter fuer KUENFTIGE Punkte - am Bild aendert er nichts. Der
+                ' Regler-Zug loeste frueher pro Tick einen Full-Render aus (Dutzende Renders,
+                ' CPU hoch, Dauerstatus "Vorschau wird berechnet").
             End Set
         End Property
 
@@ -2920,6 +3233,8 @@ Namespace ViewModels
             _cloneSourceYPercent = Math.Max(0, Math.Min(100, yPercent))
             _hasCloneOffset = False
             RaiseCloneSourceProperties()
+            ' Alt+Klick kuendigt einen Stempel-Zug an: Live-Puffer vorwaermen (siehe CurrentTool).
+            BeginRetouchLiveBuffersAsync()
         End Sub
 
         Public Sub ClearCloneSource()
@@ -2957,7 +3272,7 @@ Namespace ViewModels
                 Return _brushSize
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_brushSize, Math.Max(1, Math.Min(300, value)))
+                Me.RaiseAndSetIfChanged(_brushSize, Math.Max(1, Math.Min(2000, value)))
                 SyncSelectedAnnotationIfStroke()
                 RaiseResetButtonStateChanged()
             End Set
@@ -3035,8 +3350,8 @@ Namespace ViewModels
             Dim normalized = If(String.IsNullOrWhiteSpace(key), "soft", key.Trim().ToLowerInvariant())
             If Array.IndexOf(ImageProcessor.BrushPresetKeys, normalized) < 0 Then normalized = "soft"
             _brushPreset = normalized
-            ' Eine neue Variante beginnt einen neuen Strich-Layer (siehe AddBrushStroke).
-            _activeStrokeAnnotation = Nothing
+            ' Eine neue Variante beginnt einen neuen Raster-Paint-Eintrag (siehe AddBrushStroke).
+            _pixelEditLayer.ResetActiveStroke()
             If _brushPresets IsNot Nothing Then
                 For Each item In _brushPresets
                     item.IsSelected = String.Equals(item.Key, normalized, StringComparison.Ordinal)
@@ -3052,8 +3367,8 @@ Namespace ViewModels
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isEraserMode, value)
                 ' Umschalten zwischen Pinsel und Radiergummi beendet die laufende Mal-Sitzung (siehe
-                ' AddBrushStroke) - der nächste Strich landet auf einer neuen Ebene.
-                _activeStrokeAnnotation = Nothing
+                ' AddBrushStroke) - der nächste Strich landet in einem neuen Raster-Paint-Eintrag.
+                _pixelEditLayer.ResetActiveStroke()
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
@@ -3520,7 +3835,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(EraserFillColorValue))
                 Me.RaisePropertyChanged(NameOf(EraserFillBrush))
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
-                _activeStrokeAnnotation = Nothing
+                _pixelEditLayer.ResetActiveStroke()
                 SyncSelectedAnnotationIfStroke()
             End Set
         End Property
@@ -3651,12 +3966,16 @@ Namespace ViewModels
             Set(value As String)
                 Dim normalized = NormalizeAnnotationBlendMode(value)
                 If String.Equals(_annotationBlendMode, normalized, StringComparison.Ordinal) Then Return
+                Dim wasBakedOnly = HasSelectedAnnotation AndAlso
+                                   Not String.Equals(If(_annotationBlendMode, "Normal").Trim(), "Normal", StringComparison.OrdinalIgnoreCase)
+                Dim willBeBakedOnly = HasSelectedAnnotation AndAlso
+                                     Not String.Equals(normalized, "Normal", StringComparison.OrdinalIgnoreCase)
                 _annotationBlendMode = normalized
                 Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
                 Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
-                Me.RaisePropertyChanged(NameOf(SelectedTextRendersInVisibleOverlay))
                 SyncSelectedAnnotation()
+                If wasBakedOnly <> willBeBakedOnly Then RequestOverlayStateNotify()
             End Set
         End Property
 
@@ -3669,12 +3988,21 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Sichtbarkeit der Hintergrund-Ebene (Basisbild) im Ebenen-Panel. True = sichtbar. Das
+        ''' Auge in der Hintergrundzeile bindet hierauf; Umschalten läuft über ToggleBackgroundVisibilityCommand.</summary>
+        Public ReadOnly Property IsBackgroundVisible As Boolean
+            Get
+                Return Not _backgroundHidden
+            End Get
+        End Property
+
         Public Property AnnotationRotation As Double
             Get
                 Return _annotationRotation
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationRotation, Math.Max(-180, Math.Min(180, value)))
+                ' Nur 1 Nachkommastelle: der Slider-Drag liefert sonst beliebig krumme Gradwerte.
+                Me.RaiseAndSetIfChanged(_annotationRotation, Math.Round(Math.Max(-180, Math.Min(180, value)), 1))
                 SyncSelectedAnnotation(refreshOverlay:=False)
             End Set
         End Property
@@ -3690,6 +4018,65 @@ Namespace ViewModels
                 ' Overlay) muss die Spiegelung in das Overlay-Bitmap hineingerendert werden.
                 SyncSelectedAnnotation(refreshOverlay:=True)
             End Set
+        End Property
+
+        ''' "Seitenverhältnis beibehalten" beim Grössenziehen von Bild-Objekten und
+        ''' Wasserzeichen-Bildern (wie bei Bildgrösse) - wird pro Objekt gespeichert.
+        Public Property AnnotationLockAspect As Boolean
+            Get
+                Return _annotationLockAspect
+            End Get
+            Set(value As Boolean)
+                Dim turnedOn = value AndAlso Not _annotationLockAspect
+                Me.RaiseAndSetIfChanged(_annotationLockAspect, value)
+                ' refreshOverlay:=True - das Flag steuert auch das Zeichnen (ohne Sperre wird das
+                ' Bild auf die Box gestreckt statt uniform eingepasst), nicht nur das Ziehen.
+                SyncSelectedAnnotation(refreshOverlay:=True)
+                If turnedOn Then SnapAnnotationBoxToImageAspect()
+            End Set
+        End Property
+
+        ''' Beim AKTIVIEREN der Seitenverhaeltnis-Sperre die Objekt-Box auf den Bereich schrumpfen,
+        ''' den das uniform eingepasste Bild tatsaechlich belegt - sonst staenden Rahmen und Bild
+        ''' nicht mehr deckungsgleich. Bild-Objekte behalten dabei ihre sichtbare Position (das
+        ''' Fit-Rechteck liegt zentriert in der Box); beim verankerten Wasserzeichen bleiben die
+        ''' Anker-Offsets unangetastet, dort haelt der Anker die Lage.
+        Private Sub SnapAnnotationBoxToImageAspect()
+            If Not ShowAnnotationAspectLock Then Return
+            Dim path = SelectedAnnotationImagePath
+            If String.IsNullOrWhiteSpace(path) Then Return
+            Dim size = ImageProcessor.GetImageSize(path)
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+
+            Dim boxW = CDbl(AnnotationWidthPixels)
+            Dim boxH = CDbl(AnnotationHeightPixels)
+            If boxW <= 0 OrElse boxH <= 0 Then Return
+
+            Dim imageAspect = size.Width / CDbl(size.Height)
+            Dim newW = boxW
+            Dim newH = boxH
+            If boxW / boxH > imageAspect Then
+                newW = boxH * imageAspect
+            Else
+                newH = boxW / imageAspect
+            End If
+            If Math.Abs(newW - boxW) < 0.5 AndAlso Math.Abs(newH - boxH) < 0.5 Then Return
+
+            If Not IsWatermarkImageSource Then
+                AnnotationXPixels = CInt(Math.Round(AnnotationXPixels + (boxW - newW) / 2.0))
+                AnnotationYPixels = CInt(Math.Round(AnnotationYPixels + (boxH - newH) / 2.0))
+            End If
+            AnnotationWidthPixels = CInt(Math.Round(newW))
+            AnnotationHeightPixels = CInt(Math.Round(newH))
+        End Sub
+
+        ''' Sichtbarkeit der Checkbox: nur wo Verzerren real droht - Bild-Objekte und
+        ''' Wasserzeichen mit Bilddatei (QR bleibt hart 1:1, Formen/Text duerfen frei).
+        Public ReadOnly Property ShowAnnotationAspectLock As Boolean
+            Get
+                Return String.Equals(EffectiveAnnotationKind, "Image", StringComparison.OrdinalIgnoreCase) OrElse
+                       IsWatermarkImageSource
+            End Get
         End Property
 
         Public Property AnnotationFlipVertical As Boolean
@@ -4556,8 +4943,9 @@ Namespace ViewModels
             seedX = Math.Max(0, Math.Min(bw - 1, seedX))
             seedY = Math.Max(0, Math.Min(bh - 1, seedY))
             Dim bounds As SKRectI
-            Using mask = ImageProcessor.BuildMagicWandMaskFromFile(_currentImagePath, GetCurrentAdjustments(),
-                                                                   seedX, seedY, CSng(_selectionTolerance / 100.0), bounds)
+            Using mask = ImageProcessor.BuildMagicWandMaskFromFile(RenderSourcePath, GetCurrentAdjustments(),
+                                                                   seedX, seedY, CSng(_selectionTolerance / 100.0), bounds,
+                                                                   workingFull:=_workingImage.CloneFull())
                 If mask Is Nothing OrElse bounds.Width <= 0 OrElse bounds.Height <= 0 Then Return
                 PushUndo()
                 ' Kein Polygonzug: für maskenbasierte Auswahlen zeichnet das Overlay die Ameisenlinie aus den
@@ -4926,12 +5314,14 @@ Namespace ViewModels
                 Try
                     If mask Is Nothing Then Return Nothing
                     placementPx = maskRect
-                    If Not ImageProcessor.ExtractRegionToFileMasked(_currentImagePath, adj, maskRect, mask, tempPath) Then Return Nothing
+                    If Not ImageProcessor.ExtractRegionToFileMasked(RenderSourcePath, adj, maskRect, mask, tempPath,
+                                                                    workingFull:=_workingImage.CloneFull()) Then Return Nothing
                 Finally
                     If ownsMask Then mask.Dispose()
                 End Try
             Else
-                If Not ImageProcessor.ExtractRegionToFile(_currentImagePath, adj, placementPx, tempPath) Then Return Nothing
+                If Not ImageProcessor.ExtractRegionToFile(RenderSourcePath, adj, placementPx, tempPath,
+                                                          workingFull:=_workingImage.CloneFull()) Then Return Nothing
             End If
             Return tempPath
         End Function
@@ -5039,6 +5429,7 @@ Namespace ViewModels
                 .RotationDegrees = CSng(_annotationRotation),
                 .IsVisible = _annotationIsVisible
             }
+            HardenAnnotationBuffersForNewObject()
             _annotations.Add(annotation)
             CurrentTool = EditorTool.Move
             SelectedAnnotationIndex = _annotations.Count - 1
@@ -5261,6 +5652,7 @@ Namespace ViewModels
                 .BlendMode = _annotationBlendMode,
                 .IsVisible = True
             }
+            HardenAnnotationBuffersForNewObject()
             _annotations.Add(annotation)
             CurrentTool = EditorTool.Move
             SelectedAnnotationIndex = _annotations.Count - 1
@@ -5353,6 +5745,30 @@ Namespace ViewModels
             Return GetCurrentAnnotationDisplayRectPercent()
         End Function
 
+        ''' <summary>Anzeige-Rechtecke (Prozent des Bildes) aller sichtbaren, NICHT selektierten
+        ''' Objekte - die Anrast-Ziele der Ausricht-Hilfslinien beim Verschieben (Smart Guides:
+        ''' Objekte passgenau an bereits gesetzten ausrichten, Nutzerwunsch 2026-07-17).
+        ''' Verankerte Wasserzeichen bleiben außen vor: ihre effektive Lage folgt dem Anker,
+        ''' nicht den gespeicherten XPixels.</summary>
+        Public Function GetAnnotationSnapRectsPercent() As List(Of Avalonia.Rect)
+            Dim result As New List(Of Avalonia.Rect)()
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            If baseW <= 0 OrElse baseH <= 0 Then Return result
+            For i = 0 To _annotations.Count - 1
+                If i = _selectedAnnotationIndex Then Continue For
+                Dim a = _annotations(i)
+                If a Is Nothing OrElse Not a.IsVisible Then Continue For
+                If Not String.IsNullOrEmpty(a.Anchor) Then Continue For
+                Dim w = a.WidthPixels / CDbl(baseW) * 100.0
+                Dim h = a.HeightPixels / CDbl(baseH) * 100.0
+                If w <= 0 OrElse h <= 0 Then Continue For
+                result.Add(New Avalonia.Rect(a.XPixels / CDbl(baseW) * 100.0,
+                                             a.YPixels / CDbl(baseH) * 100.0, w, h))
+            Next
+            Return result
+        End Function
+
         Private Function AnnotationStoredXToPercent(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0
             Dim baseWidth = GetBaseWidth()
@@ -5438,7 +5854,8 @@ Namespace ViewModels
                 Return _straightenDegrees
             End Get
             Set(value As Double)
-                Dim clamped = Math.Max(-180, Math.Min(180, value))
+                ' Nur 1 Nachkommastelle - siehe AnnotationRotation.
+                Dim clamped = Math.Round(Math.Max(-180, Math.Min(180, value)), 1)
                 If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_straightenDegrees, clamped)
                 RaiseResetButtonStateChanged()
@@ -5532,6 +5949,104 @@ Namespace ViewModels
                     LibraryService.Instance.SetFavorite(_currentImagePath, value)
                 End If
             End Set
+        End Property
+
+        ''' Farbetikett (Hex der Akzentfarben-Palette, "" = keins) - lokal in der Bibliotheks-DB;
+        ''' bei Immich-Assets unter dem Pseudo-Pfad, damit die Galerie-Kachel denselben Eintrag sieht.
+        Public Property ColorLabel As String
+            Get
+                Return _colorLabel
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "")
+                If String.Equals(_colorLabel, normalized, StringComparison.OrdinalIgnoreCase) Then Return
+                _colorLabel = normalized
+                RaiseColorLabelProperties()
+                Dim immichAssetId = CurrentImmichAssetId()
+                If immichAssetId IsNot Nothing Then
+                    LibraryService.Instance.SetColorLabelForMany(
+                        {ImmichService.MakePseudoPath(immichAssetId, _immichSourceFileName)}, normalized)
+                ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
+                    LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, normalized)
+                End If
+            End Set
+        End Property
+
+        Private Sub RaiseColorLabelProperties()
+            Me.RaisePropertyChanged(NameOf(ColorLabel))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelOrange))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelRed))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelPink))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelPurple))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelBlue))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelCyan))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelTeal))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelGreen))
+            Me.RaisePropertyChanged(NameOf(HasColorLabel))
+            Me.RaisePropertyChanged(NameOf(ColorLabelBrush))
+        End Sub
+
+        Public ReadOnly Property HasColorLabel As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_colorLabel)
+            End Get
+        End Property
+
+        ''' Punkt in der Fussleiste vor dem Dateinamen (gleiche Darstellung wie die Galerie-Kachel).
+        Public ReadOnly Property ColorLabelBrush As Avalonia.Media.IBrush
+            Get
+                If String.IsNullOrEmpty(_colorLabel) Then Return Avalonia.Media.Brushes.Transparent
+                Try
+                    Return New Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(_colorLabel))
+                Catch
+                    Return Avalonia.Media.Brushes.Transparent
+                End Try
+            End Get
+        End Property
+
+        Private Function IsColorLabelValue(hex As String) As Boolean
+            Return String.Equals(_colorLabel, hex, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        Public ReadOnly Property IsColorLabelOrange As Boolean
+            Get
+                Return IsColorLabelValue("#F08A1A")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelRed As Boolean
+            Get
+                Return IsColorLabelValue("#E74C3C")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelPink As Boolean
+            Get
+                Return IsColorLabelValue("#F03B88")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelPurple As Boolean
+            Get
+                Return IsColorLabelValue("#8B5CF6")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelBlue As Boolean
+            Get
+                Return IsColorLabelValue("#3B82F6")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelCyan As Boolean
+            Get
+                Return IsColorLabelValue("#0891B2")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelTeal As Boolean
+            Get
+                Return IsColorLabelValue("#0F766E")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelGreen As Boolean
+            Get
+                Return IsColorLabelValue("#22C55E")
+            End Get
         End Property
 
         Public Property NewTagText As String
@@ -5736,13 +6251,17 @@ Namespace ViewModels
 
         Public ReadOnly Property CanUndo As Boolean
             Get
-                Return _undoStack.Count > 0
+                ' Solange ein Region-Commit in der Hintergrund-Queue läuft, ist Undo gesperrt:
+                ' der Undo-Eintrag des laufenden Zugs hat seinen Pixel-Patch noch nicht - ein
+                ' Undo JETZT stellte nur die Regler zurück, die Pixel kämen danach trotzdem an
+                ' (Nutzerwunsch 2026-07-17: keine Aktionen, solange das Bild nicht final ist).
+                Return _undoStack.Count > 0 AndAlso _pendingWorkingCommits = 0
             End Get
         End Property
 
         Public ReadOnly Property CanRedo As Boolean
             Get
-                Return _redoStack.Count > 0
+                Return _redoStack.Count > 0 AndAlso _pendingWorkingCommits = 0
             End Get
         End Property
 
@@ -5756,7 +6275,7 @@ Namespace ViewModels
         ''' ImageProcessor.OpenSourceStream) - die RAW-Datei selbst darf nie als Speicherziel dienen.
         Public ReadOnly Property IsCurrentImageRaw As Boolean
             Get
-                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso RawPreviewService.IsSupportedRaw(_currentImagePath)
+                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso RawPreviewService.IsSupportedRaw(RenderSourcePath)
             End Get
         End Property
 
@@ -5766,7 +6285,8 @@ Namespace ViewModels
         ''' sinnvoll, wenn es das Quell-Asset ersetzen darf - siehe SavesBackToImmich.
         Public ReadOnly Property CanSaveInPlace As Boolean
             Get
-                Return Not IsCurrentImageRaw AndAlso (Not _forceSaveAsOnly OrElse SavesBackToImmich)
+                Return Not IsCurrentImageRaw AndAlso
+                       (Not _forceSaveAsOnly OrElse SavesBackToImmich OrElse Not String.IsNullOrEmpty(_currentFpxPath))
             End Get
         End Property
 
@@ -5817,7 +6337,8 @@ Namespace ViewModels
 
         Public ReadOnly Property HasAnnotationChanges As Boolean
             Get
-                Return _annotations.Count > 0
+                ' Striche/Radierer stecken seit Stufe D als gebackener Inhalt im Arbeitsbild.
+                Return _annotations.Count > 0 OrElse _workingImage.HasBakedContent
             End Get
         End Property
 
@@ -5856,6 +6377,7 @@ Namespace ViewModels
         Public ReadOnly Property ClearShapeIconSearchCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
+        Public ReadOnly Property SetColorLabelCommand As ICommand
         Public ReadOnly Property AddTagCommand As ICommand
         Public ReadOnly Property RemoveTagCommand As ICommand
         Public ReadOnly Property SaveCommand As ICommand
@@ -5888,8 +6410,10 @@ Namespace ViewModels
         Public ReadOnly Property DeleteAnnotationCommand As ICommand
         Public ReadOnly Property ToggleAnnotationVisibilityCommand As ICommand
         Public ReadOnly Property DuplicateSelectedAnnotationCommand As ICommand
+        Public ReadOnly Property RasterizeSelectedAnnotationCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationUpCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationDownCommand As ICommand
+        Public ReadOnly Property ToggleBackgroundVisibilityCommand As ICommand
         Public ReadOnly Property ResetCurrentToolCommand As ICommand
         Public ReadOnly Property ResetLightCommand As ICommand
         Public ReadOnly Property ResetColorCommand As ICommand
@@ -5916,6 +6440,7 @@ Namespace ViewModels
         Public ReadOnly Property AutoNegativeBaseCommand As ICommand
         Public ReadOnly Property ResetNegativeCommand As ICommand
         Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
+        Public ReadOnly Property ToggleLayersPanelCommand As ICommand
         Public ReadOnly Property SetInfoTabCommand As ICommand
         Public ReadOnly Property SetLayersPanelTabCommand As ICommand
         Public ReadOnly Property BackToViewerCommand As ICommand
@@ -5930,6 +6455,9 @@ Namespace ViewModels
             Tags = New ObservableCollection(Of String)()
             TagSuggestions = New ObservableCollection(Of String)(LibraryService.Instance.GetAllTags())
             HistoryItems = New ObservableCollection(Of String)()
+            ' Ebenen-Panel-Anzeige (umgekehrte Reihenfolge) an den Objektstapel koppeln.
+            AddHandler _annotations.CollectionChanged, Sub(s, e) RebuildLayerRows()
+            RebuildLayerRows()
             LoadFixedShapeItems()
             LoadAllShapeIcons()
             LoadWatermarkPresets()
@@ -5938,8 +6466,7 @@ Namespace ViewModels
             _previewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(PreviewDebounceMs)}
             AddHandler _previewTimer.Tick, Sub()
                                                _previewTimer.Stop()
-                                               _previewPending = False
-                                               UpdatePreview()
+                                               OnPreviewTimerTick()
                                            End Sub
 
             _filmstripNavDebouncer = New FilmstripNavigationDebouncer(wrapAround:=True,
@@ -5955,6 +6482,9 @@ Namespace ViewModels
                                                                  End Sub)
 
             ToggleFavoriteCommand = ReactiveCommand.Create(Sub() IsFavorite = Not IsFavorite)
+            ' Gleiche Farbe erneut = Etikett entfernen (wie im Galerie-Kontextmenü).
+            SetColorLabelCommand = ReactiveCommand.Create(Of String)(
+                Sub(hex) ColorLabel = If(String.Equals(_colorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, "")))
 
             AddTagCommand = ReactiveCommand.Create(Sub()
                                                        Dim tag = NewTagText.Trim().ToLowerInvariant()
@@ -6106,12 +6636,16 @@ Namespace ViewModels
             DuplicateSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                             DuplicateSelectedAnnotation()
                                                                         End Sub)
+            RasterizeSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
+                                                                            RasterizeSelectedAnnotation()
+                                                                        End Sub)
             MoveSelectedAnnotationUpCommand = ReactiveCommand.Create(Sub()
                                                                          MoveSelectedAnnotation(1)
                                                                      End Sub)
             MoveSelectedAnnotationDownCommand = ReactiveCommand.Create(Sub()
                                                                            MoveSelectedAnnotation(-1)
                                                                        End Sub)
+            ToggleBackgroundVisibilityCommand = ReactiveCommand.Create(Sub() ToggleBackgroundVisibility())
             ResetCurrentToolCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo()
                                                                  ResetCurrentToolInternal()
@@ -6197,6 +6731,11 @@ Namespace ViewModels
                                                                    _mainVm.Settings.EditorInfoSidebarExpanded = Not _mainVm.Settings.EditorInfoSidebarExpanded
                                                                    Me.RaisePropertyChanged(NameOf(IsInfoSidebarVisible))
                                                                End Sub)
+            ToggleLayersPanelCommand = ReactiveCommand.Create(Sub()
+                                                                   If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+                                                                   _mainVm.Settings.EditorLayersPanelExpanded = Not _mainVm.Settings.EditorLayersPanelExpanded
+                                                                   Me.RaisePropertyChanged(NameOf(IsLayersPanelVisible))
+                                                               End Sub)
             SetInfoTabCommand = ReactiveCommand.Create(Of String)(Sub(tabName) SetInfoTab(tabName))
             SetLayersPanelTabCommand = ReactiveCommand.Create(Of String)(Sub(tabName)
                                                                               If String.Equals(tabName, "History", StringComparison.OrdinalIgnoreCase) Then
@@ -6244,11 +6783,27 @@ Namespace ViewModels
                 PreviewImage = Nothing
                 ComparisonImage = Nothing
                 ClearPreviewSource()
+                CleanupCurrentFpxTempDir()
             End If
+        End Sub
+
+        ''' Aus welchem Modus der Editor betreten wurde - bestimmt, wohin „Zurück" führt
+        ''' (Galerie-Einstieg -> Galerie, sonst Viewer). Gesetzt vom CurrentMode-Setter.
+        Private _entryMode As AppMode = AppMode.Viewer
+
+        Public Sub SetEntryMode(mode As AppMode)
+            _entryMode = mode
         End Sub
 
         Public Async Function BackToViewerAsync() As Task
             If Not Await ConfirmSaveBeforeLeavingAsync("den Editor verlässt") Then Return
+            ' Galerie-Einstieg: zurück in die Galerie, auf dem zuletzt bearbeiteten Bild -
+            ' nicht in den Viewer (Nutzerwunsch 2026-07-17).
+            If _entryMode = AppMode.Gallery Then
+                If Not String.IsNullOrEmpty(_currentImagePath) Then _mainVm.Gallery?.SelectItemByPath(_currentImagePath)
+                _mainVm.CurrentMode = AppMode.Gallery
+                Return
+            End If
             ' Immich-Edit: nach dem Speichern kann der Viewer noch die alte Temp-Kopie oder das alte Asset
             ' halten. Deshalb wird hier bewusst frisch auf den Editor-Pfad geöffnet, damit beim Zurückkehren
             ' der tatsächlich gespeicherte Stand sichtbar ist.
@@ -6275,6 +6830,7 @@ Namespace ViewModels
             _selectedAnnotationIndex = -1
             ResetEditorUiStateForNewImage(resetTool:=True)
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+            Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
         End Sub
 
@@ -6358,6 +6914,11 @@ Namespace ViewModels
                     ClearPreviewSource()
                     CurrentImagePath = ""
                     _currentImagePath = ""
+                    _renderSourcePathOverride = ""
+                    _workingImageOverridePath = ""
+                    _workingImageOverrideHasAlpha = False
+                    _currentFpxPath = ""
+                    CleanupCurrentFpxTempDir()
                     StatusText = ""
                     Return
                 End If
@@ -6367,30 +6928,76 @@ Namespace ViewModels
                 Return
             End If
 
+            ' .fpx-Projekt im Filmstreifen: Bündel entpacken, Basisbild wird zur Render-Quelle, gespeicherter
+            ' Zustand wird wiederhergestellt. Identität (path) bleibt der .fpx-Pfad.
+            Dim newFpxPath = ""
+            Dim newRenderSourcePathOverride = ""
+            Dim newFpxTempDir = ""
+            Dim newForceSaveAsOnly = ImmichService.IsImmichTempPath(path)
+            Dim fpxAdjustments As ImageAdjustments = Nothing
+            Dim newWorkingOverridePath = ""
+            Dim newWorkingOverrideHasAlpha = False
+            If FpxService.IsFpx(path) Then
+                Dim loaded = FpxService.Load(path)
+                If loaded Is Nothing OrElse loaded.Adjustments Is Nothing OrElse String.IsNullOrEmpty(loaded.BaseImagePath) OrElse Not File.Exists(loaded.BaseImagePath) Then
+                    StatusText = LocalizationService.T("Fehler beim Laden")
+                    Return
+                End If
+                fpxAdjustments = loaded.Adjustments
+                newRenderSourcePathOverride = loaded.BaseImagePath
+                newFpxPath = path
+                newFpxTempDir = loaded.TempDir
+                newForceSaveAsOnly = True
+                ' Gebackenes Arbeitsbild (voll aufgelöstes retouch.png): PreparePreviewSource
+                ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
+                newWorkingOverridePath = If(loaded.RetouchStagePath, "")
+                newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
+            End If
+
+            CleanupCurrentFpxTempDir()
+            _currentFpxPath = newFpxPath
+            _renderSourcePathOverride = newRenderSourcePathOverride
+            _currentFpxTempDir = newFpxTempDir
+            _forceSaveAsOnly = newForceSaveAsOnly
+            _workingImageOverridePath = newWorkingOverridePath
+            _workingImageOverrideHasAlpha = newWorkingOverrideHasAlpha
             CurrentImagePath = path
             _currentImagePath = path
             SelectedInfoTab = InfoSidebarTab.General
-            ClearSelection()   ' pixelbasierte Auswahlmaske gilt nur fürs alte Bild
+            ClearSelection(captureUndo:=False)   ' pixelbasierte Auswahlmaske gilt nur fürs alte Bild
             ResetAdjustmentsInternal(resetEditorUi:=True)
             ClearUndoHistory()
-            ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
-            PreviewImage = Nothing
-            ComparisonImage = Nothing
-            CurrentImage = Nothing
-            ExifInfo = Nothing
-            ClearHistogramData()
-            PreparePreviewSource(path)
+            Dim previousSuppressPreviewDirty = _suppressPreviewDirty
+            _suppressPreviewDirty = True
+            Try
+                ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
+                PreviewImage = Nothing
+                ComparisonImage = Nothing
+                CurrentImage = Nothing
+                If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
+                ExifInfo = Nothing
+                ClearHistogramData()
+                PreparePreviewSource(RenderSourcePath)
+                If fpxAdjustments IsNot Nothing Then
+                    ApplyAdjustments(fpxAdjustments)
+                    _hasChanges = False
+                    Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                End If
+            Finally
+                _suppressPreviewDirty = previousSuppressPreviewDirty
+            End Try
             LoadLibraryMeta(path)
             Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
             Me.RaisePropertyChanged(NameOf(PositionText))
             MarkCurrentFilmstripItem()
             Try
-                CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(path)
+                CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath)
                 If CurrentImage Is Nothing Then
-                    StatusText = If(RawPreviewService.IsSupportedRaw(path), "Keine Vorschau aus dieser RAW-Datei extrahierbar", "Fehler beim Laden")
+                    StatusText = If(RawPreviewService.IsSupportedRaw(RenderSourcePath), "Keine Vorschau aus dieser RAW-Datei extrahierbar", "Fehler beim Laden")
                     Return
                 End If
-                ExifInfo = BuildImageInfo(path)
+                VerifyWorkingImageDimensions()
+                ExifInfo = BuildImageInfo(RenderSourcePath)
                 RefreshHistogram()
                 Dim info = New FileInfo(path)
                 Dim kb = info.Length / 1024.0
@@ -6400,6 +7007,7 @@ Namespace ViewModels
             Catch
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
+            If fpxAdjustments IsNot Nothing Then ScheduleToolPreviewUpdate()
         End Sub
 
         Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing)
@@ -6411,6 +7019,41 @@ Namespace ViewModels
             If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
             End If
+
+            ' .fpx-Projektdatei: Bündel entpacken; ab hier ist das entpackte Basisbild die Arbeitsquelle, und
+            ' der gespeicherte Bearbeitungszustand wird unten (nach PreparePreviewSource) wiederhergestellt.
+            Dim newFpxPath = ""
+            Dim newRenderSourcePathOverride = ""
+            Dim newFpxTempDir = ""
+            Dim fpxAdjustments As ImageAdjustments = Nothing
+            Dim newWorkingOverridePath = ""
+            Dim newWorkingOverrideHasAlpha = False
+            If FpxService.IsFpx(imagePath) Then
+                Dim fpxSource = imagePath
+                Dim loaded = Await Task.Run(Function() FpxService.Load(fpxSource))
+                If loaded Is Nothing OrElse loaded.Adjustments Is Nothing OrElse String.IsNullOrEmpty(loaded.BaseImagePath) OrElse Not File.Exists(loaded.BaseImagePath) Then
+                    Await _mainVm.ShowMessageAsync("Öffnen fehlgeschlagen", "Diese .fpx-Projektdatei konnte nicht gelesen werden.")
+                    Return False
+                End If
+                ' imagePath bleibt der .fpx-Pfad (Identität für Filmstreifen/Metadaten); die Pipeline dekodiert
+                ' das entpackte Basisbild über den Render-Override.
+                fpxAdjustments = loaded.Adjustments
+                newRenderSourcePathOverride = loaded.BaseImagePath
+                newFpxPath = fpxSource
+                newFpxTempDir = loaded.TempDir
+                forceSaveAsOnly = True   ' das Basisbild ist eine Temp-Kopie -> Speichern nur als neue Datei
+                ' Gebackenes Arbeitsbild (voll aufgelöstes retouch.png): PreparePreviewSource
+                ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
+                newWorkingOverridePath = If(loaded.RetouchStagePath, "")
+                newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
+            End If
+
+            CleanupCurrentFpxTempDir()
+            _currentFpxPath = newFpxPath
+            _renderSourcePathOverride = newRenderSourcePathOverride
+            _currentFpxTempDir = newFpxTempDir
+            _workingImageOverridePath = newWorkingOverridePath
+            _workingImageOverrideHasAlpha = newWorkingOverrideHasAlpha
             ' Vor dem Setzen von CurrentImagePath, damit dessen PropertyChanged CanSaveInPlace korrekt neu bewertet.
             ' Pfadbasierte Erkennung ergänzt das Flag: eine Immich-Temp-Kopie ist IMMER nur „Speichern
             ' unter", egal ob aus Galerie (Flag gesetzt) oder aus dem Viewer (Flag nicht durchgereicht).
@@ -6422,13 +7065,28 @@ Namespace ViewModels
             SelectedInfoTab = InfoSidebarTab.General
             ResetAdjustmentsInternal(resetEditorUi:=True)
             ClearUndoHistory()
-            ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
-            PreviewImage = Nothing
-            ComparisonImage = Nothing
-            CurrentImage = Nothing
-            ExifInfo = Nothing
-            ClearHistogramData()
-            PreparePreviewSource(imagePath)
+            Dim previousSuppressPreviewDirty = _suppressPreviewDirty
+            _suppressPreviewDirty = True
+            Try
+                ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
+                PreviewImage = Nothing
+                ComparisonImage = Nothing
+                CurrentImage = Nothing
+                If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
+                ExifInfo = Nothing
+                ClearHistogramData()
+                PreparePreviewSource(RenderSourcePath)
+                ' Gespeicherten Bearbeitungszustand aus der .fpx wiederherstellen (Regler, Ebenenstapel, Auswahl …)
+                ' und als "keine ungespeicherten Änderungen" markieren - es ist ja gerade der gespeicherte Stand.
+                If fpxAdjustments IsNot Nothing Then
+                    ApplyAdjustments(fpxAdjustments)
+                    _hasChanges = False
+                    Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                    ScheduleToolPreviewUpdate()
+                End If
+            Finally
+                _suppressPreviewDirty = previousSuppressPreviewDirty
+            End Try
             ' Scope nur bei expliziter Pfadliste (z.B. Suchliste) wirksam, sonst normaler Ordner-Cache.
             _thumbCacheScopeId = If(allPaths IsNot Nothing, cacheScopeId, Nothing)
             _thumbCacheScopeName = If(allPaths IsNot Nothing, cacheScopeName, Nothing)
@@ -6442,17 +7100,21 @@ Namespace ViewModels
             If immichAssetId IsNot Nothing Then Await LoadImmichMetaAsync(immichAssetId)
 
             Try
-                CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(imagePath)
+                CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath)
                 If CurrentImage Is Nothing Then
-                    Dim message = If(RawPreviewService.IsSupportedRaw(imagePath),
+                    Dim message = If(RawPreviewService.IsSupportedRaw(RenderSourcePath),
                         "Aus dieser RAW-Datei konnte keine Vorschau extrahiert werden.",
                         "Diese Datei konnte nicht geöffnet werden.")
                     Await _mainVm.ShowMessageAsync("Öffnen fehlgeschlagen", message)
                     CurrentImagePath = ""
                     _currentImagePath = ""
+                    _renderSourcePathOverride = ""
+                    _workingImageOverridePath = ""
+                    _workingImageOverrideHasAlpha = False
                     Return False
                 End If
-                ExifInfo = BuildImageInfo(imagePath)
+                VerifyWorkingImageDimensions()
+                ExifInfo = BuildImageInfo(RenderSourcePath)
                 RefreshHistogram()
                 Dim info = New FileInfo(imagePath)
                 Dim kb = info.Length / 1024.0
@@ -6520,6 +7182,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Rating))
             _isFavorite = LibraryService.Instance.GetFavorite(imagePath)
             Me.RaisePropertyChanged(NameOf(IsFavorite))
+            _colorLabel = LibraryService.Instance.GetColorLabel(imagePath)
+            RaiseColorLabelProperties()
             Tags.Clear()
             For Each tag In LibraryService.Instance.GetTags(imagePath)
                 Tags.Add(tag)
@@ -6536,6 +7200,9 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Rating))
             _isFavorite = asset.IsFavorite
             Me.RaisePropertyChanged(NameOf(IsFavorite))
+            ' Etikett ist rein lokal - unter dem Pseudo-Pfad des Assets abgelegt (wie in der Galerie).
+            _colorLabel = LibraryService.Instance.GetColorLabel(ImmichService.MakePseudoPath(asset.Id, asset.FileName))
+            RaiseColorLabelProperties()
             Tags.Clear()
             For Each tag In If(asset.Tags, New List(Of String)())
                 Tags.Add(tag)
@@ -6613,24 +7280,73 @@ Namespace ViewModels
 
             Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
             Dim editableExts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico"}
-            Return editableExts.Contains(ext) OrElse RawPreviewService.IsSupportedRaw(path)
+            ' .fpx-Projekte sind im Editor voll bearbeitbar (Rezept wird wiederhergestellt) und
+            ' gehoeren deshalb in den Filmstreifen - solange das Format aktiviert ist.
+            Return editableExts.Contains(ext) OrElse RawPreviewService.IsSupportedRaw(path) OrElse FpxService.IsFpx(path)
         End Function
 
         Private Sub SchedulePreviewUpdate()
-            _hasChanges = True
+            If Not _suppressPreviewDirty Then
+                _hasChanges = True
+                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            End If
             _previewPending = True
             StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
             RestartPreviewTimer(PreviewDebounceMs)
         End Sub
 
         Private Sub RefreshPreviewImmediately()
-            _hasChanges = True
+            If Not _suppressPreviewDirty Then
+                _hasChanges = True
+                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            End If
             _previewTimer.Stop()
             _previewPending = False
             If Not TryRenderAnnotationOverlaySync() Then
                 UpdatePreview()
             End If
         End Sub
+
+        ''' <summary>Strukturaenderung der Objektliste (Anlegen/Loeschen/Duplizieren/Umsortieren/
+        ''' Sichtbarkeit): rendert NUR die betroffene Objekt-Region ASYNCHRON in die Szene. Ein
+        ''' synchroner Vollaufbau blockierte die UI sekundenlang, sobald ein grosser weicher
+        ''' Pinselstrich existiert (der Strich wird bei jedem ueberlappenden Render komplett neu
+        ''' gezeichnet). Ohne Rect (leer) wird die ganze Szene asynchron erneuert.</summary>
+        Private Sub RefreshOverlayAfterAnnotationChange(Optional dirtyRect As SKRectI = Nothing)
+            If Not _suppressPreviewDirty Then
+                _hasChanges = True
+                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            End If
+            _previewTimer.Stop()
+            _previewPending = False
+            If _sceneSk Is Nothing Then
+                ' Kalter Start: der asynchrone Vollrender baut die Szene inkl. Objekten auf.
+                SchedulePreviewUpdate()
+                Return
+            End If
+            Dim rect = dirtyRect
+            If rect.IsEmpty Then rect = New SKRectI(0, 0, _sceneSk.Width, _sceneSk.Height)
+            RequestSceneRegionRender(rect)
+        End Sub
+
+        ''' <summary>Preview-Raum-Dirty-Rect eines Objekts (inkl. Effektraender) - fuer regionsbezogene
+        ''' Struktur-Updates.</summary>
+        Private Function ComputeSceneDirtyRectFor(annotation As ImageAnnotation) As SKRectI
+            Dim previewSource = GetPreviewSource()
+            If previewSource Is Nothing OrElse annotation Is Nothing Then Return SKRectI.Empty
+            Return ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width, previewSource.Height, annotation,
+                                                             GetBaseWidth(), GetBaseHeight())
+        End Function
+
+        ''' <summary>Ob (und wo) die Szene einen Blend-Composite braucht - unabhaengig davon, ob er gerade
+        ''' renderbar ist. Billige Rechteck-Rechnung ohne Cache-Zugriff.</summary>
+        Private Function SceneBlendCompositeRequiredRect() As (RequiresComposite As Boolean, Rect As SKRectI)
+            Dim previewSource = GetPreviewSource()
+            If previewSource Is Nothing Then Return (False, SKRectI.Empty)
+            Return OverlaySceneRenderer.ComputeSceneBlendCompositeRect(_annotations,
+                                                                       previewSource.Width, previewSource.Height,
+                                                                       GetBaseWidth(), GetBaseHeight())
+        End Function
 
         ''' Wie SchedulePreviewUpdate, markiert das Dokument aber NICHT als geändert (_hasChanges) -
         ''' für Werkzeuge mit expliziter "Anwenden"-Bestätigung (Zuschneiden/Bildgröße/Leinwandgröße/
@@ -6641,6 +7357,42 @@ Namespace ViewModels
             _previewPending = True
             StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
             RestartPreviewTimer(PreviewDebounceMs)
+        End Sub
+
+        Private Sub ScheduleAnnotationCompositePreviewUpdate(Optional delayMs As Double = PreviewDebounceMs)
+            _annotationCompositePreviewPending = True
+            _annotationCompositePreviewRetries = 0
+            _previewPending = True
+            StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
+            RestartPreviewTimer(delayMs)
+        End Sub
+
+        Private Sub OnPreviewTimerTick()
+            If _annotationCompositePreviewPending Then
+                Dim hasDirtyPatch = Not _annotationDirtyRect.IsEmpty
+                If TryRenderAnnotationPatchSync() OrElse ((Not hasDirtyPatch) AndAlso TryRenderAnnotationOverlaySync()) Then
+                    _annotationCompositePreviewPending = False
+                    _annotationCompositePreviewRetries = 0
+                    Return
+                End If
+
+                ' Annotation-only bleibt Annotation-only: bei gesperrtem/kaltem Cache nicht auf den
+                ' teuren Full-Render wechseln, sondern kurz später erneut versuchen. Das Live-Overlay
+                ' bleibt sichtbar und die UI wird nicht durch Objekt-Loslassen blockiert.
+                _annotationCompositePreviewRetries += 1
+                If _annotationCompositePreviewRetries >= 6 Then
+                    _annotationCompositePreviewPending = False
+                    _annotationCompositePreviewRetries = 0
+                    _previewPending = False
+                    StatusText = LocalizationService.T("Vorschau bereit")
+                    Return
+                End If
+                RestartPreviewTimer(Math.Max(40.0, PreviewDebounceMs * 0.5))
+                Return
+            End If
+
+            _previewPending = False
+            UpdatePreview()
         End Sub
 
         Private Sub RestartPreviewTimer(delayMs As Double)
@@ -6671,15 +7423,6 @@ Namespace ViewModels
             Return Not UsesRenderedSelectionOverlay(annotation)
         End Function
 
-        ''' Für die View: der selektierte Text steht bereits im sichtbaren Overlay-Bitmap, die Textbox darf
-        ''' ihn nicht ein zweites Mal zeichnen. Ist das Bitmap noch nicht bereit oder wegen Werkzeug/Modus
-        ''' ausgeblendet, bleibt die TextBox sichtbar, damit Text nie komplett verschwindet.
-        Public ReadOnly Property SelectedTextRendersInVisibleOverlay As Boolean
-            Get
-                If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
-                Return TextRendersInOverlay(_annotations(_selectedAnnotationIndex)) AndAlso ShowSelectedSvgOverlay
-            End Get
-        End Property
 
         Private Function UsesRenderedSelectionOverlay(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing Then Return False
@@ -6699,21 +7442,615 @@ Namespace ViewModels
             Return Not String.Equals(If(annotation.BlendMode, "Normal").Trim(), "Normal", StringComparison.OrdinalIgnoreCase)
         End Function
 
+        Private Shared Function EditorRendersAnnotationAsOverlay(annotation As ImageAnnotation) As Boolean
+            Return OverlaySceneRenderer.IsOverlayAnnotation(annotation)
+        End Function
+
         Private Function SelectedAnnotationRequiresBakedPreview() As Boolean
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
             Return AnnotationRequiresBakedPreview(_annotations(_selectedAnnotationIndex))
         End Function
 
-        ''' Ob das selektierte Objekt aktuell per Live-Overlay dargestellt wird
-        ''' und deshalb im gebackenen Vorschaubild ausgeblendet werden muss (siehe GetCurrentAdjustments).
-        Private Function ComputesOverlayHidesSelection() As Boolean
-            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
-            If _currentTool = EditorTool.Move Then Return False
-            If Not IsLayerTool(_currentTool) OrElse IsObjectAdjustTool(_currentTool) Then Return False
-            Dim selected = _annotations(_selectedAnnotationIndex)
-            If AnnotationRequiresBakedPreview(selected) Then Return False
-            Return IsTextualAnnotationKind(selected.Kind) OrElse UsesRenderedSelectionOverlay(selected)
+        ''' <summary>STUFE 2: Anpassungssatz fuer die SZENE - wie die Vorschau, aber MIT allen
+        ''' Overlay-Objekten (dieselbe Zeichnung wie beim Export). Waehrend eines Placement-Edits wird
+        ''' das aktiv bearbeitete Objekt ausgeblendet: seine Live-Darstellung kommt vom Ghost
+        ''' (Selektions-Overlay), in der Szene stuende es doppelt bzw. stale an der alten Position.</summary>
+        Private Function GetSceneAdjustments() As ImageAdjustments
+            Dim adj = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
+            If _annotationPlacementEditActive AndAlso
+               _selectedAnnotationIndex >= 0 AndAlso adj.Annotations IsNot Nothing AndAlso
+               _selectedAnnotationIndex < adj.Annotations.Count Then
+                adj.Annotations(_selectedAnnotationIndex).IsVisible = False
+            End If
+            Return adj
         End Function
+
+        ''' <summary>Ersetzt die persistente Szene komplett (nach einem Vollrender) und blittet sie in
+        ''' die persistente Anzeige. Uebernimmt die Ownership von sceneSk.</summary>
+        Private Sub SetSceneBitmap(sceneSk As SKBitmap)
+            If sceneSk Is Nothing Then Return
+            Dim previous = _sceneSk
+            _sceneSk = sceneSk
+            If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, sceneSk) Then previous.Dispose()
+            _sceneContentVersion += 1
+            InvalidateZoomDetail()
+            EnsureSceneDisplay()
+            BlitSceneRegionToDisplay(New SKRectI(0, 0, _sceneSk.Width, _sceneSk.Height))
+        End Sub
+
+        ''' <summary>Stellt sicher, dass die persistente Anzeige-Bitmap existiert und zur Szene passt
+        ''' (Groesse). Nur bei Groessenwechsel entsteht eine neue Instanz (PreviewImage-Setter disposed
+        ''' die alte).</summary>
+        Private Sub EnsureSceneDisplay()
+            If _sceneSk Is Nothing Then Return
+            ' ABSICHERUNG (Ursache offen): eine bereits disposte Anzeige wie Nothing
+            ' behandeln und neu aufbauen, statt mit ObjectDisposedException abzustuerzen. Die
+            ' Log-Zeile haelt die Faehrte zur eigentlichen Dispose-Quelle offen.
+            Dim displayWidth = -1
+            Dim displayHeight = -1
+            If _sceneDisplay IsNot Nothing Then
+                Try
+                    displayWidth = _sceneDisplay.PixelSize.Width
+                    displayHeight = _sceneDisplay.PixelSize.Height
+                Catch ex As ObjectDisposedException
+                    DiagnosticLogService.LogAlways("Editor.SceneDisplay",
+                                                   "disposedDetected=EnsureSceneDisplay - Anzeige wird neu aufgebaut")
+                    _sceneDisplay = Nothing
+                End Try
+            End If
+            If _sceneDisplay Is Nothing OrElse
+               displayWidth <> _sceneSk.Width OrElse
+               displayHeight <> _sceneSk.Height Then
+                _sceneDisplay = New WriteableBitmap(New Avalonia.PixelSize(_sceneSk.Width, _sceneSk.Height),
+                                                    New Avalonia.Vector(96, 96),
+                                                    Avalonia.Platform.PixelFormat.Rgba8888,
+                                                    Avalonia.Platform.AlphaFormat.Premul)
+                PreviewImage = _sceneDisplay
+            End If
+        End Sub
+
+        ''' <summary>Kopiert NUR die Zeilen des Rects aus der Szene (Rgba8888) in die persistente
+        ''' Anzeige-Bitmap und meldet der View das Neuzeichnen (SceneInvalidated). Kein neues Bitmap,
+        ''' kein Vollbild-Upload - der Grund, warum Regler wieder fein bedienbar sind.</summary>
+        Private Sub BlitSceneRegionToDisplay(rect As SKRectI)
+            If _sceneSk Is Nothing OrElse _sceneDisplay Is Nothing OrElse rect.IsEmpty Then Return
+            Dim clamped = New SKRectI(Math.Max(0, rect.Left), Math.Max(0, rect.Top),
+                                      Math.Min(_sceneSk.Width, rect.Right), Math.Min(_sceneSk.Height, rect.Bottom))
+            If clamped.Width <= 0 OrElse clamped.Height <= 0 Then Return
+            Try
+                Using fb = _sceneDisplay.Lock()
+                    Dim srcStride = _sceneSk.RowBytes
+                    Dim dstStride = fb.RowBytes
+                    Dim srcBase = _sceneSk.GetPixels()
+                    Dim bytes = clamped.Width * 4
+                    Dim buffer(bytes - 1) As Byte
+                    For y = clamped.Top To clamped.Bottom - 1
+                        Runtime.InteropServices.Marshal.Copy(IntPtr.Add(srcBase, y * srcStride + clamped.Left * 4), buffer, 0, bytes)
+                        Runtime.InteropServices.Marshal.Copy(buffer, 0, IntPtr.Add(fb.Address, y * dstStride + clamped.Left * 4), bytes)
+                    Next
+                End Using
+            Catch ex As ObjectDisposedException
+                ' ABSICHERUNG: Anzeige wurde unter uns disposed - neu aufbauen und
+                ' die KOMPLETTE Szene blitten (die neue Bitmap ist leer, nicht nur die Region).
+                DiagnosticLogService.LogAlways("Editor.SceneDisplay",
+                                               "disposedDetected=BlitSceneRegionToDisplay - Anzeige wird neu aufgebaut")
+                _sceneDisplay = Nothing
+                EnsureSceneDisplay()
+                If _sceneDisplay Is Nothing Then Return
+                BlitSceneRegionToDisplay(New SKRectI(0, 0, _sceneSk.Width, _sceneSk.Height))
+                Return
+            End Try
+            RaiseEvent SceneInvalidated(Me, EventArgs.Empty)
+        End Sub
+
+        ''' <summary>STUFE 2: rendert eine Region (Basis + Striche + ALLE Objekte in Z-Order) in die
+        ''' persistente Szene und aktualisiert die Anzeige. Schneidet die Aenderung einen
+        ''' Mischmodus-Abhaengigkeitsbereich, wird dieser automatisch mitgerendert (das Blend-Ergebnis
+        ''' haengt vom Untergrund ab). False bei kaltem/gesperrtem Base-Cache oder fehlender Szene -
+        ''' der Aufrufer plant dann den asynchronen Vollrender.</summary>
+        Private Function TryRenderSceneRegionSync(dirtyRect As SKRectI) As Boolean
+            Dim previewSource = GetPreviewSource()
+            If previewSource Is Nothing OrElse _sceneSk Is Nothing OrElse dirtyRect.IsEmpty Then Return False
+
+            Dim rect = dirtyRect
+            Dim blendDep = SceneBlendCompositeRequiredRect()
+            If blendDep.RequiresComposite AndAlso Not blendDep.Rect.IsEmpty AndAlso
+               OverlaySceneRenderer.Intersects(rect, blendDep.Rect) Then
+                rect = ImageProcessor.UnionRects(rect, blendDep.Rect)
+            End If
+
+            Dim sw = Diagnostics.Stopwatch.StartNew()
+            Dim clamped As SKRectI
+            Dim patch As SKBitmap
+            Try
+                patch = ImageProcessor.TryRenderAnnotationsPatchSkOnCachedBase(previewSource, GetSceneAdjustments(), rect, clamped)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("EditorSceneRegion", ex)
+                Return False
+            End Try
+            If patch Is Nothing Then
+                DiagnosticLogService.LogAlways("Editor.SceneRegion",
+                                               $"fallback=true reason=cacheMissOrBusy rect={rect.Left},{rect.Top},{rect.Width}x{rect.Height} ms={sw.ElapsedMilliseconds}")
+                Return False
+            End If
+
+            Using patch
+                Using canvas = New SKCanvas(_sceneSk)
+                    ' Region ERSETZEN statt mischen (BlendMode.Src): das Patch ist das fertige Komposit,
+                    ' inkl. Transparenz bei ausgeblendetem Hintergrund.
+                    Using replacePaint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                        canvas.DrawBitmap(patch, clamped.Left, clamped.Top, replacePaint)
+                    End Using
+                End Using
+            End Using
+            _sceneContentVersion += 1
+            InvalidateZoomDetail()
+            EnsureSceneDisplay()
+            BlitSceneRegionToDisplay(clamped)
+            _annotationDirtyRect = SKRectI.Empty
+            _previewPending = False
+            StatusText = LocalizationService.T("Vorschau bereit")
+            DiagnosticLogService.LogAlways("Editor.SceneRegion",
+                                           $"rect={clamped.Left},{clamped.Top},{clamped.Width}x{clamped.Height} pixels={CLng(clamped.Width) * CLng(clamped.Height)} ms={sw.ElapsedMilliseconds}")
+            Return True
+        End Function
+
+        ''' <summary>Baut die komplette Szene synchron auf dem gecachten Base neu - fuer
+        ''' Strukturaenderungen (Anlegen/Loeschen/Umsortieren/Sichtbarkeit), bei denen kein enges
+        ''' Dirty-Rect vorliegt.</summary>
+        Private Function TryRenderSceneFullSync() As Boolean
+            If _sceneSk Is Nothing Then Return False
+            Return TryRenderSceneRegionSync(New SKRectI(0, 0, _sceneSk.Width, _sceneSk.Height))
+        End Function
+
+        ''' <summary>ASYNCHRONER Region-Render: reiht das Rect in die Pending-Union ein und startet bei
+        ''' Bedarf den Worker. Fuer Regler-Bursts und Drag-Starts - der UI-Thread bleibt frei, waehrend
+        ''' der Effekt-Render (Schatten/Gluehen grosser Objekte: 200-800 ms) im Hintergrund laeuft; das
+        ''' Anwenden auf die Szene kostet nur ~20 ms. Ueberholende Anforderungen verschmelzen zur Union;
+        ''' ein waehrenddessen ausgetauschtes _sceneSk (Vollrender) verwirft das Ergebnis und rendert neu.</summary>
+        Private Sub RequestSceneRegionRender(dirtyRect As SKRectI)
+            If dirtyRect.IsEmpty Then Return
+            _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, dirtyRect)
+            If _sceneRegionWorkerBusy Then Return
+            RunSceneRegionWorker()
+        End Sub
+
+        Private Async Sub RunSceneRegionWorker()
+            _sceneRegionWorkerBusy = True
+            Try
+                While Not _sceneRegionPendingRect.IsEmpty
+                    Dim previewSource = GetPreviewSource()
+                    Dim sceneAtStart = _sceneSk
+                    If previewSource Is Nothing OrElse sceneAtStart Is Nothing Then
+                        ' Keine Szene (kalter Start): der Vollrender ist unterwegs bzw. wird geplant.
+                        _sceneRegionPendingRect = SKRectI.Empty
+                        Return
+                    End If
+
+                    Dim rect = _sceneRegionPendingRect
+                    _sceneRegionPendingRect = SKRectI.Empty
+                    Dim blendDep = SceneBlendCompositeRequiredRect()
+                    If blendDep.RequiresComposite AndAlso Not blendDep.Rect.IsEmpty AndAlso
+                       OverlaySceneRenderer.Intersects(rect, blendDep.Rect) Then
+                        rect = ImageProcessor.UnionRects(rect, blendDep.Rect)
+                    End If
+
+                    Dim adj = GetSceneAdjustments()
+                    Dim versionAtStart = _sceneContentVersion
+                    ' Merken, ob der Snapshot das aktiv gezogene Objekt AUSBLENDET: gilt die Ausblendung
+                    ' beim Anwenden nicht mehr (Loslassen/Commit), wuerde der Patch das Objekt loeschen.
+                    Dim excludedPlacementIndex = If(_annotationPlacementEditActive, _selectedAnnotationIndex, -1)
+                    Dim sw = Diagnostics.Stopwatch.StartNew()
+                    Dim clamped As SKRectI = SKRectI.Empty
+                    Dim patch As SKBitmap = Nothing
+                    Try
+                        patch = Await Task.Run(Function()
+                                                   Dim localClamped As SKRectI
+                                                   Dim p = ImageProcessor.TryRenderAnnotationsPatchSkOnCachedBase(previewSource, adj, rect, localClamped)
+                                                   clamped = localClamped
+                                                   Return p
+                                               End Function)
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("EditorSceneRegionAsync", ex)
+                        Return
+                    End Try
+
+                    If patch Is Nothing Then
+                        ' Base-Cache kalt/gesperrt: kurz debounced nachziehen (Timer-Pfad rendert dann).
+                        DiagnosticLogService.LogAlways("Editor.SceneRegion",
+                                                       $"fallback=true reason=cacheMissOrBusy async=1 rect={rect.Left},{rect.Top},{rect.Width}x{rect.Height}")
+                        _annotationDirtyRect = ImageProcessor.UnionRects(_annotationDirtyRect, rect)
+                        ScheduleAnnotationCompositePreviewUpdate(60.0)
+                        Return
+                    End If
+
+                    Dim placementExclusionStale = excludedPlacementIndex >= 0 AndAlso
+                                                  (Not _annotationPlacementEditActive OrElse _selectedAnnotationIndex <> excludedPlacementIndex)
+                    If placementExclusionStale OrElse
+                       Not Object.ReferenceEquals(_sceneSk, sceneAtStart) OrElse _sceneContentVersion <> versionAtStart Then
+                        ' Szene wurde waehrenddessen ersetzt (Vollrender) ODER ihr INHALT hat sich
+                        ' geaendert (z.B. Objekt synchron angelegt, waehrend ein langer Strich-Render
+                        ' lief): das Ergebnis basiert auf einem alten Snapshot und wuerde die Region
+                        ' mit veraltetem Stand ueberschreiben (Sichtbefund: Objekt verschwindet, sobald
+                        ' Pinselstriche im Spiel sind). Verwerfen und mit frischem Snapshot neu rendern.
+                        patch.Dispose()
+                        _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, rect)
+                        Continue While
+                    End If
+
+                    Using patch
+                        Using canvas = New SKCanvas(_sceneSk)
+                            Using replacePaint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                canvas.DrawBitmap(patch, clamped.Left, clamped.Top, replacePaint)
+                            End Using
+                        End Using
+                    End Using
+                    _sceneContentVersion += 1
+                    InvalidateZoomDetail()
+                    EnsureSceneDisplay()
+                    BlitSceneRegionToDisplay(clamped)
+                    ClearPlacementGhostLinger()
+                    _previewPending = False
+                    StatusText = LocalizationService.T("Vorschau bereit")
+                    DiagnosticLogService.LogAlways("Editor.SceneRegion",
+                                                   $"async=1 rect={clamped.Left},{clamped.Top},{clamped.Width}x{clamped.Height} pixels={CLng(clamped.Width) * CLng(clamped.Height)} ms={sw.ElapsedMilliseconds}")
+                End While
+            Finally
+                _sceneRegionWorkerBusy = False
+            End Try
+        End Sub
+
+        ''' <summary>Beim App-Beenden aufrufen (MainWindow.HandleWindowClosing): legt laufende
+        ''' Szene-/Zoom-Arbeiten still. Absturzbild (beim Beenden): der Fenster-
+        ''' Teardown disposed die Anzeige-Bitmap, waehrend eine Region-Worker-Fortsetzung noch
+        ''' aussteht - EnsureSceneDisplay griff dann auf die disposte Instanz. Hier wird NICHTS
+        ''' disposed (in-flight-Renders koennten noch lesen), nur Referenzen gekappt und die
+        ''' Version gebumpt, damit jede Fortsetzung ihr Ergebnis verwirft.</summary>
+        Public Sub ShutdownSceneWork()
+            _sceneContentVersion += 1
+            _sceneRegionPendingRect = SKRectI.Empty
+            _sceneDisplay = Nothing
+            _sceneSk = Nothing
+            ResetZoomDetail()
+        End Sub
+
+        ' ===================== STUFE 3: Zoom-Detail =====================
+
+        Public ReadOnly Property ZoomDetailImage As Bitmap
+            Get
+                Return _zoomDetailImage
+            End Get
+        End Property
+
+        ''' Vorher-Seite des Zoom-Details (Original nur mit Geometrie) - Nothing, solange kein
+        ''' Vergleich aktiv ist oder das Vorher-Detail noch nicht gerendert wurde.
+        Public ReadOnly Property ZoomDetailBeforeImage As Bitmap
+            Get
+                Return _zoomDetailBeforeImage
+            End Get
+        End Property
+
+        Public ReadOnly Property ZoomDetailFracLeft As Double
+            Get
+                Return _zoomDetailFracLeft
+            End Get
+        End Property
+
+        Public ReadOnly Property ZoomDetailFracTop As Double
+            Get
+                Return _zoomDetailFracTop
+            End Get
+        End Property
+
+        Public ReadOnly Property ZoomDetailFracWidth As Double
+            Get
+                Return _zoomDetailFracWidth
+            End Get
+        End Property
+
+        Public ReadOnly Property ZoomDetailFracHeight As Double
+            Get
+                Return _zoomDetailFracHeight
+            End Get
+        End Property
+
+        ''' <summary>STUFE 3: Die View meldet bei jedem Layout-Durchlauf den sichtbaren Bildausschnitt
+        ''' (Anteile 0..1) und ob die Anzeige die Szenen-Aufloesung uebersteigt. Passt der gecachte
+        ''' Detail-Stand (Version + Abdeckung), passiert nichts bzw. nur ein billiger Region-Blit;
+        ''' sonst wird der teure Detail-Render debounced geplant. active=False raeumt alles weg.</summary>
+        Public Sub UpdateZoomDetailViewport(visLeft As Double, visTop As Double,
+                                            visRight As Double, visBottom As Double,
+                                            active As Boolean,
+                                            Optional wantBefore As Boolean = False)
+            _zoomDetailVisLeft = visLeft
+            _zoomDetailVisTop = visTop
+            _zoomDetailVisRight = visRight
+            _zoomDetailVisBottom = visBottom
+
+            ' SetZoomDetailImage/SetZoomDetailBeforeImage feuern PropertyChanged synchron. Die View
+            ' positioniert daraufhin sofort das Overlay und meldet den Viewport erneut. Ohne Guard
+            ' kann das mitten in ExtractZoomDetailRegion wieder eine Extraktion ausloesen - besonders
+            ' im Vergleichsmodus, bevor die Vorher-Seite gesetzt ist.
+            If _zoomDetailExtracting Then
+                If active Then
+                    _zoomDetailWanted = True
+                    _zoomDetailWantBefore = wantBefore
+                End If
+                Return
+            End If
+
+            If Not active Then
+                ResetZoomDetail()
+                Return
+            End If
+            _zoomDetailWanted = True
+            _zoomDetailWantBefore = wantBefore
+            If Not wantBefore AndAlso _zoomDetailBeforeImage IsNot Nothing Then SetZoomDetailBeforeImage(Nothing)
+
+            ' Waehrend Placement-Edit/Retusche-Zug aendert sich der Szeneninhalt laufend - kein
+            ' Detail zeigen (es waere sofort veraltet); der Commit bumpt die Version und plant neu.
+            If _annotationPlacementEditActive OrElse _retouchStrokeActive Then
+                SetZoomDetailImage(Nothing)
+                SetZoomDetailBeforeImage(Nothing)
+                Return
+            End If
+
+            ' Detail-Stand passt nur, wenn auch die Vorher-Szene da ist, falls sie gebraucht wird -
+            ' sonst neu rendern (der Render laedt dann beide Seiten).
+            If _zoomDetailSk IsNot Nothing AndAlso _zoomDetailVersion = _sceneContentVersion AndAlso
+               (Not wantBefore OrElse _zoomDetailBeforeSk IsNot Nothing) Then
+                If _zoomDetailImage IsNot Nothing AndAlso ZoomDetailExtractCoversVisible() AndAlso
+                   (Not wantBefore OrElse _zoomDetailBeforeImage IsNot Nothing) Then Return
+                ExtractZoomDetailRegion()
+                Return
+            End If
+
+            ' Kein passender Detail-Stand: nichts Veraltetes zeigen, Render debounced anstossen.
+            SetZoomDetailImage(Nothing)
+            SetZoomDetailBeforeImage(Nothing)
+            RestartZoomDetailTimer()
+        End Sub
+
+        ''' <summary>Szeneninhalt hat sich geaendert (Versions-Bump): veraltetes Detail sofort
+        ''' ausblenden und - falls der Zoom noch aktiv ist - den Neu-Render debounced planen.</summary>
+        Private Sub InvalidateZoomDetail()
+            If _zoomDetailImage IsNot Nothing Then SetZoomDetailImage(Nothing)
+            If _zoomDetailBeforeImage IsNot Nothing Then SetZoomDetailBeforeImage(Nothing)
+            If _zoomDetailWanted Then RestartZoomDetailTimer()
+        End Sub
+
+        ''' <summary>Zoom verlassen/Bildwechsel: Overlay aus, Caches freigeben. Laeuft gerade ein
+        ''' Render, wird das Dispose deferred (Radiergummi-Lektion: nie unter einem laufenden
+        ''' Hintergrund-Render wegdisposen).</summary>
+        Private Sub ResetZoomDetail()
+            _zoomDetailWanted = False
+            _zoomDetailWantBefore = False
+            _zoomDetailTimer?.Stop()
+            SetZoomDetailImage(Nothing)
+            SetZoomDetailBeforeImage(Nothing)
+            If _zoomDetailRendering Then
+                _zoomDetailDisposePending = True
+                Return
+            End If
+            _zoomDetailSk?.Dispose()
+            _zoomDetailSk = Nothing
+            _zoomDetailVersion = -1
+            _zoomDetailSource?.Dispose()
+            _zoomDetailSource = Nothing
+            _zoomDetailSourcePath = Nothing
+            _zoomDetailSourceWorkingVersion = -1
+            _zoomDetailBeforeSk?.Dispose()
+            _zoomDetailBeforeSk = Nothing
+            _zoomDetailBeforeSource?.Dispose()
+            _zoomDetailBeforeSource = Nothing
+            _zoomDetailBeforeSourcePath = Nothing
+        End Sub
+
+        Private Sub SetZoomDetailImage(value As Bitmap)
+            If Object.ReferenceEquals(_zoomDetailImage, value) Then Return
+            Dim previous = _zoomDetailImage
+            _zoomDetailImage = value
+            If previous IsNot Nothing Then DisposeDeferred(previous)
+            Me.RaisePropertyChanged(NameOf(ZoomDetailImage))
+        End Sub
+
+        Private Sub SetZoomDetailBeforeImage(value As Bitmap)
+            If Object.ReferenceEquals(_zoomDetailBeforeImage, value) Then Return
+            Dim previous = _zoomDetailBeforeImage
+            _zoomDetailBeforeImage = value
+            If previous IsNot Nothing Then DisposeDeferred(previous)
+            Me.RaisePropertyChanged(NameOf(ZoomDetailBeforeImage))
+        End Sub
+
+        Private Sub RestartZoomDetailTimer()
+            If _zoomDetailTimer Is Nothing Then
+                _zoomDetailTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(350)}
+                AddHandler _zoomDetailTimer.Tick, Sub()
+                                                      _zoomDetailTimer.Stop()
+                                                      BeginZoomDetailRenderAsync()
+                                                  End Sub
+            End If
+            _zoomDetailTimer.Stop()
+            _zoomDetailTimer.Start()
+        End Sub
+
+        ''' <summary>Rendert die Detail-Szene asynchron (Task.Run): Quelle laden (bzw. Cache), voller
+        ''' Renderer mit den aktuellen Szenen-Einstellungen. Sequenz- und Versions-Guards verwerfen
+        ''' ueberholte Ergebnisse; ein Versions-Wechsel waehrend des Renders plant automatisch neu.</summary>
+        Private Async Sub BeginZoomDetailRenderAsync()
+            If Not _zoomDetailWanted OrElse _zoomDetailRendering Then Return
+            If _annotationPlacementEditActive OrElse _retouchStrokeActive Then Return
+            If _sceneSk Is Nothing Then Return
+
+            ' Lohnt nur, wenn die Quelle spuerbar mehr Aufloesung hat als die Szene.
+            Dim baseLongest = Math.Max(GetBaseWidth(), GetBaseHeight())
+            Dim sceneLongest = Math.Max(_sceneSk.Width, _sceneSk.Height)
+            Dim detailTarget = Math.Min(ZoomDetailMaxDimension, baseLongest)
+            If detailTarget <= CInt(sceneLongest * 1.15) Then Return
+
+            Dim path = RenderSourcePath
+            If String.IsNullOrWhiteSpace(path) Then Return
+
+            _zoomDetailRendering = True
+            _zoomDetailRenderSeq += 1
+            Dim seq = _zoomDetailRenderSeq
+            Dim versionAtStart = _sceneContentVersion
+            Dim adj = GetSceneAdjustments()
+            ' Quelle nur wiederverwenden, wenn sie zu Pfad UND Arbeitsbild-Version passt (die
+            ' Ziel-Aufloesung ist je Bild konstant; die Version wandert bei jedem Commit weiter).
+            Dim workingVersionAtStart = _workingImage.Version
+            Dim cachedSource = If(String.Equals(_zoomDetailSourcePath, path, StringComparison.Ordinal) AndAlso
+                                  _zoomDetailSourceWorkingVersion = workingVersionAtStart, _zoomDetailSource, Nothing)
+            ' Vorher-Seite (Vergleich sichtbar): hochaufgeloester ORIGINAL-Decode, nur pfadabhaengig
+            ' (das Original aendert sich durch Commits nicht).
+            Dim wantBefore = _zoomDetailWantBefore
+            Dim cachedBeforeSource = If(String.Equals(_zoomDetailBeforeSourcePath, path, StringComparison.Ordinal),
+                                        _zoomDetailBeforeSource, Nothing)
+
+            Dim sw = Diagnostics.Stopwatch.StartNew()
+            Dim source As SKBitmap = Nothing
+            Dim rendered As SKBitmap = Nothing
+            Dim beforeSource As SKBitmap = Nothing
+            Dim beforeRendered As SKBitmap = Nothing
+            Try
+                Await Task.Run(Sub()
+                                   ' Arbeitsbild statt Datei-Decode (Stufe C): RenderDownscale ist
+                                   ' threadsicher; Rueckfall auf den Datei-Decode nur, falls das
+                                   ' Arbeitsbild (noch) nicht initialisiert ist.
+                                   source = If(cachedSource,
+                                               If(_workingImage.RenderDownscale(detailTarget),
+                                                  ImageProcessor.LoadPreviewSource(path, detailTarget)))
+                                   If source Is Nothing Then Return
+                                   rendered = ImageProcessor.RenderPreviewSkBitmap(source, adj)
+                                   If wantBefore Then
+                                       beforeSource = If(cachedBeforeSource,
+                                                         ImageProcessor.LoadPreviewSource(path, detailTarget))
+                                       If beforeSource IsNot Nothing Then
+                                           beforeRendered = ImageProcessor.ApplyGeometryAdjustmentsSk(beforeSource, adj)
+                                       End If
+                                   End If
+                               End Sub)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("EditorZoomDetail", ex)
+            Finally
+                _zoomDetailRendering = False
+            End Try
+
+            ' Reset lief waehrenddessen (Zoom raus/Bildwechsel): alles Frische entsorgen.
+            If _zoomDetailDisposePending OrElse Not _zoomDetailWanted OrElse seq <> _zoomDetailRenderSeq Then
+                _zoomDetailDisposePending = False
+                rendered?.Dispose()
+                beforeRendered?.Dispose()
+                If source IsNot Nothing AndAlso Not Object.ReferenceEquals(source, _zoomDetailSource) Then source.Dispose()
+                If beforeSource IsNot Nothing AndAlso Not Object.ReferenceEquals(beforeSource, _zoomDetailBeforeSource) Then beforeSource.Dispose()
+                If Not _zoomDetailWanted Then ResetZoomDetail()
+                Return
+            End If
+
+            ' Frisch geladene Quellen in den Cache uebernehmen (fuer die naechsten Renders).
+            If source IsNot Nothing AndAlso Not Object.ReferenceEquals(source, _zoomDetailSource) Then
+                _zoomDetailSource?.Dispose()
+                _zoomDetailSource = source
+                _zoomDetailSourcePath = path
+                _zoomDetailSourceWorkingVersion = workingVersionAtStart
+            End If
+            If beforeSource IsNot Nothing AndAlso Not Object.ReferenceEquals(beforeSource, _zoomDetailBeforeSource) Then
+                _zoomDetailBeforeSource?.Dispose()
+                _zoomDetailBeforeSource = beforeSource
+                _zoomDetailBeforeSourcePath = path
+            End If
+            If rendered Is Nothing Then Return
+
+            If versionAtStart <> _sceneContentVersion Then
+                ' Inhalt hat sich waehrend des Renders geaendert: verwerfen und SOFORT neu starten
+                ' (der Bump liegt in der Vergangenheit - der 350-ms-Timer wuerde nur Zeit kosten).
+                ' Die Log-Zeile zeigt, falls Renders dauerhaft im Kreis verworfen werden.
+                rendered.Dispose()
+                beforeRendered?.Dispose()
+                DiagnosticLogService.LogAlways("Editor.ZoomDetail",
+                                               $"discarded=version ms={sw.ElapsedMilliseconds}")
+                BeginZoomDetailRenderAsync()
+                Return
+            End If
+
+            _zoomDetailSk?.Dispose()
+            _zoomDetailSk = rendered
+            _zoomDetailVersion = versionAtStart
+            If beforeRendered IsNot Nothing Then
+                _zoomDetailBeforeSk?.Dispose()
+                _zoomDetailBeforeSk = beforeRendered
+            ElseIf Not wantBefore AndAlso _zoomDetailBeforeSk IsNot Nothing Then
+                _zoomDetailBeforeSk.Dispose()
+                _zoomDetailBeforeSk = Nothing
+            End If
+            DiagnosticLogService.LogAlways("Editor.ZoomDetail",
+                                           $"rendered={rendered.Width}x{rendered.Height} before={beforeRendered IsNot Nothing} ms={sw.ElapsedMilliseconds}")
+            ExtractZoomDetailRegion()
+        End Sub
+
+        ''' <summary>Blittet den sichtbaren Ausschnitt (+50 % Rand je Seite) aus der Detail-Szene in
+        ''' ein kleines Anzeige-Bitmap. Der Rand macht Pans billig: das Overlay ist bildverankert und
+        ''' wandert mit; erst ausserhalb des Rands wird neu geblittet.</summary>
+        Private Sub ExtractZoomDetailRegion()
+            If _zoomDetailExtracting Then Return
+            If _zoomDetailSk Is Nothing Then Return
+            _zoomDetailExtracting = True
+            Try
+                Dim dw = _zoomDetailSk.Width
+                Dim dh = _zoomDetailSk.Height
+                If dw <= 0 OrElse dh <= 0 Then Return
+
+                Dim marginX = Math.Max(0.01, (_zoomDetailVisRight - _zoomDetailVisLeft) * 0.5)
+                Dim marginY = Math.Max(0.01, (_zoomDetailVisBottom - _zoomDetailVisTop) * 0.5)
+                Dim fracL = Math.Max(0.0, _zoomDetailVisLeft - marginX)
+                Dim fracT = Math.Max(0.0, _zoomDetailVisTop - marginY)
+                Dim fracR = Math.Min(1.0, _zoomDetailVisRight + marginX)
+                Dim fracB = Math.Min(1.0, _zoomDetailVisBottom + marginY)
+
+                Dim rect = New SKRectI(CInt(Math.Floor(fracL * dw)), CInt(Math.Floor(fracT * dh)),
+                                       CInt(Math.Ceiling(fracR * dw)), CInt(Math.Ceiling(fracB * dh)))
+                rect = New SKRectI(Math.Max(0, rect.Left), Math.Max(0, rect.Top),
+                                   Math.Min(dw, rect.Right), Math.Min(dh, rect.Bottom))
+                If rect.Width <= 0 OrElse rect.Height <= 0 Then
+                    SetZoomDetailImage(Nothing)
+                    Return
+                End If
+
+                Dim bmp = ImageProcessor.RenderBitmapPatch(_zoomDetailSk, rect)
+                If bmp Is Nothing Then
+                    SetZoomDetailImage(Nothing)
+                    Return
+                End If
+                _zoomDetailFracLeft = rect.Left / CDbl(dw)
+                _zoomDetailFracTop = rect.Top / CDbl(dh)
+                _zoomDetailFracWidth = rect.Width / CDbl(dw)
+                _zoomDetailFracHeight = rect.Height / CDbl(dh)
+                SetZoomDetailImage(bmp)
+
+                ' Vorher-Seite: gleicher Ausschnitt aus der Vorher-Detail-Szene. Nur bei identischen
+                ' Maßen (beide Seiten laufen durch dieselbe Geometrie auf gleich großen Quellen) - bei
+                ' Abweichung lieber kein Vorher-Detail als ein verschobenes.
+                If _zoomDetailWantBefore AndAlso _zoomDetailBeforeSk IsNot Nothing AndAlso
+                   _zoomDetailBeforeSk.Width = dw AndAlso _zoomDetailBeforeSk.Height = dh Then
+                    SetZoomDetailBeforeImage(ImageProcessor.RenderBitmapPatch(_zoomDetailBeforeSk, rect))
+                Else
+                    SetZoomDetailBeforeImage(Nothing)
+                End If
+            Finally
+                _zoomDetailExtracting = False
+            End Try
+        End Sub
+
+        ''' Deckt der aktuelle Ausschnitt (inkl. Rand) den sichtbaren Bereich noch ab?
+        Private Function ZoomDetailExtractCoversVisible() As Boolean
+            Const eps As Double = 0.0005
+            Return _zoomDetailVisLeft >= _zoomDetailFracLeft - eps AndAlso
+                   _zoomDetailVisTop >= _zoomDetailFracTop - eps AndAlso
+                   _zoomDetailVisRight <= _zoomDetailFracLeft + _zoomDetailFracWidth + eps AndAlso
+                   _zoomDetailVisBottom <= _zoomDetailFracTop + _zoomDetailFracHeight + eps
+        End Function
+
+        ' ===================== ENDE STUFE 3 =====================
 
         ''' Versucht, die Annotationen synchron auf dem bereits gecachten Base-Bitmap neu zu
         ''' komposieren (siehe ImageProcessor.TryRenderAnnotationsOnCachedBase), statt auf den
@@ -6727,24 +8064,72 @@ Namespace ViewModels
             Dim previewSource = GetPreviewSource()
             If previewSource Is Nothing Then Return False
 
-            Dim adj = GetCurrentAdjustments(forPreview:=True)
-            Dim newPreview = ImageProcessor.TryRenderAnnotationsOnCachedBase(previewSource, adj)
-            If newPreview Is Nothing Then Return False
+            ' STUFE 2: die "komplette Annotations-Neukomposition" ist jetzt ein Szenen-Vollaufbau auf
+            ' dem gecachten Base (gleiche Kosten, aber die Szene bleibt die einzige Wahrheit).
+            If Not TryRenderSceneFullSync() Then Return False
+            Return True
+        End Function
 
-            InvalidatePreviewWork()
-            PreviewImage = newPreview
-            _previewPending = False
-            StatusText = LocalizationService.T("Vorschau bereit")
+        Private Function TryRenderAnnotationPatchSync() As Boolean
+            Dim previewSource = GetPreviewSource()
+            If previewSource Is Nothing Then Return False
+
+            Dim rect = _annotationDirtyRect
+            If rect.IsEmpty AndAlso _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
+                rect = ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width, previewSource.Height, _annotations(_selectedAnnotationIndex),
+                                                                 GetBaseWidth(), GetBaseHeight())
+            End If
+            If rect.IsEmpty Then Return False
+            If _sceneSk Is Nothing Then Return False
+
+            ' STUFE 2: ASYNCHRON einreihen statt synchron zu rendern - der Worker haelt waehrend
+            ' langer Renders (grosse Striche/Effekte) den Base-Cache-Lock; ein synchroner Versuch
+            ' liefe mit TryEnter(12ms) ins Leere, die Retries erschoepften sich und der finale
+            ' Stand (z.B. der Text nach dem Aufziehen) wuerde NIE gebacken. Die Pending-Union und
+    ' der Versions-/Placement-Guard des Workers stellen die richtige Endfassung sicher.
+            _annotationDirtyRect = SKRectI.Empty
+            RequestSceneRegionRender(rect)
             Return True
         End Function
 
         Private Sub RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
-            If SelectedAnnotationRequiresBakedPreview() OrElse IsObjectAdjustTool(_currentTool) Then
+            ' Im Objekt-Anpassungsmodus (Anpassen/Farbe/Details+Effekte/Filter auf ein Objekt) leben die
+            ' Reglerwerte bis zum Commit NUR im Editor-Puffer - das echte Objekt (das die Layer zeichnet)
+            ' bekommt sie erst bei der Deselektion. Die Vorschau muss deshalb ueber den BAKED-Zweig laufen
+            ' (Patch mit GetCurrentAdjustments, das die Livewerte in den Klon schreibt), sonst wirken die
+            ' Regler scheinbar erst nach der Deselektion. Der Overlay-Zweig gilt nur ausserhalb davon.
+            If _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count AndAlso
+               EditorRendersAnnotationAsOverlay(_annotations(_selectedAnnotationIndex)) AndAlso
+               Not IsObjectAdjustTool(_currentTool) Then
                 _previewTimer.Stop()
                 _previewPending = False
-                If Not TryRenderAnnotationOverlaySync() Then
-                    UpdatePreview()
+                ' Ghost-Bitmap nur aktualisieren, wenn es sichtbar ist (Placement-Edit) - der Render
+                ' inkl. Schatten/Gluehen ist teuer und waere pro Regler-Tick reine Verschwendung.
+                If _annotationPlacementEditActive Then UpdateSelectedAnnotationOverlayPreview()
+                ' STUFE 2: Eigenschafts-Aenderung des selektierten Objekts ASYNCHRON in die Szene
+                ' rendern - Effekt-Renders (Schatten/Gluehen grosser Objekte) kosten 200-800 ms und
+                ' wuerden synchron den UI-Thread wuergen (Regler "quasi nicht bedienbar"). Der Worker
+                ' koalesziert Bursts per Rect-Union von selbst.
+                Dim previewSourceForRect = GetPreviewSource()
+                Dim rect = _annotationDirtyRect
+                If rect.IsEmpty AndAlso previewSourceForRect IsNot Nothing AndAlso
+                   _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
+                    rect = ImageProcessor.ComputeAnnotationDirtyRect(previewSourceForRect.Width, previewSourceForRect.Height,
+                                                                     _annotations(_selectedAnnotationIndex),
+                                                                     GetBaseWidth(), GetBaseHeight())
                 End If
+                _annotationDirtyRect = SKRectI.Empty
+                RequestSceneRegionRender(rect)
+                Return
+            End If
+
+            If SelectedAnnotationRequiresBakedPreview() OrElse IsObjectAdjustTool(_currentTool) Then
+                ' DEBOUNCED statt sofort: Presets (XMP/LUT/Filter auf ein Objekt) setzen DUTZENDE
+                ' Properties in einem Rutsch - ein synchroner Patch-Render pro Property (je ~200-400 ms)
+                ' fror die UI viele Sekunden ein (CPU hoch, "nichts passiert"). Der Debounce buendelt
+                ' den Burst zu EINEM Patch-Render kurz nach dem letzten Wert; einzelne Reglerzuege
+                ' bekommen dieselben ~90 ms wie die normalen Bild-Regler.
+                ScheduleAnnotationCompositePreviewUpdate()
                 Return
             End If
 
@@ -6759,6 +8144,99 @@ Namespace ViewModels
             End If
         End Sub
 
+        Public Sub CommitSelectedAnnotationPlacementEdit()
+            If Not HasSelectedAnnotation Then Return
+            _previewTimer.Stop()
+            _previewPending = False
+            UpdateSelectedAnnotationOverlayPreview()
+            ' STUFE 2: das Objekt an der Endposition in die Szene backen (End lief vor Commit,
+            ' die Placement-Ausblendung ist also schon aufgehoben). Dirty = alte + neue Bounds
+            ' aus der Zieh-Sitzung (_annotationDirtyRect).
+            If Not TryRenderAnnotationPatchSync() Then ScheduleAnnotationCompositePreviewUpdate(40.0)
+        End Sub
+
+        Public Sub BeginSelectedAnnotationPlacementEdit()
+            If Not HasSelectedAnnotation Then Return
+            _annotationPlacementEditActive = True
+            _placementGhostLinger = False
+            _annotationPlacementStartDirtyRect = SKRectI.Empty
+            _previewTimer.Stop()
+            _previewPending = False
+            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+            ' STUFE 2: einheitlich fuer ALLE Objektarten - die Szene rendert die Startregion OHNE das
+            ' Objekt (GetSceneAdjustments blendet es waehrend _annotationPlacementEditActive aus); die
+            ' Live-Darstellung waehrend des Ziehens uebernimmt der Ghost (Selektions-Overlay).
+            Dim previewSource = GetPreviewSource()
+            If previewSource IsNot Nothing Then
+                _annotationPlacementStartDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width,
+                                                                                              previewSource.Height,
+                                                                                              _annotations(_selectedAnnotationIndex),
+                                                                                              GetBaseWidth(), GetBaseHeight())
+                ' _annotationDirtyRect bleibt gesetzt, damit der Commit alte+neue Bounds vereint.
+                _annotationDirtyRect = _annotationPlacementStartDirtyRect
+            End If
+            ' KOMPLETT ASYNCHRON: weder Ghost-Render (Effekte: 100-300 ms) noch das Herausloesen aus
+            ' der Szene duerfen den Drag-Start blockieren (~1 s Haenger). Bis der Ghost steht, bleibt
+            ' die Szene-Kopie sichtbar (kein Loch); danach uebernimmt der Ghost und die Kopie
+            ' verschwindet einen Wimpernschlag spaeter.
+            BeginPlacementGhostAsync()
+        End Sub
+
+        ''' <summary>Rendert den Drag-Ghost im Hintergrund und loest ERST DANACH die Szene-Kopie heraus -
+        ''' Reihenfolge wichtig, sonst klafft am Drag-Start kurz ein Loch. Ueberholende Aufrufe
+        ''' (schnelles erneutes Greifen) verwerfen aeltere Ergebnisse per Sequenznummer.</summary>
+        Private Async Sub BeginPlacementGhostAsync()
+            Dim idx = _selectedAnnotationIndex
+            If idx < 0 OrElse idx >= _annotations.Count Then Return
+            Dim annotation = _annotations(idx)
+            If Not UsesRenderedSelectionOverlay(annotation) AndAlso Not TextRendersInOverlay(annotation) Then
+                SetSelectedAnnotationOverlay(Nothing)
+                Return
+            End If
+
+            Dim clone = annotation.Clone()
+            Dim pixelWidth = Math.Max(48, CInt(Math.Round(annotation.WidthPixels)))
+            Dim pixelHeight = Math.Max(48, CInt(Math.Round(annotation.HeightPixels)))
+            Dim seq = Threading.Interlocked.Increment(_ghostRenderSeq)
+            Dim render As ImageProcessor.AnnotationOverlayRender = Nothing
+            Try
+                render = Await Task.Run(Function() ImageProcessor.RenderAnnotationOverlay(clone, pixelWidth, pixelHeight))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("EditorGhostRender", ex)
+                Return
+            End Try
+            If seq <> _ghostRenderSeq OrElse Not _annotationPlacementEditActive OrElse _selectedAnnotationIndex <> idx Then
+                render?.Image?.Dispose()
+                Return
+            End If
+
+            SetSelectedAnnotationOverlay(render)
+            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+            If Not _annotationPlacementStartDirtyRect.IsEmpty Then
+                ' ATOMAR im selben UI-Frame (Nutzer-Befund 17.07.: Objekt kurz doppelt am Zug-START):
+                ' der Ghost erscheint und die Szene verliert das Objekt in EINEM Durchlauf. Der
+                ' Lösch-Render ist billig - das gezogene Objekt ist ausgeblendet, gerendert werden
+                ' nur Basis + andere Objekte der Region (keine Effekt-Kosten des Objekts selbst).
+                ' Nur bei kaltem/gesperrtem Base-Cache bleibt der asynchrone Weg (kurzes Doppel
+                ' möglich, aber selten). Das Leeren von _annotationDirtyRect im Sync-Pfad ist
+                ' korrekt: die Altregion ist danach bereits sauber, der Commit braucht nur noch
+                ' die Endposition (Fallback in TryRenderAnnotationPatchSync).
+                If Not TryRenderSceneRegionSync(_annotationPlacementStartDirtyRect) Then
+                    RequestSceneRegionRender(_annotationPlacementStartDirtyRect)
+                End If
+            End If
+        End Sub
+
+        Public Sub EndSelectedAnnotationPlacementEdit()
+            _annotationPlacementEditActive = False
+            _annotationPlacementStartDirtyRect = SKRectI.Empty
+            ' Ghost weiterzeigen, bis die Szene das Objekt an der Endposition gerendert hat
+            ' (ClearPlacementGhostLinger im Region-Worker/Vollrender) - sonst fehlt das Objekt
+            ' für die Renderdauer im Bild.
+            If _selectedAnnotationOverlayImage IsNot Nothing Then _placementGhostLinger = True
+            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+        End Sub
+
         ''' Wrapper um NotifyAnnotationOverlayStateChanged, der Aufrufe unterdrückt, solange
         ''' _overlayNotifySuppressDepth > 0 - siehe Kommentar am Feld. Aufrufer, die mehrere
         ''' zusammengehörige Statements klammern wollen, erhöhen/verringern die Tiefe und rufen
@@ -6768,39 +8246,64 @@ Namespace ViewModels
             NotifyAnnotationOverlayStateChanged()
         End Sub
 
-        ''' Ändert sich die Live-Overlay/gebackene-Vorschau-Umschaltung gerade (in beide Richtungen -
-        ''' Selektieren blendet im gebackenen Bild aus, Verlassen der Selektion wieder ein), wird sofort
-        ''' statt erst nach dem 220ms-Debounce neu gerendert. Ohne die Selektieren-Richtung bliebe das
-        ''' gebackene Bild kurz auf dem alten (noch sichtbaren) Stand, während das Live-Overlay schon
-        ''' erscheint - das erzeugte einen sichtbaren Versatz/Sprung direkt beim Selektieren.
-        ''' Nur die beiden Aufrufer (CurrentTool-/SelectedAnnotationIndex-Setter) lösen dies aus - reine
-        ''' UI-Zustandswechsel (Werkzeug wechseln, Annotation nur selektieren), keine Inhaltsänderung.
-        ''' Markiert deshalb NICHT _hasChanges - echte Bearbeitungen an Annotationen dirtien bereits
-        ''' unabhängig über SyncSelectedAnnotation -> SchedulePreviewUpdate.
+        ''' STUFE 2: Selektions-/Werkzeugwechsel aendern den Szeneninhalt NICHT mehr (alle Objekte
+        ''' sind immer in der Szene; der Ghost existiert nur waehrend eines Placement-Edits).
         Private Sub NotifyAnnotationOverlayStateChanged()
-            Dim isHiddenNow = ComputesOverlayHidesSelection()
-            If isHiddenNow <> _overlayHidesSelectionFromPreview Then
-                _previewTimer.Stop()
-                _previewPending = False
-                If Not TryRenderAnnotationOverlaySync() Then
-                    UpdatePreview()
-                End If
-            Else
-                ScheduleToolPreviewUpdate()
-            End If
-            _overlayHidesSelectionFromPreview = isHiddenNow
+            _previewPending = False
+            StatusText = LocalizationService.T("Vorschau bereit")
         End Sub
 
-        Private Sub PreparePreviewSource(imagePath As String)
+        Private Sub PreparePreviewSource(imagePath As String, Optional scheduleInitialRender As Boolean = True)
             InvalidatePreviewWork()
             DisposeRetouchLiveBuffers()
             ClearRetouchLivePatch()
+            ResetZoomDetail()
+            ' Szene gehoert zur alten Quelle: Felder zuruecksetzen, BEVOR irgendein Worker/Apply sie
+            ' wieder anfasst (alles UI-Thread, daher rennt hier nichts dazwischen). Der Versions-Bump
+            ' laesst in-flight Worker-Ergebnisse sauber verwerfen.
+            _annotationDirtyRect = SKRectI.Empty
+            _sceneRegionPendingRect = SKRectI.Empty
+            _sceneContentVersion += 1
+            _sceneSk?.Dispose()
+            _sceneSk = Nothing
+            _sceneDisplay = Nothing
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then
                 ClearPreviewSource()
                 Return
             End If
 
-            Dim source = ImageProcessor.LoadPreviewSource(imagePath, PreviewMaxDimension)
+            ' TEMPORÄR (Untersuchung #7): einmalige Farbraum-Diagnose des Datei-Decodes.
+            ImageProcessor.LogDecodeColorDiagnostics(RenderSourcePath)
+
+            ' ARBEITSBILD: voll dekodieren, Vorschau daraus ableiten. Bei einer .fpx mit voll
+            ' aufgelöstem retouch.png ist DAS BÜNDEL-Arbeitsbild der Decode (Striche/Retusche
+            ' bereits eingebacken); ein Vorschauauflösungs-Altbestand (Seed 2026-07-17) fällt
+            ' über die Maße-Prüfung sauber auf das Basisbild zurück.
+            Dim fullDecode As SKBitmap = Nothing
+            Dim bakedFromFpx = False
+            If Not String.IsNullOrEmpty(_workingImageOverridePath) AndAlso File.Exists(_workingImageOverridePath) Then
+                fullDecode = ImageProcessor.DecodeWorkingImage(_workingImageOverridePath)
+                If fullDecode IsNot Nothing Then
+                    Dim baseSize = ImageProcessor.GetOrientedImageSize(imagePath)
+                    If baseSize.Width > 0 AndAlso (fullDecode.Width <> baseSize.Width OrElse fullDecode.Height <> baseSize.Height) Then
+                        ' NIE hochskalieren - lieber Basis dekodieren (Striche älterer Dateien fehlen dann).
+                        DiagnosticLogService.LogAlways("Editor.WorkingImage",
+                            $"fpxOverride rejected stage={fullDecode.Width}x{fullDecode.Height} base={baseSize.Width}x{baseSize.Height}")
+                        fullDecode.Dispose()
+                        fullDecode = Nothing
+                    Else
+                        bakedFromFpx = True
+                        DiagnosticLogService.LogAlways("Editor.WorkingImage",
+                            $"fpxOverride used size={fullDecode.Width}x{fullDecode.Height} alpha={_workingImageOverrideHasAlpha}")
+                    End If
+                End If
+            End If
+            If fullDecode Is Nothing Then fullDecode = ImageProcessor.DecodeWorkingImage(imagePath)
+            Dim source = If(fullDecode IsNot Nothing,
+                            _workingImage.Init(fullDecode, PreviewMaxDimension,
+                                               hasBakedContent:=bakedFromFpx,
+                                               hasAlphaHoles:=bakedFromFpx AndAlso _workingImageOverrideHasAlpha),
+                            Nothing)
             If source Is Nothing Then
                 ClearPreviewSource()
                 Return
@@ -6816,14 +8319,34 @@ Namespace ViewModels
             End SyncLock
             ' Der Basis-Cache gehört zur alten Quelle: er würde beim nächsten Render zwar ohnehin
             ' verworfen (Referenzvergleich auf die Quelle), hielte sein Bitmap bis dahin aber fest.
+            ReleaseComparisonOriginalSource()
             ImageProcessor.ClearBaseCache()
             TryDisposeStalePreviewSources()
+
+            ' Den Base-Cache sofort wärmen: EIN initialer Voll-Render nach dem Quellwechsel (async,
+            ' gedeckelte Auflösung ~1 s). Ohne ihn bleibt der Cache kalt, bis der Nutzer die erste
+            ' Anpassung macht - und ALLE Patch-Pfade (Blend, Malen, Objekt-Move) schlagen bis dahin
+            ' still mit cacheMissOrBusy fehl, weil der Annotation-Pfad bewusst nie zum Full-Render
+            ' eskaliert (Log-Befund 2026-07-16). Früher wärmte zufällig das Objekt-Anlegen den Cache
+            ' (SchedulePreviewUpdate) - das ist seit dem regionsbezogenen Anlegen weg. Nebeneffekt:
+            ' DisplayImage wechselt sofort von _currentImage (Avalonia-Decode, voll aufgelöst) auf
+            ' die Skia-Vorschau - kein sichtbarer Render-Sprung mehr bei der ersten Anpassung.
+            ' ScheduleToolPreviewUpdate statt SchedulePreviewUpdate: das Öffnen ist keine Änderung.
+            If scheduleInitialRender Then ScheduleToolPreviewUpdate()
         End Sub
 
         Private Sub ClearPreviewSource()
             InvalidatePreviewWork()
             DisposeRetouchLiveBuffers()
             ClearRetouchLivePatch()
+            ResetZoomDetail()
+            ' Szene-Felder zuruecksetzen - siehe Kommentar in PreparePreviewSource.
+            _annotationDirtyRect = SKRectI.Empty
+            _sceneRegionPendingRect = SKRectI.Empty
+            _sceneContentVersion += 1
+            _sceneSk?.Dispose()
+            _sceneSk = Nothing
+            _sceneDisplay = Nothing
             Dim oldSource As SKBitmap = Nothing
             SyncLock _previewSync
                 oldSource = _previewSource
@@ -6832,14 +8355,83 @@ Namespace ViewModels
                     _stalePreviewSources.Add(oldSource)
                 End If
             End SyncLock
+            ' Arbeitsbild gehört zur alten Quelle (das Vorschau-Bitmap entsorgt die
+            ' Stale-Mechanik oben, das Voll-Bitmap der Service selbst).
+            _workingImage.Clear()
+            ReleaseComparisonOriginalSource()
             ImageProcessor.ClearBaseCache()
             TryDisposeStalePreviewSources()
+        End Sub
+
+        Private Sub CleanupCurrentFpxTempDir()
+            Dim tempDir = _currentFpxTempDir
+            _currentFpxTempDir = ""
+            If String.IsNullOrWhiteSpace(tempDir) Then Return
+            Try
+                If Directory.Exists(tempDir) Then Directory.Delete(tempDir, True)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.FpxTempCleanup", ex)
+            End Try
         End Sub
 
         Private Function GetPreviewSource() As SKBitmap
             SyncLock _previewSync
                 Return _previewSource
             End SyncLock
+        End Function
+
+        ''' <summary>Liefert (und cached) den Vorschau-Decode der ORIGINAL-Datei für das
+        ''' „Vorher"-Bild. Läuft im Hintergrund-Render (Task.Run); der Tausch geht über die
+        ''' Stale-Liste, damit ein in-flight-Render seine Quelle behalten darf.</summary>
+        Private Function GetComparisonOriginalSource() As SKBitmap
+            Dim path = RenderSourcePath
+            If String.IsNullOrWhiteSpace(path) Then Return Nothing
+            SyncLock _previewSync
+                If _comparisonOriginalSource IsNot Nothing AndAlso
+                   String.Equals(_comparisonOriginalPath, path, StringComparison.Ordinal) Then
+                    Return _comparisonOriginalSource
+                End If
+            End SyncLock
+            Dim decoded = ImageProcessor.LoadPreviewSource(path, PreviewMaxDimension)
+            If decoded Is Nothing Then Return Nothing
+            SyncLock _previewSync
+                If _comparisonOriginalSource IsNot Nothing Then _stalePreviewSources.Add(_comparisonOriginalSource)
+                _comparisonOriginalSource = decoded
+                _comparisonOriginalPath = path
+            End SyncLock
+            Return decoded
+        End Function
+
+        Private Sub ReleaseComparisonOriginalSource()
+            SyncLock _previewSync
+                If _comparisonOriginalSource IsNot Nothing Then
+                    _stalePreviewSources.Add(_comparisonOriginalSource)
+                    _comparisonOriginalSource = Nothing
+                    _comparisonOriginalPath = Nothing
+                End If
+            End SyncLock
+        End Sub
+
+        ''' <summary>Maße-Invariante des Arbeitsbild-Umbaus: die gesamte Koordinatenmathematik
+        ''' (GetBaseWidth/Height) fußt auf CurrentImage - das Arbeitsbild muss exakt gleich groß
+        ''' sein, sonst verrutschen Spots/Striche/Objekte. Nur Diagnose-Log, kein Eingriff
+        ''' (bekannter Kandidat: ICO, das CurrentImage anders dekodiert als die Pipeline).</summary>
+        Private Sub VerifyWorkingImageDimensions()
+            If CurrentImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
+            If _workingImage.FullWidth <> CurrentImage.PixelSize.Width OrElse
+               _workingImage.FullHeight <> CurrentImage.PixelSize.Height Then
+                DiagnosticLogService.LogAlways("Editor.WorkingImage",
+                    $"dimensionMismatch working={_workingImage.FullWidth}x{_workingImage.FullHeight} currentImage={CurrentImage.PixelSize.Width}x{CurrentImage.PixelSize.Height} path={IO.Path.GetFileName(RenderSourcePath)}")
+            End If
+        End Sub
+
+        Private Function SaveCurrentPreviewImageToPngStream() As IO.MemoryStream
+            Dim preview = PreviewImage
+            If preview Is Nothing Then Return Nothing
+            Dim ms As New IO.MemoryStream()
+            preview.Save(ms, PngBitmapEncoderOptions.Default)
+            ms.Position = 0
+            Return ms
         End Function
 
         Private Sub InvalidatePreviewWork()
@@ -6993,14 +8585,20 @@ Namespace ViewModels
 
             Dim previewSource = GetPreviewSource()
             If previewSource Is Nothing Then
-                PreparePreviewSource(_currentImagePath)
+                ' Kein zweiter Render nötig - dieser Aufruf rendert gleich selbst.
+                PreparePreviewSource(RenderSourcePath, scheduleInitialRender:=False)
                 previewSource = GetPreviewSource()
                 If previewSource Is Nothing Then Return
             End If
 
             RegisterPreviewRenderStart()
             Dim requestId = _previewRequestId
-            Dim adj = GetCurrentAdjustments(forPreview:=True)
+            ' Arbeitsbild-Stand beim Render-START: landet waehrend des asynchronen Renders ein
+            ' neuer Commit (Strich/Retusche), ist die frisch gebaute Szene veraltet - der
+            ' Commit-Callback plant dann ohnehin einen neuen Render (SchedulePreviewUpdate).
+            ' STUFE 2: Die Szene enthaelt ALLE Overlay-Objekte (gleiche Zeichnung wie beim Export);
+            ' waehrend eines Placement-Edits ist das aktiv bearbeitete Objekt ausgeblendet (Ghost).
+            Dim adj = GetSceneAdjustments()
             Dim cts = New CancellationTokenSource()
             Dim token = cts.Token
             Dim oldCts = Interlocked.Exchange(_previewRenderCts, cts)
@@ -7010,13 +8608,14 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Vorschau wird berechnet…")
                 PreviewFailed = False
                 Dim needsComparison = _showBeforeImage
+                Dim fullRenderSw = Diagnostics.Stopwatch.StartNew()
                 Dim result = Await Task.Run(Function()
                                                 token.ThrowIfCancellationRequested()
-                                                Dim previewBmp = ImageProcessor.ApplyAdjustments(previewSource, adj)
-                                                ' Ab hier ist previewBmp ein fertiges Bitmap mit unmanaged Skia-Speicher.
-                                                ' Bricht der Render danach ab (neuer Slider-Tick) oder wirft das
-                                                ' Vergleichsbild, würde es niemand mehr freigeben - Avalonias Bitmap hat
-                                                ' keinen Finalizer. Deshalb ab jetzt alles im Try mit Aufräumpfad.
+                                                ' Szene als SKBitmap (persistente Wahrheit) + Avalonia-Konvertierung fuer
+                                                ' die Anzeige - beides im Hintergrund, der UI-Thread uebernimmt nur noch.
+                                                ' WICHTIG: die cache-waermende Variante - sonst schlagen alle
+                                                ' Region-Renders dauerhaft mit cacheMissOrBusy fehl.
+                                                Dim sceneSk = ImageProcessor.RenderSceneSkCached(previewSource, adj)
                                                 Dim comparisonBmp As Bitmap = Nothing
                                                 Try
                                                     token.ThrowIfCancellationRequested()
@@ -7024,11 +8623,16 @@ Namespace ViewModels
                                                     ' Vorher/Nachher-Regler gerade sichtbar ist (ShowBeforeImage) - sonst
                                                     ' wäre das bei jedem einzelnen Live-Vorschau-Frame verschwendete Arbeit.
                                                     If needsComparison Then
-                                                        comparisonBmp = ImageProcessor.ApplyGeometryAdjustments(previewSource, adj)
+                                                        ' „Vorher" = ORIGINAL-Datei (eigener Decode), nicht die Arbeitsbild-
+                                                        ' Vorschau - die enthält ab Stufe D gebackene Retusche/Striche.
+                                                        Dim comparisonSource = GetComparisonOriginalSource()
+                                                        comparisonBmp = ImageProcessor.ApplyGeometryAdjustments(If(comparisonSource, previewSource), adj)
                                                     End If
-                                                    Return New PreviewRenderResult(previewBmp, comparisonBmp)
+                                                    ' Anzeige laeuft ueber die persistente WriteableBitmap (Region-Blit
+                                                    ' auf dem UI-Thread) - keine Vollkonvertierung mehr noetig.
+                                                    Return New PreviewRenderResult(Nothing, comparisonBmp) With {.SceneSk = sceneSk}
                                                 Catch
-                                                    previewBmp?.Dispose()
+                                                    sceneSk?.Dispose()
                                                     comparisonBmp?.Dispose()
                                                     Throw
                                                 End Try
@@ -7039,15 +8643,21 @@ Namespace ViewModels
                     Return
                 End If
 
-                PreviewImage = result.Preview
+                SetSceneBitmap(result.SceneSk)
+                result.SceneSk = Nothing
+                ClearPlacementGhostLinger()
                 ComparisonImage = result.Comparison
                 _previewPending = False
                 StatusText = LocalizationService.T("Vorschau bereit")
                 PreviewFailed = False
                 If _clearRetouchLivePatchAfterPreview Then
                     _clearRetouchLivePatchAfterPreview = False
-                    ClearRetouchLivePatch()
+                    ' Waehrend eines AKTIVEN Zugs zeigt die Bruecke bereits den neueren Stand des
+                    ' laufenden Zugs - nicht wegziehen.
+                    If Not _retouchStrokeActive Then ClearRetouchLivePatch()
                 End If
+                DiagnosticLogService.LogAlways("Editor.FullPreviewRender",
+                                               $"pixels={CLng(previewSource.Width) * CLng(previewSource.Height)} size={previewSource.Width}x{previewSource.Height} retouch={If(adj.RetouchSpots Is Nothing, 0, adj.RetouchSpots.Count)} annotations={If(adj.Annotations Is Nothing, 0, adj.Annotations.Count)} ms={fullRenderSw.ElapsedMilliseconds}")
                 result.Preview = Nothing
                 result.Comparison = Nothing
                 result.Dispose()
@@ -7094,19 +8704,32 @@ Namespace ViewModels
             Dim targetPath = _currentImagePath
             Dim targetQuality = SaveQuality
             Dim saveToImmich As Boolean = False
+            Dim isFpxSave As Boolean = FpxService.IsFpx(targetPath)
+            ' Außerhalb des If-Blocks: die Einzeloptionen (Metadaten-Übernahme) werden erst nach
+            ' dem erfolgreichen Speichern ausgewertet. Nothing nur bei saveAs=False - dort wird
+            ' der Übernahme-Zweig nie erreicht.
+            Dim saveAsResult As SaveAsDialogResult = Nothing
             If saveAs Then
+                ' Aus einem geöffneten .fpx-Projekt Name/Ordner/Formatvorschlag von der Projektdatei ableiten
+                ' (nicht vom entpackten Basisbild "base" im Temp-Ordner); sonst wie gehabt.
+                Dim fromFpx = Not String.IsNullOrEmpty(_currentFpxPath)
                 ' Externe Quellen (Immich-Temp-Kopie) liegen im Temp-Verzeichnis - als Ziel taugt das nicht,
                 ' daher den Bilder-Ordner vorschlagen statt den Temp-Pfad.
-                Dim dir = If(_forceSaveAsOnly, Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), IO.Path.GetDirectoryName(_currentImagePath))
-                Dim name = IO.Path.GetFileNameWithoutExtension(_currentImagePath)
+                Dim dir = If(fromFpx, IO.Path.GetDirectoryName(_currentFpxPath),
+                             If(_forceSaveAsOnly, Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), IO.Path.GetDirectoryName(_currentImagePath)))
+                Dim name = IO.Path.GetFileNameWithoutExtension(If(fromFpx, _currentFpxPath, _currentImagePath))
                 Dim proposedName = name & "_bearbeitet"
-                Dim saveAsResult = Await _mainVm.ShowSaveAsAsync("Speichern unter",
-                                                                 "Dateiname eingeben",
-                                                                 proposedName,
-                                                                 GetFormatFromExtension(IO.Path.GetExtension(_currentImagePath)),
-                                                                 SaveQuality,
-                                                                 "Speichern",
-                                                                 "Abbrechen")
+                ' FPX als Standard-Vorschlag (Nutzerwunsch 2026-07-17): das Projektformat erhält
+                ' Regler + Objekte editierbar - der Export in JPG/PNG/WEBP bleibt eine bewusste Wahl.
+                ' NormalizeSaveAsFormat fällt auf JPG zurück, falls FPX deaktiviert ist.
+                Dim initialFormat = If(FpxService.Enabled, "FPX", "JPG")
+                saveAsResult = Await _mainVm.ShowSaveAsAsync("Speichern unter",
+                                                             "Dateiname eingeben",
+                                                             proposedName,
+                                                             initialFormat,
+                                                             SaveQuality,
+                                                             "Speichern",
+                                                             "Abbrechen")
                 If saveAsResult Is Nothing OrElse String.IsNullOrWhiteSpace(saveAsResult.BaseName) Then Return False
 
                 Dim cleanBaseName = IO.Path.GetFileNameWithoutExtension(saveAsResult.BaseName.Trim())
@@ -7114,7 +8737,9 @@ Namespace ViewModels
                     Await _mainVm.ShowMessageAsync("Speichern fehlgeschlagen", "Der Dateiname enthält ungültige Zeichen.")
                     Return False
                 End If
-                saveToImmich = String.Equals(saveAsResult.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured
+                isFpxSave = FpxService.Enabled AndAlso saveAsResult.IsFpx
+                ' Ein .fpx-Projekt geht immer lokal (Immich speichert Bilder, keine Projektdateien).
+                saveToImmich = String.Equals(saveAsResult.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured AndAlso Not isFpxSave
                 If saveToImmich Then
                     ' Für den Immich-Upload zunächst in eine Temp-Datei rendern (nicht in den Bilder-Ordner).
                     Dim uploadTempDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichUpload")
@@ -7131,10 +8756,109 @@ Namespace ViewModels
             Dim errorMessage As String = Nothing
             Try
                 StatusText = LocalizationService.T("Wird gespeichert…")
+                If _retouchStrokeActive Then CommitRetouchStroke()
+                If HasSelectedAnnotation Then SyncSelectedAnnotation(refreshOverlay:=False)
+                CommitObjectAdjustModeToModel()
                 Dim adj = GetCurrentAdjustments()
                 Dim preserveMetadata = If(saveAs AndAlso _mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
-                Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(_currentImagePath, targetPath, adj, targetQuality, preserveMetadata))
+                Dim ok As Boolean
+                If isFpxSave Then
+                    ' Nicht-destruktiv als .fpx-Bündel sichern: das gerenderte Komposit (für die Anzeige) plus
+                    ' das Rezept + Basisbild + Objekt-Assets. Das lebende Bild bleibt als Quelle unangetastet.
+                    Dim sourcePath = RenderSourcePath
+                    ' SELBSTHEILUNG (Nutzer-Befund 2026-07-17 „Basisbild fehlt" bei fpx→fpx): ist das
+                    ' entpackte Basisbild des offenen Projekts verschwunden, das aktuelle Bündel frisch
+                    ' entpacken statt mit FileNotFound zu scheitern - und den Hergang loggen, damit die
+                    ' eigentliche Ursache (wer räumt den Temp-Ordner ab?) greifbar wird.
+                    If Not IO.File.Exists(sourcePath) AndAlso
+                       Not String.IsNullOrEmpty(_currentFpxPath) AndAlso IO.File.Exists(_currentFpxPath) Then
+                        DiagnosticLogService.LogAlways("Editor.FpxSave",
+                            $"missingBase source={sourcePath} tempDirExists={IO.Directory.Exists(_currentFpxTempDir)} -> reextract {IO.Path.GetFileName(_currentFpxPath)}")
+                        Dim currentFpx = _currentFpxPath
+                        Dim reloaded = Await Task.Run(Function() FpxService.Load(currentFpx))
+                        If reloaded IsNot Nothing AndAlso IO.File.Exists(reloaded.BaseImagePath) Then
+                            CleanupCurrentFpxTempDir()
+                            _currentFpxTempDir = reloaded.TempDir
+                            _renderSourcePathOverride = reloaded.BaseImagePath
+                            _workingImageOverridePath = If(reloaded.RetouchStagePath, "")
+                            sourcePath = reloaded.BaseImagePath
+                        End If
+                    End If
+                    Dim decodeMs As Long = 0
+                    Dim processMs As Long = 0
+                    Dim encodeMs As Long = 0
+                    Dim renderMs As Long = 0
+                    Dim packageMs As Long = 0
+                    Dim preparedComposite As IO.MemoryStream = Nothing
+                    ' Gebackener Inhalt (Striche/Retusche) erzwingt den Vorschau-Pfad: der
+                    ' Datei-Render (RenderPngStream vom Basisbild) kennt das Arbeitsbild nicht.
+                    If _workingImage.HasBakedContent Then
+                        Dim swPreview = Diagnostics.Stopwatch.StartNew()
+                        Await UpdatePreviewAsync()
+                        processMs = swPreview.ElapsedMilliseconds
+                        Dim swEncode = Diagnostics.Stopwatch.StartNew()
+                        preparedComposite = SaveCurrentPreviewImageToPngStream()
+                        encodeMs = swEncode.ElapsedMilliseconds
+                    End If
+                    Dim retouchStageIncluded As Boolean = False
+                    ok = Await Task.Run(Function() As Boolean
+                                            Dim sw = Diagnostics.Stopwatch.StartNew()
+                                            Dim composite As IO.MemoryStream = Nothing
+                                            If preparedComposite IsNot Nothing Then
+                                                decodeMs = 0
+                                                composite = preparedComposite
+                                            Else
+                                                composite = ImageProcessor.RenderPngStream(sourcePath, adj, FpxCompositeMaxDimension, decodeMs, processMs, encodeMs)
+                                            End If
+                                            renderMs = sw.ElapsedMilliseconds
+                                            If composite Is Nothing Then Return False
+                                            ' retouch.png = das gebackene ARBEITSBILD in Vollauflösung; ohne
+                                            ' gebackenen Inhalt entfällt der Eintrag (Basisbild reicht).
+                                            Dim retouchStage = If(_workingImage.HasBakedContent,
+                                                                  _workingImage.EncodeFullPng(), Nothing)
+                                            retouchStageIncluded = retouchStage IsNot Nothing
+                                            Try
+                                                sw.Restart()
+                                                FpxService.Save(targetPath, adj, sourcePath, composite, retouchStage)
+                                                packageMs = sw.ElapsedMilliseconds
+                                            Finally
+                                                composite?.Dispose()
+                                                retouchStage?.Dispose()
+                                            End Try
+                                            Return IO.File.Exists(targetPath)
+                                        End Function)
+                    DiagnosticLogService.LogAlways("Editor.FpxSave", $"{IO.Path.GetFileName(targetPath)} baked={_workingImage.HasBakedContent} annotations={adj.Annotations?.Count} retouchPng={retouchStageIncluded} decode={decodeMs}ms process={processMs}ms encodePng={encodeMs}ms renderPng={renderMs}ms package={packageMs}ms")
+                Else
+                    ' Arbeitsbild als Pipeline-Eingang (Stufe C): CloneFull ist threadsicher und
+                    ' wartet automatisch auf einen laufenden Region-Commit.
+                    ok = Await Task.Run(Function() ImageProcessor.SaveImage(RenderSourcePath, targetPath, adj, targetQuality, preserveMetadata,
+                                                                            workingFull:=_workingImage.CloneFull()))
+                End If
                 If ok AndAlso saveToImmich Then
+                    ' Ziel Immich: Mit "Vorhandene Assets aktualisieren" UND einer Immich-Quelle wird
+                    ' das Quell-Asset ERSETZT (Nutzerentscheidung 2026-07-16: das Setting steuert
+                    ' beim Speichern-unter, ob ein neues Asset entsteht oder das Original
+                    ' ueberschrieben wird); ohne Immich-Quelle oder mit ausgeschaltetem Setting
+                    ' entsteht wie bisher ein neues Asset.
+                    Dim replaceAssetId = CurrentImmichAssetId()
+                    If Not String.IsNullOrEmpty(replaceAssetId) AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets Then
+                        StatusText = LocalizationService.T("Immich-Asset wird aktualisiert…")
+                        Dim newAssetId = Await ImmichService.ReplaceAssetAsync(replaceAssetId, targetPath)
+                        Try : IO.File.Delete(targetPath) : Catch : End Try
+                        If String.IsNullOrEmpty(newAssetId) Then
+                            StatusText = LocalizationService.T("Immich-Upload fehlgeschlagen")
+                            Return False
+                        End If
+                        Await ImmichService.WaitForThumbnailReadyAsync(newAssetId)
+                        _hasChanges = False
+                        ClearPreviewSource()
+                        ' Auf das ERGEBNIS umschalten (wie beim direkten Speichern): die alte
+                        ' Temp-Kopie zeigt ein Asset, das es auf dem Server nicht mehr gibt.
+                        Await SwitchToReplacedImmichAssetAsync(newAssetId, IO.Path.GetFileName(targetPath))
+                        StatusText = LocalizationService.T("Immich-Asset aktualisiert")
+                        Return True
+                    End If
+
                     StatusText = LocalizationService.T("Wird nach Immich hochgeladen…")
                     Dim assetId = Await ImmichService.UploadAssetAsync(targetPath)
                     Try : IO.File.Delete(targetPath) : Catch : End Try
@@ -7156,11 +8880,29 @@ Namespace ViewModels
                                     $"{LocalizationService.T("Gespeichert als")} {IO.Path.GetFileName(targetPath)}",
                                     LocalizationService.T("Gespeichert"))
                     _hasChanges = False
+                    If saveAs Then
+                        ' Katalog-Metadaten zur neuen Datei übernehmen - das Original behält seine.
+                        ' Was mitwandert, bestimmen die Einzeloptionen des Dialogs (2026-07-17).
+                        Dim metaSource = If(Not String.IsNullOrEmpty(_currentFpxPath), _currentFpxPath, _currentImagePath)
+                        LibraryService.Instance.CopyEntryMeta(metaSource, targetPath,
+                                                              saveAsResult.CopyRating, saveAsResult.CopyFavorite,
+                                                              saveAsResult.CopyColorLabel, saveAsResult.CopyKeywords)
+                    End If
                     ExifService.Invalidate(targetPath)
+                    _mainVm?.Gallery?.RefreshChangedFiles({targetPath})
                     If _mainVm?.Viewer IsNot Nothing AndAlso String.Equals(_mainVm.Viewer.CurrentImagePath, targetPath, StringComparison.OrdinalIgnoreCase) Then
                         _mainVm.Viewer.ReloadCurrentImageFromDisk()
                     End If
-                    ClearPreviewSource()
+                    If saveAs AndAlso Not String.Equals(targetPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
+                        ' Nutzerwunsch 2026-07-17: nach „Speichern unter" arbeitet der Editor auf der
+                        ' GESPEICHERTEN Datei weiter (.fpx bzw. exportiertes Bild), nicht mehr auf dem
+                        ' Ursprungsbild. _hasChanges ist False, der Wechsel fragt also nicht nach.
+                        Dim statusAfterSave = StatusText
+                        Await OpenImageAsync(targetPath)
+                        StatusText = statusAfterSave
+                    Else
+                        ClearPreviewSource()
+                    End If
                     Return True
                 Else
                     StatusText = LocalizationService.T("Speichern fehlgeschlagen")
@@ -7169,6 +8911,9 @@ Namespace ViewModels
             Catch ex As Exception
                 StatusText = LocalizationService.T("Fehler: ") & ex.Message
                 errorMessage = ex.Message
+                ' Speicherfehler landeten bisher NUR im Dialog - fürs Log-Debugging (z.B.
+                ' „Basisbild fehlt") braucht es den vollen Stacktrace in der Diagnose.
+                DiagnosticLogService.LogException("Editor.Save", ex)
             End Try
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Speichern fehlgeschlagen", errorMessage)
             Return False
@@ -7183,7 +8928,7 @@ Namespace ViewModels
             Dim assetId = CurrentImmichAssetId()
             If String.IsNullOrEmpty(assetId) Then Return False
 
-            Dim sourcePath = _currentImagePath
+            Dim sourcePath = RenderSourcePath
             Dim fileName = If(String.IsNullOrWhiteSpace(_immichSourceFileName), IO.Path.GetFileName(sourcePath), _immichSourceFileName)
             Dim uploadDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichUpload")
             IO.Directory.CreateDirectory(uploadDir)
@@ -7195,7 +8940,8 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Wird gespeichert…")
                 Dim adj = GetCurrentAdjustments()
                 Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
-                Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(sourcePath, renderPath, adj, SaveQuality, preserveMetadata))
+                Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(sourcePath, renderPath, adj, SaveQuality, preserveMetadata,
+                                                                            workingFull:=_workingImage.CloneFull()))
                 If Not ok Then
                     StatusText = LocalizationService.T("Speichern fehlgeschlagen")
                     Return False
@@ -7211,26 +8957,7 @@ Namespace ViewModels
 
                 _hasChanges = False
                 ClearPreviewSource()
-
-                ' Die Temp-Kopie des alten Assets ist mit dem Ersetzen weggeräumt worden. Auf die des neuen
-                ' umschalten (im Filmstreifen an derselben Stelle), damit Vorher/Nachher, erneutes Speichern
-                ' und die Metadaten-Leiste wieder auf dem echten Serverzustand stehen.
-                Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(newAssetId, fileName)
-                If Not String.IsNullOrEmpty(localPath) Then
-                    Dim paths = _folderPaths.ToList()
-                    Dim index = paths.FindIndex(Function(p) String.Equals(p, sourcePath, StringComparison.OrdinalIgnoreCase))
-                    If index >= 0 Then
-                        paths(index) = localPath
-                    Else
-                        paths = New List(Of String) From {localPath}
-                    End If
-                    Await OpenImageAsync(localPath, paths, _thumbCacheScopeId, _thumbCacheScopeName,
-                                         forceSaveAsOnly:=True, immichAlbumId:=_immichSourceAlbumId)
-                End If
-
-                Dim gallery = _mainVm?.Gallery
-                If gallery IsNot Nothing Then Await gallery.RefreshImmichViewAsync()
-
+                Await SwitchToReplacedImmichAssetAsync(newAssetId, fileName)
                 StatusText = LocalizationService.T("Immich-Asset aktualisiert")
                 Return True
             Catch ex As Exception
@@ -7246,6 +8973,30 @@ Namespace ViewModels
 
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Speichern fehlgeschlagen", errorMessage)
             Return False
+        End Function
+
+        ''' <summary>Nach einem Immich-Ersetzen (Speichern ODER Speichern-unter mit "Vorhandene
+        ''' Assets aktualisieren"): Die Temp-Kopie des alten Assets ist mit dem Ersetzen weggeräumt.
+        ''' Auf die des ERGEBNISSES umschalten (im Filmstreifen an derselben Stelle), damit
+        ''' Vorher/Nachher, erneutes Speichern und die Metadaten-Leiste wieder auf dem echten
+        ''' Serverzustand stehen; danach die Immich-Galerieansicht auffrischen.</summary>
+        Private Async Function SwitchToReplacedImmichAssetAsync(newAssetId As String, fileName As String) As Task
+            Dim previousSourcePath = RenderSourcePath
+            Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(newAssetId, fileName)
+            If Not String.IsNullOrEmpty(localPath) Then
+                Dim paths = _folderPaths.ToList()
+                Dim index = paths.FindIndex(Function(p) String.Equals(p, previousSourcePath, StringComparison.OrdinalIgnoreCase))
+                If index >= 0 Then
+                    paths(index) = localPath
+                Else
+                    paths = New List(Of String) From {localPath}
+                End If
+                Await OpenImageAsync(localPath, paths, _thumbCacheScopeId, _thumbCacheScopeName,
+                                     forceSaveAsOnly:=True, immichAlbumId:=_immichSourceAlbumId)
+            End If
+
+            Dim gallery = _mainVm?.Gallery
+            If gallery IsNot Nothing Then Await gallery.RefreshImmichViewAsync()
         End Function
 
         Public Async Function ConfirmSaveBeforeLeavingAsync(actionDescription As String) As Task(Of Boolean)
@@ -7286,8 +9037,9 @@ Namespace ViewModels
         ''' das Objekt, und das Bild bekommt seine eigenen (in _imagePixelAdjustments geparkten) zurück. Nach
         ''' außen sieht die Pipeline damit immer dasselbe: Bild-Anpassungen + Objekte, die ihre eigenen
         ''' mitbringen.</summary>
-        Private Function GetCurrentAdjustments(Optional forPreview As Boolean = False) As ImageAdjustments
-            Dim adj = BuildAdjustmentsFromFields(forPreview)
+        Private Function GetCurrentAdjustments(Optional forPreview As Boolean = False,
+                                               Optional includeEditorOverlayAnnotations As Boolean = False) As ImageAdjustments
+            Dim adj = BuildAdjustmentsFromFields(forPreview, includeEditorOverlayAnnotations)
             If Not IsObjectAdjustModeActive() Then Return adj
 
             Dim objectValues = adj.ExtractPixelAdjustments()
@@ -7298,7 +9050,8 @@ Namespace ViewModels
             Return adj
         End Function
 
-        Private Function BuildAdjustmentsFromFields(Optional forPreview As Boolean = False) As ImageAdjustments
+        Private Function BuildAdjustmentsFromFields(Optional forPreview As Boolean = False,
+                                                    Optional includeEditorOverlayAnnotations As Boolean = False) As ImageAdjustments
             Dim adj = New ImageAdjustments With {
                 .Brightness = CSng(_brightness),
                 .Contrast = CSng(_contrast),
@@ -7390,12 +9143,14 @@ Namespace ViewModels
                 .CanvasBackgroundColor = _canvasBackgroundColor,
                 .SourceWidthPixels = GetBaseWidth(),
                 .SourceHeightPixels = GetBaseHeight(),
+                .WorkingImageVersion = _workingImage.Version,
+                .WorkingImageHasTransparency = _workingImage.HasAlphaHoles,
                 .FilterPreset = _filterPreset,
                 .FilterStrength = CSng(_filterStrength),
                 .LutPath = _lutPath,
                 .LutStrength = CSng(_lutStrength),
-                .RetouchSpots = _retouchSpots.Select(Function(s) s.Clone()).ToList(),
                 .Annotations = _annotations.Select(Function(a) a.Clone()).ToList(),
+                .BackgroundHidden = _backgroundHidden,
                 .HasActiveSelection = _hasActiveSelection,
                 .SelectionXPercent = _selectionXPercent,
                 .SelectionYPercent = _selectionYPercent,
@@ -7412,12 +9167,13 @@ Namespace ViewModels
                 .SelectionFeatherPixels = CSng(_selectionFeather)
             }
 
-            ' Während die Text-/Wasserzeichen-Ebene per Canvas-Overlay live bearbeitet wird, zeigt das
-            ' Overlay selbst schon eine gerenderte Vorschau (Textbox mit Schrift/Farbe). Damit sie nicht
-            ' zusätzlich leicht versetzt im gebackenen Vorschaubild auftaucht, wird sie nur für die
-            ' Live-Vorschau ausgeblendet (nicht beim Speichern oder in Undo-Snapshots).
-            If forPreview AndAlso ComputesOverlayHidesSelection() Then
-                adj.Annotations(_selectedAnnotationIndex).IsVisible = False
+            ' Editor-Arbeitsmodus: Objekt-Layer werden als UI-Overlays gezeichnet und bleiben aus dem
+            ' teuren Pixel-Preview-Render heraus. Pinsel/Radierer bleiben vorerst in der Pixelpipeline,
+            ' weil sie aktuell als malende Ebenen modelliert sind und separat optimiert werden müssen.
+            If forPreview AndAlso Not includeEditorOverlayAnnotations Then
+                For Each annotation In adj.Annotations
+                    If EditorRendersAnnotationAsOverlay(annotation) Then annotation.IsVisible = False
+                Next
             End If
 
             Return adj
@@ -7461,8 +9217,8 @@ Namespace ViewModels
 
             If Not shouldCapture Then Return
 
-            _undoStack.Push(GetCurrentAdjustments())
-            _redoStack.Clear()
+            _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments()})
+            ClearRedoStack()
             _lastUndoProperty = propertyName
             _lastUndoCapturedAt = now
             AddHistoryEntry(GetHistoryLabelForProperty(propertyName))
@@ -7537,10 +9293,23 @@ Namespace ViewModels
 
         Private Sub ClearUndoHistory()
             ResetUndoCapture()
+            _lastPushedUndoEntry = Nothing
+            For Each entry In _undoStack
+                If entry.Patch IsNot Nothing Then _workingImage.DiscardPatch(entry.Patch)
+            Next
             _undoStack.Clear()
-            _redoStack.Clear()
+            ClearRedoStack()
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
+        End Sub
+
+        ''' Redo-Einträge können Pixel-Patches halten (Wiederholen-Inhalte) - nach einer neuen
+        ''' Aktion sind die unerreichbar und geben ihren Speicher sofort zurück.
+        Private Sub ClearRedoStack()
+            For Each entry In _redoStack
+                If entry.Patch IsNot Nothing Then _workingImage.DiscardPatch(entry.Patch)
+            Next
+            _redoStack.Clear()
         End Sub
 
         Private Shared Function GetHistoryLabelForProperty(propertyName As String) As String
@@ -7583,41 +9352,63 @@ Namespace ViewModels
             ' GetCurrentAdjustments klont alle Objekte und Retusche-Punkte und serialisiert fünf Kurven -
             ' einmal reicht, der Schnappschuss taugt auch als Vorlage für die Beschriftung.
             Dim snapshot = GetCurrentAdjustments()
-            _undoStack.Push(snapshot)
-            _redoStack.Clear()
+            Dim entry As New UndoEntry With {.Adjustments = snapshot}
+            _undoStack.Push(entry)
+            _lastPushedUndoEntry = entry
+            ClearRedoStack()
             AddHistoryEntry(BuildHistoryLabel(snapshot))
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub
 
         Private Sub UndoAction()
-            If _undoStack.Count = 0 Then Return
+            ' Auch Tastatur-Pfade (Strg+Z) respektieren die Commit-Sperre - siehe CanUndo.
+            If _undoStack.Count = 0 OrElse _pendingWorkingCommits > 0 Then Return
             ResetUndoCapture()
-            _redoStack.Push(GetCurrentAdjustments())
+            _lastPushedUndoEntry = Nothing
+            Dim entry = _undoStack.Pop()
+            ' Der Patch wandert in den Redo-Eintrag: RevertPatch tauscht die Region und hält
+            ' danach die Wiederholen-Pixel im selben Objekt (Tausch-Schema im Service).
+            _redoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch})
             _suppressUndoCapture = True
             Try
-                ApplyAdjustments(_undoStack.Pop())
+                ApplyAdjustments(entry.Adjustments)
             Finally
                 _suppressUndoCapture = False
             End Try
+            If entry.Patch IsNot Nothing AndAlso _workingImage.RevertPatch(entry.Patch) Then
+                OnWorkingImageRegionChanged(entry.Patch.Rect)
+            End If
             AddHistoryEntry("Rückgängig")
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub
 
         Private Sub RedoAction()
-            If _redoStack.Count = 0 Then Return
+            If _redoStack.Count = 0 OrElse _pendingWorkingCommits > 0 Then Return
             ResetUndoCapture()
-            _undoStack.Push(GetCurrentAdjustments())
+            _lastPushedUndoEntry = Nothing
+            Dim entry = _redoStack.Pop()
+            _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch})
             _suppressUndoCapture = True
             Try
-                ApplyAdjustments(_redoStack.Pop())
+                ApplyAdjustments(entry.Adjustments)
             Finally
                 _suppressUndoCapture = False
             End Try
+            If entry.Patch IsNot Nothing AndAlso _workingImage.ReapplyPatch(entry.Patch) Then
+                OnWorkingImageRegionChanged(entry.Patch.Rect)
+            End If
             AddHistoryEntry("Wiederholt")
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
+        End Sub
+
+        ''' Nach einem Patch-Tausch (Undo/Redo eines eingebackenen Commits): die Vorschau-Region
+        ''' hat der Service bereits nachgezogen - hier zieht die ANZEIGE nach. Voller
+        ''' Vorschau-Render; regionsgenauer Feinschliff kommt mit den Commits in Stufe D.
+        Private Sub OnWorkingImageRegionChanged(rect As SKRectI)
+            SchedulePreviewUpdate()
         End Sub
 
         Private Sub ApplyAdjustments(adj As ImageAdjustments)
@@ -7728,13 +9519,11 @@ Namespace ViewModels
             _filterStrength = If(adj.FilterStrength <= 0, 100, adj.FilterStrength)
             _lutPath = adj.LutPath
             _lutStrength = If(adj.LutStrength <= 0, 100, adj.LutStrength)
+            ' ARBEITSBILD (Stufe E): Retusche-Spots sind transient (nur der aktive Zug) - alte
+            ' Snapshots/Rezepte mit Spot-Listen werden bewusst ignoriert (Pixel sind die Wahrheit).
             _retouchSpots.Clear()
-            If adj.RetouchSpots IsNot Nothing Then
-                For Each spot In adj.RetouchSpots
-                    _retouchSpots.Add(spot.Clone())
-                Next
-            End If
             _annotations.Clear()
+            _pixelEditLayer.Clear()
             _selectedAnnotationIndex = -1
             If adj.Annotations IsNot Nothing Then
                 For Each annotation In adj.Annotations
@@ -7743,6 +9532,8 @@ Namespace ViewModels
             End If
             ClearSelectionMask()
             _hasActiveSelection = adj.HasActiveSelection
+            _backgroundHidden = adj.BackgroundHidden
+            Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
             _selectionFeather = adj.SelectionFeatherPixels
             Me.RaisePropertyChanged(NameOf(SelectionFeather))
             _selectionXPercent = adj.SelectionXPercent
@@ -7793,6 +9584,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(LutStrength))
             Me.RaisePropertyChanged(NameOf(HasLutApplied))
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+            Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(HasActiveSelection))
             Me.RaisePropertyChanged(NameOf(SelectionXPercent))
@@ -7873,6 +9665,16 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetAdjustmentsInternal(Optional resetEditorUi As Boolean = False)
+            ' ARBEITSBILD (Stufe D): Zurücksetzen entfernt auch gebackene Striche/Retusche -
+            ' das Arbeitsbild wird frisch vom Original (bzw. .fpx-Basisbild) aufgebaut. Die
+            ' Undo-Pixel-Patches sterben dabei (Init räumt sie ab): ein Undo nach dem
+            ' Zurücksetzen stellt Regler/Objekte wieder her, gebackene Pixel nicht.
+            ' Bei den Öffnen-Pfaden (resetEditorUi:=True) folgt ohnehin PreparePreviewSource.
+            If Not resetEditorUi AndAlso _workingImage.HasBakedContent Then
+                _workingImageOverridePath = ""
+                _workingImageOverrideHasAlpha = False
+                PreparePreviewSource(RenderSourcePath, scheduleInitialRender:=False)
+            End If
             _brightness = 0
             _contrast = 0
             _saturation = 0
@@ -7941,10 +9743,12 @@ Namespace ViewModels
             _lutStrength = 100
             _retouchSpots.Clear()
             _annotations.Clear()
+            _pixelEditLayer.Clear()
             _selectedAnnotationIndex = -1
             If resetEditorUi Then ResetEditorUiStateForNewImage(resetTool:=False)
             _hasChanges = False
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+            Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(Brightness))
             Me.RaisePropertyChanged(NameOf(Contrast))
@@ -8000,8 +9804,7 @@ Namespace ViewModels
             _selectedLayersPanelTab = LayersPanelTab.Tool
             _isPickingColorFromImage = False
             _pendingColorPickCallback = Nothing
-            _activeStrokeAnnotation = Nothing
-            _activeStrokeIsEraser = False
+            _pixelEditLayer.ResetActiveStroke()
             _isEraserMode = False
             _eraserFillColor = "#00FFFFFF"
             _isCloneMode = False
@@ -8049,7 +9852,8 @@ Namespace ViewModels
             _annotationGlowStrength = 100
             _annotationGlowColor = "#FFFFFF00"
 
-            _hasActiveSelection = False
+            ClearSelection(captureUndo:=False)
+            _backgroundHidden = False
             _selectionXPercent = 0
             _selectionYPercent = 0
             _selectionWidthPercent = 0
@@ -8065,6 +9869,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
             Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
             RaiseToolContextProperties()
+            Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
             Me.RaisePropertyChanged(NameOf(PendingInsertKind))
             Me.RaisePropertyChanged(NameOf(HasPendingInsertKind))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
@@ -8085,6 +9890,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsToolTabSelected))
             Me.RaisePropertyChanged(NameOf(IsLayersTabSelected))
             Me.RaisePropertyChanged(NameOf(IsHistoryTabSelected))
+            Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
             Me.RaisePropertyChanged(NameOf(ShapeIconSearchText))
             UpdateShapeIconStates()
 
@@ -8543,10 +10349,28 @@ Namespace ViewModels
                 .GradientAngleDegrees = CSng(_annotationGradientAngle),
                 .GradientInverted = _annotationGradientInverted
             }
+            HardenAnnotationBuffersForNewObject()
             _annotations.Add(annotation)
             SelectedAnnotationIndex = _annotations.Count - 1
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            ' Nur die Region des NEUEN Objekts rendern: ein Vollaufbau wuerde grosse weiche
+            ' Pinselstriche komplett neu zeichnen (Sekunden), obwohl sich dort nichts geaendert hat.
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(annotation))
+        End Sub
+
+        ''' <summary>Haertet die Puffer-Felder, die die Objekt-ERZEUGUNG nicht bewusst uebernimmt, gegen
+        ''' das [Annotation-Puffer-Leck]-Fenster: zwischen "SelectedAnnotationIndex = neu" und
+        ''' LoadSelectedAnnotationIntoEditor wechselt der Selektions-Setter das Werkzeug - ein Sync in
+        ''' diesem Fenster schriebe sonst die noch ALTEN Puffer des zuvor selektierten Objekts in das
+        ''' neue (beobachtet: Schatten/Gluehen-Aktiv; gleiche Gefahr: Spiegelungen). Direktfelder ohne
+        ''' Setter-Nebenwirkungen; Load setzt danach ohnehin konsistent aus dem neuen Objekt.
+        ''' Bewusst uebernommen bleiben die Panel-Vorgaben (Farben, Kontur, Schrift, Mischmodus,
+        ''' Drehung, Verlauf) - die setzt der Initializer explizit.</summary>
+        Private Sub HardenAnnotationBuffersForNewObject()
+            _annotationShadowEnabled = False
+            _annotationGlowEnabled = False
+            _annotationFlipH = False
+            _annotationFlipV = False
         End Sub
 
         Private Function GetDefaultAnnotationSizePercent(normalizedKind As String, rawKind As String) As (WidthPercent As Double, HeightPercent As Double)
@@ -8599,10 +10423,13 @@ Namespace ViewModels
                 .RotationDegrees = CSng(_annotationRotation),
                 .IsVisible = _annotationIsVisible
             }
+            HardenAnnotationBuffersForNewObject()
             _annotations.Add(annotation)
             SelectedAnnotationIndex = _annotations.Count - 1
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            ' Nur die Region des NEUEN Objekts rendern: ein Vollaufbau wuerde grosse weiche
+            ' Pinselstriche komplett neu zeichnen (Sekunden), obwohl sich dort nichts geaendert hat.
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(annotation))
         End Sub
 
         Private Function GetInitialImageAnnotationSize(imagePath As String) As (WidthPercent As Double, HeightPercent As Double)
@@ -8754,93 +10581,118 @@ Namespace ViewModels
             Return ""
         End Function
 
-        ''' Hängt einen neuen Pinsel-/Radiergummi-Strich an die Ebene der laufenden Mal-"Sitzung" an
-        ''' (siehe _activeStrokeAnnotation), statt wie zuvor für jeden einzelnen Strich eine eigene
-        ''' Ebene anzulegen - eine Sitzung endet erst bei Werkzeugwechsel, Pinsel/Radiergummi-
-        ''' Umschalten oder Ebenenwechsel. Mehrere Striche werden im .Text-Punktestring per ";"
-        ''' getrennt (siehe ImageProcessor.DrawBrushStroke), damit sie beim Rendern als eigenständige
-        ''' Teilpfade gezeichnet werden - eine einfache Verkettung würde sie sonst durch eine gerade
-        ''' Linie verbinden.
+        ''' ARBEITSBILD (Stufe D): ein Pinsel-/Radiererstrich wird nicht mehr als Rezept
+        ''' gespeichert und abgespielt, sondern REGIONAL in Vollauflösung ins Arbeitsbild
+        ''' eingebacken (Hintergrund-Queue). Undo läuft über den Vorher-Patch des Commits.
+        ''' Pinsel und Radierer sind keine Overlay-Objekte und erzeugen keine Ebenen.
         Public Sub AddBrushStroke(points As IEnumerable(Of Avalonia.Point), Optional isEraser As Boolean = False)
             If points Is Nothing Then Return
             Dim normalized = points.ToList()
             If normalized.Count < 2 Then Return
 
-            PushUndo()
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
             Dim pixelPoints = normalized.Select(Function(p) New Avalonia.Point(PercentXToPixels(p.X), PercentYToPixels(p.Y))).ToList()
-            Dim minX = Math.Max(0, pixelPoints.Min(Function(p) p.X))
-            Dim minY = Math.Max(0, pixelPoints.Min(Function(p) p.Y))
-            Dim maxX = Math.Min(GetBaseWidth(), pixelPoints.Max(Function(p) p.X))
-            Dim maxY = Math.Min(GetBaseHeight(), pixelPoints.Max(Function(p) p.Y))
-            Dim newStroke = New BrushStroke(pixelPoints.Select(Function(p) New StrokePoint(CSng(p.X), CSng(p.Y))))
+            Dim dirtyFull As SKRectI
+            Dim stroke = PixelEditLayer.CreateTransientStroke(pixelPoints, BuildPixelPaintOptions(isEraser), baseW, baseH, dirtyFull)
+            If stroke Is Nothing OrElse dirtyFull.Width <= 0 OrElse dirtyFull.Height <= 0 Then Return
 
-            Dim expectedKind = If(isEraser, "Eraser", "Brush")
-            Dim canAppend = _activeStrokeAnnotation IsNot Nothing AndAlso
-                             _activeStrokeIsEraser = isEraser AndAlso
-                             String.Equals(_activeStrokeAnnotation.Kind, expectedKind, StringComparison.OrdinalIgnoreCase) AndAlso
-                             _annotations.Contains(_activeStrokeAnnotation) AndAlso
-                             Math.Abs(_activeStrokeAnnotation.StrokeWidth - CSng(_brushSize)) < 0.001F AndAlso
-                             Math.Abs(_activeStrokeAnnotation.Opacity - CSng(_brushOpacity)) < 0.001F AndAlso
-                             Math.Abs(_activeStrokeAnnotation.FlowPercent - CSng(_brushFlow)) < 0.001F AndAlso
-                             Math.Abs(_activeStrokeAnnotation.HardnessPercent - CSng(_brushHardness)) < 0.001F AndAlso
-                             String.Equals(_activeStrokeAnnotation.StrokeColor, _annotationStrokeColor, StringComparison.OrdinalIgnoreCase) AndAlso
-                             String.Equals(_activeStrokeAnnotation.BrushPreset, _brushPreset, StringComparison.Ordinal) AndAlso
-                             (Not isEraser OrElse String.Equals(_activeStrokeAnnotation.EraserFillColor, _eraserFillColor, StringComparison.OrdinalIgnoreCase))
+            PushUndo()
+            Dim undoEntry = _lastPushedUndoEntry
+            Dim renderAnn = stroke.ToRenderAnnotation()
+            ' Radierer mit transparenter Füllfarbe stanzt echte Alpha-Löcher (DstOut).
+            Dim punchesAlpha = isEraser AndAlso Not EraserFillColorHasInk()
 
-            If canAppend Then
-                Dim existing = _activeStrokeAnnotation
-                Dim unionMinX = Math.Min(existing.XPixels, CSng(minX))
-                Dim unionMinY = Math.Min(existing.YPixels, CSng(minY))
-                Dim unionMaxX = Math.Max(existing.XPixels + existing.WidthPixels, CSng(maxX))
-                Dim unionMaxY = Math.Max(existing.YPixels + existing.HeightPixels, CSng(maxY))
-                existing.Strokes.Add(newStroke)
-                existing.XPixels = unionMinX
-                existing.YPixels = unionMinY
-                existing.WidthPixels = Math.Max(1, unionMaxX - unionMinX)
-                existing.HeightPixels = Math.Max(1, unionMaxY - unionMinY)
-            Else
-                Dim width = Math.Max(1, maxX - minX)
-                Dim height = Math.Max(1, maxY - minY)
-                Dim newAnnotation = New ImageAnnotation With {
-                    .Kind = expectedKind,
-                    .Text = "",
-                    .Strokes = New List(Of BrushStroke) From {newStroke},
-                    .XPixels = CSng(minX),
-                    .YPixels = CSng(minY),
-                    .WidthPixels = CSng(width),
-                    .HeightPixels = CSng(height),
-                    .FillColor = _annotationFillColor,
-                    .StrokeColor = _annotationStrokeColor,
-                    .EraserFillColor = If(isEraser, _eraserFillColor, ""),
-                    .StrokeWidth = CSng(_brushSize),
-                    .Opacity = CSng(_brushOpacity),
-                    .BlendMode = "Normal",
-                    .FlowPercent = CSng(_brushFlow),
-                    .HardnessPercent = CSng(_brushHardness),
-                    .BrushPreset = If(isEraser, "soft", _brushPreset),
-                    .ShadowEnabled = (Not isEraser) AndAlso _annotationShadowEnabled,
-                    .ShadowOffsetXPercent = CSng(_annotationShadowOffsetX),
-                    .ShadowOffsetYPercent = CSng(_annotationShadowOffsetY),
-                    .ShadowBlur = CSng(_annotationShadowBlur),
-                    .ShadowStrength = CSng(_annotationShadowStrength),
-                    .ShadowColor = _annotationShadowColor,
-                    .ShadowSizePercent = CSng(_annotationShadowSize),
-                    .GlowEnabled = (Not isEraser) AndAlso _annotationGlowEnabled,
-                    .GlowBlur = CSng(_annotationGlowBlur),
-                    .GlowStrength = CSng(_annotationGlowStrength),
-                    .GlowColor = _annotationGlowColor,
-                    .FontSizePixels = CSng(_annotationFontSize),
-                    .FontFamily = _annotationFontFamily
-                }
-                _annotations.Add(newAnnotation)
-                SelectedAnnotationIndex = _annotations.Count - 1
-                _activeStrokeAnnotation = newAnnotation
-                _activeStrokeIsEraser = isEraser
-            End If
-
+            _hasChanges = True
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            _previewTimer.Stop()
+            _previewPending = False
+
+            ' SOFORT-Brücke: den Strich in die bestehende Szene zeichnen (Vorschau-Auflösung),
+            ' damit zwischen Loslassen und Einbacken nichts flackert. Optisch ist das der alte
+            ' Stand „Strich ÜBER der Farbpipeline und über Objekten" - der korrekte Stand
+            ' (Strich unter Reglern und Objekten) kommt mit dem Voll-Render nach dem Commit.
+            DrawStrokeBridgeIntoScene(renderAnn, dirtyFull, baseW, baseH)
+
+            EnqueueWorkingCommit(
+                Function()
+                    Return _workingImage.CommitRegion(dirtyFull,
+                        Sub(full)
+                            Using canvas = New SKCanvas(full)
+                                canvas.ClipRect(SKRect.Create(dirtyFull.Left, dirtyFull.Top, dirtyFull.Width, dirtyFull.Height))
+                                Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
+                                ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, full.Width, full.Height,
+                                                                       0, 0, full.Width, full.Height,
+                                                                       New List(Of ImageAnnotation) From {renderAnn})
+                            End Using
+                        End Sub,
+                        punchesAlpha:=punchesAlpha)
+                End Function,
+                Sub(patch)
+                    If undoEntry IsNot Nothing Then undoEntry.Patch = patch
+                    If isEraser Then Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
+                    ' Der eingebackene Stand (Strich unter der Farbpipeline) zieht per Voll-Render
+                    ' nach; die Brücke oben bleibt bis dahin stehen.
+                    SchedulePreviewUpdate()
+                End Sub)
         End Sub
+
+        ''' True, wenn die Radierer-Füllfarbe DECKT (Alpha > 0) - dann malt der Radierer diese
+        ''' Farbe, statt Transparenz zu stanzen (siehe DrawBrushStroke).
+        Private Function EraserFillColorHasInk() As Boolean
+            Dim parsed As SKColor
+            If Not SKColor.TryParse(If(_eraserFillColor, ""), parsed) Then Return False
+            Return parsed.Alpha > 0
+        End Function
+
+        ''' Zeichnet den frischen Strich synchron in die persistente Szene (Vorschau-Auflösung)
+        ''' und blittet die Region in die Anzeige - die Brücke zwischen Loslassen und dem
+        ''' asynchronen Einbacken ins Arbeitsbild.
+        Private Sub DrawStrokeBridgeIntoScene(renderAnn As ImageAnnotation, dirtyFull As SKRectI,
+                                              baseW As Integer, baseH As Integer)
+            If _sceneSk Is Nothing OrElse baseW <= 0 OrElse baseH <= 0 Then Return
+            Dim previewRect = ImageProcessor.ScaleRectBetweenSpaces(dirtyFull, baseW, baseH, _sceneSk.Width, _sceneSk.Height)
+            If previewRect.Width <= 0 OrElse previewRect.Height <= 0 Then Return
+            Try
+                Using canvas = New SKCanvas(_sceneSk)
+                    canvas.ClipRect(SKRect.Create(previewRect.Left, previewRect.Top, previewRect.Width, previewRect.Height))
+                    Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
+                    ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, _sceneSk.Width, _sceneSk.Height,
+                                                           0, 0, _sceneSk.Width, _sceneSk.Height,
+                                                           New List(Of ImageAnnotation) From {renderAnn})
+                End Using
+                _sceneContentVersion += 1
+                InvalidateZoomDetail()
+                EnsureSceneDisplay()
+                BlitSceneRegionToDisplay(previewRect)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.StrokeBridge", ex)
+            End Try
+        End Sub
+
+        Private Function BuildPixelPaintOptions(isEraser As Boolean) As PixelPaintOptions
+            Return New PixelPaintOptions With {
+                .Kind = If(isEraser, "Eraser", "Brush"),
+                .StrokeColor = _annotationStrokeColor,
+                .EraserFillColor = If(isEraser, _eraserFillColor, ""),
+                .StrokeWidth = CSng(_brushSize),
+                .Opacity = CSng(_brushOpacity),
+                .FlowPercent = CSng(_brushFlow),
+                .HardnessPercent = CSng(_brushHardness),
+                .BrushPreset = If(isEraser, "soft", _brushPreset),
+                .ShadowEnabled = (Not isEraser) AndAlso _annotationShadowEnabled,
+                .ShadowOffsetXPercent = CSng(_annotationShadowOffsetX),
+                .ShadowOffsetYPercent = CSng(_annotationShadowOffsetY),
+                .ShadowBlur = CSng(_annotationShadowBlur),
+                .ShadowStrength = CSng(_annotationShadowStrength),
+                .ShadowColor = _annotationShadowColor,
+                .ShadowSizePercent = CSng(_annotationShadowSize),
+                .GlowEnabled = (Not isEraser) AndAlso _annotationGlowEnabled,
+                .GlowBlur = CSng(_annotationGlowBlur),
+                .GlowStrength = CSng(_annotationGlowStrength),
+                .GlowColor = _annotationGlowColor
+            }
+        End Function
 
         Private Sub DeleteSelectedAnnotation()
             DeleteAnnotationAt(_selectedAnnotationIndex)
@@ -8851,6 +10703,91 @@ Namespace ViewModels
             DeleteAnnotationAt(_annotations.IndexOf(annotation))
         End Sub
 
+        ''' <summary>Blendet die Hintergrund-Ebene (Basisbild) im Ebenen-Panel ein/aus - wie
+        ''' ToggleAnnotationVisibility, nur für den strukturellen BackgroundHidden-Schalter.</summary>
+        Private Sub ToggleBackgroundVisibility()
+            CaptureUndoState("BackgroundVisibility")
+            _backgroundHidden = Not _backgroundHidden
+            Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Startet das Inline-Umbenennen einer Ebene (Doppelklick im Panel): Undo-Punkt setzen und
+        ''' den Bearbeitungszustand exklusiv auf diese Ebene legen (nur eine wird gleichzeitig bearbeitet).</summary>
+        Public Sub BeginLayerRename(annotation As ImageAnnotation)
+            If annotation Is Nothing Then Return
+            PushUndo()
+            ' Das Eingabefeld mit der aktuellen (ggf. automatischen) Beschriftung vorbefüllen.
+            If String.IsNullOrWhiteSpace(annotation.CustomName) Then annotation.CustomName = annotation.LayerLabel
+            For Each a In _annotations
+                a.IsRenaming = Object.ReferenceEquals(a, annotation)
+            Next
+        End Sub
+
+        ''' <summary>Beendet das Inline-Umbenennen (Enter/Verlassen des Feldes). Der Name selbst steht durch
+        ''' die Live-Bindung bereits im Objekt; hier wird nur der Bearbeitungszustand aufgehoben.</summary>
+        Public Sub EndLayerRename()
+            For Each a In _annotations
+                a.IsRenaming = False
+            Next
+        End Sub
+
+        Public Sub MarkLayerMetadataChanged()
+            _hasChanges = True
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+        End Sub
+
+        ''' <summary>Setzt die Ebene <paramref name="dragged"/> per Drag &amp; Drop an die Einfüge-Lücke
+        ''' <paramref name="displayGap"/> der PANEL-Anzeige (0 = ganz oben/vorne … Count = ganz unten/hinten,
+        ''' direkt über dem Hintergrund). Rechnet die Anzeige (umgekehrt zu _annotations) auf die Z-Reihenfolge
+        ''' um. Ändert die Z-Reihenfolge, also neu rendern; No-Op, wenn sich nichts ändert.</summary>
+        Public Sub ReorderLayerToDisplayGap(dragged As ImageAnnotation, displayGap As Integer)
+            If dragged Is Nothing Then Return
+            Dim draggedIndex = _annotations.IndexOf(dragged)
+            CommitObjectAdjustModeToModel()
+            If draggedIndex >= 0 AndAlso draggedIndex < _annotations.Count Then dragged = _annotations(draggedIndex)
+            ' Aktuelle Anzeige-Reihenfolge (umgekehrt zu _annotations).
+            Dim disp As New List(Of ImageAnnotation)()
+            For i = _annotations.Count - 1 To 0 Step -1
+                disp.Add(_annotations(i))
+            Next
+            Dim from = disp.IndexOf(dragged)
+            If from < 0 Then Return
+            Dim insert = Math.Max(0, Math.Min(displayGap, disp.Count))
+            disp.RemoveAt(from)
+            If insert > from Then insert -= 1
+            insert = Math.Max(0, Math.Min(insert, disp.Count))
+            disp.Insert(insert, dragged)
+
+            ' Zielreihenfolge in _annotations = Anzeige umgekehrt.
+            Dim target As New List(Of ImageAnnotation)()
+            For i = disp.Count - 1 To 0 Step -1
+                target.Add(disp(i))
+            Next
+            Dim unchanged = target.Count = _annotations.Count
+            If unchanged Then
+                For i = 0 To target.Count - 1
+                    If Not Object.ReferenceEquals(target(i), _annotations(i)) Then
+                        unchanged = False
+                        Exit For
+                    End If
+                Next
+            End If
+            If unchanged Then Return
+
+            PushUndo()
+            _annotations.Clear()
+            For Each a In target
+                _annotations.Add(a)
+            Next
+            ' Selektion aufheben: nach dem Umsortieren zeigt die Szene damit sofort die neue
+            ' Reihenfolge, ohne dass ein Placement-Ghost eine alte Z-Position weiterzeigt.
+            SelectedAnnotationIndex = -1
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
         Private Sub ToggleAnnotationVisibility(annotation As ImageAnnotation)
             If annotation Is Nothing Then Return
             CaptureUndoState("LayerVisibility")
@@ -8859,28 +10796,101 @@ Namespace ViewModels
                 AnnotationIsVisible = annotation.IsVisible
             End If
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(annotation))
         End Sub
 
         Private Sub DeleteAnnotationAt(index As Integer)
             If index < 0 OrElse index >= _annotations.Count Then Return
-            ' Bedienten die Regler gerade dieses Objekt, darf beim Verlassen nichts mehr zurückgeschrieben
-            ' werden - es gibt das Objekt gleich nicht mehr, und der Index zeigte danach auf ein fremdes.
-            If _objectAdjustIndex = index Then DiscardObjectAdjustMode()
+            CommitObjectAdjustModeToModel()
             PushUndo()
+            ' Rect VOR dem Entfernen erfassen - danach ist das Objekt weg.
+            Dim deletedRect = ComputeSceneDirtyRectFor(_annotations(index))
             _annotations.RemoveAt(index)
             If _selectedAnnotationIndex = index Then
                 SelectedAnnotationIndex = -1
             ElseIf _selectedAnnotationIndex > index Then
                 _selectedAnnotationIndex -= 1
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+                Me.RaisePropertyChanged(NameOf(SelectedLayer))
             End If
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            RefreshOverlayAfterAnnotationChange(deletedRect)
+        End Sub
+
+        ''' Läuft gerade ein Raster-Commit? Sperrt den Befehl gegen Doppelklick.
+        Private _rasterizeInFlight As Boolean = False
+
+        ''' „Ebene rastern" (Stufe F): das Objekt wird in das ARBEITSBILD eingebacken, verlässt
+        ''' den Ebenenstapel und ist nur noch per Undo (Anpassungs-Snapshot + Pixel-Patch)
+        ''' zurückholbar; Retusche/Pinsel können danach direkt darauf arbeiten. Semantik:
+        ''' gerasterter Inhalt rückt UNTER die Farb-Regler und unter alle verbliebenen Objekte;
+        ''' Mischmodi rechnen ab jetzt gegen das unangepasste Arbeitsbild - der Look kann beim
+        ''' Rastern mit aktiven Anpassungen leicht umspringen (bewusst, siehe Rendering-Notizen).
+        Private Sub RasterizeSelectedAnnotation()
+            If _rasterizeInFlight Then Return
+            Dim index = _selectedAnnotationIndex
+            If index < 0 OrElse index >= _annotations.Count Then Return
+            Dim annotation = _annotations(index)
+            If annotation Is Nothing Then Return
+
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            If baseW <= 0 OrElse baseH <= 0 OrElse Not _workingImage.IsInitialized Then Return
+            CommitObjectAdjustModeToModel()
+            Dim rect = ImageProcessor.ComputeAnnotationDirtyRect(baseW, baseH, annotation, baseW, baseH)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+
+            ' Snapshot enthält das Objekt noch: Undo stellt Ebene UND Pixel wieder her.
+            PushUndo()
+            Dim undoEntry = _lastPushedUndoEntry
+            Dim annClone = annotation.Clone()
+            _rasterizeInFlight = True
+            StatusText = LocalizationService.T("Ebene wird gerastert…")
+
+            EnqueueWorkingCommit(
+                Function()
+                    Return _workingImage.CommitRegion(rect,
+                        Sub(full)
+                            Using canvas = New SKCanvas(full)
+                                canvas.ClipRect(SKRect.Create(rect.Left, rect.Top, rect.Width, rect.Height))
+                                Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
+                                ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, full.Width, full.Height,
+                                                                       0, 0, full.Width, full.Height,
+                                                                       New List(Of ImageAnnotation) From {annClone})
+                            End Using
+                        End Sub)
+                End Function,
+                Sub(patch)
+                    _rasterizeInFlight = False
+                    If patch Is Nothing Then
+                        StatusText = LocalizationService.T("Rastern fehlgeschlagen")
+                        Return
+                    End If
+                    If undoEntry IsNot Nothing Then undoEntry.Patch = patch
+                    ' Objekt aus dem Stapel nehmen - OHNE eigenen Undo-Push (der kam oben) - und
+                    ' die Anzeige in EINEM Schritt auf den gebackenen Stand ziehen.
+                    Dim idx = _annotations.IndexOf(annotation)
+                    If idx >= 0 Then
+                        _annotations.RemoveAt(idx)
+                        If _selectedAnnotationIndex = idx Then
+                            SelectedAnnotationIndex = -1
+                        ElseIf _selectedAnnotationIndex > idx Then
+                            _selectedAnnotationIndex -= 1
+                            Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+                            Me.RaisePropertyChanged(NameOf(SelectedLayer))
+                        End If
+                    End If
+                    _hasChanges = True
+                    RaiseResetButtonStateChanged()
+                    AddHistoryEntry(LocalizationService.T("Ebene gerastert"))
+                    StatusText = LocalizationService.T("Ebene gerastert")
+                    SchedulePreviewUpdate()
+                End Sub)
         End Sub
 
         Private Sub DuplicateSelectedAnnotation()
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
+            CommitObjectAdjustModeToModel()
             PushUndo()
             Dim copy = _annotations(_selectedAnnotationIndex).Clone()
             copy.XPixels += 24
@@ -8888,11 +10898,12 @@ Namespace ViewModels
             _annotations.Insert(_selectedAnnotationIndex + 1, copy)
             SelectedAnnotationIndex = _selectedAnnotationIndex + 1
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(copy))
         End Sub
 
         Private Sub MoveSelectedAnnotation(direction As Integer)
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
+            CommitObjectAdjustModeToModel()
             Dim target = _selectedAnnotationIndex + If(direction >= 0, 1, -1)
             If target < 0 OrElse target >= _annotations.Count Then Return
             PushUndo()
@@ -8900,7 +10911,9 @@ Namespace ViewModels
             _annotations.RemoveAt(_selectedAnnotationIndex)
             _annotations.Insert(target, item)
             SelectedAnnotationIndex = target
-            SchedulePreviewUpdate()
+            ' Z-Order-Wechsel wirkt nur dort, wo sich Objekte ueberlappen - das eigene Rect genuegt
+            ' (Blend-Abhaengigkeiten erweitert der Region-Renderer automatisch).
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(item))
         End Sub
 
         Public Sub NudgeSelectedAnnotation(dx As Double, dy As Double)
@@ -8977,15 +10990,23 @@ Namespace ViewModels
 
         ''' <summary>Verwirft den Objekt-Modus OHNE Rückschreiben - für den Fall, dass das Objekt gerade
         ''' verschwindet (Löschen). Die Bildwerte kommen zurück in die Regler.</summary>
-        Private Sub DiscardObjectAdjustMode()
+        ''' <summary>Schreibt aktive Objekt-Reglerwerte in die aktuell bearbeitete Ebene und stellt die
+        ''' Bild-Regler wieder her, bevor der Ebenenstapel seine Indizes ändert.</summary>
+        Private Sub CommitObjectAdjustModeToModel()
             If Not IsObjectAdjustModeActive() Then Return
+            Dim keepIndex = _selectedAnnotationIndex
             _objectAdjustSwapInProgress = True
             Try
+                Dim objectValues = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
+                If _objectAdjustIndex >= 0 AndAlso _objectAdjustIndex < _annotations.Count Then
+                    _annotations(_objectAdjustIndex).Adjustments = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
+                End If
+
                 Dim restored = BuildAdjustmentsFromFields()
                 restored.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
                 _imagePixelAdjustments = Nothing
                 _objectAdjustIndex = -1
-                ApplyAdjustments(restored)
+                ApplyAdjustmentsKeepingSelection(restored, keepIndex)
             Finally
                 _objectAdjustSwapInProgress = False
             End Try
@@ -9055,6 +11076,7 @@ Namespace ViewModels
             If keepIndex < 0 OrElse keepIndex >= _annotations.Count Then Return
             _selectedAnnotationIndex = keepIndex
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+            Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
         End Sub
 
@@ -9089,6 +11111,7 @@ Namespace ViewModels
                     AnnotationRotation = a.RotationDegrees
                     AnnotationFlipHorizontal = a.FlipHorizontal
                     AnnotationFlipVertical = a.FlipVertical
+                    AnnotationLockAspect = a.LockAspect
                     _annotationAnchor = NormalizeAnnotationAnchor(a.Anchor)
                     AnnotationIsVisible = a.IsVisible
                     AnnotationXPercent = AnnotationStoredXToPercent(a)
@@ -9153,6 +11176,10 @@ Namespace ViewModels
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             CaptureUndoState("TextAnnotation")
             Dim a = _annotations(_selectedAnnotationIndex)
+            Dim previewSource = GetPreviewSource()
+            Dim oldDirtyRect = If(previewSource Is Nothing, SKRectI.Empty,
+                                  ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width, previewSource.Height, a,
+                                                                            GetBaseWidth(), GetBaseHeight()))
             ' Pinsel- und Radiergummi-Ebenen haben keinen Text: ihre Züge liegen in a.Strokes. Das
             ' Text-Feld bleibt bei ihnen leer, damit nicht der Textpuffer des Editors hineinläuft.
             Dim normalizedKind = NormalizeAnnotationKind(a.Kind)
@@ -9178,6 +11205,7 @@ Namespace ViewModels
             a.RotationDegrees = CSng(_annotationRotation)
             a.FlipHorizontal = _annotationFlipH
             a.FlipVertical = _annotationFlipV
+            a.LockAspect = _annotationLockAspect
             a.Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             a.IsVisible = _annotationIsVisible
             a.XPixels = CSng(AnnotationXPixels)
@@ -9201,9 +11229,27 @@ Namespace ViewModels
             a.GlowBlur = CSng(_annotationGlowBlur)
             a.GlowStrength = CSng(_annotationGlowStrength)
             a.GlowColor = _annotationGlowColor
+            If previewSource IsNot Nothing Then
+                Dim newDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width, previewSource.Height, a,
+                                                                             GetBaseWidth(), GetBaseHeight())
+                If _annotationPlacementEditActive Then
+                    _annotationDirtyRect = ImageProcessor.UnionRects(_annotationPlacementStartDirtyRect, newDirtyRect)
+                Else
+                    _annotationDirtyRect = ImageProcessor.UnionRects(_annotationDirtyRect,
+                                                                     ImageProcessor.UnionRects(oldDirtyRect, newDirtyRect))
+                End If
+            End If
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
             If refreshOverlay Then UpdateSelectedAnnotationOverlayPreview()
             RaiseResetButtonStateChanged()
+            If _annotationPlacementEditActive Then
+                _previewTimer.Stop()
+                _previewPending = True
+                StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
+                Return
+            End If
+            ' STUFE 2: alle Objekt-Eigenschafts-Aenderungen laufen einheitlich in die Szene
+            ' (RefreshSelected... rendert die Dirty-Region oder debounced sie bei Bursts).
             RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
         End Sub
 
@@ -9232,8 +11278,10 @@ Namespace ViewModels
             End If
 
             If AnnotationRequiresBakedPreview(annotation) Then
-                SetSelectedAnnotationOverlay(Nothing)
-                Return
+                If Not _annotationPlacementEditActive Then
+                    SetSelectedAnnotationOverlay(Nothing)
+                    Return
+                End If
             End If
 
             ' Alles Sichtbare eines selektierten Objekts kommt aus dem Renderer: Formen und Symbole ohnehin,
@@ -9390,12 +11438,26 @@ Namespace ViewModels
                 _retouchStrokeStartSpotIndex = _retouchSpots.Count
                 _activeRetouchStrokeId = _nextRetouchStrokeId
                 _nextRetouchStrokeId += 1
-                _retouchLivePatchRect = SKRectI.Empty
-                _clearRetouchLivePatchAfterPreview = False
-                ClearRetouchLivePatch()
                 _previewTimer.Stop()
-                InvalidatePreviewWork()
-                DisposeRetouchLiveBuffers()
+                If _clearRetouchLivePatchAfterPreview Then
+                    ' BEFUND ("Reparatur 1 bei Reparatur 2 wieder weg"): Der Commit-Render
+                    ' des VORHERIGEN Zugs laeuft noch. Ihn abzubrechen (InvalidatePreviewWork)
+                    ' hiesse, dass Zug 1 NIE in die Szene gebacken wird; die Live-Bruecke samt
+                    ' Rect zu loeschen, liesse Zug 1 bis dahin verschwinden. Beides stehen
+                    ' lassen - das Patch-Rect waechst mit dem neuen Zug einfach weiter.
+                Else
+                    _retouchLivePatchRect = SKRectI.Empty
+                    ClearRetouchLivePatch()
+                    InvalidatePreviewWork()
+                End If
+                ' STEMPEL-LIVE: vorgewaermte Puffer NICHT blind wegwerfen - sonst
+                ' beginnt jeder Zug wieder ohne Live-Ansicht. Der BaseKey (enthaelt Spots UND alle
+                ' Anpassungen) entscheidet, ob der Puffer noch den committeten Stand zeigt.
+                If Not RetouchLiveBuffersMatchCommittedState() Then
+                    DiagnosticLogService.LogAlways("Editor.RetouchBuffers",
+                        $"discardAtStrokeStart hadBuffers={_retouchLiveBitmap IsNot Nothing} hadKey={_retouchBuffersKey IsNot Nothing}")
+                    DisposeRetouchLiveBuffers()
+                End If
             End If
 
             Dim baseWidth = GetBaseWidth()
@@ -9464,11 +11526,35 @@ Namespace ViewModels
                 Return
             End If
 
-            If _retouchLiveBitmap Is Nothing OrElse _retouchLiveSampleBitmap Is Nothing Then
-                If Not InitializeRetouchLiveBuffers() Then
-                    ScheduleRetouchPreviewUpdate(forcePublish)
-                    Return
+            ' BEFUND: Die Schwelle gilt im PREVIEW-Raum - die Kosten der Live-Anwendung
+            ' haengen am preview-skalierten Radius, nicht an den Basis-Pixeln. Der alte Vergleich
+            ' in Basis-Pixeln schickte grosse Pinsel immer in die Masken-Vorschau ("keine
+            ' Live-Ansicht"), obwohl der effektive Radius harmlos war.
+            ' STEMPEL IMMER LIVE ("Live nur beim ersten Zug"): Klon-Spots sind ein
+            ' billiger Shader-Draw (DrawCloneStamp) - die Schwelle schuetzt nur vor dem teuren
+            ' Box-Blur des VERWISCHENS.
+            If Not spot.HasCloneSource AndAlso spot.RadiusPixels * RetouchPreviewRadiusScale() > 240 Then
+                ' Grosser Radius: Live-Anwendung pro Mauspunkt waere zu teuer - aber GAR KEIN Feedback
+                ' ("es passiert nichts") ist schlimmer. Die orangene Masken-Vorschau zeigt den
+                ' bearbeiteten Bereich; der Commit backt das Ergebnis.
+                If EnsureRetouchMaskPreviewSize() Then
+                    ExpandRetouchMaskPatchRect(spot)
+                    PublishRetouchMaskPreview(forcePublish)
                 End If
+                Return
+            End If
+
+            If _retouchLiveBitmap Is Nothing OrElse _retouchLiveSampleBitmap Is Nothing Then
+                ' STUFE 5: Puffer-Aufbau ASYNCHRON - der synchrone Aufbau rendert bis zu zwei volle
+                ' Pipelines (~1-1,5 s je) und fror die UI beim ersten Punkt ein ("CPU hoch, nichts
+                ' passiert"). Bis die Puffer stehen, zeigt die Masken-Vorschau den Strich; danach
+                ' zieht der Init-Abschluss alle aufgelaufenen Zug-Punkte nach.
+                BeginRetouchLiveBuffersAsync()
+                If EnsureRetouchMaskPreviewSize() Then
+                    ExpandRetouchMaskPatchRect(spot)
+                    PublishRetouchMaskPreview(forcePublish)
+                End If
+                Return
             End If
 
             ImageProcessor.ApplyRetouchSpotInPlace(_retouchLiveBitmap, _retouchLiveSampleBitmap, spot, GetBaseWidth(), GetBaseHeight())
@@ -9476,32 +11562,99 @@ Namespace ViewModels
             PublishRetouchLivePreview(forcePublish)
         End Sub
 
-        Private Function InitializeRetouchLiveBuffers() As Boolean
-            Dim previewSource = GetPreviewSource()
-            If previewSource Is Nothing Then Return False
+        Private _retouchBuffersInitSeq As Long = 0
+        Private _retouchBuffersInitializing As Boolean = False
+        ''' BaseKey (Spots + Anpassungen), zu dem die Live-Puffer passen - Gueltigkeitsstempel
+        ''' fuers Vorwaermen (siehe AddRetouchSpot).
+        Private _retouchBuffersKey As String = Nothing
 
-            Dim baseAdj = GetCurrentAdjustments(forPreview:=True)
-            baseAdj.RetouchSpots = _retouchSpots.
-                Take(Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count))).
-                Select(Function(s) s.Clone()).
-                ToList()
-
-            Dim rendered = ImageProcessor.RenderPreviewSkBitmap(previewSource, baseAdj)
-            If rendered Is Nothing Then Return False
-            _retouchLiveBitmap = rendered
-
-            ' Zielbild: bisherige Retusche ist sichtbar. Quellbild: retuschefrei, wie im finalen
-            ' Pipeline-Render. Sonst sampeln Stempel/Verwischen/Reparatur live aus bereits
-            ' veränderten Pixeln und springen beim Backen auf die retuschefreie Quelle zurück.
-            Dim sampleAdj = GetCurrentAdjustments(forPreview:=True)
-            sampleAdj.RetouchSpots = New List(Of RetouchSpot)()
-            _retouchLiveSampleBitmap = ImageProcessor.RenderPreviewSkBitmap(previewSource, sampleAdj)
-            If _retouchLiveSampleBitmap Is Nothing Then
-                DisposeRetouchLiveBuffers()
-                Return False
-            End If
-            Return True
+        ''' Preview-Pixel je Basis-Pixel fuer Retusche-Radien - dieselbe sqrt(sx*sy)-Formel wie der
+        ''' Renderer (DrawRetouchSpot/DrawHealingRegion).
+        Private Function RetouchPreviewRadiusScale() As Single
+            Dim src = GetPreviewSource()
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            If src Is Nothing OrElse baseW <= 0 OrElse baseH <= 0 Then Return 1.0F
+            Return CSng(Math.Sqrt((src.Width / CDbl(baseW)) * (src.Height / CDbl(baseH))))
         End Function
+
+        ''' <summary>True, wenn die vorhandenen Live-Puffer exakt den committeten Stand spiegeln -
+        ''' dann darf das Vorwaermen sie behalten. Seit Stufe E steckt die committete Retusche im
+        ''' Arbeitsbild (WorkingImageVersion ist Teil des Keys) - kein Spot-Jonglieren mehr.</summary>
+        Private Function RetouchLiveBuffersMatchCommittedState() As Boolean
+            If _retouchLiveBitmap Is Nothing OrElse _retouchLiveSampleBitmap Is Nothing OrElse
+               _retouchBuffersKey Is Nothing Then Return False
+            Return String.Equals(_retouchBuffersKey, ImageProcessor.ComputeBaseKey(GetCurrentAdjustments(forPreview:=True)), StringComparison.Ordinal)
+        End Function
+
+        Private Sub BeginRetouchLiveBuffersAsync()
+            If _retouchBuffersInitializing Then Return
+            ' Vorwaermen (Werkzeugwechsel/Alt+Klick): passende Puffer nicht neu bauen.
+            If RetouchLiveBuffersMatchCommittedState() Then Return
+            _retouchBuffersInitializing = True
+            RunRetouchBufferInit()
+        End Sub
+
+        ''' <summary>Baut Ziel- und Sample-Bitmap im Hintergrund auf. Seit Stufe E braucht es nur
+        ''' noch EINEN Render: die committete Retusche steckt im Arbeitsbild, Ziel = Klon der
+        ''' warmen Basis (sonst Voll-Render), Sample = Kopie des Ziels (die Werkzeuge lesen beim
+        ''' Commit ebenfalls vom aktuellen Stand des Arbeitsbilds). Nach dem Aufbau werden alle
+        ''' bis dahin aufgelaufenen Punkte des aktiven Zugs nachgezogen. Bildwechsel/Dispose
+        ''' invalidieren per Sequenznummer.</summary>
+        Private Async Sub RunRetouchBufferInit()
+            Dim seq = Threading.Interlocked.Increment(_retouchBuffersInitSeq)
+            Try
+                Dim previewSource = GetPreviewSource()
+                If previewSource Is Nothing Then Return
+
+                Dim strokeStart = If(_retouchStrokeActive,
+                                     Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count)),
+                                     _retouchSpots.Count)
+                Dim targetAdj = GetCurrentAdjustments(forPreview:=True)
+
+                Dim target As SKBitmap = Nothing
+                Dim sample As SKBitmap = Nothing
+                Try
+                    Await Task.Run(Sub()
+                                       target = ImageProcessor.TryCloneBaseCachedBitmap(previewSource, targetAdj)
+                                       If target Is Nothing Then target = ImageProcessor.RenderPreviewSkBitmap(previewSource, targetAdj)
+                                       sample = target?.Copy()
+                                   End Sub)
+                Catch ex As Exception
+                    target?.Dispose()
+                    sample?.Dispose()
+                    DiagnosticLogService.LogException("EditorRetouchInit", ex)
+                    Return
+                End Try
+
+                If seq <> _retouchBuffersInitSeq OrElse target Is Nothing OrElse sample Is Nothing OrElse
+                   Not Object.ReferenceEquals(GetPreviewSource(), previewSource) Then
+                    target?.Dispose()
+                    sample?.Dispose()
+                    Return
+                End If
+
+                DisposeRetouchLiveBuffers(keepInitSeq:=True)
+                _retouchLiveBitmap = target
+                _retouchLiveSampleBitmap = sample
+                _retouchBuffersKey = ImageProcessor.ComputeBaseKey(targetAdj)
+
+                ' Aufgelaufene Punkte des aktiven Zugs nachziehen und die echte Vorschau uebernehmen.
+                If _retouchStrokeActive Then
+                    Dim pendingSpots = _retouchSpots.Skip(strokeStart).Where(Function(s) s IsNot Nothing).ToList()
+                    If pendingSpots.Count > 0 Then
+                        ImageProcessor.ApplyRetouchSpotsInPlace(_retouchLiveBitmap, _retouchLiveSampleBitmap, pendingSpots,
+                                                                GetBaseWidth(), GetBaseHeight())
+                        For Each s In pendingSpots
+                            ExpandRetouchLivePatchRect(s)
+                        Next
+                        PublishRetouchLivePreview(True)
+                    End If
+                End If
+            Finally
+                _retouchBuffersInitializing = False
+            End Try
+        End Sub
 
         Private Sub PublishRetouchLivePreview(force As Boolean)
             If _retouchLiveBitmap Is Nothing OrElse _retouchLivePatchRect.IsEmpty Then Return
@@ -9654,19 +11807,105 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' ARBEITSBILD (Stufe E): der Zug wird REGIONAL in Vollauflösung ins Arbeitsbild
+        ''' eingebacken (Hintergrund-Queue) - kein Rezept-Replay mehr. Der Live-Patch (bzw. die
+        ''' Orange-Maske bei Heal/Großradius) überbrückt, bis der Commit-Render landet; Undo
+        ''' läuft über den Vorher-Patch des Commits.
         Public Sub CommitRetouchStroke()
             If Not _retouchStrokeActive Then Return
             _retouchStrokeActive = False
+            Dim strokeStart = Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count))
+            Dim strokeSpots = _retouchSpots.Skip(strokeStart).
+                Where(Function(s) s IsNot Nothing).
+                Select(Function(s) s.Clone()).
+                ToList()
+            Dim strokeHasHeal = strokeSpots.Any(
+                Function(s) Not s.HasCloneSource AndAlso String.Equals(s.Mode, "Heal", StringComparison.OrdinalIgnoreCase))
+            ' Spots sind TRANSIENT: ab dem Commit sind die Pixel des Arbeitsbilds die Wahrheit.
+            _retouchSpots.Clear()
+            _retouchStrokeStartSpotIndex = 0
             _lastRetouchLivePreviewUtc = DateTime.MinValue
             _previewTimer.Stop()
             _previewPending = False
+            If strokeSpots.Count = 0 Then Return
+
+            Dim undoEntry = _lastPushedUndoEntry   ' PushUndo kam beim Zugstart (AddRetouchSpot)
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            Dim rect = ComputeRetouchStrokeFullRect(strokeSpots, baseW, baseH)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+
+            ' Live-Patch/Maske stehen lassen - die Brücke, bis der Commit-Render landet.
             PublishRetouchLivePreview(True)
             _clearRetouchLivePatchAfterPreview = True
-            UpdatePreview()
-            DisposeRetouchLiveBuffers()
+            StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
+
+            Dim sw = Diagnostics.Stopwatch.StartNew()
+            EnqueueWorkingCommit(
+                Function()
+                    Return _workingImage.CommitRegion(rect,
+                        Sub(full)
+                            ' Schreibt nur innerhalb der Spot-Masken (liegen in rect); die
+                            ' Heal-Kandidatensuche LIEST frei aus der Umgebung des Vollbilds.
+                            ImageProcessor.ApplyRetouchSpotsInPlace(full, full, strokeSpots, baseW, baseH)
+                        End Sub)
+                End Function,
+                Sub(patch)
+                    If undoEntry IsNot Nothing Then undoEntry.Patch = patch
+                    DiagnosticLogService.LogAlways("Editor.RetouchCommit",
+                        $"spots={strokeSpots.Count} heal={strokeHasHeal} rect={rect.Left},{rect.Top},{rect.Width}x{rect.Height} pixels={CLng(rect.Width) * CLng(rect.Height)} ms={sw.ElapsedMilliseconds}")
+                    ' Nicht-Heal-Zug: das Live-Target enthält den Zug bereits (live gemalt) und das
+                    ' Arbeitsbild jetzt auch - Sample auf den neuen Stand kopieren und NUR den
+                    ' Gültigkeitsstempel auf die neue Arbeitsbild-Version nachziehen. Ohne das warf
+                    ' jeder Zugstart die Puffer weg (Log: discardAtStrokeStart hadBuffers=True) und
+                    ' der Stempel verlor seine Live-Ansicht ab Zug 2 (alter Nutzertest-24-Befund).
+                    If Not strokeHasHeal AndAlso _retouchLiveBitmap IsNot Nothing Then
+                        Dim refreshedSample = _retouchLiveBitmap.Copy()
+                        If refreshedSample IsNot Nothing Then
+                            _retouchLiveSampleBitmap?.Dispose()
+                            _retouchLiveSampleBitmap = refreshedSample
+                            _retouchBuffersKey = ImageProcessor.ComputeBaseKey(GetCurrentAdjustments(forPreview:=True))
+                        Else
+                            DisposeRetouchLiveBuffers()
+                        End If
+                    End If
+                    SchedulePreviewUpdate()
+                End Sub)
+
+            ' Live-Puffer nach Heal-Zügen: das Target zeigt den ungeheilten Stand -> wegwerfen;
+            ' der nächste Zugstart baut sie asynchron neu auf (dann inkl. Heilung).
+            If strokeHasHeal Then
+                DisposeRetouchLiveBuffers()
+            End If
         End Sub
 
-        Private Sub DisposeRetouchLiveBuffers()
+        ''' Zug-Region in Basis-Bildpixeln: Vereinigung aller Spot-Kreise plus Rand für weiche
+        ''' Kanten und Blur (DrawBlurSpot-Pad = r + 3*sigma + 2 mit sigma <= 0,22r - der Faktor 2
+        ''' deckt das großzügig ab). Geschrieben wird nur innerhalb dieser Region (harte
+        ''' Anforderung des Umbaus); gelesen werden darf außerhalb.
+        Private Shared Function ComputeRetouchStrokeFullRect(spots As List(Of RetouchSpot),
+                                                             baseW As Integer, baseH As Integer) As SKRectI
+            If spots Is Nothing OrElse spots.Count = 0 OrElse baseW <= 0 OrElse baseH <= 0 Then Return SKRectI.Empty
+            Dim left As Double = Double.MaxValue, top As Double = Double.MaxValue
+            Dim right As Double = Double.MinValue, bottom As Double = Double.MinValue
+            For Each s In spots
+                Dim margin = s.RadiusPixels * 2.0F + 16.0F
+                left = Math.Min(left, s.XPixels - margin)
+                top = Math.Min(top, s.YPixels - margin)
+                right = Math.Max(right, s.XPixels + margin)
+                bottom = Math.Max(bottom, s.YPixels + margin)
+            Next
+            If left > right OrElse top > bottom Then Return SKRectI.Empty
+            Return New SKRectI(Math.Max(0, CInt(Math.Floor(left))),
+                               Math.Max(0, CInt(Math.Floor(top))),
+                               Math.Min(baseW, CInt(Math.Ceiling(right))),
+                               Math.Min(baseH, CInt(Math.Ceiling(bottom))))
+        End Function
+
+        Private Sub DisposeRetouchLiveBuffers(Optional keepInitSeq As Boolean = False)
+            ' Laufende asynchrone Puffer-Initialisierung invalidieren (Bildwechsel, Werkzeugwechsel) -
+            ' ausser der Init-Abschluss selbst raeumt gerade die alten Puffer weg (keepInitSeq).
+            If Not keepInitSeq Then _retouchBuffersInitSeq += 1
             If _retouchLiveBitmap IsNot Nothing Then
                 _retouchLiveBitmap.Dispose()
                 _retouchLiveBitmap = Nothing
@@ -9675,6 +11914,7 @@ Namespace ViewModels
                 _retouchLiveSampleBitmap.Dispose()
                 _retouchLiveSampleBitmap = Nothing
             End If
+            _retouchBuffersKey = Nothing
             _retouchLiveMaskBitmapWidth = 0
             _retouchLiveMaskBitmapHeight = 0
         End Sub
@@ -9849,8 +12089,13 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetRetouchInternal()
+            ' ARBEITSBILD (Stufe E): committete Retusche ist eingebacken und wird hier bewusst
+            ' NICHT entfernt (das würde auch Pinselstriche wegwischen - dafür gibt es Undo bzw.
+            ' das globale Zurücksetzen). Hier nur Werkzeug-Zustand + evtl. offenen Zug verwerfen.
             _retouchRadius = 24.0
             _retouchSpots.Clear()
+            _retouchStrokeActive = False
+            _retouchStrokeStartSpotIndex = 0
             ClearCloneSource()
             Me.RaisePropertyChanged(NameOf(RetouchRadius))
             RaiseResetButtonStateChanged()
@@ -10140,6 +12385,7 @@ Namespace ViewModels
             If adj.CropLeftPercent <> 0 OrElse adj.CropTopPercent <> 0 OrElse adj.CropRightPercent <> 0 OrElse adj.CropBottomPercent <> 0 Then Return "Zuschneiden"
             If adj.ResizeWidth > 0 OrElse adj.ResizeHeight > 0 Then Return "Bildgröße"
             If adj.CanvasWidth > 0 OrElse adj.CanvasHeight > 0 Then Return "Leinwandgröße"
+            If adj.RasterPaintStrokes IsNot Nothing AndAlso adj.RasterPaintStrokes.Count > 0 Then Return "Pinsel/Radierer"
             If adj.Annotations IsNot Nothing AndAlso adj.Annotations.Count > 0 Then Return "Text"
             If adj.RotationDegrees <> 0 OrElse adj.StraightenDegrees <> 0 OrElse adj.FlipHorizontal OrElse adj.FlipVertical Then Return "Transformieren"
             If Not ImageAdjustments.IsIdentityCurve(adj.CurveRgbPoints) OrElse Not ImageAdjustments.IsIdentityCurve(adj.CurveRedPoints) OrElse
@@ -10150,19 +12396,6 @@ Namespace ViewModels
             If adj.Vignette <> 0 OrElse adj.BorderSize <> 0 Then Return "Vignette/Rahmen"
             If Not String.Equals(adj.FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase) Then Return "Filter"
             Return "Anpassung"
-        End Function
-
-        Private Shared Function GetFormatFromExtension(extension As String) As String
-            Select Case If(extension, "").Trim().TrimStart("."c).ToUpperInvariant()
-                Case "JPEG", "JPG"
-                    Return "JPG"
-                Case "PNG"
-                    Return "PNG"
-                Case "WEBP"
-                    Return "WEBP"
-                Case Else
-                    Return "JPG"
-            End Select
         End Function
 
         Private Sub SetInfoTab(tabName As String)
@@ -10388,8 +12621,8 @@ Namespace ViewModels
                 HistogramImage = ImageProcessor.BuildHistogramImage(previewSource, 240, 120)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(previewSource)
             Else
-                HistogramImage = ImageProcessor.BuildHistogramImage(_currentImagePath, 240, 120)
-                _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(_currentImagePath)
+                HistogramImage = ImageProcessor.BuildHistogramImage(RenderSourcePath, 240, 120)
+                _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(RenderSourcePath)
             End If
             Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
         End Sub
@@ -10410,6 +12643,9 @@ Namespace ViewModels
 
             Public Property Preview As Bitmap
             Public Property Comparison As Bitmap
+            ''' STUFE 2: die frisch gerenderte Szene (SKBitmap); der Erfolgs-Pfad uebernimmt die
+            ''' Ownership (SetSceneBitmap) und setzt das Feld auf Nothing, sonst raeumt Dispose auf.
+            Public Property SceneSk As SKBitmap
 
             Public Sub New(preview As Bitmap, comparison As Bitmap)
                 Me.Preview = preview
@@ -10423,6 +12659,8 @@ Namespace ViewModels
                 If TypeOf Comparison Is IDisposable Then
                     DirectCast(Comparison, IDisposable).Dispose()
                 End If
+                SceneSk?.Dispose()
+                SceneSk = Nothing
             End Sub
         End Class
     End Class

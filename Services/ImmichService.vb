@@ -47,6 +47,12 @@ Namespace Services
         Public Property Tags As New List(Of String)()
     End Class
 
+    ''' <summary>Eine benannte Person aus der serverseitigen Gesichtserkennung von Immich.</summary>
+    Public Class ImmichPerson
+        Public Property Id As String = ""
+        Public Property Name As String = ""
+    End Class
+
     ''' <summary>
     ''' Ein Ergebnis eines Verbindungstests: <see cref="Ok"/> plus eine anzeigbare Meldung
     ''' (Benutzername bei Erfolg, Fehlertext sonst).
@@ -62,6 +68,12 @@ Namespace Services
     ''' Immich direkt statt über eine allgemeine Quellen-Abstraktion anzubinden. Alles ist async und
     ''' abbruchbar; Fehler werden geschluckt (und optional protokolliert) statt geworfen, damit ein
     ''' unerreichbarer Server nie die UI blockiert.
+    '''
+    ''' WICHTIG (Catch-Filter "When cancellationToken.IsCancellationRequested"): Nur ein echter
+    ''' Abbruch durch den AUFRUFER wird weitergeworfen. Ein HttpClient-TIMEOUT ist ebenfalls eine
+    ''' OperationCanceledException - ungefiltert flog sie durch Async-Sub-Aufrufer (z.B. das
+    ''' Blaettern im Viewer) und riss die ganze App ab. Timeouts landen deshalb im normalen
+    ''' Fehlerpfad (Log + Nothing/False).
     '''
     ''' Thumbnails werden lokal auf Platte zwischengespeichert (eigener Cache-Zweig, unabhängig vom
     ''' dateipfad-basierten <see cref="ThumbnailCacheService"/>), damit erneutes Scrollen keine
@@ -103,6 +115,14 @@ Namespace Services
         ''' <summary>True für einen Immich-Pseudo-Pfad (immich://{assetId}/{name}).</summary>
         Public Shared Function IsImmichPseudoPath(path As String) As Boolean
             Return Not String.IsNullOrEmpty(path) AndAlso path.StartsWith("immich://", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Baut den Immich-Pseudo-Pfad (immich://{assetId}/{name}) - MUSS mit
+        ''' ImageItem.CreateImmichItem identisch bleiben, denn lokale Metadaten (Farbetikett)
+        ''' werden in der Bibliotheks-DB unter genau diesem Pfad abgelegt.</summary>
+        Public Shared Function MakePseudoPath(assetId As String, fileName As String) As String
+            Dim displayName = If(String.IsNullOrEmpty(fileName), assetId, fileName)
+            Return "immich://" & assetId & "/" & displayName
         End Function
 
         ''' <summary>Zerlegt einen Immich-Pseudo-Pfad in Asset-ID und Original-Dateinamen.</summary>
@@ -200,7 +220,7 @@ Namespace Services
                         End Using
                     End Using
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.TestConnection", ex)
@@ -225,7 +245,7 @@ Namespace Services
                         Return dto?.Id
                     End Using
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.CreateAlbum", ex)
@@ -248,7 +268,7 @@ Namespace Services
                         Return resp.IsSuccessStatusCode
                     End Using
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.RenameAlbum", ex)
@@ -269,7 +289,7 @@ Namespace Services
                     End If
                     Return resp.IsSuccessStatusCode
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.DeleteAlbum", ex)
@@ -312,7 +332,7 @@ Namespace Services
                         End Using
                     End Using
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.Upload", ex)
@@ -336,7 +356,7 @@ Namespace Services
                         Return resp.IsSuccessStatusCode
                     End Using
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.AddToAlbum", ex)
@@ -411,7 +431,7 @@ Namespace Services
                         End Using
                     End Using
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.ReplaceAsset", ex)
@@ -433,7 +453,7 @@ Namespace Services
                         Return resp.IsSuccessStatusCode
                     End Using
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.CopyAsset", ex)
@@ -465,7 +485,7 @@ Namespace Services
 
                 Await RefreshAssetDetailCacheAsync(targetId, $"nach CopyAssetMetadata von {raw.Id}", cancellationToken).ConfigureAwait(False)
                 Return True
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.CopyAssetMetadata", ex)
@@ -496,7 +516,7 @@ Namespace Services
                     InvalidateAssetCaches(id)
                 Next
                 Return True
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.DeleteAssets", ex)
@@ -525,7 +545,7 @@ Namespace Services
                     _serverVersionKey = key
                     Return major
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.ServerVersion", ex)
@@ -597,7 +617,7 @@ Namespace Services
                         OrderBy(Function(a) a.Name, StringComparer.CurrentCultureIgnoreCase).
                         ToList()
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.GetAlbums", ex)
@@ -637,7 +657,7 @@ Namespace Services
                 End If
 
                 Return Await SearchMetadataFallbackAsync(query, favoriteOnly, rating, page, cancellationToken).ConfigureAwait(False)
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 LastError = ex.Message
@@ -817,7 +837,7 @@ Namespace Services
                         Distinct(StringComparer.OrdinalIgnoreCase).
                         ToList()
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.SearchTags", ex)
@@ -827,13 +847,22 @@ Namespace Services
 
         ''' <summary>Holt eine Seite von Fotos über die Metadaten-Suche - optional auf ein Album
         ''' gefiltert (v3 liefert Album-Assets NICHT über /api/albums/{id}, sondern nur so). Neueste zuerst.</summary>
-        Public Shared Async Function GetAssetsPageAsync(page As Integer, Optional albumId As String = Nothing, Optional cancellationToken As CancellationToken = Nothing) As Task(Of ImmichAssetPage)
+        Public Shared Async Function GetAssetsPageAsync(page As Integer, Optional albumId As String = Nothing,
+                                                        Optional cancellationToken As CancellationToken = Nothing,
+                                                        Optional personId As String = Nothing,
+                                                        Optional city As String = Nothing) As Task(Of ImmichAssetPage)
             Dim result As New ImmichAssetPage()
             If Not IsConfigured Then Return result
             Try
                 Dim client = GetClient()
-                Dim albumFilter = If(String.IsNullOrWhiteSpace(albumId), "", $"""albumIds"":[""{albumId}""],")
-                Dim requestBody = $"{{{albumFilter}""page"":{Math.Max(1, page)},""size"":{AssetPageSize}}}"
+                ' Ein gemeinsamer Fetcher fuer "Alle Fotos", Alben, Personen und Orte - search/metadata
+                ' filtert wahlweise per albumIds, personIds (Gesichtserkennung des Servers) oder city.
+                Dim filters As New List(Of String)()
+                If Not String.IsNullOrWhiteSpace(albumId) Then filters.Add($"""albumIds"":[""{albumId}""]")
+                If Not String.IsNullOrWhiteSpace(personId) Then filters.Add($"""personIds"":[""{personId}""]")
+                If Not String.IsNullOrWhiteSpace(city) Then filters.Add($"""city"":{JsonSerializer.Serialize(city)}")
+                Dim filterPrefix = If(filters.Count > 0, String.Join(",", filters) & ",", "")
+                Dim requestBody = $"{{{filterPrefix}""page"":{Math.Max(1, page)},""size"":{AssetPageSize}}}"
                 Using content = New StringContent(requestBody, Encoding.UTF8, "application/json")
                     Using resp = Await client.PostAsync(ApiUrl("search/metadata"), content, cancellationToken).ConfigureAwait(False)
                         resp.EnsureSuccessStatusCode()
@@ -854,11 +883,98 @@ Namespace Services
                     End Using
                 End Using
                 LastError = Nothing
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 LastError = ex.Message
                 DiagnosticLogService.LogException("Immich.GetAssetsPage", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Benannte Personen der serverseitigen Gesichtserkennung (GET /api/people).
+        ''' Unbenannte und versteckte Gesichter bleiben draußen - sie wären als Sidebar-Knoten
+        ''' ohne Namen wertlos. Leere Liste bei Fehler/unkonfiguriert (wirft nie).</summary>
+        Public Shared Async Function GetPeopleAsync(Optional cancellationToken As CancellationToken = Nothing) As Task(Of List(Of ImmichPerson))
+            Dim result As New List(Of ImmichPerson)()
+            If Not IsConfigured Then Return result
+            Try
+                Dim client = GetClient()
+                Using resp = Await client.GetAsync(ApiUrl("people?withHidden=false"), cancellationToken).ConfigureAwait(False)
+                    resp.EnsureSuccessStatusCode()
+                    Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                    Dim dto = JsonSerializer.Deserialize(Of ImmichPeopleResponseDto)(body, JsonOptions)
+                    If dto?.People IsNot Nothing Then
+                        For Each p In dto.People
+                            If p Is Nothing OrElse String.IsNullOrEmpty(p.Id) OrElse String.IsNullOrWhiteSpace(p.Name) Then Continue For
+                            If p.IsHidden Then Continue For
+                            result.Add(New ImmichPerson With {.Id = p.Id, .Name = p.Name.Trim()})
+                        Next
+                    End If
+                End Using
+                result.Sort(Function(a, b) String.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase))
+                LastError = Nothing
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Throw
+            Catch ex As Exception
+                LastError = ex.Message
+                DiagnosticLogService.LogException("Immich.GetPeople", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Orte (Städte) der Bibliothek. Primär über GET /api/search/cities - das liefert
+        ''' ALLE Städte (ein Beispiel-Asset je Stadt, exifInfo.city). GET /api/search/explore wäre
+        ''' naheliegender, gibt aber nur eine BEGRENZTE kuratierte Auswahl zurück (Befund:
+        ''' Liste endete alphabetisch bei "B") - es bleibt nur als Fallback für ältere Server.
+        ''' Leere Liste bei Fehler (wirft nie).</summary>
+        Public Shared Async Function GetPlacesAsync(Optional cancellationToken As CancellationToken = Nothing) As Task(Of List(Of String))
+            Dim result As New List(Of String)()
+            If Not IsConfigured Then Return result
+            Try
+                Dim client = GetClient()
+                Using resp = Await client.GetAsync(ApiUrl("search/cities"), cancellationToken).ConfigureAwait(False)
+                    If resp.IsSuccessStatusCode Then
+                        Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                        Dim assets = JsonSerializer.Deserialize(Of List(Of ImmichCityAssetDto))(body, JsonOptions)
+                        If assets IsNot Nothing Then
+                            For Each asset In assets
+                                Dim value = asset?.ExifInfo?.City
+                                If Not String.IsNullOrWhiteSpace(value) AndAlso Not result.Contains(value, StringComparer.CurrentCultureIgnoreCase) Then
+                                    result.Add(value.Trim())
+                                End If
+                            Next
+                        End If
+                    End If
+                End Using
+
+                If result.Count = 0 Then
+                    ' Fallback: search/explore (begrenzte Auswahl, besser als nichts).
+                    Using resp = Await client.GetAsync(ApiUrl("search/explore"), cancellationToken).ConfigureAwait(False)
+                        resp.EnsureSuccessStatusCode()
+                        Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                        Dim fields = JsonSerializer.Deserialize(Of List(Of ImmichExploreFieldDto))(body, JsonOptions)
+                        If fields IsNot Nothing Then
+                            For Each field In fields
+                                If field Is Nothing OrElse Not String.Equals(field.FieldName, "exifInfo.city", StringComparison.OrdinalIgnoreCase) Then Continue For
+                                If field.Items Is Nothing Then Continue For
+                                For Each item In field.Items
+                                    Dim value = item?.Value
+                                    If Not String.IsNullOrWhiteSpace(value) AndAlso Not result.Contains(value, StringComparer.CurrentCultureIgnoreCase) Then
+                                        result.Add(value.Trim())
+                                    End If
+                                Next
+                            Next
+                        End If
+                    End Using
+                End If
+                result.Sort(StringComparer.CurrentCultureIgnoreCase)
+                LastError = Nothing
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Throw
+            Catch ex As Exception
+                LastError = ex.Message
+                DiagnosticLogService.LogException("Immich.GetPlaces", ex)
             End Try
             Return result
         End Function
@@ -1031,7 +1147,7 @@ Namespace Services
                     If dto Is Nothing OrElse String.IsNullOrEmpty(dto.Id) Then Return Nothing
                     Return dto
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.GetAssetDetail", ex)
@@ -1064,7 +1180,7 @@ Namespace Services
                 If File.Exists(cachePath) Then
                     Return Await File.ReadAllBytesAsync(cachePath, cancellationToken).ConfigureAwait(False)
                 End If
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch
             End Try
@@ -1087,7 +1203,7 @@ Namespace Services
                     Await TryWriteCacheAsync(cachePath, bytes, cancellationToken).ConfigureAwait(False)
                     Return bytes
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.GetThumbnailBytes", ex)
@@ -1147,7 +1263,7 @@ Namespace Services
                     End Try
                     Return targetPath
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.DownloadOriginal", ex)
@@ -1217,7 +1333,7 @@ Namespace Services
                 Dim ok = Await UpdateAssetAsync(assetId, "{""description"":" & JsonSerializer.Serialize(newDescription) & "}", cancellationToken).ConfigureAwait(False)
                 Await RefreshAssetDetailCacheAsync(assetId, $"{context} ok={ok}", cancellationToken).ConfigureAwait(False)
                 Return ok
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.UpdateFerrumPixDescriptionMeta", ex)
@@ -1243,7 +1359,7 @@ Namespace Services
                     ImmichIndexService.Instance.Put(ServerKey, detail)
                     Return detail
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.RefreshAssetDetailCache", ex)
@@ -1263,7 +1379,7 @@ Namespace Services
                         Return resp.IsSuccessStatusCode
                     End Using
                 End Using
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.UpdateAsset", ex)
@@ -1299,7 +1415,7 @@ Namespace Services
                     cancellationToken).ConfigureAwait(False)
                 DiagnosticLogService.LogAlways("Immich.AddTag", $"'{normalizedTag}' → description meta asset {assetId}: {If(ok, "OK", "FEHLGESCHLAGEN")}")
                 Return ok
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.AddTag", ex)
@@ -1331,7 +1447,7 @@ Namespace Services
                     cancellationToken).ConfigureAwait(False)
                 DiagnosticLogService.LogAlways("Immich.RemoveTag", $"'{normalizedTag}' → description meta asset {assetId}: {If(ok, "OK", "FEHLGESCHLAGEN")}")
                 Return ok
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.RemoveTag", ex)
@@ -1392,7 +1508,7 @@ Namespace Services
                 Dim tempPath = cachePath & ".part"
                 Await File.WriteAllBytesAsync(tempPath, bytes, cancellationToken).ConfigureAwait(False)
                 File.Move(tempPath, cachePath, overwrite:=True)
-            Catch ex As OperationCanceledException
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch
             End Try
@@ -1478,6 +1594,34 @@ Namespace Services
             Public Property Id As String
             Public Property AlbumName As String
             Public Property Assets As List(Of ImmichAssetDto)
+        End Class
+
+        Private Class ImmichPersonDto
+            Public Property Id As String
+            Public Property Name As String
+            Public Property IsHidden As Boolean
+        End Class
+
+        Private Class ImmichPeopleResponseDto
+            Public Property People As List(Of ImmichPersonDto)
+            Public Property Total As Integer
+        End Class
+
+        Private Class ImmichExploreItemDto
+            Public Property Value As String
+        End Class
+
+        Private Class ImmichCityAssetDto
+            Public Property ExifInfo As ImmichCityExifDto
+        End Class
+
+        Private Class ImmichCityExifDto
+            Public Property City As String
+        End Class
+
+        Private Class ImmichExploreFieldDto
+            Public Property FieldName As String
+            Public Property Items As List(Of ImmichExploreItemDto)
         End Class
 
         Private Class ImmichAssetDto

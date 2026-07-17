@@ -10,6 +10,7 @@ Imports SkiaSharp
 Imports Avalonia.Media.Imaging
 Imports Avalonia.Platform
 Imports System.Text.RegularExpressions
+Imports System.Text.Json.Serialization
 Imports System.Runtime.InteropServices
 Imports QRCoder
 
@@ -30,6 +31,7 @@ Namespace Services
         Public ReadOnly X As Single
         Public ReadOnly Y As Single
 
+        <JsonConstructor>
         Public Sub New(x As Single, y As Single)
             Me.X = x
             Me.Y = y
@@ -47,8 +49,11 @@ Namespace Services
     Public NotInheritable Class BrushStroke
         Private ReadOnly _points As StrokePoint()
 
-        Public Sub New(points As IEnumerable(Of StrokePoint))
-            _points = If(points, Enumerable.Empty(Of StrokePoint)()).ToArray()
+        ' Parametername und -typ müssen exakt zur Points-Eigenschaft passen, damit System.Text.Json den
+        ' Zug konstruktorbasiert wiederherstellen kann (VB kann keine JsonConverter schreiben, siehe FpxService).
+        <JsonConstructor>
+        Public Sub New(points As IReadOnlyList(Of StrokePoint))
+            _points = If(points, CType(Array.Empty(Of StrokePoint)(), IReadOnlyList(Of StrokePoint))).ToArray()
         End Sub
 
         Public ReadOnly Property Points As IReadOnlyList(Of StrokePoint)
@@ -58,7 +63,7 @@ Namespace Services
         End Property
 
         Public Function Scale(scaleX As Single, scaleY As Single) As BrushStroke
-            Return New BrushStroke(_points.Select(Function(p) New StrokePoint(p.X * scaleX, p.Y * scaleY)))
+            Return New BrushStroke(_points.Select(Function(p) New StrokePoint(p.X * scaleX, p.Y * scaleY)).ToList())
         End Function
     End Class
 
@@ -96,6 +101,94 @@ Namespace Services
         End Function
     End Class
 
+    Public Class PixelPaintStroke
+        Public Property Kind As String = "Brush"
+        Public Property XPixels As Single = 0
+        Public Property YPixels As Single = 0
+        Public Property WidthPixels As Single = 1
+        Public Property HeightPixels As Single = 1
+        Public Property StrokeColor As String = "#FF000000"
+        Public Property EraserFillColor As String = ""
+        Public Property StrokeWidth As Single = 24
+        Public Property Opacity As Single = 100
+        Public Property BlendMode As String = "Normal"
+        Public Property FlowPercent As Single = 100
+        Public Property HardnessPercent As Single = 100
+        Public Property BrushPreset As String = "soft"
+        Public Property ShadowEnabled As Boolean = False
+        Public Property ShadowOffsetXPercent As Single = 2
+        Public Property ShadowOffsetYPercent As Single = 2
+        Public Property ShadowBlur As Single = 6
+        Public Property ShadowStrength As Single = 100
+        Public Property ShadowColor As String = "#80000000"
+        Public Property ShadowSizePercent As Single = 100
+        Public Property GlowEnabled As Boolean = False
+        Public Property GlowBlur As Single = 10
+        Public Property GlowStrength As Single = 100
+        Public Property GlowColor As String = "#FFFFFF00"
+        Public Property Strokes As New List(Of BrushStroke)()
+
+        Public Function Clone() As PixelPaintStroke
+            Return New PixelPaintStroke With {
+                .Kind = If(String.IsNullOrWhiteSpace(Kind), "Brush", Kind),
+                .XPixels = XPixels,
+                .YPixels = YPixels,
+                .WidthPixels = WidthPixels,
+                .HeightPixels = HeightPixels,
+                .StrokeColor = If(StrokeColor, "#FF000000"),
+                .EraserFillColor = If(EraserFillColor, ""),
+                .StrokeWidth = StrokeWidth,
+                .Opacity = Opacity,
+                .BlendMode = If(String.IsNullOrWhiteSpace(BlendMode), "Normal", BlendMode),
+                .FlowPercent = FlowPercent,
+                .HardnessPercent = HardnessPercent,
+                .BrushPreset = If(String.IsNullOrWhiteSpace(BrushPreset), "soft", BrushPreset),
+                .ShadowEnabled = ShadowEnabled,
+                .ShadowOffsetXPercent = ShadowOffsetXPercent,
+                .ShadowOffsetYPercent = ShadowOffsetYPercent,
+                .ShadowBlur = ShadowBlur,
+                .ShadowStrength = ShadowStrength,
+                .ShadowColor = If(ShadowColor, "#80000000"),
+                .ShadowSizePercent = ShadowSizePercent,
+                .GlowEnabled = GlowEnabled,
+                .GlowBlur = GlowBlur,
+                .GlowStrength = GlowStrength,
+                .GlowColor = If(GlowColor, "#FFFFFF00"),
+                .Strokes = New List(Of BrushStroke)(Strokes)
+            }
+        End Function
+
+        Friend Function ToRenderAnnotation() As ImageAnnotation
+            Return New ImageAnnotation With {
+                .Kind = If(String.IsNullOrWhiteSpace(Kind), "Brush", Kind),
+                .XPixels = XPixels,
+                .YPixels = YPixels,
+                .WidthPixels = WidthPixels,
+                .HeightPixels = HeightPixels,
+                .StrokeColor = If(StrokeColor, "#FF000000"),
+                .EraserFillColor = If(EraserFillColor, ""),
+                .StrokeWidth = StrokeWidth,
+                .Opacity = Opacity,
+                .BlendMode = If(String.IsNullOrWhiteSpace(BlendMode), "Normal", BlendMode),
+                .FlowPercent = FlowPercent,
+                .HardnessPercent = HardnessPercent,
+                .BrushPreset = If(String.IsNullOrWhiteSpace(BrushPreset), "soft", BrushPreset),
+                .ShadowEnabled = ShadowEnabled,
+                .ShadowOffsetXPercent = ShadowOffsetXPercent,
+                .ShadowOffsetYPercent = ShadowOffsetYPercent,
+                .ShadowBlur = ShadowBlur,
+                .ShadowStrength = ShadowStrength,
+                .ShadowColor = If(ShadowColor, "#80000000"),
+                .ShadowSizePercent = ShadowSizePercent,
+                .GlowEnabled = GlowEnabled,
+                .GlowBlur = GlowBlur,
+                .GlowStrength = GlowStrength,
+                .GlowColor = If(GlowColor, "#FFFFFF00"),
+                .Strokes = New List(Of BrushStroke)(Strokes)
+            }
+        End Function
+    End Class
+
     Public Class ImageAnnotation
         Implements INotifyPropertyChanged
 
@@ -119,9 +212,14 @@ Namespace Services
         ' Spiegelung des Objekts um seine eigene Mitte (nicht um die Bildmitte): das Drehen-Werkzeug
         ' wirkt mit seinen vier Knöpfen auf das markierte Objekt, und Spiegeln können die Anfasser nicht.
         Private _flipHorizontal As Boolean = False
+        Private _lockAspect As Boolean = True
         Private _flipVertical As Boolean = False
         Private _anchor As String = ""
         Private _isVisible As Boolean = True
+        ' Vom Nutzer im Ebenen-Panel vergebener Name. Leer = automatische Beschriftung aus Art/Text/Datei.
+        Private _customName As String = ""
+        ' Reiner UI-Zustand: gerade wird der Name inline bearbeitet (nicht persistiert, nicht geklont).
+        Private _isRenaming As Boolean = False
         Private _hardnessPercent As Single = 100
         Private _brushPreset As String = "soft"
         Private _fillKind As String = "Solid"
@@ -188,8 +286,44 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Vom Nutzer vergebener Ebenenname; leer = automatische Beschriftung. Ändert LayerLabel.</summary>
+        Public Property CustomName As String
+            Get
+                Return _customName
+            End Get
+            Set(value As String)
+                SetField(_customName, If(value, ""))
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(LayerLabel)))
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(EditableName)))
+            End Set
+        End Property
+
+        ''' <summary>Reiner UI-Zustand: die Ebene wird im Panel gerade inline umbenannt (steuert die
+        ''' Sichtbarkeit von Beschriftung vs. Eingabefeld). Wird nicht gespeichert oder geklont.</summary>
+        Public Property IsRenaming As Boolean
+            Get
+                Return _isRenaming
+            End Get
+            Set(value As Boolean)
+                SetField(_isRenaming, value)
+            End Set
+        End Property
+
+        ''' <summary>Der bearbeitbare Rohname (= CustomName). BeginLayerRename füllt ihn beim Start mit der
+        ''' aktuellen Beschriftung vor, damit das Eingabefeld sich wie ein normales Textfeld verhält. Leert
+        ''' der Nutzer das Feld, fällt die Ebene auf die automatische Beschriftung zurück.</summary>
+        Public Property EditableName As String
+            Get
+                Return _customName
+            End Get
+            Set(value As String)
+                CustomName = If(value, "")
+            End Set
+        End Property
+
         Public ReadOnly Property LayerLabel As String
             Get
+                If Not String.IsNullOrWhiteSpace(_customName) Then Return _customName
                 Dim baseLabel = GermanKindLabel(_kind)
                 Dim isSelectionKind = _kind IsNot Nothing AndAlso
                     (_kind.Equals("SelectionFill", StringComparison.OrdinalIgnoreCase) OrElse _kind.Equals("SelectionImage", StringComparison.OrdinalIgnoreCase))
@@ -443,6 +577,18 @@ Namespace Services
             End Set
         End Property
 
+        ''' Seitenverhältnis beim Grössenziehen beibehalten - relevant für Bild-Objekte und
+        ''' Wasserzeichen-Bilder (wie "Seitenverhältnis beibehalten" bei Bildgrösse). Standard AN:
+        ''' ein verzerrtes Foto ist praktisch nie gewollt; abschalten bleibt jederzeit möglich.
+        Public Property LockAspect As Boolean
+            Get
+                Return _lockAspect
+            End Get
+            Set(value As Boolean)
+                SetField(_lockAspect, value)
+            End Set
+        End Property
+
         Public Property FlipVertical As Boolean
             Get
                 Return _flipVertical
@@ -654,6 +800,7 @@ Namespace Services
             Return New ImageAnnotation With {
                 .Kind = Kind,
                 .Text = Text,
+                .CustomName = CustomName,
                 .ImagePath = ImagePath,
                 .XPixels = XPixels,
                 .YPixels = YPixels,
@@ -670,6 +817,7 @@ Namespace Services
                 .FlowPercent = FlowPercent,
                 .RotationDegrees = RotationDegrees,
                 .FlipHorizontal = FlipHorizontal,
+                .LockAspect = LockAspect,
                 .FlipVertical = FlipVertical,
                 .Adjustments = If(Adjustments Is Nothing, Nothing, Adjustments.Clone()),
                 .Anchor = Anchor,
@@ -831,6 +979,15 @@ Namespace Services
         Public Property LutStrength As Single = 100
         Public Property RetouchSpots As New System.Collections.Generic.List(Of RetouchSpot)()
         Public Property Annotations As New System.Collections.Generic.List(Of ImageAnnotation)()
+        Public Property RasterPaintStrokes As New System.Collections.Generic.List(Of PixelPaintStroke)()
+        ''' <summary>Versionszähler des ARBEITSBILDS (Umbau 2026-07-17): geht in den Base-Cache-Key
+        ''' ein und verwirft Pipeline-Caches nach jedem eingebackenen Commit. Kein Bestandteil des
+        ''' Rezepts im inhaltlichen Sinn (reiner Cache-Stempel), schadet aber serialisiert nicht.</summary>
+        Public Property WorkingImageVersion As Long = 0
+        ''' <summary>True, wenn der Radierer (oder transparentes Rastern) Alpha-Löcher ins
+        ''' Arbeitsbild gestanzt hat - im .fpx-Rezept persistiert, damit Schachbrett und
+        ''' Transparenz-Verhalten das Wiederöffnen überleben.</summary>
+        Public Property WorkingImageHasTransparency As Boolean = False
         Public Property HasActiveSelection As Boolean = False
         Public Property SelectionXPercent As Double = 0
         Public Property SelectionYPercent As Double = 0
@@ -849,6 +1006,11 @@ Namespace Services
         ''' pixelgenau - weich wird die Kante erst bei der Verwendung (Anpassungs-Skopus, Kopieren, Füllen).
         ''' So lässt sich der Wert jederzeit ändern, ohne die Auswahl neu zu ziehen.</summary>
         Public Property SelectionFeatherPixels As Single = 0
+
+        ''' <summary>True = die Hintergrund-Ebene (das Basisbild) wird beim Zusammensetzen ausgeblendet; es
+        ''' bleiben nur die Objekt-Ebenen auf transparentem Grund. Strukturell, keine Pixel-Anpassung, und
+        ''' gehört NICHT zu den Eigenschaften, die ein einzelnes Objekt mitträgt (siehe StructuralPropertyNames).</summary>
+        Public Property BackgroundHidden As Boolean = False
 
         Public Shared Function IsIdentityCurve(pointsCsv As String) As Boolean
             Return String.IsNullOrWhiteSpace(pointsCsv) OrElse String.Equals(pointsCsv.Trim(), "0,0;255,255", StringComparison.Ordinal)
@@ -880,11 +1042,11 @@ Namespace Services
             "ResizeWidth", "ResizeHeight", "LockResizeAspect", "ResizeInterpolation",
             "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
             "BorderSize", "BorderColor", "BorderCornerRadius", "BorderEffect",
-            "RetouchSpots", "Annotations",
+            "RetouchSpots", "Annotations", "RasterPaintStrokes",
             "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
-            "SelectionMaskPngBase64", "SelectionFeatherPixels"
+            "SelectionMaskPngBase64", "SelectionFeatherPixels", "BackgroundHidden"
         }
 
         Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing
@@ -934,6 +1096,8 @@ Namespace Services
                 .Exposure = Exposure,
                 .SourceWidthPixels = SourceWidthPixels,
                 .SourceHeightPixels = SourceHeightPixels,
+                .WorkingImageVersion = WorkingImageVersion,
+                .WorkingImageHasTransparency = WorkingImageHasTransparency,
                 .Brightness = Brightness,
                 .Contrast = Contrast,
                 .Saturation = Saturation,
@@ -1027,6 +1191,7 @@ Namespace Services
                 .LutStrength = LutStrength,
                 .RetouchSpots = RetouchSpots.Select(Function(s) s.Clone()).ToList(),
                 .Annotations = Annotations.Select(Function(a) a.Clone()).ToList(),
+                .RasterPaintStrokes = RasterPaintStrokes.Select(Function(s) s.Clone()).ToList(),
                 .HasActiveSelection = HasActiveSelection,
                 .SelectionXPercent = SelectionXPercent,
                 .SelectionYPercent = SelectionYPercent,
@@ -1040,7 +1205,8 @@ Namespace Services
                 .SelectionMaskRight = SelectionMaskRight,
                 .SelectionMaskBottom = SelectionMaskBottom,
                 .SelectionMaskPngBase64 = SelectionMaskPngBase64,
-                .SelectionFeatherPixels = SelectionFeatherPixels
+                .SelectionFeatherPixels = SelectionFeatherPixels,
+                .BackgroundHidden = BackgroundHidden
             }
         End Function
     End Class
@@ -1096,6 +1262,8 @@ Namespace Services
 
     Public Class ImageProcessor
 
+        Private Const FastPngCompressionQuality As Integer = 60
+
         ''' SKPaint trug bis SkiaSharp 2 die Schrift selbst. Sein interner Ersatz-SKFont hat
         ''' LinearMetrics=True - ein frisch erzeugter SKFont dagegen False, was Textbreiten und das
         ''' Rendering messbar verändert (geprüft: identische Bytes erst mit LinearMetrics=True).
@@ -1135,6 +1303,12 @@ Namespace Services
         Private Shared _baseCacheKey As String = Nothing
         Private Shared _baseCacheSourceRef As SKBitmap = Nothing
         Private Shared _baseCacheBitmap As SKBitmap = Nothing
+
+        ' Zweiter Cache neben dem Base-Cache: das Basisbild MIT allen Raster-Strichen (Pinsel/Radierer),
+        ' in Preview-Auflösung. Damit muss beim Malen nur das NEUE Strichsegment nachgezeichnet werden,
+        ' statt alle Striche pro Maus-Batch neu zu rendern. Der Zustand + die Zeichenlogik liegen in
+        ' RasterCompositeCache; hier werden die öffentlichen Einstiege unter _baseCacheLock gehalten und
+        ' das gültige Base-Bitmap hereingereicht (siehe TryRenderRasterPaintIncrementalPatch).
 
         ' Ersetzt SKBitmap.Decode(path) an den Stellen, die das tatsächlich bearbeitete Foto laden
         ' (nicht Icons/Sticker-Assets oder reine Pixel-Statistik) - korrigiert die EXIF-Orientierung
@@ -1186,12 +1360,123 @@ Namespace Services
             End Using
         End Function
 
+        ''' TEMPORÄR (Untersuchung #7 Vorher/Nachher dunkler): protokolliert den Farbraum des rohen
+        ''' Datei-Decodes und ob eine Farbkonvertierung nach sRGB den Mittelpixel ändert. So lässt sich
+        ''' hart bestätigen, ob die Skia-Pipeline (farbraumlose Zwischen-Bitmaps) gegenüber dem
+        ''' Avalonia-Decoder (New Bitmap) einen Helligkeits-/Farbversatz erzeugt. Nach der Auswertung
+        ''' wieder entfernen.
+        Public Shared Sub LogDecodeColorDiagnostics(path As String)
+            Try
+                If String.IsNullOrWhiteSpace(path) Then Return
+                Dim data As SKData
+                Using stream = OpenSourceStream(path)
+                    If stream Is Nothing Then Return
+                    data = SKData.Create(stream)
+                End Using
+                If data Is Nothing Then Return
+                Using data
+                    Using raw = SKBitmap.Decode(data)
+                        If raw Is Nothing Then Return
+                        Dim cs = raw.ColorSpace
+                        Dim csDesc = If(cs Is Nothing, "null", If(cs.IsSrgb, "sRGB", "non-sRGB"))
+                        Dim cx = raw.Width \ 2
+                        Dim cy = raw.Height \ 2
+                        Dim pRaw = raw.GetPixel(cx, cy)
+
+                        ' Ziel farbraumlos (wie der Pipeline-Start via New SKBitmap ohne ColorSpace):
+                        Dim pNull As SKColor = pRaw
+                        Using drawnNull = New SKBitmap(raw.Width, raw.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                            Using canvas = New SKCanvas(drawnNull)
+                                canvas.Clear(SKColors.Transparent)
+                                canvas.DrawBitmap(raw, 0, 0)
+                            End Using
+                            pNull = drawnNull.GetPixel(cx, cy)
+                        End Using
+
+                        ' Ziel explizit sRGB (farbverwaltet):
+                        Dim pSrgb As SKColor = pRaw
+                        Dim srgbInfo = New SKImageInfo(raw.Width, raw.Height, SKColorType.Bgra8888, SKAlphaType.Premul, SKColorSpace.CreateSrgb())
+                        Using drawnSrgb = New SKBitmap(srgbInfo)
+                            Using canvas = New SKCanvas(drawnSrgb)
+                                canvas.Clear(SKColors.Transparent)
+                                canvas.DrawBitmap(raw, 0, 0)
+                            End Using
+                            pSrgb = drawnSrgb.GetPixel(cx, cy)
+                        End Using
+
+                        DiagnosticLogService.LogAlways("Editor.DecodeColorCheck",
+                            $"file={IO.Path.GetFileName(path)} colorType={raw.ColorType} colorSpace={csDesc} " &
+                            $"rawCenter=#{pRaw.Red:X2}{pRaw.Green:X2}{pRaw.Blue:X2} " &
+                            $"nullTarget=#{pNull.Red:X2}{pNull.Green:X2}{pNull.Blue:X2} " &
+                            $"srgbTarget=#{pSrgb.Red:X2}{pSrgb.Green:X2}{pSrgb.Blue:X2} " &
+                            $"nullVsSrgbDiffers={pNull <> pSrgb}")
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.DecodeColorCheck", ex)
+            End Try
+        End Sub
+
         Public Shared Function ApplyAdjustments(sourcePath As String, adj As ImageAdjustments) As Bitmap
             Using original = DecodeOriented(sourcePath)
                 If original Is Nothing Then Return Nothing
 
                 Using processed = ProcessBitmap(original, adj)
                     Return ToAvaloniaBitmap(processed)
+                End Using
+            End Using
+        End Function
+
+        Public Shared Function RenderPngStream(sourcePath As String, adj As ImageAdjustments) As MemoryStream
+            Dim decodeMs As Long = 0
+            Dim processMs As Long = 0
+            Dim encodeMs As Long = 0
+            Return RenderPngStream(sourcePath, adj, 0, decodeMs, processMs, encodeMs)
+        End Function
+
+        Public Shared Function RenderPngStream(sourcePath As String, adj As ImageAdjustments,
+                                               maxDimension As Integer,
+                                               ByRef decodeMs As Long, ByRef processMs As Long, ByRef encodeMs As Long) As MemoryStream
+            Dim sw = Diagnostics.Stopwatch.StartNew()
+            Using original = DecodeOriented(sourcePath)
+                decodeMs = sw.ElapsedMilliseconds
+                If original Is Nothing Then Return Nothing
+
+                Dim workingSource = CreatePreviewWorkingBitmap(original, maxDimension)
+                If workingSource Is Nothing Then Return Nothing
+
+                Try
+                    sw.Restart()
+                    Using processed = ProcessBitmap(workingSource, adj)
+                        processMs = sw.ElapsedMilliseconds
+                        Return EncodePngStream(processed, encodeMs)
+                    End Using
+                Finally
+                    If Not Object.ReferenceEquals(workingSource, original) Then workingSource.Dispose()
+                End Try
+            End Using
+        End Function
+
+        Public Shared Function RenderPngStream(source As SKBitmap, adj As ImageAdjustments,
+                                               ByRef processMs As Long, ByRef encodeMs As Long) As MemoryStream
+            If source Is Nothing Then Return Nothing
+            Dim sw = Diagnostics.Stopwatch.StartNew()
+            Using processed = ProcessBitmap(source, adj)
+                processMs = sw.ElapsedMilliseconds
+                Return EncodePngStream(processed, encodeMs)
+            End Using
+        End Function
+
+        Private Shared Function EncodePngStream(bitmap As SKBitmap, ByRef encodeMs As Long) As MemoryStream
+            Dim sw = Diagnostics.Stopwatch.StartNew()
+            Using image = SKImage.FromBitmap(bitmap)
+                ' PNG bleibt verlustfrei; niedrigerer Quality-Wert reduziert hier die Encoder-Arbeit.
+                Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
+                    Dim ms As New MemoryStream()
+                    data.SaveTo(ms)
+                    ms.Position = 0
+                    encodeMs = sw.ElapsedMilliseconds
+                    Return ms
                 End Using
             End Using
         End Function
@@ -1230,6 +1515,45 @@ Namespace Services
         Public Shared Function RenderPreviewSkBitmap(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If source Is Nothing Then Return Nothing
             Return ProcessBitmap(source, adj)
+        End Function
+
+        ''' <summary>STUFE 5: Klon der warmen Basis (Pixel-Pipeline INKL. committeter Retusche, OHNE
+        ''' Objekte) - das ist exakt das "Zielbild" der Retusche-Live-Puffer. Spart den vollen
+        ''' Pipeline-Render, wenn der Cache zur aktuellen Einstellung passt; sonst Nothing.</summary>
+        Public Shared Function TryCloneBaseCachedBitmap(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            If Not Monitor.TryEnter(_baseCacheLock, 12) Then Return Nothing
+            Try
+                Dim key = ComputeBaseKey(adj)
+                If Not Object.ReferenceEquals(_baseCacheSourceRef, source) OrElse
+                   Not String.Equals(_baseCacheKey, key, StringComparison.Ordinal) OrElse
+                   _baseCacheBitmap Is Nothing Then
+                    Return Nothing
+                End If
+                Return CloneBitmap(_baseCacheBitmap)
+            Finally
+                Monitor.Exit(_baseCacheLock)
+            End Try
+        End Function
+
+        ''' <summary>STUFE 2: Szenen-Vollrender als SKBitmap UEBER den Base-Cache (GetOrComputeBaseLocked) -
+        ''' im Gegensatz zu RenderPreviewSkBitmap/ProcessBitmap, die den Cache UMGEHEN. Ohne das Waermen
+        ''' schlagen ALLE nachfolgenden Region-Renders (TryRenderAnnotationsPatchSkOnCachedBase) dauerhaft
+        ''' mit cacheMissOrBusy fehl (Log-Befund 2026-07-16). Liefert immer ein eigenes Bitmap
+        ''' (Aufrufer disposed).</summary>
+        Public Shared Function RenderSceneSkCached(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            SyncLock _baseCacheLock
+                Dim baseBitmap = GetOrComputeBaseLocked(source, adj)
+                Dim annotated = ApplyAnnotations(baseBitmap, adj)
+                ' Ohne sichtbare Annotationen liefert ApplyAnnotations die gecachte Basis selbst zurueck -
+                ' dann klonen, sonst wuerde der Aufrufer das Cache-Bitmap disposen. WICHTIG: als Rgba8888
+                ' (CloneBitmapForAnnotationComposite), damit die Szene IMMER dasselbe Pixelformat hat wie
+                ' der ApplyAnnotations-Ausgang - der Display-Blit kopiert rohe Bytes und wuerde bei
+                ' gemischten Formaten Rot/Blau vertauschen.
+                If Object.ReferenceEquals(annotated, baseBitmap) Then Return CloneBitmapForAnnotationComposite(baseBitmap)
+                Return annotated
+            End SyncLock
         End Function
 
         Public Shared Function CloneForEditing(source As SKBitmap) As SKBitmap
@@ -1331,6 +1655,206 @@ Namespace Services
             Finally
                 Monitor.Exit(_baseCacheLock)
             End Try
+        End Function
+
+        ''' <summary>
+        ''' Rendert nur einen Bildausschnitt aus dem gecachten Basisbild plus aktueller Annotationen.
+        ''' Der Pfad vermeidet beim Verschieben/Ändern von Objekten den teuren Vollbild-Composite.
+        ''' </summary>
+        Public Shared Function TryRenderAnnotationsPatchOnCachedBase(source As SKBitmap, adj As ImageAdjustments, dirtyRect As SKRectI) As Bitmap
+            Dim clampedRect As SKRectI
+            Dim patch = TryRenderAnnotationsPatchSkOnCachedBase(source, adj, dirtyRect, clampedRect)
+            If patch Is Nothing Then Return Nothing
+            Using patch
+                Return ToAvaloniaBitmap(patch)
+            End Using
+        End Function
+
+        ''' <summary>SK-Kern des Region-Renderers (Basis + Striche + Objekte im Dirty-Rect). Liefert das
+        ''' Patch-SKBitmap (Aufrufer disposed) und per clampedRect die tatsächlich gerenderte Region -
+        ''' der Szenen-Renderer zeichnet das Patch dort in die persistente Szene. Nothing bei kaltem/
+        ''' gesperrtem Base-Cache.</summary>
+        Public Shared Function TryRenderAnnotationsPatchSkOnCachedBase(source As SKBitmap, adj As ImageAdjustments, dirtyRect As SKRectI,
+                                                                       ByRef clampedRect As SKRectI) As SKBitmap
+            clampedRect = SKRectI.Empty
+            If source Is Nothing OrElse dirtyRect.IsEmpty Then Return Nothing
+
+            If Not Monitor.TryEnter(_baseCacheLock, 12) Then Return Nothing
+            Try
+                Dim key = ComputeBaseKey(adj)
+                If Not Object.ReferenceEquals(_baseCacheSourceRef, source) OrElse
+                   Not String.Equals(_baseCacheKey, key, StringComparison.Ordinal) OrElse
+                   _baseCacheBitmap Is Nothing Then
+                    Return Nothing
+                End If
+
+                Dim rect = ClampRectToBitmap(dirtyRect, _baseCacheBitmap.Width, _baseCacheBitmap.Height)
+                If rect.IsEmpty OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+
+                Dim patch = New SKBitmap(rect.Width, rect.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(patch)
+                    canvas.Clear(SKColors.Transparent)
+                    ' ARBEITSBILD-Umbau (Stufe D): Pinsel-/Radiererstriche sind ins Arbeitsbild
+                    ' eingebacken und stecken damit bereits im Base-Cache-Bitmap - der Patch
+                    ' schneidet nur noch Basis-Slice + Z-Order-Objekte (der RasterCompositeCache
+                    ' und sein Strich-Stamp sind entfallen).
+                    If adj Is Nothing OrElse Not adj.BackgroundHidden Then
+                        canvas.DrawBitmap(_baseCacheBitmap,
+                                          New SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom),
+                                          New SKRect(0, 0, rect.Width, rect.Height))
+                    End If
+                    If adj IsNot Nothing AndAlso adj.Annotations IsNot Nothing AndAlso adj.Annotations.Count > 0 Then
+                        DrawAnnotationsOnCanvas(canvas, adj, _baseCacheBitmap.Width, _baseCacheBitmap.Height,
+                                                rect.Left, rect.Top, rect.Width, rect.Height, adj.Annotations)
+                    End If
+                End Using
+                clampedRect = rect
+                Return patch
+            Finally
+                Monitor.Exit(_baseCacheLock)
+            End Try
+        End Function
+
+        ''' <summary>Dirty-Rect eines Objekts im ZIEL-Koordinatenraum (sourceWidth/Height, z.B. die
+        ''' gedeckelte Preview). Die Annotation ist in BASIS-Bildpixeln gespeichert; baseWidth/baseHeight
+        ''' geben diesen Basisraum an, damit hier dieselbe Skalierung greift wie beim Zeichnen
+        ''' (DrawAnnotationsOnCanvas via ScaleAnnotationForSource). 0/0 oder gleiche Masse = keine
+        ''' Skalierung (historisches Verhalten, als preview==base galt).</summary>
+        Public Shared Function ComputeAnnotationDirtyRect(sourceWidth As Integer, sourceHeight As Integer, annotation As ImageAnnotation,
+                                                          Optional baseWidth As Integer = 0, Optional baseHeight As Integer = 0) As SKRectI
+            If annotation Is Nothing OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return SKRectI.Empty
+            If baseWidth > 0 AndAlso baseHeight > 0 AndAlso (baseWidth <> sourceWidth OrElse baseHeight <> sourceHeight) Then
+                annotation = ScaleAnnotationForSource(annotation, sourceWidth / CSng(baseWidth), sourceHeight / CSng(baseHeight))
+            End If
+
+            Dim kind = If(annotation.Kind, "Text").Trim().ToLowerInvariant()
+            If IsPaintKind(kind) Then
+                Dim bounds As SKRect? = Nothing
+                If annotation.Strokes IsNot Nothing Then
+                    For Each stroke In annotation.Strokes
+                        If stroke Is Nothing OrElse stroke.Points Is Nothing Then Continue For
+                        For Each pt In stroke.Points
+                            Dim pRect = New SKRect(CSng(pt.X), CSng(pt.Y), CSng(pt.X), CSng(pt.Y))
+                            If bounds.HasValue Then
+                                Dim b = bounds.Value
+                                b.Union(pRect)
+                                bounds = b
+                            Else
+                                bounds = pRect
+                            End If
+                        Next
+                    Next
+                End If
+                If Not bounds.HasValue Then Return SKRectI.Empty
+                Dim paintPad = Math.Max(4.0F, annotation.StrokeWidth * 2.0F)
+                Return ClampRectToBitmap(InflateToRectI(bounds.Value, paintPad), sourceWidth, sourceHeight)
+            End If
+
+            Dim rect = ComputeAnnotationRect(sourceWidth, sourceHeight, kind, annotation)
+            rect = RotationBounds(rect, annotation.RotationDegrees)
+
+            Dim extent = Math.Max(rect.Width, rect.Height)
+            Dim effectPad = Math.Max(8.0F, annotation.StrokeWidth * 3.0F)
+            If annotation.ShadowEnabled Then
+                Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
+                Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * 0.6F
+                Dim shadowOffset = Math.Max(Math.Abs(objSize * annotation.ShadowOffsetXPercent / 100.0F),
+                                            Math.Abs(objSize * annotation.ShadowOffsetYPercent / 100.0F))
+                Dim shadowGrow = Math.Max(0.0F, Clamp(annotation.ShadowSizePercent, 10, 400) / 100.0F - 1.0F) * objSize * 0.5F
+                effectPad = Math.Max(effectPad, shadowBlurPx * 3.0F + shadowOffset + shadowGrow + 4.0F)
+            End If
+            If annotation.GlowEnabled Then
+                Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
+                Dim glowReach = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 1.5F
+                Dim glowDilate = Math.Max(0, CInt(Math.Round(glowReach * 0.5F)))
+                Dim glowSigma = Math.Max(0.1F, glowReach * 0.17F)
+                effectPad = Math.Max(effectPad, glowDilate + 3.0F * glowSigma + 4.0F)
+            End If
+            If HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(annotation.BlendMode) Then
+                effectPad = Math.Max(effectPad, 24.0F)
+            End If
+
+            Return ClampRectToBitmap(InflateToRectI(rect, effectPad), sourceWidth, sourceHeight)
+        End Function
+
+        Public Shared Function ComputePixelPaintDirtyRect(sourceWidth As Integer,
+                                                          sourceHeight As Integer,
+                                                          paintStroke As PixelPaintStroke,
+                                                          Optional lastStroke As BrushStroke = Nothing) As SKRectI
+            If paintStroke Is Nothing OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return SKRectI.Empty
+            Dim renderStroke = paintStroke.ToRenderAnnotation()
+            If lastStroke IsNot Nothing Then renderStroke.Strokes = New List(Of BrushStroke) From {lastStroke}
+            Return ComputeAnnotationDirtyRect(sourceWidth, sourceHeight, renderStroke)
+        End Function
+
+        ''' <summary>Rechnet ein Rect von einem Koordinatenraum in einen anderen um (z.B. Basis-Bildpixel ->
+        ''' gedeckelte Preview). Konservativ gerundet (Floor/Ceiling), damit der Zielbereich nie kleiner wird
+        ''' als der Quellbereich - ein zu kleines Dirty-Rect liesse Randpixel veraltet stehen.</summary>
+        Public Shared Function ScaleRectBetweenSpaces(rect As SKRectI,
+                                                      fromWidth As Integer, fromHeight As Integer,
+                                                      toWidth As Integer, toHeight As Integer) As SKRectI
+            If rect.IsEmpty OrElse fromWidth <= 0 OrElse fromHeight <= 0 OrElse toWidth <= 0 OrElse toHeight <= 0 Then
+                Return SKRectI.Empty
+            End If
+            If fromWidth = toWidth AndAlso fromHeight = toHeight Then Return rect
+            Dim sx = toWidth / CDbl(fromWidth)
+            Dim sy = toHeight / CDbl(fromHeight)
+            Return New SKRectI(CInt(Math.Floor(rect.Left * sx)),
+                               CInt(Math.Floor(rect.Top * sy)),
+                               CInt(Math.Ceiling(rect.Right * sx)),
+                               CInt(Math.Ceiling(rect.Bottom * sy)))
+        End Function
+
+        Public Shared Function UnionRects(a As SKRectI, b As SKRectI) As SKRectI
+            If a.IsEmpty Then Return b
+            If b.IsEmpty Then Return a
+            Return New SKRectI(Math.Min(a.Left, b.Left),
+                               Math.Min(a.Top, b.Top),
+                               Math.Max(a.Right, b.Right),
+                               Math.Max(a.Bottom, b.Bottom))
+        End Function
+
+        Private Shared Function InflateToRectI(rect As SKRect, padding As Single) As SKRectI
+            Return New SKRectI(CInt(Math.Floor(rect.Left - padding)),
+                               CInt(Math.Floor(rect.Top - padding)),
+                               CInt(Math.Ceiling(rect.Right + padding)),
+                               CInt(Math.Ceiling(rect.Bottom + padding)))
+        End Function
+
+        Friend Shared Function ClampRectToBitmap(rect As SKRectI, width As Integer, height As Integer) As SKRectI
+            If width <= 0 OrElse height <= 0 OrElse rect.IsEmpty Then Return SKRectI.Empty
+            Dim left = Math.Max(0, Math.Min(width, rect.Left))
+            Dim top = Math.Max(0, Math.Min(height, rect.Top))
+            Dim right = Math.Max(left, Math.Min(width, rect.Right))
+            Dim bottom = Math.Max(top, Math.Min(height, rect.Bottom))
+            If right <= left OrElse bottom <= top Then Return SKRectI.Empty
+            Return New SKRectI(left, top, right, bottom)
+        End Function
+
+        Private Shared Function RotationBounds(rect As SKRect, degrees As Single) As SKRect
+            If Math.Abs(degrees) < 0.01F Then Return rect
+            Dim radians = degrees * Math.PI / 180.0
+            Dim cos = Math.Cos(radians)
+            Dim sin = Math.Sin(radians)
+            Dim cx = rect.MidX
+            Dim cy = rect.MidY
+            Dim xs = New Single() {rect.Left, rect.Right, rect.Right, rect.Left}
+            Dim ys = New Single() {rect.Top, rect.Top, rect.Bottom, rect.Bottom}
+            Dim minX As Single = Single.MaxValue
+            Dim minY As Single = Single.MaxValue
+            Dim maxX As Single = Single.MinValue
+            Dim maxY As Single = Single.MinValue
+            For i = 0 To 3
+                Dim dx = xs(i) - cx
+                Dim dy = ys(i) - cy
+                Dim x = CSng(cx + dx * cos - dy * sin)
+                Dim y = CSng(cy + dx * sin + dy * cos)
+                minX = Math.Min(minX, x)
+                minY = Math.Min(minY, y)
+                maxX = Math.Max(maxX, x)
+                maxY = Math.Max(maxY, y)
+            Next
+            Return New SKRect(minX, minY, maxX, maxY)
         End Function
 
         ' Obergrenze für die interne Renderauflösung des Auswahl-Overlays. Das Bitmap wird ohnehin
@@ -1544,6 +2068,21 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Geometrie-only-Render als SKBitmap (Vorher-Seite des Zoom-Details): dieselben
+        ''' Schritte wie ApplyGeometryAdjustments, aber ohne Avalonia-Konvertierung - der Aufrufer
+        ''' extrahiert daraus Viewport-Regionen. Der Aufrufer übernimmt den Besitz.</summary>
+        Public Shared Function ApplyGeometryAdjustmentsSk(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing Then Return Nothing
+
+            Dim processed As SKBitmap = CloneBitmap(source)
+            processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+            Return processed
+        End Function
+
         Public Shared Function BuildHistogramImage(sourcePath As String, width As Integer, height As Integer) As Bitmap
             Try
                 Using original = DecodeOriented(sourcePath)
@@ -1564,11 +2103,54 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Voll aufgelöster Decode für das ARBEITSBILD (Umbau 2026-07-17): öffentlicher
+        ''' Zugang zum universellen Decode-Chokepoint (RAW/ICO-Sonderfälle + EXIF-Orientierung).
+        ''' Der Aufrufer übernimmt den Besitz des Bitmaps.</summary>
+        Public Shared Function DecodeWorkingImage(path As String) As SKBitmap
+            Try
+                Return DecodeOriented(path)
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>ORIENTIERTE Bildmaße (wie DecodeOriented sie liefert) ohne Voll-Decode - zum
+        ''' Abgleich, ob ein retouch.png wirklich das voll aufgelöste Arbeitsbild ist. (0,0) wenn
+        ''' nicht bestimmbar; der Aufrufer behandelt das als „Prüfung nicht möglich".</summary>
+        Public Shared Function GetOrientedImageSize(path As String) As (Width As Integer, Height As Integer)
+            Try
+                Dim data As SKData
+                Using stream = OpenSourceStream(path)
+                    If stream Is Nothing Then Return (0, 0)
+                    data = SKData.Create(stream)
+                End Using
+                If data Is Nothing Then Return (0, 0)
+                Using data
+                    Using codec = SKCodec.Create(data)
+                        If codec Is Nothing Then Return (0, 0)
+                        Dim info = codec.Info
+                        Select Case codec.EncodedOrigin
+                            Case SKEncodedOrigin.LeftTop, SKEncodedOrigin.RightTop, SKEncodedOrigin.RightBottom, SKEncodedOrigin.LeftBottom
+                                ' 90°/270°-Orientierungen tauschen Breite und Höhe.
+                                Return (info.Height, info.Width)
+                            Case Else
+                                Return (info.Width, info.Height)
+                        End Select
+                    End Using
+                End Using
+            Catch
+                Return (0, 0)
+            End Try
+        End Function
+
         Public Shared Function LoadPreviewSource(imagePath As String, maxDimension As Integer) As SKBitmap
             Try
                 Using original = DecodeOriented(imagePath)
                     If original Is Nothing Then Return Nothing
-                    Return CreatePreviewWorkingBitmap(original, maxDimension)
+                    Dim working = CreatePreviewWorkingBitmap(original, maxDimension)
+                    If working Is Nothing Then Return Nothing
+                    If Object.ReferenceEquals(working, original) Then Return CloneBitmap(original)
+                    Return working
                 End Using
             Catch
                 Return Nothing
@@ -1732,10 +2314,11 @@ Namespace Services
 
         ' Alle Pipeline-Schritte AUSSER dem Einzeichnen der Objekte (Annotations). Wird von
         ' ProcessBitmap sowie vom Basis-Cache in ApplyAdjustments(source As SKBitmap, ...) genutzt.
+        ' ARBEITSBILD (Stufe E): Retusche ist KEIN Pipeline-Schritt mehr - sie steckt bereits im
+        ' Eingangsbild (Arbeitsbild); die Pipeline beginnt direkt mit der Geometrie.
         Private Shared Function ProcessBitmapBase(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim processed As SKBitmap = CloneBitmap(source)
 
-            processed = ReplaceBitmap(processed, ApplyRetouch(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
             processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
@@ -2025,8 +2608,9 @@ Namespace Services
         End Function
 
         ' Signatur aller Anpassungen AUSSER Annotations - solange sie sich nicht ändert, kann die
-        ' gecachte Basis wiederverwendet werden.
-        Private Shared Function ComputeBaseKey(adj As ImageAdjustments) As String
+        ' gecachte Basis wiederverwendet werden. Friend: der Editor nutzt sie auch als
+        ' Gültigkeitsstempel der vorgewärmten Retusche-Live-Puffer.
+        Friend Shared Function ComputeBaseKey(adj As ImageAdjustments) As String
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.NoiseReduction, adj.NoiseReductionMethod,
@@ -2052,7 +2636,7 @@ Namespace Services
                 adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
                 If(String.IsNullOrEmpty(adj.SelectionMaskPngBase64), 0, adj.SelectionMaskPngBase64.Length),
                 adj.SelectionFeatherPixels,
-                String.Join(";", adj.RetouchSpots.Select(Function(s) $"{s.XPixels},{s.YPixels},{s.RadiusPixels},{s.StrengthPercent},{s.OpacityPercent},{s.FlowPercent},{If(s.Mode, "")},{s.SourceXPixels},{s.SourceYPixels},{s.StrokeId}"))
+                adj.WorkingImageVersion
             })
         End Function
 
@@ -2126,6 +2710,15 @@ Namespace Services
             Return clone
         End Function
 
+        Private Shared Function CloneBitmapForAnnotationComposite(source As SKBitmap) As SKBitmap
+            Dim clone = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+            Using canvas = New SKCanvas(clone)
+                canvas.Clear(SKColors.Transparent)
+                canvas.DrawBitmap(source, 0, 0)
+            End Using
+            Return clone
+        End Function
+
         Private Shared Function ApplyCrop(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim leftPct = Clamp(adj.CropLeftPercent, 0, 100) / 100.0F
             Dim topPct = Clamp(adj.CropTopPercent, 0, 100) / 100.0F
@@ -2159,54 +2752,13 @@ Namespace Services
         ' Entspricht der früheren Formel edge = (radius - d) / (radius * 0.45).
         Private Shared ReadOnly RetouchFeatherStops As Single() = {0.0F, 0.55F, 1.0F}
 
-        ''' <summary>
-        ''' Retuschiert die gesetzten Punkte. Punkte mit Klonquelle kopieren die Textur von dort
-        ''' herüber; Punkte ohne Quelle arbeiten als Healing-Pinsel: sie ziehen Textur vom Rand des
-        ''' Pinsels nach innen und gleichen sie farblich an die Umgebung an. Dadurch lassen sich kleine
-        ''' Flecken und einfache störende Bildteile entfernen, ohne nur eine flache Mischfarbe über die
-        ''' Stelle zu legen.
-        '''
-        ''' Gelesen wird stets aus <paramref name="source"/>, dem unretuschierten Bild. Sonst zöge ein
-        ''' Zug, dessen Quelle über bereits geklonte Stellen läuft, seine eigenen Kopien mit.
-        ''' </summary>
-        Private Shared Function ApplyRetouch(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            If adj.RetouchSpots Is Nothing OrElse adj.RetouchSpots.Count = 0 Then Return source
-
-            Dim result = CloneBitmap(source)
-
-            Using canvas = New SKCanvas(result)
-                Dim pendingHeal As New List(Of RetouchSpot)()
-                Dim pendingHealStrokeId As Integer? = Nothing
-                For Each spot In adj.RetouchSpots
-                    If IsHealingSpot(spot) Then
-                        If pendingHeal.Count > 0 AndAlso pendingHealStrokeId.HasValue AndAlso spot.StrokeId <> pendingHealStrokeId.Value Then
-                            FlushHealingSpots(result, canvas, pendingHeal, adj.SourceWidthPixels, adj.SourceHeightPixels)
-                            pendingHeal.Clear()
-                        End If
-                        pendingHeal.Add(spot)
-                        pendingHealStrokeId = spot.StrokeId
-                        Continue For
-                    End If
-
-                    If pendingHeal.Count > 0 Then
-                        FlushHealingSpots(result, canvas, pendingHeal, adj.SourceWidthPixels, adj.SourceHeightPixels)
-                        pendingHeal.Clear()
-                        pendingHealStrokeId = Nothing
-                    End If
-                    DrawRetouchSpot(result, source, canvas, spot, adj.SourceWidthPixels, adj.SourceHeightPixels)
-                Next
-                If pendingHeal.Count > 0 Then
-                    FlushHealingSpots(result, canvas, pendingHeal, adj.SourceWidthPixels, adj.SourceHeightPixels)
-                End If
-            End Using
-            Return result
-        End Function
-
-        Private Shared Sub FlushHealingSpots(result As SKBitmap, canvas As SKCanvas, pendingHeal As List(Of RetouchSpot),
-                                             sourceWidthPixels As Integer, sourceHeightPixels As Integer)
-            If pendingHeal Is Nothing OrElse pendingHeal.Count = 0 Then Return
-            DrawHealingRegion(result, canvas, result, pendingHeal, sourceWidthPixels, sourceHeightPixels)
-        End Sub
+        ''' ARBEITSBILD-Umbau Stufe E (2026-07-17): Das Rezept-Replay der Retusche ist entfernt.
+        ''' Retusche wird beim Commit REGIONAL in Vollauflösung ins Arbeitsbild eingebacken
+        ''' (EditorViewModel.CommitRetouchStroke -> WorkingImageService.CommitRegion ->
+        ''' ApplyRetouchSpotsInPlace). Damit entfielen: ApplyRetouch, der Retusche-Stufen-Cache
+        ''' (Primary/Secondary/Seed-Slots), ComputeRetouchSpotsKey, das Praefix-Anhaengen und der
+        ''' .fpx-Seed. Erhalten bleiben die Zeichen-Engines DrawRetouchSpot/DrawHealingRegion und
+        ''' die InPlace-Anwendungen darunter (Commit + Live-Vorschau).
 
         Public Shared Sub ApplyRetouchSpotInPlace(target As SKBitmap, sampleSource As SKBitmap, spot As RetouchSpot,
                                                   sourceWidthPixels As Integer, sourceHeightPixels As Integer)
@@ -2216,6 +2768,37 @@ Namespace Services
                     DrawHealingRegion(target, canvas, target, {spot}, sourceWidthPixels, sourceHeightPixels)
                 Else
                     DrawRetouchSpot(target, sampleSource, canvas, spot, sourceWidthPixels, sourceHeightPixels)
+                End If
+            End Using
+        End Sub
+
+        Public Shared Sub ApplyRetouchSpotsInPlace(target As SKBitmap, sampleSource As SKBitmap, spots As IReadOnlyList(Of RetouchSpot),
+                                                   sourceWidthPixels As Integer, sourceHeightPixels As Integer)
+            If target Is Nothing OrElse sampleSource Is Nothing OrElse spots Is Nothing OrElse spots.Count = 0 Then Return
+            Using canvas = New SKCanvas(target)
+                Dim pendingHeal As New List(Of RetouchSpot)()
+                Dim pendingHealStrokeId As Integer? = Nothing
+                For Each spot In spots
+                    If spot Is Nothing Then Continue For
+                    If IsHealingSpot(spot) Then
+                        If pendingHeal.Count > 0 AndAlso pendingHealStrokeId.HasValue AndAlso spot.StrokeId <> pendingHealStrokeId.Value Then
+                            DrawHealingRegion(target, canvas, target, pendingHeal, sourceWidthPixels, sourceHeightPixels)
+                            pendingHeal.Clear()
+                        End If
+                        pendingHeal.Add(spot)
+                        pendingHealStrokeId = spot.StrokeId
+                        Continue For
+                    End If
+
+                    If pendingHeal.Count > 0 Then
+                        DrawHealingRegion(target, canvas, target, pendingHeal, sourceWidthPixels, sourceHeightPixels)
+                        pendingHeal.Clear()
+                        pendingHealStrokeId = Nothing
+                    End If
+                    DrawRetouchSpot(target, sampleSource, canvas, spot, sourceWidthPixels, sourceHeightPixels)
+                Next
+                If pendingHeal.Count > 0 Then
+                    DrawHealingRegion(target, canvas, target, pendingHeal, sourceWidthPixels, sourceHeightPixels)
                 End If
             End Using
         End Sub
@@ -2249,8 +2832,10 @@ Namespace Services
             Else
                 ' Verwischen soll auf dem bereits retuschierten Ergebnis aufbauen, damit nach einer
                 ' Reparatur nicht wieder Textur aus dem Ursprungsbild "hineingewischt" wird.
-                Dim fill = AverageSurroundingColor(result, cx, cy, radius)
-                If fill.HasValue Then DrawSoftDisc(canvas, cx, cy, radius, fill.Value, alphaFactor)
+                ' BEFUND: KEINE Umgebungsfarb-Scheibe mehr darueber - beim Ziehen ueberlappen
+                ' dutzende Spots, und die 28-%-Scheiben konvergierten gegen eine flache Fremdfarbe
+                ' (brauner Schmier). Die Scheibe war Fleckentferner-Logik, kein Verwischen.
+                DrawBlurSpot(result, canvas, cx, cy, radius, alphaFactor)
             End If
         End Sub
 
@@ -2287,6 +2872,199 @@ Namespace Services
                 End Using
             End Using
         End Sub
+
+        Private Shared Sub DrawBlurSpot(result As SKBitmap, canvas As SKCanvas,
+                                        cx As Single, cy As Single, radius As Single, flow As Single)
+            If result Is Nothing OrElse canvas Is Nothing Then Return
+            flow = Clamp(flow, 0.0F, 1.0F)
+            If radius <= 0.5F OrElse flow <= 0.001F Then Return
+
+            ' BEFUND: sigma gedeckelt - 0,45r machte das Kreisinnere bei grossen Radien
+            ' strukturlos, und ueberlappende Zug-Spots verstaerkten das zu Brei.
+            Dim sigma = Clamp(radius * 0.22F, 1.25F, 24.0F)
+            Dim pad = CInt(Math.Ceiling(radius + sigma * 3.0F + 2.0F))
+            Dim left = Math.Max(0, CInt(Math.Floor(cx - pad)))
+            Dim top = Math.Max(0, CInt(Math.Floor(cy - pad)))
+            Dim right = Math.Min(result.Width, CInt(Math.Ceiling(cx + pad)))
+            Dim bottom = Math.Min(result.Height, CInt(Math.Ceiling(cy + pad)))
+            Dim width = right - left
+            Dim height = bottom - top
+            If width <= 0 OrElse height <= 0 Then Return
+
+            Using patch = New SKBitmap(width, height, result.ColorType, result.AlphaType)
+                Using patchCanvas = New SKCanvas(patch)
+                    patchCanvas.Clear(SKColors.Transparent)
+                    patchCanvas.DrawBitmap(result,
+                                           New SKRect(left, top, right, bottom),
+                                           New SKRect(0, 0, width, height))
+                End Using
+
+                Using blurred = FastBoxBlur(patch, Math.Max(1, CInt(Math.Round(sigma * 1.35F))))
+                    Dim bounds = New SKRect(left, top, right, bottom)
+                    canvas.SaveLayer(bounds, Nothing)
+                    canvas.DrawBitmap(blurred, left, top)
+                    Using mask = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
+                                                               {SKColors.White.WithAlpha(CByte(255 * flow)),
+                                                                SKColors.White.WithAlpha(CByte(255 * flow)),
+                                                                SKColors.Transparent},
+                                                               RetouchFeatherStops, SKShaderTileMode.Clamp)
+                        Using maskPaint = New SKPaint With {.Shader = mask, .IsAntialias = True, .BlendMode = SKBlendMode.DstIn}
+                            ' BEFUND (der 4x-Schmier): DstIn wirkt nur, wo auch GEZEICHNET
+                            ' wird. DrawCircle liess den Layer AUSSERHALB des Kreises unangetastet -
+                            ' die Blur-Kopie des gesamten Pads (2,35r je Seite) wurde beim Restore
+                            ' voll einkomposittiert. Das volle Rechteck zeichnen: der Radial-Verlauf
+                            ' ist ausserhalb r transparent und nullt den Layer dort.
+                            canvas.DrawRect(bounds, maskPaint)
+                        End Using
+                    End Using
+                    canvas.Restore()
+                End Using
+            End Using
+        End Sub
+
+        Private Shared Function FastBoxBlur(source As SKBitmap, radius As Integer) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            radius = Math.Max(1, Math.Min(radius, Math.Max(source.Width, source.Height)))
+            Dim width = source.Width
+            Dim height = source.Height
+            Dim count = width * height
+            If count <= 0 Then Return CloneBitmap(source)
+
+            Dim srcR(count - 1) As Integer
+            Dim srcG(count - 1) As Integer
+            Dim srcB(count - 1) As Integer
+            Dim srcA(count - 1) As Integer
+            Dim tmpR(count - 1) As Integer
+            Dim tmpG(count - 1) As Integer
+            Dim tmpB(count - 1) As Integer
+            Dim tmpA(count - 1) As Integer
+
+            ' BEFUND: Roh-Bytes zeilenweise kopieren statt GetPixel/SetPixel - die
+            ' Interop-Aufrufe ueber (4,7r)^2 Pixel pro Spot (zweimal!) waren der verbliebene
+            ' CPU-Fresser beim Verwischen. Die Kanal-REIHENFOLGE ist fuer den Blur egal (jeder
+            ' Kanal wird unabhaengig gemittelt, "R" ist einfach Byte-Index 0); premultiplizierte
+            ' Werte zu mitteln ist fuers Kompositieren korrekt. Fremdformate (nicht 4 Byte/Pixel)
+            ' fallen auf den langsamen GetPixel-Pfad zurueck.
+            Dim rawSupported = source.BytesPerPixel = 4 AndAlso source.GetPixels() <> IntPtr.Zero
+            If rawSupported Then
+                Dim rowBuffer(width * 4 - 1) As Byte
+                Dim basePtr = source.GetPixels()
+                Dim srcStride = source.RowBytes
+                For y = 0 To height - 1
+                    Runtime.InteropServices.Marshal.Copy(IntPtr.Add(basePtr, y * srcStride), rowBuffer, 0, width * 4)
+                    Dim row = y * width
+                    For x = 0 To width - 1
+                        Dim i = row + x
+                        Dim o = x * 4
+                        srcR(i) = rowBuffer(o)
+                        srcG(i) = rowBuffer(o + 1)
+                        srcB(i) = rowBuffer(o + 2)
+                        srcA(i) = rowBuffer(o + 3)
+                    Next
+                Next
+            Else
+                For y = 0 To height - 1
+                    Dim row = y * width
+                    For x = 0 To width - 1
+                        Dim c = source.GetPixel(x, y)
+                        Dim i = row + x
+                        srcR(i) = c.Red
+                        srcG(i) = c.Green
+                        srcB(i) = c.Blue
+                        srcA(i) = c.Alpha
+                    Next
+                Next
+            End If
+
+            For y = 0 To height - 1
+                Dim row = y * width
+                Dim sumR As Integer = 0, sumG As Integer = 0, sumB As Integer = 0, sumA As Integer = 0
+                Dim samples As Integer = 0
+                For x = 0 To Math.Min(width - 1, radius)
+                    Dim i = row + x
+                    sumR += srcR(i) : sumG += srcG(i) : sumB += srcB(i) : sumA += srcA(i)
+                    samples += 1
+                Next
+                For x = 0 To width - 1
+                    If x - radius - 1 >= 0 Then
+                        Dim removeIndex = row + x - radius - 1
+                        sumR -= srcR(removeIndex) : sumG -= srcG(removeIndex) : sumB -= srcB(removeIndex) : sumA -= srcA(removeIndex)
+                        samples -= 1
+                    End If
+                    If x + radius < width AndAlso x > 0 Then
+                        Dim addIndex = row + x + radius
+                        sumR += srcR(addIndex) : sumG += srcG(addIndex) : sumB += srcB(addIndex) : sumA += srcA(addIndex)
+                        samples += 1
+                    End If
+                    Dim outIndex = row + x
+                    tmpR(outIndex) = sumR \ samples
+                    tmpG(outIndex) = sumG \ samples
+                    tmpB(outIndex) = sumB \ samples
+                    tmpA(outIndex) = sumA \ samples
+                Next
+            Next
+
+            Dim result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
+            Dim outR(count - 1) As Integer
+            Dim outG(count - 1) As Integer
+            Dim outB(count - 1) As Integer
+            Dim outA(count - 1) As Integer
+            For x = 0 To width - 1
+                Dim sumR As Integer = 0, sumG As Integer = 0, sumB As Integer = 0, sumA As Integer = 0
+                Dim samples As Integer = 0
+                For y = 0 To Math.Min(height - 1, radius)
+                    Dim i = y * width + x
+                    sumR += tmpR(i) : sumG += tmpG(i) : sumB += tmpB(i) : sumA += tmpA(i)
+                    samples += 1
+                Next
+                For y = 0 To height - 1
+                    If y - radius - 1 >= 0 Then
+                        Dim removeIndex = (y - radius - 1) * width + x
+                        sumR -= tmpR(removeIndex) : sumG -= tmpG(removeIndex) : sumB -= tmpB(removeIndex) : sumA -= tmpA(removeIndex)
+                        samples -= 1
+                    End If
+                    If y + radius < height AndAlso y > 0 Then
+                        Dim addIndex = (y + radius) * width + x
+                        sumR += tmpR(addIndex) : sumG += tmpG(addIndex) : sumB += tmpB(addIndex) : sumA += tmpA(addIndex)
+                        samples += 1
+                    End If
+                    Dim outIndex = y * width + x
+                    outR(outIndex) = sumR \ samples
+                    outG(outIndex) = sumG \ samples
+                    outB(outIndex) = sumB \ samples
+                    outA(outIndex) = sumA \ samples
+                Next
+            Next
+
+            Dim resultRaw = result.BytesPerPixel = 4 AndAlso result.GetPixels() <> IntPtr.Zero
+            If rawSupported AndAlso resultRaw Then
+                Dim rowBuffer(width * 4 - 1) As Byte
+                Dim basePtr = result.GetPixels()
+                Dim dstStride = result.RowBytes
+                For y = 0 To height - 1
+                    Dim row = y * width
+                    For x = 0 To width - 1
+                        Dim i = row + x
+                        Dim o = x * 4
+                        rowBuffer(o) = CByte(outR(i))
+                        rowBuffer(o + 1) = CByte(outG(i))
+                        rowBuffer(o + 2) = CByte(outB(i))
+                        rowBuffer(o + 3) = CByte(outA(i))
+                    Next
+                    Runtime.InteropServices.Marshal.Copy(rowBuffer, 0, IntPtr.Add(basePtr, y * dstStride), width * 4)
+                Next
+            Else
+                For y = 0 To height - 1
+                    Dim row = y * width
+                    For x = 0 To width - 1
+                        Dim i = row + x
+                        result.SetPixel(x, y, New SKColor(CByte(outR(i)), CByte(outG(i)), CByte(outB(i)), CByte(outA(i))))
+                    Next
+                Next
+            End If
+
+            Return result
+        End Function
 
         Private Shared Sub DrawHealingRegion(result As SKBitmap, canvas As SKCanvas, source As SKBitmap,
                                              spots As IReadOnlyList(Of RetouchSpot),
@@ -2498,10 +3276,36 @@ Namespace Services
             If remaining = 0 Then Return False
 
             Dim repairExtent = Math.Max(width, height)
-            Dim patchRadius = If(repairExtent > 180, 4, 5)
-            Dim maxPasses = Math.Min(repairExtent + patchRadius * 2, 96)
-            Dim maxPatchCopiesPerPass = If(repairExtent > 240, 36, If(repairExtent > 120, 48, 64))
+            ' BEFUND: groessere Patches (Radius 6) tragen mehr Struktur pro Kopie und brauchen
+            ' weniger Suchen - bezahlbar, seit die Kandidaten vorberechnet sind.
+            Dim patchRadius = 6
+            Dim maxPasses = Math.Min(repairExtent + patchRadius * 2, 160)
+            Dim maxPatchCopiesPerPass = If(repairExtent > 360, 72, If(repairExtent > 240, 96, If(repairExtent > 120, 96, 64)))
             Dim repaired = 0
+
+            ' QUALITAET: Pixelpuffer ueber den gesamten Suchbereich (Zielrechteck +
+            ' maximale Suchreichweite) - damit wird HealingPatchScore rein managed und die Suche kann
+            ' sich DICHTE leisten (kleinere Schrittweite, mehr Kandidaten, Verfeinerung immer), statt
+            ' angrenzende Struktur wegen GetPixel-Kosten grob zu ueberspringen. CopyHealingPatch
+            ' spiegelt seine Schreibzugriffe in den Puffer, damit Scores im selben Pass frisch bleiben.
+            Dim searchMargin = 140 + patchRadius + 8
+            Dim pixels = RegionPixelBuffer.FromRegion(work, targetLeft - searchMargin, targetTop - searchMargin,
+                                                      targetLeft + width - 1 + searchMargin, targetTop + height - 1 + searchMargin)
+
+            ' BEFUND: gueltige Quell-Patches EINMAL vorberechnen (Praefixsumme + Bucket-Grid);
+            ' die Suche pro Randpixel zieht daraus nur noch die naechsten echten Kandidaten.
+            Dim candidates = New HealSourceCandidates(maskAlpha, targetLeft, targetTop, width, height,
+                                                      patchRadius, searchMargin, work.Width, work.Height)
+            Dim candidateScratch As New List(Of (X As Integer, Y As Integer))(256)
+            If candidates.Count = 0 Then Return False
+
+            ' BUDGET: Die Patch-Suche ist fuer FLECKEN gebaut. Ein langer Pinselzug
+            ' erzeugt eine Riesen-Region, in der fast alle Kandidaten verworfen werden (Umgebung
+            ' selbst maskiert) - ungedeckelt wurden daraus Milliarden Array-Reads (Log: 64 s fuer
+            ' EINEN Zug). Das Budget zaehlt geprüfte Kandidaten ueber die GESAMTE Region; ist es
+            ' erschoepft, fuellt der bestehende Fallback (FillRemainingInpaintedPixels + Rand-
+            ' Blending) den Rest - sichtbar weicher, aber in Sekundenbruchteilen statt Minuten.
+            Dim searchBudget As Long = 3_000_000
 
             For pass = 0 To maxPasses - 1
                 Dim boundary As New List(Of Integer)()
@@ -2519,23 +3323,32 @@ Namespace Services
                 Dim patchCopiesThisPass = 0
                 For Each index In boundary
                     If known(index) Then Continue For
+                    If searchBudget <= 0 Then Exit For
                     Dim mx = index Mod width
                     Dim maskY = index \ width
                     Dim sourcePatch = FindBestHealingSourcePatch(work, maskAlpha, known, targetLeft, targetTop,
-                                                                 width, height, mx, maskY, patchRadius)
+                                                                 width, height, mx, maskY, patchRadius, pixels,
+                                                                 candidates, candidateScratch, searchBudget)
                     If Not sourcePatch.Found Then Continue For
 
                     changedThisPass += CopyHealingPatch(work, maskAlpha, known, targetLeft, targetTop,
-                                                        width, height, mx, maskY, sourcePatch.X, sourcePatch.Y, patchRadius)
+                                                        width, height, mx, maskY, sourcePatch.X, sourcePatch.Y, patchRadius, pixels)
                     patchCopiesThisPass += 1
                     If patchCopiesThisPass >= maxPatchCopiesPerPass Then Exit For
                 Next
 
+                If searchBudget <= 0 Then Exit For
                 If changedThisPass = 0 Then Exit For
                 repaired += changedThisPass
                 remaining -= changedThisPass
                 If remaining <= 0 Then Exit For
             Next
+
+            If remaining > 0 Then
+                Dim filledByFallback = FillRemainingInpaintedPixels(work, maskAlpha, known, targetLeft, targetTop, width, height)
+                repaired += filledByFallback
+                remaining -= filledByFallback
+            End If
 
             If repaired = 0 Then Return False
             BlendInpaintedBoundary(work, maskAlpha, targetLeft, targetTop, width, height)
@@ -2560,6 +3373,63 @@ Namespace Services
             Next
 
             Return True
+        End Function
+
+        Private Shared Function FillRemainingInpaintedPixels(work As SKBitmap, maskAlpha As Byte(), known As Boolean(),
+                                                             targetLeft As Integer, targetTop As Integer,
+                                                             width As Integer, height As Integer) As Integer
+            If work Is Nothing OrElse maskAlpha Is Nothing OrElse known Is Nothing Then Return 0
+
+            Dim queued(width * height - 1) As Boolean
+            Dim queue As New Queue(Of Integer)()
+            For maskY = 0 To height - 1
+                For mx = 0 To width - 1
+                    Dim index = maskY * width + mx
+                    If known(index) OrElse maskAlpha(index) <= 8 Then Continue For
+                    If Not HasKnownNeighbor(known, width, height, mx, maskY) Then Continue For
+                    queue.Enqueue(index)
+                    queued(index) = True
+                Next
+            Next
+
+            Dim repaired = 0
+            While queue.Count > 0
+                Dim index = queue.Dequeue()
+                queued(index) = False
+                If known(index) OrElse maskAlpha(index) <= 8 Then Continue While
+
+                Dim mx = index Mod width
+                Dim maskY = index \ width
+                Dim x = targetLeft + mx
+                Dim y = targetTop + maskY
+                If x < 0 OrElse y < 0 OrElse x >= work.Width OrElse y >= work.Height Then
+                    known(index) = True
+                    Continue While
+                End If
+
+                Dim average = AverageFilledNeighborhood(work, known, targetLeft, targetTop, width, height, mx, maskY)
+                If Not average.HasValue Then average = AverageUnmaskedRays(work, maskAlpha, targetLeft, targetTop, width, height, mx, maskY)
+                If Not average.HasValue Then Continue While
+
+                work.SetPixel(x, y, average.Value)
+                known(index) = True
+                repaired += 1
+
+                For oy = -1 To 1
+                    For ox = -1 To 1
+                        If ox = 0 AndAlso oy = 0 Then Continue For
+                        Dim nx = mx + ox
+                        Dim ny = maskY + oy
+                        If nx < 0 OrElse ny < 0 OrElse nx >= width OrElse ny >= height Then Continue For
+                        Dim ni = ny * width + nx
+                        If known(ni) OrElse queued(ni) OrElse maskAlpha(ni) <= 8 Then Continue For
+                        queue.Enqueue(ni)
+                        queued(ni) = True
+                    Next
+                Next
+            End While
+
+            Return repaired
         End Function
 
         Private Shared Sub BlendInpaintedBoundary(work As SKBitmap, maskAlpha As Byte(),
@@ -2683,54 +3553,176 @@ Namespace Services
             Return count
         End Function
 
+        ''' <summary>BEFUND: Vorberechnete Quell-Kandidaten fuer die Heal-Patch-Suche. Die alte
+        ''' Blindsuche prüfte pro Randpixel ein Raster um den ZIELPUNKT - mitten in einem breiten Zug
+        ''' ist dort alles selbst maskiert, fast alle Kandidaten wurden verworfen (Budget verbrannt)
+        ''' und die Zugmitte fiel auf den strukturlosen Mittelwert-Fallback zurück. Hier wird EINMAL
+        ''' pro Region über eine 2D-Präfixsumme der Maske ein Gitter aller Positionen bestimmt, deren
+        ''' kompletter Patch unmaskiert im Bild liegt, räumlich in 32-px-Buckets abgelegt. Die Suche
+        ''' zieht dann pro Randpixel nur noch die NÄCHSTEN echten Kandidaten - ohne harten
+        ''' Radius-Deckel, die Mitte bekommt Struktur von den Rändern.</summary>
+        Private NotInheritable Class HealSourceCandidates
+            Private Const BucketSize As Integer = 32
+            Private ReadOnly _buckets As Dictionary(Of Long, List(Of (X As Integer, Y As Integer)))
+            Private ReadOnly _integral As Integer()   ' Präfixsumme "maskiert" über das Suchfenster
+            Private ReadOnly _winLeft As Integer
+            Private ReadOnly _winTop As Integer
+            Private ReadOnly _winWidth As Integer
+            Private ReadOnly _winHeight As Integer
+            Public ReadOnly Count As Integer
+
+            Public Sub New(maskAlpha As Byte(), targetLeft As Integer, targetTop As Integer,
+                           width As Integer, height As Integer, patchRadius As Integer,
+                           margin As Integer, bitmapWidth As Integer, bitmapHeight As Integer)
+                _winLeft = Math.Max(0, targetLeft - margin)
+                _winTop = Math.Max(0, targetTop - margin)
+                Dim winRight = Math.Min(bitmapWidth - 1, targetLeft + width - 1 + margin)
+                Dim winBottom = Math.Min(bitmapHeight - 1, targetTop + height - 1 + margin)
+                _winWidth = Math.Max(0, winRight - _winLeft + 1)
+                _winHeight = Math.Max(0, winBottom - _winTop + 1)
+                _buckets = New Dictionary(Of Long, List(Of (X As Integer, Y As Integer)))()
+                If _winWidth <= 0 OrElse _winHeight <= 0 Then
+                    _integral = Array.Empty(Of Integer)()
+                    Return
+                End If
+
+                ' Präfixsumme: integral(y,x) = Anzahl maskierter Pixel im Rechteck [0..x)x[0..y).
+                _integral = New Integer((_winWidth + 1) * (_winHeight + 1) - 1) {}
+                Dim stride = _winWidth + 1
+                For y = 0 To _winHeight - 1
+                    Dim rowSum = 0
+                    Dim absY = _winTop + y
+                    Dim maskRow = (absY - targetTop) * width
+                    For x = 0 To _winWidth - 1
+                        Dim absX = _winLeft + x
+                        Dim masked = 0
+                        If absX >= targetLeft AndAlso absY >= targetTop AndAlso
+                           absX < targetLeft + width AndAlso absY < targetTop + height AndAlso
+                           maskAlpha(maskRow + (absX - targetLeft)) > 8 Then
+                            masked = 1
+                        End If
+                        rowSum += masked
+                        _integral((y + 1) * stride + (x + 1)) = _integral(y * stride + (x + 1)) + rowSum
+                    Next
+                Next
+
+                ' Kandidaten-Gitter (Schritt 3): kompletter Patch im Bild UND unmaskiert.
+                Dim total = 0
+                For y = patchRadius To _winHeight - 1 - patchRadius Step 3
+                    For x = patchRadius To _winWidth - 1 - patchRadius Step 3
+                        Dim absX = _winLeft + x
+                        Dim absY = _winTop + y
+                        If absX < patchRadius OrElse absY < patchRadius OrElse
+                           absX >= bitmapWidth - patchRadius OrElse absY >= bitmapHeight - patchRadius Then Continue For
+                        If Not IsPatchClear(absX, absY, patchRadius) Then Continue For
+                        Dim key = BucketKey(absX, absY)
+                        Dim list As List(Of (X As Integer, Y As Integer)) = Nothing
+                        If Not _buckets.TryGetValue(key, list) Then
+                            list = New List(Of (X As Integer, Y As Integer))()
+                            _buckets(key) = list
+                        End If
+                        list.Add((absX, absY))
+                        total += 1
+                    Next
+                Next
+                Count = total
+            End Sub
+
+            Private Shared Function BucketKey(x As Integer, y As Integer) As Long
+                Return (CLng(y \ BucketSize) << 24) Or CLng(x \ BucketSize)
+            End Function
+
+            ''' Patch um (x,y) komplett unmaskiert? O(1) über die Präfixsumme (Bereiche ausserhalb
+            ''' des Fensters gelten als unmaskiert - dort liegt keine Maske).
+            Public Function IsPatchClear(x As Integer, y As Integer, patchRadius As Integer) As Boolean
+                If _winWidth <= 0 Then Return True
+                Dim x0 = Math.Max(0, x - patchRadius - _winLeft)
+                Dim y0 = Math.Max(0, y - patchRadius - _winTop)
+                Dim x1 = Math.Min(_winWidth - 1, x + patchRadius - _winLeft)
+                Dim y1 = Math.Min(_winHeight - 1, y + patchRadius - _winTop)
+                If x1 < x0 OrElse y1 < y0 Then Return True
+                Dim stride = _winWidth + 1
+                Dim masked = _integral((y1 + 1) * stride + (x1 + 1)) -
+                             _integral(y0 * stride + (x1 + 1)) -
+                             _integral((y1 + 1) * stride + x0) +
+                             _integral(y0 * stride + x0)
+                Return masked = 0
+            End Function
+
+            ''' Sammelt bis zu maxCount Kandidaten in ringförmig wachsenden Bucket-Schalen um das
+            ''' Ziel - grob nach Nähe geordnet; die Feinordnung erledigt der Distanz-Malus im Score.
+            Public Sub CollectNearest(targetX As Integer, targetY As Integer, maxCount As Integer,
+                                      results As List(Of (X As Integer, Y As Integer)))
+                results.Clear()
+                If _buckets.Count = 0 Then Return
+                Dim centerBx = targetX \ BucketSize
+                Dim centerBy = targetY \ BucketSize
+                Dim maxRing = Math.Max(_winWidth, _winHeight) \ BucketSize + 2
+                For ring = 0 To maxRing
+                    For by = centerBy - ring To centerBy + ring
+                        For bx = centerBx - ring To centerBx + ring
+                            If bx < 0 OrElse by < 0 Then Continue For
+                            ' Nur die Schale, nicht das Innere (das lieferten schon kleinere Ringe).
+                            If ring > 0 AndAlso Math.Abs(bx - centerBx) <> ring AndAlso Math.Abs(by - centerBy) <> ring Then Continue For
+                            Dim list As List(Of (X As Integer, Y As Integer)) = Nothing
+                            If Not _buckets.TryGetValue((CLng(by) << 24) Or CLng(bx), list) Then Continue For
+                            results.AddRange(list)
+                        Next
+                    Next
+                    If results.Count >= maxCount Then Exit For
+                Next
+                If results.Count > maxCount Then results.RemoveRange(maxCount, results.Count - maxCount)
+            End Sub
+        End Class
+
+        ''' QUALITAET: Suche über vorberechnete Kandidaten (HealSourceCandidates) -
+        ''' das Budget fliesst komplett in echte Struktur-Vergleiche, und ohne harten Radius-Deckel
+        ''' erreicht auch die Mitte breiter Züge die Struktur der Ränder. Der Distanz-Malus im Score
+        ''' lässt bei gleicher Ähnlichkeit weiterhin die NÄCHSTE Struktur gewinnen.
         Private Shared Function FindBestHealingSourcePatch(work As SKBitmap, maskAlpha As Byte(), known As Boolean(),
                                                            targetLeft As Integer, targetTop As Integer,
                                                            width As Integer, height As Integer,
                                                            mx As Integer, my As Integer,
-                                                           patchRadius As Integer) As (X As Integer, Y As Integer, Found As Boolean)
+                                                           patchRadius As Integer,
+                                                           pixels As RegionPixelBuffer,
+                                                           candidates As HealSourceCandidates,
+                                                           scratch As List(Of (X As Integer, Y As Integer)),
+                                                           ByRef searchBudget As Long) As (X As Integer, Y As Integer, Found As Boolean)
             Dim targetX = targetLeft + mx
             Dim targetY = targetTop + my
             Dim extent = Math.Max(width, height)
-            Dim searchRadius = Math.Min(88, Math.Max(28, extent \ 3))
-            Dim stepSize = If(extent > 240, 12, If(extent > 120, 8, 6))
+            Dim maxCandidates = If(extent > 360, 140, 220)
+
+            candidates.CollectNearest(targetX, targetY, maxCandidates, scratch)
+
             Dim bestX = 0
             Dim bestY = 0
             Dim bestScore = Double.MaxValue
             Dim found = False
-            Dim evaluated = 0
-            Dim maxEvaluations = If(extent > 240, 180, If(extent > 120, 260, 360))
-
-            Dim minY = Math.Max(patchRadius, targetY - searchRadius)
-            Dim maxY = Math.Min(work.Height - patchRadius - 1, targetY + searchRadius)
-            Dim minX = Math.Max(patchRadius, targetX - searchRadius)
-            Dim maxX = Math.Min(work.Width - patchRadius - 1, targetX + searchRadius)
-            Dim offsetSeed = Math.Abs((targetX * 31 + targetY * 17) Mod stepSize)
-
-            For sy = minY + offsetSeed To maxY Step stepSize
-                For sx = minX + ((offsetSeed * 3) Mod stepSize) To maxX Step stepSize
-                    If Math.Abs(sx - targetX) <= patchRadius AndAlso Math.Abs(sy - targetY) <= patchRadius Then Continue For
-                    If Not IsOriginalKnownPatch(maskAlpha, targetLeft, targetTop, width, height, sx, sy, patchRadius) Then Continue For
-
-                    Dim score = HealingPatchScore(work, maskAlpha, known, targetLeft, targetTop,
-                                                  width, height, mx, my, sx, sy, patchRadius)
-                    evaluated += 1
-                    If score < bestScore Then
-                        bestScore = score
-                        bestX = sx
-                        bestY = sy
-                        found = True
-                    End If
-                    If evaluated >= maxEvaluations Then Exit For
-                Next
-                If evaluated >= maxEvaluations Then Exit For
+            For Each candidate In scratch
+                If Math.Abs(candidate.X - targetX) <= patchRadius AndAlso Math.Abs(candidate.Y - targetY) <= patchRadius Then Continue For
+                searchBudget -= 1
+                If searchBudget <= 0 Then Exit For
+                Dim score = HealingPatchScore(work, maskAlpha, known, targetLeft, targetTop,
+                                              width, height, mx, my, candidate.X, candidate.Y, patchRadius, pixels)
+                If score < bestScore Then
+                    bestScore = score
+                    bestX = candidate.X
+                    bestY = candidate.Y
+                    found = True
+                End If
             Next
 
-            If found AndAlso extent <= 160 Then
-                For sy = Math.Max(patchRadius, bestY - 4) To Math.Min(work.Height - patchRadius - 1, bestY + 4) Step 2
-                    For sx = Math.Max(patchRadius, bestX - 4) To Math.Min(work.Width - patchRadius - 1, bestX + 4) Step 2
-                        If Not IsOriginalKnownPatch(maskAlpha, targetLeft, targetTop, width, height, sx, sy, patchRadius) Then Continue For
+            If found AndAlso searchBudget > 0 Then
+                ' Pixelgenaue Verfeinerung um den besten Treffer (das Kandidaten-Gitter hat Schritt 3).
+                For sy = Math.Max(patchRadius, bestY - 2) To Math.Min(work.Height - patchRadius - 1, bestY + 2)
+                    For sx = Math.Max(patchRadius, bestX - 2) To Math.Min(work.Width - patchRadius - 1, bestX + 2)
+                        If sx = bestX AndAlso sy = bestY Then Continue For
+                        If Math.Abs(sx - targetX) <= patchRadius AndAlso Math.Abs(sy - targetY) <= patchRadius Then Continue For
+                        If Not candidates.IsPatchClear(sx, sy, patchRadius) Then Continue For
+                        searchBudget -= 1
                         Dim score = HealingPatchScore(work, maskAlpha, known, targetLeft, targetTop,
-                                                      width, height, mx, my, sx, sy, patchRadius)
+                                                      width, height, mx, my, sx, sy, patchRadius, pixels)
                         If score < bestScore Then
                             bestScore = score
                             bestX = sx
@@ -2748,7 +3740,8 @@ Namespace Services
                                                   width As Integer, height As Integer,
                                                   mx As Integer, my As Integer,
                                                   sx As Integer, sy As Integer,
-                                                  patchRadius As Integer) As Double
+                                                  patchRadius As Integer,
+                                                  pixels As RegionPixelBuffer) As Double
             Dim score = 0.0
             Dim count = 0
             Dim targetX = targetLeft + mx
@@ -2775,7 +3768,9 @@ Namespace Services
 
                     Dim distance = Math.Max(Math.Abs(ox), Math.Abs(oy))
                     Dim weight = If(distance <= 1, 5.0, If(distance <= 3, 2.0, 1.0))
-                    score += ColorDistanceSquared(work.GetPixel(tx, ty), work.GetPixel(px, py)) * weight
+                    Dim targetColor = If(pixels IsNot Nothing AndAlso pixels.Contains(tx, ty), pixels.GetColor(tx, ty), work.GetPixel(tx, ty))
+                    Dim patchColor = If(pixels IsNot Nothing AndAlso pixels.Contains(px, py), pixels.GetColor(px, py), work.GetPixel(px, py))
+                    score += ColorDistanceSquared(targetColor, patchColor) * weight
                     count += CInt(weight)
                 Next
             Next
@@ -2792,10 +3787,15 @@ Namespace Services
                                                  width As Integer, height As Integer,
                                                  mx As Integer, my As Integer,
                                                  sx As Integer, sy As Integer,
-                                                 patchRadius As Integer) As Integer
+                                                 patchRadius As Integer,
+                                                 Optional pixels As RegionPixelBuffer = Nothing) As Integer
             Dim copied = 0
             Dim targetX = targetLeft + mx
             Dim targetY = targetTop + my
+            ' BEFUND: weicher Ueberlappungsrand gegen Kachelnaehte - im aeusseren Ring des
+            ' Patches werden BEREITS GEFUELLTE Zielpixel 50/50 gemischt statt uebersprungen.
+            ' Ungefuellte bekommen weiterhin die volle Kopie (kein Durchbluten des Defekts).
+            Dim featherInnerSq = Math.Max(1.0F, (patchRadius - 1.5F) * (patchRadius - 1.5F))
 
             For oy = -patchRadius To patchRadius
                 Dim oySq = oy * oy
@@ -2803,18 +3803,38 @@ Namespace Services
                 Dim py = sy + oy
                 If y < 0 OrElse y >= work.Height OrElse py < 0 OrElse py >= work.Height Then Continue For
                 For ox = -patchRadius To patchRadius
-                    If ox * ox + oySq > patchRadius * patchRadius Then Continue For
+                    Dim distSq = ox * ox + oySq
+                    If distSq > patchRadius * patchRadius Then Continue For
                     Dim lx = mx + ox
                     Dim ly = my + oy
                     If lx < 0 OrElse ly < 0 OrElse lx >= width OrElse ly >= height Then Continue For
                     Dim index = ly * width + lx
-                    If known(index) OrElse maskAlpha(index) <= 8 Then Continue For
+                    If maskAlpha(index) <= 8 Then Continue For
 
                     Dim x = targetX + ox
                     Dim px = sx + ox
                     If x < 0 OrElse x >= work.Width OrElse px < 0 OrElse px >= work.Width Then Continue For
 
-                    work.SetPixel(x, y, work.GetPixel(px, py))
+                    If known(index) Then
+                        If distSq >= featherInnerSq Then
+                            Dim existing = work.GetPixel(x, y)
+                            Dim incoming = work.GetPixel(px, py)
+                            Dim blended = New SKColor(
+                                CByte((CInt(existing.Red) + CInt(incoming.Red)) \ 2),
+                                CByte((CInt(existing.Green) + CInt(incoming.Green)) \ 2),
+                                CByte((CInt(existing.Blue) + CInt(incoming.Blue)) \ 2),
+                                existing.Alpha)
+                            work.SetPixel(x, y, blended)
+                            If pixels IsNot Nothing AndAlso pixels.Contains(x, y) Then pixels.SetColor(x, y, blended)
+                        End If
+                        Continue For
+                    End If
+
+                    Dim sourceColor = work.GetPixel(px, py)
+                    work.SetPixel(x, y, sourceColor)
+                    ' Puffer synchron halten - Scores im selben Pass sehen sonst den alten (defekten)
+                    ' Inhalt unter frisch kopierten Pixeln.
+                    If pixels IsNot Nothing AndAlso pixels.Contains(x, y) Then pixels.SetColor(x, y, sourceColor)
                     known(index) = True
                     copied += 1
                 Next
@@ -3290,31 +4310,41 @@ Namespace Services
             Return ratio * ratio * 220000.0
         End Function
 
+        ''' PERF: Masken-Alphas und Quell-Region einmal puffern, Abtastung mit
+        ''' Schrittweite - der alte Doppel-Scan (pro Region-Pixel eine GetPixel-Nachbarschaftssuche
+        ''' auf der Maske) kostete bei grossen Heal-Flaechen zweistellige Millionen Interop-Calls.
         Private Shared Function AverageRegionSurroundingColor(source As SKBitmap, mask As SKBitmap,
                                                               left As Integer, top As Integer,
                                                               radius As Single) As SKColor?
             Dim reach = Math.Max(3, CInt(Math.Ceiling(radius * 1.5F)))
-            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
-            Dim count = 0
             Dim minX = Math.Max(0, left - reach)
             Dim minY = Math.Max(0, top - reach)
             Dim maxX = Math.Min(source.Width - 1, left + mask.Width + reach)
             Dim maxY = Math.Min(source.Height - 1, top + mask.Height + reach)
-            For y = minY To maxY
-                For x = minX To maxX
+            If maxX < minX OrElse maxY < minY Then Return Nothing
+
+            Dim maskBuffer = RegionPixelBuffer.FromRegion(mask, 0, 0, mask.Width - 1, mask.Height - 1)
+            Dim sourceBuffer = RegionPixelBuffer.FromRegion(source, minX, minY, maxX, maxY)
+            Dim stride = Math.Max(1, CInt(Math.Ceiling(Math.Max(maxX - minX + 1, maxY - minY + 1) / 128.0)))
+            Dim neighborStep = Math.Max(1, reach \ 3)
+
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
+            Dim count = 0
+            For y = minY To maxY Step stride
+                For x = minX To maxX Step stride
                     Dim mx = x - left
                     Dim my = y - top
-                    If mx >= 0 AndAlso my >= 0 AndAlso mx < mask.Width AndAlso my < mask.Height AndAlso
-                       mask.GetPixel(mx, my).Alpha > 0 Then Continue For
+                    Dim insideMaskArea = mx >= 0 AndAlso my >= 0 AndAlso mx < mask.Width AndAlso my < mask.Height
+                    If insideMaskArea AndAlso MaskAlphaAt(maskBuffer, mask, mx, my) > 0 Then Continue For
 
                     Dim nearMask = False
-                    For oy = -reach To reach Step Math.Max(1, reach \ 3)
+                    For oy = -reach To reach Step neighborStep
                         If nearMask Then Exit For
-                        For ox = -reach To reach Step Math.Max(1, reach \ 3)
+                        For ox = -reach To reach Step neighborStep
                             Dim nx = mx + ox
                             Dim ny = my + oy
                             If nx >= 0 AndAlso ny >= 0 AndAlso nx < mask.Width AndAlso ny < mask.Height AndAlso
-                               mask.GetPixel(nx, ny).Alpha > 32 Then
+                               MaskAlphaAt(maskBuffer, mask, nx, ny) > 32 Then
                                 nearMask = True
                                 Exit For
                             End If
@@ -3322,13 +4352,18 @@ Namespace Services
                     Next
                     If Not nearMask Then Continue For
 
-                    Dim c = source.GetPixel(x, y)
+                    Dim c = If(sourceBuffer IsNot Nothing, sourceBuffer.GetColor(x, y), source.GetPixel(x, y))
                     sr += c.Red : sg += c.Green : sb += c.Blue : sa += c.Alpha
                     count += 1
                 Next
             Next
             If count = 0 Then Return Nothing
             Return New SKColor(CByte(sr \ count), CByte(sg \ count), CByte(sb \ count), CByte(sa \ count))
+        End Function
+
+        Private Shared Function MaskAlphaAt(buffer As RegionPixelBuffer, mask As SKBitmap, x As Integer, y As Integer) As Byte
+            If buffer IsNot Nothing Then Return buffer.GetAlpha(x, y)
+            Return mask.GetPixel(x, y).Alpha
         End Function
 
         Private Shared Function SuppressHealingOutlier(sample As SKColor, sourceAverage As SKColor, targetAverage As SKColor) As SKColor
@@ -3341,40 +4376,6 @@ Namespace Services
                 sample.Alpha)
             If ColorDistanceSquared(repaired, targetAverage) <= ColorDistanceSquared(sample, targetAverage) Then Return repaired
             Return New SKColor(sourceAverage.Red, sourceAverage.Green, sourceAverage.Blue, sample.Alpha)
-        End Function
-
-        Private Shared Function SamplePatchStats(source As SKBitmap, cx As Single, cy As Single, radius As Single,
-                                                 Optional sourceBuffer As Byte() = Nothing,
-                                                 Optional sourceStride As Integer = 0,
-                                                 Optional hasBuffer As Boolean = False) As (Average As SKColor, Variance As Double, Count As Integer)
-            Dim stepSize = Math.Max(1, CInt(Math.Round(radius / 2.25F)))
-            Dim radiusSq = radius * radius
-            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0
-            Dim sr2 As Long = 0, sg2 As Long = 0, sb2 As Long = 0
-            Dim count = 0
-
-            For y = Math.Max(0, CInt(Math.Floor(cy - radius))) To Math.Min(source.Height - 1, CInt(Math.Ceiling(cy + radius))) Step stepSize
-                Dim dy = CSng(y) - cy
-                For x = Math.Max(0, CInt(Math.Floor(cx - radius))) To Math.Min(source.Width - 1, CInt(Math.Ceiling(cx + radius))) Step stepSize
-                    Dim dx = CSng(x) - cx
-                    If dx * dx + dy * dy > radiusSq Then Continue For
-                    Dim c = ReadPixel(source, x, y, sourceBuffer, sourceStride, hasBuffer)
-                    sr += c.Red : sg += c.Green : sb += c.Blue
-                    sr2 += CInt(c.Red) * CInt(c.Red)
-                    sg2 += CInt(c.Green) * CInt(c.Green)
-                    sb2 += CInt(c.Blue) * CInt(c.Blue)
-                    count += 1
-                Next
-            Next
-
-            If count = 0 Then Return (SKColors.Transparent, Double.MaxValue, 0)
-            Dim ar = CDbl(sr) / count
-            Dim ag = CDbl(sg) / count
-            Dim ab = CDbl(sb) / count
-            Dim variance = Math.Max(0.0, (CDbl(sr2) / count - ar * ar) +
-                                     (CDbl(sg2) / count - ag * ag) +
-                                     (CDbl(sb2) / count - ab * ab))
-            Return (New SKColor(CByte(Math.Round(ar)), CByte(Math.Round(ag)), CByte(Math.Round(ab))), variance, count)
         End Function
 
         Private Shared Function SampleRingPatchStats(source As SKBitmap, cx As Single, cy As Single,
@@ -3411,15 +4412,6 @@ Namespace Services
             Return (New SKColor(CByte(Math.Round(ar)), CByte(Math.Round(ag)), CByte(Math.Round(ab))), variance, count)
         End Function
 
-        Private Shared Function ReadPixel(source As SKBitmap, x As Integer, y As Integer,
-                                          sourceBuffer As Byte(), sourceStride As Integer, hasBuffer As Boolean) As SKColor
-            If hasBuffer AndAlso sourceBuffer IsNot Nothing AndAlso sourceStride > 0 Then
-                Dim index = y * sourceStride + x * 4
-                Return New SKColor(sourceBuffer(index + 2), sourceBuffer(index + 1), sourceBuffer(index), sourceBuffer(index + 3))
-            End If
-            Return source.GetPixel(x, y)
-        End Function
-
         Private Shared Function ColorDistanceSquared(a As SKColor, b As SKColor) As Double
             Dim dr = CInt(a.Red) - CInt(b.Red)
             Dim dg = CInt(a.Green) - CInt(b.Green)
@@ -3433,9 +4425,111 @@ Namespace Services
             Return values(values.Count \ 2)
         End Function
 
+        ''' <summary>Kompakter, rein lesender Regionen-Pixelpuffer: kopiert den
+        ''' benoetigten Ausschnitt EINMAL zeilenweise in ein Byte-Array und liefert Farben rein
+        ''' managed. SKBitmap.GetPixel ist ein Interop-Call pro Pixel - grosse Ring-/Regionsscans
+        ''' (Verwischen, Heal-Umgebung, Patch-Suche) wurden damit minutenlang. Nur Bgra8888/
+        ''' Rgba8888 (Pipeline-Standard); andere Formate -> FromRegion liefert Nothing, der
+        ''' Aufrufer faellt auf GetPixel zurueck.</summary>
+        Private NotInheritable Class RegionPixelBuffer
+            Public ReadOnly Left As Integer
+            Public ReadOnly Top As Integer
+            Public ReadOnly Width As Integer
+            Public ReadOnly Height As Integer
+            Private ReadOnly _bytes As Byte()
+            Private ReadOnly _rIdx As Integer
+            Private ReadOnly _gIdx As Integer
+            Private ReadOnly _bIdx As Integer
+
+            Private Sub New(left As Integer, top As Integer, width As Integer, height As Integer,
+                            bytes As Byte(), rIdx As Integer, gIdx As Integer, bIdx As Integer)
+                Me.Left = left
+                Me.Top = top
+                Me.Width = width
+                Me.Height = height
+                _bytes = bytes
+                _rIdx = rIdx
+                _gIdx = gIdx
+                _bIdx = bIdx
+            End Sub
+
+            ''' <summary>x0..x1/y0..y1 einschliesslich, werden aufs Bitmap geklemmt.</summary>
+            Public Shared Function FromRegion(bmp As SKBitmap, x0 As Integer, y0 As Integer,
+                                              x1 As Integer, y1 As Integer) As RegionPixelBuffer
+                If bmp Is Nothing Then Return Nothing
+                Dim rIdx, gIdx, bIdx As Integer
+                Select Case bmp.ColorType
+                    Case SKColorType.Bgra8888 : bIdx = 0 : gIdx = 1 : rIdx = 2
+                    Case SKColorType.Rgba8888 : rIdx = 0 : gIdx = 1 : bIdx = 2
+                    Case Else
+                        Return Nothing
+                End Select
+                x0 = Math.Max(0, x0) : y0 = Math.Max(0, y0)
+                x1 = Math.Min(bmp.Width - 1, x1) : y1 = Math.Min(bmp.Height - 1, y1)
+                If x1 < x0 OrElse y1 < y0 Then Return Nothing
+                Dim width = x1 - x0 + 1
+                Dim height = y1 - y0 + 1
+                Dim bytes(width * height * 4 - 1) As Byte
+                Dim basePtr = bmp.GetPixels()
+                If basePtr = IntPtr.Zero Then Return Nothing
+                Dim srcStride = bmp.RowBytes
+                For row = 0 To height - 1
+                    Runtime.InteropServices.Marshal.Copy(IntPtr.Add(basePtr, (y0 + row) * srcStride + x0 * 4),
+                                                         bytes, row * width * 4, width * 4)
+                Next
+                Return New RegionPixelBuffer(x0, y0, width, height, bytes, rIdx, gIdx, bIdx)
+            End Function
+
+            ''' <summary>Bitmap-Koordinaten; entpremultipliziert bei Alpha &lt; 255 (GetPixel-Verhalten).</summary>
+            Public Function GetColor(x As Integer, y As Integer) As SKColor
+                Dim idx = ((y - Top) * Width + (x - Left)) * 4
+                Dim a = _bytes(idx + 3)
+                Dim r = CInt(_bytes(idx + _rIdx))
+                Dim g = CInt(_bytes(idx + _gIdx))
+                Dim b = CInt(_bytes(idx + _bIdx))
+                If a > 0 AndAlso a < 255 Then
+                    r = Math.Min(255, r * 255 \ a)
+                    g = Math.Min(255, g * 255 \ a)
+                    b = Math.Min(255, b * 255 \ a)
+                End If
+                Return New SKColor(CByte(r), CByte(g), CByte(b), a)
+            End Function
+
+            Public Function GetAlpha(x As Integer, y As Integer) As Byte
+                Return _bytes(((y - Top) * Width + (x - Left)) * 4 + 3)
+            End Function
+
+            Public Function Contains(x As Integer, y As Integer) As Boolean
+                Return x >= Left AndAlso y >= Top AndAlso x < Left + Width AndAlso y < Top + Height
+            End Function
+
+            ''' <summary>Spiegel-Schreibzugriff (Heal-Patch-Kopien): haelt den Puffer synchron zum
+            ''' Bitmap, damit Scores innerhalb eines Passes frisch kopierte Pixel sehen. Schreibt
+            ''' premultipliziert (Puffer-Layout).</summary>
+            Public Sub SetColor(x As Integer, y As Integer, color As SKColor)
+                Dim idx = ((y - Top) * Width + (x - Left)) * 4
+                Dim a = CInt(color.Alpha)
+                Dim r = CInt(color.Red)
+                Dim g = CInt(color.Green)
+                Dim b = CInt(color.Blue)
+                If a < 255 Then
+                    r = r * a \ 255
+                    g = g * a \ 255
+                    b = b * a \ 255
+                End If
+                _bytes(idx + _rIdx) = CByte(r)
+                _bytes(idx + _gIdx) = CByte(g)
+                _bytes(idx + _bIdx) = CByte(b)
+                _bytes(idx + 3) = CByte(a)
+            End Sub
+        End Class
+
         ''' Mittelt den Ring zwischen dem 1,25- und dem 2-fachen Radius um das Ziel - der Rückfall,
         ''' wenn keine Klonquelle gesetzt wurde. Liefert Nothing, wenn der Ring komplett außerhalb
         ''' des Bildes liegt.
+        ''' PERF: Ringabtastung mit Regionen-Puffer + Schrittweite statt GetPixel
+        ''' ueber JEDES Pixel - bei grossen Verwisch-Radien wurden aus einem Zug sonst Milliarden
+        ''' Interop-Calls (Minuten CPU). ~10k Samples liefern denselben Mittelwert.
         Private Shared Function AverageSurroundingColor(source As SKBitmap, cx As Single, cy As Single, radius As Single,
                                                         Optional innerFactor As Single = 1.25F,
                                                         Optional outerFactor As Single = 2.0F) As SKColor?
@@ -3447,18 +4541,26 @@ Namespace Services
             Dim icx = CInt(Math.Round(cx))
             Dim icy = CInt(Math.Round(cy))
             Dim reach = CInt(Math.Ceiling(outer))
+            Dim stride = Math.Max(1, CInt(Math.Ceiling(reach / 56.0)))
+
+            Dim y0 = Math.Max(0, icy - reach)
+            Dim y1 = Math.Min(source.Height - 1, icy + reach)
+            Dim x0 = Math.Max(0, icx - reach)
+            Dim x1 = Math.Min(source.Width - 1, icx + reach)
+            If y1 < y0 OrElse x1 < x0 Then Return Nothing
+            Dim buffer = RegionPixelBuffer.FromRegion(source, x0, y0, x1, y1)
 
             Dim samples As New List(Of SKColor)()
             Dim sr As Long = 0, sg As Long = 0, sb As Long = 0, sa As Long = 0
             Dim count As Integer = 0
-            For yy = Math.Max(0, icy - reach) To Math.Min(source.Height - 1, icy + reach)
+            For yy = y0 To y1 Step stride
                 Dim dy = CSng(yy - icy)
                 Dim dySq = dy * dy
-                For xx = Math.Max(0, icx - reach) To Math.Min(source.Width - 1, icx + reach)
+                For xx = x0 To x1 Step stride
                     Dim dx = CSng(xx - icx)
                     Dim dSq = dx * dx + dySq
                     If dSq >= innerSq AndAlso dSq <= outerSq Then
-                        Dim c = source.GetPixel(xx, yy)
+                        Dim c = If(buffer IsNot Nothing, buffer.GetColor(xx, yy), source.GetPixel(xx, yy))
                         samples.Add(c)
                         sr += c.Red : sg += c.Green : sb += c.Blue : sa += c.Alpha
                         count += 1
@@ -3638,70 +4740,129 @@ Namespace Services
         End Sub
 
         Private Shared Function ApplyAnnotations(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            If adj.Annotations Is Nothing OrElse adj.Annotations.Count = 0 Then Return source
+            ' ARBEITSBILD-Umbau (Stufe D): Pinsel-/Radiererstriche sind ins Arbeitsbild eingebacken
+            ' und laufen nicht mehr hier durch - hier rendern nur noch die Z-Order-Objekte.
+            ' Ohne Objekte UND mit sichtbarem Hintergrund gibt es nichts zu tun. Ist der Hintergrund
+            ' ausgeblendet, muss aber selbst ohne Objekte ein transparentes Bild herauskommen.
+            Dim hasObjects = adj.Annotations IsNot Nothing AndAlso adj.Annotations.Count > 0
+            If Not adj.BackgroundHidden AndAlso Not hasObjects Then Return source
 
-            Dim result = CloneBitmap(source)
-            Dim scaleX As Single = 1.0F
-            Dim scaleY As Single = 1.0F
-            If adj.SourceWidthPixels > 0 AndAlso adj.SourceHeightPixels > 0 AndAlso source.Width > 0 AndAlso source.Height > 0 Then
-                scaleX = source.Width / CSng(adj.SourceWidthPixels)
-                scaleY = source.Height / CSng(adj.SourceHeightPixels)
+            Dim result As SKBitmap
+            If adj.BackgroundHidden Then
+                ' Hintergrund-Ebene aus: die Objekte schweben auf transparentem Grund (durchsichtiges PNG,
+                ' im Editor der Schachbrett-Hintergrund). Die teure Basis-Pipeline lief zwar, wird hier aber
+                ' verworfen - das ist der Preis fürs saubere Ein-/Ausschalten über einen einzigen Schalter.
+                result = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using clearCanvas = New SKCanvas(result)
+                    clearCanvas.Clear(SKColors.Transparent)
+                End Using
+            Else
+                result = CloneBitmapForAnnotationComposite(source)
             End If
 
+            If Not hasObjects Then Return result
+
             Using canvas = New SKCanvas(result)
-                For Each annotation In adj.Annotations
-                    If annotation Is Nothing OrElse Not annotation.IsVisible Then Continue For
-                    Dim renderAnnotation = ScaleAnnotationForSource(annotation, scaleX, scaleY)
-                    Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
-
-                    If IsPaintKind(kind) Then
-                        Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
-                        Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
-                        Dim strokeWidth = Math.Max(1.0F, Clamp(renderAnnotation.StrokeWidth, 1, Math.Max(source.Width, source.Height)))
-                        Dim isEraser = kind = "eraser"
-                        Dim eraserFill As SKColor? = Nothing
-                        If isEraser AndAlso Not String.IsNullOrWhiteSpace(renderAnnotation.EraserFillColor) Then
-                            eraserFill = ApplyAlpha(ParseColor(renderAnnotation.EraserFillColor, SKColors.Transparent), alphaFactor)
-                        End If
-                        If (Not isEraser) AndAlso (renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled) Then
-                            DrawBrushStrokeWithEffects(canvas, renderAnnotation, source.Width, source.Height, stroke, strokeWidth)
-                        Else
-                            DrawBrushStroke(canvas, renderAnnotation.Strokes, source.Width, source.Height, stroke, strokeWidth,
-                                            renderAnnotation.HardnessPercent, renderAnnotation.FlowPercent, renderAnnotation.BrushPreset, isEraser, eraserFill)
-                        End If
-                        Continue For
-                    End If
-
-                    Dim rect = ComputeAnnotationRect(source.Width, source.Height, kind, renderAnnotation)
-
-                    ' Objekt MIT eigenen Anpassungen: erst allein auf eine transparente Ebene zeichnen, dann
-                    ' die Pixel-Pipeline darauf laufen lassen (Belichtung, Farbe, Filter … treffen so nur das
-                    ' Objekt), dann an Ort und Stelle in der Z-Reihenfolge einkomponieren. Ohne eigene
-                    ' Anpassungen wird wie bisher direkt gezeichnet - kein zusätzlicher Speicher, keine Zeit.
-                    If HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) Then
-                        Using layer = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
-                            Using layerCanvas = New SKCanvas(layer)
-                                layerCanvas.Clear(SKColors.Transparent)
-                                DrawAnnotationOnCanvas(layerCanvas, kind, renderAnnotation, rect, source.Width, source.Height)
-                            End Using
-                            If HasObjectAdjustments(annotation) Then
-                                Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
-                                objectAdj.SourceWidthPixels = source.Width
-                                objectAdj.SourceHeightPixels = source.Height
-                                Using processedLayer = ProcessBitmapBase(layer, objectAdj)
-                                    DrawAnnotationLayer(canvas, processedLayer, renderAnnotation.BlendMode)
-                                End Using
-                            Else
-                                DrawAnnotationLayer(canvas, layer, renderAnnotation.BlendMode)
-                            End If
-                        End Using
-                    Else
-                        DrawAnnotationOnCanvas(canvas, kind, renderAnnotation, rect, source.Width, source.Height)
-                    End If
-                Next
+                DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height, adj.Annotations)
             End Using
             Return result
         End Function
+
+        Friend Shared Sub DrawAnnotationsOnCanvas(canvas As SKCanvas, adj As ImageAdjustments,
+                                                   sourceWidth As Integer, sourceHeight As Integer,
+                                                   offsetX As Integer, offsetY As Integer,
+                                                   layerWidth As Integer, layerHeight As Integer,
+                                                   Optional renderAnnotations As IReadOnlyList(Of ImageAnnotation) = Nothing)
+            If canvas Is Nothing OrElse adj Is Nothing Then Return
+            Dim annotations = If(renderAnnotations, adj.Annotations)
+            If annotations Is Nothing OrElse annotations.Count = 0 Then Return
+            If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse layerWidth <= 0 OrElse layerHeight <= 0 Then Return
+
+            Dim scaleX As Single = 1.0F
+            Dim scaleY As Single = 1.0F
+            If adj.SourceWidthPixels > 0 AndAlso adj.SourceHeightPixels > 0 Then
+                scaleX = sourceWidth / CSng(adj.SourceWidthPixels)
+                scaleY = sourceHeight / CSng(adj.SourceHeightPixels)
+            End If
+
+            For Each annotation In annotations
+                If annotation Is Nothing OrElse Not annotation.IsVisible Then Continue For
+                Dim renderAnnotation = ScaleAnnotationForSource(annotation, scaleX, scaleY)
+                Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
+
+                If IsPaintKind(kind) Then
+                    Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
+                    Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
+                    Dim strokeWidth = Math.Max(1.0F, Clamp(renderAnnotation.StrokeWidth, 1, Math.Max(sourceWidth, sourceHeight)))
+                    Dim isEraser = kind = "eraser"
+                    Dim eraserFill As SKColor? = Nothing
+                    If isEraser AndAlso Not String.IsNullOrWhiteSpace(renderAnnotation.EraserFillColor) Then
+                        eraserFill = ApplyAlpha(ParseColor(renderAnnotation.EraserFillColor, SKColors.Transparent), alphaFactor)
+                    End If
+                    ' Mischmodus auch für Pinselstriche (nicht Radiergummi - der entfernt Pixel und ignoriert
+                    ' den Modus): erst auf eine eigene transparente Ebene malen, dann mit dem Blend-Modus
+                    ' einkomponieren - wie bei Formen/Text. Bei "Normal" direkt zeichnen (kein Extra-Speicher).
+                    Dim useBrushBlendLayer = (Not isEraser) AndAlso Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode)
+                    If useBrushBlendLayer Then
+                        Using brushLayer = New SKBitmap(layerWidth, layerHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
+                            Using brushLayerCanvas = New SKCanvas(brushLayer)
+                                brushLayerCanvas.Clear(SKColors.Transparent)
+                                brushLayerCanvas.Translate(-offsetX, -offsetY)
+                                If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
+                                    DrawBrushStrokeWithEffects(brushLayerCanvas, renderAnnotation, sourceWidth, sourceHeight, stroke, strokeWidth)
+                                Else
+                                    DrawBrushStroke(brushLayerCanvas, renderAnnotation.Strokes, sourceWidth, sourceHeight, stroke, strokeWidth,
+                                                    renderAnnotation.HardnessPercent, renderAnnotation.FlowPercent, renderAnnotation.BrushPreset, False, Nothing)
+                                End If
+                            End Using
+                            DrawAnnotationLayer(canvas, brushLayer, renderAnnotation.BlendMode)
+                        End Using
+                    Else
+                        canvas.Save()
+                        canvas.Translate(-offsetX, -offsetY)
+                        If (Not isEraser) AndAlso (renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled) Then
+                            DrawBrushStrokeWithEffects(canvas, renderAnnotation, sourceWidth, sourceHeight, stroke, strokeWidth)
+                        Else
+                            DrawBrushStroke(canvas, renderAnnotation.Strokes, sourceWidth, sourceHeight, stroke, strokeWidth,
+                                            renderAnnotation.HardnessPercent, renderAnnotation.FlowPercent, renderAnnotation.BrushPreset, isEraser, eraserFill)
+                        End If
+                        canvas.Restore()
+                    End If
+                    Continue For
+                End If
+
+                Dim rect = ComputeAnnotationRect(sourceWidth, sourceHeight, kind, renderAnnotation)
+
+                ' Objekt MIT eigenen Anpassungen: erst allein auf eine transparente Ebene zeichnen, dann
+                ' die Pixel-Pipeline darauf laufen lassen (Belichtung, Farbe, Filter … treffen so nur das
+                ' Objekt), dann an Ort und Stelle in der Z-Reihenfolge einkomponieren. Ohne eigene
+                ' Anpassungen wird wie bisher direkt gezeichnet - kein zusätzlicher Speicher, keine Zeit.
+                If HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) Then
+                    Using layer = New SKBitmap(layerWidth, layerHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
+                        Using layerCanvas = New SKCanvas(layer)
+                            layerCanvas.Clear(SKColors.Transparent)
+                            layerCanvas.Translate(-offsetX, -offsetY)
+                            DrawAnnotationOnCanvas(layerCanvas, kind, renderAnnotation, rect, sourceWidth, sourceHeight)
+                        End Using
+                        If HasObjectAdjustments(annotation) Then
+                            Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
+                            objectAdj.SourceWidthPixels = layer.Width
+                            objectAdj.SourceHeightPixels = layer.Height
+                            Using processedLayer = ProcessBitmapBase(layer, objectAdj)
+                                DrawAnnotationLayer(canvas, processedLayer, renderAnnotation.BlendMode)
+                            End Using
+                        Else
+                            DrawAnnotationLayer(canvas, layer, renderAnnotation.BlendMode)
+                        End If
+                    End Using
+                Else
+                    canvas.Save()
+                    canvas.Translate(-offsetX, -offsetY)
+                    DrawAnnotationOnCanvas(canvas, kind, renderAnnotation, rect, sourceWidth, sourceHeight)
+                    canvas.Restore()
+                End If
+            Next
+        End Sub
 
         Private Shared Sub DrawAnnotationLayer(canvas As SKCanvas, layer As SKBitmap, blendModeName As String)
             Using paint = New SKPaint With {.BlendMode = ResolveAnnotationBlendMode(blendModeName), .IsAntialias = True}
@@ -3804,13 +4965,14 @@ Namespace Services
                     ' Beim QR-Code ist FillColor die Hintergrundfarbe, StrokeColor die Modulfarbe.
                     DrawQrCode(canvas, If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text), rect, stroke, fill)
                 Case "image", "selectionimage"
-                    DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth, stretchToFill:=kind = "selectionimage")
+                    ' Ohne Seitenverhaeltnis-Sperre wird das Bild auf die Objekt-Box gestreckt.
+                    DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth, stretchToFill:=(kind = "selectionimage" OrElse Not annotation.LockAspect))
                 Case "svg"
                     Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                     DrawSvgAnnotation(canvas, annotation.ImagePath, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
                 Case "watermark"
                     If Not String.IsNullOrWhiteSpace(annotation.ImagePath) Then
-                        DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth)
+                        DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth, stretchToFill:=Not annotation.LockAspect)
                     Else
                         Dim watermark = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
                         Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
@@ -4960,34 +6122,46 @@ Namespace Services
             Dim embossOff = Math.Max(1.0F, strokeWidth * 0.03F)
 
             Dim bristles = Math.Max(6, CInt(strokeWidth / 1.4F))
-            Using bristle = New SKPaint With {.IsAntialias = True, .Style = SKPaintStyle.Stroke,
-                                              .StrokeCap = SKStrokeCap.Round, .StrokeJoin = SKStrokeJoin.Round,
-                                              .StrokeWidth = Math.Max(1.0F, strokeWidth * 0.055F)}
-                bristle.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(0.5F, strokeWidth * 0.03F + blurSigma))
-                For b As Integer = 0 To bristles - 1
-                    If Hash01(b, 1, seedBase) < 0.1F Then Continue For ' Lücken = Streifen
-                    Dim frac = (b / CSng(bristles - 1)) - 0.5F
-                    Dim offset = frac * strokeWidth * 0.92F + (Hash01(b, 2, seedBase) - 0.5F) * strokeWidth * 0.08F
-                    Dim a = Clamp(baseAlpha * (0.24F + Hash01(b, 3, seedBase) * 0.55F) * density, 0, 1)
-                    ' Zufälliger Beschnitt vorne/hinten -> unterschiedlich lange, auslaufende Borsten.
-                    Dim i0 = CInt(Math.Floor(Hash01(b, 4, seedBase) * 0.28F * (n - 1)))
-                    Dim i1 = CInt(Math.Ceiling((0.55F + Hash01(b, 5, seedBase) * 0.45F) * (n - 1)))
-                    i1 = Math.Min(n - 1, Math.Max(i0 + 1, i1))
+            ' PERF (Nutzer-Befund 17.07.: "CPU hängt ~2 min nach großem Klecks-Strich"): früher trug
+            ' jede Borste (×3 beim Impasto) einen eigenen MaskFilter-Blur - Skia rastert und blurt
+            ' dafür JE ZEICHNUNG eine Maske in Strichregion-Größe; bei ~160 Borsten in Vollauflösung
+            ' waren das Hunderte Blur-Durchläufe über eine Riesenregion (Minuten im Einback-Commit).
+            ' Jetzt: alle Borsten SCHARF in EINEN SaveLayer, der beim Restore einmalig mit derselben
+            ' Sigma geblurt wird - gleicher Weichzeichner, ein Durchlauf. Minimale Abweichung nur an
+            ' Borsten-Überlappungen (Blur nach dem Mischen statt je Borste); Vorschau, Brücke und
+            ' Einbacken nutzen dieselbe Routine und bleiben deshalb untereinander identisch.
+            Dim bristleSigma = Math.Max(0.5F, strokeWidth * 0.03F + blurSigma)
+            Using layerPaint = New SKPaint With {.ImageFilter = SKImageFilter.CreateBlur(bristleSigma, bristleSigma)}
+                lc.SaveLayer(layerPaint)
+                Using bristle = New SKPaint With {.IsAntialias = True, .Style = SKPaintStyle.Stroke,
+                                                  .StrokeCap = SKStrokeCap.Round, .StrokeJoin = SKStrokeJoin.Round,
+                                                  .StrokeWidth = Math.Max(1.0F, strokeWidth * 0.055F)}
+                    For b As Integer = 0 To bristles - 1
+                        If Hash01(b, 1, seedBase) < 0.1F Then Continue For ' Lücken = Streifen
+                        Dim frac = (b / CSng(bristles - 1)) - 0.5F
+                        Dim offset = frac * strokeWidth * 0.92F + (Hash01(b, 2, seedBase) - 0.5F) * strokeWidth * 0.08F
+                        Dim a = Clamp(baseAlpha * (0.24F + Hash01(b, 3, seedBase) * 0.55F) * density, 0, 1)
+                        ' Zufälliger Beschnitt vorne/hinten -> unterschiedlich lange, auslaufende Borsten.
+                        Dim i0 = CInt(Math.Floor(Hash01(b, 4, seedBase) * 0.28F * (n - 1)))
+                        Dim i1 = CInt(Math.Ceiling((0.55F + Hash01(b, 5, seedBase) * 0.45F) * (n - 1)))
+                        i1 = Math.Min(n - 1, Math.Max(i0 + 1, i1))
 
-                    If emboss Then
-                        ' Schatten (dunkle Kante) auf der einen, Licht (helle Kante) auf der anderen Seite;
-                        ' der Kern liegt zuletzt darüber, sodass nur schmale Kanten herausschauen.
-                        bristle.Color = Shade(color, -0.45F).WithAlpha(CByte(Clamp(a * 0.9F * 255.0F, 0, 255)))
-                        Using sp = BuildOffsetBristlePath(pts, normals, i0, i1, offset + embossOff) : lc.DrawPath(sp, bristle) : End Using
-                        bristle.Color = Shade(color, 0.55F).WithAlpha(CByte(Clamp(a * 0.9F * 255.0F, 0, 255)))
-                        Using hp = BuildOffsetBristlePath(pts, normals, i0, i1, offset - embossOff) : lc.DrawPath(hp, bristle) : End Using
-                    End If
+                        If emboss Then
+                            ' Schatten (dunkle Kante) auf der einen, Licht (helle Kante) auf der anderen Seite;
+                            ' der Kern liegt zuletzt darüber, sodass nur schmale Kanten herausschauen.
+                            bristle.Color = Shade(color, -0.45F).WithAlpha(CByte(Clamp(a * 0.9F * 255.0F, 0, 255)))
+                            Using sp = BuildOffsetBristlePath(pts, normals, i0, i1, offset + embossOff) : lc.DrawPath(sp, bristle) : End Using
+                            bristle.Color = Shade(color, 0.55F).WithAlpha(CByte(Clamp(a * 0.9F * 255.0F, 0, 255)))
+                            Using hp = BuildOffsetBristlePath(pts, normals, i0, i1, offset - embossOff) : lc.DrawPath(hp, bristle) : End Using
+                        End If
 
-                    bristle.Color = color.WithAlpha(CByte(Clamp(a * 255.0F, 0, 255)))
-                    Using path = BuildOffsetBristlePath(pts, normals, i0, i1, offset)
-                        lc.DrawPath(path, bristle)
-                    End Using
-                Next
+                        bristle.Color = color.WithAlpha(CByte(Clamp(a * 255.0F, 0, 255)))
+                        Using path = BuildOffsetBristlePath(pts, normals, i0, i1, offset)
+                            lc.DrawPath(path, bristle)
+                        End Using
+                    Next
+                End Using
+                lc.Restore()
             End Using
         End Sub
 
@@ -5294,15 +6468,24 @@ Namespace Services
             Return result
         End Function
 
-        Public Shared Function SaveImage(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer, Optional preserveMetadata As Boolean = True) As Boolean
+        ''' <paramref name="workingFull"/>: voll aufgelöstes ARBEITSBILD des Editors (Umbau Stufe C) -
+        ''' wenn gesetzt, ersetzt es den Datei-Decode als Pipeline-Eingang (Besitz wechselt hierher,
+        ''' wird disposed). Aufrufer übergeben einen Klon (WorkingImageService.CloneFull).
+        Public Shared Function SaveImage(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer,
+                                         Optional preserveMetadata As Boolean = True,
+                                         Optional workingFull As SKBitmap = Nothing) As Boolean
             ' Zentraler Schutz: Bearbeitung einer RAW-Quelle wirkt nur auf deren eingebettete
             ' JPEG-Vorschau (siehe OpenSourceStream/DecodeOriented) - ein Speichern-in-place würde
             ' hier fälschlich die RAW-Rohdaten JPEG-kodiert über die Original-RAW-Datei schreiben.
             If RawPreviewService.IsSupportedRaw(sourcePath) AndAlso String.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase) Then
+                workingFull?.Dispose()
                 Return False
             End If
             Try
-                Using original = DecodeOriented(sourcePath)
+                ' .fpx-Projekte beim echten Speichern/Konvertieren immer aus Basisbild + Rezept rendern.
+                ' composite.png ist nur ein schnelles Anzeige-/Thumbnail-Bild und kann bewusst verkleinert sein.
+                Dim isFpxSource = FpxService.IsFpx(sourcePath)
+                Using original = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeOriented(sourcePath)))
                     If original Is Nothing Then Return False
 
                     Dim ext = IO.Path.GetExtension(targetPath).ToLowerInvariant()
@@ -5311,20 +6494,78 @@ Namespace Services
                                     SKEncodedImageFormat.Jpeg))
 
                     Using processed = ProcessBitmap(original, adj)
-                        Using image = SKImage.FromBitmap(processed)
-                            Using data = image.Encode(format, quality)
-                                Using fs = File.Open(targetPath, FileMode.Create, FileAccess.Write)
-                                    data.SaveTo(fs)
+                        ' JPEG kennt kein Alpha: transparente Bereiche (Radierer-Löcher,
+                        ' ausgeblendeter Hintergrund) liefen beim Encode auf SCHWARZ
+                        ' (Nutzer-Befund 2026-07-17). Auf WEISS flatten - wie Photoshop.
+                        Dim toEncode = processed
+                        If format = SKEncodedImageFormat.Jpeg Then
+                            toEncode = FlattenAlphaToWhite(processed)
+                        End If
+                        Try
+                            Using image = SKImage.FromBitmap(toEncode)
+                                Using data = image.Encode(format, quality)
+                                    Using fs = File.Open(targetPath, FileMode.Create, FileAccess.Write)
+                                        data.SaveTo(fs)
+                                    End Using
                                 End Using
                             End Using
-                        End Using
+                        Finally
+                            If Not Object.ReferenceEquals(toEncode, processed) Then toEncode.Dispose()
+                        End Try
                     End Using
-                    If preserveMetadata Then TryCopyMetadata(sourcePath, targetPath)
+                    ' Metadaten nur von echten Bildquellen kopieren (ein .fpx-Bündel trägt keine).
+                    If preserveMetadata AndAlso Not isFpxSource Then TryCopyMetadata(sourcePath, targetPath)
                     Return True
                 End Using
             Catch ex As Exception
                 Return False
             End Try
+        End Function
+
+        ''' <summary>Weißer Untergrund für Formate ohne Alphakanal (JPEG). Liefert das Original
+        ''' zurück, wenn nichts zu tun ist; sonst ein NEUES Bitmap (Aufrufer disposed es).</summary>
+        Private Shared Function FlattenAlphaToWhite(source As SKBitmap) As SKBitmap
+            If source Is Nothing Then Return source
+            Dim flattened = New SKBitmap(source.Width, source.Height, source.ColorType, SKAlphaType.Premul)
+            Using canvas = New SKCanvas(flattened)
+                canvas.Clear(SKColors.White)
+                canvas.DrawBitmap(source, 0, 0)
+            End Using
+            Return flattened
+        End Function
+
+        ''' <summary>Rendert ein .fpx-Bündel in voller Basisauflösung. Der Aufrufer übernimmt das SKBitmap.</summary>
+        Private Shared Function RenderFpxFullResolution(fpxPath As String) As SKBitmap
+            Dim loaded = FpxService.Load(fpxPath)
+            If loaded Is Nothing OrElse String.IsNullOrWhiteSpace(loaded.BaseImagePath) OrElse Not File.Exists(loaded.BaseImagePath) Then Return Nothing
+            Try
+                ' Gebackenes Arbeitsbild (voll aufgelöstes retouch.png) als Pipeline-Eingang -
+                ' Pinsel-/Radiererstriche stehen seit Stufe D NUR noch dort, nicht mehr im Rezept.
+                ' Ein Vorschauauflösungs-Altbestand (Seed 2026-07-17) wird ignoriert (Maße-Check).
+                Dim inputPath = loaded.BaseImagePath
+                If Not String.IsNullOrWhiteSpace(loaded.RetouchStagePath) AndAlso File.Exists(loaded.RetouchStagePath) Then
+                    Dim baseSize = GetOrientedImageSize(loaded.BaseImagePath)
+                    Dim stageSize = GetOrientedImageSize(loaded.RetouchStagePath)
+                    If baseSize.Width > 0 AndAlso stageSize.Width = baseSize.Width AndAlso stageSize.Height = baseSize.Height Then
+                        inputPath = loaded.RetouchStagePath
+                    End If
+                End If
+                Using baseBitmap = DecodeOriented(inputPath)
+                    If baseBitmap Is Nothing Then Return Nothing
+                    Return ProcessBitmap(baseBitmap, If(loaded.Adjustments, New ImageAdjustments()))
+                End Using
+            Finally
+                If Not String.IsNullOrWhiteSpace(loaded.TempDir) Then
+                    Try : Directory.Delete(loaded.TempDir, True) : Catch : End Try
+                End If
+            End Try
+        End Function
+
+        Public Shared Function RenderFpxFullResolutionBitmap(fpxPath As String) As Bitmap
+            Using rendered = RenderFpxFullResolution(fpxPath)
+                If rendered Is Nothing Then Return Nothing
+                Return ToAvaloniaBitmap(rendered)
+            End Using
         End Function
 
         Private Shared Sub TryCopyMetadata(sourcePath As String, targetPath As String)
@@ -5922,9 +7163,11 @@ Namespace Services
         ''' SaveImage (Original decodiert + alle Anpassungen/Objekte gebacken), schneidet daraus
         ''' aber nur pixelRect aus und speichert das Ergebnis als eigenständige PNG-Datei -
         ''' Grundlage für ein neues, frei verschiebbares Bild-Objekt (AddImageAnnotationAt).
-        Public Shared Function ExtractRegionToFile(sourcePath As String, adj As ImageAdjustments, pixelRect As SKRectI, targetPngPath As String) As Boolean
+        ''' <paramref name="workingFull"/>: Arbeitsbild statt Datei-Decode (siehe SaveImage; Besitz wechselt hierher).
+        Public Shared Function ExtractRegionToFile(sourcePath As String, adj As ImageAdjustments, pixelRect As SKRectI, targetPngPath As String,
+                                                   Optional workingFull As SKBitmap = Nothing) As Boolean
             Try
-                Using original = DecodeOriented(sourcePath)
+                Using original = If(workingFull, DecodeOriented(sourcePath))
                     If original Is Nothing Then Return False
                     Using processed = ProcessBitmap(original, adj)
                         Dim left = Math.Max(0, pixelRect.Left)
@@ -6136,11 +7379,16 @@ Namespace Services
 
         ''' <summary>Wie <see cref="ExtractRegionToFile"/>, aber schneidet den Ausschnitt zusätzlich mit einer
         ''' Maske frei (unregelmäßige Auswahl). Die Maske muss die Größe des (geklemmten) Rechtecks haben.</summary>
+        ''' <paramref name="workingFull"/>: Arbeitsbild statt Datei-Decode (siehe SaveImage; Besitz wechselt hierher).
         Public Shared Function ExtractRegionToFileMasked(sourcePath As String, adj As ImageAdjustments,
-                                                         pixelRect As SKRectI, mask As SKBitmap, targetPngPath As String) As Boolean
+                                                         pixelRect As SKRectI, mask As SKBitmap, targetPngPath As String,
+                                                         Optional workingFull As SKBitmap = Nothing) As Boolean
             Try
-                If mask Is Nothing Then Return False
-                Using original = DecodeOriented(sourcePath)
+                If mask Is Nothing Then
+                    workingFull?.Dispose()
+                    Return False
+                End If
+                Using original = If(workingFull, DecodeOriented(sourcePath))
                     If original Is Nothing Then Return False
                     Using processed = ProcessBitmap(original, adj)
                         Dim left = Math.Max(0, pixelRect.Left)
@@ -6231,12 +7479,14 @@ Namespace Services
         ''' <summary>Dekodiert und verarbeitet das Bild (alle Anpassungen/Objekte gebacken) und liefert die
         ''' Zauberstab-Maske am Saatpunkt in Bildpixeln. <paramref name="bounds"/> ist das umschließende
         ''' Rechteck in Bildpixeln.</summary>
+        ''' <paramref name="workingFull"/>: Arbeitsbild statt Datei-Decode (siehe SaveImage; Besitz wechselt hierher).
         Public Shared Function BuildMagicWandMaskFromFile(sourcePath As String, adj As ImageAdjustments,
                                                           seedX As Integer, seedY As Integer, tolerance As Single,
-                                                          ByRef bounds As SKRectI) As SKBitmap
+                                                          ByRef bounds As SKRectI,
+                                                          Optional workingFull As SKBitmap = Nothing) As SKBitmap
             bounds = SKRectI.Empty
             Try
-                Using original = DecodeOriented(sourcePath)
+                Using original = If(workingFull, DecodeOriented(sourcePath))
                     If original Is Nothing Then Return Nothing
                     Using processed = ProcessBitmap(original, adj)
                         Return BuildMagicWandMask(processed, seedX, seedY, tolerance, bounds)
@@ -7688,6 +8938,12 @@ Namespace Services
             If skBitmap.ColorType = SKColorType.Bgra8888 AndAlso skBitmap.AlphaType = SKAlphaType.Premul Then
                 Return ImageOrientationService.ToAvaloniaBitmapFast(skBitmap)
             End If
+            ' Rgba8888/Premul (z.B. jede Ausgabe von ApplyAnnotations und damit die SZENE) ebenfalls per
+            ' reiner Zeilen-Speicherkopie - der fruehere PNG-Encode/Decode-Umweg kostete pro Vorschau-
+            ' Update einen kompletten 9,8-MP-Roundtrip (CPU hoch, Regler nur "haeppchenweise").
+            If skBitmap.ColorType = SKColorType.Rgba8888 AndAlso skBitmap.AlphaType = SKAlphaType.Premul Then
+                Return ToAvaloniaBitmapFastRgba(skBitmap)
+            End If
 
             Using image = SKImage.FromBitmap(skBitmap)
                 Using data = image.Encode(SKEncodedImageFormat.Png, 100)
@@ -7698,6 +8954,27 @@ Namespace Services
                     End Using
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Wie ImageOrientationService.ToAvaloniaBitmapFast, nur fuer Rgba8888/Premul
+        ''' (Avalonia PixelFormat.Rgba8888) - reine Zeilenkopie ohne Kompressions-Umweg.</summary>
+        Private Shared Function ToAvaloniaBitmapFastRgba(skBitmap As SKBitmap) As Bitmap
+            Dim width = skBitmap.Width
+            Dim height = skBitmap.Height
+            Dim wb = New WriteableBitmap(New Avalonia.PixelSize(width, height), New Avalonia.Vector(96, 96),
+                                         Avalonia.Platform.PixelFormat.Rgba8888, Avalonia.Platform.AlphaFormat.Premul)
+            Using fb = wb.Lock()
+                Dim srcStride = skBitmap.RowBytes
+                Dim dstStride = fb.RowBytes
+                Dim rowBytes = Math.Min(srcStride, dstStride)
+                Dim srcBase = skBitmap.GetPixels()
+                Dim buffer(rowBytes - 1) As Byte
+                For y = 0 To height - 1
+                    Runtime.InteropServices.Marshal.Copy(IntPtr.Add(srcBase, y * srcStride), buffer, 0, rowBytes)
+                    Runtime.InteropServices.Marshal.Copy(buffer, 0, IntPtr.Add(fb.Address, y * dstStride), rowBytes)
+                Next
+            End Using
+            Return wb
         End Function
     End Class
 

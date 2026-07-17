@@ -48,8 +48,10 @@ The editor covers the most common photo work:
 - Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools.
 - Rectangle, ellipse, lasso and magic wand selections.
 - Per object editing with opacity, blend modes, shadows, glow and transform controls.
+- A toggleable Layers panel with the full object stack: per-layer visibility, opacity, blend mode, drag-and-drop reorder, rename (double-click or F2), rasterize (bake a layer into the image so retouching can work on its pixels) and delete, plus the base image as a hideable background layer.
+- A native project format (`.fpx`): *Save as…* can bundle the whole edit — adjustments, layer stack and the baked working image — so it can be reopened and continued. Adjustments and object layers stay editable after reopening; retouching, brush strokes and rasterized layers are baked into the image (undo covers them only within the session). `.fpx` projects show up in the gallery, viewer and fullscreen like any image.
 
-The editor is not non-destructive after saving. While the editor is open, changes can be undone and objects stay editable. Saving writes the result into pixels. Use *Save as* if the original file should stay untouched.
+Exporting to JPEG/PNG/WEBP writes the result into pixels; while the editor is open, changes can be undone and objects stay editable. Save as a `.fpx` project (or use *Save as* to a normal image) if the original file should stay untouched.
 
 <img src="Screenshots/Editor_Text.png" />
 

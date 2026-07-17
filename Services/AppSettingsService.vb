@@ -119,6 +119,23 @@ Namespace Services
         Public Property JpgSaveQuality As Integer = 90
         Public Property PreserveMetadataOnSave As Boolean = True
         Public Property EditorInfoSidebarExpanded As Boolean = True
+        ''' Ob das Ebenen-Panel im Editor zuletzt eingeblendet war - gemerkter Bedienzustand (wie die
+        ''' Info-Leiste), kein Schalter in den Einstellungen. Standard aus: es ist ein Profi-Werkzeug.
+        Public Property EditorLayersPanelExpanded As Boolean = False
+        ''' „Originale überschreiben" im Filter-anwenden-Dialog - bleibt über Sitzungen erhalten
+        ''' (Nutzerwunsch 2026-07-17).
+        Public Property BatchFilterOverwriteOriginals As Boolean = False
+        ''' „Originale überschreiben" im Wasserzeichen-anwenden-Dialog - bleibt über Sitzungen erhalten
+        ''' (analog zu Filter anwenden).
+        Public Property BatchWatermarkOverwriteOriginals As Boolean = True
+        ''' „Originale überschreiben" im Bildgröße-ändern-Dialog. Standard AN = bisheriges Verhalten;
+        ''' abgewählt entstehen Kopien mit Formatauswahl wie beim Filter-Dialog (Nutzerwunsch 2026-07-17).
+        Public Property BatchResizeOverwriteOriginals As Boolean = True
+        ''' Abstand der EINRAST-Linien (Sicherheitsabstand) zu den Bildrändern in Prozent - die
+        ''' pinken Ziel-Linien, an denen Objekte beim Verschieben einrasten (Nutzerwunsch
+        ''' 2026-07-17, präzisiert: gemeint war diese Linie, nicht das Zuschneiden-Werkzeug).
+        ''' 0 = deaktiviert; Ränder und Mitte rasten immer. 4 = bisheriges festes Verhalten.
+        Public Property EditorSnapMarginPercent As Integer = 4
         ''' Ob der Vorher/Nachher-Vergleich im Editor zuletzt eingeschaltet war - gemerkter Bedienzustand
         ''' (wie die Info-Leiste), kein Schalter in den Einstellungen.
         Public Property EditorShowComparison As Boolean = True
@@ -166,6 +183,9 @@ Namespace Services
         ' Löschen wirkt standardmäßig NICHT auf den Server: ein versehentliches Entf in der Galerie soll
         ' keine Bilder aus Immich entfernen. ImmichDeletePermanently umgeht zusätzlich den Immich-Papierkorb.
         Public Property ImmichAllowDelete As Boolean = False
+        ''' Wo die Zeitleiste am rechten Galerierand erscheint: "All" (Immich UND Ordner),
+        ''' "Immich" (nur Immich-Ansichten), "Folders" (nur Ordner-/Suchansichten), "Off".
+        Public Property GalleryTimelineMode As String = "All"
         Public Property ImmichDeletePermanently As Boolean = False
     End Class
 
@@ -225,6 +245,7 @@ Namespace Services
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
+                settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
                 settings.GalleryStartupFolderMode = NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
                 settings.GalleryStartupCustomFolder = NormalizeFolderPath(settings.GalleryStartupCustomFolder)
                 settings.LastGalleryFolder = NormalizeFolderPath(settings.LastGalleryFolder)
@@ -300,6 +321,7 @@ Namespace Services
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
+                settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
                 settings.GalleryStartupFolderMode = NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
                 settings.GalleryStartupCustomFolder = NormalizeFolderPath(settings.GalleryStartupCustomFolder)
                 settings.LastGalleryFolder = NormalizeFolderPath(settings.LastGalleryFolder)
@@ -503,6 +525,15 @@ Namespace Services
             Environment.SetEnvironmentVariable("AVALONIA_SCREEN_SCALE_FACTORS", $"{screen}={scaleText}")
         End Sub
 
+        Public Shared Function NormalizeGalleryTimelineMode(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Immich", "Folders", "Off"
+                    Return If(value, "").Trim()
+                Case Else
+                    Return "All"
+            End Select
+        End Function
+
         Public Shared Function NormalizeGalleryViewMode(value As String) As String
             Select Case If(value, "").Trim()
                 Case "List"
@@ -576,7 +607,7 @@ Namespace Services
 
         Public Shared Function NormalizeGalleryStartupFolderMode(value As String) As String
             Select Case If(value, "").Trim()
-                Case "Pictures", "Last", "Custom"
+                Case "Pictures", "Last", "Custom", "Immich"
                     Return value.Trim()
                 Case Else
                     Return "Pictures"
@@ -813,6 +844,26 @@ Namespace Services
 
         Public Shared Sub SaveEditorInfoSidebarExpanded(value As Boolean)
             Update(Sub(s) s.EditorInfoSidebarExpanded = value)
+        End Sub
+
+        Public Shared Sub SaveBatchFilterOverwriteOriginals(value As Boolean)
+            Update(Sub(s) s.BatchFilterOverwriteOriginals = value)
+        End Sub
+
+        Public Shared Sub SaveBatchWatermarkOverwriteOriginals(value As Boolean)
+            Update(Sub(s) s.BatchWatermarkOverwriteOriginals = value)
+        End Sub
+
+        Public Shared Sub SaveBatchResizeOverwriteOriginals(value As Boolean)
+            Update(Sub(s) s.BatchResizeOverwriteOriginals = value)
+        End Sub
+
+        Public Shared Sub SaveEditorSnapMarginPercent(value As Integer)
+            Update(Sub(s) s.EditorSnapMarginPercent = Math.Max(0, Math.Min(20, value)))
+        End Sub
+
+        Public Shared Sub SaveEditorLayersPanelExpanded(value As Boolean)
+            Update(Sub(s) s.EditorLayersPanelExpanded = value)
         End Sub
 
         Public Shared Sub SaveEditorShowComparison(value As Boolean)

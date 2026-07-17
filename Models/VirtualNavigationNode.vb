@@ -1,9 +1,15 @@
 Imports System.Collections.ObjectModel
+Imports System.ComponentModel
+Imports System.Runtime.CompilerServices
 Imports FerrumPix.Services
 
 Namespace Models
 
     Public Class VirtualNavigationNode
+        Implements INotifyPropertyChanged
+
+        Private _isExpanded As Boolean
+
         Public Property Name As String
         Public Property Kind As String
         ''' Für gespeicherte Suchen: "Local" oder "Immich".
@@ -26,6 +32,15 @@ Namespace Models
         ''' für JEDEN Baum - Ordner, Suchen und Immich. Ohne diese Eigenschaft lief die Bindung für die
         ''' beiden virtuellen Bäume ins Leere (Avalonia meldete das nur ins Log, sichtbar war nichts).</summary>
         Public Property IsExpanded As Boolean
+            Get
+                Return _isExpanded
+            End Get
+            Set(value As Boolean)
+                If _isExpanded = value Then Return
+                _isExpanded = value
+                RaisePropertyChanged()
+            End Set
+        End Property
 
         ''' <summary>Album löschbar: nur ein echter Album-Knoten, und nur wenn „Löschen in Immich erlauben"
         ''' eingeschaltet ist - derselbe Schalter, der auch das Löschen von Fotos freigibt. Die Album-Knoten
@@ -44,6 +59,19 @@ Namespace Models
             End Get
         End Property
 
+        ''' Symbol des Knotens im Immich-Baum: Personen und Orte bekommen eigene Icons,
+        ''' alles andere (Alle Fotos, Alben) behält die Wolke.
+        Public ReadOnly Property ImmichIconSource As String
+            Get
+                Select Case Kind
+                    Case "ImmichPeopleRoot" : Return "avares://FerrumPix/Assets/Icons/outline/users.svg"
+                    Case "ImmichPerson" : Return "avares://FerrumPix/Assets/Icons/outline/user.svg"
+                    Case "ImmichPlacesRoot", "ImmichPlace" : Return "avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
+                    Case Else : Return "avares://FerrumPix/Assets/Icons/outline/cloud.svg"
+                End Select
+            End Get
+        End Property
+
         ''' True für jeden Immich-Knoten (Album oder „Alle Fotos") - zeigt das Immich-Kontextmenü.
         Public ReadOnly Property IsImmichNode As Boolean
             Get
@@ -56,6 +84,12 @@ Namespace Models
             Me.Kind = kind
             Me.Query = query
             Children = New ObservableCollection(Of VirtualNavigationNode)()
+        End Sub
+
+        Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+
+        Private Sub RaisePropertyChanged(<CallerMemberName> Optional propertyName As String = Nothing)
+            RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
         End Sub
     End Class
 

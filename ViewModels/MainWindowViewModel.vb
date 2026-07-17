@@ -55,6 +55,9 @@ Namespace ViewModels
         Private _dialogBatchResizeScalePercent As Integer = 0
         Private _dialogBatchResizeSourceWidth As Integer = 0
         Private _dialogBatchResizeSourceHeight As Integer = 0
+        Private _dialogBatchResizeOverwrite As Boolean = True
+        Private _dialogBatchResizeAppendSize As Boolean = True
+        Private _dialogBatchWatermarkOverwrite As Boolean = True
         Private _dialogSelectedWatermarkPresetName As String = ""
         Private ReadOnly _dialogWatermarkPresets As New List(Of WatermarkPresetSettings)()
 
@@ -91,6 +94,10 @@ Namespace ViewModels
 
                 If previousMode <> AppMode.Editor AndAlso value = AppMode.Editor Then
                     Editor?.ActivateDefaultToolForModeEntry()
+                    ' Herkunft merken: Wer aus der GALERIE in den Editor kam, soll beim Verlassen
+                    ' wieder in der Galerie landen (auf dem Bild), nicht im Viewer (Nutzerwunsch
+                    ' 2026-07-17).
+                    Editor?.SetEntryMode(previousMode)
                 End If
             End Set
         End Property
@@ -205,9 +212,19 @@ Namespace ViewModels
             Return Await Editor.ConfirmSaveBeforeLeavingAsync(actionDescription)
         End Function
 
+        Private Async Function ConfirmViewerLeaveAsync(actionDescription As String) As Task(Of Boolean)
+            If CurrentMode <> AppMode.Viewer OrElse Viewer Is Nothing Then Return True
+            Return Await Viewer.ConfirmPendingRotationAsync(actionDescription)
+        End Function
+
         Public Async Sub OpenImageInViewer(imagePath As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional bypassEditorPrompt As Boolean = False, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             If CurrentMode = AppMode.Editor AndAlso Not bypassEditorPrompt Then
                 If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
+            End If
+            If CurrentMode = AppMode.Viewer AndAlso
+               Viewer IsNot Nothing AndAlso
+               Not String.Equals(Viewer.CurrentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+                If Not Await ConfirmViewerLeaveAsync("ein anderes Bild öffnest") Then Return
             End If
             Viewer.OpenImage(imagePath, allPaths, cacheScopeId, cacheScopeName)
             CurrentMode = AppMode.Viewer
@@ -227,6 +244,9 @@ Namespace ViewModels
             If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmEditorLeaveAsync("ein anderes Bild zu öffnen") Then Return
             End If
+            If CurrentMode = AppMode.Viewer Then
+                If Not Await ConfirmViewerLeaveAsync("den Editor öffnest") Then Return
+            End If
             Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId)
             If Not opened Then Return
             CurrentMode = AppMode.Editor
@@ -235,6 +255,9 @@ Namespace ViewModels
         Public Async Sub OpenSettings()
             If CurrentMode = AppMode.Editor Then
                 If Not Await ConfirmEditorLeaveAsync("die Einstellungen zu öffnen") Then Return
+            End If
+            If CurrentMode = AppMode.Viewer Then
+                If Not Await ConfirmViewerLeaveAsync("die Einstellungen öffnest") Then Return
             End If
             If CurrentMode <> AppMode.Settings Then
                 _previousModeBeforeSettings = CurrentMode
@@ -251,6 +274,9 @@ Namespace ViewModels
         Public Async Sub BackToGallery(Optional sourcePath As String = Nothing)
             If CurrentMode = AppMode.Editor Then
                 If Not Await ConfirmEditorLeaveAsync("zur Galerie zu wechseln") Then Return
+            End If
+            If CurrentMode = AppMode.Viewer Then
+                If Not Await ConfirmViewerLeaveAsync("zur Galerie wechselst") Then Return
             End If
             If String.IsNullOrEmpty(sourcePath) AndAlso Viewer IsNot Nothing Then
                 sourcePath = Viewer.CurrentImagePath
@@ -291,7 +317,10 @@ Namespace ViewModels
             IsFullscreen = True
         End Sub
 
-        Public Sub ExitFullscreen()
+        Public Async Sub ExitFullscreen()
+            If CurrentMode = AppMode.Viewer AndAlso _previousModeBeforeFullscreen <> AppMode.Viewer Then
+                If Not Await ConfirmViewerLeaveAsync("den Vollbildmodus verlässt") Then Return
+            End If
             IsFullscreen = False
             Viewer.StopSlideshow()
             CurrentMode = _previousModeBeforeFullscreen
@@ -328,12 +357,39 @@ Namespace ViewModels
 
             Select Case AppSettingsService.NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
                 Case "Last"
-                    If Directory.Exists(settings.LastGalleryFolder) Then
+                    ' Auch ein Immich-Ziel (Alle Fotos/Album/Person/Ort) kann der zuletzt geöffnete
+                    ' „Ordner" sein (Nutzerwunsch 2026-07-17). Erst den Bilder-Ordner als Basis
+                    ' laden, dann asynchron das Immich-Ziel öffnen - bei ausgeschaltetem/nicht
+                    ' erreichbarem Immich bleibt so der Bilder-Ordner als Fallback stehen.
+                    If If(settings.LastGalleryFolder, "").StartsWith("immich://", StringComparison.OrdinalIgnoreCase) Then
+                        If ImmichService.IsConfigured Then
+                            Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+                            If Directory.Exists(pictures) Then
+                                Gallery.SetInitialFolderNodeForPath(pictures)
+                                Gallery.NavigateToFolder(pictures)
+                            End If
+                            Dim ignored = Gallery.OpenImmichStartupTargetAsync(settings.LastGalleryFolder)
+                            Return
+                        End If
+                    ElseIf Directory.Exists(settings.LastGalleryFolder) Then
                         targetFolder = settings.LastGalleryFolder
                     End If
                 Case "Custom"
                     If Directory.Exists(settings.GalleryStartupCustomFolder) Then
                         targetFolder = settings.GalleryStartupCustomFolder
+                    End If
+                Case "Immich"
+                    ' Fester Start in Immich „Alle Fotos" (Einstellungsdialog, Nutzerwunsch
+                    ' 2026-07-17) - gleiche Mechanik wie der Letzter-Ordner-Fall: Bilder-Ordner
+                    ' als Basis laden, Immich-Ziel asynchron öffnen (Fallback bleibt so stehen).
+                    If ImmichService.IsConfigured Then
+                        Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+                        If Directory.Exists(pictures) Then
+                            Gallery.SetInitialFolderNodeForPath(pictures)
+                            Gallery.NavigateToFolder(pictures)
+                        End If
+                        Dim ignored = Gallery.OpenImmichStartupTargetAsync("immich://all")
+                        Return
                     End If
             End Select
 
@@ -356,6 +412,7 @@ Namespace ViewModels
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstrip))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstrip))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsInfoSidebarVisible))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsLayersPanelVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorGridSize))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowRulers))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowGrid))
@@ -410,6 +467,12 @@ Namespace ViewModels
                 If _dialogSelectedFormat = normalized Then Return
                 Me.RaiseAndSetIfChanged(_dialogSelectedFormat, normalized)
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+                ' Verfügbarkeit des Immich-Ziels hängt vom Format ab (FPX: nur lokal); ein zuvor gewähltes
+                ' Immich-Ziel auf Lokal zurücksetzen, damit keine ausgeblendete Option aktiv bleibt.
+                Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
+                If Not IsSaveAsImmichAvailable AndAlso String.Equals(_dialogSaveAsTarget, "Immich", StringComparison.OrdinalIgnoreCase) Then
+                    DialogSaveAsTarget = "Local"
+                End If
             End Set
         End Property
 
@@ -452,7 +515,9 @@ Namespace ViewModels
 
         Public ReadOnly Property IsSaveAsImmichAvailable As Boolean
             Get
-                Return ImmichService.IsConfigured
+                ' FPX ist ein lokales, nicht-destruktives Projektformat - ein Upload nach Immich (das Bilder
+                ' als Assets führt) ergibt keinen Sinn, daher als Ziel ausschließen.
+                Return ImmichService.IsConfigured AndAlso Not String.Equals(_dialogSelectedFormat, "FPX", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
@@ -579,8 +644,12 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _dialogBatchFilterOverwrite = value Then Return
                 _dialogBatchFilterOverwrite = value
+                ' Die Wahl bleibt über Sitzungen erhalten (Nutzerwunsch 2026-07-17).
+                AppSettingsService.SaveBatchFilterOverwriteOriginals(value)
                 Me.RaisePropertyChanged(NameOf(DialogBatchFilterOverwrite))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
+                Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))
+                Me.RaisePropertyChanged(NameOf(DialogWidth))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterAppendNameVisible))
             End Set
@@ -647,8 +716,9 @@ Namespace ViewModels
         ''' gemeint ist. Leer (z.B. in einer Suchliste oder in Immich) fällt es auf diesen zurück.</param>
         Public Async Function ShowBatchFilterAsync(fileCount As Integer, Optional currentFolder As String = "") As Task(Of BatchFilterDialogResult)
             _dialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
-            _dialogBatchFilterOverwrite = False
+            _dialogBatchFilterOverwrite = AppSettingsService.Load().BatchFilterOverwriteOriginals
             _dialogBatchFilterAppendName = True
+            ResetDialogSaveAsMetaOptions()
             DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
             DialogJpgQuality = 90
             DialogSaveAsTarget = "Local"
@@ -662,6 +732,7 @@ Namespace ViewModels
                               NameOf(IsDialogFilterFileVisible), NameOf(IsDialogFilterStrengthVisible),
                               NameOf(DialogBatchFilterOverwrite), NameOf(DialogBatchFilterAppendName),
                               NameOf(IsDialogFilterAppendNameVisible), NameOf(DialogShowsSaveAsOptions),
+                              NameOf(DialogShowsSaveAsMetaOptions), NameOf(DialogWidth),
                               NameOf(IsDialogJpgQualityVisible), NameOf(IsSaveAsImmichAvailable)}
                 Me.RaisePropertyChanged(name)
             Next
@@ -692,7 +763,11 @@ Namespace ViewModels
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
                 .Target = DialogSaveAsTarget,
-                .TargetFolder = DialogSaveAsTargetFolder
+                .TargetFolder = DialogSaveAsTargetFolder,
+                .CopyRating = _dialogSaveAsCopyRating,
+                .CopyFavorite = _dialogSaveAsCopyFavorite,
+                .CopyColorLabel = _dialogSaveAsCopyColorLabel,
+                .CopyKeywords = _dialogSaveAsCopyKeywords
             }
         End Function
 
@@ -976,6 +1051,11 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_dialogKind, value)
                 Me.RaisePropertyChanged(NameOf(DialogShowsInput))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
+                ' MUSS hier stehen: ResetDialogSaveAsMetaOptions läuft VOR dem Öffnen, also bevor
+                ' _dialogKind gesetzt ist - die Zeile „Übernehmen" wurde dort mit der Art des VORIGEN
+                ' Dialogs gemeldet und blieb je nach Vorgeschichte weg (Nutzerbericht „mal drin, mal
+                ' draußen" 2026-07-17).
+                Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsFileConflict))
                 Me.RaisePropertyChanged(NameOf(DialogShowsStandardActions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchRename))
@@ -984,6 +1064,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchFilter))
                 Me.RaisePropertyChanged(NameOf(DialogShowsWatermarkPreset))
                 Me.RaisePropertyChanged(NameOf(DialogUsesWideLayout))
+                Me.RaisePropertyChanged(NameOf(DialogWidth))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
             End Set
         End Property
@@ -1021,7 +1102,9 @@ Namespace ViewModels
             Get
                 Return _dialogKind = AppDialogKind.SaveAs OrElse
                        _dialogKind = AppDialogKind.BatchConvert OrElse
-                       (_dialogKind = AppDialogKind.BatchFilter AndAlso Not _dialogBatchFilterOverwrite)
+                       (_dialogKind = AppDialogKind.BatchFilter AndAlso Not _dialogBatchFilterOverwrite) OrElse
+                       (_dialogKind = AppDialogKind.WatermarkPreset AndAlso Not _dialogBatchWatermarkOverwrite) OrElse
+                       (_dialogKind = AppDialogKind.BatchResize AndAlso Not _dialogBatchResizeOverwrite)
             End Get
         End Property
 
@@ -1030,6 +1113,87 @@ Namespace ViewModels
                 Return _dialogKind = AppDialogKind.BatchFilter
             End Get
         End Property
+
+        ''' Einzeloptionen „Katalog-Metadaten übernehmen" (Nutzerwunsch 2026-07-17) - überall dort, wo
+        ''' aus EINER Quelldatei eine neue Datei entsteht: Speichern-unter, Konvertieren-nach sowie
+        ''' Bildgröße-ändern und Filter-anwenden als Kopie. Beim Überschreiben behält die Datei ihren
+        ''' Katalog-Eintrag, dort wäre die Zeile sinnlos.
+        Public ReadOnly Property DialogShowsSaveAsMetaOptions As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.SaveAs OrElse
+                       _dialogKind = AppDialogKind.BatchConvert OrElse
+                       (_dialogKind = AppDialogKind.BatchResize AndAlso Not _dialogBatchResizeOverwrite) OrElse
+                       (_dialogKind = AppDialogKind.WatermarkPreset AndAlso Not _dialogBatchWatermarkOverwrite) OrElse
+                       (_dialogKind = AppDialogKind.BatchFilter AndAlso Not _dialogBatchFilterOverwrite)
+            End Get
+        End Property
+
+        Private _dialogSaveAsCopyRating As Boolean = True
+        Private _dialogSaveAsCopyFavorite As Boolean = True
+        Private _dialogSaveAsCopyColorLabel As Boolean = True
+        Private _dialogSaveAsCopyKeywords As Boolean = True
+
+        Public Property DialogSaveAsCopyRating As Boolean
+            Get
+                Return _dialogSaveAsCopyRating
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogSaveAsCopyRating, value)
+            End Set
+        End Property
+
+        Public Property DialogSaveAsCopyFavorite As Boolean
+            Get
+                Return _dialogSaveAsCopyFavorite
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogSaveAsCopyFavorite, value)
+            End Set
+        End Property
+
+        Public Property DialogSaveAsCopyColorLabel As Boolean
+            Get
+                Return _dialogSaveAsCopyColorLabel
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogSaveAsCopyColorLabel, value)
+            End Set
+        End Property
+
+        Public Property DialogSaveAsCopyKeywords As Boolean
+            Get
+                Return _dialogSaveAsCopyKeywords
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogSaveAsCopyKeywords, value)
+            End Set
+        End Property
+
+        ''' Vom Dialog aufgerufen (Klick auf einen der Übernehmen-Buttons): Option umschalten.
+        Public Sub ToggleDialogSaveAsMetaOption(kind As String)
+            Select Case If(kind, "")
+                Case "Rating"
+                    DialogSaveAsCopyRating = Not DialogSaveAsCopyRating
+                Case "Favorite"
+                    DialogSaveAsCopyFavorite = Not DialogSaveAsCopyFavorite
+                Case "Label"
+                    DialogSaveAsCopyColorLabel = Not DialogSaveAsCopyColorLabel
+                Case "Keywords"
+                    DialogSaveAsCopyKeywords = Not DialogSaveAsCopyKeywords
+            End Select
+        End Sub
+
+        Private Sub ResetDialogSaveAsMetaOptions()
+            _dialogSaveAsCopyRating = True
+            _dialogSaveAsCopyFavorite = True
+            _dialogSaveAsCopyColorLabel = True
+            _dialogSaveAsCopyKeywords = True
+            For Each name In {NameOf(DialogSaveAsCopyRating), NameOf(DialogSaveAsCopyFavorite),
+                              NameOf(DialogSaveAsCopyColorLabel), NameOf(DialogSaveAsCopyKeywords),
+                              NameOf(DialogShowsSaveAsMetaOptions)}
+                Me.RaisePropertyChanged(name)
+            Next
+        End Sub
 
         Public ReadOnly Property DialogShowsFileConflict As Boolean
             Get
@@ -1067,9 +1231,25 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' Speichern-unter und Konvertieren-nach zählen mit dazu: die Zeile „Übernehmen" trägt vier
+        ''' Umschalt-Buttons nebeneinander, die bei 440 px nicht mehr aufs Formular passen
+        ''' (Nutzerwunsch 2026-07-17).
         Public ReadOnly Property DialogUsesWideLayout As Boolean
             Get
-                Return DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch OrElse DialogShowsBatchResize
+                Return DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch OrElse
+                       DialogShowsBatchResize OrElse DialogShowsSaveAsMetaOptions
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogWidth As Double
+            Get
+                If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch Then Return 820
+                If DialogShowsBatchResize Then Return 780
+                If _dialogKind = AppDialogKind.SaveAs OrElse
+                   _dialogKind = AppDialogKind.BatchConvert OrElse
+                   _dialogKind = AppDialogKind.BatchFilter Then Return 570
+                If _dialogKind = AppDialogKind.WatermarkPreset AndAlso DialogShowsSaveAsOptions Then Return 570
+                Return 440
             End Get
         End Property
 
@@ -1094,6 +1274,40 @@ Namespace ViewModels
         Public ReadOnly Property IsDialogJpgQualityVisible As Boolean
             Get
                 Return DialogShowsSaveAsOptions AndAlso String.Equals(_dialogSelectedFormat, "JPG", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' Überschreiben blendet Format, Ziel und Namenszusatz aus - wie beim Stapel-Filter.
+        Public Property DialogBatchResizeOverwrite As Boolean
+            Get
+                Return _dialogBatchResizeOverwrite
+            End Get
+            Set(value As Boolean)
+                If _dialogBatchResizeOverwrite = value Then Return
+                _dialogBatchResizeOverwrite = value
+                ' Die Wahl bleibt über Sitzungen erhalten (Nutzerwunsch 2026-07-17).
+                AppSettingsService.SaveBatchResizeOverwriteOriginals(value)
+                Me.RaisePropertyChanged(NameOf(DialogBatchResizeOverwrite))
+                Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
+                Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))
+                Me.RaisePropertyChanged(NameOf(DialogWidth))
+                Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogResizeAppendSizeVisible))
+            End Set
+        End Property
+
+        Public Property DialogBatchResizeAppendSize As Boolean
+            Get
+                Return _dialogBatchResizeAppendSize
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogBatchResizeAppendSize, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property IsDialogResizeAppendSizeVisible As Boolean
+            Get
+                Return Not _dialogBatchResizeOverwrite
             End Get
         End Property
 
@@ -1177,6 +1391,22 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property DialogBatchWatermarkOverwrite As Boolean
+            Get
+                Return _dialogBatchWatermarkOverwrite
+            End Get
+            Set(value As Boolean)
+                If _dialogBatchWatermarkOverwrite = value Then Return
+                _dialogBatchWatermarkOverwrite = value
+                AppSettingsService.SaveBatchWatermarkOverwriteOriginals(value)
+                Me.RaisePropertyChanged(NameOf(DialogBatchWatermarkOverwrite))
+                Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
+                Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))
+                Me.RaisePropertyChanged(NameOf(DialogWidth))
+                Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+            End Set
+        End Property
+
         Public Sub SetDialogBatchResizePreset(preset As String)
             _dialogBatchResizeScalePercent = 0
             Select Case If(preset, "")
@@ -1222,6 +1452,14 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(DialogBatchResizeHeightText))
             Me.RaisePropertyChanged(NameOf(DialogBatchResizeLockAspect))
             Me.RaisePropertyChanged(NameOf(DialogBatchResizeInterpolationLabel))
+            Me.RaisePropertyChanged(NameOf(DialogBatchResizeOverwrite))
+            Me.RaisePropertyChanged(NameOf(DialogBatchResizeAppendSize))
+            Me.RaisePropertyChanged(NameOf(IsDialogResizeAppendSizeVisible))
+            Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
+            Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))
+            Me.RaisePropertyChanged(NameOf(DialogWidth))
+            Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+            Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
         End Sub
 
         Private Shared Function NormalizeResizeDimensionText(value As String) As String
@@ -1300,7 +1538,9 @@ Namespace ViewModels
             Return ShowDialogAsync(kind, titleText, messageText, initialText, confirmText, cancelText)
         End Function
 
-        Public Async Function ShowBatchResizeAsync(Optional samplePath As String = Nothing) As Task(Of BatchResizeResult)
+        ''' <param name="currentFolder">Der Ordner, in dem die Galerie gerade steht - Vorgabe für den
+        ''' Zielordner, wenn Kopien geschrieben werden (wie beim Stapel-Filter).</param>
+        Public Async Function ShowBatchResizeAsync(Optional samplePath As String = Nothing, Optional currentFolder As String = "") As Task(Of BatchResizeResult)
             Dim settings = AppSettingsService.Load()
             _dialogBatchResizeWidthText = If(settings.LastBatchResizeWidth > 0, settings.LastBatchResizeWidth.ToString(CultureInfo.InvariantCulture), "")
             _dialogBatchResizeHeightText = If(settings.LastBatchResizeHeight > 0, settings.LastBatchResizeHeight.ToString(CultureInfo.InvariantCulture), "")
@@ -1309,6 +1549,15 @@ Namespace ViewModels
             _dialogBatchResizeScalePercent = settings.LastBatchResizeScalePercent
             _dialogBatchResizeSourceWidth = 0
             _dialogBatchResizeSourceHeight = 0
+            _dialogBatchResizeOverwrite = settings.BatchResizeOverwriteOriginals
+            _dialogBatchResizeAppendSize = True
+            ResetDialogSaveAsMetaOptions()
+            DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
+            DialogJpgQuality = 90
+            DialogSaveAsTarget = "Local"
+            DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
+                                          currentFolder,
+                                          ResolveDefaultSaveAsTargetFolder())
 
             If Not String.IsNullOrWhiteSpace(samplePath) AndAlso File.Exists(samplePath) Then
                 Try
@@ -1349,19 +1598,37 @@ Namespace ViewModels
 
             If _dialogBatchResizeScalePercent <= 0 AndAlso width <= 0 AndAlso height <= 0 Then Return Nothing
             AppSettingsService.SaveLastBatchResizeSettings(width, height, _dialogBatchResizeScalePercent, _dialogBatchResizeLockAspect, _dialogBatchResizeInterpolation)
+            If Not _dialogBatchResizeOverwrite Then PersistDialogTargetFolderIfLocal()
             Return New BatchResizeResult With {
                 .Width = width,
                 .Height = height,
                 .ScalePercent = _dialogBatchResizeScalePercent,
                 .LockAspect = _dialogBatchResizeLockAspect,
-                .Interpolation = _dialogBatchResizeInterpolation
+                .Interpolation = _dialogBatchResizeInterpolation,
+                .Overwrite = _dialogBatchResizeOverwrite,
+                .AppendSizeToFileName = _dialogBatchResizeAppendSize,
+                .Format = DialogSelectedFormat,
+                .JpgQuality = DialogJpgQuality,
+                .Target = DialogSaveAsTarget,
+                .TargetFolder = DialogSaveAsTargetFolder,
+                .CopyRating = _dialogSaveAsCopyRating,
+                .CopyFavorite = _dialogSaveAsCopyFavorite,
+                .CopyColorLabel = _dialogSaveAsCopyColorLabel,
+                .CopyKeywords = _dialogSaveAsCopyKeywords
             }
         End Function
 
         Public Async Function ShowWatermarkPresetDialogAsync() As Task(Of WatermarkPresetDialogResult)
             Dim settings = AppSettingsService.Load()
+            SetDialogFormats(includeFpx:=False)
             _dialogWatermarkPresets.Clear()
             DialogWatermarkPresetNames.Clear()
+            _dialogBatchWatermarkOverwrite = settings.BatchWatermarkOverwriteOriginals
+            ResetDialogSaveAsMetaOptions()
+            DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
+            DialogJpgQuality = 90
+            DialogSaveAsTarget = "Local"
+            DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
 
             For Each preset In settings.WatermarkPresets
                 _dialogWatermarkPresets.Add(preset)
@@ -1377,6 +1644,11 @@ Namespace ViewModels
             Dim selectedPreset = _dialogWatermarkPresets.FirstOrDefault(Function(p) String.Equals(p.Name, lastName, StringComparison.OrdinalIgnoreCase))
             If selectedPreset Is Nothing Then selectedPreset = _dialogWatermarkPresets(0)
             DialogSelectedWatermarkPresetName = selectedPreset.Name
+            For Each name In {NameOf(DialogBatchWatermarkOverwrite), NameOf(DialogShowsSaveAsOptions),
+                              NameOf(DialogShowsSaveAsMetaOptions), NameOf(DialogWidth),
+                              NameOf(IsDialogJpgQualityVisible), NameOf(IsSaveAsImmichAvailable)}
+                Me.RaisePropertyChanged(name)
+            Next
 
             Dim result = Await ShowDialogAsync(AppDialogKind.WatermarkPreset,
                                                "Wasserzeichen anwenden",
@@ -1390,7 +1662,19 @@ Namespace ViewModels
             If selectedPreset Is Nothing Then Return Nothing
 
             AppSettingsService.SaveLastWatermarkPresetName(selectedPreset.Name)
-            Return New WatermarkPresetDialogResult With {.Preset = selectedPreset}
+            If Not _dialogBatchWatermarkOverwrite Then PersistDialogTargetFolderIfLocal()
+            Return New WatermarkPresetDialogResult With {
+                .Preset = selectedPreset,
+                .Overwrite = _dialogBatchWatermarkOverwrite,
+                .Format = DialogSelectedFormat,
+                .JpgQuality = DialogJpgQuality,
+                .Target = DialogSaveAsTarget,
+                .TargetFolder = DialogSaveAsTargetFolder,
+                .CopyRating = _dialogSaveAsCopyRating,
+                .CopyFavorite = _dialogSaveAsCopyFavorite,
+                .CopyColorLabel = _dialogSaveAsCopyColorLabel,
+                .CopyKeywords = _dialogSaveAsCopyKeywords
+            }
         End Function
 
         Private Shared Function ParseResizeInterpolationMode(value As String) As ResizeInterpolationMode
@@ -1561,10 +1845,12 @@ Namespace ViewModels
                                              Optional initialJpgQuality As Integer = 90,
                                              Optional confirmText As String = "Speichern",
                                              Optional cancelText As String = "Abbrechen") As Task(Of SaveAsDialogResult)
+            SetDialogFormats(includeFpx:=True)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             DialogJpgQuality = initialJpgQuality
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
+            ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
             Dim result = Await ShowDialogAsync(AppDialogKind.SaveAs, titleText, messageText, initialBaseName, confirmText, cancelText)
@@ -1576,17 +1862,23 @@ Namespace ViewModels
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
                 .Target = DialogSaveAsTarget,
-                .TargetFolder = DialogSaveAsTargetFolder
+                .TargetFolder = DialogSaveAsTargetFolder,
+                .CopyRating = _dialogSaveAsCopyRating,
+                .CopyFavorite = _dialogSaveAsCopyFavorite,
+                .CopyColorLabel = _dialogSaveAsCopyColorLabel,
+                .CopyKeywords = _dialogSaveAsCopyKeywords
             }
         End Function
 
         ''' Wiederverwendet denselben Format+Qualität-Block wie ShowSaveAsAsync, aber ohne
         ''' Dateinamen-Feld (BatchConvert lässt die Originalnamen unangetastet, ändert nur die Endung).
         Public Async Function ShowBatchConvertAsync(fileCount As Integer, initialFormat As String, Optional initialJpgQuality As Integer = 90) As Task(Of SaveAsDialogResult)
+            SetDialogFormats(includeFpx:=False)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             DialogJpgQuality = initialJpgQuality
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
+            ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchConvert,
@@ -1602,7 +1894,11 @@ Namespace ViewModels
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
                 .Target = DialogSaveAsTarget,
-                .TargetFolder = DialogSaveAsTargetFolder
+                .TargetFolder = DialogSaveAsTargetFolder,
+                .CopyRating = _dialogSaveAsCopyRating,
+                .CopyFavorite = _dialogSaveAsCopyFavorite,
+                .CopyColorLabel = _dialogSaveAsCopyColorLabel,
+                .CopyKeywords = _dialogSaveAsCopyKeywords
             }
         End Function
 
@@ -1872,10 +2168,22 @@ Namespace ViewModels
                     Return "PNG"
                 Case "WEBP"
                     Return "WEBP"
+                Case "FPX"
+                    Return If(FpxService.Enabled, "FPX", "JPG")
                 Case Else
                     Return "JPG"
             End Select
         End Function
+
+        ''' <summary>Setzt die Formatliste des Speichern-Dialogs. FPX (nicht-destruktives Projektformat) nur beim
+        ''' Editor-"Speichern unter" anbieten, nicht beim Stapel-Konvertieren (dort gibt es keinen Ebenenstand).</summary>
+        Private Sub SetDialogFormats(includeFpx As Boolean)
+            DialogFormatOptions.Clear()
+            DialogFormatOptions.Add("JPG")
+            DialogFormatOptions.Add("PNG")
+            DialogFormatOptions.Add("WEBP")
+            If includeFpx AndAlso FpxService.Enabled Then DialogFormatOptions.Add("FPX")
+        End Sub
 
         Private Shared Function CreateUniqueConflictName(path As String) As String
             Dim dir = IO.Path.GetDirectoryName(path)

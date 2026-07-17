@@ -20,6 +20,9 @@ Namespace Views
         Private _hasRestoredPlacement As Boolean = False
         Private _allowWindowClose As Boolean = False
 
+        ''' <summary>Wer den Tastaturfokus hatte, bevor ein Overlay-Dialog ihn an sich gezogen hat.</summary>
+        Private _focusBeforeDialog As Control = Nothing
+
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             ApplyInitialWindowSize()
@@ -57,7 +60,13 @@ Namespace Views
             If e.PropertyName = NameOf(MainWindowViewModel.IsFullscreen) Then
                 ApplyFullscreenState()
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.IsDialogOpen) Then
-                FocusDialog()
+                Dim vm = TryCast(sender, MainWindowViewModel)
+                If vm IsNot Nothing AndAlso vm.IsDialogOpen Then
+                    _focusBeforeDialog = TryCast(TopLevel.GetTopLevel(Me)?.FocusManager?.GetFocusedElement(), Control)
+                    FocusDialog()
+                Else
+                    RestoreFocusAfterDialog()
+                End If
                 ApplyLocalization()
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.CurrentContent) OrElse
                    e.PropertyName = NameOf(MainWindowViewModel.CurrentMode) Then
@@ -168,6 +177,9 @@ Namespace Views
 
             If _allowWindowClose Then
                 vm?.Viewer?.ShutdownVideo()
+                ' Szene-/Zoom-Worker stilllegen: eine ausstehende Fortsetzung griff sonst waehrend
+                ' des Fenster-Teardowns auf die bereits disposte Anzeige zu (Absturz beim Beenden).
+                vm?.Editor?.ShutdownSceneWork()
                 If WindowState = WindowState.Normal Then
                     AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
                 End If
@@ -192,7 +204,20 @@ Namespace Views
                 Return
             End If
 
+            If vm IsNot Nothing AndAlso
+               vm.CurrentMode = AppMode.Viewer AndAlso
+               vm.Viewer IsNot Nothing AndAlso
+               e.CloseReason = WindowCloseReason.WindowClosing Then
+                e.Cancel = True
+                If Await vm.Viewer.ConfirmPendingRotationAsync("die Anwendung schließt") Then
+                    _allowWindowClose = True
+                    Close()
+                End If
+                Return
+            End If
+
             vm?.Viewer?.ShutdownVideo()
+            vm?.Editor?.ShutdownSceneWork()
             If WindowState = WindowState.Normal Then
                 AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
             End If
@@ -201,6 +226,41 @@ Namespace Views
 
         Private Sub ApplyLocalization()
             Dispatcher.UIThread.Post(Sub() LocalizationService.ApplyTo(Me), DispatcherPriority.Loaded)
+        End Sub
+
+        ''' <summary>Gibt den Tastaturfokus nach dem Schließen eines Overlay-Dialogs an die Ansicht
+        ''' zurück. Ohne das bleibt er beim verschwundenen Dialog hängen: Galerie/Viewer/Editor sehen
+        ''' danach KEINE Tastendrücke mehr (ihre Kürzel hängen am KeyDown der jeweiligen View), und erst
+        ''' ein Klick auf ein Bild belebt sie wieder — genau das Muster „zweiter Shortcut tot"
+        ''' (Nutzerbericht 2026-07-17). Die Fensterkürzel (Strg+C/V, Strg+1–5) liefen weiter, weil die
+        ''' im Tunnel des Fensters hängen — deshalb wirkte es so willkürlich.</summary>
+        Private Sub RestoreFocusAfterDialog()
+            Dim restore = Sub()
+                Dim vm = TryCast(DataContext, MainWindowViewModel)
+                If vm Is Nothing OrElse vm.IsDialogOpen Then Return
+
+                ' Bevorzugt das Element von vorher (z. B. die angeklickte Kachel) - aber nur, wenn es
+                ' noch im Baum hängt: Stapelaktionen bauen die Galerie-Liste komplett neu auf.
+                If _focusBeforeDialog IsNot Nothing AndAlso
+                   _focusBeforeDialog.IsAttachedToVisualTree AndAlso
+                   _focusBeforeDialog.IsEffectivelyVisible AndAlso
+                   _focusBeforeDialog.Focus() Then
+                    _focusBeforeDialog = Nothing
+                    Return
+                End If
+
+                _focusBeforeDialog = Nothing
+                ' Fallback: die aktive View selbst - GalleryView/ViewerView/EditorView sind Focusable
+                ' und tragen die Tastenkürzel an ihrem Wurzelelement.
+                Dim host = Me.FindControl(Of ContentControl)("MainContentHost")
+                Dim view = TryCast(host?.Content, Control)
+                If view IsNot Nothing AndAlso view.Focusable Then view.Focus()
+            End Sub
+
+            ' Wie beim Öffnen doppelt geplant: der schließende Dialog (und ein evtl. beteiligtes Popup)
+            ' schiebt den Fokus selbst noch einmal, nachdem IsDialogOpen gemeldet wurde.
+            Dispatcher.UIThread.Post(restore, DispatcherPriority.Loaded)
+            Dispatcher.UIThread.Post(restore, DispatcherPriority.Background)
         End Sub
 
         Private Sub FocusDialog()
@@ -334,6 +394,50 @@ Namespace Views
             End If
         End Sub
 
+        ''' App-weite Kürzel (Nutzerwunsch 2026-07-17): Strg+1–5 setzt die Bewertung (Strg+0
+        ''' entfernt sie), Strg+Q schaltet den Favoriten - in Galerie, Viewer (auch Vollbild)
+        ''' und Editor, jeweils auf dem aktuellen Bild bzw. der Galerie-Auswahl.
+        Private Function TryHandleRatingShortcut(vm As MainWindowViewModel, e As KeyEventArgs) As Boolean
+            If Not e.KeyModifiers.HasFlag(KeyModifiers.Control) Then Return False
+            If IsTextInputSource(e.Source) Then Return False
+
+            Dim rating As String = Nothing
+            Select Case e.Key
+                Case Key.D0, Key.NumPad0 : rating = "0"
+                Case Key.D1, Key.NumPad1 : rating = "1"
+                Case Key.D2, Key.NumPad2 : rating = "2"
+                Case Key.D3, Key.NumPad3 : rating = "3"
+                Case Key.D4, Key.NumPad4 : rating = "4"
+                Case Key.D5, Key.NumPad5 : rating = "5"
+                Case Key.Q
+                    If vm.IsFullscreen OrElse vm.CurrentMode = AppMode.Viewer Then
+                        vm.Viewer?.ToggleFavoriteCommand.Execute(Nothing)
+                    ElseIf vm.CurrentMode = AppMode.Gallery Then
+                        ' ToggleFavoriteCommand erwartet ein ImageItem (Kachel-Herz); mit Nothing lief es
+                        ' als stiller No-Op. Für die Auswahl gibt es ToggleSelectedFavoriteCommand.
+                        vm.Gallery?.ToggleSelectedFavoriteCommand.Execute(Nothing)
+                    ElseIf vm.CurrentMode = AppMode.Editor Then
+                        vm.Editor?.ToggleFavoriteCommand.Execute(Nothing)
+                    Else
+                        Return False
+                    End If
+                    Return True
+                Case Else
+                    Return False
+            End Select
+
+            If vm.IsFullscreen OrElse vm.CurrentMode = AppMode.Viewer Then
+                vm.Viewer?.SetRatingCommand.Execute(rating)
+            ElseIf vm.CurrentMode = AppMode.Gallery Then
+                vm.Gallery?.SetSelectedRatingCommand.Execute(rating)
+            ElseIf vm.CurrentMode = AppMode.Editor Then
+                vm.Editor?.SetRatingCommand.Execute(rating)
+            Else
+                Return False
+            End If
+            Return True
+        End Function
+
         Private Async Sub OnWindowKeyDown(sender As Object, e As KeyEventArgs)
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If vm Is Nothing Then Return
@@ -359,6 +463,11 @@ Namespace Views
             ' wo die darunterliegenden Ansichten keine Tasten mehr sehen.
             If e.Key = Key.F11 Then
                 If vm.IsFullscreen Then vm.ExitFullscreen() Else vm.EnterFullscreen()
+                e.Handled = True
+                Return
+            End If
+
+            If TryHandleRatingShortcut(vm, e) Then
                 e.Handled = True
                 Return
             End If

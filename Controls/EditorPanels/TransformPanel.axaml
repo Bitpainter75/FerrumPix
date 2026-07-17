@@ -57,12 +57,12 @@
                 <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
                                    DefaultValue="0"
                                    Value="{Binding StraightenDegrees}"
-                                   WheelIncrement="0.01"
+                                   WheelIncrement="0.1"
                                    Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding StraightenDegrees, Mode=TwoWay}"
-                                         Minimum="-180" Maximum="180" Increment="0.01"
-                                         FormatString="F2" />
+                                         Minimum="-180" Maximum="180" Increment="0.1"
+                                         FormatString="F1" />
             </Grid>
             <CheckBox Content="Leinwand automatisch vergrößern"
                       IsChecked="{Binding StraightenExpandCanvas}"

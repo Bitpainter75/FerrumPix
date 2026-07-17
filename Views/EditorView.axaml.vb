@@ -147,6 +147,50 @@ Namespace Views
             UpdateZoomDisplay()
         End Sub
 
+        Private Sub SetZoomAtCanvasPoint(sliderValue As Double, anchor As Avalonia.Point)
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If canvas Is Nothing OrElse vm Is Nothing OrElse vm.DisplayImage Is Nothing Then
+                SetZoom(sliderValue)
+                Return
+            End If
+
+            Dim cw = canvas.Bounds.Width
+            Dim ch = canvas.Bounds.Height
+            If cw <= 0 OrElse ch <= 0 Then
+                SetZoom(sliderValue)
+                Return
+            End If
+
+            Dim effectiveSize = GetEffectiveDisplaySize(vm)
+            If effectiveSize.Width <= 0 OrElse effectiveSize.Height <= 0 Then
+                SetZoom(sliderValue)
+                Return
+            End If
+
+            Dim oldScale = SliderToZoom(_zoomSliderValue) / 100.0
+            Dim oldW = Math.Round(effectiveSize.Width * oldScale, MidpointRounding.AwayFromZero)
+            Dim oldH = Math.Round(effectiveSize.Height * oldScale, MidpointRounding.AwayFromZero)
+            Dim oldLeft = Math.Round((cw - oldW) / 2.0 + _panX, MidpointRounding.AwayFromZero)
+            Dim oldTop = Math.Round((ch - oldH) / 2.0 + _panY, MidpointRounding.AwayFromZero)
+            Dim imageX = (anchor.X - oldLeft) / Math.Max(0.0001, oldScale)
+            Dim imageY = (anchor.Y - oldTop) / Math.Max(0.0001, oldScale)
+
+            _zoomSliderValue = Math.Max(0, Math.Min(100, sliderValue))
+            Dim newScale = SliderToZoom(_zoomSliderValue) / 100.0
+            Dim newW = Math.Round(effectiveSize.Width * newScale, MidpointRounding.AwayFromZero)
+            Dim newH = Math.Round(effectiveSize.Height * newScale, MidpointRounding.AwayFromZero)
+            _panX = anchor.X - (cw - newW) / 2.0 - imageX * newScale
+            _panY = anchor.Y - (ch - newH) / 2.0 - imageY * newScale
+
+            _ignoreSliderChange = True
+            Dim zs = Me.FindControl(Of RoundSlider)("EditorZoomSlider")
+            If zs IsNot Nothing Then zs.Value = _zoomSliderValue
+            _ignoreSliderChange = False
+            UpdateSliderLayout()
+            UpdateZoomDisplay()
+        End Sub
+
         Private Sub UpdateZoomDisplay()
             Dim pct = CInt(Math.Round(SliderToZoom(_zoomSliderValue)))
             Dim txt = Me.FindControl(Of TextBlock)("ZoomPercentText")
@@ -415,9 +459,23 @@ Namespace Views
             End While
             If Not isInsideCanvas Then Return
             If e.Delta.Y = 0 Then Return
+            Dim pointerPoint = e.GetCurrentPoint(canvas)
+            Dim wantsZoom = pointerPoint.Properties.IsRightButtonPressed OrElse e.KeyModifiers.HasFlag(KeyModifiers.Control)
+            If Not wantsZoom Then Return
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm IsNot Nothing Then vm.ActiveZoomPreset = ZoomPresetMode.Manual
-            SetZoom(_zoomSliderValue + If(e.Delta.Y > 0, 6.0, -6.0))
+            Dim anchor = e.GetPosition(canvas)
+            SetZoomAtCanvasPoint(_zoomSliderValue + If(e.Delta.Y > 0, 6.0, -6.0), anchor)
+            ' Rad-Zoom bei GEDRUECKTER rechter Maustaste: das Zoomen hat _panX/_panY (Anker-Korrektur)
+            ' veraendert, die beim Pointer-Down gemerkte Pan-Basis ist damit veraltet. Ohne Neu-Verankern
+            ' springt die Ansicht beim anschliessenden Ziehen auf den Stand VOR dem Zoomen zurueck
+            ' (typisch: Bildmitte). Deshalb die Drag-Basis auf JETZT setzen.
+            If _isPanDragging Then
+                _panStartX = anchor.X
+                _panStartY = anchor.Y
+                _panStartOffsetX = _panX
+                _panStartOffsetY = _panY
+            End If
             e.Handled = True
         End Sub
 
@@ -435,6 +493,7 @@ Namespace Views
                 RestoreRulerAndGridState()
                 UpdateSliderLayout()
                 UpdateInfoSidebarLayout()
+                UpdateLayersPanelLayout()
                 Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")
                 _filmstripController.AttachTo(filmstrip)
                 If filmstrip IsNot Nothing Then
@@ -475,13 +534,24 @@ Namespace Views
             If _currentVm IsNot Nothing Then
                 RemoveHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 RemoveHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
+                RemoveHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
             End If
             _currentVm = TryCast(DataContext, EditorViewModel)
             If _currentVm IsNot Nothing Then
                 AddHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 AddHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
+                AddHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
             End If
             _filmstripController.Reset()
+        End Sub
+
+        ''' STUFE 2: Region-Blits schreiben in DIESELBE WriteableBitmap-Instanz - fuer das Binding
+        ''' aendert sich nichts, das Image-Control muss explizit neu zeichnen. Ausserdem ist DIES
+        ''' jetzt der "gebackener Stand ist da"-Moment: die Mal-Vorschaulinie wartete frueher auf
+        ''' einen DisplayImage-Wechsel, den es mit der persistenten Anzeige nicht mehr gibt.
+        Private Sub OnSceneInvalidated(sender As Object, e As EventArgs)
+            Me.FindControl(Of Image)("AfterImageControl")?.InvalidateVisual()
+            HideBrushPreviewLineAfterBake()
         End Sub
 
         ''' <summary>Der KeyDown-Handler hängt an dieser UserControl - er sieht eine Taste nur, wenn der
@@ -505,6 +575,7 @@ Namespace Views
             If _currentVm IsNot Nothing Then
                 RemoveHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 RemoveHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
+                RemoveHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
                 _currentVm = Nothing
             End If
         End Sub
@@ -554,6 +625,11 @@ Namespace Views
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.ShowBeforeImage)
                     UpdateSliderLayout()
+                Case NameOf(EditorViewModel.ZoomDetailImage),
+                     NameOf(EditorViewModel.ZoomDetailBeforeImage)
+                    ' STUFE 3: asynchron gelandeter Detail-Ausschnitt - Overlay (neu) positionieren.
+                    ' Terminiert: der Folge-Durchlauf trifft einen passenden Cache und loest nichts aus.
+                    UpdateSliderLayout()
                 Case NameOf(EditorViewModel.CurrentTool)
                     UpdateCropOverlayVisibility()
                     UpdateTextOverlayVisibility()
@@ -563,6 +639,7 @@ Namespace Views
                 Case NameOf(EditorViewModel.SelectedAnnotationIndex),
                      NameOf(EditorViewModel.HasSelectedAnnotation)
                     UpdateTextOverlayVisibility()
+                    UpdateSliderLayout()
                 Case NameOf(EditorViewModel.HasActiveSelection),
                      NameOf(EditorViewModel.SelectionMode),
                      NameOf(EditorViewModel.SelectionXPercent),
@@ -587,6 +664,8 @@ Namespace Views
                     _filmstripController.ScrollToCurrent()
                 Case NameOf(EditorViewModel.IsInfoSidebarVisible)
                     UpdateInfoSidebarLayout()
+                Case NameOf(EditorViewModel.IsLayersPanelVisible)
+                    UpdateLayersPanelLayout()
                 Case NameOf(EditorViewModel.EditorGridSize)
                     UpdateGridOverlay()
                 Case NameOf(EditorViewModel.AnnotationText),
@@ -621,13 +700,11 @@ Namespace Views
             UpdateSliderLayout()
         End Sub
 
-        ''' Das Vorschaubild (DisplayImage) ist zur Performance auf PreviewMaxDimension herunterskaliert
-        ''' und hat deshalb i.d.R. andere Pixelmaße als das Originalbild. Für Zoom-Fit/Anzeige wird hier
-        ''' - wenn das Seitenverhältnis übereinstimmt (also nicht beschnitten/geometrisch verändert) -
-        ''' auf die echten Bildmaße zurückgegriffen, damit z.B. "100% Zoom" wirklich 1 Bildpixel = 1
-        ''' Bildschirmpixel bedeutet. GetDisplayedImageRect MUSS dieselbe Größe verwenden, da sonst
-        ''' Klick-/Zieh-Koordinaten (dort in Prozent umgerechnet) nicht mehr zur tatsächlich auf dem
-        ''' Bildschirm angezeigten Bildgröße passen.
+        ''' Für Zoom-Fit/Anzeige wird - wenn das Seitenverhältnis übereinstimmt (also nicht beschnitten/
+        ''' geometrisch verändert) - auf die echten Bildmaße zurückgegriffen, damit z.B. "100% Zoom"
+        ''' wirklich 1 Bildpixel = 1 Bildschirmpixel bedeutet. GetDisplayedImageRect MUSS dieselbe Größe
+        ''' verwenden, da sonst Klick-/Zieh-Koordinaten nicht mehr zur tatsächlich angezeigten Bildgröße
+        ''' passen.
         Private Function GetEffectiveDisplaySize(vm As EditorViewModel) As Avalonia.Size
             Dim displayBitmap = vm?.DisplayImage
             If displayBitmap Is Nothing Then Return New Avalonia.Size(0, 0)
@@ -727,6 +804,7 @@ Namespace Views
             End If
 
             PositionRetouchLivePatch(ix, iy, iw, ih, vm)
+            UpdateZoomDetailOverlay(ix, iy, iw, ih, cw, ch, vm, displayBitmap, showBefore)
 
             Dim frame = Me.FindControl(Of Border)("ImageFrameBorder")
             If frame IsNot Nothing Then
@@ -742,6 +820,15 @@ Namespace Views
                 Avalonia.Controls.Canvas.SetLeft(divider, sliderX - 1)
                 Avalonia.Controls.Canvas.SetTop(divider, iy)
                 divider.Height = ih
+            End If
+
+            ' Breite Griffzone deckungsgleich über der Trennlinie (Linie ziehen + Cursor).
+            Dim dividerHit = Me.FindControl(Of Border)("SliderDividerHit")
+            If dividerHit IsNot Nothing Then
+                dividerHit.IsVisible = showBefore
+                Avalonia.Controls.Canvas.SetLeft(dividerHit, sliderX - 7)
+                Avalonia.Controls.Canvas.SetTop(dividerHit, iy)
+                dividerHit.Height = ih
             End If
 
             Dim handle = Me.FindControl(Of Border)("SliderHandleCircle")
@@ -770,6 +857,9 @@ Namespace Views
             End If
             If Not _isTextDragging Then
                 PositionTextOverlayFromViewModel(ix, iy, iw, ih, scale)
+                ' Selbstheilung: eine ohne aktiven Zug sichtbare Einrast-Hilfslinie ist immer ein
+                ' Überbleibsel (verlorenes Release/Capture) - beim nächsten Layout-Durchlauf weg.
+                HideTextSnapGuides()
             End If
             If Not _isSelectionDragging Then
                 PositionSelectionOverlayFromViewModel(ix, iy, iw, ih)
@@ -778,6 +868,88 @@ Namespace Views
             UpdateRulers()
             UpdateGuideLines()
             UpdateGridOverlay()
+        End Sub
+
+        ''' <summary>STUFE 3 (Zoom-Detail): meldet dem ViewModel den sichtbaren Bildausschnitt und ob
+        ''' die Anzeige die Szenen-Aufloesung uebersteigt, und positioniert danach den vom ViewModel
+        ''' gelieferten hochaufgeloesten Ausschnitt bildverankert ueber dem AfterImage. Waehrend
+        ''' Vorher/Nachher laeuft das Detail zweigleisig (Nutzerwunsch 2026-07-17): die Nachher-Seite
+        ''' wird rechts der Vergleichslinie geclippt, die Vorher-Seite (Original nur mit Geometrie)
+        ''' links davon - beide Seiten werden beim Zoomen scharf.</summary>
+        Private Sub UpdateZoomDetailOverlay(ix As Double, iy As Double, iw As Double, ih As Double,
+                                            cw As Double, ch As Double, vm As EditorViewModel,
+                                            displayBitmap As Bitmap, showBefore As Boolean)
+            Dim detailImg = Me.FindControl(Of Image)("ZoomDetailImageControl")
+            Dim beforeDetailImg = Me.FindControl(Of Image)("ZoomDetailBeforeImageControl")
+            If detailImg Is Nothing OrElse vm Is Nothing Then Return
+
+            Dim scenePx = Math.Max(1, If(displayBitmap IsNot Nothing, displayBitmap.PixelSize.Width, 1))
+            Dim displayScale = iw / scenePx
+            ' Sichtbarer Bildausschnitt in Bildanteilen 0..1 (Canvas-Schnittmenge).
+            Dim visL = Math.Max(0.0, Math.Min(1.0, (-ix) / iw))
+            Dim visT = Math.Max(0.0, Math.Min(1.0, (-iy) / ih))
+            Dim visR = Math.Max(0.0, Math.Min(1.0, (cw - ix) / iw))
+            Dim visB = Math.Max(0.0, Math.Min(1.0, (ch - iy) / ih))
+            ' Früher aktivieren (0,8 statt 1,02): so ist das hochaufgelöste Detail schon geladen,
+            ' BEVOR die Anzeige die Szenen-Auflösung übersteigt - bei hochauflösenden Quellen
+            ' (z. B. 5760×8640, Szene auf ~3840 gedeckelt) fing das Nachschärfen sonst spürbar
+            ' zu spät an (Nutzer-Befund 2026-07-17). Unterhalb 1,0 ist das Overlay optisch
+            ' identisch zur Szene - der frühe Start ist reines Vorladen.
+            Dim active = displayScale > 0.8 AndAlso visR > visL AndAlso visB > visT
+
+            vm.UpdateZoomDetailViewport(visL, visT, visR, visB, active, showBefore)
+
+            Dim bmp = vm.ZoomDetailImage
+            If bmp Is Nothing OrElse Not active Then
+                detailImg.IsVisible = False
+                detailImg.Source = Nothing
+                detailImg.Clip = Nothing
+                If beforeDetailImg IsNot Nothing Then
+                    beforeDetailImg.IsVisible = False
+                    beforeDetailImg.Source = Nothing
+                    beforeDetailImg.Clip = Nothing
+                End If
+                Return
+            End If
+
+            Dim detailLeft = ix + vm.ZoomDetailFracLeft * iw
+            Dim detailTop = iy + vm.ZoomDetailFracTop * ih
+            Dim detailW = Math.Max(1.0, vm.ZoomDetailFracWidth * iw)
+            Dim detailH = Math.Max(1.0, vm.ZoomDetailFracHeight * ih)
+            detailImg.Source = bmp
+            Avalonia.Controls.Canvas.SetLeft(detailImg, detailLeft)
+            Avalonia.Controls.Canvas.SetTop(detailImg, detailTop)
+            detailImg.Width = detailW
+            detailImg.Height = detailH
+
+            If showBefore Then
+                ' An der Vergleichslinie clippen (in lokalen Koordinaten des Detail-Overlays).
+                Dim sliderX = ix + iw * _sliderPosition
+                Dim clipX = Math.Max(0.0, Math.Min(detailW, sliderX - detailLeft))
+                detailImg.Clip = New RectangleGeometry(New Avalonia.Rect(clipX, 0, Math.Max(0.0, detailW - clipX), detailH))
+
+                Dim beforeBmp = vm.ZoomDetailBeforeImage
+                If beforeDetailImg IsNot Nothing AndAlso beforeBmp IsNot Nothing Then
+                    beforeDetailImg.Source = beforeBmp
+                    Avalonia.Controls.Canvas.SetLeft(beforeDetailImg, detailLeft)
+                    Avalonia.Controls.Canvas.SetTop(beforeDetailImg, detailTop)
+                    beforeDetailImg.Width = detailW
+                    beforeDetailImg.Height = detailH
+                    beforeDetailImg.Clip = New RectangleGeometry(New Avalonia.Rect(0, 0, clipX, detailH))
+                    beforeDetailImg.IsVisible = True
+                ElseIf beforeDetailImg IsNot Nothing Then
+                    beforeDetailImg.IsVisible = False
+                    beforeDetailImg.Source = Nothing
+                End If
+            Else
+                detailImg.Clip = Nothing
+                If beforeDetailImg IsNot Nothing Then
+                    beforeDetailImg.IsVisible = False
+                    beforeDetailImg.Source = Nothing
+                    beforeDetailImg.Clip = Nothing
+                End If
+            End If
+            detailImg.IsVisible = True
         End Sub
 
         Private Sub PositionRetouchLivePatch(ix As Double, iy As Double, iw As Double, ih As Double, vm As EditorViewModel)
@@ -841,6 +1013,20 @@ Namespace Views
             If vm IsNot Nothing Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso Not imageRect.Contains(e.GetPosition(canvas)) Then
+                    ' Anfasser (und Objektteile) koennen AUSSERHALB des Bildes liegen, wenn das Objekt
+                    ' am Rand steht: erst pruefen, ob der Klick eine Zone der aktuellen Selektion
+                    ' trifft - sonst waere ein solcher Griff nie greifbar, weil der Klick sofort
+                    ' deselektierte.
+                    If vm.HasSelectedAnnotation Then
+                        Dim overlayOutside = Me.FindControl(Of Border)("TextOverlay")
+                        If overlayOutside IsNot Nothing AndAlso overlayOutside.IsVisible Then
+                            Dim outsideMode = GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), vm.AnnotationRotation)
+                            If outsideMode <> TextDragMode.None Then
+                                OnTextOverlayPointerPressed(overlayOutside, e)
+                                Return
+                            End If
+                        End If
+                    End If
                     ClearEditorSelections(vm)
                     e.Handled = True
                     Return
@@ -912,6 +1098,11 @@ Namespace Views
                     If hitIndex >= 0 Then
                         vm.SelectedAnnotationIndex = hitIndex
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
+                        ' Auswahl + Ziehen in EINER Geste (siehe gleicher Block im allgemeinen Pfad).
+                        Dim overlayAfterSelect = Me.FindControl(Of Border)("TextOverlay")
+                        If overlayAfterSelect IsNot Nothing AndAlso overlayAfterSelect.IsVisible Then
+                            OnTextOverlayPointerPressed(overlayAfterSelect, e)
+                        End If
                         e.Handled = True
                         Return
                     End If
@@ -945,6 +1136,13 @@ Namespace Views
                     If hitIndex >= 0 Then
                         vm.SelectedAnnotationIndex = hitIndex
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
+                        ' Auswahl + Ziehen in EINER Geste: der Selektions-Setter hat das TextOverlay
+                        ' synchron positioniert - den Move-Drag direkt auf DIESEM Press starten, statt
+                        ' ein Loslassen und erneutes Anklicken zu verlangen.
+                        Dim overlayAfterSelect = Me.FindControl(Of Border)("TextOverlay")
+                        If overlayAfterSelect IsNot Nothing AndAlso overlayAfterSelect.IsVisible Then
+                            OnTextOverlayPointerPressed(overlayAfterSelect, e)
+                        End If
                         e.Handled = True
                         Return
                     ElseIf vm.HasSelectedAnnotation Then
@@ -1046,6 +1244,13 @@ Namespace Views
                     If hitIndex >= 0 Then
                         vm.SelectedAnnotationIndex = hitIndex
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
+                        ' Auswahl + Ziehen in EINER Geste: der Selektions-Setter hat das TextOverlay
+                        ' synchron positioniert - den Move-Drag direkt auf DIESEM Press starten, statt
+                        ' ein Loslassen und erneutes Anklicken zu verlangen.
+                        Dim overlayAfterSelect = Me.FindControl(Of Border)("TextOverlay")
+                        If overlayAfterSelect IsNot Nothing AndAlso overlayAfterSelect.IsVisible Then
+                            OnTextOverlayPointerPressed(overlayAfterSelect, e)
+                        End If
                         e.Handled = True
                         Return
                     ElseIf vm.HasSelectedAnnotation Then
@@ -1089,6 +1294,7 @@ Namespace Views
             End If
             _isCropDragging = False
             _cropDragMode = CropDragMode.None
+            If _isTextDragging Then vm.EndSelectedAnnotationPlacementEdit()
             _isTextDragging = False
             _textDragMode = TextDragMode.None
             HideTextSizeBadge()
@@ -1490,6 +1696,18 @@ Namespace Views
 
             If sidebar IsNot Nothing Then
                 sidebar.IsVisible = vm IsNot Nothing AndAlso vm.IsInfoSidebarVisible
+            End If
+        End Sub
+
+        ' Klappt die Ebenen-Panel-Spalte (Index 4) auf 0 zusammen, wenn das Panel aus ist - wie die
+        ' Info-Seitenleiste (Spalte 3). Die Border-Sichtbarkeit selbst hängt zusätzlich an der Bindung.
+        Private Sub UpdateLayersPanelLayout()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
+            If root Is Nothing Then Return
+
+            If root.ColumnDefinitions.Count >= 5 Then
+                root.ColumnDefinitions(4).Width = If(vm IsNot Nothing AndAlso vm.IsLayersPanelVisible, New GridLength(300), New GridLength(0))
             End If
         End Sub
 
@@ -2373,9 +2591,15 @@ Namespace Views
             overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
             overlay.RenderTransform = New RotateTransform(vm.AnnotationRotation)
             overlay.IsVisible = True
+            ' Der Selektionsrahmen folgt bewusst der Objekt-Konturfarbe (Nutzer-Entscheidung 2026-07-16:
+            ' "so wie frueher darstellen", nicht Akzentfarbe).
             If frame IsNot Nothing Then frame.Stroke = New SolidColorBrush(ParseAvaloniaColor(vm.AnnotationStrokeColor, Colors.White))
             If overlayImage IsNot Nothing Then
                 overlayImage.Margin = ComputeSelectedOverlayImageMargin(vm, width, height)
+                ' KEIN IsVisible hier setzen: die Sichtbarkeit gehoert allein dem Binding
+                ' (ShowSelectedSvgOverlay = Drag-Ghost nur waehrend Placement-Edit). Ein lokales
+                ' False wuerde das Binding uebersteuern und den Ghost bei jeder Mausbewegung
+                ' (UpdateSliderLayout) verstecken.
             End If
 
             Dim selectedKind = If(vm.SelectedAnnotationKind, "")
@@ -2415,12 +2639,9 @@ Namespace Views
                 }
                 editor.FontFamily = New FontFamily(vm.AnnotationFontFamily)
                 ' Kontur und Verlaufsfüllung kann die TextBox nicht: solche Objekte zeichnet das
-                ' Overlay-Bitmap darunter vollständig, die Textbox bleibt nur noch für Eingabe und
-                ' Schreibmarke da und malt selbst nichts (siehe EditorViewModel.TextRendersInOverlay).
+                ' Overlay darunter vollständig, die Textbox bleibt nur noch für Eingabe und Schreibmarke da.
                 Dim textColor = ParseAvaloniaColor(vm.AnnotationFillColor, Colors.White)
-                editor.Foreground = If(vm.SelectedTextRendersInVisibleOverlay,
-                                       Brushes.Transparent,
-                                       CType(New SolidColorBrush(textColor), IBrush))
+                editor.Foreground = Brushes.Transparent
                 editor.CaretBrush = New SolidColorBrush(textColor)
                 ' Skia hängt die erste Zeile an der Grundlinie unter der Oberkante auf, Avalonia an der
                 ' Glyphen-Oberkante - ohne diesen Versatz säße der Live-Text über dem gebackenen.
@@ -2446,11 +2667,22 @@ Namespace Views
         ''' Prozent-Slidern nachzurechnen wäre falsch, weil ImageProcessor sie in der (gedeckelten)
         ''' Bildpixel-Auflösung des Objekts bemisst, nicht in dessen Bildschirmgröße.
         Private Shared Function ComputeSelectedOverlayImageMargin(vm As EditorViewModel, width As Double, height As Double) As Thickness
-            If vm Is Nothing OrElse width <= 0 OrElse height <= 0 OrElse Not vm.ShowSelectedSvgOverlay Then
+            ' BEWUSST KEIN ShowSelectedSvgOverlay-Guard mehr: die Margin gehoert IMMER zu den Metrics
+            ' des aktuell gesetzten Ghost-Bitmaps - die Sichtbarkeit regelt allein IsVisible (Binding).
+            ' Der fruehere Guard war eine Timing-Falle: landete der (asynchrone) Ghost, waehrend die
+            ' Property gerade False lieferte, blieb die Margin 0 und die Bitmap-Innenraender
+            ' (4 px Basis + Effekt-Pads) wurden mit in die Box gequetscht -> Objekt schrumpfte beim
+            ' Selektieren/Ziehen (~2 px ohne Effekte, mit Schatten deutlich; Log-Befund GhostMargin
+            ' show=False margin=0 bei bmp 847x587 / obj@54,54).
+            If vm Is Nothing OrElse width <= 0 OrElse height <= 0 Then
                 Return New Thickness(0)
             End If
 
-            Dim metrics = vm.SelectedAnnotationOverlayMetrics
+            Return ComputeAnnotationOverlayImageMargin(vm.SelectedAnnotationOverlayMetrics, width, height)
+        End Function
+
+        Private Shared Function ComputeAnnotationOverlayImageMargin(metrics As ImageProcessor.AnnotationOverlayRender, width As Double, height As Double) As Thickness
+            If width <= 0 OrElse height <= 0 Then Return New Thickness(0)
             If metrics Is Nothing OrElse metrics.ObjectWidth <= 0 OrElse metrics.ObjectHeight <= 0 Then
                 Return New Thickness(0)
             End If
@@ -2484,7 +2716,11 @@ Namespace Views
             End Try
         End Function
 
-        Private Shared ReadOnly TextSnapPercents As Double() = {0, 4, 50, 96, 100}
+        ' Feste Anrast-Ziele: Ränder und Mitte. Der Sicherheitsabstand (früher fest 4/96) kommt
+        ' seit 17.07. aus den Einstellungen (EditorSnapMarginPercent, 0 = aus) - siehe
+        ' GetSnapTargets; eingelesen je Zug-Start in OnTextOverlayPointerPressed.
+        Private Shared ReadOnly TextSnapPercents As Double() = {0, 50, 100}
+        Private _snapMarginPercent As Integer = 4
         Private Const OverlayMinVisiblePixels As Double = 24.0
 
         Private Shared Function ClampOverlayOriginToReachable(origin As Double, size As Double, axisStart As Double, axisLength As Double) As Double
@@ -2524,19 +2760,35 @@ Namespace Views
             _textDragAspect = If(rect.Height > 0, rect.Width / rect.Height, 1.0)
             _textDragInitialFontSize = vm.AnnotationFontSize
             _isTextDragging = True
+            ' Placement-Edit (Ghost-Übergabe Szene->Overlay) NICHT hier starten, sondern erst
+            ' bei echter Bewegung in OnTextOverlayPointerMoved: der reine Auswahl-Klick
+            ' ("Auswahl + Ziehen in einer Geste") löste sonst bei jedem Maus-Selektieren die
+            ' komplette Übergabe aus - das kurze Flackern (Nutzer-Befund 2026-07-17).
+            _textDragPlacementStarted = False
+            ' Smart Guides: Anrast-Ziele der ANDEREN Objekte einmal beim Zug-Start einsammeln
+            ' (stabil und billig; die Objekte bewegen sich während des Zugs nicht). Der
+            ' Rand-Sicherheitsabstand kommt je Zug frisch aus den Einstellungen.
+            If mode = TextDragMode.Move Then
+                _snapMarginPercent = Math.Max(0, Math.Min(20, AppSettingsService.Load().EditorSnapMarginPercent))
+                CollectObjectSnapTargets(vm, canvas)
+            Else
+                _objectSnapTargetsX.Clear()
+                _objectSnapTargetsY.Clear()
+            End If
             e.Pointer.Capture(overlay)
             If mode = TextDragMode.Rotate Then
                 _textRotateCenter = New Avalonia.Point(rect.Left + rect.Width / 2.0, rect.Top + rect.Height / 2.0)
                 _textRotateStartAngle = Math.Atan2(pos.Y - _textRotateCenter.Y, pos.X - _textRotateCenter.X) * 180.0 / Math.PI
                 _textRotateStartRotation = vm.AnnotationRotation
-            Else
-                ShowTextSizeBadge()
-                If mode = TextDragMode.Move AndAlso (vm.CurrentTool = EditorTool.Text OrElse vm.CurrentTool = EditorTool.Insert) Then
-                    FocusTextOverlayEditor()
-                End If
+            ElseIf mode = TextDragMode.Move AndAlso (vm.CurrentTool = EditorTool.Text OrElse vm.CurrentTool = EditorTool.Insert) Then
+                FocusTextOverlayEditor()
             End If
             e.Handled = True
         End Sub
+
+        ''' True, sobald der laufende Overlay-Drag den Placement-Edit tatsächlich gestartet hat
+        ''' (erst ab ~3 px Bewegung) - ein reiner Auswahl-Klick bleibt dadurch flackerfrei.
+        Private _textDragPlacementStarted As Boolean = False
 
         Private Const RotateHandleDistance As Double = 28
         Private Const RotateHandleHitRadius As Double = 12
@@ -2655,6 +2907,15 @@ Namespace Views
 
             Dim pos = e.GetPosition(canvas)
 
+            If Not _textDragPlacementStarted Then
+                ' Erst ab echter Bewegung wird aus dem Klick ein Zug (siehe PointerPressed).
+                If Math.Abs(pos.X - _textDragPointerStart.X) < 3 AndAlso
+                   Math.Abs(pos.Y - _textDragPointerStart.Y) < 3 Then Return
+                _textDragPlacementStarted = True
+                vm.BeginSelectedAnnotationPlacementEdit()
+                If _textDragMode <> TextDragMode.Rotate Then ShowTextSizeBadge()
+            End If
+
             If _textDragMode = TextDragMode.Rotate Then
                 Dim currentAngle = Math.Atan2(pos.Y - _textRotateCenter.Y, pos.X - _textRotateCenter.X) * 180.0 / Math.PI
                 Dim newRotation = _textRotateStartRotation + (currentAngle - _textRotateStartAngle)
@@ -2680,8 +2941,13 @@ Namespace Views
                 Dim height = _textDragInitialRect.Height
                 left = ClampOverlayOriginToReachable(left + dx, width, imageRect.Left, imageRect.Width)
                 top = ClampOverlayOriginToReachable(top + dy, height, imageRect.Top, imageRect.Height)
-                left = ApplyTextSnap(left, width, imageRect.Left, imageRect.Width, True)
-                top = ApplyTextSnap(top, height, imageRect.Top, imageRect.Height, False)
+                If e.KeyModifiers.HasFlag(KeyModifiers.Alt) Then
+                    ' Alt = frei verschieben ohne Einrasten (Hilfslinien aus).
+                    HideTextSnapGuides()
+                Else
+                    left = ApplyTextSnap(left, width, imageRect.Left, imageRect.Width, True)
+                    top = ApplyTextSnap(top, height, imageRect.Top, imageRect.Height, False)
+                End If
                 left = ClampOverlayOriginToReachable(left, width, imageRect.Left, imageRect.Width)
                 top = ClampOverlayOriginToReachable(top, height, imageRect.Top, imageRect.Height)
                 right = left + width
@@ -2705,8 +2971,13 @@ Namespace Views
                 End Select
 
                 Dim isQr = String.Equals(vm.EffectiveAnnotationKind, "QR", StringComparison.OrdinalIgnoreCase)
+                ' "Seitenverhältnis beibehalten": pro Objekt schaltbar (Checkbox im Panel) fuer
+                ' Bild-Objekte und Wasserzeichen-Bilder - frueher war es fuer Bilder hart verdrahtet
+                ' und Wasserzeichen-Bilder fehlten ganz. Shift erzwingt weiterhin, QR bleibt hart 1:1.
+                Dim isAspectLockedKind = (String.Equals(vm.EffectiveAnnotationKind, "Image", StringComparison.OrdinalIgnoreCase) OrElse
+                                          vm.IsWatermarkImageSource) AndAlso vm.AnnotationLockAspect
                 Dim keepAspect = (e.KeyModifiers.HasFlag(KeyModifiers.Shift) OrElse
-                                  String.Equals(vm.EffectiveAnnotationKind, "Image", StringComparison.OrdinalIgnoreCase) OrElse
+                                  isAspectLockedKind OrElse
                                   isQr) AndAlso
                                  _textDragAspect > 0 AndAlso IsTextCornerMode(_textDragMode)
                 If keepAspect Then
@@ -2717,6 +2988,22 @@ Namespace Views
                             top = bottom - targetHeight
                         Case TextDragMode.BottomLeft, TextDragMode.BottomRight
                             bottom = top + targetHeight
+                    End Select
+                End If
+                If isAspectLockedKind AndAlso _textDragAspect > 0 AndAlso Not IsTextCornerMode(_textDragMode) Then
+                    ' Auch Kanten-Anfasser skalieren bei aktivem Lock proportional (zentriert auf
+                    ' der Gegenachse) - sonst bliebe das Verzerren durch die Hintertuer moeglich.
+                    Select Case _textDragMode
+                        Case TextDragMode.Left, TextDragMode.Right
+                            Dim targetHeight = Math.Max(minSize, (right - left) / _textDragAspect)
+                            Dim centerY = (top + bottom) / 2.0
+                            top = centerY - targetHeight / 2.0
+                            bottom = centerY + targetHeight / 2.0
+                        Case TextDragMode.Top, TextDragMode.Bottom
+                            Dim targetWidth = Math.Max(minSize, (bottom - top) * _textDragAspect)
+                            Dim centerX = (left + right) / 2.0
+                            left = centerX - targetWidth / 2.0
+                            right = centerX + targetWidth / 2.0
                     End Select
                 End If
                 If isQr AndAlso Not IsTextCornerMode(_textDragMode) Then
@@ -2784,8 +3071,10 @@ Namespace Views
             Return value
         End Function
 
-        ''' Canvas-Koordinaten, an denen ein Objekt einrastet. Die vom Nutzer gesetzten Hilfslinien
-        ''' kommen zuerst: liegen sie nahe an einem der festen Prozentziele, soll die Hilfslinie gewinnen.
+        ''' Canvas-Koordinaten, an denen ein Objekt einrastet. Reihenfolge = Priorität: die vom
+        ''' Nutzer gesetzten Hilfslinien zuerst, dann die Kanten/Mitten der ANDEREN Objekte
+        ''' (Smart Guides - Objekte passgenau aneinander ausrichten), zuletzt die festen
+        ''' Prozentziele des Bildes (Ränder/Mitte).
         Private Iterator Function GetSnapTargets(axisStart As Double, axisLength As Double, isVerticalLine As Boolean) As IEnumerable(Of Double)
             If _showRulers Then
                 Dim vm = TryCast(DataContext, EditorViewModel)
@@ -2799,10 +3088,45 @@ Namespace Views
                     End If
                 End If
             End If
+            For Each target In If(isVerticalLine, _objectSnapTargetsX, _objectSnapTargetsY)
+                Yield target
+            Next
             For Each pct In TextSnapPercents
                 Yield axisStart + axisLength * pct / 100.0
             Next
+            ' Sicherheitsabstand zu den Rändern (die pinken Einrast-Linien nahe der Kante) -
+            ' einstellbar und abschaltbar (Nutzerwunsch 2026-07-17, präzisiert: DIESE Linien
+            ' waren gemeint, nicht das Zuschneiden-Werkzeug).
+            If _snapMarginPercent > 0 Then
+                Yield axisStart + axisLength * _snapMarginPercent / 100.0
+                Yield axisStart + axisLength * (100 - _snapMarginPercent) / 100.0
+            End If
         End Function
+
+        ''' Anrast-Ziele aus den ANDEREN sichtbaren Objekten (linke Kante, Mitte, rechte Kante bzw.
+        ''' oben/Mitte/unten), einmal beim Zug-Start in Canvas-Koordinaten eingesammelt.
+        Private ReadOnly _objectSnapTargetsX As New List(Of Double)()
+        Private ReadOnly _objectSnapTargetsY As New List(Of Double)()
+
+        Private Sub CollectObjectSnapTargets(vm As EditorViewModel, canvas As Canvas)
+            _objectSnapTargetsX.Clear()
+            _objectSnapTargetsY.Clear()
+            If vm Is Nothing OrElse canvas Is Nothing Then Return
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            For Each rectPct In vm.GetAnnotationSnapRectsPercent()
+                Dim left = imageRect.Left + imageRect.Width * rectPct.X / 100.0
+                Dim top = imageRect.Top + imageRect.Height * rectPct.Y / 100.0
+                Dim width = imageRect.Width * rectPct.Width / 100.0
+                Dim height = imageRect.Height * rectPct.Height / 100.0
+                _objectSnapTargetsX.Add(left)
+                _objectSnapTargetsX.Add(left + width / 2.0)
+                _objectSnapTargetsX.Add(left + width)
+                _objectSnapTargetsY.Add(top)
+                _objectSnapTargetsY.Add(top + height / 2.0)
+                _objectSnapTargetsY.Add(top + height)
+            Next
+        End Sub
 
         Private Sub ShowTextSnapGuide(position As Double, isVerticalLine As Boolean)
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
@@ -2851,12 +3175,38 @@ Namespace Views
 
         Public Sub OnTextOverlayPointerReleased(sender As Object, e As PointerReleasedEventArgs)
             If Not _isTextDragging Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
             _isTextDragging = False
             _textDragMode = TextDragMode.None
             HideTextSizeBadge()
             HideTextSnapGuides()
+            ' Ohne echte Bewegung war es nur ein Auswahl-Klick: es gab keinen Placement-Edit,
+            ' also auch nichts zu beenden oder in die Szene zu backen (kein Flackern).
+            If _textDragPlacementStarted Then
+                _textDragPlacementStarted = False
+                vm?.EndSelectedAnnotationPlacementEdit()
+                vm?.CommitSelectedAnnotationPlacementEdit()
+            End If
             e.Pointer.Capture(Nothing)
             e.Handled = True
+        End Sub
+
+        ''' Capture-Verlust während eines Objekt-Zugs (Fokuswechsel, Popup, Fenster verliert die
+        ''' Maus): das Release-Event kommt dann NIE an - ohne dieses Aufräumen blieb u. a. die
+        ''' pinke Einrast-Hilfslinie dauerhaft im Bild stehen (Nutzer-Screenshot 17.07.).
+        ''' Gleiche Abwicklung wie OnTextOverlayPointerReleased.
+        Public Sub OnTextOverlayCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
+            If Not _isTextDragging Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            _isTextDragging = False
+            _textDragMode = TextDragMode.None
+            HideTextSizeBadge()
+            HideTextSnapGuides()
+            If _textDragPlacementStarted Then
+                _textDragPlacementStarted = False
+                vm?.EndSelectedAnnotationPlacementEdit()
+                vm?.CommitSelectedAnnotationPlacementEdit()
+            End If
         End Sub
 
         Private Function GetTextOverlayRect() As Avalonia.Rect
@@ -2866,7 +3216,14 @@ Namespace Views
             Dim top = Avalonia.Controls.Canvas.GetTop(overlay)
             If Double.IsNaN(left) Then left = 0
             If Double.IsNaN(top) Then top = 0
-            Return New Avalonia.Rect(left, top, Math.Max(0, overlay.Bounds.Width), Math.Max(0, overlay.Bounds.Height))
+            ' Width/Height-PROPERTIES lesen, nicht Bounds: PositionTextOverlayFromViewModel setzt
+            ' die Properties synchron, Bounds folgt erst im nächsten Layout-Pass. Beim
+            ' "Auswahl + Ziehen in EINER Geste" startete der Drag sonst mit der Größe der
+            ' VORHERIGEN Selektion und schrieb sie beim ersten Move ins neue Objekt
+            ' (Nutzer-Befund 2026-07-17: Bild sprang auf QR-Code-Größe).
+            Dim width = If(Double.IsNaN(overlay.Width), overlay.Bounds.Width, overlay.Width)
+            Dim height = If(Double.IsNaN(overlay.Height), overlay.Bounds.Height, overlay.Height)
+            Return New Avalonia.Rect(left, top, Math.Max(0, width), Math.Max(0, height))
         End Function
 
         Private Sub UpdateTextPixels(textRect As Avalonia.Rect, imageRect As Avalonia.Rect, vm As EditorViewModel)
@@ -2922,7 +3279,8 @@ Namespace Views
             Dim current = TryCast(source, Control)
             While current IsNot Nothing
                 If String.Equals(current.Name, "SliderHandleCircle", StringComparison.Ordinal) OrElse
-                   String.Equals(current.Name, "SliderDivider", StringComparison.Ordinal) Then
+                   String.Equals(current.Name, "SliderDivider", StringComparison.Ordinal) OrElse
+                   String.Equals(current.Name, "SliderDividerHit", StringComparison.Ordinal) Then
                     Return True
                 End If
                 current = TryCast(current.Parent, Control)

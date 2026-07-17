@@ -10,12 +10,23 @@
                 <TextBlock Text="Namensvorlage"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Body}"/>
-                <TextBox Text="{Binding DialogBatchRenamePattern, Mode=TwoWay}"
+                <TextBox Name="PatternTextBox"
+                         Text="{Binding DialogBatchRenamePattern, Mode=TwoWay}"
                          MinHeight="36"/>
-                <TextBlock Text="Platzhalter: #, ###, {name}, {date:yyyyMMdd}, {datetaken:yyyyMMdd}, {width}, {height}, {camera}, {iso}, {aperture}, {focal}"
-                           Foreground="{DynamicResource FP.Text.Muted}"
-                           FontSize="{DynamicResource FP.Font.Small}"
-                           TextWrapping="Wrap"/>
+                <!-- Platzhalter als Klick-Auswahl statt Hilfetext (Nutzerwunsch 2026-07-17):
+                     ein Klick fügt den Platzhalter an der Cursorposition der Vorlage ein. -->
+                <WrapPanel Name="PlaceholderChips" ItemSpacing="4" LineSpacing="4">
+                    <Button Classes="ghost" Padding="8,3" Content="###" Tag="###" Click="OnInsertPlaceholder" ToolTip.Tip="Laufende Nummer (Stellen = Anzahl #)"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{name}" Tag="{}{name}" Click="OnInsertPlaceholder" ToolTip.Tip="Ursprünglicher Dateiname"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{date:yyyyMMdd}" Tag="{}{date:yyyyMMdd}" Click="OnInsertPlaceholder" ToolTip.Tip="Dateidatum"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{datetaken:yyyyMMdd}" Tag="{}{datetaken:yyyyMMdd}" Click="OnInsertPlaceholder" ToolTip.Tip="Aufnahmedatum (EXIF)"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{width}" Tag="{}{width}" Click="OnInsertPlaceholder" ToolTip.Tip="Bildbreite in Pixeln"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{height}" Tag="{}{height}" Click="OnInsertPlaceholder" ToolTip.Tip="Bildhöhe in Pixeln"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{camera}" Tag="{}{camera}" Click="OnInsertPlaceholder" ToolTip.Tip="Kameramodell (EXIF)"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{iso}" Tag="{}{iso}" Click="OnInsertPlaceholder" ToolTip.Tip="ISO-Wert (EXIF)"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{aperture}" Tag="{}{aperture}" Click="OnInsertPlaceholder" ToolTip.Tip="Blende (EXIF)"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{focal}" Tag="{}{focal}" Click="OnInsertPlaceholder" ToolTip.Tip="Brennweite (EXIF)"/>
+                </WrapPanel>
             </StackPanel>
             <StackPanel Grid.Column="1" Spacing="7">
                 <TextBlock Text="Startwert"

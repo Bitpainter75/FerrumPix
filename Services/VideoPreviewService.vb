@@ -43,6 +43,10 @@ Namespace Services
                 If handle = IntPtr.Zero Then Return Nothing
 
                 SetOption(handle, "terminal", "no")
+                ' FFmpeg-Demuxer-Hinweise ("Skipping unhandled metadata ...") komplett stumm -
+                ' terminal=no allein laesst bei parallel lebenden mpv-Instanzen gelegentlich rohe
+                ' libav-Meldungen auf die Konsole durch (kosmetisch, aber Spam).
+                SetOption(handle, "msg-level", "all=no")
                 SetOption(handle, "config", "no")
                 SetOption(handle, "input-default-bindings", "no")
                 SetOption(handle, "osc", "no")

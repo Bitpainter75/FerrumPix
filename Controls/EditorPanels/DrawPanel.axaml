@@ -57,12 +57,12 @@
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
+                        <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="2000"
                                            DefaultValue="24"
                                            Value="{Binding BrushSize}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding BrushSize, Mode=TwoWay}"
-                                                 Minimum="1" Maximum="300" Increment="1"
+                                                 Minimum="1" Maximum="2000" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
@@ -127,12 +127,12 @@
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
+                        <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="2000"
                                            DefaultValue="24"
                                            Value="{Binding BrushSize}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding BrushSize, Mode=TwoWay}"
-                                                 Minimum="1" Maximum="300" Increment="1"
+                                                 Minimum="1" Maximum="2000" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
@@ -196,7 +196,7 @@
                     <Grid ColumnDefinitions="92,*,Auto,44" VerticalAlignment="Center">
                         <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300"
+                        <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="2000"
                                            DefaultValue="24"
                                            Value="{Binding RetouchRadius}" Margin="0,0" />
                         <Button Grid.Column="2"
@@ -213,7 +213,7 @@
                         </Button>
                         <icons:SliderValueUpDown Grid.Column="3" Classes="slider-value"
                                                  Value="{Binding RetouchRadius, Mode=TwoWay}"
-                                                 Minimum="1" Maximum="300" Increment="1"
+                                                 Minimum="1" Maximum="2000" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">

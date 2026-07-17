@@ -98,5 +98,16 @@
                 </WrapPanel>
             </StackPanel>
         </Border>
+
+        <CheckBox Content="Originale überschreiben"
+                  IsChecked="{Binding DialogBatchResizeOverwrite, Mode=TwoWay}"
+                  FontSize="{DynamicResource FP.Font.Small}"
+                  ToolTip.Tip="Schreibt die neue Größe direkt in die Bilddateien. Ohne Haken entstehen neue Dateien mit Formatauswahl und die Originale bleiben unangetastet."/>
+
+        <CheckBox Content="Größe an den Dateinamen anhängen"
+                  IsChecked="{Binding DialogBatchResizeAppendSize, Mode=TwoWay}"
+                  IsVisible="{Binding IsDialogResizeAppendSizeVisible}"
+                  FontSize="{DynamicResource FP.Font.Small}"
+                  ToolTip.Tip="foto.jpg wird zu foto_1920x1080.jpg"/>
     </StackPanel>
 </UserControl>

@@ -211,13 +211,18 @@
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
                                DefaultValue="0"
-                               Value="{Binding AnnotationRotation}" WheelIncrement="0.01"
-                               DragIncrement="0.01" Margin="0,0" />
+                               Value="{Binding AnnotationRotation}" WheelIncrement="0.1"
+                               DragIncrement="0.1" Margin="0,0" />
             <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                      Value="{Binding AnnotationRotation, Mode=TwoWay}"
-                                     Minimum="-180" Maximum="180" Increment="0.01"
-                                     FormatString="F2" />
+                                     Minimum="-180" Maximum="180" Increment="0.1"
+                                     FormatString="F1" />
         </Grid>
+        <CheckBox Content="Seitenverhältnis beibehalten"
+                  IsChecked="{Binding AnnotationLockAspect}"
+                  IsVisible="{Binding ShowAnnotationAspectLock}"
+                  FontSize="{DynamicResource FP.Font.Small}"
+                  ToolTip.Tip="Beim Ziehen an den Anfassern bleibt das Verhältnis von Breite zu Höhe erhalten - wie bei Bildgröße. Aus: das Bild wird auf die gezogene Größe gestreckt (Shift erzwingt das Verhältnis weiterhin)."/>
         <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowWatermarkAnchorControls}">
             <TextBlock Text="Anker" Foreground="{DynamicResource FP.Text.Secondary}"

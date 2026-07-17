@@ -1,0 +1,205 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.LayersPanelView">
+
+    <!-- Eigenständiges, ein-/ausschaltbares Ebenen-Panel im Standard-Layout üblicher Bildbearbeitungen:
+         oben eine Deckkraft-/Mischmodus-Leiste, darunter der Ebenenstapel (Vorschau links, Name, Auge rechts,
+         ausgewählte Zeile voll in Akzentfarbe), die feste Hintergrund-Ebene mit Schloss und unten eine
+         Icon-Werkzeugleiste. Bindet ans EditorViewModel; alle Aktionen nutzen bestehende Kommandos. -->
+    <Border x:Name="LayersPanelBorder" Classes="panel-right" Padding="0"
+            IsVisible="{Binding IsLayersPanelVisible}">
+        <Grid RowDefinitions="Auto,*,Auto,Auto">
+
+            <!-- Kopfleiste: Deckkraft (Slider) über dem Mischmodus der markierten Ebene. -->
+            <Border Grid.Row="0" Padding="10,10,10,8"
+                    BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,0,0,1">
+                <StackPanel Spacing="8" IsEnabled="{Binding HasSelectedAnnotation}">
+                    <Grid ColumnDefinitions="70,*,44" VerticalAlignment="Center">
+                        <TextBlock Grid.Column="0" Text="Deckkraft"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding AnnotationOpacity}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding AnnotationOpacity, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="70,*" VerticalAlignment="Center">
+                        <TextBlock Grid.Column="0" Text="Mischen"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <ComboBox Grid.Column="1" Margin="6,0,0,0"
+                                  ItemsSource="{Binding AnnotationBlendModeOptions}"
+                                  SelectedItem="{Binding SelectedAnnotationBlendModeOption, Mode=TwoWay}"
+                                  FontSize="{DynamicResource FP.Font.Small}"
+                                  HorizontalAlignment="Stretch" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Ebenenstapel: oberster Eintrag = vorderste Ebene, Hintergrund liegt fest darunter. -->
+            <Grid Grid.Row="1" x:Name="LayerListArea">
+            <ListBox x:Name="LayerListBox"
+                     Classes="layers-panel-list"
+                     ItemsSource="{Binding LayerRows}"
+                     SelectedItem="{Binding SelectedLayer, Mode=TwoWay}"
+                     Background="Transparent" BorderThickness="0" Padding="0"
+                     VerticalAlignment="Stretch"
+                     KeyDown="OnLayerListKeyDown"
+                     DragDrop.AllowDrop="True"
+                     DragDrop.DragOver="OnLayerListDragOver"
+                     DragDrop.DragLeave="OnLayerListDragLeave"
+                     DragDrop.Drop="OnLayerListDrop"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Classes="layers-panel-row" Padding="8,5" MinHeight="42"
+                                DragDrop.AllowDrop="True"
+                                PointerPressed="OnLayerRowPointerPressed"
+                                PointerMoved="OnLayerRowPointerMoved"
+                                DragDrop.DragOver="OnLayerRowDragOver"
+                                DragDrop.Drop="OnLayerRowDrop">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Border Grid.Column="0" Width="30" Height="30" CornerRadius="3"
+                                        BorderThickness="1"
+                                        BorderBrush="{DynamicResource FP.Border.Normal}"
+                                        Background="{DynamicResource FP.Bg.Root}">
+                                    <icons:SvgIcon Source="{Binding IconSource}"
+                                                   Width="18" Height="18"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <!-- Name: Doppelklick auf die Beschriftung öffnet das Eingabefeld (Enter oder
+                                     Verlassen übernimmt, Esc verwirft). Beides teilt sich die Zelle. -->
+                                <Panel Grid.Column="1" Margin="9,0,6,0">
+                                    <TextBlock Classes="layer-name"
+                                               Text="{Binding LayerLabel}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"
+                                               IsVisible="{Binding !IsRenaming}"
+                                               ToolTip.Tip="Doppelklick zum Umbenennen"
+                                               DoubleTapped="OnLayerNameDoubleTapped" />
+                                    <TextBox Text="{Binding EditableName, Mode=TwoWay}"
+                                             FontSize="{DynamicResource FP.Font.Small}"
+                                             Padding="7,4"
+                                             VerticalAlignment="Center"
+                                             VerticalContentAlignment="Center"
+                                             IsVisible="{Binding IsRenaming}"
+                                             KeyDown="OnLayerRenameKeyDown"
+                                             LostFocus="OnLayerRenameLostFocus" />
+                                </Panel>
+                                <ToggleButton Grid.Column="2"
+                                              Classes="ghost layer-eye"
+                                              Width="24" Height="24" Padding="0"
+                                              IsChecked="{Binding IsVisible, Mode=OneWay}"
+                                              Command="{Binding DataContext.ToggleAnnotationVisibilityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              CommandParameter="{Binding}"
+                                              ToolTip.Tip="Ebene ein-/ausblenden">
+                                    <icons:SvgIcon
+                                        Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                                        Width="15" Height="15" />
+                                </ToggleButton>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Einfüge-Hilfslinie beim Ziehen: markiert die Position zwischen zwei Ebenen. Sie liegt über
+                 der Liste, wird per Code-Behind an die Lücke geschoben und fängt keine Zeigereignisse ab. -->
+            <Border x:Name="DropIndicator" Height="2" Margin="0"
+                    Background="{DynamicResource FP.Accent}"
+                    VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                    IsVisible="False" IsHitTestVisible="False" />
+            </Grid>
+
+            <!-- Hintergrund-Ebene: das Basisbild, fest am Boden, gesperrt (nicht umsortier-/löschbar). Nur das
+                 Auge blendet es aus (transparenter Grund, siehe ImageProcessor.ApplyAnnotations). -->
+            <Border Grid.Row="2" Padding="8,5" MinHeight="42"
+                    BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
+                    Background="{DynamicResource FP.Bg.Dark}">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                    <Border Grid.Column="0" Width="30" Height="30" CornerRadius="3"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                            Background="{DynamicResource FP.Bg.Input}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/077_Bild.svg"
+                                       Width="16" Height="16"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Grid.Column="1" Text="Hintergrund"
+                               FontSize="{DynamicResource FP.Font.Small}"
+                               Margin="9,0,6,0" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                    <icons:SvgIcon Grid.Column="2"
+                                   Source="avares://FerrumPix/Assets/Icons/outline/lock.svg"
+                                   Width="13" Height="13" Margin="0,0,8,0"
+                                   IconBrush="{DynamicResource FP.Text.Muted}"
+                                   VerticalAlignment="Center" />
+                    <ToggleButton Grid.Column="3"
+                                  Classes="ghost layer-eye"
+                                  Width="24" Height="24" Padding="0"
+                                  IsChecked="{Binding IsBackgroundVisible, Mode=OneWay}"
+                                  Command="{Binding ToggleBackgroundVisibilityCommand}"
+                                  ToolTip.Tip="Hintergrund ein-/ausblenden">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                            Width="15" Height="15" />
+                    </ToggleButton>
+                </Grid>
+            </Border>
+
+            <!-- Untere Werkzeugleiste: Aktionen auf der markierten Ebene (wie die Icon-Reihe unten in
+                 üblichen Ebenen-Panels). Nur die tatsächlich unterstützten Aktionen, keine Attrappen. -->
+            <Border Grid.Row="3" Padding="8,6"
+                    BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding MoveSelectedAnnotationUpCommand}"
+                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            ToolTip.Tip="Ebene nach vorne">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-up.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding MoveSelectedAnnotationDownCommand}"
+                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            ToolTip.Tip="Ebene nach hinten">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-down.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding DuplicateSelectedAnnotationCommand}"
+                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            ToolTip.Tip="Ebene duplizieren (Strg+D)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding RasterizeSelectedAnnotationCommand}"
+                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            ToolTip.Tip="Ebene rastern (ins Bild einbacken)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-union.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Click="OnRenameSelectedClick"
+                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            ToolTip.Tip="Ebene umbenennen (F2)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/edit.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding DeleteSelectedAnnotationCommand}"
+                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            ToolTip.Tip="Ebene löschen (Entf)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

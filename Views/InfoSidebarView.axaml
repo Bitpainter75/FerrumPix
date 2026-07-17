@@ -6,9 +6,10 @@
 
     <!-- Gemeinsame Info-Seitenleiste (Allgemein/EXIF/IPTC/XMP) für Viewer und Editor - beide
          ViewModels exponieren dieselben Property-/Command-Namen (ExifInfo, Tags, HistogramImage,
-         IsInfoTab*, ToggleFavoriteCommand, SetRatingCommand, AddTagCommand, RemoveTagCommand,
-         Rating, IsFavorite, IsInfoSidebarVisible), daher genügt ein einziges, DataContext-loses
-         UserControl statt der zuvor doppelt gepflegten Markup-Kopie in ViewerView/EditorView. -->
+         IsInfoTab*, ToggleFavoriteCommand, SetRatingCommand, SetColorLabelCommand, AddTagCommand,
+         RemoveTagCommand, Rating, IsFavorite, ColorLabel/IsColorLabel*, IsInfoSidebarVisible),
+         daher genügt ein einziges, DataContext-loses UserControl statt der zuvor doppelt
+         gepflegten Markup-Kopie in ViewerView/EditorView. -->
     <Border x:Name="InfoSidebarBorder" Classes="panel-right" Padding="14,14"
             IsVisible="{Binding IsInfoSidebarVisible}">
         <Grid RowDefinitions="Auto,*" RowSpacing="14">
@@ -66,6 +67,127 @@
                                        Stretch="Fill"
                                        RenderOptions.BitmapInterpolationMode="LowQuality"/>
                             </Border>
+                        </StackPanel>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+
+                        <!-- Bewertung, Favorit und Farbetikett direkt am Bild pflegen - dieselben
+                             Sterne wie in der Werkzeugleiste, dieselben Akzentfarben-Punkte wie im
+                             Galerie-Kontextmenü (gleiche Farbe erneut = Etikett entfernen). -->
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Bewertung &amp; Etikett" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                            <StackPanel Orientation="Horizontal" Spacing="1">
+                                <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
+                                        Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                        Command="{Binding SetRatingCommand}" CommandParameter="1">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star"
+                                                   Width="18" Height="18" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
+                                        Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                        Command="{Binding SetRatingCommand}" CommandParameter="2">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star"
+                                                   Width="18" Height="18" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
+                                        Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                        Command="{Binding SetRatingCommand}" CommandParameter="3">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star"
+                                                   Width="18" Height="18" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
+                                        Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                        Command="{Binding SetRatingCommand}" CommandParameter="4">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star"
+                                                   Width="18" Height="18" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
+                                        Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                        Command="{Binding SetRatingCommand}" CommandParameter="5">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star"
+                                                   Width="18" Height="18" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Classes="icon-btn" Width="24" Height="24" VerticalAlignment="Center"
+                                        Command="{Binding ToggleFavoriteCommand}" ToolTip.Tip="Favorit" Margin="8,0,0,0">
+                                    <Grid Width="20" Height="20">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                                       Width="20" Height="20" Classes="fav-heart" IsVisible="{Binding !IsFavorite}"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                                       Width="20" Height="20" Classes="fav-heart active" IsVisible="{Binding IsFavorite}"/>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="#F08A1A" ToolTip.Tip="Orange">
+                                    <Grid>
+                                        <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsColorLabelOrange}" Foreground="White"
+                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="#E74C3C" ToolTip.Tip="Rot">
+                                    <Grid>
+                                        <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsColorLabelRed}" Foreground="White"
+                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="#F03B88" ToolTip.Tip="Pink">
+                                    <Grid>
+                                        <Ellipse Width="16" Height="16" Fill="#F03B88"/>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsColorLabelPink}" Foreground="White"
+                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="#8B5CF6" ToolTip.Tip="Lila">
+                                    <Grid>
+                                        <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsColorLabelPurple}" Foreground="White"
+                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="#3B82F6" ToolTip.Tip="Blau">
+                                    <Grid>
+                                        <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsColorLabelBlue}" Foreground="White"
+                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="#0891B2" ToolTip.Tip="Cyan">
+                                    <Grid>
+                                        <Ellipse Width="16" Height="16" Fill="#0891B2"/>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsColorLabelCyan}" Foreground="White"
+                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="#0F766E" ToolTip.Tip="Türkis">
+                                    <Grid>
+                                        <Ellipse Width="16" Height="16" Fill="#0F766E"/>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsColorLabelTeal}" Foreground="White"
+                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="#22C55E" ToolTip.Tip="Grün">
+                                    <Grid>
+                                        <Ellipse Width="16" Height="16" Fill="#22C55E"/>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsColorLabelGreen}" Foreground="White"
+                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="" ToolTip.Tip="Kein Etikett">
+                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
 
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>

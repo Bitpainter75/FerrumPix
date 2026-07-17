@@ -24,6 +24,11 @@ Namespace Models
         Private Const BackgroundThumbnailPriority As Integer = 0
         Private Const ViewportThumbnailPriority As Integer = 100
         Private Const MaxParallelThumbnailJobs As Integer = 4
+        ' Immich-Thumbnails sind NETZ-Abrufe (Latenz statt CPU/Platte): mit der lokalen
+        ' Decode-Parallelitaet von 4 fuellte sich der Viewport eines 30k-Albums sekundenlang
+        ' (40+ Kacheln x Latenz / 4). Hoehere Parallelitaet kostet hier fast nichts - die
+        ' Worker warten auf den Server, der geteilte HttpClient poolt die Verbindungen.
+        Private Const MaxParallelImmichThumbnailJobs As Integer = 12
         ' Ein Worker, der gerade eine Hintergrund-Regenerierung (voller Decode+Resize+Encode)
         ' begonnen hat, prüft die Warteschlange erst wieder, wenn diese fertig ist - er kann also
         ' nicht "unterbrochen" werden, sobald neue Viewport-Anfragen eintreffen. Deshalb wird
@@ -248,6 +253,51 @@ Namespace Models
                 RaisePropertyChanged()
                 InvalidateSearchText()
             End Set
+        End Property
+
+        Private _colorLabel As String = ""
+        ''' Farbetikett fürs Culling: der HEX-Wert einer Farbe aus der Akzentfarben-Palette der
+        ''' Einstellungen (z.B. "#E74C3C"), "" = kein Etikett. Lokal in library.db, unabhängig von
+        ''' Sternen und Favorit.
+        Public Property ColorLabel As String
+            Get
+                Return _colorLabel
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _colorLabel = value Then Return
+                _colorLabel = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(HasColorLabel))
+                RaisePropertyChanged(NameOf(ColorLabelBrush))
+            End Set
+        End Property
+
+        Public ReadOnly Property HasColorLabel As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_colorLabel)
+            End Get
+        End Property
+
+        ' Brush-Cache je Hex-Wert: die Badges teilen sich die Instanzen über alle Items.
+        Private Shared ReadOnly _colorLabelBrushes As New Dictionary(Of String, Avalonia.Media.IBrush)(StringComparer.OrdinalIgnoreCase)
+
+        ''' Anzeige-Pinsel des Farbetiketts (Kachel-/Listen-Badge) - direkt aus dem Hex-Wert.
+        Public ReadOnly Property ColorLabelBrush As Avalonia.Media.IBrush
+            Get
+                If String.IsNullOrEmpty(_colorLabel) Then Return Avalonia.Media.Brushes.Transparent
+                SyncLock _colorLabelBrushes
+                    Dim brush As Avalonia.Media.IBrush = Nothing
+                    If _colorLabelBrushes.TryGetValue(_colorLabel, brush) Then Return brush
+                    Try
+                        brush = New Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(_colorLabel))
+                    Catch
+                        brush = Avalonia.Media.Brushes.Transparent
+                    End Try
+                    _colorLabelBrushes(_colorLabel) = brush
+                    Return brush
+                End SyncLock
+            End Get
         End Property
 
         Private _isFavorite As Boolean
@@ -691,6 +741,15 @@ Namespace Models
             _fileInfoLoaded = True
         End Sub
 
+        Public Sub RefreshFileInfo()
+            If IsFolder Then Return
+            _fileInfoLoaded = False
+            EnsureFileInfoLoaded()
+            RaisePropertyChanged(NameOf(FileSizeText))
+            RaisePropertyChanged(NameOf(DateText))
+            RaisePropertyChanged(NameOf(DateFileCreatedText))
+        End Sub
+
         Public Sub New(filePath As String, thumbnailCancellationToken As CancellationToken)
             Me.New(filePath)
             _thumbnailCancellationToken = thumbnailCancellationToken
@@ -745,7 +804,7 @@ Namespace Models
             ' denselben Original-Namen tragen), während GetFileName/GetExtension weiterhin Anzeigename
             ' und Endung liefern - Letztere steuert Video-/RAW-/Editierbarkeits-Erkennung.
             Dim displayName = If(String.IsNullOrEmpty(asset.FileName), asset.Id, asset.FileName)
-            item.InitializePath("immich://" & asset.Id & "/" & displayName, False)
+            item.InitializePath(Services.ImmichService.MakePseudoPath(asset.Id, asset.FileName), False)
             item.FileName = displayName
             item._immichAssetId = asset.Id
             item._immichOriginalFileName = asset.FileName
@@ -975,12 +1034,23 @@ Namespace Models
         End Sub
 
         Private Shared Sub StartThumbnailWorkersLocked()
-            While _runningThumbnailWorkers < MaxParallelThumbnailJobs AndAlso
+            While _runningThumbnailWorkers < CurrentThumbnailWorkerCap() AndAlso
                   (_viewportQueue.Count > 0 OrElse _backgroundQueue.Count > 0)
                 _runningThumbnailWorkers += 1
                 Task.Run(AddressOf RunThumbnailWorkerAsync)
             End While
         End Sub
+
+        ''' Unter _thumbnailQueueLock aufrufen. Immich-Ansichten (Netz-Abrufe) bekommen mehr
+        ''' parallele Worker als lokale Decodes - gemischte Warteschlangen kommen praktisch
+        ''' nicht vor (eine Galerie-Ansicht ist lokal ODER Immich), deshalb reicht der Blick
+        ''' auf die als naechstes anstehenden Viewport-Elemente (LIFO-Ende).
+        Private Shared Function CurrentThumbnailWorkerCap() As Integer
+            For i = _viewportQueue.Count - 1 To Math.Max(0, _viewportQueue.Count - 4) Step -1
+                If _viewportQueue(i)._immichAssetId IsNot Nothing Then Return MaxParallelImmichThumbnailJobs
+            Next
+            Return MaxParallelThumbnailJobs
+        End Function
 
         Private Shared Async Function RunThumbnailWorkerAsync() As Task
             While True

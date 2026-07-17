@@ -11,6 +11,9 @@ Namespace Services
         Public Property FilePath As String
         Public Property IsFavorite As Boolean
         Public Property Rating As Integer
+        ''' Farbetikett fürs Culling ("Red","Yellow","Green","Blue","Purple", "" = keins) -
+        ''' rein lokale FerrumPix-Zuordnung, wird in keine Datei geschrieben.
+        Public Property ColorLabel As String = ""
         Public Property Tags As New List(Of String)()
         Public Property DateTaken As String = ""
         Public Property DateModifiedExif As String = ""
@@ -116,7 +119,8 @@ Namespace Services
             ("XmpSummary", "TEXT"),
             ("HasIccProfile", "INTEGER NOT NULL DEFAULT 0"),
             ("IccSummary", "TEXT"),
-            ("SummaryFormat", "TEXT")
+            ("SummaryFormat", "TEXT"),
+            ("ColorLabel", "TEXT")
         }
 
         Private Shared Sub EnsureExifColumns(conn As SqliteConnection)
@@ -210,6 +214,96 @@ Namespace Services
             If syncToXmp AndAlso HasXmpMetadata(filePath) Then
                 ExifService.WriteXmpRatingSidecar(filePath, rating, createIfMissing:=False)
             End If
+        End Sub
+
+        Public Function GetColorLabel(filePath As String) As String
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT ColorLabel FROM ImageMeta WHERE FilePath=$p"
+                    cmd.Parameters.AddWithValue("$p", filePath)
+                    Dim r = cmd.ExecuteScalar()
+                    If r Is Nothing OrElse TypeOf r Is DBNull Then Return ""
+                    Return CStr(r)
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Übernimmt Bewertung, Favorit, Farbetikett und Stichworte eines Eintrags auf
+        ''' eine NEUE Datei - für „Speichern unter" und „Konvertieren nach" (Nutzerwunsch
+        ''' 2026-07-17): das Katalog-Wissen wandert zur Kopie mit, das Original behält seins.
+        ''' Die Flags kommen aus den Einzeloptionen des Speichern-unter-/Konvertieren-Dialogs.</summary>
+        Public Sub CopyEntryMeta(sourcePath As String, targetPath As String,
+                                 Optional copyRating As Boolean = True,
+                                 Optional copyFavorite As Boolean = True,
+                                 Optional copyColorLabel As Boolean = True,
+                                 Optional copyKeywords As Boolean = True)
+            If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return
+            If String.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase) Then Return
+            Try
+                If copyRating Then
+                    Dim rating = GetRating(sourcePath)
+                    If rating > 0 Then SetRating(targetPath, rating)
+                End If
+                If copyFavorite AndAlso GetFavorite(sourcePath) Then SetFavorite(targetPath, True)
+                If copyColorLabel Then
+                    Dim label = GetColorLabel(sourcePath)
+                    If Not String.IsNullOrEmpty(label) Then SetColorLabelForMany({targetPath}, label)
+                End If
+                If copyKeywords Then
+                    Dim tags = GetTags(sourcePath)
+                    If tags.Count > 0 Then SetTags(targetPath, tags)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.CopyEntryMeta", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Alle vergebenen Farbetiketten auf einmal (Pfad → Hex). Für die Galerie-Kacheln von
+        ''' Immich-Items: statt zehntausende Pseudo-Pfade einzeln abzufragen, wird die kleine Menge
+        ''' tatsächlich etikettierter Einträge geladen und darüber zugeordnet.</summary>
+        Public Function GetAllColorLabels() As Dictionary(Of String, String)
+            Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT FilePath, ColorLabel FROM ImageMeta WHERE ColorLabel IS NOT NULL AND ColorLabel <> ''"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            result(reader.GetString(0)) = reader.GetString(1)
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Setzt das Farbetikett für mehrere Dateien in einer Transaktion (Mehrfachauswahl).
+        ''' Leerstring = Etikett entfernen.</summary>
+        Public Sub SetColorLabelForMany(filePaths As IEnumerable(Of String), colorLabel As String)
+            Dim list = If(filePaths, Enumerable.Empty(Of String)()).Where(Function(p) Not String.IsNullOrWhiteSpace(p)).ToList()
+            If list.Count = 0 Then Return
+            Dim value = If(colorLabel, "")
+
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using transaction = conn.BeginTransaction()
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = transaction
+                        cmd.CommandText =
+                            "INSERT INTO ImageMeta(FilePath,ColorLabel) VALUES($p,$c) " &
+                            "ON CONFLICT(FilePath) DO UPDATE SET ColorLabel=$c"
+                        Dim pParam = cmd.Parameters.Add("$p", SqliteType.Text)
+                        Dim cParam = cmd.Parameters.Add("$c", SqliteType.Text)
+                        For Each path In list
+                            pParam.Value = path
+                            cParam.Value = value
+                            cmd.ExecuteNonQuery()
+                        Next
+                    End Using
+                    transaction.Commit()
+                End Using
+            End Using
         End Sub
 
         ''' <summary>Setzt die Bewertung für mehrere Dateien in einer einzigen Transaktion/Verbindung
@@ -421,7 +515,7 @@ Namespace Services
         End Sub
 
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -451,7 +545,8 @@ Namespace Services
                 .XmpSummary = If(reader.IsDBNull(23), "", reader.GetString(23)),
                 .HasIccProfile = Not reader.IsDBNull(24) AndAlso reader.GetInt32(24) <> 0,
                 .IccSummary = If(reader.IsDBNull(25), "", reader.GetString(25)),
-                .SummaryFormat = If(reader.IsDBNull(26), "", reader.GetString(26))
+                .SummaryFormat = If(reader.IsDBNull(26), "", reader.GetString(26)),
+                .ColorLabel = If(reader.IsDBNull(27), "", reader.GetString(27))
             }
         End Function
 

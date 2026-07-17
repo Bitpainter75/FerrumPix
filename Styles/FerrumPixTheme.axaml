@@ -840,6 +840,39 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderThickness" Value="2"/>
     </Style>
+
+    <!-- Standard-Ebenenliste (LayersPanelView): flache, volle Zeilen mit dünnem Trenner, ausgewählte Zeile
+         voll in Akzentfarbe gefüllt (wie in üblichen Bildbearbeitungen, nur in der App-Farbe statt Blau). -->
+    <Style Selector="ListBox.layers-panel-list">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBox.layers-panel-list ListBoxItem">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="Border.layers-panel-row">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    </Style>
+    <Style Selector="ListBox.layers-panel-list ListBoxItem:pointerover Border.layers-panel-row">
+        <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
+    </Style>
+    <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.layers-panel-row">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.layers-panel-row TextBlock.layer-name">
+        <Setter Property="Foreground" Value="#FFFFFFFF"/>
+    </Style>
+    <!-- Auge auf einer ausgewählten (orangefarbenen) Zeile: sichtbar = weiß, ausgeblendet = gedämpftes Weiß. -->
+    <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.layers-panel-row ToggleButton.layer-eye icons|SvgIcon">
+        <Setter Property="IconBrush" Value="#99FFFFFF"/>
+    </Style>
+    <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.layers-panel-row ToggleButton.layer-eye:checked icons|SvgIcon">
+        <Setter Property="IconBrush" Value="#FFFFFFFF"/>
+    </Style>
+
     <Style Selector="ListBoxItem:selected:pressed">
         <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
@@ -962,10 +995,22 @@
              Tooltip-Popups ab, wodurch das letzte Zeichen abgeschnitten wurde ("Anpassen" -> "Anpasse").
              Der Puffer fällt optisch nicht auf und deckt die Rundung in jeder Skalierung ab. -->
         <Setter Property="Padding" Value="8,4,14,4"/>
+        <!-- Krumme Skalierung, Teil 2 (Analyse 2026-07-16): Der feste Padding-Puffer reichte nicht
+             für alle Textlängen - die Layout-Rundung arbeitet bei fraktionalen Faktoren in
+             Gerätepixel-Schritten (1,72 => 0,58-DIP-Raster) und kann die Textbreite ABRUNDEN,
+             der Fehler wächst mit der Zeichenzahl. Ohne Layout-Rundung bekommt der Text exakt
+             seine gemessene Breite; die minimal weichere 1-px-Kante des Tooltips ist der Preis. -->
+        <Setter Property="UseLayoutRounding" Value="False"/>
         <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Small}"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="MaxWidth" Value="260"/>
+    </Style>
+    <!-- Tooltip-Texte dürfen umbrechen: Texte über MaxWidth (260) wurden bisher bei JEDER
+         Skalierung hart abgeschnitten (TextBlock ohne Wrapping, z.B. die langen Erklär-Tooltips
+         im Transformieren-Panel). Mit Umbruch bestimmt die Messung die nötige Höhe gleich mit. -->
+    <Style Selector="ToolTip TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
 
     <Style Selector="Border.sidebar">

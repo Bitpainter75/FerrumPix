@@ -27,6 +27,7 @@ Namespace Views
         Private _cropDragMoved As Boolean
         Private _cropDragStartNorm As Point
         Private _cropDragCurrentNorm As Point
+        Private _suppressNextImageContextMenu As Boolean = False
         Private Const CropDragMinPixels As Double = 12
         Private Const FullscreenVideoControlsIdleMs As Integer = 2200
         Private Const FullscreenVideoCursorPollMs As Integer = 120
@@ -231,16 +232,63 @@ Namespace Views
             If vm Is Nothing Then Return
             If IsWithinInfoSidebar(e.Source) Then Return
 
-            If e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
-                If e.Delta.Y < 0 Then
+            Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
+            Dim rightButtonZoom = scrollViewer IsNot Nothing AndAlso e.GetCurrentPoint(scrollViewer).Properties.IsRightButtonPressed
+
+            If rightButtonZoom Then
+                _suppressNextImageContextMenu = True
+                ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+            ElseIf e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+                If scrollViewer IsNot Nothing Then
+                    ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+                ElseIf e.Delta.Y < 0 Then
                     vm.ZoomOut()
+                    ApplyImageFitMode()
                 ElseIf e.Delta.Y > 0 Then
                     vm.ZoomIn()
+                    ApplyImageFitMode()
                 End If
-                ApplyImageFitMode()
             Else
                 vm.NavigateByWheel(e.Delta.Y)
             End If
+            e.Handled = True
+        End Sub
+
+        Private Sub ZoomImageAtViewportPoint(viewportPoint As Point, factor As Double)
+            Dim vm = GetVm()
+            Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
+            If vm Is Nothing OrElse scrollViewer Is Nothing OrElse vm.CurrentImage Is Nothing OrElse factor <= 0 Then Return
+
+            Dim oldZoom = Math.Max(0.05, vm.ZoomLevel)
+            Dim imageX = (scrollViewer.Offset.X + viewportPoint.X) / oldZoom
+            Dim imageY = (scrollViewer.Offset.Y + viewportPoint.Y) / oldZoom
+
+            vm.ActiveZoomPreset = ZoomPresetMode.Manual
+            vm.ZoomLevel = oldZoom * factor
+            ApplyImageFitMode()
+
+            Dim applyOffset =
+                Sub()
+                    Dim newZoom = Math.Max(0.05, vm.ZoomLevel)
+                    Dim target = New Vector(imageX * newZoom - viewportPoint.X,
+                                            imageY * newZoom - viewportPoint.Y)
+                    scrollViewer.Offset = ClampOffset(scrollViewer, target)
+                    ' Rad-Zoom bei GEDRUECKTER rechter Maustaste: das Zoomen hat den Offset veraendert,
+                    ' die beim Pointer-Down gemerkte Pan-Basis ist veraltet. Ohne Neu-Verankern springt
+                    ' die Ansicht beim anschliessenden Ziehen auf den Stand VOR dem Zoomen zurueck
+                    ' (gleicher Bug wie im Editor). Drag-Basis deshalb auf JETZT setzen - auch im
+                    ' verzoegerten zweiten Aufruf (Dispatcher-Post nach dem Layout-Durchlauf).
+                    If _isPanningImage Then
+                        _panStartPoint = viewportPoint
+                        _panStartOffset = scrollViewer.Offset
+                    End If
+                End Sub
+            applyOffset()
+            Dispatcher.UIThread.Post(applyOffset, DispatcherPriority.Background)
+        End Sub
+
+        Public Sub OnImageContextRequested(sender As Object, e As ContextRequestedEventArgs)
+            _suppressNextImageContextMenu = False
             e.Handled = True
         End Sub
 
@@ -254,12 +302,15 @@ Namespace Views
         End Function
 
         Private Sub OnImagePointerPressed(sender As Object, e As PointerPressedEventArgs)
-            If Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
+            Dim properties = e.GetCurrentPoint(Nothing).Properties
+            Dim isLeftButton = properties.IsLeftButtonPressed
+            Dim isRightButton = properties.IsRightButtonPressed
+            If Not isLeftButton AndAlso Not isRightButton Then Return
             Dim vm = GetVm()
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
             If vm Is Nothing OrElse scrollViewer Is Nothing Then Return
 
-            If CanPanImage(vm, scrollViewer) Then
+            If isRightButton AndAlso CanPanImage(vm, scrollViewer) Then
                 _isPanningImage = True
                 _panStartPoint = e.GetPosition(scrollViewer)
                 _panStartOffset = scrollViewer.Offset
@@ -268,6 +319,11 @@ Namespace Views
                 Else
                     e.Pointer.Capture(Me)
                 End If
+                e.Handled = True
+                Return
+            End If
+
+            If isRightButton Then
                 e.Handled = True
                 Return
             End If
@@ -452,6 +508,10 @@ Namespace Views
             _isAttached = True
             RebindViewModel()
             ApplyVideoLayout()
+            ' Wie die Galerie: ohne Fokus im eigenen Teilbaum sieht diese View KEINE Taste - beim
+            ' Wechsel aus der Galerie waren Strg+L/R, Strg+I/E und die Pfeiltasten deshalb tot, bis
+            ' man ins Bild oder in den Filmstreifen geklickt hat (Nutzerbericht 2026-07-17).
+            Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
             Dispatcher.UIThread.Post(Sub()
                                          ApplyImageFitMode()
                                          _filmstripController.ScrollToCurrent()
@@ -736,6 +796,7 @@ Namespace Views
         Private Sub ApplyImageFitMode()
             Dim vm = GetVm()
             Dim image = Me.FindControl(Of Image)("MainImage")
+            Dim background = Me.FindControl(Of Border)("MainImageBackgroundBorder")
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
             If vm Is Nothing OrElse image Is Nothing OrElse scrollViewer Is Nothing Then Return
 
@@ -753,6 +814,12 @@ Namespace Views
             image.Height = imageHeight
             image.MaxWidth = Double.PositiveInfinity
             image.MaxHeight = Double.PositiveInfinity
+            If background IsNot Nothing Then
+                background.Width = Math.Max(0, imageWidth - 2.0)
+                background.Height = Math.Max(0, imageHeight - 2.0)
+                background.MaxWidth = Double.PositiveInfinity
+                background.MaxHeight = Double.PositiveInfinity
+            End If
             If vm.IsZoomFitActive Then
                 scrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
                 scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
@@ -786,6 +853,7 @@ Namespace Views
         Private Sub ApplyFullscreenImageMode()
             Dim vm = GetVm()
             Dim image = Me.FindControl(Of Image)("FullscreenImage")
+            Dim background = Me.FindControl(Of Border)("FullscreenImageBackgroundBorder")
             Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
             If vm Is Nothing OrElse image Is Nothing OrElse viewport Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
 
@@ -814,6 +882,12 @@ Namespace Views
                 image.Height = Math.Round(ih * scale, MidpointRounding.AwayFromZero)
                 image.MaxWidth = vw
                 image.MaxHeight = vh
+            End If
+            If background IsNot Nothing Then
+                background.Width = Math.Max(0, image.Width - 2.0)
+                background.Height = Math.Max(0, image.Height - 2.0)
+                background.MaxWidth = image.MaxWidth
+                background.MaxHeight = image.MaxHeight
             End If
         End Sub
 

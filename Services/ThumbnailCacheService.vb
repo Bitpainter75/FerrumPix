@@ -519,6 +519,9 @@ Namespace Services
             If IcoPreviewService.IsSupportedIco(filePath) Then
                 Return IcoPreviewService.ExtractPreview(filePath)
             End If
+            If FpxService.IsFpx(filePath) Then
+                Return FpxService.ExtractComposite(filePath)
+            End If
             If VideoPreviewService.IsSupportedVideo(filePath) Then
                 Return VideoPreviewService.ExtractPreview(filePath, CacheWidth)
             End If
@@ -573,6 +576,11 @@ Namespace Services
                     Using preview = IcoPreviewService.ExtractPreview(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
+                    End Using
+                ElseIf FpxService.IsFpx(filePath) Then
+                    Using preview = FpxService.ExtractComposite(filePath)
+                        cancellationToken.ThrowIfCancellationRequested()
+                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth)
                     End Using
                 ElseIf VideoPreviewService.IsSupportedVideo(filePath) Then
                     Using preview = VideoPreviewService.ExtractPreview(filePath, CacheWidth)

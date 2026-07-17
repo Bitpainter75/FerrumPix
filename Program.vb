@@ -7,6 +7,16 @@ Module Program
     <STAThread>
     Function Main(args As String()) As Integer
         AppSettingsService.ApplyApplicationScaleEnvironment()
+        ' Build-Marker (ungated): beim Auswerten von Logs/Stacktraces muss zweifelsfrei erkennbar
+        ' sein, WELCHER Build lief - mehrere Befunde am 2026-07-16 stammten unbemerkt aus einem
+        ' veralteten Binary, und die Analyse jagte Geister.
+        Try
+            Dim asmPath = Reflection.Assembly.GetExecutingAssembly().Location
+            Dim buildUtc = If(String.IsNullOrEmpty(asmPath), Date.MinValue, IO.File.GetLastWriteTimeUtc(asmPath))
+            DiagnosticLogService.LogAlways("App.Start",
+                $"buildUtc={buildUtc:yyyy-MM-dd HH:mm:ss}Z pid={Environment.ProcessId}")
+        Catch
+        End Try
         Return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args)
     End Function
 

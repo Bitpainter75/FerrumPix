@@ -7,6 +7,7 @@ Imports Avalonia.Interactivity
 Imports Avalonia.Threading
 Imports Avalonia.Media.Imaging
 Imports Avalonia.VisualTree
+Imports FerrumPix.Controls
 Imports FerrumPix.Models
 Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
@@ -43,6 +44,7 @@ Namespace Views
         Private _viewportThumbnailRefreshQueued As Boolean = False
         Private _scrollHandlersAttached As Boolean = False
         Private _isAttached As Boolean = False
+        Private _suppressNextGalleryContextMenu As Boolean = False
         Private ReadOnly _thumbnailTracker As New ViewportThumbnailTracker()
 
         Public Sub New()
@@ -55,6 +57,9 @@ Namespace Views
             If tree IsNot Nothing Then
                 tree.AddHandler(InputElement.PointerPressedEvent, AddressOf OnFolderTreePointerPressedTunnel, RoutingStrategies.Tunnel)
             End If
+            ' Das Control gehört dieser View-Instanz - kein Abmelden nötig, sie sterben gemeinsam.
+            Dim scrubber = Me.FindControl(Of GalleryTimelineScrubber)("GalleryTimelineScrubber")
+            If scrubber IsNot Nothing Then AddHandler scrubber.ScrubRequested, AddressOf OnTimelineScrubRequested
         End Sub
 
         Private Sub OnDescendantGotFocus(sender As Object, e As FocusChangedEventArgs)
@@ -117,10 +122,38 @@ Namespace Views
         Private Sub OnGalleryScrollWheelChanged(sender As Object, e As PointerWheelEventArgs)
             Dim scrollViewer = TryCast(sender, ScrollViewer)
             If scrollViewer Is Nothing Then Return
+            Dim rightButtonZoom = e.GetCurrentPoint(scrollViewer).Properties.IsRightButtonPressed
+            If rightButtonZoom OrElse e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+                If rightButtonZoom Then _suppressNextGalleryContextMenu = True
+                ZoomGalleryAtViewportPoint(scrollViewer, e.GetPosition(scrollViewer), If(e.Delta.Y > 0, 24.0, -24.0))
+                e.Handled = True
+                Return
+            End If
+
             Dim maxOffsetY = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height)
             Dim newOffsetY = Math.Max(0, Math.Min(scrollViewer.Offset.Y - e.Delta.Y * GalleryWheelScrollStepPx, maxOffsetY))
             scrollViewer.Offset = New Vector(scrollViewer.Offset.X, newOffsetY)
             e.Handled = True
+        End Sub
+
+        Private Sub ZoomGalleryAtViewportPoint(scrollViewer As ScrollViewer, viewportPoint As Avalonia.Point, deltaSize As Double)
+            Dim vm = TryCast(DataContext, GalleryViewModel)
+            If vm Is Nothing OrElse Math.Abs(deltaSize) < 0.01 Then Return
+
+            Dim oldSize = Math.Max(1.0, vm.ThumbnailSize)
+            Dim contentY = scrollViewer.Offset.Y + viewportPoint.Y
+            vm.ThumbnailSize = oldSize + deltaSize
+            Dim scale = vm.ThumbnailSize / oldSize
+
+            Dim applyOffset =
+                Sub()
+                    Dim maxOffsetY = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height)
+                    Dim targetY = contentY * scale - viewportPoint.Y
+                    Dim newOffsetY = Math.Max(0, Math.Min(targetY, maxOffsetY))
+                    scrollViewer.Offset = New Vector(scrollViewer.Offset.X, newOffsetY)
+                End Sub
+            applyOffset()
+            Dispatcher.UIThread.Post(applyOffset, DispatcherPriority.Background)
         End Sub
 
         Private Sub OnGalleryDetachedFromVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
@@ -160,6 +193,8 @@ Namespace Views
             AddHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
             If _observedVm.Items IsNot Nothing Then AddHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
             If _observedVm.DisplayItems IsNot Nothing Then AddHandler _observedVm.DisplayItems.CollectionChanged, AddressOf OnDisplayItemsCollectionChanged
+            ' Die neue View-Instanz startet ohne Zeitleisten-Daten - vom (langlebigen) VM-Stand aufbauen.
+            RebuildTimelineSegments()
         End Sub
 
         Private Sub UnsubscribeViewModel()
@@ -261,6 +296,13 @@ Namespace Views
                 Return
             End If
 
+            If e.PropertyName = NameOf(GalleryViewModel.SortMode) OrElse
+               e.PropertyName = NameOf(GalleryViewModel.SortAscending) Then
+                ' Sortierung bestimmt die Achse der Zeitleiste (Jahre/Buchstaben/keine).
+                RebuildTimelineSegments()
+                Return
+            End If
+
             If e.PropertyName = NameOf(GalleryViewModel.SelectedFolderNode) Then
                 Dispatcher.UIThread.Post(Sub()
                                              Dim vm = GetVm()
@@ -313,7 +355,61 @@ Namespace Views
             If e.Action = NotifyCollectionChangedAction.Reset Then
                 _thumbnailTracker.Reset()
             End If
+            RebuildTimelineSegments()
             QueueViewportThumbnailRefresh()
+        End Sub
+
+        ''' Zeitleisten-Segmente neu aufbauen: bei Listen-Reset (Ordnerwechsel, Nachladen) und bei
+        ''' Sortierwechsel. Ein O(n)-Durchlauf, auch bei 30k Immich-Assets unkritisch - aber nicht
+        ''' pro Scroll-Tick, deshalb getrennt vom Viewport-Refresh.
+        Private Sub RebuildTimelineSegments()
+            Dim scrubber = Me.FindControl(Of GalleryTimelineScrubber)("GalleryTimelineScrubber")
+            Dim vm = GetVm()
+            If scrubber Is Nothing Then Return
+            If vm Is Nothing OrElse vm.Items Is Nothing OrElse Not TimelineAllowedForCurrentView(vm) Then
+                scrubber.SetData(Nothing, 0)
+                scrubber.IsVisible = False
+                Return
+            End If
+            Dim segments = vm.BuildTimelineSegments()
+            scrubber.SetData(segments, vm.Items.Count)
+            ' Sichtbar, sobald die Sortierung eine Achse hergibt - die fruehere 60-Bilder-Schwelle
+            ' ist raus (Nutzer-Feedback: "kann auch immer da sein, stoert nicht").
+            scrubber.IsVisible = segments IsNot Nothing
+        End Sub
+
+        ''' Einstellung "Zeitleiste am rechten Rand": All / Immich (nur Immich-Ansichten) /
+        ''' Folders (nur Ordner-/Suchansichten) / Off. Immich-Ansicht = ein Immich-Knoten ist
+        ''' ausgewählt (Album oder "Alle Fotos").
+        Private Function TimelineAllowedForCurrentView(vm As GalleryViewModel) As Boolean
+            Dim mode = AppSettingsService.NormalizeGalleryTimelineMode(AppSettingsService.Load().GalleryTimelineMode)
+            Dim isImmichView = vm.SelectedImmichNode IsNot Nothing
+            Select Case mode
+                Case "Off" : Return False
+                Case "Immich" : Return isImmichView
+                Case "Folders" : Return Not isImmichView
+                Case Else : Return True
+            End Select
+        End Function
+
+        Private Sub OnTimelineScrubRequested(sender As Object, offsetFraction As Double)
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            Dim scrollViewer = Me.FindControl(Of ScrollViewer)(If(vm.IsGridView, "GalleryGridScrollViewer", "GalleryListScrollViewer"))
+            If scrollViewer Is Nothing Then Return
+            Dim range = Math.Max(0.0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height)
+            scrollViewer.Offset = New Avalonia.Vector(scrollViewer.Offset.X, offsetFraction * range)
+        End Sub
+
+        ''' Positions-Band der Zeitleiste nachführen - läuft im (gedrosselten) Viewport-Refresh mit.
+        Private Sub UpdateTimelineScrollState(scrollViewer As ScrollViewer)
+            Dim scrubber = Me.FindControl(Of GalleryTimelineScrubber)("GalleryTimelineScrubber")
+            If scrubber Is Nothing OrElse scrollViewer Is Nothing Then Return
+            Dim extent = scrollViewer.Extent.Height
+            Dim viewport = scrollViewer.Viewport.Height
+            If extent <= 0 OrElse viewport <= 0 Then Return
+            Dim range = Math.Max(1.0, extent - viewport)
+            scrubber.SetScrollState(scrollViewer.Offset.Y / range, Math.Min(1.0, viewport / extent))
         End Sub
 
         Private Sub OnGalleryScrollPropertyChanged(sender As Object, e As Avalonia.AvaloniaPropertyChangedEventArgs)
@@ -327,13 +423,38 @@ Namespace Views
             QueueViewportThumbnailRefresh()
         End Sub
 
+        Private _lastViewportRefreshUtc As DateTime = DateTime.MinValue
+        Private _viewportRefreshTrailingTimer As DispatcherTimer
+
+        ''' <summary>Drossel (Immich "Alle Fotos" mit 30k Bildern): Scroll-Ereignisse feuern im
+        ''' Millisekundentakt, und jedes Fenster-Update ohne Ueberlappung (schnelles Ziehen des
+        ''' Balkens) baut dutzende Kacheln inkl. eager erzeugter Kontextmenues neu - ungedrosselt
+        ''' wird die UI dabei zaeh. Hoechstens alle ~90 ms aktualisieren; waehrend schnellen
+        ''' Scrollens laeuft EIN nachlaufender Aufruf, damit die Endposition immer frisch ist.</summary>
         Private Sub QueueViewportThumbnailRefresh()
-            If _viewportThumbnailRefreshQueued Then Return
-            _viewportThumbnailRefreshQueued = True
-            Dispatcher.UIThread.Post(Sub()
-                                         _viewportThumbnailRefreshQueued = False
-                                         RequestViewportThumbnails()
-                                     End Sub, DispatcherPriority.Input)
+            Dim elapsed = (DateTime.UtcNow - _lastViewportRefreshUtc).TotalMilliseconds
+            If elapsed >= 90.0 Then
+                _viewportRefreshTrailingTimer?.Stop()
+                If _viewportThumbnailRefreshQueued Then Return
+                _viewportThumbnailRefreshQueued = True
+                _lastViewportRefreshUtc = DateTime.UtcNow
+                Dispatcher.UIThread.Post(Sub()
+                                             _viewportThumbnailRefreshQueued = False
+                                             RequestViewportThumbnails()
+                                         End Sub, DispatcherPriority.Input)
+                Return
+            End If
+
+            If _viewportRefreshTrailingTimer Is Nothing Then
+                _viewportRefreshTrailingTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(90)}
+                AddHandler _viewportRefreshTrailingTimer.Tick, Sub()
+                                                                   _viewportRefreshTrailingTimer.Stop()
+                                                                   _lastViewportRefreshUtc = DateTime.UtcNow
+                                                                   RequestViewportThumbnails()
+                                                               End Sub
+            End If
+            _viewportRefreshTrailingTimer.Stop()
+            _viewportRefreshTrailingTimer.Start()
         End Sub
 
         Private Sub RequestViewportThumbnails()
@@ -367,6 +488,7 @@ Namespace Views
                 Dim displayLast = Math.Min(vm.Items.Count - 1, ((lastRow + rowCount * 2 + 1) * cols) - 1)
                 vm.SetDisplayWindow(displayFirst, displayLast, itemSlotHeight, cols)
                 RequestThumbnailRange(vm, firstIndex, lastIndex)
+                UpdateTimelineScrollState(scrollViewer)
             Else
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
@@ -385,6 +507,7 @@ Namespace Views
                 Dim displayLast = Math.Min(vm.Items.Count - 1, lastIndex + itemCount * 2)
                 vm.SetDisplayWindow(displayFirst, displayLast, itemSlotHeight, 1)
                 RequestThumbnailRange(vm, firstIndex, lastIndex)
+                UpdateTimelineScrollState(scrollViewer)
             End If
         End Sub
 
@@ -535,6 +658,18 @@ Namespace Views
             If node Is Nothing Then Return
             ClearOtherNavigationSelections(TryCast(sender, TreeView))
             Dim opened = Await vm.OpenVirtualNavigationNode(node)
+            ' Personen/Orte sind reine Auf-/Zuklapp-Knoten (öffnen keine Ansicht): Auswahl sofort
+            ' wieder lösen, damit der NÄCHSTE Klick erneut ein SelectionChanged auslöst - sonst
+            ' ließe sich der Knoten nach dem Aufklappen nie wieder zuklappen (der Chevron ist im
+            ' Immich-Baum ausgeblendet, siehe Style im XAML) - und die Ordner-Markierung des
+            ' weiterhin aktiven Ordners zurückholen.
+            If String.Equals(node.Kind, "ImmichPeopleRoot", StringComparison.Ordinal) OrElse
+               String.Equals(node.Kind, "ImmichPlacesRoot", StringComparison.Ordinal) Then
+                ClearVirtualTreeSelections()
+                Dim activeFolderTree = Me.FindControl(Of TreeView)("FolderTreeView")
+                RestoreFolderTreeSelection(activeFolderTree, vm)
+                Return
+            End If
             ' "Neue Suche" per Dialog abgebrochen: der Ordner-/Suchbaum blieb oben bereits ohne
             ' Auswahl (ClearOtherNavigationSelections) - sichtbare Baumauswahl wieder auf den
             ' tatsächlich aktiven Ordner zurücksetzen, statt sie auf "Neue Suche" hängen zu lassen.
@@ -543,6 +678,22 @@ Namespace Views
                 Dim folderTree = Me.FindControl(Of TreeView)("FolderTreeView")
                 RestoreFolderTreeSelection(folderTree, vm)
             End If
+        End Sub
+
+        Public Async Sub OnImmichNodePointerPressed(sender As Object, e As PointerPressedEventArgs)
+            Dim point = e.GetCurrentPoint(TryCast(sender, Control))
+            If Not point.Properties.IsLeftButtonPressed Then Return
+            Dim node = TryCast(TryCast(sender, Control)?.DataContext, VirtualNavigationNode)
+            If node Is Nothing Then Return
+            If Not (String.Equals(node.Kind, "ImmichPeopleRoot", StringComparison.Ordinal) OrElse
+                    String.Equals(node.Kind, "ImmichPlacesRoot", StringComparison.Ordinal)) Then Return
+
+            e.Handled = True
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            Await vm.OpenVirtualNavigationNode(node)
+            ClearVirtualTreeSelections()
+            RestoreFolderTreeSelection(Me.FindControl(Of TreeView)("FolderTreeView"), vm)
         End Sub
 
         Private Sub ClearVirtualTreeSelections()
@@ -727,6 +878,10 @@ Namespace Views
             Finally
                 _restoringFolderTreeSelection = False
             End Try
+            ' NUR beim initialen Anzeigen der (neu aufgebauten) TreeView den aktuellen Ordner in den
+            ' sichtbaren Bereich holen - Auto-Scrollen bei normaler Navigation stoerte den Nutzer
+            ' (der Baum "zog" jeden angeklickten Ordner in die Mitte).
+            BringTreeItemIntoView(tree, node)
         End Sub
 
         Public Sub OnThumbnailPointerPressed(sender As Object, e As PointerPressedEventArgs)
@@ -769,6 +924,7 @@ Namespace Views
         End Sub
 
         Public Sub OnThumbnailContextRequested(sender As Object, e As ContextRequestedEventArgs)
+            If ConsumeSuppressedGalleryContextMenu(e) Then Return
             Dim vm = GetVm()
             If vm Is Nothing Then Return
             Dim item = GetItemFromSender(sender)
@@ -784,6 +940,7 @@ Namespace Views
         End Sub
 
         Public Sub OnGalleryAreaContextRequested(sender As Object, e As ContextRequestedEventArgs)
+            If ConsumeSuppressedGalleryContextMenu(e) Then Return
             Dim vm = GetVm()
             If vm Is Nothing Then Return
             If HasImageItemContext(e.Source) Then Return
@@ -799,6 +956,13 @@ Namespace Views
             SetMenuItemVisible("GalleryListViewportCreateFolderMenuItem", canPasteIntoCurrent)
             SetMenuItemVisible("GalleryListViewportPasteMenuItem", canPasteIntoCurrent)
         End Sub
+
+        Private Function ConsumeSuppressedGalleryContextMenu(e As ContextRequestedEventArgs) As Boolean
+            If Not _suppressNextGalleryContextMenu Then Return False
+            _suppressNextGalleryContextMenu = False
+            If e IsNot Nothing Then e.Handled = True
+            Return True
+        End Function
 
         Public Sub OnSelectionBadgeClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)
@@ -859,6 +1023,20 @@ Namespace Views
             vm.SelectOnly(item)
             _selectionAnchor = item
             vm.DeleteSelectedCommand.Execute(Nothing)
+            e.Handled = True
+        End Sub
+
+        ''' Farbetikett-Punktreihe unten im Kontextmenü: Tag = Hex-Farbe der Akzentpalette bzw. ""
+        ''' (Etikett entfernen). Trifft der Rechtsklick ein markiertes Bild, wendet das ViewModel das
+        ''' Etikett auf die ganze Auswahl an. Buttons schließen das Menü nicht automatisch (nur
+        ''' MenuItems tun das) - deshalb explizit schließen.</summary>
+        Public Sub OnContextSetColorLabel(sender As Object, e As RoutedEventArgs)
+            Dim control = TryCast(sender, Control)
+            Dim item = TryCast(control?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            If control Is Nothing OrElse item Is Nothing OrElse vm Is Nothing Then Return
+            vm.SetItemColorLabel(item, If(control.Tag, "").ToString())
+            control.FindAncestorOfType(Of ContextMenu)()?.Close()
             e.Handled = True
         End Sub
 
@@ -1584,7 +1762,27 @@ Namespace Views
                         Await PasteClipboardIntoFolder(vm.CurrentFolder)
                         Return
                     Case Key.F
+                        ' Strg+F bleibt die Suche; „Filter anwenden" liegt auf Strg+W
+                        ' (Nutzerwunsch 2026-07-17, Strg+F war schon belegt).
                         FocusSearchBox()
+                        e.Handled = True
+                        Return
+                    Case Key.W
+                        ' Strg+W: Filter anwenden (Nutzerwunsch 2026-07-17, vorher Strg+Umschalt+F).
+                        DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+W hasSelectedImage={vm.HasSelectedImage}")
+                        If vm.HasSelectedImage Then vm.ApplyFilterSelectedCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
+                    Case Key.R
+                        ' Strg+R: Bildgröße ändern (Nutzerwunsch 2026-07-17).
+                        DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+R hasSelectedImage={vm.HasSelectedImage}")
+                        If vm.HasSelectedImage Then vm.ResizeSelectedCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
+                    Case Key.D
+                        ' Strg+D: Konvertieren nach (Nutzerwunsch 2026-07-17).
+                        DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+D hasSelectedImage={vm.HasSelectedImage}")
+                        If vm.HasSelectedImage Then vm.BatchConvertSelectedCommand.Execute(Nothing)
                         e.Handled = True
                         Return
                 End Select
@@ -1934,6 +2132,9 @@ Namespace Views
             End If
         End Sub
 
+        ''' Selektiert und expandiert den Ordner im Baum. Bewusst OHNE Auto-Scrollen: das Nachziehen
+        ''' in die Mitte bei jeder Navigation stoerte (Nutzer-Feedback 2026-07-16) - nur das initiale
+        ''' Anzeigen der TreeView stellt Sichtbarkeit her (RestoreFolderTreeSelection).
         Private Sub SelectFolderInTree(folderPath As String)
             Dim vm = GetVm()
             Dim tree = Me.FindControl(Of TreeView)("FolderTreeView")
@@ -1944,7 +2145,6 @@ Namespace Views
                 tree.SelectedItem = node
                 node.EnsureChildrenLoaded()
                 node.IsExpanded = True
-                BringTreeItemIntoView(tree, node)
             End If
         End Sub
 
@@ -1991,6 +2191,13 @@ Namespace Views
 
             Dim viewportHeight = scrollViewer.Viewport.Height
             Dim itemHeight = container.Bounds.Height
+            ' Bereits komplett sichtbar? Dann NICHT scrollen - es soll nur Sichtbarkeit
+            ' sichergestellt werden, kein Zwangs-Zentrieren (Nutzer-Feedback 2026-07-16).
+            Dim currentOffset = scrollViewer.Offset.Y
+            If topLeft.Value.Y >= currentOffset AndAlso
+               topLeft.Value.Y + itemHeight <= currentOffset + viewportHeight Then
+                Return
+            End If
             Dim desiredY = topLeft.Value.Y - (viewportHeight / 2) + (itemHeight / 2)
             Dim maxY = Math.Max(0.0, scrollViewer.Extent.Height - viewportHeight)
             desiredY = Math.Max(0.0, Math.Min(maxY, desiredY))

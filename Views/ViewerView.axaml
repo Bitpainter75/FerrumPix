@@ -36,6 +36,19 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg"
                                Width="20" Height="20"/>
                     </Button>
+
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Command="{Binding RotateLeftCommand}"
+                            ToolTip.Tip="Bild nach links drehen (Strg+L)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Command="{Binding RotateRightCommand}"
+                            ToolTip.Tip="Bild nach rechts drehen (Strg+R)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise-2.svg"
+                               Width="20" Height="20"/>
+                    </Button>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Margin="-110,0,0,0">
@@ -115,7 +128,8 @@
                                   SizeChanged="OnImageViewportSizeChanged"
                                   IsVisible="{Binding CurrentImage, Converter={x:Static ObjectConverters.IsNotNull}}">
                         <Panel>
-                            <Border HorizontalAlignment="Center"
+                            <Border Name="MainImageBackgroundBorder"
+                                    HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Background="{Binding TransparencyBackgroundBrush}">
                                 <Border.RenderTransform>
@@ -127,19 +141,15 @@
                                 <Image Name="MainImage"
                                        Source="{Binding CurrentImage}"
                                        Stretch="Uniform"
+                                       Margin="-1"
                                        RenderOptions.BitmapInterpolationMode="HighQuality"
                                        PointerPressed="OnImagePointerPressed"
                                        PointerMoved="OnImagePointerMoved"
                                        PointerReleased="OnImagePointerReleased"
                                        PointerCaptureLost="OnImagePointerCaptureLost"
                                        PointerExited="OnImagePointerExited"
-                                       DoubleTapped="OnImageDoubleTapped">
-                                    <Image.ContextMenu>
-                                        <ContextMenu>
-                                            <MenuItem Header="Kopieren" Click="OnCopyPathClick"/>
-                                        </ContextMenu>
-                                    </Image.ContextMenu>
-                                </Image>
+                                       ContextRequested="OnImageContextRequested"
+                                       DoubleTapped="OnImageDoubleTapped" />
                             </Border>
                             <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
                                 <Border Name="CropSelectionRect"
@@ -247,6 +257,9 @@
 
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                        <!-- Farbetikett des Bildes (gleiche Darstellung wie auf der Galerie-Kachel). -->
+                        <Ellipse Width="10" Height="10" Fill="{Binding ColorLabelBrush}"
+                                 IsVisible="{Binding HasColorLabel}" VerticalAlignment="Center" Margin="0,0,-10,0"/>
                         <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
@@ -360,11 +373,13 @@
               Background="Black"
               SizeChanged="OnFullscreenViewportSizeChanged"
               IsVisible="{Binding IsFullscreenMode}">
-            <Border HorizontalAlignment="Center"
+            <Border Name="FullscreenImageBackgroundBorder"
+                    HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Background="{Binding TransparencyBackgroundBrush}">
                 <Image Name="FullscreenImage"
                        Source="{Binding CurrentImage}"
+                       Margin="-1"
                        RenderOptions.BitmapInterpolationMode="HighQuality"/>
             </Border>
 

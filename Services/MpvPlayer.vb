@@ -184,6 +184,8 @@ Namespace Services
             If _handle = IntPtr.Zero Then Throw New InvalidOperationException("libmpv konnte nicht erstellt werden.")
 
             SetOptionStringLocked("terminal", "no")
+            ' Siehe VideoPreviewService: FFmpeg-Demuxer-Hinweise nicht auf die Konsole durchlassen.
+            SetOptionStringLocked("msg-level", "all=no")
             SetOptionStringLocked("config", "no")
             SetOptionStringLocked("input-default-bindings", "no")
             SetOptionStringLocked("osc", "no")
@@ -203,6 +205,13 @@ Namespace Services
             ObservePropertyLocked(PropPause, "pause", MpvInterop.MpvFormat.Flag)
             ObservePropertyLocked(PropMute, "mute", MpvInterop.MpvFormat.Flag)
             SetPropertyStringLocked("mute", If(_isMuted, "yes", "no"))
+
+            ' Klick aufs Video toggelt Wiedergabe/Pause (Nutzerwunsch 2026-07-16): Das Video sitzt in
+            ' einem NativeControlHost - Avalonia-Pointer-Events erreichen es NIE, das native
+            ' mpv-Fenster schluckt sie. Deshalb bindet mpv selbst die linke Maustaste; alle uebrigen
+            ' Default-Bindings bleiben aus (input-default-bindings=no). Der Pause-Status fliesst
+            ' ueber die bestehende pause-Observation zurueck in die Oberflaeche (Play-Knopf folgt).
+            CommandLocked("keybind", "MBTN_LEFT", "cycle pause")
 
             _eventThread = New Thread(AddressOf EventLoop) With {
                 .IsBackground = True,

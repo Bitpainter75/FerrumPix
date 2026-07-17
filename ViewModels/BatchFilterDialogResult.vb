@@ -33,6 +33,24 @@ Namespace ViewModels
         Public Property Target As String = "Local"
         Public Property TargetFolder As String = ""
 
+        ''' <summary>Welche Katalog-Metadaten die Kopie vom Original übernimmt (Zeile „Übernehmen").
+        ''' Beim Überschreiben ohne Bedeutung - die Datei behält ihren Katalog-Eintrag.</summary>
+        Public Property CopyRating As Boolean = True
+        Public Property CopyFavorite As Boolean = True
+        Public Property CopyColorLabel As Boolean = True
+        Public Property CopyKeywords As Boolean = True
+
+        Public ReadOnly Property MetaCopy As CatalogMetaCopyOptions
+            Get
+                Return New CatalogMetaCopyOptions With {
+                    .CopyRating = CopyRating,
+                    .CopyFavorite = CopyFavorite,
+                    .CopyColorLabel = CopyColorLabel,
+                    .CopyKeywords = CopyKeywords
+                }
+            End Get
+        End Property
+
         Public ReadOnly Property Extension As String
             Get
                 Select Case If(Format, "").Trim().ToUpperInvariant()

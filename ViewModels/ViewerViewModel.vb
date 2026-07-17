@@ -19,6 +19,7 @@ Namespace ViewModels
 
         Private ReadOnly _mainVm As MainWindowViewModel
         Private _currentImagePath As String = ""
+        Private _bitmapLoadToken As Integer = 0
         ' Immich-Sitzung: _folderPaths enthält dann die Immich-Pseudo-Pfade (immich://{assetId}/{name})
         ' für Filmstreifen/Zähler, während _currentImagePath weiterhin der reale (heruntergeladene)
         ' Temp-Pfad des aktuell angezeigten Bildes ist - so bleibt der ganze Datei-/Anzeigecode gleich.
@@ -52,9 +53,12 @@ Namespace ViewModels
         Private _histogramImage As Bitmap
         Private _newTagText As String = ""
         Private _rotationAngle As Double = 0
+        Private _hasPendingRotationSave As Boolean = False
+        Private _suppressRotationDirty As Boolean = False
         Private _scaleX As Double = 1.0
         Private _rating As Integer = 0
         Private _isFavorite As Boolean = False
+        Private _colorLabel As String = ""
         Private _isSlideshowPlaying As Boolean = False
         Private _slideshowTimer As Timer
         Private _slideshowIntervalMs As Double = 3000
@@ -113,7 +117,15 @@ Namespace ViewModels
                 ' Formate ohne Alphakanal-Unterstützung (z.B. JPEG) können strukturell nie
                 ' transparente Bereiche haben - Schachbrett/Volltonfarbe wäre dort nur an
                 ' Letterbox-/Rundungsrändern fälschlich sichtbar, nie inhaltlich sinnvoll.
-                If Not TransparencyBrushService.HasVisibleTransparency(_currentImagePath) Then
+                ' Der Alpha-Scan läuft im HINTERGRUND (früher: Volldekode im Binding-Getter =
+                ' UI-Hänger bei grossen PNGs); solange unbekannt, erst mal kein Schachbrett -
+                ' der Callback zieht den Brush nach, sobald das Ergebnis vorliegt.
+                Dim hasTransparency As Boolean = False
+                If Not TransparencyBrushService.TryGetTransparency(_currentImagePath, hasTransparency,
+                        Sub() Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))) Then
+                    Return Avalonia.Media.Brushes.Transparent
+                End If
+                If Not hasTransparency Then
                     Return Avalonia.Media.Brushes.Transparent
                 End If
                 ' Im Vollbildmodus soll die tatsächliche Transparenz durchscheinen statt des
@@ -366,7 +378,14 @@ Namespace ViewModels
                 Return _rotationAngle
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_rotationAngle, value)
+                Dim normalized = NormalizeRotationAngle(value)
+                If Me.RaiseAndSetIfChanged(_rotationAngle, normalized) AndAlso
+                   Not _suppressRotationDirty AndAlso
+                   Not _isImmichSession AndAlso
+                   Not String.IsNullOrEmpty(_currentImagePath) AndAlso
+                   File.Exists(_currentImagePath) Then
+                    _hasPendingRotationSave = normalized <> 0
+                End If
                 If _isFitToWindow Then
                     UpdateFitZoom()
                 End If
@@ -416,6 +435,107 @@ Namespace ViewModels
                     LibraryService.Instance.SetFavorite(_currentImagePath, value)
                 End If
             End Set
+        End Property
+
+        ''' Farbetikett (Hex der Akzentfarben-Palette, "" = keins) - lokal in der Bibliotheks-DB;
+        ''' bei Immich-Sitzungen unter dem Pseudo-Pfad des Assets, damit die Galerie-Kachel den
+        ''' gleichen Eintrag sieht.
+        Public Property ColorLabel As String
+            Get
+                Return _colorLabel
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "")
+                If String.Equals(_colorLabel, normalized, StringComparison.OrdinalIgnoreCase) Then Return
+                _colorLabel = normalized
+                RaiseColorLabelProperties()
+                If _isImmichSession Then
+                    If _currentIndex >= 0 AndAlso _currentIndex < _immichSessionItems.Count Then
+                        Dim meta = _immichSessionItems(_currentIndex)
+                        meta.ColorLabel = normalized
+                        LibraryService.Instance.SetColorLabelForMany({meta.FilePath}, normalized)
+                    End If
+                ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
+                    LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, normalized)
+                End If
+            End Set
+        End Property
+
+        Private Sub RaiseColorLabelProperties()
+            Me.RaisePropertyChanged(NameOf(ColorLabel))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelOrange))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelRed))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelPink))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelPurple))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelBlue))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelCyan))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelTeal))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelGreen))
+            Me.RaisePropertyChanged(NameOf(HasColorLabel))
+            Me.RaisePropertyChanged(NameOf(ColorLabelBrush))
+        End Sub
+
+        Public ReadOnly Property HasColorLabel As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_colorLabel)
+            End Get
+        End Property
+
+        ''' Punkt in der Fussleiste vor dem Dateinamen (gleiche Darstellung wie die Galerie-Kachel).
+        Public ReadOnly Property ColorLabelBrush As Avalonia.Media.IBrush
+            Get
+                If String.IsNullOrEmpty(_colorLabel) Then Return Avalonia.Media.Brushes.Transparent
+                Try
+                    Return New Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(_colorLabel))
+                Catch
+                    Return Avalonia.Media.Brushes.Transparent
+                End Try
+            End Get
+        End Property
+
+        Private Function IsColorLabelValue(hex As String) As Boolean
+            Return String.Equals(_colorLabel, hex, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        Public ReadOnly Property IsColorLabelOrange As Boolean
+            Get
+                Return IsColorLabelValue("#F08A1A")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelRed As Boolean
+            Get
+                Return IsColorLabelValue("#E74C3C")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelPink As Boolean
+            Get
+                Return IsColorLabelValue("#F03B88")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelPurple As Boolean
+            Get
+                Return IsColorLabelValue("#8B5CF6")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelBlue As Boolean
+            Get
+                Return IsColorLabelValue("#3B82F6")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelCyan As Boolean
+            Get
+                Return IsColorLabelValue("#0891B2")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelTeal As Boolean
+            Get
+                Return IsColorLabelValue("#0F766E")
+            End Get
+        End Property
+        Public ReadOnly Property IsColorLabelGreen As Boolean
+            Get
+                Return IsColorLabelValue("#22C55E")
+            End Get
         End Property
 
         Public Property IsSlideshowPlaying As Boolean
@@ -575,6 +695,7 @@ Namespace ViewModels
         Public ReadOnly Property OpenFileManagerCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
+        Public ReadOnly Property SetColorLabelCommand As ICommand
         Public ReadOnly Property ToggleSlideshowCommand As ICommand
         Public ReadOnly Property PlayPauseVideoCommand As ICommand
         Public ReadOnly Property SeekVideoCommand As ICommand
@@ -637,8 +758,8 @@ Namespace ViewModels
                                                                          LibraryService.Instance.SetTags(_currentImagePath, Tags)
                                                                      End If
                                                                  End Sub)
-            RotateLeftCommand = ReactiveCommand.Create(Sub() RotationAngle = ((RotationAngle - 90) Mod 360 + 360) Mod 360)
-            RotateRightCommand = ReactiveCommand.Create(Sub() RotationAngle = (RotationAngle + 90) Mod 360)
+            RotateLeftCommand = ReactiveCommand.Create(Sub() RotationAngle = RotationAngle - 90)
+            RotateRightCommand = ReactiveCommand.Create(Sub() RotationAngle = RotationAngle + 90)
             FlipHorizontalCommand = ReactiveCommand.Create(Sub() ScaleX = ScaleX * -1)
             BackToGalleryCommand = ReactiveCommand.Create(Sub() _mainVm.BackToGallery(_currentImagePath))
             DeleteCurrentCommand = ReactiveCommand.Create(Sub() DeleteCurrent())
@@ -650,6 +771,9 @@ Namespace ViewModels
                                                                      If Integer.TryParse(r, v) Then Rating = If(_rating = v, 0, v)
                                                                  End Sub)
             ToggleFavoriteCommand = ReactiveCommand.Create(Sub() IsFavorite = Not IsFavorite)
+            ' Gleiche Farbe erneut = Etikett entfernen (wie im Galerie-Kontextmenü).
+            SetColorLabelCommand = ReactiveCommand.Create(Of String)(
+                Sub(hex) ColorLabel = If(String.Equals(_colorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, "")))
             ToggleSlideshowCommand = ReactiveCommand.Create(Sub()
                                                                 If _isSlideshowPlaying Then
                                                                     StopSlideshow()
@@ -697,6 +821,15 @@ Namespace ViewModels
             _currentImmichAssetId = assetId
             StatusInfo = LocalizationService.T("Lade…")
 
+            ' Infopanel SOFORT auf das neue Asset umschalten (Minimalstand): während des
+            ' Original-Downloads (Sekunden) stand sonst das komplette Panel des vorherigen
+            ' Bildes da (Nutzer-Befund 17.07., Filmstrip-Wechsel). Der volle EXIF-Stand kommt
+            ' nach dem Download über LoadInfoPanelData mit der Temp-Kopie.
+            BeginInfoPanelSwitch(pseudo, New ExifData With {
+                .FileName = If(fileName, ""),
+                .FileType = IO.Path.GetExtension(If(fileName, "")).TrimStart("."c).ToUpperInvariant()
+            })
+
             ' Favorit/Rating/Stichwörter aus dem durchgereichten Galerie-Item übernehmen - Felder direkt
             ' setzen, damit die Property-Setter nicht sofort wieder an den Server zurückschreiben.
             If idx < _immichSessionItems.Count Then
@@ -706,6 +839,9 @@ Namespace ViewModels
                 _rating = meta.Rating
                 Me.RaisePropertyChanged(NameOf(Rating))
                 Me.RaisePropertyChanged(NameOf(RatingText))
+                ' Etikett ist lokal (Bibliotheks-DB, Pseudo-Pfad) - das Galerie-Item traegt es schon.
+                _colorLabel = If(meta.ColorLabel, "")
+                RaiseColorLabelProperties()
                 Tags.Clear()
                 If meta.Tags IsNot Nothing Then
                     For Each t In meta.Tags
@@ -724,7 +860,7 @@ Namespace ViewModels
 
             _currentImagePath = localPath
             CurrentImagePath = localPath
-            RotationAngle = 0
+            ResetViewerRotation()
             ScaleX = 1.0
             Select Case _activeZoomPreset
                 Case ZoomPresetMode.Fit : IsFitToWindow = True
@@ -757,7 +893,7 @@ Namespace ViewModels
             _currentImagePath = imagePath
             CurrentImagePath = imagePath
             CurrentFileName = IO.Path.GetFileName(imagePath)
-            RotationAngle = 0
+            ResetViewerRotation()
             ScaleX = 1.0
             IsFitToWindow = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.ViewerOpenFitToWindow, True)
             ActiveZoomPreset = If(_isFitToWindow, ZoomPresetMode.Fit, ZoomPresetMode.Actual)
@@ -784,6 +920,8 @@ Namespace ViewModels
             _rating = LibraryService.Instance.GetRating(imagePath)
             Me.RaisePropertyChanged(NameOf(Rating))
             Me.RaisePropertyChanged(NameOf(RatingText))
+            _colorLabel = LibraryService.Instance.GetColorLabel(imagePath)
+            RaiseColorLabelProperties()
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
@@ -798,6 +936,7 @@ Namespace ViewModels
 
             If evictCurrentThumbnail Then
                 For Each filmItem In FilmstripItems.Where(Function(i) i IsNot Nothing AndAlso String.Equals(i.FilePath, _currentImagePath, StringComparison.OrdinalIgnoreCase))
+                    filmItem.RefreshFileInfo()
                     filmItem.ClearThumbnail()
                 Next
             End If
@@ -830,8 +969,19 @@ Namespace ViewModels
             _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
         End Sub
 
+        ''' <summary>Startet das Laden des aktuellen Bildes. Der DECODE laeuft im HINTERGRUND
+        ''' (Analyse 2026-07-16: vorher synchron auf dem UI-Thread - jeder Bildwechsel fror den
+        ''' Viewer fuer die Dekodier-Dauer ein, bei grossen JPEGs/RAWs deutlich spuerbar). Das
+        ''' bisherige Bild bleibt sichtbar, bis das neue fertig ist; ueberholte Ergebnisse
+        ''' verwirft der Lade-Token (schnelles Blaettern startet mehrere Loads, nur der juengste
+        ''' gewinnt). Nach der Uebernahme werden Fit-Zoom und Statuszeile NACHGEZOGEN - die
+        ''' Aufrufer haben sie direkt nach LoadBitmap() nur fuer das noch angezeigte alte Bild
+        ''' aktualisiert.</summary>
         Private Sub LoadBitmap()
             If VideoPreviewService.IsSupportedVideo(_currentImagePath) Then
+                ' Laufende Bild-Loads (inkl. FPX-Vollaufloesung) verwerfen - sonst wuerde ein spaet
+                ' eintreffendes Bitmap das Video-Layout ueberschreiben.
+                InvalidatePendingBitmapLoad()
                 CurrentImage = Nothing
                 ImageWidth = 0
                 ImageHeight = 0
@@ -840,32 +990,97 @@ Namespace ViewModels
             End If
 
             StopVideoPlayback()
+            Dim token = System.Threading.Interlocked.Increment(_bitmapLoadToken)
+            Dim path = _currentImagePath
+            RunBitmapLoad(path, token, FpxService.IsFpx(path))
+        End Sub
 
+        ''' Verwirft ein eventuell laufendes asynchrones Bild-Laden (Bildwechsel auf Video,
+        ''' Loeschen/Freigeben der Datei) - ohne das koennte ein spaetes Decode-Ergebnis ein
+        ''' bewusst geleertes CurrentImage wieder "auferstehen" lassen.
+        Private Sub InvalidatePendingBitmapLoad()
+            System.Threading.Interlocked.Increment(_bitmapLoadToken)
+        End Sub
+
+        Private Async Sub RunBitmapLoad(path As String, token As Integer, isFpx As Boolean)
+            Dim bmp As Bitmap = Nothing
             Try
-                Dim bmp As Bitmap
-                If RawPreviewService.IsSupportedRaw(_currentImagePath) Then
-                    Using preview = RawPreviewService.ExtractPreview(_currentImagePath)
-                        bmp = If(preview IsNot Nothing, ImageOrientationService.LoadOrientedAvaloniaBitmap(preview), Nothing)
-                    End Using
-                ElseIf SvgPreviewService.IsSupportedSvg(_currentImagePath) Then
-                    Using preview = SvgPreviewService.ExtractPreview(_currentImagePath)
-                        bmp = If(preview IsNot Nothing, New Bitmap(preview), Nothing)
-                    End Using
-                ElseIf IcoPreviewService.IsSupportedIco(_currentImagePath) Then
-                    Using preview = IcoPreviewService.ExtractPreview(_currentImagePath)
-                        bmp = If(preview IsNot Nothing, New Bitmap(preview), Nothing)
-                    End Using
-                Else
-                    bmp = ImageOrientationService.LoadOrientedAvaloniaBitmap(_currentImagePath)
-                End If
-                If bmp Is Nothing Then Throw New Exception("Keine Vorschau extrahierbar")
-                CurrentImage = bmp
-                ImageWidth = CInt(bmp.Size.Width)
-                ImageHeight = CInt(bmp.Size.Height)
+                bmp = Await Task.Run(Function() DecodeViewerBitmap(path))
             Catch
+                bmp = Nothing
+            End Try
+
+            If Not ApplyLoadedBitmap(token, bmp) Then Return
+            ' FPX: das schnelle Komposit steht - die Vollaufloesung zieht mit demselben Token nach.
+            If isFpx AndAlso bmp IsNot Nothing Then LoadFpxFullResolutionBitmapAsync(path, token)
+        End Sub
+
+        ''' <summary>Uebernimmt ein fertig dekodiertes Bitmap, WENN der Token noch aktuell ist -
+        ''' sonst wird es verworfen (False). Zieht Fit-Zoom und Status nach.</summary>
+        Private Function ApplyLoadedBitmap(token As Integer, bmp As Bitmap) As Boolean
+            If token <> System.Threading.Volatile.Read(_bitmapLoadToken) Then
+                bmp?.Dispose()
+                Return False
+            End If
+
+            If bmp Is Nothing Then
                 CurrentImage = Nothing
                 ImageWidth = 0
                 ImageHeight = 0
+            Else
+                CurrentImage = bmp
+                ImageWidth = CInt(bmp.Size.Width)
+                ImageHeight = CInt(bmp.Size.Height)
+            End If
+            If _isFitToWindow Then UpdateFitZoom()
+            UpdateStatus()
+            Return True
+        End Function
+
+        ''' Reiner Decode ohne ViewModel-Zustand - laeuft im Task.Run-Worker.
+        Private Shared Function DecodeViewerBitmap(path As String) As Bitmap
+            If RawPreviewService.IsSupportedRaw(path) Then
+                Using preview = RawPreviewService.ExtractPreview(path)
+                    Return If(preview IsNot Nothing, ImageOrientationService.LoadOrientedAvaloniaBitmap(preview), Nothing)
+                End Using
+            End If
+            If SvgPreviewService.IsSupportedSvg(path) Then
+                Using preview = SvgPreviewService.ExtractPreview(path)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                End Using
+            End If
+            If IcoPreviewService.IsSupportedIco(path) Then
+                Using preview = IcoPreviewService.ExtractPreview(path)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                End Using
+            End If
+            If FpxService.IsFpx(path) Then
+                Using preview = FpxService.ExtractComposite(path)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                End Using
+            End If
+            Return ImageOrientationService.LoadOrientedAvaloniaBitmap(path)
+        End Function
+
+        Private Async Sub LoadFpxFullResolutionBitmapAsync(path As String, token As Integer)
+            If String.IsNullOrWhiteSpace(path) Then Return
+            Try
+                Dim full = Await Task.Run(Function() ImageProcessor.RenderFpxFullResolutionBitmap(path))
+                If token <> System.Threading.Volatile.Read(_bitmapLoadToken) Then
+                    full?.Dispose()
+                    Return
+                End If
+                If Not String.Equals(path, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
+                    full?.Dispose()
+                    Return
+                End If
+                If full Is Nothing Then Return
+                CurrentImage = full
+                ImageWidth = CInt(full.Size.Width)
+                ImageHeight = CInt(full.Size.Height)
+                If _isFitToWindow Then UpdateFitZoom()
+                UpdateStatus()
+            Catch
             End Try
         End Sub
 
@@ -1045,7 +1260,8 @@ Namespace ViewModels
         End Sub
 
         Private Sub LoadFolderContext(folder As String, currentPath As String)
-            Dim exts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico", ".svg", ".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2", ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
+            ' ".fpx" gehört dazu: Projekte blättern im Viewer/Vollbild mit (Anzeige aus dem Composite).
+            Dim exts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico", ".svg", ".fpx", ".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2", ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
             Try
                 _folderPaths = Directory.GetFiles(folder).
                     Where(Function(f) exts.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
@@ -1162,6 +1378,11 @@ Namespace ViewModels
         ' veraltete Ergebnis, statt EXIF/Histogramm eines längst verlassenen Bildes anzuzeigen.
         Private _infoPanelLoadToken As Integer = 0
 
+        ' Pfad, dessen Daten das Infopanel gerade zeigt (auch provisorisch) - verhindert beim
+        ' Neuladen DESSELBEN Bildes (Tag-Edit, Sidebar-Toggle) das kurze Zurückfallen auf den
+        ' provisorischen Katalog-Stand.
+        Private _infoPanelShownForPath As String = ""
+
         ' Pfad, für den HistogramImage zuletzt tatsächlich berechnet wurde - erlaubt
         ' EnsureHistogramLoaded, beim Einblenden der Info-Leiste zu erkennen, ob für das aktuelle
         ' Bild noch nachgeladen werden muss (siehe unten).
@@ -1189,25 +1410,117 @@ Namespace ViewModels
             End If
             RefreshTagSuggestions()
 
-            If Not loadHistogram Then HistogramImage = Nothing
+            If Not loadHistogram Then
+                _histogramLoadedForPath = ""
+                HistogramImage = Nothing
+            End If
+
+            ' NUTZER-BEFUND (17.07., 2. Runde): Beim schnellen Blättern blieb das KOMPLETTE Panel
+            ' auf dem vorherigen Bild stehen - ExifInfo wurde erst nach der gesamten Hintergrund-
+            ' Arbeit ersetzt, und dazu gehörte auch der Histogramm-Volldecode. Deshalb jetzt
+            ' dreistufig: (1) SOFORT auf einen Stand des NEUEN Bildes wechseln - aus dem Katalog,
+            ' wenn er das Bild schon kennt (Nutzervorschlag), sonst leeren; (2) das EXIF-Ergebnis
+            ' posten, SOBALD es gelesen ist; (3) das Histogramm separat nachschieben, ohne das
+            ' EXIF-Update dahinter aufzuhalten.
+            If Not String.Equals(_infoPanelShownForPath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+                SetProvisionalInfoPanelForPath(imagePath)
+            End If
 
             Task.Run(Sub()
-                         Dim info = BuildImageInfo(imagePath, capturedWidth, capturedHeight)
-                         Dim histogram As Bitmap = Nothing
-                         If loadHistogram Then histogram = ImageProcessor.BuildHistogramImage(imagePath, 240, 120)
-                         Dim exifForSearch = ExifService.ExtractSearchFields(info, imagePath)
-                         LibraryService.Instance.SyncExifData(imagePath, exifForSearch, ExifService.BuildCatalogSummary(info, exifForSearch))
-
+                         ' Maße aus dem DATEI-Header statt aus dem VM-Zustand: seit der Viewer
+                         ' asynchron lädt, hielt _imageWidth beim Aufruf noch das VORHERIGE Bild -
+                         ' MP/Seitenverhältnis/Maße im Infopanel blieben bei schnellem Blättern
+                         ' auf dem alten Stand (Nutzer-Befund 2026-07-17).
+                         Dim headerSize = ImageProcessor.GetOrientedImageSize(imagePath)
+                         Dim infoWidth = If(headerSize.Width > 0, headerSize.Width, capturedWidth)
+                         Dim infoHeight = If(headerSize.Height > 0, headerSize.Height, capturedHeight)
+                         Dim info = BuildImageInfo(imagePath, infoWidth, infoHeight)
                          Dispatcher.UIThread.Post(Sub()
                                                        If token <> _infoPanelLoadToken Then Return
                                                        ExifInfo = info
-                                                       If loadHistogram Then
+                                                       _infoPanelShownForPath = imagePath
+                                                   End Sub)
+
+                         Dim exifForSearch = ExifService.ExtractSearchFields(info, imagePath)
+                         LibraryService.Instance.SyncExifData(imagePath, exifForSearch, ExifService.BuildCatalogSummary(info, exifForSearch))
+
+                         If loadHistogram Then
+                             Dim histogram = ImageProcessor.BuildHistogramImage(imagePath, 240, 120)
+                             Dispatcher.UIThread.Post(Sub()
+                                                           If token <> _infoPanelLoadToken Then
+                                                               histogram?.Dispose()
+                                                               Return
+                                                           End If
                                                            HistogramImage = histogram
                                                            _histogramLoadedForPath = imagePath
-                                                       End If
-                                                   End Sub)
+                                                       End Sub)
+                         End If
                      End Sub)
         End Sub
+
+        ''' <summary>Startet einen Bildwechsel fürs Infopanel sofort: alte Hintergrund-Posts werden per
+        ''' Token ungültig, das Panel bekommt ein neues ExifData-Objekt und das alte Histogramm wird
+        ''' entfernt. Das passiert bewusst VOR dem eigentlichen Bitmap-/EXIF-Decode, damit schnelle
+        ''' Filmstrip-Klicks nie sichtbare Daten des vorherigen Bildes stehen lassen.</summary>
+        Private Function BeginInfoPanelSwitch(imagePath As String, Optional provisionalInfo As ExifData = Nothing) As Integer
+            Dim token = System.Threading.Interlocked.Increment(_infoPanelLoadToken)
+            SetProvisionalInfoPanelForPath(imagePath, provisionalInfo)
+            Return token
+        End Function
+
+        Private Sub SetProvisionalInfoPanelForPath(imagePath As String, Optional provisionalInfo As ExifData = Nothing)
+            ExifInfo = If(provisionalInfo, BuildProvisionalInfoFromCatalog(imagePath))
+            _infoPanelShownForPath = imagePath
+            ' Das Histogramm des alten Bildes ebenfalls sofort raus - es käme sonst als letztes
+            ' Relikt des vorherigen Bildes erst mit dem Nachschub-Post weg.
+            _histogramLoadedForPath = ""
+            HistogramImage = Nothing
+        End Sub
+
+        ''' <summary>Provisorischer Infopanel-Stand aus dem Katalog (SQLite, ein Zeilen-Lookup) -
+        ''' zeigt beim Bildwechsel sofort die Daten des RICHTIGEN Bildes, bis der vollständige
+        ''' EXIF-Read sie ersetzt. Kennt der Katalog das Bild nicht, kommt ein MINIMAL-Objekt
+        ''' (Dateiname/Typ, Rest leer) zurück - NIE Nothing: Bindings wie „ExifInfo.Camera"
+        ''' aktualisieren bei Nothing nicht auf leer, sondern behalten stumpf den letzten Wert -
+        ''' genau so blieb das Panel beim Filmstrip-Wechsel auf dem Vorgängerbild stehen
+        ''' (Nutzer-Befund 17.07., 3. Runde).</summary>
+        Private Shared Function BuildProvisionalInfoFromCatalog(imagePath As String) As ExifData
+            Try
+                Dim meta = LibraryService.Instance.GetMetaForPaths({imagePath}).Values.FirstOrDefault()
+                If meta Is Nothing Then
+                    Return New ExifData With {
+                        .FileName = IO.Path.GetFileName(imagePath),
+                        .FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant()
+                    }
+                End If
+
+                Dim data As New ExifData With {
+                    .FileName = IO.Path.GetFileName(imagePath),
+                    .FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant(),
+                    .DateTaken = If(meta.DateTaken, ""),
+                    .DateModifiedExif = If(meta.DateModifiedExif, ""),
+                    .Camera = If(meta.Camera, ""),
+                    .Lens = If(meta.Lens, ""),
+                    .ShutterSpeed = If(meta.ShutterSpeed, "")
+                }
+                If meta.Aperture.HasValue Then data.Aperture = "f/" & meta.Aperture.Value.ToString("0.#", Globalization.CultureInfo.InvariantCulture)
+                If meta.FocalLengthMm.HasValue Then data.FocalLength = meta.FocalLengthMm.Value.ToString("0.#", Globalization.CultureInfo.InvariantCulture) & " mm"
+                If meta.Iso.HasValue Then data.ISO = meta.Iso.Value.ToString(Globalization.CultureInfo.InvariantCulture)
+                If meta.ImageWidth.GetValueOrDefault() > 0 AndAlso meta.ImageHeight.GetValueOrDefault() > 0 Then
+                    Dim w = meta.ImageWidth.Value
+                    Dim h = meta.ImageHeight.Value
+                    data.ImageWidth = w.ToString(Globalization.CultureInfo.InvariantCulture)
+                    data.ImageHeight = h.ToString(Globalization.CultureInfo.InvariantCulture)
+                    data.Megapixels = $"{w * h / 1_000_000.0:F1} MP"
+                    data.AspectRatio = FormatAspectRatio(w, h)
+                End If
+                Return data
+            Catch
+                ' Auch im Fehlerfall nie Nothing (siehe Methodenkommentar - Bindings blieben sonst
+                ' auf dem Vorgängerbild stehen).
+                Return New ExifData With {.FileName = IO.Path.GetFileName(If(imagePath, ""))}
+            End Try
+        End Function
 
         Private Sub RefreshTagSuggestions()
             TagSuggestions.Clear()
@@ -1221,13 +1534,21 @@ Namespace ViewModels
         ''' aufgerufen von ToggleInfoSidebarCommand beim Einblenden.
         Private Sub EnsureHistogramLoaded()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
+            ' Während eines Immich-Wechsels zeigt das Infopanel bereits den neuen Pseudo-Pfad,
+            ' _currentImagePath verweist aber bis zum Downloadende noch auf die alte Temp-Datei.
+            ' In dieser Zwischenzeit kein Histogramm nachladen, sonst erscheint wieder das alte Bild.
+            If Not String.Equals(_infoPanelShownForPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
             If String.Equals(_histogramLoadedForPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
 
             Dim imagePath = _currentImagePath
             Task.Run(Sub()
                          Dim histogram = ImageProcessor.BuildHistogramImage(imagePath, 240, 120)
                          Dispatcher.UIThread.Post(Sub()
-                                                       If Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then Return
+                                                       If Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                                                          Not String.Equals(_infoPanelShownForPath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+                                                           histogram?.Dispose()
+                                                           Return
+                                                       End If
                                                        HistogramImage = histogram
                                                        _histogramLoadedForPath = imagePath
                                                    End Sub)
@@ -1238,6 +1559,82 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SlideshowButtonText))
             Me.RaisePropertyChanged(NameOf(PositionText))
         End Sub
+
+        Private Shared Function NormalizeRotationAngle(value As Double) As Double
+            Dim rounded = CInt(Math.Round(value / 90.0)) * 90
+            Return ((rounded Mod 360) + 360) Mod 360
+        End Function
+
+        Private Sub ResetViewerRotation()
+            _suppressRotationDirty = True
+            Try
+                RotationAngle = 0
+            Finally
+                _suppressRotationDirty = False
+            End Try
+            _hasPendingRotationSave = False
+        End Sub
+
+        Public Async Function ConfirmPendingRotationAsync(actionDescription As String) As Task(Of Boolean)
+            If Not _hasPendingRotationSave OrElse NormalizeRotationAngle(_rotationAngle) = 0 Then Return True
+            If String.IsNullOrEmpty(_currentImagePath) OrElse Not File.Exists(_currentImagePath) Then
+                ResetViewerRotation()
+                Return True
+            End If
+
+            Dim save = Await _mainVm.ShowConfirmAsync("Drehung speichern?",
+                                                      $"Soll die Drehung von {IO.Path.GetFileName(_currentImagePath)} gespeichert werden, bevor du {actionDescription}?",
+                                                      "Speichern",
+                                                      "Verwerfen")
+            If save Then
+                If Not Await SavePendingRotationAsync() Then Return False
+            Else
+                ResetViewerRotation()
+            End If
+
+            Return True
+        End Function
+
+        Private Async Function SavePendingRotationAsync() As Task(Of Boolean)
+            Dim angle = CInt(NormalizeRotationAngle(_rotationAngle))
+            If angle = 0 Then
+                ResetViewerRotation()
+                Return True
+            End If
+
+            Dim source = _currentImagePath
+            Dim ext = IO.Path.GetExtension(source)
+            Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-rotate-{Guid.NewGuid():N}{ext}")
+            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
+            Dim ok = False
+            Dim errorMessage As String = Nothing
+
+            Try
+                ok = Await Task.Run(Function()
+                                        Dim adj = New ImageAdjustments With {.RotationDegrees = angle}
+                                        Return ImageProcessor.SaveImage(source, temp, adj, 95, preserveMetadata)
+                                    End Function)
+                If ok AndAlso File.Exists(temp) Then
+                    File.Copy(temp, source, True)
+                    ExifService.Invalidate(source)
+                    LoadBitmap()
+                    ResetViewerRotation()
+                    UpdateStatus()
+                    Return True
+                End If
+                errorMessage = LocalizationService.T("Bild konnte nicht gespeichert werden")
+            Catch ex As Exception
+                errorMessage = ex.Message
+            Finally
+                Try
+                    If File.Exists(temp) Then File.Delete(temp)
+                Catch
+                End Try
+            End Try
+
+            Await _mainVm.ShowMessageAsync("Drehung speichern", If(errorMessage, LocalizationService.T("Bild konnte nicht gespeichert werden")))
+            Return False
+        End Function
 
         Public Sub NavigatePrevious()
             _navDebouncer.QueuePrevious()
@@ -1253,9 +1650,9 @@ Namespace ViewModels
             _navDebouncer.QueueWheelDelta(deltaY)
         End Sub
 
-        Private Function CommitNavigateAsync(idx As Integer) As Task
+        Private Async Function CommitNavigateAsync(idx As Integer) As Task
+            If Not Await ConfirmPendingRotationAsync("zu einem anderen Bild wechselst") Then Return
             LoadPathAt(idx)
-            Return Task.CompletedTask
         End Function
 
         Private Sub LoadPathAt(idx As Integer)
@@ -1268,7 +1665,7 @@ Namespace ViewModels
             If String.IsNullOrEmpty(nextPath) OrElse Not File.Exists(nextPath) Then
                 _folderPaths.RemoveAll(Function(p) String.Equals(p, nextPath, StringComparison.OrdinalIgnoreCase))
                 If _folderPaths.Count = 0 Then
-                    CurrentImage = Nothing
+                    InvalidatePendingBitmapLoad() : CurrentImage = Nothing
                     CurrentImagePath = ""
                     CurrentFileName = ""
                     Return
@@ -1281,7 +1678,9 @@ Namespace ViewModels
             _currentImagePath = nextPath
             CurrentImagePath = _currentImagePath
             CurrentFileName = IO.Path.GetFileName(_currentImagePath)
-            RotationAngle = 0
+            CurrentIndex = idx
+            BeginInfoPanelSwitch(_currentImagePath)
+            ResetViewerRotation()
             ScaleX = 1.0
             ' Anders als OpenImage (frischer Start) NICHT mehr aus den Settings neu initialisieren -
             ' der zuletzt vom Nutzer gewählte Zoom-Modus soll über einen Bildwechsel hinweg erhalten
@@ -1304,18 +1703,19 @@ Namespace ViewModels
             _rating = LibraryService.Instance.GetRating(_currentImagePath)
             Me.RaisePropertyChanged(NameOf(Rating))
             Me.RaisePropertyChanged(NameOf(RatingText))
+            _colorLabel = LibraryService.Instance.GetColorLabel(_currentImagePath)
+            RaiseColorLabelProperties()
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
             Me.RaisePropertyChanged(NameOf(HasNoMedia))
             Me.RaisePropertyChanged(NameOf(CanEdit))
-            CurrentIndex = idx
         End Sub
 
-        Public Sub NavigateToItem(item As ImageItem)
+        Public Async Sub NavigateToItem(item As ImageItem)
             If item Is Nothing Then Return
             Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, StringComparison.OrdinalIgnoreCase))
-            If idx >= 0 Then LoadPathAt(idx)
+            If idx >= 0 Then Await CommitNavigateAsync(idx)
         End Sub
 
         Private Sub DeleteCurrent()
@@ -1334,7 +1734,7 @@ Namespace ViewModels
                                                                LoadFilmstrip()
                                                                LoadPathAt(_currentIndex)
                                                            Else
-                                                               CurrentImage = Nothing
+                                                               InvalidatePendingBitmapLoad() : CurrentImage = Nothing
                                                                CurrentImagePath = ""
                                                                CurrentFileName = ""
                                                                _mainVm.BackToGallery(IO.Path.GetDirectoryName(deletedPath))
@@ -1378,7 +1778,7 @@ Namespace ViewModels
             _mainVm.Gallery?.RemoveImmichItems({assetId})
 
             If _folderPaths.Count = 0 Then
-                CurrentImage = Nothing
+                InvalidatePendingBitmapLoad() : CurrentImage = Nothing
                 CurrentImagePath = ""
                 CurrentFileName = ""
                 _mainVm.CurrentMode = AppMode.Gallery
@@ -1404,6 +1804,7 @@ Namespace ViewModels
         Public Sub ReleaseCurrentImageIfAny(paths As IEnumerable(Of String))
             If String.IsNullOrEmpty(_currentImagePath) OrElse paths Is Nothing Then Return
             If paths.Any(Function(p) String.Equals(p, _currentImagePath, StringComparison.OrdinalIgnoreCase)) Then
+                InvalidatePendingBitmapLoad()
                 CurrentImage = Nothing
             End If
         End Sub

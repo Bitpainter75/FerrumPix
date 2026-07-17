@@ -16,6 +16,14 @@
         <Style Selector="TreeViewItem">
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
         </Style>
+        <!-- Personen/Orte klappen per Klick auf die Zeile auf/zu (OpenVirtualNavigationNode); der
+             Standard-Chevron läge durch den Einzug-Trick (-34-Margin im Item-Template) mitten im
+             Knoten-Icon (Nutzer-Befund 2026-07-16). Unsichtbar UND nicht klickbar, damit der Klick
+             die Zeile trifft - der Platz bleibt erhalten, sonst verschöben sich die Einzüge. -->
+        <Style Selector="TreeView#ImmichTreeView TreeViewItem /template/ ToggleButton">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid RowDefinitions="60,*,60">
@@ -229,6 +237,89 @@
 
                                         <Separator Margin="4,6"/>
 
+                                        <!-- FARBETIKETT -->
+                                        <TextBlock Text="ETIKETT" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,4,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterColorLabelCommand}" CommandParameter="">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterLabelAll}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <!-- Dieselben Farben wie die Akzentauswahl in den Einstellungen. -->
+                                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,4,10,6">
+                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                    Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#F08A1A" ToolTip.Tip="Orange">
+                                                <Grid>
+                                                    <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
+                                                    <TextBlock Text="✓" IsVisible="{Binding IsFilterLabelOrange}" Foreground="White"
+                                                               FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                    Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#E74C3C" ToolTip.Tip="Rot">
+                                                <Grid>
+                                                    <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
+                                                    <TextBlock Text="✓" IsVisible="{Binding IsFilterLabelRed}" Foreground="White"
+                                                               FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                    Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#F03B88" ToolTip.Tip="Pink">
+                                                <Grid>
+                                                    <Ellipse Width="16" Height="16" Fill="#F03B88"/>
+                                                    <TextBlock Text="✓" IsVisible="{Binding IsFilterLabelPink}" Foreground="White"
+                                                               FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                    Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#8B5CF6" ToolTip.Tip="Lila">
+                                                <Grid>
+                                                    <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
+                                                    <TextBlock Text="✓" IsVisible="{Binding IsFilterLabelPurple}" Foreground="White"
+                                                               FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                    Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#3B82F6" ToolTip.Tip="Blau">
+                                                <Grid>
+                                                    <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
+                                                    <TextBlock Text="✓" IsVisible="{Binding IsFilterLabelBlue}" Foreground="White"
+                                                               FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                    Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#0891B2" ToolTip.Tip="Cyan">
+                                                <Grid>
+                                                    <Ellipse Width="16" Height="16" Fill="#0891B2"/>
+                                                    <TextBlock Text="✓" IsVisible="{Binding IsFilterLabelCyan}" Foreground="White"
+                                                               FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                    Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#0F766E" ToolTip.Tip="Türkis">
+                                                <Grid>
+                                                    <Ellipse Width="16" Height="16" Fill="#0F766E"/>
+                                                    <TextBlock Text="✓" IsVisible="{Binding IsFilterLabelTeal}" Foreground="White"
+                                                               FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                    Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#22C55E" ToolTip.Tip="Grün">
+                                                <Grid>
+                                                    <Ellipse Width="16" Height="16" Fill="#22C55E"/>
+                                                    <TextBlock Text="✓" IsVisible="{Binding IsFilterLabelGreen}" Foreground="White"
+                                                               FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Button>
+                                        </StackPanel>
+
+                                        <Separator Margin="4,6"/>
+
                                         <!-- DATEITYP -->
                                         <TextBlock Text="DATEITYP" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource FP.Text.Muted}"
@@ -281,7 +372,7 @@
                     </Button>
 
                     <Button Grid.Column="2"
-                            Width="156"
+                            MinWidth="156" MaxWidth="260"
                             Padding="10,7" Margin="0,0,8,0"
                             ToolTip.Tip="Sortieren">
                         <Button.Flyout>
@@ -499,9 +590,13 @@
                     <Grid ColumnDefinitions="*" Margin="0,0,14,8">
                         <TextBlock Text="Suchen" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                     </Grid>
+                    <!-- Suchen- und Immich-Bereich sind hart gedeckelt und scrollen intern; der
+                         Ordnerbaum darunter hat zusätzlich eine Mindesthöhe (siehe Row 1) - er darf
+                         von wachsenden Suchlisten/Immich-Knoten (Alben, Personen, Orte) nie aus dem
+                         sichtbaren Bereich gedrängt werden. -->
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto"
-                                  MaxHeight="180">
+                                  MaxHeight="150">
                         <TreeView Name="SearchTreeView"
                                   ItemsSource="{Binding SearchTree}"
                                   Background="Transparent"
@@ -554,7 +649,7 @@
                     </Grid>
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto"
-                                  MaxHeight="160"
+                                  MaxHeight="220"
                                   IsVisible="{Binding HasImmich}">
                         <TreeView Name="ImmichTreeView"
                                   ItemsSource="{Binding ImmichTree}"
@@ -568,7 +663,8 @@
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
                                     <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center"
-                                          HorizontalAlignment="Stretch" Background="Transparent" Margin="-34,3,0,3">
+                                          HorizontalAlignment="Stretch" Background="Transparent" Margin="-34,3,0,3"
+                                          PointerPressed="OnImmichNodePointerPressed">
                                         <Grid.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Bilder hochladen…" Click="OnImmichUploadClick"/>
@@ -579,7 +675,7 @@
                                                 <MenuItem Header="Neues Album…" Click="OnImmichNewAlbumClick"/>
                                             </ContextMenu>
                                         </Grid.ContextMenu>
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/cloud.svg"
+                                        <icons:SvgIcon Source="{Binding ImmichIconSource}"
                                                        Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
                                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
@@ -594,6 +690,7 @@
                 <Grid Grid.Row="1"
                       Margin="24,8,12,0"
                       RowDefinitions="Auto,*"
+                      MinHeight="180"
                       ClipToBounds="True">
                     <Grid ColumnDefinitions="*" Margin="0,0,14,8">
                         <TextBlock Text="Ordner" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
@@ -706,7 +803,11 @@
                             <MenuItem Name="GalleryGridViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
                     </ScrollViewer.ContextMenu>
+                    <!-- VerticalAlignment=Top ist Pflicht: mit EXPLIZITER Höhe (ContentHeight-Virtualisierung)
+                         zentriert das Standard-Alignment (Stretch) das Panel im größeren Viewport - bei
+                         wenigen Bildern rutschte das ganze Raster in die vertikale Mitte. -->
                     <StackPanel Margin="12,12,18,20"
+                                VerticalAlignment="Top"
                                 Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
@@ -759,6 +860,39 @@
                                             <MenuItem Name="GridContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
                                             <Separator Name="GridContextDeleteSeparator"/>
                                             <MenuItem Header="Löschen" Click="OnContextDelete" IsVisible="{Binding CanFileOperationDelete}"/>
+                                            <Separator IsVisible="{Binding IsImage}"/>
+                                            <!-- Farbetiketten: dieselben Farben wie die Akzentauswahl in den Einstellungen,
+                                                 direkt nebeneinander wie im Filter-Menü; × entfernt das Etikett. -->
+                                            <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,4,10,4" IsVisible="{Binding IsImage}">
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnContextSetColorLabel" ToolTip.Tip="Orange">
+                                                    <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#E74C3C" Click="OnContextSetColorLabel" ToolTip.Tip="Rot">
+                                                    <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F03B88" Click="OnContextSetColorLabel" ToolTip.Tip="Pink">
+                                                    <Ellipse Width="16" Height="16" Fill="#F03B88"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#8B5CF6" Click="OnContextSetColorLabel" ToolTip.Tip="Lila">
+                                                    <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#3B82F6" Click="OnContextSetColorLabel" ToolTip.Tip="Blau">
+                                                    <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0891B2" Click="OnContextSetColorLabel" ToolTip.Tip="Cyan">
+                                                    <Ellipse Width="16" Height="16" Fill="#0891B2"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0F766E" Click="OnContextSetColorLabel" ToolTip.Tip="Türkis">
+                                                    <Ellipse Width="16" Height="16" Fill="#0F766E"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnContextSetColorLabel" ToolTip.Tip="Grün">
+                                                    <Ellipse Width="16" Height="16" Fill="#22C55E"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="" Click="OnContextSetColorLabel" ToolTip.Tip="Kein Etikett">
+                                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                                </Button>
+                                            </StackPanel>
                                         </ContextMenu>
                                     </Border.ContextMenu>
                                     <Grid RowDefinitions="Auto,68">
@@ -1029,10 +1163,15 @@
                                         </Border>
                                         <Border Grid.Row="1" Background="{DynamicResource FP.Bg.Content}" CornerRadius="0,0,8,8" Padding="14,9">
                                             <StackPanel Spacing="7">
-                                                <TextBlock Text="{Binding FileName}"
-                                                           FontSize="{DynamicResource FP.Font.ItemTitle}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis"/>
+                                                <Grid ColumnDefinitions="Auto,*">
+                                                    <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                             Fill="{Binding ColorLabelBrush}"
+                                                             IsVisible="{Binding HasColorLabel}"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding FileName}"
+                                                               FontSize="{DynamicResource FP.Font.ItemTitle}"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </Grid>
                                                 <Grid ColumnDefinitions="*,*,Auto">
                                                     <TextBlock Text="{Binding DateText}"
                                                                Foreground="{DynamicResource FP.Text.Secondary}"
@@ -1077,7 +1216,10 @@
                             <MenuItem Name="GalleryListViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
                     </ScrollViewer.ContextMenu>
+                    <!-- VerticalAlignment=Top: siehe Kommentar an der Raster-Ansicht (explizite Höhe
+                         + Stretch-Default = vertikal zentriert bei kurzem Inhalt). -->
                     <StackPanel Margin="12,12,18,150"
+                                VerticalAlignment="Top"
                                 Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
@@ -1129,6 +1271,38 @@
                                             <MenuItem Name="ListContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
                                             <Separator Name="ListContextDeleteSeparator"/>
                                             <MenuItem Header="Löschen" Click="OnContextDelete" IsVisible="{Binding CanFileOperationDelete}"/>
+                                            <Separator IsVisible="{Binding IsImage}"/>
+                                            <!-- Farbetiketten: siehe Raster-Kontextmenü (Akzentfarben-Palette). -->
+                                            <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,4,10,4" IsVisible="{Binding IsImage}">
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnContextSetColorLabel" ToolTip.Tip="Orange">
+                                                    <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#E74C3C" Click="OnContextSetColorLabel" ToolTip.Tip="Rot">
+                                                    <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F03B88" Click="OnContextSetColorLabel" ToolTip.Tip="Pink">
+                                                    <Ellipse Width="16" Height="16" Fill="#F03B88"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#8B5CF6" Click="OnContextSetColorLabel" ToolTip.Tip="Lila">
+                                                    <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#3B82F6" Click="OnContextSetColorLabel" ToolTip.Tip="Blau">
+                                                    <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0891B2" Click="OnContextSetColorLabel" ToolTip.Tip="Cyan">
+                                                    <Ellipse Width="16" Height="16" Fill="#0891B2"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0F766E" Click="OnContextSetColorLabel" ToolTip.Tip="Türkis">
+                                                    <Ellipse Width="16" Height="16" Fill="#0F766E"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnContextSetColorLabel" ToolTip.Tip="Grün">
+                                                    <Ellipse Width="16" Height="16" Fill="#22C55E"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="" Click="OnContextSetColorLabel" ToolTip.Tip="Kein Etikett">
+                                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                                </Button>
+                                            </StackPanel>
                                         </ContextMenu>
                                     </Border.ContextMenu>
                                     <Grid ColumnDefinitions="76,*,150,90,90,28" Height="72">
@@ -1235,12 +1409,15 @@
                                                     VerticalAlignment="Center"
                                                     Spacing="5"
                                                     Margin="4,0,14,0">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding FileName}"
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                         Fill="{Binding ColorLabelBrush}"
+                                                         IsVisible="{Binding HasColorLabel}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding FileName}"
                                                            FontSize="{DynamicResource FP.Font.ItemTitle}"
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis"/>
-                                                <StackPanel Grid.Column="1"
+                                                <StackPanel Grid.Column="2"
                                                             Orientation="Horizontal"
                                                             Spacing="4"
                                                             VerticalAlignment="Center"
@@ -1354,6 +1531,21 @@
                     </StackPanel>
                 </ScrollViewer>
 
+                <!-- Zeitleiste am rechten Rand (wie Immich): Grob-Marker der aktuellen Sortierung
+                     (Jahre bzw. Anfangsbuchstaben), Positions-Band und Sprechblase beim Ziehen.
+                     Ein Control für beide Ansichten - Daten/Scroll-Zustand und Sichtbarkeit
+                     verdrahtet der Code-Behind (UpdateTimelineScrubber). -->
+                <icons:GalleryTimelineScrubber x:Name="GalleryTimelineScrubber"
+                                               HorizontalAlignment="Right"
+                                               Width="64"
+                                               Margin="0,12,10,12"
+                                               ZIndex="40"
+                                               IsVisible="False"
+                                               LabelBrush="{DynamicResource FP.Text.Muted}"
+                                               AccentBrush="{DynamicResource FP.Accent}"
+                                               BubbleBackground="{DynamicResource FP.Bg.Panel}"
+                                               BubbleForeground="{DynamicResource FP.Text.Primary}"/>
+
                 <Border Classes="gallery-metadata-overlay"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
@@ -1409,6 +1601,40 @@
                                 <MenuItem Name="MenuContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
                                 <Separator Name="MenuContextDeleteSeparator"/>
                                 <MenuItem Name="MenuContextDeleteMenuItem" Header="Löschen" Click="OnContextDelete"/>
+                                <Separator IsVisible="{Binding IsImage}"/>
+                                <!-- Farbetiketten wie im Rechtsklick-Menü der Kacheln (Nutzerwunsch
+                                     2026-07-17: Footermenü == Kontextmenü). DataContext ist vor dem
+                                     Öffnen das ausgewählte Element (OnGalleryMenuButtonClick). -->
+                                <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,4,10,4" IsVisible="{Binding IsImage}">
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnContextSetColorLabel" ToolTip.Tip="Orange">
+                                        <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
+                                    </Button>
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#E74C3C" Click="OnContextSetColorLabel" ToolTip.Tip="Rot">
+                                        <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
+                                    </Button>
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F03B88" Click="OnContextSetColorLabel" ToolTip.Tip="Pink">
+                                        <Ellipse Width="16" Height="16" Fill="#F03B88"/>
+                                    </Button>
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#8B5CF6" Click="OnContextSetColorLabel" ToolTip.Tip="Lila">
+                                        <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
+                                    </Button>
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#3B82F6" Click="OnContextSetColorLabel" ToolTip.Tip="Blau">
+                                        <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
+                                    </Button>
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0891B2" Click="OnContextSetColorLabel" ToolTip.Tip="Cyan">
+                                        <Ellipse Width="16" Height="16" Fill="#0891B2"/>
+                                    </Button>
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0F766E" Click="OnContextSetColorLabel" ToolTip.Tip="Türkis">
+                                        <Ellipse Width="16" Height="16" Fill="#0F766E"/>
+                                    </Button>
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnContextSetColorLabel" ToolTip.Tip="Grün">
+                                        <Ellipse Width="16" Height="16" Fill="#22C55E"/>
+                                    </Button>
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="" Click="OnContextSetColorLabel" ToolTip.Tip="Kein Etikett">
+                                        <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    </Button>
+                                </StackPanel>
                             </ContextMenu>
                         </Button.ContextMenu>
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/menu-2.svg"

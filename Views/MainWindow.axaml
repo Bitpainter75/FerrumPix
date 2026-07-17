@@ -41,7 +41,7 @@
                     </Grid>
                 </Border>
 
-                <ContentControl Grid.Row="1" Content="{Binding CurrentContent}"/>
+                <ContentControl x:Name="MainContentHost" Grid.Row="1" Content="{Binding CurrentContent}"/>
             </Grid>
 
             <views:DialogOverlayView x:Name="DialogOverlay" ZIndex="500"/>

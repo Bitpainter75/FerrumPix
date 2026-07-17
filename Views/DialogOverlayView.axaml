@@ -7,8 +7,8 @@
     <Border Background="#B8000000"
             IsVisible="{Binding IsDialogOpen}"
             ZIndex="500">
-        <Border Width="{Binding DialogUsesWideLayout, Converter={StaticResource BoolToWidthConverter}, ConverterParameter='820|440'}"
-                MaxWidth="820"
+        <Border Width="{Binding DialogWidth}"
+                MaxWidth="{Binding DialogWidth}"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Background="{DynamicResource FP.Bg.Panel}"
@@ -58,6 +58,9 @@
                               SelectedItem="{Binding DialogSelectedWatermarkPresetName, Mode=TwoWay}"
                               MinHeight="36"
                               HorizontalAlignment="Stretch"/>
+                    <CheckBox Content="Originale überschreiben"
+                              IsChecked="{Binding DialogBatchWatermarkOverwrite, Mode=TwoWay}"
+                              ToolTip.Tip="Schreibt das Wasserzeichen direkt in die Bilddateien. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
                 </StackPanel>
 
                 <views:BatchFilterDialogView Grid.Row="3"
@@ -72,7 +75,7 @@
                             Margin="0,14,0,0"
                             IsVisible="{Binding DialogShowsSaveAsOptions}">
                     <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                           ColumnSpacing="14"
                           RowSpacing="12">
                         <TextBlock Text="Format"
@@ -175,6 +178,41 @@
                                                Height="18"/>
                             </Button>
                         </Grid>
+
+                        <!-- Einzeloptionen (Nutzerwunsch 2026-07-17): welche Katalog-Metadaten die
+                             neue Datei übernimmt - Akzent = aktiv, Klick schaltet um. -->
+                        <TextBlock Grid.Row="4"
+                                   Text="Übernehmen"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding DialogShowsSaveAsMetaOptions}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        <Border Grid.Row="4"
+                                Grid.Column="1"
+                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                BorderThickness="1"
+                                CornerRadius="7"
+                                Padding="8,6"
+                                HorizontalAlignment="Left"
+                                IsVisible="{Binding DialogShowsSaveAsMetaOptions}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Classes="segmented"
+                                        Classes.active="{Binding DialogSaveAsCopyRating}"
+                                        Click="OnDialogMetaCopyToggleClick"
+                                        Tag="Rating">Bewertung</Button>
+                                <Button Classes="segmented"
+                                        Classes.active="{Binding DialogSaveAsCopyFavorite}"
+                                        Click="OnDialogMetaCopyToggleClick"
+                                        Tag="Favorite">Favorit</Button>
+                                <Button Classes="segmented"
+                                        Classes.active="{Binding DialogSaveAsCopyColorLabel}"
+                                        Click="OnDialogMetaCopyToggleClick"
+                                        Tag="Label">Etikett</Button>
+                                <Button Classes="segmented"
+                                        Classes.active="{Binding DialogSaveAsCopyKeywords}"
+                                        Click="OnDialogMetaCopyToggleClick"
+                                        Tag="Keywords">Stichworte</Button>
+                            </StackPanel>
+                        </Border>
                     </Grid>
                 </StackPanel>
 

@@ -33,6 +33,7 @@ Namespace ViewModels
         Private _galleryShowParentFolder As Boolean = True
         Private _galleryViewMode As String = "Grid"
         Private _galleryStartupFolderMode As String = "Pictures"
+        Private _galleryTimelineMode As String = "All"
         Private _galleryStartupCustomFolder As String = ""
         Private _viewerShowFilmstrip As Boolean = True
         Private _viewerSlideshowIntervalSeconds As Integer = 3
@@ -41,6 +42,7 @@ Namespace ViewModels
         Private _editorShowRulers As Boolean = False
         Private _editorShowGrid As Boolean = False
         Private _editorInfoSidebarExpanded As Boolean = True
+        Private _editorLayersPanelExpanded As Boolean = False
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _startupImageMode As String = "Viewer"
         Private _languageMode As String = "System"
@@ -94,6 +96,7 @@ Namespace ViewModels
         Private _savedGalleryShowParentFolder As Boolean = True
         Private _savedGalleryViewMode As String = "Grid"
         Private _savedGalleryStartupFolderMode As String = "Pictures"
+        Private _savedGalleryTimelineMode As String = "All"
         Private _savedGalleryStartupCustomFolder As String = ""
         Private _savedViewerShowFilmstrip As Boolean = True
         Private _savedViewerSlideshowIntervalSeconds As Integer = 3
@@ -102,6 +105,7 @@ Namespace ViewModels
         Private _savedEditorShowRulers As Boolean = False
         Private _savedEditorShowGrid As Boolean = False
         Private _savedEditorInfoSidebarExpanded As Boolean = True
+        Private _savedEditorLayersPanelExpanded As Boolean = False
         Private _savedViewerInfoSidebarExpanded As Boolean = True
         Private _savedStartupImageMode As String = "Viewer"
         Private _savedLanguageMode As String = "System"
@@ -563,6 +567,45 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' Wo die Zeitleiste am rechten Galerierand erscheint: "All" (Immich und Ordner),
+        ''' "Immich", "Folders" (nur Ordner-/Suchansichten), "Off" (ausgeblendet).
+        Public Property GalleryTimelineMode As String
+            Get
+                Return _galleryTimelineMode
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeGalleryTimelineMode(value)
+                If _galleryTimelineMode = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryTimelineMode, value)
+                RaiseGalleryTimelineModeProperties()
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsGalleryTimelineAll As Boolean
+            Get
+                Return _galleryTimelineMode = "All"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGalleryTimelineImmich As Boolean
+            Get
+                Return _galleryTimelineMode = "Immich"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGalleryTimelineFolders As Boolean
+            Get
+                Return _galleryTimelineMode = "Folders"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGalleryTimelineOff As Boolean
+            Get
+                Return _galleryTimelineMode = "Off"
+            End Get
+        End Property
+
         Public ReadOnly Property IsGalleryStartupPicturesFolder As Boolean
             Get
                 Return _galleryStartupFolderMode = "Pictures"
@@ -578,6 +621,20 @@ Namespace ViewModels
         Public ReadOnly Property IsGalleryStartupCustomFolder As Boolean
             Get
                 Return _galleryStartupFolderMode = "Custom"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGalleryStartupImmich As Boolean
+            Get
+                Return _galleryStartupFolderMode = "Immich"
+            End Get
+        End Property
+
+        ''' Die Immich-Startoption ergibt nur mit eingerichteter Verbindung Sinn - ohne sie
+        ''' bleibt der Knopf ausgeblendet (der Start fällt ohnehin auf den Bilder-Ordner zurück).
+        Public ReadOnly Property IsGalleryStartupImmichAvailable As Boolean
+            Get
+                Return ImmichService.IsConfigured
             End Get
         End Property
 
@@ -784,6 +841,33 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_editorInfoSidebarExpanded, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public Property EditorLayersPanelExpanded As Boolean
+            Get
+                Return _editorLayersPanelExpanded
+            End Get
+            Set(value As Boolean)
+                If _editorLayersPanelExpanded = value Then Return
+                Me.RaiseAndSetIfChanged(_editorLayersPanelExpanded, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Private _editorSnapMarginPercent As Integer = 4
+
+        ''' Abstand der Einrast-Linien (Sicherheitsabstand) zu den Bildrändern (0 = deaktiviert).
+        Public Property EditorSnapMarginPercent As Integer
+            Get
+                Return _editorSnapMarginPercent
+            End Get
+            Set(value As Integer)
+                Dim clamped = Math.Max(0, Math.Min(20, value))
+                If _editorSnapMarginPercent = clamped Then Return
+                Me.RaiseAndSetIfChanged(_editorSnapMarginPercent, clamped)
+                AppSettingsService.SaveEditorSnapMarginPercent(clamped)
             End Set
         End Property
 
@@ -1044,6 +1128,7 @@ Namespace ViewModels
         Public ReadOnly Property SetAccentColorCommand As ICommand
         Public ReadOnly Property SetStartupImageModeCommand As ICommand
         Public ReadOnly Property SetGalleryViewModeCommand As ICommand
+        Public ReadOnly Property SetGalleryTimelineModeCommand As ICommand
         Public ReadOnly Property SetGalleryStartupFolderModeCommand As ICommand
         Public ReadOnly Property SetViewerFitBehaviorCommand As ICommand
         Public ReadOnly Property SetLanguageModeCommand As ICommand
@@ -1089,6 +1174,7 @@ Namespace ViewModels
             _galleryShowParentFolder = _appSettings.GalleryShowParentFolder
             _galleryViewMode = AppSettingsService.NormalizeGalleryViewMode(_appSettings.GalleryViewMode)
             _galleryStartupFolderMode = _appSettings.GalleryStartupFolderMode
+            _galleryTimelineMode = AppSettingsService.NormalizeGalleryTimelineMode(_appSettings.GalleryTimelineMode)
             _galleryStartupCustomFolder = AppSettingsService.NormalizeFolderPath(_appSettings.GalleryStartupCustomFolder)
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
             _viewerSlideshowIntervalSeconds = _appSettings.ViewerSlideshowIntervalSeconds
@@ -1099,6 +1185,8 @@ Namespace ViewModels
             _editorShowRulers = _appSettings.EditorShowRulers
             _editorShowGrid = _appSettings.EditorShowGrid
             _editorInfoSidebarExpanded = _appSettings.EditorInfoSidebarExpanded
+            _editorLayersPanelExpanded = _appSettings.EditorLayersPanelExpanded
+            _editorSnapMarginPercent = Math.Max(0, Math.Min(20, _appSettings.EditorSnapMarginPercent))
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _transparencyBackgroundMode = AppSettingsService.NormalizeTransparencyBackgroundMode(_appSettings.TransparencyBackgroundMode)
@@ -1128,6 +1216,7 @@ Namespace ViewModels
             SetStartupImageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) StartupImageMode = m)
             SetGalleryViewModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryViewMode = m)
             SetGalleryStartupFolderModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryStartupFolderMode = m)
+            SetGalleryTimelineModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryTimelineMode = m)
             SetViewerFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerFitBehavior = m)
             SetLanguageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) LanguageMode = m)
             SetTransparencyBackgroundModeCommand = ReactiveCommand.Create(Of String)(Sub(m) TransparencyBackgroundMode = m)
@@ -1252,6 +1341,7 @@ Namespace ViewModels
             _savedGalleryShowParentFolder = _galleryShowParentFolder
             _savedGalleryViewMode = _galleryViewMode
             _savedGalleryStartupFolderMode = _galleryStartupFolderMode
+            _savedGalleryTimelineMode = _galleryTimelineMode
             _savedGalleryStartupCustomFolder = _galleryStartupCustomFolder
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
             _savedViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
@@ -1260,6 +1350,7 @@ Namespace ViewModels
             _savedEditorShowRulers = _editorShowRulers
             _savedEditorShowGrid = _editorShowGrid
             _savedEditorInfoSidebarExpanded = _editorInfoSidebarExpanded
+            _savedEditorLayersPanelExpanded = _editorLayersPanelExpanded
             _savedViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             _savedStartupImageMode = _startupImageMode
             _savedLanguageMode = _languageMode
@@ -1296,6 +1387,7 @@ Namespace ViewModels
             GalleryShowParentFolder = _savedGalleryShowParentFolder
             GalleryViewMode = _savedGalleryViewMode
             GalleryStartupFolderMode = _savedGalleryStartupFolderMode
+            GalleryTimelineMode = _savedGalleryTimelineMode
             GalleryStartupCustomFolder = _savedGalleryStartupCustomFolder
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
             ViewerSlideshowIntervalSeconds = _savedViewerSlideshowIntervalSeconds
@@ -1304,6 +1396,7 @@ Namespace ViewModels
             EditorShowRulers = _savedEditorShowRulers
             EditorShowGrid = _savedEditorShowGrid
             EditorInfoSidebarExpanded = _savedEditorInfoSidebarExpanded
+            EditorLayersPanelExpanded = _savedEditorLayersPanelExpanded
             ViewerInfoSidebarExpanded = _savedViewerInfoSidebarExpanded
             StartupImageMode = _savedStartupImageMode
             LanguageMode = _savedLanguageMode
@@ -1366,6 +1459,7 @@ Namespace ViewModels
             EditorShowRulers = False
             EditorShowGrid = False
             EditorInfoSidebarExpanded = True
+            EditorLayersPanelExpanded = False
             ViewerInfoSidebarExpanded = True
             LanguageMode = "System"
             VideoHardwareAcceleration = False
@@ -1451,6 +1545,7 @@ Namespace ViewModels
             settings.GalleryViewMode = _galleryViewMode
             settings.GalleryStartupFolderMode = _galleryStartupFolderMode
             settings.GalleryStartupCustomFolder = _galleryStartupCustomFolder
+            settings.GalleryTimelineMode = _galleryTimelineMode
             AppSettingsService.Save(settings)
         End Sub
 
@@ -1465,6 +1560,7 @@ Namespace ViewModels
             settings.EditorShowRulers = _editorShowRulers
             settings.EditorShowGrid = _editorShowGrid
             settings.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
+            settings.EditorLayersPanelExpanded = _editorLayersPanelExpanded
             settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             AppSettingsService.Save(settings)
         End Sub
@@ -1550,6 +1646,14 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsGalleryStartupPicturesFolder))
             Me.RaisePropertyChanged(NameOf(IsGalleryStartupLastFolder))
             Me.RaisePropertyChanged(NameOf(IsGalleryStartupCustomFolder))
+            Me.RaisePropertyChanged(NameOf(IsGalleryStartupImmich))
+        End Sub
+
+        Private Sub RaiseGalleryTimelineModeProperties()
+            Me.RaisePropertyChanged(NameOf(IsGalleryTimelineAll))
+            Me.RaisePropertyChanged(NameOf(IsGalleryTimelineImmich))
+            Me.RaisePropertyChanged(NameOf(IsGalleryTimelineFolders))
+            Me.RaisePropertyChanged(NameOf(IsGalleryTimelineOff))
         End Sub
 
         Private Sub RaiseThemeModeProperties()

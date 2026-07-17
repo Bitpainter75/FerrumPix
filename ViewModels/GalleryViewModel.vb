@@ -46,6 +46,10 @@ Namespace ViewModels
         Private _pendingReload As Boolean = False
         Private _filterFavorite As String = "All"
         Private ReadOnly _filterRatings As New HashSet(Of Integer)()
+        ''' Farbetikett-Filter (Mehrfachauswahl). Bewusst NICHT persistiert: Etiketten sind
+        ''' Arbeits-Markierungen - ein vergessener, mitgespeicherter Filter würde Wochen später
+        ''' still Bilder verstecken.
+        Private ReadOnly _filterColorLabels As New HashSet(Of String)(StringComparer.Ordinal)
         Private _filterFileType As String = "All"
         Private _isCollageDialogOpen As Boolean
         Private _collageBaseName As String = "Collage"
@@ -470,6 +474,83 @@ Namespace ViewModels
             AppSettingsService.SaveGalleryFilters(_filterFavorite, _filterRatings, _filterFileType)
         End Sub
 
+        Private Sub ToggleFilterColorLabel(value As String)
+            If String.IsNullOrEmpty(value) Then
+                If _filterColorLabels.Count = 0 Then Return
+                _filterColorLabels.Clear()
+            Else
+                If Not _filterColorLabels.Add(value) Then _filterColorLabels.Remove(value)
+            End If
+            RaiseFilterColorLabelStateChanged()
+            FilterAndSort()
+        End Sub
+
+        Private Sub RaiseFilterColorLabelStateChanged()
+            For Each name In {
+                NameOf(IsFilterLabelAll),
+                NameOf(IsFilterLabelOrange),
+                NameOf(IsFilterLabelRed),
+                NameOf(IsFilterLabelPink),
+                NameOf(IsFilterLabelPurple),
+                NameOf(IsFilterLabelBlue),
+                NameOf(IsFilterLabelCyan),
+                NameOf(IsFilterLabelTeal),
+                NameOf(IsFilterLabelGreen),
+                NameOf(HasActiveFilter),
+                NameOf(FilterLabel)
+            }
+                Me.RaisePropertyChanged(name)
+            Next
+        End Sub
+
+        ' Die Etikett-Werte sind die HEX-Farben der Akzentfarben-Palette aus den Einstellungen
+        ' (SettingsView-Swatches) - eine Palette, eine Wahrheit.
+        Public ReadOnly Property IsFilterLabelAll As Boolean
+            Get
+                Return _filterColorLabels.Count = 0
+            End Get
+        End Property
+        Public ReadOnly Property IsFilterLabelOrange As Boolean
+            Get
+                Return _filterColorLabels.Contains("#F08A1A")
+            End Get
+        End Property
+        Public ReadOnly Property IsFilterLabelRed As Boolean
+            Get
+                Return _filterColorLabels.Contains("#E74C3C")
+            End Get
+        End Property
+        Public ReadOnly Property IsFilterLabelPink As Boolean
+            Get
+                Return _filterColorLabels.Contains("#F03B88")
+            End Get
+        End Property
+        Public ReadOnly Property IsFilterLabelPurple As Boolean
+            Get
+                Return _filterColorLabels.Contains("#8B5CF6")
+            End Get
+        End Property
+        Public ReadOnly Property IsFilterLabelBlue As Boolean
+            Get
+                Return _filterColorLabels.Contains("#3B82F6")
+            End Get
+        End Property
+        Public ReadOnly Property IsFilterLabelCyan As Boolean
+            Get
+                Return _filterColorLabels.Contains("#0891B2")
+            End Get
+        End Property
+        Public ReadOnly Property IsFilterLabelTeal As Boolean
+            Get
+                Return _filterColorLabels.Contains("#0F766E")
+            End Get
+        End Property
+        Public ReadOnly Property IsFilterLabelGreen As Boolean
+            Get
+                Return _filterColorLabels.Contains("#22C55E")
+            End Get
+        End Property
+
         Private Sub RaiseFilterRatingStateChanged()
             For Each name In {
                 NameOf(IsFilterRatingAll),
@@ -566,7 +647,8 @@ Namespace ViewModels
 
         Public ReadOnly Property HasActiveFilter As Boolean
             Get
-                Return _filterFavorite <> "All" OrElse _filterRatings.Count > 0 OrElse _filterFileType <> "All"
+                Return _filterFavorite <> "All" OrElse _filterRatings.Count > 0 OrElse
+                       _filterFileType <> "All" OrElse _filterColorLabels.Count > 0
             End Get
         End Property
 
@@ -912,6 +994,7 @@ Namespace ViewModels
         Public ReadOnly Property IncreaseThumbnailSizeCommand As ICommand
         Public ReadOnly Property DecreaseThumbnailSizeCommand As ICommand
         Public ReadOnly Property SetFilterFavoriteCommand As ICommand
+        Public ReadOnly Property SetFilterColorLabelCommand As ICommand
         Public ReadOnly Property SetFilterRatingCommand As ICommand
         Public ReadOnly Property SetFilterTypeCommand As ICommand
         Public ReadOnly Property ClearFiltersCommand As ICommand
@@ -1129,16 +1212,21 @@ Namespace ViewModels
                 If Integer.TryParse(v, r) Then ToggleFilterRating(r)
             End Sub)
             SetFilterTypeCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterFileType = v)
+            SetFilterColorLabelCommand = ReactiveCommand.Create(Of String)(Sub(v) ToggleFilterColorLabel(v))
             ClearFiltersCommand = ReactiveCommand.Create(Sub()
                 _filterFavorite = "All"
                 _filterRatings.Clear()
                 _filterFileType = "All"
+                _filterColorLabels.Clear()
                 For Each n In {NameOf(IsFilterFavoriteAll), NameOf(IsFilterFavoriteOnly),
                                 NameOf(IsFilterRatingAll), NameOf(IsFilterRatingUnrated),
                                 NameOf(IsFilterRating1Plus), NameOf(IsFilterRating2Plus),
                                 NameOf(IsFilterRating3Plus), NameOf(IsFilterRating4Plus),
                                 NameOf(IsFilterRating5),
                                 NameOf(IsFilterTypeAll), NameOf(IsFilterTypeRaw), NameOf(IsFilterTypeNonRaw),
+                                NameOf(IsFilterLabelAll), NameOf(IsFilterLabelOrange), NameOf(IsFilterLabelRed),
+                                NameOf(IsFilterLabelPink), NameOf(IsFilterLabelPurple), NameOf(IsFilterLabelBlue),
+                                NameOf(IsFilterLabelCyan), NameOf(IsFilterLabelTeal), NameOf(IsFilterLabelGreen),
                                 NameOf(HasActiveFilter), NameOf(FilterLabel)}
                     Me.RaisePropertyChanged(n)
                 Next
@@ -1193,6 +1281,15 @@ Namespace ViewModels
                 Return
             End If
             ReplaceSelection({item})
+        End Sub
+
+        ''' <summary>Markiert das Element mit diesem Pfad, falls es im aktuellen Ordner sichtbar
+        ''' ist - für die Rückkehr aus dem Editor auf das zuletzt bearbeitete Bild.</summary>
+        Public Sub SelectItemByPath(path As String)
+            If String.IsNullOrEmpty(path) Then Return
+            Dim item = Items.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                String.Equals(i.FilePath, path, StringComparison.OrdinalIgnoreCase))
+            If item IsNot Nothing Then SelectOnly(item)
         End Sub
 
         Public Sub SelectAllVisible()
@@ -1267,6 +1364,29 @@ Namespace ViewModels
 
             Me.RaisePropertyChanged(NameOf(SelectedRating))
             If _sortMode = "Rating" Then FilterAndSort()
+        End Sub
+
+        ''' <summary>Setzt das Farbetikett. Ist das Bild Teil der aktuellen Auswahl, bekommt die GANZE
+        ''' Auswahl das Etikett (ein Rechtsklick auf ein markiertes Bild meint die Markierung);
+        ''' erneutes Setzen derselben Farbe entfernt sie (Toggle wie bei den Sternen). Immich-Items
+        ''' funktionieren mit: der Pseudo-Pfad ist ein stabiler library.db-Schlüssel - das Etikett
+        ''' ist aber rein lokal und wandert nicht zum Server.</summary>
+        Public Sub SetItemColorLabel(item As ImageItem, colorLabel As String)
+            If item Is Nothing OrElse Not item.IsImage Then Return
+            Dim value = If(colorLabel, "")
+            Dim target = If(String.Equals(item.ColorLabel, value, StringComparison.Ordinal), "", value)
+
+            Dim targets As New List(Of ImageItem)()
+            If SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item) Then
+                targets.AddRange(SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage))
+            End If
+            If targets.Count = 0 Then targets.Add(item)
+
+            For Each t In targets
+                t.ColorLabel = target
+            Next
+            LibraryService.Instance.SetColorLabelForMany(targets.Select(Function(t) t.FilePath), target)
+            If _filterColorLabels.Count > 0 Then FilterAndSort()
         End Sub
 
         Public Sub SetItemRating(item As ImageItem, rating As Integer)
@@ -1395,6 +1515,13 @@ Namespace ViewModels
                     Await OpenImmichAlbumAsync(node)
                 Case "ImmichAll"
                     Await OpenImmichAllAsync(node)
+                Case "ImmichPerson"
+                    Await OpenImmichPersonAsync(node)
+                Case "ImmichPlace"
+                    Await OpenImmichPlaceAsync(node)
+                Case "ImmichPeopleRoot", "ImmichPlacesRoot"
+                    ' Elternknoten: nur auf-/zuklappen, keine Ansicht öffnen.
+                    node.IsExpanded = Not node.IsExpanded
             End Select
             Return True
         End Function
@@ -1529,11 +1656,19 @@ Namespace ViewModels
         Private Sub RefreshImmichAlbumsAsync()
             Dim ignored = Task.Run(Async Function()
                                        Dim albums = Await ImmichService.GetAlbumsAsync()
+                                       ' Personen (serverseitige Gesichtserkennung) und Orte (Städte) kommen als
+                                       ' EINKLAPPBARE Elternknoten dazu - eingeklappt, damit der (gedeckelte)
+                                       ' Immich-Bereich der Sidebar übersichtlich bleibt.
+                                       Dim people = Await ImmichService.GetPeopleAsync()
+                                       Dim places = Await ImmichService.GetPlacesAsync()
                                        Await Dispatcher.UIThread.InvokeAsync(
                                            Sub()
-                                               ' Nur die Album-Knoten ersetzen, „Alle Fotos" bleibt stehen.
+                                               ' Nur die eigenen Knoten ersetzen, „Alle Fotos" bleibt stehen.
                                                For i = ImmichTree.Count - 1 To 0 Step -1
-                                                   If ImmichTree(i).Kind = "ImmichAlbum" Then ImmichTree.RemoveAt(i)
+                                                   Select Case ImmichTree(i).Kind
+                                                       Case "ImmichAlbum", "ImmichPeopleRoot", "ImmichPlacesRoot"
+                                                           ImmichTree.RemoveAt(i)
+                                                   End Select
                                                Next
                                                For Each album In albums
                                                    ImmichTree.Add(New VirtualNavigationNode(album.Name, "ImmichAlbum") With {
@@ -1541,6 +1676,32 @@ Namespace ViewModels
                                                        .IsRemovable = False
                                                    })
                                                Next
+                                               If people.Count > 0 Then
+                                                   Dim peopleRoot = New VirtualNavigationNode(LocalizationService.T("Personen"), "ImmichPeopleRoot") With {
+                                                       .Children = New ObservableCollection(Of VirtualNavigationNode)(),
+                                                       .IsExpanded = False
+                                                   }
+                                                   For Each person In people
+                                                       peopleRoot.Children.Add(New VirtualNavigationNode(person.Name, "ImmichPerson") With {
+                                                           .Id = person.Id,
+                                                           .IsRemovable = False
+                                                       })
+                                                   Next
+                                                   ImmichTree.Add(peopleRoot)
+                                               End If
+                                               If places.Count > 0 Then
+                                                   Dim placesRoot = New VirtualNavigationNode(LocalizationService.T("Orte"), "ImmichPlacesRoot") With {
+                                                       .Children = New ObservableCollection(Of VirtualNavigationNode)(),
+                                                       .IsExpanded = False
+                                                   }
+                                                   For Each place In places
+                                                       placesRoot.Children.Add(New VirtualNavigationNode(place, "ImmichPlace") With {
+                                                           .Id = place,
+                                                           .IsRemovable = False
+                                                       })
+                                                   Next
+                                                   ImmichTree.Add(placesRoot)
+                                               End If
                                                Me.RaisePropertyChanged(NameOf(HasImmich))
                                            End Sub)
                                    End Function)
@@ -1549,20 +1710,67 @@ Namespace ViewModels
         ''' <summary>Öffnet „Alle Fotos" (Timeline ohne Album) als virtuellen Ordner.</summary>
         Private Async Function OpenImmichAllAsync(node As VirtualNavigationNode) As Task
             SelectedImmichNode = node
+            AppSettingsService.RememberLastGalleryFolder("immich://all")
             Await LoadImmichVirtualFolderAsync(If(node?.Name, LocalizationService.T("Alle Fotos")), Nothing)
+        End Function
+
+        ''' <summary>Öffnet die Bilder einer Immich-Person (serverseitige Gesichtserkennung).</summary>
+        Private Async Function OpenImmichPersonAsync(node As VirtualNavigationNode) As Task
+            If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
+            SelectedImmichNode = node
+            AppSettingsService.RememberLastGalleryFolder($"immich://person/{node.Id}/{node.Name}")
+            Await LoadImmichVirtualFolderAsync(node.Name, Nothing, personId:=node.Id)
+        End Function
+
+        ''' <summary>Öffnet die Bilder eines Immich-Orts (Stadt aus den EXIF-Daten).</summary>
+        Private Async Function OpenImmichPlaceAsync(node As VirtualNavigationNode) As Task
+            If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
+            SelectedImmichNode = node
+            AppSettingsService.RememberLastGalleryFolder($"immich://place/{node.Id}")
+            Await LoadImmichVirtualFolderAsync(node.Name, Nothing, city:=node.Id)
         End Function
 
         ''' <summary>Öffnet ein Immich-Album als virtuellen Ordner.</summary>
         Private Async Function OpenImmichAlbumAsync(node As VirtualNavigationNode) As Task
             If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
             SelectedImmichNode = node
+            AppSettingsService.RememberLastGalleryFolder($"immich://album/{node.Id}/{node.Name}")
             Await LoadImmichVirtualFolderAsync(node.Name, node.Id)
+        End Function
+
+        ''' <summary>Startziel „zuletzt: Immich" (immich://…-Token aus LastGalleryFolder): öffnet
+        ''' Alle Fotos, Album, Person oder Ort wieder. Bei ausgeschaltetem/nicht erreichbarem
+        ''' Immich bleibt still der bereits geladene Ordner stehen (Fallback Bilder-Ordner).</summary>
+        Public Async Function OpenImmichStartupTargetAsync(token As String) As Task
+            Try
+                If Not ImmichService.IsConfigured OrElse String.IsNullOrWhiteSpace(token) Then Return
+                Dim rest = token.Substring("immich://".Length)
+                Dim node As VirtualNavigationNode = Nothing
+                If String.Equals(rest, "all", StringComparison.OrdinalIgnoreCase) Then
+                    node = New VirtualNavigationNode(LocalizationService.T("Alle Fotos"), "ImmichAll")
+                ElseIf rest.StartsWith("album/", StringComparison.OrdinalIgnoreCase) Then
+                    Dim parts = rest.Substring(6).Split("/"c, 2)
+                    node = New VirtualNavigationNode(If(parts.Length > 1, parts(1), "Album"), "ImmichAlbum") With {.Id = parts(0)}
+                ElseIf rest.StartsWith("person/", StringComparison.OrdinalIgnoreCase) Then
+                    Dim parts = rest.Substring(7).Split("/"c, 2)
+                    node = New VirtualNavigationNode(If(parts.Length > 1, parts(1), "Person"), "ImmichPerson") With {.Id = parts(0)}
+                ElseIf rest.StartsWith("place/", StringComparison.OrdinalIgnoreCase) Then
+                    Dim placeName = rest.Substring(6)
+                    node = New VirtualNavigationNode(placeName, "ImmichPlace") With {.Id = placeName}
+                End If
+                If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.Id) AndAlso Not String.Equals(rest, "all", StringComparison.OrdinalIgnoreCase) Then Return
+                Await OpenVirtualNavigationNode(node)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.ImmichStartup", ex)
+            End Try
         End Function
 
         ''' <summary>Gemeinsamer Lade-Pfad für „Alle Fotos" (albumId = Nothing) und Alben (albumId gesetzt):
         ''' streamt die Assets seitenweise über die Metadaten-Suche und zeigt bereits geladene sofort an.
         ''' v3 liefert Album-Assets NICHT über /api/albums/{id}, daher der einheitliche Suche-mit-albumIds-Weg.</summary>
-        Private Async Function LoadImmichVirtualFolderAsync(name As String, albumId As String) As Task
+        Private Async Function LoadImmichVirtualFolderAsync(name As String, albumId As String,
+                                                            Optional personId As String = Nothing,
+                                                            Optional city As String = Nothing) As Task
             Dim thumbnailToken = StartEmptyVirtualFolder(name)
             SelectedSearchNode = Nothing
             IsLoading = True
@@ -1570,6 +1778,33 @@ Namespace ViewModels
             ' Sicherheitsnetz gegen eine versehentlich riesige Bibliothek.
             Const SafetyCap As Integer = 100000
             Dim total As Integer = 0
+
+            ' LOKALER KATALOG (Nutzerwunsch 2026-07-16, 30k-Bibliothek): "Alle Fotos" zeigte bei
+            ' jedem Öffnen erst nach dem kompletten Server-Streaming etwas an. Jetzt kommt SOFORT
+            ' der zuletzt gespeicherte Katalog aus der Index-DB; der Server-Abgleich läuft danach
+            ' im Hintergrund weiter (neue Assets kommen dazu - Dedup über die Pseudo-Pfade -,
+            ' verschwundene werden am Ende ausgetragen, Favoriten-Änderungen nachgezogen).
+            ' Nur für die ungefilterte Timeline - Alben/Personen/Orte sind klein genug.
+            Dim useCatalog = String.IsNullOrEmpty(albumId) AndAlso String.IsNullOrEmpty(personId) AndAlso String.IsNullOrEmpty(city)
+            Dim serverKey = ImmichService.ServerKey
+            Dim catalogShown = False
+            Dim itemsByAssetId As Dictionary(Of String, ImageItem) = Nothing
+            If useCatalog Then
+                Dim cached = Await Task.Run(Function() ImmichIndexService.Instance.GetAssetList(serverKey))
+                If thumbnailToken.IsCancellationRequested Then Return
+                If cached.Count > 0 Then
+                    Dim cachedItems = cached.Select(Function(a) ImageItem.CreateImmichItem(a, thumbnailToken)).ToList()
+                    AddPrebuiltItemsToVirtualFolder(cachedItems, sortNow:=False)
+                    FilterAndSort()
+                    catalogShown = True
+                    itemsByAssetId = cachedItems.
+                        Where(Function(i) Not String.IsNullOrEmpty(i.ImmichAssetId)).
+                        ToDictionary(Function(i) i.ImmichAssetId, StringComparer.Ordinal)
+                    StatusText = LocalizationService.T("Wird mit Immich abgeglichen…")
+                End If
+            End If
+            Dim serverAssets As List(Of ImmichAsset) = If(useCatalog, New List(Of ImmichAsset)(), Nothing)
+
             Try
                 Dim page As Integer = 1
                 ' FilterAndSort ist O(n log n) über ALLE bisher geladenen Items und läuft auf dem UI-Thread.
@@ -1579,16 +1814,30 @@ Namespace ViewModels
                 ' viewport-priorisiert selbst nach, gekoppelt an seinen Thumbnail-Ladeweg.
                 Dim lastSortTick = Environment.TickCount64
                 Do
-                    Dim result = Await ImmichService.GetAssetsPageAsync(page, albumId, thumbnailToken)
+                    Dim result = Await ImmichService.GetAssetsPageAsync(page, albumId, thumbnailToken, personId, city)
                     If thumbnailToken.IsCancellationRequested Then Return
                     If result.Items.Count > 0 Then
                         Dim isFirstBatch = (total = 0)
+                        If serverAssets IsNot Nothing Then serverAssets.AddRange(result.Items)
+                        ' Bereits aus dem Katalog angezeigte Assets: nur Kernfelder nachziehen, die
+                        ' die Timeline/Kacheln sofort betreffen (Favorit) - der Rest heilt sich
+                        ' viewport-gekoppelt ueber updatedAt selbst.
+                        If itemsByAssetId IsNot Nothing Then
+                            For Each asset In result.Items
+                                Dim known As ImageItem = Nothing
+                                If itemsByAssetId.TryGetValue(asset.Id, known) AndAlso known.IsFavorite <> asset.IsFavorite Then
+                                    known.IsFavorite = asset.IsFavorite
+                                End If
+                            Next
+                        End If
                         Dim items = result.Items.Select(Function(a) ImageItem.CreateImmichItem(a, thumbnailToken)).ToList()
                         AddPrebuiltItemsToVirtualFolder(items, sortNow:=False)
                         total += items.Count
                         ' Zwischensortierungen bewusst selten (das Neuaufbauen der Liste läuft auf dem
                         ' UI-Thread und konkurriert sonst mit den Viewport-Thumbnail-Benachrichtigungen).
-                        If isFirstBatch OrElse Environment.TickCount64 - lastSortTick > 1500 Then
+                        ' Mit angezeigtem Katalog gar nicht: die Liste steht ja schon - erst der
+                        ' Abschluss sortiert Neuzugänge ein.
+                        If Not catalogShown AndAlso (isFirstBatch OrElse Environment.TickCount64 - lastSortTick > 1500) Then
                             FilterAndSort()
                             lastSortTick = Environment.TickCount64
                         End If
@@ -1599,6 +1848,20 @@ Namespace ViewModels
                 FilterAndSort()
                 If total = 0 AndAlso Not String.IsNullOrEmpty(ImmichService.LastError) Then
                     StatusText = LocalizationService.T("Immich-Fehler: ") & ImmichService.LastError
+                End If
+
+                ' Abgleich abschliessen - NUR wenn das Streaming vollstaendig und fehlerfrei war
+                ' (ein Teilstand wuerde Bilder verstecken bzw. beim naechsten Start fehlen lassen).
+                If useCatalog AndAlso String.IsNullOrEmpty(ImmichService.LastError) AndAlso
+                   Not thumbnailToken.IsCancellationRequested AndAlso total < SafetyCap Then
+                    If itemsByAssetId IsNot Nothing Then
+                        Dim serverIds = New HashSet(Of String)(serverAssets.Select(Function(a) a.Id), StringComparer.Ordinal)
+                        Dim removed = itemsByAssetId.Keys.Where(Function(id) Not serverIds.Contains(id)).ToList()
+                        If removed.Count > 0 Then RemoveImmichItems(removed)
+                    End If
+                    Dim toStore = serverAssets
+                    Await Task.Run(Sub() ImmichIndexService.Instance.ReplaceAssetList(serverKey, toStore))
+                    StatusText = LocalizationService.T("Vorschau bereit")
                 End If
             Catch ex As OperationCanceledException
             Catch ex As Exception
@@ -1972,6 +2235,7 @@ Namespace ViewModels
                                                           Dim item = ImageItem.CreateLightweight(path, thumbnailToken, cacheScopeId, cacheScopeName)
                                                           item.IsFavorite = If(m IsNot Nothing, m.IsFavorite, False)
                                                           item.Rating = If(m IsNot Nothing, m.Rating, 0)
+                                                          item.ColorLabel = If(m IsNot Nothing, m.ColorLabel, "")
                                                           item.Tags = If(m IsNot Nothing AndAlso m.Tags IsNot Nothing, m.Tags, New List(Of String)())
                                                           If m IsNot Nothing Then
                                                               item.ImageWidth = If(m.ImageWidth, 0)
@@ -2502,6 +2766,7 @@ Namespace ViewModels
                 _allItems.Add(New ImageItem(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName) With {
                     .IsFavorite = meta.IsFavorite,
                     .Rating = meta.Rating,
+                    .ColorLabel = meta.ColorLabel,
                     .Tags = If(meta.Tags, New List(Of String)()),
                     .ImageWidth = If(meta.ImageWidth, 0),
                     .ImageHeight = If(meta.ImageHeight, 0)
@@ -2514,6 +2779,7 @@ Namespace ViewModels
         ''' Adds pre-built ImageItem objects (constructed on a background thread) to the virtual
         ''' folder without any filesystem I/O — only dedup check and collection mutation.
         Private Sub AddPrebuiltItemsToVirtualFolder(items As List(Of ImageItem), Optional sortNow As Boolean = True)
+            ApplyLocalColorLabelsToImmichItems(items)
             Dim added = False
             For Each item In If(items, New List(Of ImageItem)())
                 If item Is Nothing Then Continue For
@@ -2522,6 +2788,25 @@ Namespace ViewModels
                 added = True
             Next
             If added AndAlso sortNow Then FilterAndSort()
+        End Sub
+
+        ''' Farbetiketten sind rein lokal (Bibliotheks-DB) - Immich-Items kommen vom Server bzw. aus
+        ''' dem Katalog und tragen sie deshalb nicht. Hier werden sie unter dem Pseudo-Pfad nachgeladen;
+        ''' die Gesamtmenge der vergebenen Etiketten ist klein, daher EIN Abruf statt Pfad-Abfragen.
+        Private Sub ApplyLocalColorLabelsToImmichItems(items As List(Of ImageItem))
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            If Not items.Any(Function(i) i IsNot Nothing AndAlso ImmichService.IsImmichPseudoPath(i.FilePath)) Then Return
+            Try
+                Dim labels = LibraryService.Instance.GetAllColorLabels()
+                If labels.Count = 0 Then Return
+                For Each item In items
+                    If item Is Nothing OrElse Not ImmichService.IsImmichPseudoPath(item.FilePath) Then Continue For
+                    Dim label As String = Nothing
+                    If labels.TryGetValue(item.FilePath, label) Then item.ColorLabel = label
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.ImmichColorLabels", ex)
+            End Try
         End Sub
 
         Private Sub AppendSearchListResults(node As VirtualNavigationNode, paths As IEnumerable(Of String))
@@ -2598,7 +2883,9 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))
         End Sub
 
-        Private ReadOnly _imageExtensions As String() = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico", ".svg", ".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2", ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
+        ' ".fpx" gehört dazu: FerrumPix-Projekte erscheinen wie Bilder in Galerie und Filmstreifen
+        ' (Thumbnail aus dem eingebetteten Composite, siehe ThumbnailCacheService).
+        Private ReadOnly _imageExtensions As String() = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico", ".svg", ".fpx", ".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2", ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
 
         ''' <summary>
         ''' Freier Speicherplatz des Laufwerks, auf dem der aktuelle Ordner liegt. Läuft im Hintergrund:
@@ -3038,6 +3325,20 @@ Namespace ViewModels
             End Try
         End Sub
 
+        Public Sub RefreshChangedFiles(paths As IEnumerable(Of String))
+            Dim changed = If(paths, Enumerable.Empty(Of String)()).
+                Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                ToHashSet(StringComparer.OrdinalIgnoreCase)
+            If changed.Count = 0 Then Return
+
+            For Each item In _allItems.Where(Function(i) i IsNot Nothing AndAlso changed.Contains(i.FilePath))
+                item.RefreshFileInfo()
+                item.ClearThumbnail()
+            Next
+
+            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
+        End Sub
+
         ''' Entfernt Elemente aus der Auswahl, die es nach dem Abgleich nicht mehr gibt.
         Private Sub PruneSelection(survivors As HashSet(Of ImageItem))
             If SelectedItems IsNot Nothing Then
@@ -3086,6 +3387,7 @@ Namespace ViewModels
                         If meta.TryGetValue(file, m) Then
                             item.IsFavorite = m.IsFavorite
                             item.Rating = m.Rating
+                            item.ColorLabel = m.ColorLabel
                             item.Tags = If(m.Tags, New List(Of String)())
                             ' Nur übernehmen, wenn die Datei sich seit dem letzten EXIF-Scan nicht geändert hat -
                             ' sonst würde man dauerhaft veraltete Breite/Höhe/EXIF-Daten anzeigen (siehe IsMetaStale).
@@ -3167,6 +3469,69 @@ Namespace ViewModels
                 item.ClearThumbnail()
             Next
         End Sub
+
+        ''' <summary>Baut die Segmente der Zeitleiste am rechten Galerierand passend zur AKTUELLEN
+        ''' Sortierung aus Items: Datums-Sortierungen liefern Monats-Segmente (Grob-Marker nur beim
+        ''' Jahreswechsel), Namens-Sortierung Anfangsbuchstaben. Nothing bei Sortierungen ohne
+        ''' sinnvolle Achse (Größe, ISO, ...) - die View blendet die Leiste dann aus. Ein Durchlauf
+        ''' über die Liste (O(n), auch bei 30k Immich-Assets unkritisch); Ordner-Einträge am
+        ''' Listenanfang zählen für die Positionen mit, bekommen aber kein Segment.</summary>
+        Public Function BuildTimelineSegments() As List(Of Controls.GalleryTimelineSegment)
+            If Items Is Nothing OrElse Items.Count = 0 Then Return Nothing
+
+            Dim dateSelector As Func(Of ImageItem, DateTime?) = Nothing
+            Dim byName = False
+            Select Case _sortMode
+                Case "FileModifiedAt" : dateSelector = Function(i) i.DateModified
+                Case "FileCreatedAt" : dateSelector = Function(i) i.FileCreatedAt
+                Case "ExifDateTaken" : dateSelector = Function(i) i.ExifDateTaken
+                Case "ExifDateModified" : dateSelector = Function(i) i.ExifDateModified
+                Case "Name" : byName = True
+                Case Else
+                    Return Nothing
+            End Select
+
+            Dim segments As New List(Of Controls.GalleryTimelineSegment)()
+            Dim lastMonthKey As Integer = Integer.MinValue
+            Dim lastYear As Integer = Integer.MinValue
+            Dim lastLetter As String = Nothing
+            For i = 0 To Items.Count - 1
+                Dim item = Items(i)
+                If item Is Nothing OrElse item.IsFolder OrElse item.IsParentFolderEntry Then Continue For
+
+                If byName Then
+                    Dim name = If(item.FileName, "")
+                    Dim letter = If(name.Length > 0 AndAlso Char.IsLetter(name(0)),
+                                    name.Substring(0, 1).ToUpperInvariant(), "#")
+                    If Not String.Equals(letter, lastLetter, StringComparison.Ordinal) Then
+                        lastLetter = letter
+                        segments.Add(New Controls.GalleryTimelineSegment With {
+                            .Label = letter, .DetailLabel = letter, .StartIndex = i})
+                    End If
+                Else
+                    Dim value = dateSelector(item)
+                    If Not value.HasValue OrElse value.Value = DateTime.MinValue Then
+                        If lastMonthKey <> -1 Then
+                            lastMonthKey = -1
+                            segments.Add(New Controls.GalleryTimelineSegment With {
+                                .Label = "", .DetailLabel = LocalizationService.T("Ohne Datum"), .StartIndex = i})
+                        End If
+                        Continue For
+                    End If
+                    Dim monthKey = value.Value.Year * 12 + value.Value.Month
+                    If monthKey <> lastMonthKey Then
+                        lastMonthKey = monthKey
+                        Dim label = If(value.Value.Year <> lastYear, value.Value.Year.ToString(Globalization.CultureInfo.CurrentUICulture), "")
+                        lastYear = value.Value.Year
+                        segments.Add(New Controls.GalleryTimelineSegment With {
+                            .Label = label,
+                            .DetailLabel = value.Value.ToString("MMMM yyyy", Globalization.CultureInfo.CurrentUICulture),
+                            .StartIndex = i})
+                    End If
+                End If
+            Next
+            Return If(segments.Count > 0, segments, Nothing)
+        End Function
 
         Public Sub SetDisplayWindow(firstIndex As Integer, lastIndex As Integer, itemSlotHeight As Double, columns As Integer)
             If Items Is Nothing OrElse Items.Count = 0 Then
@@ -3267,6 +3632,9 @@ Namespace ViewModels
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsFavorite)
             End If
 
+            If _filterColorLabels.Count > 0 Then
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse _filterColorLabels.Contains(i.ColorLabel))
+            End If
             If _filterRatings.Count > 0 Then
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse _filterRatings.Contains(i.Rating))
             End If
@@ -4045,53 +4413,95 @@ Namespace ViewModels
             If targetItems.Count = 0 Then Return
 
             Dim samplePath = Await EnsureLocalPathForBatchAsync(targetItems(0))
-            Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath)
+            ' In einer Suchliste oder in Immich gibt es keinen echten Ordner - dann greift die Vorgabe des
+            ' Dialogs (zuletzt genutzter Exportordner).
+            Dim folderHint = If(_isVirtualFolder, "", If(_currentFolder, ""))
+            Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint)
             If resize Is Nothing Then Return
 
             StatusText = LocalizationService.T("Ändere Bildgröße...")
-            Dim localTargets = targetItems.Where(Function(i) Not i.IsImmichAsset AndAlso File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
-            Dim changedCount = Await RewriteImagesInPlaceAsync(localTargets,
-                Function(source, temp)
-                    Dim width = resize.Width
-                    Dim height = resize.Height
-                    If resize.ScalePercent > 0 Then
-                        Dim size = ImageProcessor.GetImageSize(source)
-                        width = Math.Max(1, CInt(Math.Round(size.Width * resize.ScalePercent / 100.0)))
-                        height = Math.Max(1, CInt(Math.Round(size.Height * resize.ScalePercent / 100.0)))
-                    End If
-                    Dim adj = New ImageAdjustments With {
-                        .ResizeWidth = width,
-                        .ResizeHeight = height,
-                        .LockResizeAspect = resize.LockAspect,
-                        .ResizeInterpolation = resize.Interpolation
-                    }
-                    Return ImageProcessor.SaveImage(source, temp, adj, 95)
-                End Function)
+            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
+            ' Beim Überschreiben behält die Datei ihr Format - dort bleibt die bisherige feste Qualität;
+            ' bei Kopien zählt die Formatauswahl des Dialogs.
+            Dim jpgQuality = If(resize.Overwrite, 95, resize.JpgQuality)
+            Dim writer = Function(source As String, target As String)
+                             Dim width = resize.Width
+                             Dim height = resize.Height
+                             If resize.ScalePercent > 0 Then
+                                 Dim size = ImageProcessor.GetImageSize(source)
+                                 width = Math.Max(1, CInt(Math.Round(size.Width * resize.ScalePercent / 100.0)))
+                                 height = Math.Max(1, CInt(Math.Round(size.Height * resize.ScalePercent / 100.0)))
+                             End If
+                             Dim adj = New ImageAdjustments With {
+                                 .ResizeWidth = width,
+                                 .ResizeHeight = height,
+                                 .LockResizeAspect = resize.LockAspect,
+                                 .ResizeInterpolation = resize.Interpolation
+                             }
+                             Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata)
+                         End Function
 
+            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
+            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
             Dim uploadedAssetIds As New List(Of String)()
-            Dim uploadedCount = Await ProcessImmichBatchItemsAsync(targetItems.Where(Function(i) i.IsImmichAsset),
-                Function(source, target)
-                    Dim width = resize.Width
-                    Dim height = resize.Height
-                    If resize.ScalePercent > 0 Then
-                        Dim size = ImageProcessor.GetImageSize(source)
-                        width = Math.Max(1, CInt(Math.Round(size.Width * resize.ScalePercent / 100.0)))
-                        height = Math.Max(1, CInt(Math.Round(size.Height * resize.ScalePercent / 100.0)))
-                    End If
-                    Dim adj = New ImageAdjustments With {
-                        .ResizeWidth = width,
-                        .ResizeHeight = height,
-                        .LockResizeAspect = resize.LockAspect,
-                        .ResizeInterpolation = resize.Interpolation
-                    }
-                    Return ImageProcessor.SaveImage(source, target, adj, 95)
-                End Function,
-                Function(source) IO.Path.GetExtension(source),
-                uploadedAssetIds).ConfigureAwait(True)
+            Dim changedCount = 0
+            Dim uploadedCount = 0
+
+            If resize.Overwrite Then
+                Dim localTargets = localItems.Where(Function(i) File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
+                changedCount = Await RewriteImagesInPlaceAsync(localTargets, writer)
+                ' In Immich gibt es kein Überschreiben an Ort und Stelle - dort entsteht wie bei den
+                ' übrigen Stapelaktionen ein neues Asset.
+                uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
+                                                                   Function(source) IO.Path.GetExtension(source),
+                                                                   uploadedAssetIds).ConfigureAwait(True)
+                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
+                RefreshAfterBatchFileRewrite(localTargets)
+                If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
+                Return
+            End If
+
+            ' Als Kopie mit Formatauswahl (Nutzerwunsch 2026-07-17) - gleicher Ablauf wie beim
+            ' Stapel-Filter: neue Dateien in den Zielordner oder als neues Asset nach Immich.
+            Dim suffix = resize.FileNameSuffix
+            If String.Equals(resize.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured Then
+                changedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
+                                                                         Function(source) resize.Extension,
+                                                                         uploadedAssetIds, suffix, skipSameExtension:=False).ConfigureAwait(True)
+                uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
+                                                                   Function(source) resize.Extension,
+                                                                   uploadedAssetIds, suffix).ConfigureAwait(True)
+                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
+                If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
+                Return
+            End If
+
+            Dim targetFolder = If(resize.TargetFolder, "").Trim()
+            If String.IsNullOrWhiteSpace(targetFolder) Then
+                Await _mainVm.ShowMessageAsync("Bildgröße ändern", "Kein Zielordner angegeben.")
+                Return
+            End If
+            Dim createFolderError As String = Nothing
+            Try
+                Directory.CreateDirectory(targetFolder)
+            Catch ex As Exception
+                createFolderError = ex.Message
+            End Try
+            If createFolderError IsNot Nothing Then
+                Await _mainVm.ShowMessageAsync("Bildgröße ändern", createFolderError)
+                Return
+            End If
+
+            changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
+                                                                     Function(source) resize.Extension,
+                                                                     suffix, skipSameExtension:=False,
+                                                                     metaCopy:=resize.MetaCopy).ConfigureAwait(True)
+            uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
+                                                                       Function(source) resize.Extension,
+                                                                       suffix).ConfigureAwait(True)
 
             StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
-            RefreshAfterBatchFileRewrite(localTargets)
-            If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
+            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Sub
 
         ''' <summary>Stapel: einen eingebauten Filter, ein Lightroom-Preset (.xmp) oder eine LUT (.cube) auf
@@ -4170,7 +4580,8 @@ Namespace ViewModels
 
             changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
                                                                      Function(source) result.Extension,
-                                                                     suffix, skipSameExtension:=False).ConfigureAwait(True)
+                                                                     suffix, skipSameExtension:=False,
+                                                                     metaCopy:=result.MetaCopy).ConfigureAwait(True)
             uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
                                                                        Function(source) result.Extension,
                                                                        suffix).ConfigureAwait(True)
@@ -4229,27 +4640,67 @@ Namespace ViewModels
             End If
 
             StatusText = LocalizationService.T("Wende Wasserzeichen an...")
-            Dim localTargets = targetItems.Where(Function(i) Not i.IsImmichAsset AndAlso File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
-            Dim changedCount = Await RewriteImagesInPlaceAsync(localTargets,
-                Function(source, temp)
-                    Dim adj = New ImageAdjustments()
-                    adj.Annotations.Add(annotation.Clone())
-                    Return ImageProcessor.SaveImage(source, temp, adj, 95)
-                End Function)
-
+            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
+            Dim writer = Function(source As String, target As String)
+                             Dim adj = New ImageAdjustments()
+                             adj.Annotations.Add(annotation.Clone())
+                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata)
+                         End Function
+            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
+            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
             Dim uploadedAssetIds As New List(Of String)()
-            Dim uploadedCount = Await ProcessImmichBatchItemsAsync(targetItems.Where(Function(i) i.IsImmichAsset),
-                Function(source, target)
-                    Dim adj = New ImageAdjustments()
-                    adj.Annotations.Add(annotation.Clone())
-                    Return ImageProcessor.SaveImage(source, target, adj, 95)
-                End Function,
-                Function(source) IO.Path.GetExtension(source),
-                uploadedAssetIds).ConfigureAwait(True)
+            Dim changedCount = 0
+            Dim uploadedCount = 0
+
+            If result.Overwrite Then
+                Dim localTargets = localItems.Where(Function(i) File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
+                changedCount = Await RewriteImagesInPlaceAsync(localTargets, writer)
+                uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
+                                                                   Function(source) IO.Path.GetExtension(source),
+                                                                   uploadedAssetIds).ConfigureAwait(True)
+                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) mit Wasserzeichen versehen"
+                RefreshAfterBatchFileRewrite(localTargets)
+                If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
+                Return
+            End If
+
+            If String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured Then
+                changedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
+                                                                         Function(source) result.Extension,
+                                                                         uploadedAssetIds, "", skipSameExtension:=False).ConfigureAwait(True)
+                uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
+                                                                   Function(source) result.Extension,
+                                                                   uploadedAssetIds).ConfigureAwait(True)
+                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) mit Wasserzeichen versehen"
+                If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
+                Return
+            End If
+
+            Dim targetFolder = If(result.TargetFolder, "").Trim()
+            If String.IsNullOrWhiteSpace(targetFolder) Then
+                Await _mainVm.ShowMessageAsync("Wasserzeichen anwenden", "Kein Zielordner angegeben.")
+                Return
+            End If
+            Dim createFolderError As String = Nothing
+            Try
+                Directory.CreateDirectory(targetFolder)
+            Catch ex As Exception
+                createFolderError = ex.Message
+            End Try
+            If createFolderError IsNot Nothing Then
+                Await _mainVm.ShowMessageAsync("Wasserzeichen anwenden", createFolderError)
+                Return
+            End If
+
+            changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
+                                                                     Function(source) result.Extension,
+                                                                     "", skipSameExtension:=False,
+                                                                     metaCopy:=result.MetaCopy).ConfigureAwait(True)
+            uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
+                                                                       Function(source) result.Extension).ConfigureAwait(True)
 
             StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) mit Wasserzeichen versehen"
-            RefreshAfterBatchFileRewrite(localTargets)
-            If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
+            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Sub
 
         Private Shared Function CreateWatermarkAnnotation(preset As WatermarkPresetSettings) As ImageAnnotation
@@ -4463,12 +4914,15 @@ Namespace ViewModels
         ''' <param name="skipSameExtension">Beim Konvertieren ist eine Datei, die schon im Zielformat
         ''' vorliegt, nichts zu tun. Beim Anwenden eines Filters dagegen schon - dort MUSS auch ein JPG
         ''' nach JPG geschrieben werden.</param>
+        ''' <param name="metaCopy">Einzeloptionen aus dem Konvertieren-Dialog, welche Katalog-Metadaten
+        ''' zur Kopie wandern; Nothing = alles (Filter/Bildgröße haben keine Einzeloptionen).</param>
         Private Async Function ProcessLocalBatchItemsToFolderAsync(items As IEnumerable(Of ImageItem),
                                                                    targetFolder As String,
                                                                    writer As Func(Of String, String, Boolean),
                                                                    outputExtension As Func(Of String, String),
                                                                    Optional nameSuffix As String = "",
-                                                                   Optional skipSameExtension As Boolean = True) As Task(Of Integer)
+                                                                   Optional skipSameExtension As Boolean = True,
+                                                                   Optional metaCopy As CatalogMetaCopyOptions = Nothing) As Task(Of Integer)
             Dim savedCount = 0
             Dim errorMessage As String = Nothing
 
@@ -4481,7 +4935,16 @@ Namespace ViewModels
                         If skipSameExtension AndAlso String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
 
                         Dim target = CreateBatchTargetFolderPath(item.FilePath, targetFolder, targetExt, nameSuffix)
-                        If writer(item.FilePath, target) AndAlso File.Exists(target) Then savedCount += 1
+                        If writer(item.FilePath, target) AndAlso File.Exists(target) Then
+                            savedCount += 1
+                            ' Katalog-Metadaten (Bewertung/Favorit/Etikett/Stichworte) wandern zur
+                            ' Kopie mit - das Original behält seine (Nutzerwunsch 2026-07-17).
+                            LibraryService.Instance.CopyEntryMeta(item.FilePath, target,
+                                                                  If(metaCopy Is Nothing, True, metaCopy.CopyRating),
+                                                                  If(metaCopy Is Nothing, True, metaCopy.CopyFavorite),
+                                                                  If(metaCopy Is Nothing, True, metaCopy.CopyColorLabel),
+                                                                  If(metaCopy Is Nothing, True, metaCopy.CopyKeywords))
+                        End If
                     Next
                 End Sub)
             Catch ex As Exception
@@ -4586,6 +5049,7 @@ Namespace ViewModels
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
                 Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
                 ToList()
+            DiagnosticLogService.LogAlways("Gallery.BatchConvert", $"selected={GetSelectedImageItems().Count} convertible={targetItems.Count}")
             If targetItems.Count = 0 Then Return
 
             Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, "JPG")
@@ -4637,7 +5101,8 @@ Namespace ViewModels
                     Function(source, target)
                         Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
                     End Function,
-                    Function(source) result.Extension).ConfigureAwait(True)
+                    Function(source) result.Extension,
+                    metaCopy:=result.MetaCopy).ConfigureAwait(True)
 
                 uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems,
                     targetFolder,

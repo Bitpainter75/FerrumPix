@@ -67,7 +67,115 @@ Namespace Services
                         ")"
                     cmd.ExecuteNonQuery()
                 End Using
+                Using cmd = conn.CreateCommand()
+                    ' Lokaler KATALOG der "Alle Fotos"-Timeline (2026-07-16): das Öffnen zeigt sofort
+                    ' diesen Stand, der Server-Abgleich läuft danach im Hintergrund. Position erhält
+                    ' die Server-Reihenfolge (Timeline).
+                    cmd.CommandText =
+                        "CREATE TABLE IF NOT EXISTS AssetList (" &
+                        "  ServerKey     TEXT NOT NULL," &
+                        "  Position      INTEGER NOT NULL DEFAULT 0," &
+                        "  AssetId       TEXT NOT NULL," &
+                        "  FileName      TEXT NOT NULL DEFAULT ''," &
+                        "  IsVideo       INTEGER NOT NULL DEFAULT 0," &
+                        "  FileCreatedAt TEXT," &
+                        "  Width         INTEGER NOT NULL DEFAULT 0," &
+                        "  Height        INTEGER NOT NULL DEFAULT 0," &
+                        "  IsFavorite    INTEGER NOT NULL DEFAULT 0," &
+                        "  UpdatedAt     TEXT NOT NULL DEFAULT ''," &
+                        "  PRIMARY KEY (ServerKey, AssetId)" &
+                        ")"
+                    cmd.ExecuteNonQuery()
+                End Using
             End Using
+        End Sub
+
+        ''' <summary>Der lokal gespeicherte "Alle Fotos"-Katalog in Server-Reihenfolge. Leer, wenn
+        ''' noch nie ein vollständiger Abgleich lief. Wirft nie.</summary>
+        Public Function GetAssetList(serverKey As String) As List(Of ImmichAsset)
+            Dim result As New List(Of ImmichAsset)()
+            If String.IsNullOrEmpty(serverKey) Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT AssetId,FileName,IsVideo,FileCreatedAt,Width,Height,IsFavorite,UpdatedAt " &
+                                          "FROM AssetList WHERE ServerKey=$s ORDER BY Position"
+                        cmd.Parameters.AddWithValue("$s", serverKey)
+                        Using r = cmd.ExecuteReader()
+                            While r.Read()
+                                result.Add(New ImmichAsset With {
+                                    .Id = r.GetString(0),
+                                    .FileName = If(r.IsDBNull(1), "", r.GetString(1)),
+                                    .IsVideo = Not r.IsDBNull(2) AndAlso r.GetInt32(2) <> 0,
+                                    .FileCreatedAt = ParseDate(If(r.IsDBNull(3), "", r.GetString(3))),
+                                    .Width = If(r.IsDBNull(4), 0, r.GetInt32(4)),
+                                    .Height = If(r.IsDBNull(5), 0, r.GetInt32(5)),
+                                    .IsFavorite = Not r.IsDBNull(6) AndAlso r.GetInt32(6) <> 0,
+                                    .UpdatedAt = If(r.IsDBNull(7), "", r.GetString(7))
+                                })
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImmichIndex.GetAssetList", ex)
+                result.Clear()
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Ersetzt den gespeicherten Katalog KOMPLETT durch den frischen Serverstand
+        ''' (eine Transaktion). Nur nach einem VOLLSTÄNDIG durchgelaufenen Abgleich aufrufen -
+        ''' ein Teilstand würde beim nächsten Start Bilder verstecken. Wirft nie.</summary>
+        Public Sub ReplaceAssetList(serverKey As String, assets As IReadOnlyList(Of ImmichAsset))
+            If String.IsNullOrEmpty(serverKey) OrElse assets Is Nothing Then Return
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using transaction = conn.BeginTransaction()
+                        Using del = conn.CreateCommand()
+                            del.Transaction = transaction
+                            del.CommandText = "DELETE FROM AssetList WHERE ServerKey=$s"
+                            del.Parameters.AddWithValue("$s", serverKey)
+                            del.ExecuteNonQuery()
+                        End Using
+                        Using ins = conn.CreateCommand()
+                            ins.Transaction = transaction
+                            ins.CommandText = "INSERT INTO AssetList(ServerKey,Position,AssetId,FileName,IsVideo,FileCreatedAt,Width,Height,IsFavorite,UpdatedAt) " &
+                                              "VALUES($s,$pos,$a,$n,$v,$c,$w,$h,$f,$u)"
+                            Dim pS = ins.Parameters.Add("$s", SqliteType.Text)
+                            Dim pPos = ins.Parameters.Add("$pos", SqliteType.Integer)
+                            Dim pA = ins.Parameters.Add("$a", SqliteType.Text)
+                            Dim pN = ins.Parameters.Add("$n", SqliteType.Text)
+                            Dim pV = ins.Parameters.Add("$v", SqliteType.Integer)
+                            Dim pC = ins.Parameters.Add("$c", SqliteType.Text)
+                            Dim pW = ins.Parameters.Add("$w", SqliteType.Integer)
+                            Dim pH = ins.Parameters.Add("$h", SqliteType.Integer)
+                            Dim pF = ins.Parameters.Add("$f", SqliteType.Integer)
+                            Dim pU = ins.Parameters.Add("$u", SqliteType.Text)
+                            pS.Value = serverKey
+                            For i = 0 To assets.Count - 1
+                                Dim a = assets(i)
+                                If a Is Nothing OrElse String.IsNullOrEmpty(a.Id) Then Continue For
+                                pPos.Value = i
+                                pA.Value = a.Id
+                                pN.Value = If(a.FileName, "")
+                                pV.Value = If(a.IsVideo, 1, 0)
+                                pC.Value = If(a.FileCreatedAt.HasValue, a.FileCreatedAt.Value.ToString("o", CultureInfo.InvariantCulture), CType(DBNull.Value, Object))
+                                pW.Value = a.Width
+                                pH.Value = a.Height
+                                pF.Value = If(a.IsFavorite, 1, 0)
+                                pU.Value = If(a.UpdatedAt, "")
+                                ins.ExecuteNonQuery()
+                            Next
+                        End Using
+                        transaction.Commit()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImmichIndex.ReplaceAssetList", ex)
+            End Try
         End Sub
 
         ''' <summary>Liefert die gecachten Detaildaten, sofern vorhanden UND das gespeicherte updatedAt

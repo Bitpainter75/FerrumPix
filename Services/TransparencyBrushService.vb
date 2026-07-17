@@ -18,6 +18,11 @@ Namespace Services
 
         Private Shared ReadOnly _checkerboardBrush As IBrush = BuildCheckerboardBrush()
         Private Shared ReadOnly _alphaCache As New Dictionary(Of String, Boolean)(StringComparer.OrdinalIgnoreCase)
+        Private Shared ReadOnly _alphaPending As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Private Shared ReadOnly _alphaLock As New Object()
+        ' Grober Deckel gegen unbegrenztes Wachstum über lange Sitzungen; bei Überlauf wird komplett
+        ' geleert (die Berechnung ist nach dem Roh-Puffer-Umbau billig genug für Wiederholung).
+        Private Const AlphaCacheLimit As Integer = 512
 
         ' Dateiformate, die strukturell keinen Alphakanal besitzen können (JPEG hat schlicht keine
         ' Transparenz-Unterstützung) bzw. bei denen die Vorschau immer aus einer opaken Quelle
@@ -38,35 +43,90 @@ Namespace Services
             Return Not OpaqueOnlyExtensions.Contains(ext)
         End Function
 
-        Public Shared Function HasVisibleTransparency(filePath As String) As Boolean
-            If String.IsNullOrWhiteSpace(filePath) Then Return True
-            If Not CanHaveTransparency(filePath) Then Return False
-            If Not IO.File.Exists(filePath) Then Return True
+        ''' <summary>Cache-freundlicher, UI-Thread-tauglicher Zugriff: Ist die Antwort sofort bekannt
+        ''' (Formats-Shortcut, Cache-Treffer), liefert die Funktion True und füllt hasTransparency.
+        ''' Sonst False - die teure Berechnung (Bild dekodieren + Alpha-Scan) läuft dann EINMAL im
+        ''' Hintergrund, und onComputed wird anschließend auf dem UI-Thread aufgerufen (typisch:
+        ''' RaisePropertyChanged des Brush-Getters).
+        '''
+        ''' Hintergrund (Analyse 2026-07-16): Der frühere synchrone HasVisibleTransparency-Aufruf
+        ''' sass in Binding-Gettern von Viewer UND Editor - ein grosses PNG wurde dabei KOMPLETT
+        ''' auf dem UI-Thread dekodiert und per GetPixel (Interop pro Pixel!) gescannt: sekundenlange
+        ''' Haenger beim ersten Anzeigen. Verdaechtig nah am unbestaetigten "Viewer-Start-Haenger".</summary>
+        Public Shared Function TryGetTransparency(filePath As String, ByRef hasTransparency As Boolean,
+                                                  onComputed As Action) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then hasTransparency = True : Return True
+            If Not CanHaveTransparency(filePath) Then hasTransparency = False : Return True
+            If Not IO.File.Exists(filePath) Then hasTransparency = True : Return True
 
+            Dim key As String
             Try
                 Dim info = New IO.FileInfo(filePath)
-                Dim key = $"{filePath}|{info.Length}|{info.LastWriteTimeUtc.Ticks}"
-                Dim cached As Boolean = False
-                If _alphaCache.TryGetValue(key, cached) Then Return cached
+                key = $"{filePath}|{info.Length}|{info.LastWriteTimeUtc.Ticks}"
+            Catch
+                hasTransparency = True
+                Return True
+            End Try
 
+            SyncLock _alphaLock
+                Dim cached As Boolean = False
+                If _alphaCache.TryGetValue(key, cached) Then
+                    hasTransparency = cached
+                    Return True
+                End If
+                If _alphaPending.Contains(key) Then Return False
+                _alphaPending.Add(key)
+            End SyncLock
+
+            System.Threading.Tasks.Task.Run(Sub()
+                                         Dim value = ComputeHasTransparency(filePath)
+                                         SyncLock _alphaLock
+                                             If _alphaCache.Count >= AlphaCacheLimit Then _alphaCache.Clear()
+                                             _alphaCache(key) = value
+                                             _alphaPending.Remove(key)
+                                         End SyncLock
+                                         If onComputed IsNot Nothing Then
+                                             Avalonia.Threading.Dispatcher.UIThread.Post(Sub() onComputed())
+                                         End If
+                                     End Sub)
+            Return False
+        End Function
+
+        Private Shared Function ComputeHasTransparency(filePath As String) As Boolean
+            Try
                 Using bitmap = SKBitmap.Decode(filePath)
-                    If bitmap Is Nothing OrElse bitmap.ColorType = SKColorType.Unknown Then
-                        _alphaCache(key) = True
-                        Return True
+                    If bitmap Is Nothing OrElse bitmap.ColorType = SKColorType.Unknown Then Return True
+                    ' Dekoder weiss es am besten: als opak markierte Bilder haben nie sichtbare
+                    ' Transparenz - kein Pixel-Scan noetig.
+                    If bitmap.AlphaType = SKAlphaType.Opaque Then Return False
+                    Select Case bitmap.ColorType
+                        Case SKColorType.Rgb565, SKColorType.Rgb888x, SKColorType.Gray8
+                            Return False
+                    End Select
+
+                    If (bitmap.ColorType = SKColorType.Bgra8888 OrElse bitmap.ColorType = SKColorType.Rgba8888) AndAlso
+                       bitmap.GetPixels() <> IntPtr.Zero Then
+                        ' Alpha liegt bei beiden Formaten in Byte 3 - zeilenweise Rohkopie statt
+                        ' GetPixel (Interop pro Pixel machte den Scan bei grossen PNGs sekundenlang).
+                        Dim width = bitmap.Width
+                        Dim row(width * 4 - 1) As Byte
+                        Dim basePtr = bitmap.GetPixels()
+                        For y = 0 To bitmap.Height - 1
+                            Runtime.InteropServices.Marshal.Copy(IntPtr.Add(basePtr, y * bitmap.RowBytes), row, 0, width * 4)
+                            For x = 0 To width - 1
+                                If row(x * 4 + 3) < 250 Then Return True
+                            Next
+                        Next
+                        Return False
                     End If
 
                     For y = 0 To bitmap.Height - 1
                         For x = 0 To bitmap.Width - 1
-                            If bitmap.GetPixel(x, y).Alpha < 250 Then
-                                _alphaCache(key) = True
-                                Return True
-                            End If
+                            If bitmap.GetPixel(x, y).Alpha < 250 Then Return True
                         Next
                     Next
+                    Return False
                 End Using
-
-                _alphaCache(key) = False
-                Return False
             Catch
                 Return True
             End Try

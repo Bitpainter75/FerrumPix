@@ -16,9 +16,9 @@
              KeyUp="OnKeyUp"
              PointerReleased="OnGlobalPointerReleased">
 
-    <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="190,*,330,320">
+    <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="190,*,330,320,300">
 
-        <Border Grid.Row="0" Grid.ColumnSpan="4" Classes="toolbar" Height="60" Padding="24,0">
+        <Border Grid.Row="0" Grid.ColumnSpan="5" Classes="toolbar" Height="60" Padding="24,0">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
                     <Button Classes="icon-btn" Width="38" Height="38"
@@ -144,6 +144,13 @@
                             ToolTip.Tip="Löschen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
                                        Width="18" Height="18" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Classes.active="{Binding IsLayersPanelVisible}"
+                            Command="{Binding ToggleLayersPanelCommand}"
+                            ToolTip.Tip="Ebenen-Panel">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-2.svg" Width="20"
+                                       Height="20" />
                     </Button>
                     <Button Classes="icon-btn"
                             Width="38" Height="38"
@@ -468,9 +475,25 @@
                                Source="{Binding DisplayImage}"
                                Stretch="Fill"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <!-- STUFE 3 (Zoom-Detail): hochaufgeloester Viewport-Ausschnitt ueber dem
+                             AfterImage, sobald der Zoom die Szenen-Aufloesung uebersteigt. Quelle
+                             und Position setzt UpdateZoomDetailOverlay (Code-Behind), damit
+                             Ausschnitt und Layout im selben Durchlauf konsistent bleiben. -->
+                        <Image x:Name="ZoomDetailImageControl"
+                               Stretch="Fill"
+                               IsHitTestVisible="False"
+                               IsVisible="False"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
                         <Image x:Name="BeforeImageControl"
                                Source="{Binding BeforeDisplayImage}"
                                Stretch="Fill"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <!-- Vorher-Seite des Zoom-Details (Original, nur Geometrie): liegt ueber dem
+                             BeforeImage und wird wie dieses an der Vergleichslinie geclippt. -->
+                        <Image x:Name="ZoomDetailBeforeImageControl"
+                               Stretch="Fill"
+                               IsHitTestVisible="False"
+                               IsVisible="False"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
                         <Image x:Name="RetouchLivePatchImage"
                                Source="{Binding RetouchLivePatchImage}"
@@ -491,6 +514,13 @@
                                 Width="2"
                                 Background="{DynamicResource FP.Accent}"
                                 Opacity="0.9" />
+                        <!-- Unsichtbare, breite Griffzone über der 2-px-Trennlinie: die Linie selbst
+                             ist praktisch nicht greifbar (Nutzerwunsch 2026-07-17: Linie ziehen +
+                             Größenänderungs-Cursor wie bei den Hilfslinien). -->
+                        <Border x:Name="SliderDividerHit"
+                                Width="14"
+                                Background="Transparent"
+                                Cursor="SizeWestEast" />
                         <Border x:Name="SliderHandleCircle"
                                 Width="36" Height="36"
                                 Background="#F2F2F2"
@@ -620,7 +650,8 @@
                                 IsVisible="False"
                                 PointerPressed="OnTextOverlayPointerPressed"
                                 PointerMoved="OnTextOverlayPointerMoved"
-                                PointerReleased="OnTextOverlayPointerReleased">
+                                PointerReleased="OnTextOverlayPointerReleased"
+                                PointerCaptureLost="OnTextOverlayCaptureLost">
                             <Grid>
                                 <Rectangle x:Name="TextOverlayFrame"
                                            Fill="Transparent"
@@ -875,8 +906,10 @@
 
         <views:InfoSidebarView Grid.Row="1" Grid.Column="3" Width="320" />
 
+        <views:LayersPanelView Grid.Row="1" Grid.Column="4" Width="300" />
+
         <Border Grid.Row="2"
-                Grid.ColumnSpan="4"
+                Grid.ColumnSpan="5"
                 Background="{DynamicResource FP.Bg.Dark}"
                 BorderBrush="{DynamicResource FP.Border.Subtle}"
                 BorderThickness="0,1,0,0"
@@ -914,6 +947,9 @@
 
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                        <!-- Farbetikett des Bildes (gleiche Darstellung wie auf der Galerie-Kachel). -->
+                        <Ellipse Width="10" Height="10" Fill="{Binding ColorLabelBrush}"
+                                 IsVisible="{Binding HasColorLabel}" VerticalAlignment="Center" Margin="0,0,-10,0"/>
                         <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding StatusText}"
                                    Classes="status-text"

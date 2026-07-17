@@ -33,6 +33,15 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' Einzeloption „Katalog-Metadaten übernehmen" umschalten (Akzent = aktiv).
+        Private Sub OnDialogMetaCopyToggleClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If button Is Nothing OrElse vm Is Nothing Then Return
+            vm.ToggleDialogSaveAsMetaOption(TryCast(button.Tag, String))
+            e.Handled = True
+        End Sub
+
         Private Async Sub OnBrowseSaveTargetFolderClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If vm Is Nothing Then Return
