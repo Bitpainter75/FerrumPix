@@ -99,6 +99,9 @@ Release packaging currently targets Linux and Windows:
 - Portable Linux ZIP
 - Portable Windows ZIP
 
+EXPERIMENTAL
+- ARM and OS X releases are not testet. Please give me a feedback if it works !
+
 And as a package in the AUR 
 - https://aur.archlinux.org/packages/ferrumpix-bin
 
