@@ -119,13 +119,42 @@ Namespace Services
                 Case "Italian" : Return "it"
                 Case "English" : Return ""
                 Case Else
-                    Dim systemCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant()
-                    Select Case systemCode
-                        Case "de", "es", "fr", "it"
-                            Return systemCode
-                        Case Else
-                            Return ""
-                    End Select
+                    Return ResolveSystemCultureCode()
+            End Select
+        End Function
+
+        Private Shared Function ResolveSystemCultureCode() As String
+            Dim systemCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant()
+            If IsSupportedCultureCode(systemCode) Then Return systemCode
+
+            For Each variableName In {"LANGUAGE", "LC_MESSAGES", "LANG"}
+                Dim code = ExtractCultureCode(Environment.GetEnvironmentVariable(variableName))
+                If IsSupportedCultureCode(code) Then Return code
+            Next
+
+            Return ""
+        End Function
+
+        Private Shared Function ExtractCultureCode(value As String) As String
+            value = If(value, "").Trim()
+            If String.IsNullOrEmpty(value) Then Return ""
+
+            Dim first = value.Split(":"c)(0).Trim()
+            If String.Equals(first, "C", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(first, "POSIX", StringComparison.OrdinalIgnoreCase) Then Return ""
+
+            Dim normalized = first.Split("."c)(0).Split("@"c)(0).Replace("-"c, "_"c)
+            Dim separator = normalized.IndexOf("_"c)
+            If separator >= 0 Then normalized = normalized.Substring(0, separator)
+            Return normalized.ToLowerInvariant()
+        End Function
+
+        Private Shared Function IsSupportedCultureCode(code As String) As Boolean
+            Select Case If(code, "").ToLowerInvariant()
+                Case "de", "es", "fr", "it"
+                    Return True
+                Case Else
+                    Return False
             End Select
         End Function
 
