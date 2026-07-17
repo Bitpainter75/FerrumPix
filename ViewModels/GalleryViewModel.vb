@@ -1466,7 +1466,7 @@ Namespace ViewModels
             Dim homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
             Dim homeNode As FolderNode = Nothing
             If Directory.Exists(homePath) Then
-                homeNode = New FolderNode("Persönlicher Ordner", homePath)
+                homeNode = New FolderNode(LocalizationService.T("Persönlicher Ordner"), homePath)
                 FolderTree.Add(homeNode)
                 homeNode.EnsureChildrenLoaded()
                 homeNode.IsExpanded = True
@@ -1480,7 +1480,7 @@ Namespace ViewModels
             Else
                 Dim rootPath = IO.Path.GetPathRoot(homePath)
                 If String.IsNullOrEmpty(rootPath) Then rootPath = IO.Path.DirectorySeparatorChar.ToString()
-                If Directory.Exists(rootPath) Then FolderTree.Add(New FolderNode("Root", rootPath))
+                If Directory.Exists(rootPath) Then FolderTree.Add(New FolderNode(LocalizationService.T("Root"), rootPath))
             End If
 
             Dim picPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
@@ -1493,7 +1493,7 @@ Namespace ViewModels
 
         Private Sub InitializeVirtualNavigation()
             SearchTree.Clear()
-            SearchTree.Add(New VirtualNavigationNode("Neue Suche", "NewSearch"))
+            SearchTree.Add(New VirtualNavigationNode(LocalizationService.T("Neue Suche"), "NewSearch"))
             _savedSearches.Clear()
             _savedSearches.AddRange(SearchListService.Load())
             For Each search In _savedSearches

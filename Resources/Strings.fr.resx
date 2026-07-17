@@ -3243,6 +3243,15 @@
     <value>Inscrit le filigrane directement dans les fichiers image. Si la case n'est pas cochée, de nouveaux fichiers sont créés et les originaux restent inchangés.</value>
   </data>
   <data name="Bild_konnte_nicht_gespeichert_werden_19d534fb" xml:space="preserve">
-    <value>Impossible d'enregistrer l'image</value>
+    <value>Impossible d’enregistrer l’image</value>
+  </data>
+  <data name="Pers_nlicher_Ordner_06f3044a" xml:space="preserve">
+    <value>Dossier personnel</value>
+  </data>
+  <data name="Root_e96857c5" xml:space="preserve">
+    <value>Racine</value>
+  </data>
+  <data name="Neue_Suche_125f7d4b" xml:space="preserve">
+    <value>Nouvelle recherche</value>
   </data>
 </root>

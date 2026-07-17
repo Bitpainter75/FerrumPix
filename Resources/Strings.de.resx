@@ -3245,4 +3245,13 @@
   <data name="Bild_konnte_nicht_gespeichert_werden_19d534fb" xml:space="preserve">
     <value>Bild konnte nicht gespeichert werden</value>
   </data>
+  <data name="Pers_nlicher_Ordner_06f3044a" xml:space="preserve">
+    <value>Persönlicher Ordner</value>
+  </data>
+  <data name="Root_e96857c5" xml:space="preserve">
+    <value>Root</value>
+  </data>
+  <data name="Neue_Suche_125f7d4b" xml:space="preserve">
+    <value>Neue Suche</value>
+  </data>
 </root>
