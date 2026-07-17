@@ -2768,7 +2768,7 @@ Namespace Views
             ' Smart Guides: Anrast-Ziele der ANDEREN Objekte einmal beim Zug-Start einsammeln
             ' (stabil und billig; die Objekte bewegen sich während des Zugs nicht). Der
             ' Rand-Sicherheitsabstand kommt je Zug frisch aus den Einstellungen.
-            If mode = TextDragMode.Move Then
+            If mode <> TextDragMode.Rotate Then
                 _snapMarginPercent = Math.Max(0, Math.Min(20, AppSettingsService.Load().EditorSnapMarginPercent))
                 CollectObjectSnapTargets(vm, canvas)
             Else
@@ -2970,6 +2970,13 @@ Namespace Views
                         bottom = Math.Max(top + minSize, bottom + localDelta.Y)
                 End Select
 
+                If e.KeyModifiers.HasFlag(KeyModifiers.Alt) Then
+                    ' Alt = frei skalieren ohne Einrasten (wie beim Verschieben).
+                    HideTextSnapGuides()
+                Else
+                    ApplyTextResizeSnap(left, top, right, bottom, imageRect, minSize)
+                End If
+
                 Dim isQr = String.Equals(vm.EffectiveAnnotationKind, "QR", StringComparison.OrdinalIgnoreCase)
                 ' "Seitenverhältnis beibehalten": pro Objekt schaltbar (Checkbox im Panel) fuer
                 ' Bild-Objekte und Wasserzeichen-Bilder - frueher war es fuer Bilder hart verdrahtet
@@ -3035,8 +3042,6 @@ Namespace Views
                     top += shift.Y - rotatedShift.Y
                     bottom += shift.Y - rotatedShift.Y
                 End If
-
-                HideTextSnapGuides()
             End If
 
             Dim finalRect = ClampOverlayRectToReachable(New Avalonia.Rect(Math.Min(left, right), Math.Min(top, bottom), Math.Abs(right - left), Math.Abs(bottom - top)), imageRect)
@@ -3069,6 +3074,73 @@ Namespace Views
             Next
             HideTextSnapGuide(isVerticalLine)
             Return value
+        End Function
+
+        ''' Beim Skalieren ueber Objekt-Anfasser sollen dieselben Smart Guides sichtbar sein wie
+        ''' beim Verschieben: die gezogene Kante und die neue Mitte koennen an Kanten/Mitten anderer
+        ''' Objekte, Hilfslinien sowie Bildraster-Zielen einrasten. Die gegenueberliegende Kante
+        ''' bleibt dabei der Anker des jeweiligen Anfassers.
+        Private Sub ApplyTextResizeSnap(ByRef left As Double, ByRef top As Double,
+                                        ByRef right As Double, ByRef bottom As Double,
+                                        imageRect As Avalonia.Rect, minSize As Double)
+            Dim snappedX = False
+            Dim snappedY = False
+
+            Select Case _textDragMode
+                Case TextDragMode.Left, TextDragMode.TopLeft, TextDragMode.BottomLeft
+                    snappedX = ApplyTextResizeSnapAxis(left, right, True, imageRect.Left, imageRect.Width, True, minSize)
+                Case TextDragMode.Right, TextDragMode.TopRight, TextDragMode.BottomRight
+                    snappedX = ApplyTextResizeSnapAxis(right, left, False, imageRect.Left, imageRect.Width, True, minSize)
+            End Select
+
+            Select Case _textDragMode
+                Case TextDragMode.Top, TextDragMode.TopLeft, TextDragMode.TopRight
+                    snappedY = ApplyTextResizeSnapAxis(top, bottom, True, imageRect.Top, imageRect.Height, False, minSize)
+                Case TextDragMode.Bottom, TextDragMode.BottomLeft, TextDragMode.BottomRight
+                    snappedY = ApplyTextResizeSnapAxis(bottom, top, False, imageRect.Top, imageRect.Height, False, minSize)
+            End Select
+
+            If Not snappedX Then HideTextSnapGuide(True)
+            If Not snappedY Then HideTextSnapGuide(False)
+        End Sub
+
+        Private Function ApplyTextResizeSnapAxis(ByRef draggedEdge As Double,
+                                                 fixedEdge As Double,
+                                                 draggedIsStart As Boolean,
+                                                 axisStart As Double,
+                                                 axisLength As Double,
+                                                 isVerticalLine As Boolean,
+                                                 minSize As Double) As Boolean
+            Const tolerance As Double = 7.0
+            For Each target In GetSnapTargets(axisStart, axisLength, isVerticalLine)
+                If Math.Abs(draggedEdge - target) <= tolerance Then
+                    Dim candidate = target
+                    If IsValidResizeEdge(candidate, fixedEdge, draggedIsStart, minSize) Then
+                        draggedEdge = candidate
+                        ShowTextSnapGuide(target, isVerticalLine)
+                        Return True
+                    End If
+                End If
+
+                Dim center = (draggedEdge + fixedEdge) / 2.0
+                If Math.Abs(center - target) <= tolerance Then
+                    Dim candidate = target * 2.0 - fixedEdge
+                    If IsValidResizeEdge(candidate, fixedEdge, draggedIsStart, minSize) Then
+                        draggedEdge = candidate
+                        ShowTextSnapGuide(target, isVerticalLine)
+                        Return True
+                    End If
+                End If
+            Next
+            Return False
+        End Function
+
+        Private Shared Function IsValidResizeEdge(candidate As Double,
+                                                  fixedEdge As Double,
+                                                  draggedIsStart As Boolean,
+                                                  minSize As Double) As Boolean
+            If draggedIsStart Then Return candidate <= fixedEdge - minSize
+            Return candidate >= fixedEdge + minSize
         End Function
 
         ''' Canvas-Koordinaten, an denen ein Objekt einrastet. Reihenfolge = Priorität: die vom
