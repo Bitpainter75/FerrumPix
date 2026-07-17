@@ -452,11 +452,11 @@ Namespace ViewModels
         End Property
 
         ' Die manuelle Skalierungs-Einstellung wirkt nur auf Avalonias X11-Backend (siehe
-        ' AppSettingsService.ApplyApplicationScaleEnvironment) und ist unter Windows wirkungslos,
-        ' da Windows nativ pro Monitor skaliert.
+        ' AppSettingsService.ApplyApplicationScaleEnvironment) und ist unter Windows/macOS wirkungslos,
+        ' da diese Plattformen nativ pro Monitor skalieren.
         Public ReadOnly Property IsApplicationScaleSupported As Boolean
             Get
-                Return Not OperatingSystem.IsWindows()
+                Return OperatingSystem.IsLinux()
             End Get
         End Property
 

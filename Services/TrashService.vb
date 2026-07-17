@@ -4,7 +4,8 @@ Imports System.IO
 Namespace Services
 
     ''' <summary>Verschiebt Dateien/Ordner in den Papierkorb des Betriebssystems statt sie dauerhaft zu
-    ''' löschen. Linux: <c>gio trash</c> (glib, auf Desktop-Systemen vorhanden). Windows: Papierkorb über
+    ''' löschen. Linux: <c>gio trash</c> (glib, auf Desktop-Systemen vorhanden). macOS: Finder-Papierkorb
+    ''' über AppleScript. Windows: Papierkorb über
     ''' Microsoft.VisualBasic.FileIO. Liefert False, wenn kein Papierkorb verfügbar ist oder die Verschiebung
     ''' scheitert - der Aufrufer entscheidet dann, ob er eine Fehlermeldung zeigt, statt still dauerhaft zu
     ''' löschen.</summary>
@@ -18,6 +19,8 @@ Namespace Services
             Try
                 If OperatingSystem.IsWindows() Then
                     Return MoveToTrashWindows(path)
+                ElseIf OperatingSystem.IsMacOS() Then
+                    Return MoveToTrashMacOS(path)
                 Else
                     Return MoveToTrashViaGio(path)
                 End If
@@ -50,6 +53,31 @@ Namespace Services
             }
             psi.ArgumentList.Add("trash")
             psi.ArgumentList.Add("--")
+            psi.ArgumentList.Add(path)
+
+            Using proc = Process.Start(psi)
+                If proc Is Nothing Then Return False
+                If Not proc.WaitForExit(15000) Then
+                    Try : proc.Kill(True) : Catch : End Try
+                    Return False
+                End If
+                Return proc.ExitCode = 0
+            End Using
+        End Function
+
+        Private Shared Function MoveToTrashMacOS(path As String) As Boolean
+            Dim psi As New ProcessStartInfo("osascript") With {
+                .UseShellExecute = False,
+                .RedirectStandardOutput = True,
+                .RedirectStandardError = True,
+                .CreateNoWindow = True
+            }
+            psi.ArgumentList.Add("-e")
+            psi.ArgumentList.Add("on run argv")
+            psi.ArgumentList.Add("-e")
+            psi.ArgumentList.Add("tell application ""Finder"" to delete POSIX file (item 1 of argv)")
+            psi.ArgumentList.Add("-e")
+            psi.ArgumentList.Add("end run")
             psi.ArgumentList.Add(path)
 
             Using proc = Process.Start(psi)

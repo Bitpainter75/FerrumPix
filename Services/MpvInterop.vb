@@ -64,7 +64,7 @@ Namespace Services
 
         Private Shared Iterator Function BundledLibraryCandidates() As IEnumerable(Of String)
             Dim baseDir = AppContext.BaseDirectory
-            Dim rid = If(OperatingSystem.IsWindows(), "win-x64", If(OperatingSystem.IsLinux(), "linux-x64", If(OperatingSystem.IsMacOS(), "osx-x64", "")))
+            Dim rid = GetCurrentRuntimeIdentifier()
 
             Dim names As String()
             If OperatingSystem.IsWindows() Then
@@ -79,6 +79,23 @@ Namespace Services
                 Yield Path.Combine(baseDir, name)
                 If Not String.IsNullOrEmpty(rid) Then Yield Path.Combine(baseDir, "runtimes", rid, "native", name)
             Next
+        End Function
+
+        Private Shared Function GetCurrentRuntimeIdentifier() As String
+            Dim archSuffix As String
+            Select Case RuntimeInformation.ProcessArchitecture
+                Case Architecture.Arm64
+                    archSuffix = "arm64"
+                Case Else
+                    archSuffix = "x64"
+            End Select
+
+            If OperatingSystem.IsWindows() Then Return $"win-{archSuffix}"
+            If OperatingSystem.IsLinux() Then Return $"linux-{archSuffix}"
+            If OperatingSystem.IsMacOS() Then
+                Return $"osx-{archSuffix}"
+            End If
+            Return ""
         End Function
 
         Friend Enum MpvFormat As Integer

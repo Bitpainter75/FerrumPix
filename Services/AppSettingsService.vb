@@ -509,9 +509,9 @@ Namespace Services
         End Function
 
         Public Shared Sub ApplyApplicationScaleEnvironment()
-            ' AVALONIA_SCREEN_SCALE_FACTORS wirkt nur auf Avalonias X11-Backend. Unter Windows
-            ' skaliert Avalonia bereits nativ pro Monitor über DWM, die Einstellung wäre dort wirkungslos.
-            If OperatingSystem.IsWindows() Then Return
+            ' AVALONIA_SCREEN_SCALE_FACTORS wirkt nur auf Avalonias X11-Backend. Unter Windows und
+            ' macOS skaliert Avalonia nativ pro Monitor, die Einstellung wäre dort wirkungslos.
+            If Not OperatingSystem.IsLinux() Then Return
 
             Dim settings = Load()
             Dim scale = NormalizeApplicationScale(settings.ApplicationScale)
