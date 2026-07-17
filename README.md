@@ -94,7 +94,7 @@ Settings cover theme, accent color, language, thumbnail quality, export quality,
 
 Release packaging currently targets Linux and Windows:
 
-- Linux AppImage
+- Linux AppImage and Flatpak
 - Windows Setup
 - Portable Linux ZIP
 - Portable Windows ZIP
