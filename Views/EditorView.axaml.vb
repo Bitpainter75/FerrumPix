@@ -250,7 +250,7 @@ Namespace Views
                     .Title = title,
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
-                        New FilePickerFileType("Bilder") With {
+                        New FilePickerFileType(LocalizationService.T("Bilder")) With {
                             .Patterns = New String() {"*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.tif", "*.tiff", "*.avif", "*.ico"}
                         }
                     }
@@ -266,7 +266,7 @@ Namespace Views
             If vm Is Nothing Then Return
 
             Try
-                Dim path = Await PickSingleImagePathAsync("Bild auswählen")
+                Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild auswählen"))
                 If Not String.IsNullOrWhiteSpace(path) Then
                     vm.AddImageAnnotationAt(path, xPercent, yPercent)
                 End If
@@ -277,7 +277,7 @@ Namespace Views
         Public Async Sub OnWatermarkChooseImageClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
-            Dim path = Await PickSingleImagePathAsync("Wasserzeichen-Bild auswählen")
+            Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Wasserzeichen-Bild auswählen"))
             If Not String.IsNullOrWhiteSpace(path) Then vm.SetWatermarkImagePath(path)
         End Sub
 
@@ -306,7 +306,7 @@ Namespace Views
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
-                    .Title = "Lightroom-Preset laden",
+                    .Title = LocalizationService.T("Lightroom-Preset laden"),
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
                         New FilePickerFileType("Lightroom XMP") With {

@@ -23,7 +23,7 @@ Namespace Controls.EditorPanels
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
-                    .Title = "Lightroom-Preset laden",
+                    .Title = LocalizationService.T("Lightroom-Preset laden"),
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
                         New FilePickerFileType("Lightroom XMP") With {
@@ -46,7 +46,7 @@ Namespace Controls.EditorPanels
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
-                    .Title = "Ordner mit Lightroom-Presets wählen",
+                    .Title = LocalizationService.T("Ordner mit Lightroom-Presets wählen"),
                     .AllowMultiple = False
                 })
                 Dim folder = folders?.FirstOrDefault()

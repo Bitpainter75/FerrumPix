@@ -3609,11 +3609,11 @@ Namespace ViewModels
             Get
                 Select Case _resizeInterpolation
                     Case ResizeInterpolationMode.Nearest
-                        Return "Nächstgelegen"
+                        Return LocalizationService.T("Nächstgelegen")
                     Case ResizeInterpolationMode.Bilinear
-                        Return "Bilinear"
+                        Return LocalizationService.T("Bilinear")
                     Case Else
-                        Return "Bikubisch"
+                        Return LocalizationService.T("Bikubisch")
                 End Select
             End Get
             Set(value As String)

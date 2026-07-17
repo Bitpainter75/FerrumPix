@@ -46,7 +46,7 @@ Namespace Views
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
-                    .Title = "Startordner wählen",
+                    .Title = LocalizationService.T("Startordner wählen"),
                     .AllowMultiple = False
                 })
                 Dim folder = folders?.FirstOrDefault()

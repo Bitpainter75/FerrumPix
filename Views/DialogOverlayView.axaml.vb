@@ -2,6 +2,7 @@ Imports Avalonia.Controls
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Platform.Storage
+Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
 Imports System.Linq
 
@@ -49,7 +50,7 @@ Namespace Views
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
-                    .Title = "Zielordner wählen",
+                    .Title = LocalizationService.T("Zielordner wählen"),
                     .AllowMultiple = False
                 })
                 Dim folder = folders?.FirstOrDefault()

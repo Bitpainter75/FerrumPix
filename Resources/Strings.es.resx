@@ -3254,4 +3254,58 @@
   <data name="Neue_Suche_125f7d4b" xml:space="preserve">
     <value>Nueva búsqueda</value>
   </data>
+  <data name="Standard_2dfa6607" xml:space="preserve">
+    <value>Predeterminado</value>
+  </data>
+  <data name="N_chstgelegen_633ab016" xml:space="preserve">
+    <value>Más cercano</value>
+  </data>
+  <data name="Bilinear_a8b51aa0" xml:space="preserve">
+    <value>Bilineal</value>
+  </data>
+  <data name="Bikubisch_841800ce" xml:space="preserve">
+    <value>Bicúbico</value>
+  </data>
+  <data name="Sterne_a1a58241" xml:space="preserve">
+    <value>estrellas</value>
+  </data>
+  <data name="Ung_ltiger_Name_7832f740" xml:space="preserve">
+    <value>Nombre no válido</value>
+  </data>
+  <data name="Doppelter_Zielname_981b916a" xml:space="preserve">
+    <value>Nombre de destino duplicado</value>
+  </data>
+  <data name="Existiert_bereits_41e404d3" xml:space="preserve">
+    <value>Ya existe</value>
+  </data>
+  <data name="Startordner_der_Galerie_w_hlen_d3f8f9e8" xml:space="preserve">
+    <value>Elegir carpeta de inicio de la galería</value>
+  </data>
+  <data name="Startordner_w_hlen_ba4fc4b1" xml:space="preserve">
+    <value>Elegir carpeta inicial</value>
+  </data>
+  <data name="Zielordner_w_hlen_8d363d26" xml:space="preserve">
+    <value>Elegir carpeta de destino</value>
+  </data>
+  <data name="Bild_ausw_hlen_16d5cad2" xml:space="preserve">
+    <value>Elegir imagen</value>
+  </data>
+  <data name="Wasserzeichen_Bild_ausw_hlen_75101908" xml:space="preserve">
+    <value>Elegir imagen de marca de agua</value>
+  </data>
+  <data name="Lightroom_Preset_laden_3bd63d09" xml:space="preserve">
+    <value>Cargar preset de Lightroom</value>
+  </data>
+  <data name="Bilder_Videos_29a7f050" xml:space="preserve">
+    <value>Imágenes y vídeos</value>
+  </data>
+  <data name="Bilder_Videos_zum_Hochladen_w_hlen_bc013d24" xml:space="preserve">
+    <value>Elegir imágenes/vídeos para subir</value>
+  </data>
+  <data name="Ordner_mit_Lightroom_Presets_w_hlen_11dc24cb" xml:space="preserve">
+    <value>Elegir carpeta con presets de Lightroom</value>
+  </data>
+  <data name="Ordner_mit_LUTs_w_hlen_98a5a3f5" xml:space="preserve">
+    <value>Elegir carpeta con LUTs</value>
+  </data>
 </root>

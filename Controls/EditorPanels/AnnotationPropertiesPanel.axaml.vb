@@ -8,6 +8,7 @@ Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Platform.Storage
 Imports Avalonia.VisualTree
+Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
 
 Namespace Controls.EditorPanels
@@ -27,7 +28,7 @@ Namespace Controls.EditorPanels
                     .Title = title,
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
-                        New FilePickerFileType("Bilder") With {
+                        New FilePickerFileType(LocalizationService.T("Bilder")) With {
                             .Patterns = New String() {"*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.tif", "*.tiff", "*.avif", "*.ico"}
                         }
                     }

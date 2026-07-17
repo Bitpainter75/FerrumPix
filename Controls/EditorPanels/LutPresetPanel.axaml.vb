@@ -23,7 +23,7 @@ Namespace Controls.EditorPanels
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
-                    .Title = "LUT laden",
+                    .Title = LocalizationService.T("LUT laden"),
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
                         New FilePickerFileType("3D-LUT (.cube)") With {
@@ -46,7 +46,7 @@ Namespace Controls.EditorPanels
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
-                    .Title = "Ordner mit LUTs wählen",
+                    .Title = LocalizationService.T("Ordner mit LUTs wählen"),
                     .AllowMultiple = False
                 })
                 Dim folder = folders?.FirstOrDefault()

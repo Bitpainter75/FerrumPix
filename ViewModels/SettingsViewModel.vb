@@ -398,7 +398,7 @@ Namespace ViewModels
 
         Public ReadOnly Property FontSizeOffsetText As String
             Get
-                If _fontSizeOffset = 0 Then Return "Standard"
+                If _fontSizeOffset = 0 Then Return LocalizationService.T("Standard")
                 If _fontSizeOffset > 0 Then Return $"+{_fontSizeOffset}"
                 Return _fontSizeOffset.ToString(CultureInfo.InvariantCulture)
             End Get

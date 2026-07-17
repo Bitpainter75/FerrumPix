@@ -801,13 +801,13 @@ Namespace Views
             Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
             If storageProvider Is Nothing Then Return
             e.Handled = True
-            Dim mediaType = New Avalonia.Platform.Storage.FilePickerFileType("Bilder & Videos") With {
+            Dim mediaType = New Avalonia.Platform.Storage.FilePickerFileType(LocalizationService.T("Bilder & Videos")) With {
                 .Patterns = New List(Of String) From {
                     "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
                     "*.heic", "*.heif", "*.avif", "*.mp4", "*.mov", "*.mkv", "*.avi", "*.webm"}
             }
             Dim files = Await storageProvider.OpenFilePickerAsync(New Avalonia.Platform.Storage.FilePickerOpenOptions With {
-                .Title = "Bilder/Videos zum Hochladen wählen",
+                .Title = LocalizationService.T("Bilder/Videos zum Hochladen wählen"),
                 .AllowMultiple = True,
                 .FileTypeFilter = New List(Of Avalonia.Platform.Storage.FilePickerFileType) From {mediaType}
             })

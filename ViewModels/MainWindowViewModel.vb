@@ -993,10 +993,10 @@ Namespace ViewModels
 
         Public ReadOnly Property DialogSearchRatingLabel As String
             Get
-                If _dialogSearchRatings.Count = 0 Then Return "Alle"
+                If _dialogSearchRatings.Count = 0 Then Return LocalizationService.T("Alle")
                 Return String.Join(", ", _dialogSearchRatings.OrderBy(Function(r) r).Select(Function(r)
-                    If r = 0 Then Return "Nicht bewertet"
-                    Return If(r = 1, "1 Stern", $"{r} Sterne")
+                    If r = 0 Then Return LocalizationService.T("Nicht bewertet")
+                    Return If(r = 1, LocalizationService.T("1 Stern"), $"{r} {LocalizationService.T("Sterne")}")
                 End Function))
             End Get
         End Property
@@ -1362,11 +1362,11 @@ Namespace ViewModels
             Get
                 Select Case _dialogBatchResizeInterpolation
                     Case ResizeInterpolationMode.Nearest
-                        Return "Nächstgelegen"
+                        Return LocalizationService.T("Nächstgelegen")
                     Case ResizeInterpolationMode.Bicubic
-                        Return "Bikubisch"
+                        Return LocalizationService.T("Bikubisch")
                     Case Else
-                        Return "Bilinear"
+                        Return LocalizationService.T("Bilinear")
                 End Select
             End Get
             Set(value As String)
@@ -2054,14 +2054,14 @@ Namespace ViewModels
                 Dim hasProblem As Boolean = False
 
                 If String.IsNullOrWhiteSpace(newName) OrElse HasInvalidFileNameChars(newName) Then
-                    status = "Ungültiger Name"
+                    status = LocalizationService.T("Ungültiger Name")
                     hasProblem = True
                 ElseIf Not usedTargets.Add(NormalizePath(targetPath)) Then
-                    status = "Doppelter Zielname"
+                    status = LocalizationService.T("Doppelter Zielname")
                     hasProblem = True
                 ElseIf Not String.Equals(NormalizePath(sourcePath), NormalizePath(targetPath), StringComparison.OrdinalIgnoreCase) AndAlso
                        (IO.File.Exists(targetPath) OrElse IO.Directory.Exists(targetPath)) Then
-                    status = "Existiert bereits"
+                    status = LocalizationService.T("Existiert bereits")
                     hasProblem = True
                 End If
 
