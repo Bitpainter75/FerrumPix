@@ -3308,4 +3308,58 @@
   <data name="Ordner_mit_LUTs_w_hlen_98a5a3f5" xml:space="preserve">
     <value>Ordner mit LUTs wählen</value>
   </data>
+  <data name="nderungen_speichern_00fe8153" xml:space="preserve">
+    <value>Änderungen speichern</value>
+  </data>
+  <data name="Es_gibt_ungespeicherte_nderungen_M_chtest_du_sie_2411d96a" xml:space="preserve">
+    <value>Es gibt ungespeicherte Änderungen. Möchtest du sie speichern?</value>
+  </data>
+  <data name="Es_gibt_ungespeicherte_nderungen_M_chtest_du_sie_434baf9a" xml:space="preserve">
+    <value>Es gibt ungespeicherte Änderungen. Möchtest du sie speichern, bevor du {0}?</value>
+  </data>
+  <data name="Nicht_speichern_923e8009" xml:space="preserve">
+    <value>Nicht speichern</value>
+  </data>
+  <data name="den_Editor_verl_sst_db39cbe9" xml:space="preserve">
+    <value>den Editor verlässt</value>
+  </data>
+  <data name="dieses_Bild_ffnest_829b64fb" xml:space="preserve">
+    <value>dieses Bild öffnest</value>
+  </data>
+  <data name="das_n_chste_Bild_ffnest_a8f97718" xml:space="preserve">
+    <value>das nächste Bild öffnest</value>
+  </data>
+  <data name="ein_anderes_Bild_ffnest_528d859c" xml:space="preserve">
+    <value>ein anderes Bild öffnest</value>
+  </data>
+  <data name="die_Anwendung_schlie_t_5e1422db" xml:space="preserve">
+    <value>die Anwendung schließt</value>
+  </data>
+  <data name="ffnen_fehlgeschlagen_c0866611" xml:space="preserve">
+    <value>Öffnen fehlgeschlagen</value>
+  </data>
+  <data name="Diese_fpx_Projektdatei_konnte_nicht_gelesen_werd_b476b06f" xml:space="preserve">
+    <value>Diese .fpx-Projektdatei konnte nicht gelesen werden.</value>
+  </data>
+  <data name="Aus_dieser_RAW_Datei_konnte_keine_Vorschau_extra_29d7758a" xml:space="preserve">
+    <value>Aus dieser RAW-Datei konnte keine Vorschau extrahiert werden.</value>
+  </data>
+  <data name="Diese_Datei_konnte_nicht_ge_ffnet_werden_b5febe5c" xml:space="preserve">
+    <value>Diese Datei konnte nicht geöffnet werden.</value>
+  </data>
+  <data name="Drehung_speichern_6281919b" xml:space="preserve">
+    <value>Drehung speichern?</value>
+  </data>
+  <data name="Drehung_speichern_e3b6f6b1" xml:space="preserve">
+    <value>Drehung speichern</value>
+  </data>
+  <data name="Verwerfen_24cc57bc" xml:space="preserve">
+    <value>Verwerfen</value>
+  </data>
+  <data name="Soll_die_Drehung_von_0_gespeichert_werden_bevor__8a43f254" xml:space="preserve">
+    <value>Soll die Drehung von {0} gespeichert werden, bevor du {1}?</value>
+  </data>
+  <data name="zu_einem_anderen_Bild_wechselst_6e24027e" xml:space="preserve">
+    <value>zu einem anderen Bild wechselst</value>
+  </data>
 </root>

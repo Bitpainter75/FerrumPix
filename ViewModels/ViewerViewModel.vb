@@ -1582,10 +1582,14 @@ Namespace ViewModels
                 Return True
             End If
 
-            Dim save = Await _mainVm.ShowConfirmAsync("Drehung speichern?",
-                                                      $"Soll die Drehung von {IO.Path.GetFileName(_currentImagePath)} gespeichert werden, bevor du {actionDescription}?",
-                                                      "Speichern",
-                                                      "Verwerfen")
+            Dim save = Await _mainVm.ShowConfirmAsync(
+                LocalizationService.T("Drehung speichern?"),
+                String.Format(
+                    LocalizationService.T("Soll die Drehung von {0} gespeichert werden, bevor du {1}?"),
+                    IO.Path.GetFileName(_currentImagePath),
+                    LocalizationService.T(actionDescription)),
+                LocalizationService.T("Speichern"),
+                LocalizationService.T("Verwerfen"))
             If save Then
                 If Not Await SavePendingRotationAsync() Then Return False
             Else
@@ -1632,7 +1636,7 @@ Namespace ViewModels
                 End Try
             End Try
 
-            Await _mainVm.ShowMessageAsync("Drehung speichern", If(errorMessage, LocalizationService.T("Bild konnte nicht gespeichert werden")))
+            Await _mainVm.ShowMessageAsync(LocalizationService.T("Drehung speichern"), If(errorMessage, LocalizationService.T("Bild konnte nicht gespeichert werden")))
             Return False
         End Function
 

@@ -7032,7 +7032,7 @@ Namespace ViewModels
                 Dim fpxSource = imagePath
                 Dim loaded = Await Task.Run(Function() FpxService.Load(fpxSource))
                 If loaded Is Nothing OrElse loaded.Adjustments Is Nothing OrElse String.IsNullOrEmpty(loaded.BaseImagePath) OrElse Not File.Exists(loaded.BaseImagePath) Then
-                    Await _mainVm.ShowMessageAsync("Öffnen fehlgeschlagen", "Diese .fpx-Projektdatei konnte nicht gelesen werden.")
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Öffnen fehlgeschlagen"), LocalizationService.T("Diese .fpx-Projektdatei konnte nicht gelesen werden."))
                     Return False
                 End If
                 ' imagePath bleibt der .fpx-Pfad (Identität für Filmstreifen/Metadaten); die Pipeline dekodiert
@@ -7103,9 +7103,9 @@ Namespace ViewModels
                 CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath)
                 If CurrentImage Is Nothing Then
                     Dim message = If(RawPreviewService.IsSupportedRaw(RenderSourcePath),
-                        "Aus dieser RAW-Datei konnte keine Vorschau extrahiert werden.",
-                        "Diese Datei konnte nicht geöffnet werden.")
-                    Await _mainVm.ShowMessageAsync("Öffnen fehlgeschlagen", message)
+                        LocalizationService.T("Aus dieser RAW-Datei konnte keine Vorschau extrahiert werden."),
+                        LocalizationService.T("Diese Datei konnte nicht geöffnet werden."))
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Öffnen fehlgeschlagen"), message)
                     CurrentImagePath = ""
                     _currentImagePath = ""
                     _renderSourcePathOverride = ""
@@ -8723,18 +8723,18 @@ Namespace ViewModels
                 ' Regler + Objekte editierbar - der Export in JPG/PNG/WEBP bleibt eine bewusste Wahl.
                 ' NormalizeSaveAsFormat fällt auf JPG zurück, falls FPX deaktiviert ist.
                 Dim initialFormat = If(FpxService.Enabled, "FPX", "JPG")
-                saveAsResult = Await _mainVm.ShowSaveAsAsync("Speichern unter",
-                                                             "Dateiname eingeben",
+                saveAsResult = Await _mainVm.ShowSaveAsAsync(LocalizationService.T("Speichern unter"),
+                                                             LocalizationService.T("Dateiname eingeben"),
                                                              proposedName,
                                                              initialFormat,
                                                              SaveQuality,
-                                                             "Speichern",
-                                                             "Abbrechen")
+                                                             LocalizationService.T("Speichern"),
+                                                             LocalizationService.T("Abbrechen"))
                 If saveAsResult Is Nothing OrElse String.IsNullOrWhiteSpace(saveAsResult.BaseName) Then Return False
 
                 Dim cleanBaseName = IO.Path.GetFileNameWithoutExtension(saveAsResult.BaseName.Trim())
                 If HasInvalidFileNameChars(cleanBaseName) Then
-                    Await _mainVm.ShowMessageAsync("Speichern fehlgeschlagen", "Der Dateiname enthält ungültige Zeichen.")
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), LocalizationService.T("Der Dateiname enthält ungültige Zeichen."))
                     Return False
                 End If
                 isFpxSave = FpxService.Enabled AndAlso saveAsResult.IsFpx
@@ -8915,7 +8915,7 @@ Namespace ViewModels
                 ' „Basisbild fehlt") braucht es den vollen Stacktrace in der Diagnose.
                 DiagnosticLogService.LogException("Editor.Save", ex)
             End Try
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Speichern fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), errorMessage)
             Return False
         End Function
 
@@ -8971,7 +8971,7 @@ Namespace ViewModels
                 End Try
             End Try
 
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Speichern fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), errorMessage)
             Return False
         End Function
 
@@ -9005,12 +9005,18 @@ Namespace ViewModels
 
             Dim message As String
             If String.IsNullOrWhiteSpace(actionDescription) Then
-                message = "Es gibt ungespeicherte Änderungen. Möchtest du sie speichern?"
+                message = LocalizationService.T("Es gibt ungespeicherte Änderungen. Möchtest du sie speichern?")
             Else
-                message = $"Es gibt ungespeicherte Änderungen. Möchtest du sie speichern, bevor du {actionDescription}?"
+                message = String.Format(
+                    LocalizationService.T("Es gibt ungespeicherte Änderungen. Möchtest du sie speichern, bevor du {0}?"),
+                    LocalizationService.T(actionDescription))
             End If
 
-            Dim save = Await _mainVm.ShowConfirmAsync("Änderungen speichern", message, "Speichern", "Nicht speichern")
+            Dim save = Await _mainVm.ShowConfirmAsync(
+                LocalizationService.T("Änderungen speichern"),
+                message,
+                LocalizationService.T("Speichern"),
+                LocalizationService.T("Nicht speichern"))
             If Not save Then
                 ' Nutzer hat "Nicht speichern" gewählt - alle nicht gespeicherten/nicht angewendeten
                 ' Änderungen verwerfen. Ohne dies bliebe _hasChanges fälschlich True, und ein späteres
