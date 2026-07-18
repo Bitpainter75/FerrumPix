@@ -964,10 +964,10 @@
                         <Ellipse Width="10" Height="10" Fill="{Binding ColorLabelBrush}"
                                  IsVisible="{Binding HasColorLabel}" VerticalAlignment="Center" Margin="0,0,-10,0"/>
                         <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding StatusText}"
-                                   Classes="status-text"
-                                   Classes.failed="{Binding PreviewFailed}"
-                                   FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
+                        <!-- KEIN StatusText hier: die Fußzeile ist die linke Spalte eines *,Auto,*-Rasters
+                             und wächst mit dem Text, bis sie die mittig zentrierten Zoom-Bedienelemente
+                             überdeckt („Gespeichert als <langer Dateiname>"). Der Status steht ohnehin
+                             oben in der Werkzeugleiste (Nutzer-Befund 2026-07-18). -->
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                     </StackPanel>
