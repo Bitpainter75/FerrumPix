@@ -3337,7 +3337,13 @@ Namespace ViewModels
             ("acrylic", "Acryl körnig"),
             ("sandpaper", "Sandpapier"),
             ("smear", "Schmieren"),
-            ("spatter", "Farbkleckse")
+            ("spatter", "Farbkleckse"),
+            ("charcoal", "Kohle"),
+            ("crayon", "Wachsmalstift"),
+            ("airbrush", "Sprühdose"),
+            ("calligraphy", "Kalligrafie"),
+            ("stipple", "Punktraster"),
+            ("watercolor", "Aquarell")
         }
 
         Private Function BuildBrushPresetItems() As System.Collections.ObjectModel.ObservableCollection(Of BrushPresetItem)

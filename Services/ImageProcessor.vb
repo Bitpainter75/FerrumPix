@@ -5783,7 +5783,8 @@ Namespace Services
         ''' eine einzige durchgehende Linie würde sie sonst fälschlich miteinander verbinden.
         ''' <summary>Bekannte Pinsel-Varianten (Stufe 2). "soft" ist der klassische weiche Rundpinsel;
         ''' die übrigen sind texturierte Presets. Radiergummi erzwingt immer "soft".</summary>
-        Friend Shared ReadOnly BrushPresetKeys As String() = {"soft", "marker", "acrylic", "sandpaper", "pencil", "smear", "spatter"}
+        Friend Shared ReadOnly BrushPresetKeys As String() = {"soft", "marker", "acrylic", "sandpaper", "pencil", "smear", "spatter",
+                                                             "charcoal", "crayon", "airbrush", "calligraphy", "stipple", "watercolor"}
 
         Private Shared Function NormalizeBrushPreset(preset As String) As String
             If String.IsNullOrWhiteSpace(preset) Then Return "soft"
@@ -5802,13 +5803,15 @@ Namespace Services
             Dim flow = Clamp(flowPercent, 0, 100) / 100.0F
 
             ' Texturierte Presets laufen über eine eigene Ebene, in die eine Korn-Textur gestanzt wird.
-            If key = "acrylic" OrElse key = "sandpaper" OrElse key = "pencil" Then
+            If key = "acrylic" OrElse key = "sandpaper" OrElse key = "pencil" OrElse
+               key = "charcoal" OrElse key = "crayon" Then
                 DrawGrainBrushStroke(canvas, strokes, width, height, stroke, resolvedStrokeWidth, blurSigma, flow, key)
                 Return
             End If
 
             ' Schmieren/Farbkleckse werden entlang des Pfades gestempelt (richtungsabhängig bzw. gestreut).
-            If key = "smear" OrElse key = "spatter" Then
+            If key = "smear" OrElse key = "spatter" OrElse key = "airbrush" OrElse
+               key = "calligraphy" OrElse key = "stipple" OrElse key = "watercolor" Then
                 DrawStampBrushStroke(canvas, strokes, width, height, stroke, resolvedStrokeWidth, blurSigma, flow, key)
                 Return
             End If
@@ -5941,6 +5944,11 @@ Namespace Services
             Select Case key
                 Case "acrylic" : a = v * 1.7F - 0.15F      ' überwiegend deckend, raue Lücken
                 Case "sandpaper" : a = v * 1.35F - 0.2F    ' gröber, mehr Lücken
+                ' Kohle: harte Schwelle mit breiten Lücken - bröseliger, kontrastreicher als Bleistift.
+                Case "charcoal" : a = If(v > 0.32F, (v - 0.32F) * 2.1F, 0.0F)
+                ' Wachsmalstift: satt deckend mit nur wenigen Aussetzern - Wachs schmiert zu, es
+                ' bröselt nicht wie Kohle. Genau daran unterscheiden sich die beiden im Strich.
+                Case "crayon" : a = Clamp(v * 2.6F - 0.35F, 0.0F, 1.0F)
                 Case Else ' pencil: feines, sparsames Graphitkorn
                     a = If(v > 0.4F, (v - 0.4F) * 1.5F, 0.0F)
             End Select
@@ -5949,7 +5957,15 @@ Namespace Services
 
         Private Shared Function BuildGrainBitmap(key As String) As SKBitmap
             Const size As Integer = 256
-            Dim cell As Integer = If(key = "sandpaper", 3, If(key = "acrylic", 2, 1))
+            ' Zellgröße = Korngröße der Kachel. Kohle und Wachs sind gröber als Graphit.
+            Dim cell As Integer
+            Select Case key
+                Case "sandpaper" : cell = 3
+                Case "acrylic" : cell = 2
+                Case "charcoal" : cell = 4
+                Case "crayon" : cell = 5
+                Case Else : cell = 1
+            End Select
             Dim bmp = New SKBitmap(size, size, SKColorType.Rgba8888, SKAlphaType.Unpremul)
             Dim px(size * size - 1) As SKColor
             For y As Integer = 0 To size - 1
@@ -6061,7 +6077,16 @@ Namespace Services
             If Not any Then Return
 
             Dim isSmear = key = "smear"
-            Dim spread = If(isSmear, strokeWidth * 1.3F, strokeWidth * 2.2F)
+            ' Wie weit ein Stempel seitlich über die Spur hinausreicht - bestimmt den Rand der Ebene.
+            Dim spread As Single
+            Select Case key
+                Case "smear" : spread = strokeWidth * 1.3F
+                Case "airbrush" : spread = strokeWidth * 1.1F
+                Case "calligraphy" : spread = strokeWidth * 0.8F
+                Case "stipple" : spread = strokeWidth * 0.8F
+                Case "watercolor" : spread = strokeWidth * 1.2F
+                Case Else : spread = strokeWidth * 2.2F   ' spatter streut am weitesten
+            End Select
             Dim pad = spread + blurSigma * 3.0F + 2.0F
             Dim left = CInt(Math.Floor(Clamp(minX - pad, 0, width)))
             Dim top = CInt(Math.Floor(Clamp(minY - pad, 0, height)))
@@ -6085,11 +6110,14 @@ Namespace Services
                             pts.Add(New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height)))
                         Next
                         Dim seedBase = 4242 + strokeOrdinal * 131
-                        If isSmear Then
-                            DrawSmearStroke(lc, pts, color, strokeWidth, baseAlpha, blurSigma, seedBase)
-                        Else
-                            DrawSpatterStroke(lc, pts, color, strokeWidth, baseAlpha, blurSigma, seedBase)
-                        End If
+                        Select Case key
+                            Case "smear" : DrawSmearStroke(lc, pts, color, strokeWidth, baseAlpha, blurSigma, seedBase)
+                            Case "airbrush" : DrawAirbrushStroke(lc, pts, color, strokeWidth, baseAlpha, seedBase)
+                            Case "calligraphy" : DrawCalligraphyStroke(lc, pts, color, strokeWidth, baseAlpha, blurSigma)
+                            Case "stipple" : DrawStippleStroke(lc, pts, color, strokeWidth, baseAlpha, seedBase)
+                            Case "watercolor" : DrawWatercolorStroke(lc, pts, color, strokeWidth, baseAlpha, seedBase)
+                            Case Else : DrawSpatterStroke(lc, pts, color, strokeWidth, baseAlpha, blurSigma, seedBase)
+                        End Select
                         strokeOrdinal += 1
                     Next
                 End Using
@@ -6244,6 +6272,200 @@ Namespace Services
                             If d >= length Then Exit Do
                             d = Math.Min(length, d + spacing)
                         Loop
+                    End Using
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Sprühdose: dichte Wolke feiner Punkte um die Spur, mit radial abnehmender
+        ''' Wahrscheinlichkeit und Deckkraft. Anders als "spatter" (wenige große Tropfen weit gestreut)
+        ''' baut sich hier durch viele winzige Punkte ein weicher Farbauftrag auf, der bei mehrfachem
+        ''' Überfahren dichter wird. Alle Zufallswerte deterministisch aus Stempelindex + seedBase.</summary>
+        Private Shared Sub DrawAirbrushStroke(lc As SKCanvas, pts As List(Of SKPoint), color As SKColor, strokeWidth As Single, baseAlpha As Single, seedBase As Integer)
+            If pts.Count < 2 Then Return
+            Using path = New SKPath()
+                path.MoveTo(pts(0))
+                For i As Integer = 1 To pts.Count - 1 : path.LineTo(pts(i)) : Next
+
+                Dim radius = Math.Max(1.0F, strokeWidth * 0.5F)
+                Dim dotR = Math.Max(0.4F, strokeWidth * 0.045F)
+                Using dots = New SKPaint With {.IsAntialias = True, .Style = SKPaintStyle.Fill}
+                    Using pm = New SKPathMeasure(path, False)
+                        Dim length = pm.Length
+                        ' Eng abtasten: die Punktwolke soll durchgehend wirken, nicht perlenartig.
+                        Dim spacing = Math.Max(0.6F, strokeWidth * 0.12F)
+                        Dim perStep = Math.Max(3, CInt(Math.Min(26, strokeWidth * 0.55F)))
+                        Dim d As Single = 0.0F
+                        Dim stampIndex = 0
+                        Do
+                            Dim pos As SKPoint, tan As SKPoint
+                            If pm.GetPositionAndTangent(d, pos, tan) Then
+                                For j As Integer = 0 To perStep - 1
+                                    ' Sqrt der Zufallszahl = flächengleiche Verteilung in der Kreisscheibe;
+                                    ' ohne das drängen sich die Punkte in der Mitte.
+                                    Dim rr = CSng(Math.Sqrt(Hash01(stampIndex, 60 + j, seedBase)))
+                                    Dim ang = Hash01(stampIndex, 90 + j, seedBase) * 6.2831853F
+                                    Dim rad = rr * radius
+                                    Dim a = baseAlpha * (1.0F - rr * 0.85F) * 0.85F
+                                    If a <= 0.004F Then Continue For
+                                    dots.Color = color.WithAlpha(CByte(Clamp(a * 255.0F, 0, 255)))
+                                    lc.DrawCircle(pos.X + CSng(Math.Cos(ang)) * rad,
+                                                  pos.Y + CSng(Math.Sin(ang)) * rad, dotR, dots)
+                                Next
+                            End If
+                            stampIndex += 1
+                            If d >= length Then Exit Do
+                            d = Math.Min(length, d + spacing)
+                        Loop
+                    End Using
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Kalligrafie-Feder: eine flache Feder mit FESTEM Anstellwinkel wird entlang des Pfades
+        ''' gestempelt. Der sichtbare Strich wird dadurch dort breit, wo die Bewegung quer zur Feder läuft,
+        ''' und dünn, wo sie ihr folgt - genau das macht den Schwung einer Breitfeder aus. Deshalb hier
+        ''' KEIN Zufall: die Federkante ist ein fester Winkel, keine Textur.</summary>
+        Private Shared Sub DrawCalligraphyStroke(lc As SKCanvas, pts As List(Of SKPoint), color As SKColor, strokeWidth As Single, baseAlpha As Single, blurSigma As Single)
+            If pts.Count < 2 Then Return
+            Const nibAngleDeg As Single = 40.0F
+            Dim nibRad = nibAngleDeg * 0.0174532925F
+            Dim nx = CSng(Math.Cos(nibRad)), ny = CSng(Math.Sin(nibRad))
+            Dim half = Math.Max(0.5F, strokeWidth * 0.5F)
+            ' Dicke der Feder quer zur Kante - eine echte Breitfeder ist schmal, nicht rund.
+            Dim nibThickness = Math.Max(1.0F, strokeWidth * 0.16F)
+
+            Using path = New SKPath()
+                path.MoveTo(pts(0))
+                For i As Integer = 1 To pts.Count - 1 : path.LineTo(pts(i)) : Next
+
+                Using paint = New SKPaint With {
+                    .Color = color.WithAlpha(CByte(Clamp(baseAlpha * 255.0F, 0, 255))),
+                    .IsAntialias = True,
+                    .Style = SKPaintStyle.Stroke,
+                    .StrokeWidth = nibThickness,
+                    .StrokeCap = SKStrokeCap.Round
+                }
+                    If blurSigma > 0.05F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, blurSigma * 0.35F)
+                    Using pm = New SKPathMeasure(path, False)
+                        Dim length = pm.Length
+                        ' Sehr eng stempeln, sonst zerfällt der Zug in einzelne Federabdrücke.
+                        Dim spacing = Math.Max(0.35F, strokeWidth * 0.07F)
+                        Dim d As Single = 0.0F
+                        Do
+                            Dim pos As SKPoint, tan As SKPoint
+                            If pm.GetPositionAndTangent(d, pos, tan) Then
+                                lc.DrawLine(pos.X - nx * half, pos.Y - ny * half,
+                                            pos.X + nx * half, pos.Y + ny * half, paint)
+                            End If
+                            If d >= length Then Exit Do
+                            d = Math.Min(length, d + spacing)
+                        Loop
+                    End Using
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Punktraster: gleichmäßig verteilte Tupfen entlang der Spur mit leichtem Versatz und
+        ''' wechselnder Größe. Ergibt eine gepunktete Linie (Stippling/Pointillismus) statt eines
+        ''' geschlossenen Zuges - der Abstand skaliert mit der Strichbreite.</summary>
+        Private Shared Sub DrawStippleStroke(lc As SKCanvas, pts As List(Of SKPoint), color As SKColor, strokeWidth As Single, baseAlpha As Single, seedBase As Integer)
+            If pts.Count < 2 Then Return
+            Using path = New SKPath()
+                path.MoveTo(pts(0))
+                For i As Integer = 1 To pts.Count - 1 : path.LineTo(pts(i)) : Next
+
+                Using dot = New SKPaint With {.IsAntialias = True, .Style = SKPaintStyle.Fill}
+                    Using pm = New SKPathMeasure(path, False)
+                        Dim length = pm.Length
+                        Dim spacing = Math.Max(2.0F, strokeWidth * 0.85F)
+                        Dim d As Single = 0.0F
+                        Dim stampIndex = 0
+                        Do
+                            Dim pos As SKPoint, tan As SKPoint
+                            If pm.GetPositionAndTangent(d, pos, tan) Then
+                                Dim perpX = -tan.Y, perpY = tan.X
+                                Dim jitter = (Hash01(stampIndex, 11, seedBase) - 0.5F) * strokeWidth * 0.35F
+                                Dim rr = 0.22F + Hash01(stampIndex, 22, seedBase) * 0.16F
+                                Dim a = baseAlpha * (0.75F + Hash01(stampIndex, 33, seedBase) * 0.25F)
+                                dot.Color = color.WithAlpha(CByte(Clamp(a * 255.0F, 0, 255)))
+                                lc.DrawCircle(pos.X + perpX * jitter, pos.Y + perpY * jitter, strokeWidth * rr, dot)
+                            End If
+                            stampIndex += 1
+                            If d >= length Then Exit Do
+                            d = Math.Min(length, d + spacing)
+                        Loop
+                    End Using
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Aquarell: mehrere lasierende Durchgänge unterschiedlicher Breite mit weichen Rändern,
+        ''' dazu eine dunklere, unruhige Randlinie. Der Reiz von Aquarell liegt im ÜBEREINANDER - jede
+        ''' Lage ist fast durchsichtig, erst die Summe ergibt die Farbe, und die Ränder laufen aus.</summary>
+        Private Shared Sub DrawWatercolorStroke(lc As SKCanvas, pts As List(Of SKPoint), color As SKColor, strokeWidth As Single, baseAlpha As Single, seedBase As Integer)
+            If pts.Count < 2 Then Return
+            Using path = New SKPath()
+                path.MoveTo(pts(0))
+                For i As Integer = 1 To pts.Count - 1 : path.LineTo(pts(i)) : Next
+
+                ' Von breit/blass nach schmal/kräftiger - der Kern wird dadurch von selbst satter.
+                Dim widths = New Single() {1.15F, 0.92F, 0.66F, 0.42F}
+                Dim alphas = New Single() {0.20F, 0.24F, 0.28F, 0.34F}
+                For layerIndex As Integer = 0 To widths.Length - 1
+                    Dim w = Math.Max(1.0F, strokeWidth * widths(layerIndex))
+                    Dim a = baseAlpha * alphas(layerIndex)
+                    ' Winziger Versatz je Lage: die Lagen decken sich nicht exakt, so entstehen die
+                    ' typischen Farbränder, wo sich zwei Lasuren überlappen.
+                    Dim offX = (Hash01(layerIndex, 7, seedBase) - 0.5F) * strokeWidth * 0.12F
+                    Dim offY = (Hash01(layerIndex, 8, seedBase) - 0.5F) * strokeWidth * 0.12F
+                    Using paint = New SKPaint With {
+                        .Color = color.WithAlpha(CByte(Clamp(a * 255.0F, 0, 255))),
+                        .IsAntialias = True,
+                        .Style = SKPaintStyle.Stroke,
+                        .StrokeWidth = w,
+                        .StrokeCap = SKStrokeCap.Round,
+                        .StrokeJoin = SKStrokeJoin.Round,
+                        .MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, w * 0.22F)
+                    }
+                        lc.Save()
+                        lc.Translate(offX, offY)
+                        lc.DrawPath(path, paint)
+                        lc.Restore()
+                    End Using
+                Next
+
+                ' Randlinie: bei echtem Aquarell sammelt sich Pigment am austrocknenden Rand.
+                Using edge = New SKPaint With {
+                    .Color = color.WithAlpha(CByte(Clamp(baseAlpha * 0.30F * 255.0F, 0, 255))),
+                    .IsAntialias = True,
+                    .Style = SKPaintStyle.Stroke,
+                    .StrokeWidth = Math.Max(1.0F, strokeWidth * 0.10F),
+                    .StrokeCap = SKStrokeCap.Round,
+                    .MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, strokeWidth * 0.06F)
+                }
+                    Using outline = New SKPath()
+                        Using measure = New SKPathMeasure(path, False)
+                            Dim length = measure.Length
+                            Dim stepLen As Single = Math.Max(1.0F, strokeWidth * 0.3F)
+                            Dim d As Single = 0.0F
+                            Dim first = True
+                            Dim idx = 0
+                            Do
+                                Dim pos As SKPoint, tan As SKPoint
+                                If measure.GetPositionAndTangent(d, pos, tan) Then
+                                    Dim perpX = -tan.Y, perpY = tan.X
+                                    Dim wob = 0.42F + Hash01(idx, 5, seedBase) * 0.12F
+                                    Dim ex = pos.X + perpX * strokeWidth * wob
+                                    Dim ey = pos.Y + perpY * strokeWidth * wob
+                                    If first Then outline.MoveTo(ex, ey) : first = False Else outline.LineTo(ex, ey)
+                                End If
+                                idx += 1
+                                If d >= length Then Exit Do
+                                d = Math.Min(length, d + stepLen)
+                            Loop
+                        End Using
+                        lc.DrawPath(outline, edge)
                     End Using
                 End Using
             End Using

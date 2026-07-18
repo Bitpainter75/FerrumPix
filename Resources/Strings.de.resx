@@ -3470,4 +3470,22 @@
   <data name="ISO_4f325d99" xml:space="preserve">
     <value>ISO</value>
   </data>
+  <data name="Kohle_fe82dffb" xml:space="preserve">
+    <value>Kohle</value>
+  </data>
+  <data name="Wachsmalstift_a61783aa" xml:space="preserve">
+    <value>Wachsmalstift</value>
+  </data>
+  <data name="Spr_hdose_ea654421" xml:space="preserve">
+    <value>Sprühdose</value>
+  </data>
+  <data name="Kalligrafie_66d78c72" xml:space="preserve">
+    <value>Kalligrafie</value>
+  </data>
+  <data name="Punktraster_e1ca16a4" xml:space="preserve">
+    <value>Punktraster</value>
+  </data>
+  <data name="Aquarell_b522f5aa" xml:space="preserve">
+    <value>Aquarell</value>
+  </data>
 </root>

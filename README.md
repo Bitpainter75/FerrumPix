@@ -50,7 +50,7 @@ The editor covers the most common photo work:
 - Filters, LUT files and Lightroom `.xmp` preset import.
 - Film negative conversion for scanned negatives.
 - Text, shapes, symbols, images, QR codes and watermarks.
-- Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools.
+- Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools. The brush picker offers 13 variants — soft round, pencil, marker, grainy acrylic, sandpaper, smudge, spatter, charcoal, crayon, airbrush, calligraphy, stipple and watercolor.
 - Rectangle, ellipse, lasso and magic wand selections.
 - Per object editing with opacity, blend modes, shadows, glow and transform controls.
 - A toggleable Layers panel with the full object stack: per-layer visibility, opacity, blend mode, drag-and-drop reorder, rename (double-click or F2), rasterize (bake a layer into the image so retouching can work on its pixels) and delete, plus the base image as a hideable background layer.
@@ -102,6 +102,8 @@ Settings cover theme, accent color, language, thumbnail quality, export quality,
 Release packaging targets Linux and Windows:
 
 - Linux AppImage and Flatpak
+- Debian/Ubuntu package (`.deb`)
+- Fedora/openSUSE package (`.rpm`)
 - Windows Setup
 - Portable Linux ZIP
 - Portable Windows ZIP
