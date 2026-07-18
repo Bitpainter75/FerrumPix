@@ -17,6 +17,14 @@ Namespace ViewModels
     Public Class ViewerViewModel
         Inherits ViewModelBase
 
+        ''' Weniger Schalter als im Editor - „Diashow starten" und „Anpassen" oben,
+        ''' „Einpassen" in der Fußzeile.
+        Protected Overrides ReadOnly Property ToolbarLabelWidthThreshold As Double
+            Get
+                Return 1150
+            End Get
+        End Property
+
         Private ReadOnly _mainVm As MainWindowViewModel
         Private _currentImagePath As String = ""
         Private _bitmapLoadToken As Integer = 0
@@ -676,6 +684,7 @@ Namespace ViewModels
         ' Commands
         Public ReadOnly Property PreviousCommand As ICommand
         Public ReadOnly Property NextCommand As ICommand
+        Public ReadOnly Property PrintCommand As ICommand
         Public ReadOnly Property ZoomInCommand As ICommand
         Public ReadOnly Property ZoomOutCommand As ICommand
         Public ReadOnly Property ZoomFitCommand As ICommand
@@ -714,6 +723,9 @@ Namespace ViewModels
 
             PreviousCommand = ReactiveCommand.Create(Sub() NavigatePrevious())
             NextCommand = ReactiveCommand.Create(Sub() NavigateNext())
+            ' Parameterlos: an ein ReactiveCommand.Create(Of T) gebundene Tastenkürzel wären mit
+            ' Execute(Nothing) ein stiller No-Op.
+            PrintCommand = ReactiveCommand.Create(Sub() PrintCurrent())
             ZoomInCommand = ReactiveCommand.Create(Sub() ZoomIn())
             ZoomOutCommand = ReactiveCommand.Create(Sub() ZoomOut())
             ZoomFitCommand = ReactiveCommand.Create(Sub()
@@ -1815,6 +1827,14 @@ Namespace ViewModels
 
         Private Sub CopyToClipboard()
             ' Clipboard-Zugriff erfolgt über TopLevel in der View (ViewModel hat keinen UI-Zugriff)
+        End Sub
+
+        ''' <summary>Druckt das gerade angezeigte Bild. Der Betrachter arbeitet auf Pfaden - bei
+        ''' einem Immich-Asset ist _currentImagePath bereits die lokale Temp-Kopie, es braucht also
+        ''' keine gesonderte Auflösung wie in der Galerie.</summary>
+        Private Sub PrintCurrent()
+            If String.IsNullOrEmpty(_currentImagePath) OrElse Not IO.File.Exists(_currentImagePath) Then Return
+            _mainVm?.ShowPrintDialog(New List(Of String) From {_currentImagePath})
         End Sub
 
         Private Sub OpenInFileManager()

@@ -68,28 +68,37 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/home.svg"
                                        Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="ghost"
-                            Command="{Binding NavigateParentCommand}"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Padding="0"
-                            Height="30"
-                            VerticalContentAlignment="Center"
-                            IsVisible="{Binding HasBreadcrumbParent}">
-                        <TextBlock Text="{Binding BreadcrumbParent}"
-                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                   FontWeight="SemiBold"
+                    <!-- Der Brotkrümelpfad weicht im schmalen Fenster als Erstes: er wächst mit der
+                         Ordnertiefe und liefe sonst in die Suchleiste. Die Navigation bleibt über die
+                         Pfeil- und Haus-Schalter links davon erreichbar, der Pfad steht in der Fußzeile. -->
+                    <!-- Eine Klammer um den ganzen Pfad, damit die beiden Bedingungen sauber
+                         bleiben: aussen "ist ueberhaupt Platz", innen "gibt es einen Elternordner".
+                         Avalonia kann zwei Bindungen nicht ohne Konverter verunden. -->
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                                IsVisible="{Binding AreToolbarLabelsVisible}">
+                        <Button Classes="ghost"
+                                Command="{Binding NavigateParentCommand}"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                Height="30"
+                                VerticalContentAlignment="Center"
+                                IsVisible="{Binding HasBreadcrumbParent}">
+                            <TextBlock Text="{Binding BreadcrumbParent}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                        </Button>
+                        <TextBlock Text="›"
+                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                   FontSize="{DynamicResource FP.Font.Small}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding HasBreadcrumbParent}"/>
+                        <TextBlock Text="{Binding CurrentFolderName}"
+                                   Foreground="{DynamicResource FP.Text.Primary}"
+                                   FontSize="{DynamicResource FP.Font.Body}"
                                    VerticalAlignment="Center"/>
-                    </Button>
-                    <TextBlock Text="›"
-                               Foreground="{DynamicResource FP.Text.Muted}"
-                               FontSize="{DynamicResource FP.Font.Small}"
-                               VerticalAlignment="Center"
-                               IsVisible="{Binding HasBreadcrumbParent}"/>
-                    <TextBlock Text="{Binding CurrentFolderName}"
-                               Foreground="{DynamicResource FP.Text.Primary}"
-                               FontSize="{DynamicResource FP.Font.Body}"
-                               VerticalAlignment="Center"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
@@ -855,6 +864,7 @@
                                             <MenuItem Name="GridContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
                                             <MenuItem Name="GridContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
                                             <MenuItem Name="GridContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
+                                            <MenuItem Name="GridContextPrintMenuItem" Header="Drucken..." Click="OnContextPrint" IsVisible="{Binding IsImage}"/>
                                             <Separator Name="GridContextPathSeparator"/>
                                             <MenuItem Name="GridContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
                                             <MenuItem Name="GridContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
@@ -1266,6 +1276,7 @@
                                             <MenuItem Name="ListContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
                                             <MenuItem Name="ListContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
                                             <MenuItem Name="ListContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
+                                            <MenuItem Name="ListContextPrintMenuItem" Header="Drucken..." Click="OnContextPrint"/>
                                             <Separator Name="ListContextPathSeparator"/>
                                             <MenuItem Name="ListContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
                                             <MenuItem Name="ListContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
@@ -1596,6 +1607,7 @@
                                 <MenuItem Name="MenuContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
                                 <MenuItem Name="MenuContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
                                 <MenuItem Name="MenuContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
+                                <MenuItem Name="MenuContextPrintMenuItem" Header="Drucken..." Click="OnContextPrint"/>
                                 <Separator Name="MenuContextPathSeparator"/>
                                 <MenuItem Name="MenuContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
                                 <MenuItem Name="MenuContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>

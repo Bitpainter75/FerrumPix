@@ -187,6 +187,31 @@ Namespace Services
         ''' "Immich" (nur Immich-Ansichten), "Folders" (nur Ordner-/Suchansichten), "Off".
         Public Property GalleryTimelineMode As String = "All"
         Public Property ImmichDeletePermanently As Boolean = False
+
+        ' Zuletzt im Druckdialog gewählte Optionen. Sie gelten auch für das Zielformat PDF in
+        ' „Speichern unter"/„Konvertieren nach", damit Drucken und PDF-Export dasselbe Seitenlayout
+        ' liefern. Die Strings tragen die englischen Logikschlüssel, nie den übersetzten Anzeigetext.
+        Public Property PrintPageSize As String = "A4"
+        Public Property PrintLandscape As Boolean = False
+        Public Property PrintMarginMm As Double = 10
+        Public Property PrintFitMode As String = "Fit"
+        Public Property PrintImagesPerPage As Integer = 1
+        Public Property PrintShowCaption As Boolean = False
+        Public Property PrintBorderless As Boolean = False
+
+        ''' <summary>Die gespeicherten Druckoptionen als PrintOptions. Kontaktabzug-Einstellungen
+        ''' (Bilder pro Seite, Unterschrift) reicht WriteSinglePagePdf bewusst nicht durch.</summary>
+        Public Function ToPrintOptions() As PrintOptions
+            Return New PrintOptions With {
+                .PageSize = PrintPageSize,
+                .Landscape = PrintLandscape,
+                .MarginMm = PrintMarginMm,
+                .FitMode = PrintFitMode,
+                .ImagesPerPage = PrintImagesPerPage,
+                .ShowCaption = PrintShowCaption,
+                .Borderless = PrintBorderless
+            }
+        End Function
     End Class
 
     Public NotInheritable Class AppSettingsService
@@ -856,6 +881,21 @@ Namespace Services
 
         Public Shared Sub SaveBatchResizeOverwriteOriginals(value As Boolean)
             Update(Sub(s) s.BatchResizeOverwriteOriginals = value)
+        End Sub
+
+        ''' <summary>Die im Druckdialog zuletzt bestätigten Optionen. Sie gelten auch für das
+        ''' Zielformat PDF in „Speichern unter"/„Konvertieren nach".</summary>
+        Public Shared Sub SavePrintOptions(options As PrintOptions)
+            If options Is Nothing Then Return
+            Update(Sub(s)
+                       s.PrintPageSize = options.PageSize
+                       s.PrintLandscape = options.Landscape
+                       s.PrintMarginMm = options.MarginMm
+                       s.PrintFitMode = options.FitMode
+                       s.PrintImagesPerPage = options.ImagesPerPage
+                       s.PrintShowCaption = options.ShowCaption
+                       s.PrintBorderless = options.Borderless
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveEditorSnapMarginPercent(value As Integer)

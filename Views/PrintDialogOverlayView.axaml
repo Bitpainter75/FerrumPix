@@ -1,0 +1,176 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FerrumPix.Views.PrintDialogOverlayView">
+
+    <Border Background="#B8000000"
+            IsVisible="{Binding IsPrintDialogOpen}">
+        <Border Width="900"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{DynamicResource FP.Bg.Panel}"
+                BorderBrush="{DynamicResource FP.Border.Strong}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="22">
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Drucken"
+                               FontSize="{DynamicResource FP.Font.Heading}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource FP.Text.Primary}"/>
+                    <TextBlock Text="Die Auswahl wird als PDF aufbereitet und im Standardprogramm geöffnet - dort erscheint der gewohnte Druckdialog des Systems."
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="380,*"
+                      ColumnSpacing="28">
+                    <StackPanel Grid.Column="0" Spacing="8">
+                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="10"
+                                Height="420"
+                                ClipToBounds="True">
+                            <Grid>
+                                <TextBlock Text="Vorschau wird berechnet…"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           IsVisible="{Binding PrintPreviewImage, Converter={x:Static ObjectConverters.IsNull}}"/>
+                                <Image Source="{Binding PrintPreviewImage}"
+                                       Stretch="Uniform"
+                                       IsVisible="{Binding PrintPreviewImage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="{Binding PrintSummaryText}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   FontSize="{DynamicResource FP.Font.Body}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Grid Grid.Column="1"
+                          ColumnDefinitions="130,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                          ColumnSpacing="14"
+                          RowSpacing="14">
+                        <TextBlock Text="Seitengröße"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding PrintPageSizeOptions}"
+                                  SelectedItem="{Binding PrintPageSize}"
+                                  MinHeight="34"
+                                  HorizontalAlignment="Stretch"/>
+
+                        <TextBlock Grid.Row="1"
+                                   Text="Ausrichtung"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button Classes="segmented" Classes.active="{Binding IsPrintPortrait}"
+                                    Click="OnOrientationClick" Tag="Portrait">Hochformat</Button>
+                            <Button Classes="segmented" Classes.active="{Binding PrintLandscape}"
+                                    Click="OnOrientationClick" Tag="Landscape">Querformat</Button>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="2"
+                                   Text="Skalierung"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                    IsEnabled="{Binding CanEditPrintPageFit}">
+                            <Button Classes="segmented" Classes.active="{Binding IsPrintFitModeFit}"
+                                    Click="OnFitModeClick" Tag="Fit"
+                                    ToolTip.Tip="Das ganze Bild passt auf die Seite, Seitenverhältnis bleibt erhalten">Einpassen</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsPrintFitModeFill}"
+                                    Click="OnFitModeClick" Tag="Fill"
+                                    ToolTip.Tip="Das Bild füllt die Fläche vollständig aus und wird dabei beschnitten">Füllen</Button>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="3"
+                                   Text="Bilder pro Seite"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button Classes="segmented" Classes.active="{Binding IsPrintPerPage1}"
+                                    Click="OnImagesPerPageClick" Tag="1">1</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsPrintPerPage4}"
+                                    Click="OnImagesPerPageClick" Tag="4">2 × 2</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsPrintPerPage9}"
+                                    Click="OnImagesPerPageClick" Tag="9">3 × 3</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsPrintPerPage16}"
+                                    Click="OnImagesPerPageClick" Tag="16">4 × 4</Button>
+                        </StackPanel>
+
+                        <!-- Nur bei Einzelauswahl: dasselbe Bild mehrfach. Zusammen mit "Bilder pro
+                             Seite" ergibt das den Wunschfall "ein Bild 4x auf einer Seite". -->
+                        <TextBlock Grid.Row="4"
+                                   Text="Anzahl Abzüge"
+                                   IsVisible="{Binding IsPrintSingleImage}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="4"
+                                       Grid.Column="1"
+                                       Classes="combo-like"
+                                       Minimum="1"
+                                       Maximum="{Binding PrintMaxCopies}"
+                                       Increment="1"
+                                       Value="{Binding PrintCopies}"
+                                       IsVisible="{Binding IsPrintSingleImage}"
+                                       ToolTip.Tip="Dasselbe Bild mehrfach drucken - für mehrere Abzüge auf einer Seite zusätzlich „Bilder pro Seite“ setzen."
+                                       MinHeight="34"/>
+
+                        <TextBlock Grid.Row="5"
+                                   Text="Rand (mm)"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="5"
+                                       Grid.Column="1"
+                                       Classes="combo-like"
+                                       Minimum="0"
+                                       Maximum="50"
+                                       Increment="1"
+                                       Value="{Binding PrintMarginMm}"
+                                       IsEnabled="{Binding CanEditPrintPageFit}"
+                                       MinHeight="34"/>
+
+                        <CheckBox Grid.Row="6"
+                                  Grid.Column="1"
+                                  IsChecked="{Binding PrintBorderless}"
+                                  Content="Randlos drucken (Bild füllt die Seite, Rand wird beschnitten)"
+                                  ToolTip.Tip="Ohne Seitenrand. Ob wirklich bis an die Papierkante gedruckt wird, entscheidet der Drucker im Systemdruckdialog."
+                                  Foreground="{DynamicResource FP.Text.Secondary}"/>
+
+                        <CheckBox Grid.Row="7"
+                                  Grid.Column="1"
+                                  IsChecked="{Binding PrintShowCaption}"
+                                  IsVisible="{Binding IsPrintContactSheet}"
+                                  Content="Dateinamen unter die Bilder setzen"
+                                  Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    </Grid>
+                </Grid>
+
+                <StackPanel Grid.Row="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Spacing="10">
+                    <Button Classes="ghost"
+                            Padding="14,8"
+                            Click="OnCancelClick">
+                        <TextBlock Text="Abbrechen"/>
+                    </Button>
+                    <Button Classes="accent"
+                            Padding="16,8"
+                            Click="OnPrintClick">
+                        <TextBlock Text="Drucken"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Border>
+</UserControl>

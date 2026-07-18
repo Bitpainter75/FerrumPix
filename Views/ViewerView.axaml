@@ -36,6 +36,12 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg"
                                Width="20" Height="20"/>
                     </Button>
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Command="{Binding PrintCommand}"
+                            ToolTip.Tip="Drucken (Strg+P)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/printer.svg"
+                               Width="20" Height="20"/>
+                    </Button>
 
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding RotateLeftCommand}"
@@ -57,14 +63,14 @@
                             ToolTip.Tip="Diashow starten">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Diashow starten" />
+                            <TextBlock Text="Diashow starten" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="ghost" Height="38" Command="{Binding EditCommand}" ToolTip.Tip="Anpassen"
                             IsEnabled="{Binding CanEdit}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Anpassen" />
+                            <TextBlock Text="Anpassen" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -260,7 +266,10 @@
                         <!-- Farbetikett des Bildes (gleiche Darstellung wie auf der Galerie-Kachel). -->
                         <Ellipse Width="10" Height="10" Fill="{Binding ColorLabelBrush}"
                                  IsVisible="{Binding HasColorLabel}" VerticalAlignment="Center" Margin="0,0,-10,0"/>
-                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                        <!-- Gleiche Kollisionsgefahr wie im Editor: rechts daneben stehen die mittig
+                             zentrierten Zoom-Bedienelemente, ein langer Dateiname liefe hinein. -->
+                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"
+                                   MaxWidth="260" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding CurrentFileName}"/>
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -285,7 +294,7 @@
                                 Command="{Binding ZoomFitCommand}" ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg" Width="20" Height="20"/>
-                                <TextBlock Text="Einpassen" VerticalAlignment="Center" />
+                                <TextBlock Text="Einpassen" VerticalAlignment="Center" IsVisible="{Binding AreToolbarLabelsVisible}" />
                             </StackPanel>
                         </Button>
                     </StackPanel>

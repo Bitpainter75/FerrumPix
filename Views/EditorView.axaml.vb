@@ -517,17 +517,22 @@ Namespace Views
             End Sub
         End Sub
 
+        ''' <summary>Fenster-Tunnel: diese Kürzel müssen auch dann noch greifen, wenn zuvor ein
+        ''' Overlay-Dialog den Fokus hatte - die View-Kürzel sind danach tot.</summary>
         Private Sub OnEditorKeyDownTunnel(sender As Object, e As KeyEventArgs)
-            If e.Handled OrElse e.Key <> Key.S OrElse Not e.KeyModifiers.HasFlag(KeyModifiers.Control) Then Return
+            If e.Handled OrElse Not e.KeyModifiers.HasFlag(KeyModifiers.Control) Then Return
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
 
-            If vm.CanSaveInPlace Then
-                vm.SaveCommand.Execute(Nothing)
-            Else
-                vm.SaveAsCommand.Execute(Nothing)
-            End If
-            e.Handled = True
+            Select Case e.Key
+                Case Key.S
+                    If vm.CanSaveInPlace Then
+                        vm.SaveCommand.Execute(Nothing)
+                    Else
+                        vm.SaveAsCommand.Execute(Nothing)
+                    End If
+                    e.Handled = True
+            End Select
         End Sub
 
         Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)
@@ -3504,7 +3509,10 @@ Namespace Views
                             e.Handled = True
                         End If
                     Case Key.P
-                        If Not isTextInputFocused Then
+                        ' Strg+P ist seit 2026-07-18 durchgängig „Drucken" (Weltstandard, im
+                        ' Fenster-Tunnel abgefangen). „Vorschau anwenden" liegt jetzt auf
+                        ' Strg+UMSCHALT+P; ohne die Umschalt-Prüfung würden beide feuern.
+                        If Not isTextInputFocused AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
                             vm.ApplyPreviewCommand.Execute(Nothing)
                             e.Handled = True
                         End If

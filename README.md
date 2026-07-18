@@ -2,7 +2,7 @@
 
 # FerrumPix
 
-FerrumPix is a desktop photo manager and image editor for Linux and Windows. It is built with [Avalonia UI](https://avaloniaui.net/) and .NET 10.
+FerrumPix is a desktop photo manager and image editor for Linux and Windows, with experimental ARM64 and macOS builds. It is built with [Avalonia UI](https://avaloniaui.net/) and .NET 10.
 I absolutely love VB.NET, even though it's pretty rare nowadays. For the heavy lifting, I use AI assistance.
 
 Project website: [FerrumPix.app](https://ferrumpix.app/)
@@ -26,6 +26,8 @@ The gallery is built for daily photo work. It supports folder browsing, fast thu
 
 Search can combine normal text with metadata such as camera, ISO, aperture, focal length, date taken and image size. Batch tools are available from the context menu and from the footer menu.
 
+Printing works from the context menu, the footer menu or with `Ctrl+P`. A multiple selection becomes a multi-page document, or a contact sheet with 4, 9 or 16 images per page. The dialog can print borderless, and for a single selected image it can repeat the same photo several times on a sheet.
+
 ## Viewer
 
 <img src="Screenshots/Viewer.png" />
@@ -33,6 +35,8 @@ Search can combine normal text with metadata such as camera, ISO, aperture, foca
 The viewer opens photos and videos quickly and keeps navigation simple. It supports fullscreen mode, zoom, pan, slideshow, filmstrip navigation, ratings, favorites, tags and deletion.
 
 Video files use `libmpv` for inline playback and thumbnails. Linux packages use the system `libmpv`; Windows packages bundle the mpv runtime with FerrumPix.
+
+Printing is available from the toolbar or with `Ctrl+P`, using the same dialog as the gallery.
 
 ## Editor
 
@@ -53,6 +57,8 @@ The editor covers the most common photo work:
 - A native project format (`.fpx`): *Save as…* can bundle the whole edit — adjustments, layer stack and the baked working image — so it can be reopened and continued. Adjustments and object layers stay editable after reopening; retouching, brush strokes and rasterized layers are baked into the image (undo covers them only within the session). `.fpx` projects show up in the gallery, viewer and fullscreen like any image.
 
 Exporting to JPEG/PNG/WEBP writes the result into pixels; while the editor is open, changes can be undone and objects stay editable. Save as a `.fpx` project (or use *Save as* to a normal image) if the original file should stay untouched.
+
+`Ctrl+P` prints the current edit state — adjustments, objects and brush work included, not the file on disk. PDF is also available as a target format in *Save as…* and *Convert to…*; it uses the page setup last confirmed in the print dialog.
 
 <img src="Screenshots/Editor_Text.png" />
 
@@ -93,17 +99,20 @@ Settings cover theme, accent color, language, thumbnail quality, export quality,
 
 ## Installation
 
-Release packaging currently targets Linux and Windows:
+Release packaging targets Linux and Windows:
 
 - Linux AppImage and Flatpak
 - Windows Setup
 - Portable Linux ZIP
 - Portable Windows ZIP
 
-EXPERIMENTAL
-- ARM and OS X releases are not testet. Please give me a feedback if it works !
+Experimental, untested builds — feedback is welcome:
 
-And as a package in the AUR 
+- ARM64
+- macOS
+
+And as a package in the AUR:
+
 - https://aur.archlinux.org/packages/ferrumpix-bin
 
 

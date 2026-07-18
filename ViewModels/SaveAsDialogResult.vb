@@ -35,9 +35,19 @@ Namespace ViewModels
                         Return ".webp"
                     Case "FPX"
                         Return ".fpx"
+                    Case "PDF"
+                        Return ".pdf"
                     Case Else
                         Return ".jpg"
                 End Select
+            End Get
+        End Property
+
+        ''' <summary>True, wenn ein druckfertiges PDF geschrieben wird (eine Seite, Seitenlayout aus
+        ''' den zuletzt im Druckdialog gewählten Optionen). Wie FPX kein Immich-Ziel.</summary>
+        Public ReadOnly Property IsPdf As Boolean
+            Get
+                Return String.Equals(Format, "PDF", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 

@@ -43,6 +43,7 @@ Namespace Views
             If Not String.IsNullOrEmpty(selected) Then
                 vm.ApplicationScaleScreen = selected
             End If
+            FlyoutHelpers.CloseContainingFlyout(button)
             e.Handled = True
         End Sub
 

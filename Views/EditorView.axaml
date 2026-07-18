@@ -39,11 +39,22 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg"
                                        Width="20" Height="20" />
                     </Button>
-                    <StackPanel Margin="26,0,0,0" VerticalAlignment="Center" >
-                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold" />
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Command="{Binding PrintCommand}"
+                            ToolTip.Tip="Drucken (Strg+P)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/printer.svg"
+                                       Width="20" Height="20" />
+                    </Button>
+                    <!-- Der Dateiname sitzt in derselben Zeile wie die mittig zentrierten Modus-Schalter.
+                         Deshalb kleiner (Body statt Subtitle) UND hart begrenzt: allein eine kleinere
+                         Schrift verschiebt die Kollision nur auf den nächsten langen Dateinamen. -->
+                    <StackPanel Margin="26,0,0,0" VerticalAlignment="Center" MaxWidth="260">
+                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding CurrentFileName}" />
                         <TextBlock Text="{Binding StatusText}"
                                    Classes="status-text"
                                    Classes.failed="{Binding PreviewFailed}"
+                                   TextTrimming="CharacterEllipsis"
                                    FontSize="{DynamicResource FP.Font.Caption}" />
                     </StackPanel>
                 </StackPanel>
@@ -56,7 +67,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pinned.svg"
                                            Width="20" Height="20" />
-                            <TextBlock Text="Verschieben" />
+                            <TextBlock Text="Verschieben" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
@@ -67,7 +78,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/ruler-2.svg"
                                            Width="20" Height="20" />
-                            <TextBlock Text="Lineale" />
+                            <TextBlock Text="Lineale" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
@@ -78,7 +89,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/grid-pattern.svg"
                                            Width="20" Height="20" />
-                            <TextBlock Text="Raster" />
+                            <TextBlock Text="Raster" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
@@ -93,7 +104,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Vergleich" />
+                            <TextBlock Text="Vergleich" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -124,18 +135,20 @@
                         </Canvas>
                     </Button>
                     <Button Classes="accent" Height="38" Padding="16,7" Command="{Binding SaveCommand}"
+                            ToolTip.Tip="Speichern"
                             IsEnabled="{Binding CanSaveInPlace}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/device-floppy.svg"
                                            Width="20" Height="20" />
-                            <TextBlock Text="Speichern" />
+                            <TextBlock Text="Speichern" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="ghost active" Height="38" Padding="12,7" Command="{Binding SaveAsCommand}">
+                    <Button Classes="ghost active" Height="38" Padding="12,7" Command="{Binding SaveAsCommand}"
+                            ToolTip.Tip="Speichern unter...">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/file-export.svg"
                                            Width="20" Height="20" />
-                            <TextBlock Text="Speichern unter..." />
+                            <TextBlock Text="Speichern unter..." IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="icon-btn"
@@ -984,7 +997,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg"
                                                Width="20" Height="20" />
-                                <TextBlock Text="Einpassen" VerticalAlignment="Center" />
+                                <TextBlock Text="Einpassen" VerticalAlignment="Center" IsVisible="{Binding AreToolbarLabelsVisible}" />
                             </StackPanel>
                         </Button>
                     </StackPanel>

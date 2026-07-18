@@ -33,6 +33,10 @@ Namespace Views
             AddHandler Closing, AddressOf HandleWindowClosing
             AddHandler PositionChanged, Sub(s, e) OnWindowPlacementChanged()
             AddHandler SizeChanged, Sub(s, e) OnWindowPlacementChanged()
+            ' Eigener Handler statt Anhängen an OnWindowPlacementChanged: das dort steigt bei
+            ' maximiert/Vollbild sofort aus (es speichert nur die Normalgröße) - die Leisten
+            ' müssten dann ausgerechnet im breitesten Zustand ohne Meldung auskommen.
+            AddHandler SizeChanged, Sub(s, e) UpdateToolbarWidth(e.NewSize.Width)
             AddHandler LocalizationService.LanguageChanged, Sub(s, e) ApplyLocalization()
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnWindowKeyDown, RoutingStrategies.Tunnel)
             AddHandler PointerPressed, AddressOf OnWindowPointerPressed
@@ -50,6 +54,9 @@ Namespace Views
             If vm IsNot Nothing Then
                 AddHandler vm.PropertyChanged, AddressOf OnVmPropertyChanged
                 ApplyFullscreenState()
+                ' Der erste SizeChanged kann vor dem DataContext liegen - dann bliebe die Breite
+                ' bis zur ersten Größenänderung unbekannt.
+                If Bounds.Width > 0 Then vm.UpdateWindowWidth(Bounds.Width)
             End If
         End Sub
 
@@ -166,6 +173,12 @@ Namespace Views
             If x2 <= x1 OrElse y2 <= y1 Then Return 0
             Return (x2 - x1) * (y2 - y1)
         End Function
+
+        ''' <summary>Meldet die Fensterbreite an die ViewModels, damit die Leisten ihre
+        ''' Beschriftungen ausblenden, bevor sie sich gegenseitig überlaufen.</summary>
+        Private Sub UpdateToolbarWidth(width As Double)
+            TryCast(DataContext, MainWindowViewModel)?.UpdateWindowWidth(width)
+        End Sub
 
         Private Sub OnWindowPlacementChanged()
             If Not _hasRestoredPlacement OrElse _isRestoringPlacement OrElse WindowState <> WindowState.Normal Then Return
@@ -457,6 +470,43 @@ Namespace Views
                         e.Handled = False
                 End Select
                 Return
+            End If
+
+            ' Solange der Druckdialog offen ist, darf KEINE Taste an die Ansicht dahinter
+            ' durchfallen - sonst blättert Links/Rechts im Betrachter weiter, während vorne der
+            ' Dialog steht.
+            If vm.IsPrintDialogOpen Then
+                Select Case e.Key
+                    Case Key.Escape
+                        vm.ClosePrintDialog()
+                    Case Key.Return, Key.Enter
+                        vm.ConfirmPrint()
+                End Select
+                e.Handled = True
+                Return
+            End If
+
+            ' Strg+P zentral im Fenster-Tunnel statt in den einzelnen Ansichten: so greift es in
+            ' jedem Modus, im Vollbild und - weil der Tunnel vor den View-Kürzeln feuert - auch
+            ' noch, nachdem ein Overlay-Dialog den Fokus hatte.
+            ' Ohne den Umschalt-Ausschluss würde dieser Zweig auch Strg+Umschalt+P schlucken -
+            ' das ist im Editor „Vorschau anwenden".
+            If e.Key = Key.P AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                Select Case vm.CurrentMode
+                    Case AppMode.Editor
+                        vm.Editor.PrintCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
+                    Case AppMode.Viewer
+                        vm.Viewer.PrintCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
+                    Case AppMode.Gallery
+                        vm.Gallery.PrintSelectedCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
+                End Select
             End If
 
             ' F11 schaltet in jedem Modus um - hier oben im Tunnel, damit es auch im Vollbild greift,

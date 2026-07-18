@@ -3363,4 +3363,112 @@
   <data name="zu_einem_anderen_Bild_wechselst_6e24027e" xml:space="preserve">
     <value>switch to another image</value>
   </data>
+  <data name="Drucken_72be3404" xml:space="preserve">
+    <value>Print</value>
+  </data>
+  <data name="Drucken_1c14ea4d" xml:space="preserve">
+    <value>Print...</value>
+  </data>
+  <data name="Drucken_Strg_P_73b2de57" xml:space="preserve">
+    <value>Print (Ctrl+P)</value>
+  </data>
+  <data name="Drucken_fehlgeschlagen_6bac9264" xml:space="preserve">
+    <value>Printing failed</value>
+  </data>
+  <data name="Die_Auswahl_wird_als_PDF_aufbereitet_und_im_Stan_fac8442a" xml:space="preserve">
+    <value>The selection is prepared as a PDF and opened in your default application - the familiar system print dialog appears there.</value>
+  </data>
+  <data name="Seitengr_e_3b3f2e86" xml:space="preserve">
+    <value>Page size</value>
+  </data>
+  <data name="Hochformat_82437297" xml:space="preserve">
+    <value>Portrait</value>
+  </data>
+  <data name="Querformat_7f75cf96" xml:space="preserve">
+    <value>Landscape</value>
+  </data>
+  <data name="Skalierung_9312adff" xml:space="preserve">
+    <value>Scaling</value>
+  </data>
+  <data name="Das_ganze_Bild_passt_auf_die_Seite_Seitenverh_lt_876369b7" xml:space="preserve">
+    <value>The whole image fits on the page, aspect ratio is preserved</value>
+  </data>
+  <data name="Das_Bild_f_llt_die_Fl_che_vollst_ndig_aus_und_wi_e71e9f7c" xml:space="preserve">
+    <value>The image fills the area completely and is cropped in the process</value>
+  </data>
+  <data name="Bilder_pro_Seite_a3b24e9a" xml:space="preserve">
+    <value>Images per page</value>
+  </data>
+  <data name="Rand_mm_9520de10" xml:space="preserve">
+    <value>Margin (mm)</value>
+  </data>
+  <data name="Dateinamen_unter_die_Bilder_setzen_2a827630" xml:space="preserve">
+    <value>Show file names below the images</value>
+  </data>
+  <data name="Es_sind_keine_druckbaren_Bilder_ausgew_hlt_eeaee767" xml:space="preserve">
+    <value>No printable images are selected.</value>
+  </data>
+  <data name="Das_PDF_konnte_nicht_erzeugt_oder_ge_ffnet_werde_fdf1038e" xml:space="preserve">
+    <value>The PDF could not be created or opened.</value>
+  </data>
+  <data name="Lade_Bilder_aus_Immich_820c63dd" xml:space="preserve">
+    <value>Loading images from Immich…</value>
+  </data>
+  <data name="Einige_Bilder_konnten_nicht_geladen_werden_c1dd9f54" xml:space="preserve">
+    <value>Some images could not be loaded.</value>
+  </data>
+  <data name="Druck_wird_vorbereitet_feeb5cda" xml:space="preserve">
+    <value>Preparing print…</value>
+  </data>
+  <data name="Der_Bearbeitungsstand_konnte_nicht_f_r_den_Druck_f53e0267" xml:space="preserve">
+    <value>The current edit state could not be prepared for printing.</value>
+  </data>
+  <data name="Seiten_88b125a9" xml:space="preserve">
+    <value>Pages</value>
+  </data>
+  <data name="Auswahl_drucken_25ae17ac" xml:space="preserve">
+    <value>Print selection</value>
+  </data>
+  <data name="Drucken_aktueller_Bearbeitungsstand_1f1eda1f" xml:space="preserve">
+    <value>Print (current edit state)</value>
+  </data>
+  <data name="Strg_Umschalt_P_11bebc45" xml:space="preserve">
+    <value>Ctrl+Shift+P</value>
+  </data>
+  <data name="Ausrichtung_d02b063d" xml:space="preserve">
+    <value>Orientation</value>
+  </data>
+  <data name="Randlos_drucken_Bild_f_llt_die_Seite_Rand_wird_b_426505b5" xml:space="preserve">
+    <value>Borderless printing (image fills the page, edges are cropped)</value>
+  </data>
+  <data name="Ohne_Seitenrand_Ob_wirklich_bis_an_die_Papierkan_63fb5733" xml:space="preserve">
+    <value>No page margin. Whether printing really reaches the paper edge is up to the printer in the system print dialog.</value>
+  </data>
+  <data name="Anzahl_Abz_ge_5b11783c" xml:space="preserve">
+    <value>Number of prints</value>
+  </data>
+  <data name="Dasselbe_Bild_mehrfach_drucken_f_r_mehrere_Abz_g_f3cc97bc" xml:space="preserve">
+    <value>Print the same image several times - for multiple prints on one page also set "Images per page".</value>
+  </data>
+  <data name="Bildverarbeitung_fehlgeschlagen_7e8b647a" xml:space="preserve">
+    <value>Image processing failed</value>
+  </data>
+  <data name="Das_ausgew_hlte_Wasserzeichen_enth_lt_keinen_Tex_a7ed1bb8" xml:space="preserve">
+    <value>The selected watermark contains neither text nor an image.</value>
+  </data>
+  <data name="Es_ist_kein_gespeichertes_Wasserzeichen_vorhande_ce5b2dd6" xml:space="preserve">
+    <value>There is no saved watermark.</value>
+  </data>
+  <data name="Immich_Export_fehlgeschlagen_7c7125df" xml:space="preserve">
+    <value>Immich export failed</value>
+  </data>
+  <data name="Konvertierung_fehlgeschlagen_fd6bcd7b" xml:space="preserve">
+    <value>Conversion failed</value>
+  </data>
+  <data name="Wasserzeichen_anwenden_fd75c555" xml:space="preserve">
+    <value>Apply watermark</value>
+  </data>
+  <data name="ISO_4f325d99" xml:space="preserve">
+    <value>ISO</value>
+  </data>
 </root>

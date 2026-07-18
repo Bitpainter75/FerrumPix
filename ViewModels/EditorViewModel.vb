@@ -21,6 +21,14 @@ Namespace ViewModels
     Public Class EditorViewModel
         Inherits ViewModelBase
 
+        ''' Die vollste Leiste der App: links Navigation + Dateiname, mittig die vier
+        ''' Modus-Schalter, rechts Speichern/Speichern unter und acht Symbolschalter.
+        Protected Overrides ReadOnly Property ToolbarLabelWidthThreshold As Double
+            Get
+                Return 1500
+            End Get
+        End Property
+
         Private ReadOnly _mainVm As MainWindowViewModel
         ' Identität des bearbeiteten Bildes (Filmstreifen, Metadaten, Bewertung, Navigation, Dateiname). Bei
         ' einem geöffneten .fpx ist das der PROJEKTpfad, während die Pipeline das entpackte Basisbild dekodiert.
@@ -6447,6 +6455,7 @@ Namespace ViewModels
         Public ReadOnly Property BackToGalleryCommand As ICommand
         Public ReadOnly Property PreviousCommand As ICommand
         Public ReadOnly Property NextCommand As ICommand
+        Public ReadOnly Property PrintCommand As ICommand
         Public ReadOnly Property DeleteCurrentCommand As ICommand
 
         Public Sub New(mainVm As MainWindowViewModel)
@@ -6757,11 +6766,60 @@ Namespace ViewModels
                                                      Await NavigateNextAsync()
                                                  End Function)
             DeleteCurrentCommand = ReactiveCommand.Create(Sub() DeleteCurrent())
+            PrintCommand = ReactiveCommand.CreateFromTask(Function() PrintCurrentAsync())
 
             If _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing Then
                 _saveQuality = _mainVm.Settings.JpgSaveQuality
             End If
         End Sub
+
+        ''' <summary>Druckt den AKTUELLEN BEARBEITUNGSSTAND, nicht die Quelldatei: Anpassungen,
+        ''' Objekte und gebackene Striche werden - über exakt dieselbe Export-Route wie
+        ''' „Speichern unter" - in eine Temp-Datei gerendert, die dann in den Druckdialog geht.
+        ''' Der Dialog löscht sie beim Schließen wieder.
+        ''' Identität kommt aus _currentImagePath, die Pixel aus RenderSourcePath (bei .fpx das
+        ''' entpackte Basisbild) - siehe Kommentar an RenderSourcePath.</summary>
+        Private Async Function PrintCurrentAsync() As Task
+            If String.IsNullOrEmpty(_currentImagePath) Then Return
+
+            ' Wie im Speichern-Pfad: laufenden Strich und die Eigenschaften des ausgewählten
+            ' Objekts erst ins Modell übernehmen, sonst fehlen sie im Druck.
+            If _retouchStrokeActive Then CommitRetouchStroke()
+            If HasSelectedAnnotation Then SyncSelectedAnnotation(refreshOverlay:=False)
+            CommitObjectAdjustModeToModel()
+
+            Dim adj = GetCurrentAdjustments()
+            Dim sourcePath = RenderSourcePath
+            Dim tempDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "Print")
+            Dim tempPath = IO.Path.Combine(tempDir,
+                                           IO.Path.GetFileNameWithoutExtension(_currentImagePath) &
+                                           $"_{DateTime.Now:yyyyMMdd_HHmmssfff}.png")
+
+            StatusText = LocalizationService.T("Druck wird vorbereitet…")
+            Dim ok = Await Task.Run(Function() As Boolean
+                                        Try
+                                            IO.Directory.CreateDirectory(tempDir)
+                                        Catch
+                                            Return False
+                                        End Try
+                                        ' PNG als Zwischenformat: verlustfrei, und das Einbetten ins
+                                        ' PDF komprimiert ohnehin erst PrintService.
+                                        ' preserveMetadata:=False - eine Temp-Datei braucht kein EXIF.
+                                        Return ImageProcessor.SaveImage(sourcePath, tempPath, adj, 100,
+                                                                        preserveMetadata:=False,
+                                                                        workingFull:=_workingImage.CloneFull())
+                                    End Function)
+            StatusText = ""
+
+            If Not ok OrElse Not IO.File.Exists(tempPath) Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Drucken fehlgeschlagen"),
+                                               LocalizationService.T("Der Bearbeitungsstand konnte nicht für den Druck aufbereitet werden."))
+                Return
+            End If
+
+            _mainVm?.ShowPrintDialog(New List(Of String) From {tempPath},
+                                     tempFile:=tempPath)
+        End Function
 
         Private Sub DeleteCurrent()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
@@ -8739,7 +8797,8 @@ Namespace ViewModels
                 End If
                 isFpxSave = FpxService.Enabled AndAlso saveAsResult.IsFpx
                 ' Ein .fpx-Projekt geht immer lokal (Immich speichert Bilder, keine Projektdateien).
-                saveToImmich = String.Equals(saveAsResult.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured AndAlso Not isFpxSave
+                ' Ein PDF ebenso - Immich führt Bild-Assets, keine Dokumente.
+                saveToImmich = String.Equals(saveAsResult.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured AndAlso Not isFpxSave AndAlso Not saveAsResult.IsPdf
                 If saveToImmich Then
                     ' Für den Immich-Upload zunächst in eine Temp-Datei rendern (nicht in den Bilder-Ordner).
                     Dim uploadTempDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichUpload")
@@ -8893,7 +8952,11 @@ Namespace ViewModels
                     If _mainVm?.Viewer IsNot Nothing AndAlso String.Equals(_mainVm.Viewer.CurrentImagePath, targetPath, StringComparison.OrdinalIgnoreCase) Then
                         _mainVm.Viewer.ReloadCurrentImageFromDisk()
                     End If
-                    If saveAs AndAlso Not String.Equals(targetPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
+                    ' Ein PDF ist ein AUSGABEformat, keine Arbeitsdatei: der Editor kann es nicht
+                    ' dekodieren, der Wechsel endete in einem leeren Editor (Nutzer-Befund 2026-07-18).
+                    ' Deshalb bleibt nach „Speichern unter → PDF" das aktuelle Bild geöffnet.
+                    Dim savedAsPdf = saveAsResult IsNot Nothing AndAlso saveAsResult.IsPdf
+                    If saveAs AndAlso Not savedAsPdf AndAlso Not String.Equals(targetPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
                         ' Nutzerwunsch 2026-07-17: nach „Speichern unter" arbeitet der Editor auf der
                         ' GESPEICHERTEN Datei weiter (.fpx bzw. exportiertes Bild), nicht mehr auf dem
                         ' Ursprungsbild. _hasChanges ist False, der Wechsel fragt also nicht nach.

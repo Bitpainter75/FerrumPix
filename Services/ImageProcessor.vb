@@ -1274,12 +1274,13 @@ Namespace Services
         ''' SkiaSharp hat SKFilterQuality zugunsten von SKSamplingOptions abgekündigt. Diese Werte sind
         ''' exakt die, auf die SkiaSharp die alten Stufen intern abbildet (siehe SkiaExtensions.ToSamplingOptions):
         ''' High = kubisch (Mitchell), Medium = linear mit Mipmaps.
-        Private Shared ReadOnly SamplingHigh As New SKSamplingOptions(SKCubicResampler.Mitchell)
+        ''' Friend: auch PrintService skaliert Bilder auf die Druckseite und braucht dieselbe Abtastung.
+        Friend Shared ReadOnly SamplingHigh As New SKSamplingOptions(SKCubicResampler.Mitchell)
 
         ''' Zeichnet eine Bitmap mit ausdrücklicher Abtastung. SKCanvas.DrawBitmap kennt keine
         ''' SKSamplingOptions-Überladung, DrawImage schon - ohne sie fiele die Skalierung auf
         ''' Nearest zurück, weil SKSamplingOptions.Default nicht filtert.
-        Private Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, source As SKRect, dest As SKRect,
+        Friend Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, source As SKRect, dest As SKRect,
                                              sampling As SKSamplingOptions, paint As SKPaint)
             Using image = SKImage.FromBitmap(bitmap)
                 canvas.DrawImage(image, source, dest, sampling, paint)
@@ -1326,7 +1327,18 @@ Namespace Services
             Return File.OpenRead(path)
         End Function
 
-        Private Shared Function DecodeOriented(path As String) As SKBitmap
+        ''' <summary>Der Weg zum fertigen Bild für Ausgabewege (Drucken, PDF): wie DecodeOriented,
+        ''' aber .fpx-Projekte werden aus Basisbild + Rezept gerendert statt als ZIP an den Codec
+        ''' gereicht - dort kam bisher Nothing zurück, was in einer leeren Seite endete. Der Aufrufer
+        ''' übernimmt das SKBitmap.</summary>
+        Friend Shared Function DecodeForOutput(path As String) As SKBitmap
+            If FpxService.IsFpx(path) Then Return RenderFpxFullResolution(path)
+            Return DecodeOriented(path)
+        End Function
+
+        ''' <summary>Friend statt Private, damit PrintService dieselbe Dekodier-Route benutzt -
+        ''' sie ist die einzige, die RAW/ICO/WebP und die EXIF-Orientierung korrekt behandelt.</summary>
+        Friend Shared Function DecodeOriented(path As String) As SKBitmap
             ' SKCodec.Create(Stream) übernimmt den Stream, und manche Codecs (insbesondere WebP) schließen
             ' ihn dabei sofort. Ein späteres stream.Seek für den Fallback-Decode wirft dann
             ' ObjectDisposedException - WebP-Quellen ließen sich deshalb weder öffnen noch konvertieren.
@@ -6489,32 +6501,42 @@ Namespace Services
                     If original Is Nothing Then Return False
 
                     Dim ext = IO.Path.GetExtension(targetPath).ToLowerInvariant()
+                    Dim isPdf = ext = ".pdf"
                     Dim format = If(ext = ".png", SKEncodedImageFormat.Png,
                                  If(ext = ".webp", SKEncodedImageFormat.Webp,
                                     SKEncodedImageFormat.Jpeg))
 
                     Using processed = ProcessBitmap(original, adj)
-                        ' JPEG kennt kein Alpha: transparente Bereiche (Radierer-Löcher,
+                        ' JPEG und PDF kennen kein Alpha: transparente Bereiche (Radierer-Löcher,
                         ' ausgeblendeter Hintergrund) liefen beim Encode auf SCHWARZ
                         ' (Nutzer-Befund 2026-07-17). Auf WEISS flatten - wie Photoshop.
                         Dim toEncode = processed
-                        If format = SKEncodedImageFormat.Jpeg Then
+                        If isPdf OrElse format = SKEncodedImageFormat.Jpeg Then
                             toEncode = FlattenAlphaToWhite(processed)
                         End If
                         Try
-                            Using image = SKImage.FromBitmap(toEncode)
-                                Using data = image.Encode(format, quality)
-                                    Using fs = File.Open(targetPath, FileMode.Create, FileAccess.Write)
-                                        data.SaveTo(fs)
+                            If isPdf Then
+                                ' Druckfertiges einseitiges PDF mit dem zuletzt im Druckdialog
+                                ' gewählten Seitenlayout - so sehen Drucken und PDF-Export gleich aus.
+                                If Not PrintService.WriteSinglePagePdf(toEncode, targetPath,
+                                                                      AppSettingsService.Load().ToPrintOptions()) Then Return False
+                            Else
+                                Using image = SKImage.FromBitmap(toEncode)
+                                    Using data = image.Encode(format, quality)
+                                        Using fs = File.Open(targetPath, FileMode.Create, FileAccess.Write)
+                                            data.SaveTo(fs)
+                                        End Using
                                     End Using
                                 End Using
-                            End Using
+                            End If
                         Finally
                             If Not Object.ReferenceEquals(toEncode, processed) Then toEncode.Dispose()
                         End Try
                     End Using
                     ' Metadaten nur von echten Bildquellen kopieren (ein .fpx-Bündel trägt keine).
-                    If preserveMetadata AndAlso Not isFpxSource Then TryCopyMetadata(sourcePath, targetPath)
+                    ' In ein PDF lässt sich kein EXIF-Block kopieren - der Versuch würde die Datei
+                    ' beschädigen.
+                    If preserveMetadata AndAlso Not isFpxSource AndAlso Not isPdf Then TryCopyMetadata(sourcePath, targetPath)
                     Return True
                 End Using
             Catch ex As Exception

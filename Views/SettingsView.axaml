@@ -1149,6 +1149,10 @@
                                 <TextBlock Grid.Column="1" Text="Konvertieren nach" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Grid.Column="1" Text="Auswahl drucken" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
                                 <TextBlock Grid.Column="1" Text="Löschen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
@@ -1201,6 +1205,10 @@
                                 <TextBlock Grid.Column="1" Text="Im Editor öffnen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Grid.Column="1" Text="Drucken" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
                                 <TextBlock Grid.Column="1" Text="Löschen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
@@ -1241,8 +1249,12 @@
                                 <TextBlock Grid.Column="1" Text="Objekt duplizieren; ohne Objekt: Auswahl aufheben" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+Umschalt+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
                                 <TextBlock Grid.Column="1" Text="Vorschau anwenden" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Grid.Column="1" Text="Drucken (aktueller Bearbeitungsstand)" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Strg+R / Strg+T / Strg+B / Strg+G" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>

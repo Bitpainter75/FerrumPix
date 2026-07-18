@@ -17,6 +17,14 @@ Namespace ViewModels
     Public Class GalleryViewModel
         Inherits ViewModelBase
 
+        ''' Betrifft den Brotkrümelpfad, der mit langen Ordnernamen als Erstes in die
+        ''' Suchleiste läuft.
+        Protected Overrides ReadOnly Property ToolbarLabelWidthThreshold As Double
+            Get
+                Return 1050
+            End Get
+        End Property
+
         Private ReadOnly _mainVm As MainWindowViewModel
         Private _currentFolder As String = Nothing
         Private _selectedItem As ImageItem
@@ -988,6 +996,7 @@ Namespace ViewModels
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
         Public ReadOnly Property ResizeSelectedCommand As ICommand
         Public ReadOnly Property ApplyWatermarkSelectedCommand As ICommand
+        Public ReadOnly Property PrintSelectedCommand As ICommand
         Public ReadOnly Property BatchConvertSelectedCommand As ICommand
         Public ReadOnly Property ApplyFilterSelectedCommand As ICommand
         Public ReadOnly Property RemoveMetadataSelectedCommand As ICommand
@@ -1201,6 +1210,7 @@ Namespace ViewModels
             ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
             ApplyWatermarkSelectedCommand = ReactiveCommand.Create(Sub() ApplyWatermarkSelected())
             BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() BatchConvertSelected())
+            PrintSelectedCommand = ReactiveCommand.CreateFromTask(Function() PrintSelectedAsync())
             ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() ApplyFilterSelected())
             RemoveMetadataSelectedCommand = ReactiveCommand.Create(Sub() RemoveMetadataSelected())
             IncreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize += 24)
@@ -4079,7 +4089,7 @@ Namespace ViewModels
                 errorMessage = ex.Message
             End Try
 
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Stapel-Umbenennen fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Stapel-Umbenennen fehlgeschlagen"), errorMessage)
         End Sub
 
         Public Async Sub CreateFolderIn(folderPath As String)
@@ -4107,7 +4117,7 @@ Namespace ViewModels
                 errorMessage = ex.Message
             End Try
 
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Ordner erstellen fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Ordner erstellen fehlgeschlagen"), errorMessage)
         End Sub
 
         Public Function GetSelectedPaths() As List(Of String)
@@ -4120,6 +4130,62 @@ Namespace ViewModels
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
                 Distinct(StringComparer.OrdinalIgnoreCase).
                 ToList()
+        End Function
+
+        ''' <summary>Öffnet den Druckdialog für die Auswahl. Immich-Assets tragen in FilePath nur
+        ''' einen Pseudopfad - für sie muss erst das Original lokal vorliegen, sonst fände der
+        ''' PDF-Renderer keine Datei. Videos scheiden aus (nichts zu drucken).</summary>
+        Private Async Function PrintSelectedAsync() As Task
+            Dim items = If(SelectedItems Is Nothing OrElse SelectedItems.Count = 0,
+                           If(SelectedItem Is Nothing, Enumerable.Empty(Of ImageItem)(), {SelectedItem}),
+                           SelectedItems.AsEnumerable()).
+                Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsVideoFile).
+                ToList()
+
+            If items.Count = 0 Then
+                StatusText = LocalizationService.T("Es sind keine druckbaren Bilder ausgewählt.")
+                Return
+            End If
+
+            Dim paths = New List(Of String)()
+            Dim skipped = 0
+            Try
+                For Each item In items
+                    If item.IsImmichAsset Then
+                        ' Bereits heruntergeladene Kopie wiederverwenden, sonst laden.
+                        Dim localPath = item.ImmichLocalPath
+                        If String.IsNullOrEmpty(localPath) OrElse Not File.Exists(localPath) Then
+                            If items.Count > 1 Then
+                                StatusText = LocalizationService.T("Lade Bilder aus Immich…")
+                            Else
+                                StatusText = LocalizationService.T("Lade Bild aus Immich…")
+                            End If
+                            IsLoading = True
+                            localPath = Await ImmichService.DownloadOriginalToTempAsync(item.ImmichAssetId, item.ImmichOriginalFileName)
+                            If Not String.IsNullOrEmpty(localPath) Then item.ImmichLocalPath = localPath
+                        End If
+                        If Not String.IsNullOrEmpty(localPath) AndAlso File.Exists(localPath) Then
+                            paths.Add(localPath)
+                        Else
+                            skipped += 1
+                        End If
+                    ElseIf File.Exists(item.FilePath) Then
+                        paths.Add(item.FilePath)
+                    Else
+                        skipped += 1
+                    End If
+                Next
+            Finally
+                IsLoading = False
+            End Try
+
+            If paths.Count = 0 Then
+                StatusText = LocalizationService.T("Es sind keine druckbaren Bilder ausgewählt.")
+                Return
+            End If
+
+            StatusText = If(skipped > 0, LocalizationService.T("Einige Bilder konnten nicht geladen werden."), "")
+            _mainVm?.ShowPrintDialog(paths)
         End Function
 
         Public Sub OpenCollageDialog()
@@ -4342,7 +4408,7 @@ Namespace ViewModels
             Catch ex As Exception
                 errorMessage = ex.Message
             End Try
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Einfügen fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Einfügen fehlgeschlagen"), errorMessage)
         End Function
 
         ''' <summary>Lädt Immich-Originale (Pseudo-Pfade) in einen lokalen Zielordner herunter - der
@@ -4402,7 +4468,7 @@ Namespace ViewModels
             Catch ex As Exception
                 errorMessage = ex.Message
             End Try
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Duplizieren fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Duplizieren fehlgeschlagen"), errorMessage)
         End Function
 
         Private Shared ReadOnly BatchConvertExcludedExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".svg"}
@@ -4478,7 +4544,7 @@ Namespace ViewModels
 
             Dim targetFolder = If(resize.TargetFolder, "").Trim()
             If String.IsNullOrWhiteSpace(targetFolder) Then
-                Await _mainVm.ShowMessageAsync("Bildgröße ändern", "Kein Zielordner angegeben.")
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Bildgröße ändern"), LocalizationService.T("Kein Zielordner angegeben."))
                 Return
             End If
             Dim createFolderError As String = Nothing
@@ -4488,7 +4554,7 @@ Namespace ViewModels
                 createFolderError = ex.Message
             End Try
             If createFolderError IsNot Nothing Then
-                Await _mainVm.ShowMessageAsync("Bildgröße ändern", createFolderError)
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Bildgröße ändern"), createFolderError)
                 Return
             End If
 
@@ -4519,7 +4585,7 @@ Namespace ViewModels
 
             Dim adjustmentsTemplate = BuildBatchFilterAdjustments(result)
             If adjustmentsTemplate Is Nothing Then
-                Await _mainVm.ShowMessageAsync("Filter anwenden", "Die gewählte Vorgabe konnte nicht gelesen werden.")
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Filter anwenden"), LocalizationService.T("Die gewählte Vorgabe konnte nicht gelesen werden."))
                 Return
             End If
 
@@ -4564,7 +4630,7 @@ Namespace ViewModels
 
             Dim targetFolder = If(result.TargetFolder, "").Trim()
             If String.IsNullOrWhiteSpace(targetFolder) Then
-                Await _mainVm.ShowMessageAsync("Filter anwenden", "Kein Zielordner angegeben.")
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Filter anwenden"), LocalizationService.T("Kein Zielordner angegeben."))
                 Return
             End If
             Dim createFolderError As String = Nothing
@@ -4574,7 +4640,7 @@ Namespace ViewModels
                 createFolderError = ex.Message
             End Try
             If createFolderError IsNot Nothing Then
-                Await _mainVm.ShowMessageAsync("Filter anwenden", createFolderError)
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Filter anwenden"), createFolderError)
                 Return
             End If
 
@@ -4635,7 +4701,7 @@ Namespace ViewModels
 
             Dim annotation = CreateWatermarkAnnotation(result.Preset)
             If annotation Is Nothing Then
-                Await _mainVm.ShowMessageAsync("Wasserzeichen anwenden", "Das ausgewählte Wasserzeichen enthält keinen Text und kein Bild.")
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Wasserzeichen anwenden"), LocalizationService.T("Das ausgewählte Wasserzeichen enthält keinen Text und kein Bild."))
                 Return
             End If
 
@@ -4678,7 +4744,7 @@ Namespace ViewModels
 
             Dim targetFolder = If(result.TargetFolder, "").Trim()
             If String.IsNullOrWhiteSpace(targetFolder) Then
-                Await _mainVm.ShowMessageAsync("Wasserzeichen anwenden", "Kein Zielordner angegeben.")
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Wasserzeichen anwenden"), LocalizationService.T("Kein Zielordner angegeben."))
                 Return
             End If
             Dim createFolderError As String = Nothing
@@ -4688,7 +4754,7 @@ Namespace ViewModels
                 createFolderError = ex.Message
             End Try
             If createFolderError IsNot Nothing Then
-                Await _mainVm.ShowMessageAsync("Wasserzeichen anwenden", createFolderError)
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Wasserzeichen anwenden"), createFolderError)
                 Return
             End If
 
@@ -4769,7 +4835,7 @@ Namespace ViewModels
             Catch ex As Exception
                 errorMessage = ex.Message
             End Try
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Bildverarbeitung fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Bildverarbeitung fehlgeschlagen"), errorMessage)
             Return changedCount
         End Function
 
@@ -4881,7 +4947,7 @@ Namespace ViewModels
                 errorMessage = ex.Message
             End Try
 
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Immich-Upload fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Immich-Upload fehlgeschlagen"), errorMessage)
             Return uploadedCount
         End Function
 
@@ -4907,7 +4973,7 @@ Namespace ViewModels
                 errorMessage = ex.Message
             End Try
 
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Immich-Export fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Immich-Export fehlgeschlagen"), errorMessage)
             Return savedCount
         End Function
 
@@ -4951,7 +5017,7 @@ Namespace ViewModels
                 errorMessage = ex.Message
             End Try
 
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Konvertierung fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Konvertierung fehlgeschlagen"), errorMessage)
             Return savedCount
         End Function
 
@@ -4994,7 +5060,7 @@ Namespace ViewModels
                 errorMessage = ex.Message
             End Try
 
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Immich-Upload fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Immich-Upload fehlgeschlagen"), errorMessage)
             Return uploadedCount
         End Function
 
@@ -5082,7 +5148,7 @@ Namespace ViewModels
             Else
                 Dim targetFolder = If(result.TargetFolder, "").Trim()
                 If String.IsNullOrWhiteSpace(targetFolder) Then
-                    Await _mainVm.ShowMessageAsync("Konvertierung fehlgeschlagen", "Kein Zielordner angegeben.")
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Konvertierung fehlgeschlagen"), LocalizationService.T("Kein Zielordner angegeben."))
                     Return
                 End If
                 Dim createFolderError As String = Nothing
@@ -5092,7 +5158,7 @@ Namespace ViewModels
                     createFolderError = ex.Message
                 End Try
                 If createFolderError IsNot Nothing Then
-                    Await _mainVm.ShowMessageAsync("Konvertierung fehlgeschlagen", createFolderError)
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Konvertierung fehlgeschlagen"), createFolderError)
                     Return
                 End If
 
@@ -5151,7 +5217,7 @@ Namespace ViewModels
             Catch ex As Exception
                 errorMessage = ex.Message
             End Try
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync("Verschieben fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Verschieben fehlgeschlagen"), errorMessage)
         End Function
 
         Public Sub ClearSelection()
@@ -5275,7 +5341,7 @@ Namespace ViewModels
                         Dim newName = If(result.NewName, "").Trim()
                         If String.IsNullOrWhiteSpace(newName) Then Return Nothing
                         If HasInvalidFileNameChars(newName) Then
-                            Await _mainVm.ShowMessageAsync("Umbenennen fehlgeschlagen", "Der Name enthält ungültige Zeichen.")
+                            Await _mainVm.ShowMessageAsync(LocalizationService.T("Umbenennen fehlgeschlagen"), LocalizationService.T("Der Name enthält ungültige Zeichen."))
                             Continue Do
                         End If
 
@@ -5283,7 +5349,7 @@ Namespace ViewModels
                         If String.IsNullOrEmpty(targetFolder) Then Return Nothing
                         Dim renamedTarget = IO.Path.Combine(targetFolder, newName)
                         If File.Exists(renamedTarget) OrElse Directory.Exists(renamedTarget) Then
-                            Await _mainVm.ShowMessageAsync("Umbenennen fehlgeschlagen", "Ein Element mit diesem Namen existiert bereits.")
+                            Await _mainVm.ShowMessageAsync(LocalizationService.T("Umbenennen fehlgeschlagen"), LocalizationService.T("Ein Element mit diesem Namen existiert bereits."))
                             Continue Do
                         End If
 

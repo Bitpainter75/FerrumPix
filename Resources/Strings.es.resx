@@ -3362,4 +3362,112 @@
   <data name="zu_einem_anderen_Bild_wechselst_6e24027e" xml:space="preserve">
     <value>cambiar a otra imagen</value>
   </data>
+  <data name="Drucken_72be3404" xml:space="preserve">
+    <value>Imprimir</value>
+  </data>
+  <data name="Drucken_1c14ea4d" xml:space="preserve">
+    <value>Imprimir...</value>
+  </data>
+  <data name="Drucken_Strg_P_73b2de57" xml:space="preserve">
+    <value>Imprimir (Ctrl+P)</value>
+  </data>
+  <data name="Drucken_fehlgeschlagen_6bac9264" xml:space="preserve">
+    <value>Error al imprimir</value>
+  </data>
+  <data name="Die_Auswahl_wird_als_PDF_aufbereitet_und_im_Stan_fac8442a" xml:space="preserve">
+    <value>La selección se prepara como PDF y se abre en la aplicación predeterminada; allí aparece el cuadro de diálogo de impresión habitual del sistema.</value>
+  </data>
+  <data name="Seitengr_e_3b3f2e86" xml:space="preserve">
+    <value>Tamaño de página</value>
+  </data>
+  <data name="Hochformat_82437297" xml:space="preserve">
+    <value>Vertical</value>
+  </data>
+  <data name="Querformat_7f75cf96" xml:space="preserve">
+    <value>Horizontal</value>
+  </data>
+  <data name="Skalierung_9312adff" xml:space="preserve">
+    <value>Escala</value>
+  </data>
+  <data name="Das_ganze_Bild_passt_auf_die_Seite_Seitenverh_lt_876369b7" xml:space="preserve">
+    <value>La imagen completa cabe en la página, se conserva la relación de aspecto</value>
+  </data>
+  <data name="Das_Bild_f_llt_die_Fl_che_vollst_ndig_aus_und_wi_e71e9f7c" xml:space="preserve">
+    <value>La imagen llena el área por completo y se recorta</value>
+  </data>
+  <data name="Bilder_pro_Seite_a3b24e9a" xml:space="preserve">
+    <value>Imágenes por página</value>
+  </data>
+  <data name="Rand_mm_9520de10" xml:space="preserve">
+    <value>Margen (mm)</value>
+  </data>
+  <data name="Dateinamen_unter_die_Bilder_setzen_2a827630" xml:space="preserve">
+    <value>Mostrar los nombres de archivo debajo de las imágenes</value>
+  </data>
+  <data name="Es_sind_keine_druckbaren_Bilder_ausgew_hlt_eeaee767" xml:space="preserve">
+    <value>No hay imágenes imprimibles seleccionadas.</value>
+  </data>
+  <data name="Das_PDF_konnte_nicht_erzeugt_oder_ge_ffnet_werde_fdf1038e" xml:space="preserve">
+    <value>No se pudo crear o abrir el PDF.</value>
+  </data>
+  <data name="Lade_Bilder_aus_Immich_820c63dd" xml:space="preserve">
+    <value>Cargando imágenes de Immich…</value>
+  </data>
+  <data name="Einige_Bilder_konnten_nicht_geladen_werden_c1dd9f54" xml:space="preserve">
+    <value>No se pudieron cargar algunas imágenes.</value>
+  </data>
+  <data name="Druck_wird_vorbereitet_feeb5cda" xml:space="preserve">
+    <value>Preparando la impresión…</value>
+  </data>
+  <data name="Der_Bearbeitungsstand_konnte_nicht_f_r_den_Druck_f53e0267" xml:space="preserve">
+    <value>No se pudo preparar el estado de edición actual para imprimir.</value>
+  </data>
+  <data name="Seiten_88b125a9" xml:space="preserve">
+    <value>Páginas</value>
+  </data>
+  <data name="Auswahl_drucken_25ae17ac" xml:space="preserve">
+    <value>Imprimir selección</value>
+  </data>
+  <data name="Drucken_aktueller_Bearbeitungsstand_1f1eda1f" xml:space="preserve">
+    <value>Imprimir (estado de edición actual)</value>
+  </data>
+  <data name="Strg_Umschalt_P_11bebc45" xml:space="preserve">
+    <value>Ctrl+Shift+P</value>
+  </data>
+  <data name="Ausrichtung_d02b063d" xml:space="preserve">
+    <value>Orientación</value>
+  </data>
+  <data name="Randlos_drucken_Bild_f_llt_die_Seite_Rand_wird_b_426505b5" xml:space="preserve">
+    <value>Impresión sin bordes (la imagen llena la página, los bordes se recortan)</value>
+  </data>
+  <data name="Ohne_Seitenrand_Ob_wirklich_bis_an_die_Papierkan_63fb5733" xml:space="preserve">
+    <value>Sin margen de página. Si la impresión llega realmente al borde del papel lo decide la impresora en el diálogo de impresión del sistema.</value>
+  </data>
+  <data name="Anzahl_Abz_ge_5b11783c" xml:space="preserve">
+    <value>Número de copias</value>
+  </data>
+  <data name="Dasselbe_Bild_mehrfach_drucken_f_r_mehrere_Abz_g_f3cc97bc" xml:space="preserve">
+    <value>Imprimir la misma imagen varias veces: para varias copias en una página, ajusta además «Imágenes por página».</value>
+  </data>
+  <data name="Bildverarbeitung_fehlgeschlagen_7e8b647a" xml:space="preserve">
+    <value>Error al procesar la imagen</value>
+  </data>
+  <data name="Das_ausgew_hlte_Wasserzeichen_enth_lt_keinen_Tex_a7ed1bb8" xml:space="preserve">
+    <value>La marca de agua seleccionada no contiene ni texto ni imagen.</value>
+  </data>
+  <data name="Es_ist_kein_gespeichertes_Wasserzeichen_vorhande_ce5b2dd6" xml:space="preserve">
+    <value>No hay ninguna marca de agua guardada.</value>
+  </data>
+  <data name="Immich_Export_fehlgeschlagen_7c7125df" xml:space="preserve">
+    <value>Error en la exportación a Immich</value>
+  </data>
+  <data name="Konvertierung_fehlgeschlagen_fd6bcd7b" xml:space="preserve">
+    <value>Error de conversión</value>
+  </data>
+  <data name="Wasserzeichen_anwenden_fd75c555" xml:space="preserve">
+    <value>Aplicar marca de agua</value>
+  </data>
+  <data name="ISO_4f325d99" xml:space="preserve">
+    <value>ISO</value>
+  </data>
 </root>

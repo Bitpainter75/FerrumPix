@@ -46,6 +46,12 @@
 
             <views:DialogOverlayView x:Name="DialogOverlay" ZIndex="500"/>
 
+            <!-- Der Druckdialog liegt hier und nicht in einer der Modus-Views, weil er aus
+                 Galerie, Betrachter und Editor gleichermaßen geöffnet wird. UNTER dem
+                 Standard-Dialog-Overlay (500), damit Meldungen wie "Drucken fehlgeschlagen"
+                 immer davor liegen statt dahinter zu verschwinden. -->
+            <views:PrintDialogOverlayView x:Name="PrintDialogOverlay" ZIndex="499"/>
+
             <StackPanel Orientation="Horizontal"
                         Spacing="7"
                         HorizontalAlignment="Right"

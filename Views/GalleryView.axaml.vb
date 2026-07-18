@@ -1333,6 +1333,17 @@ Namespace Views
             vm?.RemoveMetadataSelectedCommand.Execute(Nothing)
         End Sub
 
+        Public Sub OnContextPrint(sender As Object, e As RoutedEventArgs)
+            Dim item = GetItemFromSender(sender)
+            Dim vm = GetVm()
+            If item IsNot Nothing AndAlso vm IsNot Nothing AndAlso
+               (vm.SelectedItems Is Nothing OrElse Not vm.SelectedItems.Contains(item)) Then
+                vm.SelectOnly(item)
+                _selectionAnchor = item
+            End If
+            vm?.PrintSelectedCommand.Execute(Nothing)
+        End Sub
+
         Public Sub OnContextCreateCollage(sender As Object, e As RoutedEventArgs)
             Dim item = GetItemFromSender(sender)
             Dim vm = GetVm()
@@ -1443,6 +1454,7 @@ Namespace Views
             SetMenuItemVisible(menu, "ListContextBatchConvertMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextCreateCollageMenuItem", showCollage)
+            SetMenuItemVisible(menu, "ListContextPrintMenuItem", showImageBatchActions)
             SetMenuControlVisible(menu, "ListContextPathSeparator", showSingleItemActions)
             SetMenuItemVisible(menu, "ListContextCopyPathMenuItem", showSingleItemActions)
             SetMenuItemVisible(menu, "ListContextRevealMenuItem", showSingleItemActions)
@@ -1462,6 +1474,7 @@ Namespace Views
             SetMenuItemVisible(menu, "MenuContextBatchConvertMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "MenuContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "MenuContextCreateCollageMenuItem", showCollage)
+            SetMenuItemVisible(menu, "MenuContextPrintMenuItem", showImageBatchActions)
             SetMenuControlVisible(menu, "MenuContextPathSeparator", showSingleItemActions)
             SetMenuItemVisible(menu, "MenuContextCopyPathMenuItem", showSingleItemActions)
             SetMenuItemVisible(menu, "MenuContextRevealMenuItem", showSingleItemActions)

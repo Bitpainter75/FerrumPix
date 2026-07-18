@@ -1,6 +1,7 @@
 Imports System.Windows.Input
 Imports System.Linq
 Imports System.IO
+Imports System.Threading
 Imports System.Threading.Tasks
 Imports System.Collections.Generic
 Imports System.Collections.ObjectModel
@@ -65,6 +66,23 @@ Namespace ViewModels
         Public Property Viewer As ViewerViewModel
         Public Property Editor As EditorViewModel
         Public Property Settings As SettingsViewModel
+
+        ''' <summary>Meldet die Fensterbreite an alle Leisten. Wird von MainWindow bei jeder
+        ''' Größenänderung gerufen; meldet nur, wenn sich an mindestens einer Schwelle etwas
+        ''' ändert - sonst liefe bei jedem Pixel Ziehen eine Runde Bindungsaktualisierungen.</summary>
+        Public Sub UpdateWindowWidth(width As Double)
+            If Double.IsNaN(width) OrElse Double.IsInfinity(width) Then Return
+
+            Dim targets = {CType(Me, ViewModelBase), Gallery, Viewer, Editor, Settings}
+            Dim before = targets.Select(Function(vm) vm IsNot Nothing AndAlso vm.AreToolbarLabelsVisible).ToArray()
+            ViewModelBase.SetWindowWidth(width)
+
+            For index = 0 To targets.Length - 1
+                Dim target = targets(index)
+                If target Is Nothing Then Continue For
+                If target.AreToolbarLabelsVisible <> before(index) Then target.RaiseToolbarLabelsChanged()
+            Next
+        End Sub
 
         Public ReadOnly Property DialogFormatOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {
             "JPG",
@@ -516,8 +534,11 @@ Namespace ViewModels
         Public ReadOnly Property IsSaveAsImmichAvailable As Boolean
             Get
                 ' FPX ist ein lokales, nicht-destruktives Projektformat - ein Upload nach Immich (das Bilder
-                ' als Assets führt) ergibt keinen Sinn, daher als Ziel ausschließen.
-                Return ImmichService.IsConfigured AndAlso Not String.Equals(_dialogSelectedFormat, "FPX", StringComparison.OrdinalIgnoreCase)
+                ' als Assets führt) ergibt keinen Sinn, daher als Ziel ausschließen. PDF genauso:
+                ' Immich verwaltet Bild-Assets, keine Dokumente.
+                Return ImmichService.IsConfigured AndAlso
+                       Not String.Equals(_dialogSelectedFormat, "FPX", StringComparison.OrdinalIgnoreCase) AndAlso
+                       Not String.Equals(_dialogSelectedFormat, "PDF", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
@@ -1525,17 +1546,22 @@ Namespace ViewModels
             _dialogBatchResizeHeightText = height.ToString(CultureInfo.InvariantCulture)
         End Sub
 
+        ' Die Knopfbeschriftungen sind Optional-Vorgaben und müssen deshalb Konstanten bleiben
+        ' (VB verlangt konstante Ausdrücke) - übersetzt wird daher IM RUMPF, nicht in der Signatur.
+        ' Genau daran lag es, dass „OK"/„Abbrechen" in jeder Sprache deutsch blieben.
         Public Async Function ShowMessageAsync(titleText As String, messageText As String, Optional confirmText As String = "OK") As Task
-            Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "", confirmText, "")
+            Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "", LocalizationService.T(confirmText), "")
         End Function
 
         Public Async Function ShowConfirmAsync(titleText As String, messageText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of Boolean)
-            Dim result = Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "", confirmText, cancelText)
+            Dim result = Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "",
+                                               LocalizationService.T(confirmText), LocalizationService.T(cancelText))
             Return result IsNot Nothing
         End Function
 
         Public Function ShowInputAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of String)
-            Return ShowDialogAsync(kind, titleText, messageText, initialText, confirmText, cancelText)
+            Return ShowDialogAsync(kind, titleText, messageText, initialText,
+                                   LocalizationService.T(confirmText), LocalizationService.T(cancelText))
         End Function
 
         ''' <param name="currentFolder">Der Ordner, in dem die Galerie gerade steht - Vorgabe für den
@@ -1636,7 +1662,7 @@ Namespace ViewModels
             Next
 
             If _dialogWatermarkPresets.Count = 0 Then
-                Await ShowMessageAsync("Wasserzeichen anwenden", "Es ist kein gespeichertes Wasserzeichen vorhanden.")
+                Await ShowMessageAsync(LocalizationService.T("Wasserzeichen anwenden"), LocalizationService.T("Es ist kein gespeichertes Wasserzeichen vorhanden."))
                 Return Nothing
             End If
 
@@ -1736,7 +1762,7 @@ Namespace ViewModels
             Dim textQuery = DialogSearchText.Trim()
             Dim rootFolder = DialogSearchRootFolder.Trim()
             If Not String.IsNullOrWhiteSpace(rootFolder) AndAlso Not Directory.Exists(rootFolder) Then
-                Await ShowMessageAsync("Suche fehlgeschlagen", "Bitte wähle einen gültigen Startordner.")
+                Await ShowMessageAsync(LocalizationService.T("Suche fehlgeschlagen"), LocalizationService.T("Bitte wähle einen gültigen Startordner."))
                 Return Nothing
             End If
             If String.IsNullOrWhiteSpace(name) Then
@@ -1800,7 +1826,7 @@ Namespace ViewModels
             AppSettingsService.SaveLastBatchRenameSettings(DialogBatchRenamePattern, DialogBatchRenameStart, DialogBatchRenameStep)
             RebuildBatchRenamePreview()
             If DialogBatchRenamePreview.Any(Function(i) i.HasProblem) Then
-                Await ShowMessageAsync("Stapel-Umbenennen fehlgeschlagen", "Bitte behebe Namenskonflikte oder ungültige Namen in der Vorschau.")
+                Await ShowMessageAsync(LocalizationService.T("Stapel-Umbenennen fehlgeschlagen"), LocalizationService.T("Bitte behebe Namenskonflikte oder ungültige Namen in der Vorschau."))
                 Return Nothing
             End If
 
@@ -2170,6 +2196,8 @@ Namespace ViewModels
                     Return "WEBP"
                 Case "FPX"
                     Return If(FpxService.Enabled, "FPX", "JPG")
+                Case "PDF"
+                    Return "PDF"
                 Case Else
                     Return "JPG"
             End Select
@@ -2182,6 +2210,9 @@ Namespace ViewModels
             DialogFormatOptions.Add("JPG")
             DialogFormatOptions.Add("PNG")
             DialogFormatOptions.Add("WEBP")
+            ' PDF in BEIDEN Dialogen: einzeln als druckfertige Datei speichern und stapelweise
+            ' konvertieren (dort entsteht wie bei allen Formaten eine Zieldatei je Bild).
+            DialogFormatOptions.Add("PDF")
             If includeFpx AndAlso FpxService.Enabled Then DialogFormatOptions.Add("FPX")
         End Sub
 
@@ -2299,7 +2330,7 @@ Namespace ViewModels
             Catch ex As Exception
                 errorMessage = ex.Message
             End Try
-            If errorMessage IsNot Nothing Then Await ShowMessageAsync("Umbenennen fehlgeschlagen", errorMessage)
+            If errorMessage IsNot Nothing Then Await ShowMessageAsync(LocalizationService.T("Umbenennen fehlgeschlagen"), errorMessage)
         End Sub
 
         ''' Entfernt Zeichen aus einem eingesetzten Platzhalterwert (z.B. Kameramodell), die in
@@ -2323,6 +2354,390 @@ Namespace ViewModels
             Dim invalidChars = IO.Path.GetInvalidFileNameChars()
             Return invalidChars IsNot Nothing AndAlso invalidChars.Length > 0 AndAlso fileName.IndexOfAny(invalidChars) >= 0
         End Function
+
+#Region "Drucken"
+
+        ' Der Druckdialog hängt - anders als der Collage-Dialog - am MainWindowViewModel, weil er
+        ' aus allen drei Modi (Galerie, Betrachter, Editor) geöffnet wird. Aufbau ansonsten genau
+        ' wie der Collage-Dialog: Overlay-View mit Live-Vorschau, entprellt und mit Request-ID
+        ' gegen veraltete Ergebnisse abgesichert.
+
+        Private _isPrintDialogOpen As Boolean
+        Private _printPaths As New List(Of String)()
+        Private _printTitle As String = ""
+        Private _printPreviewImage As Avalonia.Media.Imaging.Bitmap
+        Private _printPreviewRequestId As Integer
+        Private _printPreviewTimer As DispatcherTimer
+        ''' Temporär gerenderte Datei (Editor-Bearbeitungsstand), die nach dem Dialog wieder weg muss.
+        Private _printTempFile As String
+
+        Private _printPageSize As String = "A4"
+        Private _printLandscape As Boolean
+        Private _printMarginMm As Double = 10
+        Private _printFitMode As String = "Fit"
+        Private _printImagesPerPage As Integer = 1
+        Private _printShowCaption As Boolean
+        Private _printBorderless As Boolean
+        Private _printCopies As Integer = 1
+
+        ''' Logikschlüssel, NIE der übersetzte Anzeigetext - sonst bricht die Auswahl in jeder
+        ''' anderen Sprache. Die View zeigt sie über PrintPageSizeDisplay/... übersetzt an.
+        Public ReadOnly Property PrintPageSizeOptions As New ObservableCollection(Of String) From {"A4", "A3", "A5", "Letter", "Legal"}
+
+        Public Property IsPrintDialogOpen As Boolean
+            Get
+                Return _isPrintDialogOpen
+            End Get
+            Set
+                Me.RaiseAndSetIfChanged(_isPrintDialogOpen, value)
+            End Set
+        End Property
+
+        Public Property PrintPreviewImage As Avalonia.Media.Imaging.Bitmap
+            Get
+                Return _printPreviewImage
+            End Get
+            Set
+                Me.RaiseAndSetIfChanged(_printPreviewImage, value)
+            End Set
+        End Property
+
+        Public Property PrintPageSize As String
+            Get
+                Return _printPageSize
+            End Get
+            Set
+                Me.RaiseAndSetIfChanged(_printPageSize, If(value, "A4"))
+                SchedulePrintPreviewUpdate()
+            End Set
+        End Property
+
+        Public Property PrintLandscape As Boolean
+            Get
+                Return _printLandscape
+            End Get
+            Set
+                Me.RaiseAndSetIfChanged(_printLandscape, value)
+                Me.RaisePropertyChanged(NameOf(IsPrintPortrait))
+                SchedulePrintPreviewUpdate()
+            End Set
+        End Property
+
+        ''' Für die Segment-Schalter „Hoch"/„Quer" in der View.
+        Public ReadOnly Property IsPrintPortrait As Boolean
+            Get
+                Return Not _printLandscape
+            End Get
+        End Property
+
+        Public Property PrintMarginMm As Double
+            Get
+                Return _printMarginMm
+            End Get
+            Set
+                Me.RaiseAndSetIfChanged(_printMarginMm, Math.Max(0, Math.Min(50, value)))
+                SchedulePrintPreviewUpdate()
+            End Set
+        End Property
+
+        Public Property PrintFitMode As String
+            Get
+                Return _printFitMode
+            End Get
+            Set
+                Dim v = If(String.Equals(value, "Fill", StringComparison.OrdinalIgnoreCase), "Fill", "Fit")
+                Me.RaiseAndSetIfChanged(_printFitMode, v)
+                Me.RaisePropertyChanged(NameOf(IsPrintFitModeFit))
+                Me.RaisePropertyChanged(NameOf(IsPrintFitModeFill))
+                SchedulePrintPreviewUpdate()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsPrintFitModeFit As Boolean
+            Get
+                Return String.Equals(_printFitMode, "Fit", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPrintFitModeFill As Boolean
+            Get
+                Return String.Equals(_printFitMode, "Fill", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public Property PrintImagesPerPage As Integer
+            Get
+                Return _printImagesPerPage
+            End Get
+            Set
+                Me.RaiseAndSetIfChanged(_printImagesPerPage, value)
+                RaisePrintPerPageChanged()
+                SchedulePrintPreviewUpdate()
+            End Set
+        End Property
+
+        ''' Die Bildunterschrift ergibt nur im Kontaktabzug Sinn - bei einem Bild pro Seite
+        ''' verdeckt sie nur das Motiv.
+        Public ReadOnly Property IsPrintContactSheet As Boolean
+            Get
+                Return _printImagesPerPage > 1
+            End Get
+        End Property
+
+        ' Aktiv-Zustand der Rasterschalter. Einzelne Boolesche statt eines Converters - dasselbe
+        ' Vorgehen wie IsCollageGridMode/IsCollageHeroMode im Collage-Dialog.
+        Public ReadOnly Property IsPrintPerPage1 As Boolean
+            Get
+                Return _printImagesPerPage <= 1
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPrintPerPage4 As Boolean
+            Get
+                Return _printImagesPerPage = 4
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPrintPerPage9 As Boolean
+            Get
+                Return _printImagesPerPage = 9
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPrintPerPage16 As Boolean
+            Get
+                Return _printImagesPerPage = 16
+            End Get
+        End Property
+
+        Public Property PrintShowCaption As Boolean
+            Get
+                Return _printShowCaption
+            End Get
+            Set
+                Me.RaiseAndSetIfChanged(_printShowCaption, value)
+                SchedulePrintPreviewUpdate()
+            End Set
+        End Property
+
+        ''' <summary>Randlos drucken: Rand 0 und Seite füllen. Die zuletzt gewählten Werte für Rand
+        ''' und Skalierung bleiben im ViewModel stehen (PrintOptions entscheidet erst beim Zeichnen) -
+        ''' beim Abschalten steht wieder das da, was der Nutzer vorher eingestellt hatte.</summary>
+        Public Property PrintBorderless As Boolean
+            Get
+                Return _printBorderless
+            End Get
+            Set
+                Me.RaiseAndSetIfChanged(_printBorderless, value)
+                Me.RaisePropertyChanged(NameOf(CanEditPrintPageFit))
+                SchedulePrintPreviewUpdate()
+            End Set
+        End Property
+
+        ''' <summary>Rand und Skalierung sind bei „randlos" wirkungslos - die Bedienelemente werden
+        ''' deshalb ausgegraut statt still ignoriert zu werden.</summary>
+        Public ReadOnly Property CanEditPrintPageFit As Boolean
+            Get
+                Return Not _printBorderless
+            End Get
+        End Property
+
+        ''' <summary>Wie oft dasselbe Bild gedruckt wird. Zusammen mit „Bilder pro Seite" ergibt das
+        ''' den Wunschfall „ein Bild 4x auf einer Seite". Nur bei Einzelauswahl sichtbar - bei mehreren
+        ''' Bildern wäre unklar, ob sich die Zahl auf die Auswahl oder auf jedes Bild bezieht.</summary>
+        Public Property PrintCopies As Integer
+            Get
+                Return _printCopies
+            End Get
+            Set
+                Me.RaiseAndSetIfChanged(_printCopies, Math.Max(1, Math.Min(PrintService.MaxCopies, value)))
+                SchedulePrintPreviewUpdate()
+            End Set
+        End Property
+
+        Public ReadOnly Property PrintMaxCopies As Integer
+            Get
+                Return PrintService.MaxCopies
+            End Get
+        End Property
+
+        ''' <summary>Nur bei genau einem ausgewählten Bild ergibt die Wiederholung Sinn.</summary>
+        Public ReadOnly Property IsPrintSingleImage As Boolean
+            Get
+                Return _printPaths IsNot Nothing AndAlso _printPaths.Count = 1
+            End Get
+        End Property
+
+        Public ReadOnly Property PrintDialogTitle As String
+            Get
+                Return If(String.IsNullOrWhiteSpace(_printTitle), LocalizationService.T("Drucken"), _printTitle)
+            End Get
+        End Property
+
+        Public ReadOnly Property PrintSummaryText As String
+            Get
+                Dim options = BuildPrintOptions()
+                Dim pages = PrintService.GetPageCount(_printPaths, options)
+                ' Die Wiederholungen mitzählen, sonst behauptet die Zeile "1 Bild · 1 Seite",
+                ' während vier Abzüge auf der Seite liegen.
+                Dim prints = _printPaths.Count * Math.Max(1, options.Copies)
+                Return $"{prints} {LocalizationService.T("Bilder")} · {pages} {LocalizationService.T("Seiten")}"
+            End Get
+        End Property
+
+        Private Function BuildPrintOptions() As PrintOptions
+            Return New PrintOptions With {
+                .PageSize = _printPageSize,
+                .Landscape = _printLandscape,
+                .MarginMm = _printMarginMm,
+                .FitMode = _printFitMode,
+                .ImagesPerPage = _printImagesPerPage,
+                .ShowCaption = _printShowCaption,
+                .Borderless = _printBorderless,
+                .Copies = If(IsPrintSingleImage, _printCopies, 1)
+            }
+        End Function
+
+        ''' <summary>Öffnet den Druckdialog für die übergebenen Bilder. tempFile wird nach dem
+        ''' Schließen gelöscht - der Editor rendert seinen Bearbeitungsstand dorthin.</summary>
+        Public Sub ShowPrintDialog(imagePaths As IEnumerable(Of String),
+                                   Optional title As String = Nothing,
+                                   Optional tempFile As String = Nothing)
+            Dim paths = If(imagePaths, Enumerable.Empty(Of String)()).
+                Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso File.Exists(p)).
+                ToList()
+            If paths.Count = 0 Then
+                ' Ohne diesen Zweig entstünde ein Dialog mit leerer Vorschau, dessen „Drucken"
+                ' wortlos nichts tut.
+                DeletePrintTempFile(tempFile)
+                Dim unused = ShowMessageAsync(LocalizationService.T("Drucken"),
+                                              LocalizationService.T("Es sind keine druckbaren Bilder ausgewählt."))
+                Return
+            End If
+
+            _printPaths = paths
+            _printTitle = title
+            _printTempFile = tempFile
+
+            ' Zuletzt bestätigte Optionen vorbelegen.
+            Dim settings = AppSettingsService.Load()
+            _printPageSize = If(settings.PrintPageSize, "A4")
+            _printLandscape = settings.PrintLandscape
+            _printMarginMm = settings.PrintMarginMm
+            _printFitMode = If(String.Equals(settings.PrintFitMode, "Fill", StringComparison.OrdinalIgnoreCase), "Fill", "Fit")
+            _printImagesPerPage = settings.PrintImagesPerPage
+            _printShowCaption = settings.PrintShowCaption
+            _printBorderless = settings.PrintBorderless
+            ' Wiederholungen sind eine bewusste Einzelentscheidung, kein Dauerzustand - sonst
+            ' druckt der naechste Auftrag ungefragt wieder alles vierfach.
+            _printCopies = 1
+            RaisePrintOptionChanged()
+
+            IsPrintDialogOpen = True
+            RefreshPrintPreviewAsync()
+        End Sub
+
+        Private Sub RaisePrintPerPageChanged()
+            Me.RaisePropertyChanged(NameOf(IsPrintContactSheet))
+            Me.RaisePropertyChanged(NameOf(IsPrintPerPage1))
+            Me.RaisePropertyChanged(NameOf(IsPrintPerPage4))
+            Me.RaisePropertyChanged(NameOf(IsPrintPerPage9))
+            Me.RaisePropertyChanged(NameOf(IsPrintPerPage16))
+        End Sub
+
+        Private Sub RaisePrintOptionChanged()
+            Me.RaisePropertyChanged(NameOf(PrintPageSize))
+            Me.RaisePropertyChanged(NameOf(PrintLandscape))
+            Me.RaisePropertyChanged(NameOf(IsPrintPortrait))
+            Me.RaisePropertyChanged(NameOf(PrintMarginMm))
+            Me.RaisePropertyChanged(NameOf(PrintFitMode))
+            Me.RaisePropertyChanged(NameOf(IsPrintFitModeFit))
+            Me.RaisePropertyChanged(NameOf(IsPrintFitModeFill))
+            Me.RaisePropertyChanged(NameOf(PrintImagesPerPage))
+            RaisePrintPerPageChanged()
+            Me.RaisePropertyChanged(NameOf(PrintShowCaption))
+            Me.RaisePropertyChanged(NameOf(PrintBorderless))
+            Me.RaisePropertyChanged(NameOf(CanEditPrintPageFit))
+            Me.RaisePropertyChanged(NameOf(PrintCopies))
+            Me.RaisePropertyChanged(NameOf(IsPrintSingleImage))
+            Me.RaisePropertyChanged(NameOf(PrintDialogTitle))
+            Me.RaisePropertyChanged(NameOf(PrintSummaryText))
+        End Sub
+
+        Public Sub ClosePrintDialog()
+            IsPrintDialogOpen = False
+            _printPreviewTimer?.Stop()
+            PrintPreviewImage = Nothing
+            DeletePrintTempFile(_printTempFile)
+            _printTempFile = Nothing
+            _printPaths = New List(Of String)()
+        End Sub
+
+        ''' <summary>Die Temp-Datei des Editor-Bearbeitungsstands wegräumen. Fehler sind hier
+        ''' bedeutungslos - im schlimmsten Fall bleibt eine Datei im Temp-Ordner liegen.</summary>
+        Private Shared Sub DeletePrintTempFile(path As String)
+            If String.IsNullOrWhiteSpace(path) Then Return
+            Try
+                If File.Exists(path) Then File.Delete(path)
+            Catch
+            End Try
+        End Sub
+
+        Private Sub SchedulePrintPreviewUpdate()
+            Me.RaisePropertyChanged(NameOf(PrintSummaryText))
+            If Not IsPrintDialogOpen Then Return
+            If _printPreviewTimer Is Nothing Then
+                _printPreviewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(180)}
+                AddHandler _printPreviewTimer.Tick, Sub()
+                                                        _printPreviewTimer.Stop()
+                                                        RefreshPrintPreviewAsync()
+                                                    End Sub
+            End If
+            _printPreviewTimer.Stop()
+            _printPreviewTimer.Start()
+        End Sub
+
+        ''' <summary>Rendert die Vorschau der ersten Seite im Hintergrund. Die Request-ID verwirft
+        ''' Ergebnisse, die während des Renderns von einer neueren Einstellung überholt wurden -
+        ''' sonst würde beim schnellen Reglerdrehen ein veraltetes Bild „gewinnen".</summary>
+        Private Async Sub RefreshPrintPreviewAsync()
+            Dim requestId = Interlocked.Increment(_printPreviewRequestId)
+            If Not IsPrintDialogOpen Then Return
+
+            Dim paths = _printPaths.ToList()
+            Dim options = BuildPrintOptions()
+            Dim preview = Await Task.Run(Function() PrintService.RenderPreview(paths, options, 900))
+            If requestId <> _printPreviewRequestId OrElse Not IsPrintDialogOpen Then Return
+            PrintPreviewImage = preview
+        End Sub
+
+        ''' <summary>Erzeugt das PDF und übergibt es dem System. Der Dialog schließt vorher, damit
+        ''' der Systemviewer nicht hinter dem Overlay auftaucht.</summary>
+        Public Async Sub ConfirmPrint()
+            Dim paths = _printPaths.ToList()
+            Dim options = BuildPrintOptions()
+            Dim tempFile = _printTempFile
+
+            AppSettingsService.SavePrintOptions(options)
+
+            IsPrintDialogOpen = False
+            _printPreviewTimer?.Stop()
+            PrintPreviewImage = Nothing
+            ' Die Temp-Datei erst NACH dem Rendern löschen - sie ist die Druckquelle.
+            _printTempFile = Nothing
+
+            Dim ok = Await PrintService.PrintAsync(paths, options)
+            DeletePrintTempFile(tempFile)
+            _printPaths = New List(Of String)()
+
+            If Not ok Then
+                Await ShowMessageAsync(LocalizationService.T("Drucken fehlgeschlagen"),
+                                       LocalizationService.T("Das PDF konnte nicht erzeugt oder geöffnet werden."))
+            End If
+        End Sub
+
+#End Region
+
     End Class
 
 End Namespace

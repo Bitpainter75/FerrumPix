@@ -36,6 +36,7 @@ Namespace Views
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If button Is Nothing OrElse vm Is Nothing Then Return
             vm.SetDialogSearchRatingMin(If(button.Tag, "").ToString())
+            FlyoutHelpers.CloseContainingFlyout(button)
             e.Handled = True
         End Sub
 
