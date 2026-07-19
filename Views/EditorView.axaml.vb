@@ -261,6 +261,16 @@ Namespace Views
             End Try
         End Function
 
+        ''' <summary>„Bild öffnen" aus dem Leerzustand. Nutzt denselben Dateidialog wie das Einfügen
+        ''' eines Bildobjekts und gibt den Pfad an den regulären Editor-Einstieg weiter.</summary>
+        Public Async Sub OnPlaceholderOpenImageClick(sender As Object, e As RoutedEventArgs)
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            If mainVm Is Nothing Then Return
+            Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild öffnen"))
+            If String.IsNullOrWhiteSpace(path) Then Return
+            Await mainVm.OpenImageInEditor(path)
+        End Sub
+
         Private Async Sub PlacePendingImageAsync(xPercent As Double, yPercent As Double)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
@@ -428,6 +438,10 @@ Namespace Views
         Public Sub OnToggleFilmstripClick(sender As Object, e As RoutedEventArgs)
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             If mainVm Is Nothing OrElse mainVm.Settings Is Nothing Then Return
+            ' Bei einem neuen Bild bleibt der Filmstreifen aus - sonst schriebe der Klick die
+            ' Einstellung um, ohne dass sich sichtbar etwas täte (der Knopf ist auch gesperrt).
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing AndAlso Not vm.CanToggleFilmstrip Then Return
             mainVm.Settings.EditorShowFilmstrip = Not mainVm.Settings.EditorShowFilmstrip
         End Sub
 
@@ -3304,6 +3318,7 @@ Namespace Views
         End Function
 
         Private Sub UpdateTextPixels(textRect As Avalonia.Rect, imageRect As Avalonia.Rect, vm As EditorViewModel)
+            If vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
             Dim baseWidth = vm.CurrentImage.PixelSize.Width
             Dim baseHeight = vm.CurrentImage.PixelSize.Height
             If baseWidth <= 0 OrElse baseHeight <= 0 OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
@@ -3479,6 +3494,9 @@ Namespace Views
                         e.Handled = True
                     Case Key.Y
                         vm.RedoCommand.Execute(Nothing)
+                        e.Handled = True
+                    Case Key.N
+                        vm.ShowNewDocumentDialogCommand.Execute(Nothing)
                         e.Handled = True
                     Case Key.S
                         ' Ist Speichern gesperrt (RAW-Datei, oder Immich-Bild ohne "Vorhandene Assets

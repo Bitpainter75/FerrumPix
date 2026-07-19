@@ -45,6 +45,7 @@ Namespace ViewModels
         Private _editorLayersPanelExpanded As Boolean = False
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _startupImageMode As String = "Viewer"
+        Private _startupNoImageMode As String = "Gallery"
         Private _languageMode As String = "System"
         Private _fontSizeOffset As Integer = 0
         Private _applicationScale As Double = 1.0
@@ -108,6 +109,7 @@ Namespace ViewModels
         Private _savedEditorLayersPanelExpanded As Boolean = False
         Private _savedViewerInfoSidebarExpanded As Boolean = True
         Private _savedStartupImageMode As String = "Viewer"
+        Private _savedStartupNoImageMode As String = "Gallery"
         Private _savedLanguageMode As String = "System"
         Private _savedFontSizeOffset As Integer = 0
         Private _savedApplicationScale As Double = 1.0
@@ -363,6 +365,20 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Was ohne Bildparameter erscheint - Gegenstueck zu StartupImageMode.</summary>
+        Public Property StartupNoImageMode As String
+            Get
+                Return _startupNoImageMode
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeStartupNoImageMode(value)
+                If _startupNoImageMode = value Then Return
+                Me.RaiseAndSetIfChanged(_startupNoImageMode, value)
+                RaiseStartupNoImageModeProperties()
+                SaveStartupSettings()
+            End Set
+        End Property
+
         Public Property LanguageMode As String
             Get
                 Return _languageMode
@@ -551,6 +567,24 @@ Namespace ViewModels
         Public ReadOnly Property IsStartupFullscreenMode As Boolean
             Get
                 Return _startupImageMode = "Fullscreen"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsStartupNoImageGalleryMode As Boolean
+            Get
+                Return _startupNoImageMode = "Gallery"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsStartupNoImageViewerMode As Boolean
+            Get
+                Return _startupNoImageMode = "Viewer"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsStartupNoImageEditorMode As Boolean
+            Get
+                Return _startupNoImageMode = "Editor"
             End Get
         End Property
 
@@ -1127,6 +1161,7 @@ Namespace ViewModels
         Public ReadOnly Property SetThemeModeCommand As ICommand
         Public ReadOnly Property SetAccentColorCommand As ICommand
         Public ReadOnly Property SetStartupImageModeCommand As ICommand
+        Public ReadOnly Property SetStartupNoImageModeCommand As ICommand
         Public ReadOnly Property SetGalleryViewModeCommand As ICommand
         Public ReadOnly Property SetGalleryTimelineModeCommand As ICommand
         Public ReadOnly Property SetGalleryStartupFolderModeCommand As ICommand
@@ -1156,6 +1191,7 @@ Namespace ViewModels
             _themeMode = _appSettings.ThemeMode
             _accentColor = _appSettings.AccentColor
             _startupImageMode = _appSettings.StartupImageMode
+            _startupNoImageMode = _appSettings.StartupNoImageMode
             _languageMode = _appSettings.LanguageMode
             _fontSizeOffset = AppSettingsService.NormalizeFontSizeOffset(_appSettings.FontSizeOffset)
             _applicationScale = _appSettings.ApplicationScale
@@ -1214,6 +1250,7 @@ Namespace ViewModels
             SetThemeModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ThemeMode = m)
             SetAccentColorCommand = ReactiveCommand.Create(Of String)(Sub(c) AccentColor = c)
             SetStartupImageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) StartupImageMode = m)
+            SetStartupNoImageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) StartupNoImageMode = m)
             SetGalleryViewModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryViewMode = m)
             SetGalleryStartupFolderModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryStartupFolderMode = m)
             SetGalleryTimelineModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryTimelineMode = m)
@@ -1295,7 +1332,7 @@ Namespace ViewModels
                     _mainVm?.Gallery?.ReinitializeImmich()
                 End If
                 Dim albums = Await ImmichService.GetAlbumsAsync()
-                ImmichConnectionMessage = $"{result.Message} · {albums.Count} Alben"
+                ImmichConnectionMessage = $"{result.Message} · {albums.Count} {LocalizationService.T("Alben")}"
             Catch ex As Exception
                 ImmichConnectionMessage = ex.Message
             Finally
@@ -1353,6 +1390,7 @@ Namespace ViewModels
             _savedEditorLayersPanelExpanded = _editorLayersPanelExpanded
             _savedViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             _savedStartupImageMode = _startupImageMode
+            _savedStartupNoImageMode = _startupNoImageMode
             _savedLanguageMode = _languageMode
             _savedVideoHardwareAcceleration = _videoHardwareAcceleration
             _savedTransparencyBackgroundMode = _transparencyBackgroundMode
@@ -1399,6 +1437,7 @@ Namespace ViewModels
             EditorLayersPanelExpanded = _savedEditorLayersPanelExpanded
             ViewerInfoSidebarExpanded = _savedViewerInfoSidebarExpanded
             StartupImageMode = _savedStartupImageMode
+            StartupNoImageMode = _savedStartupNoImageMode
             LanguageMode = _savedLanguageMode
             VideoHardwareAcceleration = _savedVideoHardwareAcceleration
             TransparencyBackgroundMode = _savedTransparencyBackgroundMode
@@ -1434,6 +1473,7 @@ Namespace ViewModels
             ViewerOpenFitToWindow = True
             ViewerFitBehavior = "Always"
             StartupImageMode = "Viewer"
+            StartupNoImageMode = "Gallery"
             ThumbnailCacheEnabled = True
             ThumbnailQuality = 82
             ThumbnailMemoryCacheCapacity = 250
@@ -1527,6 +1567,7 @@ Namespace ViewModels
         Private Sub SaveStartupSettings()
             Dim settings = AppSettingsService.Load()
             settings.StartupImageMode = _startupImageMode
+            settings.StartupNoImageMode = _startupNoImageMode
             AppSettingsService.Save(settings)
         End Sub
 
@@ -1640,6 +1681,12 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsStartupViewerMode))
             Me.RaisePropertyChanged(NameOf(IsStartupEditorMode))
             Me.RaisePropertyChanged(NameOf(IsStartupFullscreenMode))
+        End Sub
+
+        Private Sub RaiseStartupNoImageModeProperties()
+            Me.RaisePropertyChanged(NameOf(IsStartupNoImageGalleryMode))
+            Me.RaisePropertyChanged(NameOf(IsStartupNoImageViewerMode))
+            Me.RaisePropertyChanged(NameOf(IsStartupNoImageEditorMode))
         End Sub
 
         Private Sub RaiseGalleryStartupFolderModeProperties()

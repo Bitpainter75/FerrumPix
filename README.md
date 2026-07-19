@@ -44,6 +44,7 @@ Printing is available from the toolbar or with `Ctrl+P`, using the same dialog a
 
 The editor covers the most common photo work:
 
+- Create a blank image with `Ctrl+N`: presets for photo, screen and paper sizes, free width and height in mm, cm, inches or pixels at 72–600 dpi, and a white, transparent or coloured background.
 - Crop, resize, rotate, flip and canvas resize.
 - Exposure, brightness, contrast, highlights, shadows, tone curves and white balance.
 - Color tools with HSL, vibrance, saturation and split toning.

@@ -112,6 +112,9 @@ Namespace Services
         Public Property ThemeMode As String = "Dark"
         Public Property AccentColor As String = "#F08A1A"
         Public Property StartupImageMode As String = "Viewer"
+        ''' <summary>Was beim Start OHNE Bildparameter erscheint. "Viewer" öffnet das erste Bild des
+        ''' Startordners, "Editor" den leeren Editor mit dem Dialog „Neues Bild".</summary>
+        Public Property StartupNoImageMode As String = "Gallery"
         Public Property LanguageMode As String = "System"
         Public Property ThumbnailCacheEnabled As Boolean = True
         Public Property ThumbnailQuality As Integer = 82
@@ -281,6 +284,7 @@ Namespace Services
                 settings.ThemeMode = NormalizeThemeMode(settings.ThemeMode)
                 settings.AccentColor = NormalizeAccentColor(settings.AccentColor)
                 settings.StartupImageMode = NormalizeStartupImageMode(settings.StartupImageMode)
+                settings.StartupNoImageMode = NormalizeStartupNoImageMode(settings.StartupNoImageMode)
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
@@ -357,6 +361,7 @@ Namespace Services
                 settings.ThemeMode = NormalizeThemeMode(settings.ThemeMode)
                 settings.AccentColor = NormalizeAccentColor(settings.AccentColor)
                 settings.StartupImageMode = NormalizeStartupImageMode(settings.StartupImageMode)
+                settings.StartupNoImageMode = NormalizeStartupNoImageMode(settings.StartupNoImageMode)
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
@@ -627,6 +632,15 @@ Namespace Services
                     Return value.Trim()
                 Case Else
                     Return "Viewer"
+            End Select
+        End Function
+
+        Public Shared Function NormalizeStartupNoImageMode(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Viewer", "Editor"
+                    Return value.Trim()
+                Case Else
+                    Return "Gallery"
             End Select
         End Function
 

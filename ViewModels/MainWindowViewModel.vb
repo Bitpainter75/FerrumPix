@@ -220,9 +220,36 @@ Namespace ViewModels
             If Not String.IsNullOrEmpty(initialImagePath) Then
                 OpenInitialImage(initialImagePath)
             Else
-                OpenStartupGallery()
-                CurrentMode = AppMode.Gallery
+                OpenStartupWithoutImage()
             End If
+        End Sub
+
+        ''' <summary>Start ohne Bildparameter - Einstellung „Start ohne Bilddatei".
+        ''' Die Galerie wird IMMER aufgebaut, auch wenn Betrachter oder Editor nach vorn kommen:
+        ''' sonst führte „Zurück zur Galerie" in eine leere Ansicht.</summary>
+        Private Sub OpenStartupWithoutImage()
+            OpenStartupGallery()
+            CurrentMode = AppMode.Gallery
+
+            Select Case AppSettingsService.NormalizeStartupNoImageMode(AppSettingsService.Load().StartupNoImageMode)
+                Case "Viewer"
+                    ' Ein Betrachter ohne Bild wäre eine leere Fläche - deshalb das erste Bild des
+                    ' Startordners öffnen. Ist dort keins (oder zeigt der Start auf Immich), bleibt
+                    ' es bei der Galerie.
+                    Dim resolved = ResolveStartupFolder()
+                    If Not String.IsNullOrEmpty(resolved.ImmichTarget) Then Return
+                    Dim paths = Gallery.GetFolderImagePaths(resolved.LocalFolder)
+                    If paths.Count = 0 Then Return
+                    Viewer.OpenImage(paths(0), paths)
+                    CurrentMode = AppMode.Viewer
+
+                Case "Editor"
+                    ' Kein OpenImageAsync: der Editor zeigt seinen Platzhalter (HasDocument = False),
+                    ' und der Neu-Dialog legt sich darüber. Der Dialog wird nachgelagert geöffnet,
+                    ' weil die EditorView im Konstruktor noch nicht realisiert ist.
+                    CurrentMode = AppMode.Editor
+                    Dispatcher.UIThread.Post(Sub() Editor?.ShowNewDocumentDialog(), DispatcherPriority.Background)
+            End Select
         End Sub
 
         Private Async Function ConfirmEditorLeaveAsync(actionDescription As String) As Task(Of Boolean)
@@ -320,6 +347,11 @@ Namespace ViewModels
                 _previousModeBeforeFullscreen = AppMode.Gallery
                 OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
                                   cacheScopeId:=Gallery.CurrentThumbnailCacheScopeId, cacheScopeName:=Gallery.CurrentThumbnailCacheScopeName)
+            ElseIf CurrentMode = AppMode.Editor AndAlso Editor.IsNewDocument Then
+                ' Ein nie gespeichertes neues Bild hat auf der Platte nur seine LEERE Temp-Datei -
+                ' Vollbild zeigte also eine leere Fläche und zöge den Betrachter in den Temp-Ordner.
+                ' Wie beim bildlosen Betrachter unten: nichts tun.
+                Return
             ElseIf CurrentMode = AppMode.Editor AndAlso Not String.IsNullOrEmpty(Editor.CurrentImagePath) Then
                 If Not Await ConfirmEditorLeaveAsync("den Vollbildmodus zu öffnen") Then Return
                 _previousModeBeforeFullscreen = AppMode.Editor
@@ -369,9 +401,30 @@ Namespace ViewModels
             End Select
         End Sub
 
-        Private Sub OpenStartupGallery()
+        ''' <summary>Sorgt dafür, dass die Galerie auf einem ECHTEN Ordner steht, und zeigt sie an.
+        ''' Gebraucht beim Verwerfen eines nie gespeicherten neuen Bildes: dessen Pfad zeigt in einen
+        ''' Temp-Ordner, der als Ziel nicht taugt. Ein bereits geöffneter Ordner bleibt stehen - nur
+        ''' wenn gar keiner da ist (Start MIT Bildparameter baut die Galerie nie auf), wird der
+        ''' Startordner nachgeladen.</summary>
+        Public Sub ShowGalleryAtRealFolder()
+            Dim current = Gallery?.CurrentFolder
+            If String.IsNullOrEmpty(current) OrElse
+               current.StartsWith("immich://", StringComparison.OrdinalIgnoreCase) OrElse
+               Not Directory.Exists(current) Then
+                OpenStartupGallery()
+            End If
+            CurrentMode = AppMode.Gallery
+        End Sub
+
+        ''' <summary>Wohin die Galerie beim Start zeigt - nur ermittelt, nichts navigiert.
+        ''' Herausgezogen, damit „Start ohne Bilddatei = Betrachter" denselben Ordner benutzt, statt
+        ''' die Leiter (Letzter/Benutzerdefiniert/Immich/Bilder) ein zweites Mal nachzubauen.
+        ''' Ein Immich-Ziel kommt zusätzlich zum lokalen Ordner zurück: der lokale Ordner ist dann
+        ''' die Grundlage, die stehen bleibt, falls Immich nicht erreichbar ist.</summary>
+        Private Function ResolveStartupFolder() As (LocalFolder As String, ImmichTarget As String)
             Dim settings = AppSettingsService.Load()
             Dim targetFolder As String = Nothing
+            Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
 
             Select Case AppSettingsService.NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
                 Case "Last"
@@ -380,15 +433,7 @@ Namespace ViewModels
                     ' laden, dann asynchron das Immich-Ziel öffnen - bei ausgeschaltetem/nicht
                     ' erreichbarem Immich bleibt so der Bilder-Ordner als Fallback stehen.
                     If If(settings.LastGalleryFolder, "").StartsWith("immich://", StringComparison.OrdinalIgnoreCase) Then
-                        If ImmichService.IsConfigured Then
-                            Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
-                            If Directory.Exists(pictures) Then
-                                Gallery.SetInitialFolderNodeForPath(pictures)
-                                Gallery.NavigateToFolder(pictures)
-                            End If
-                            Dim ignored = Gallery.OpenImmichStartupTargetAsync(settings.LastGalleryFolder)
-                            Return
-                        End If
+                        If ImmichService.IsConfigured Then Return (pictures, settings.LastGalleryFolder)
                     ElseIf Directory.Exists(settings.LastGalleryFolder) Then
                         targetFolder = settings.LastGalleryFolder
                     End If
@@ -398,27 +443,27 @@ Namespace ViewModels
                     End If
                 Case "Immich"
                     ' Fester Start in Immich „Alle Fotos" (Einstellungsdialog, Nutzerwunsch
-                    ' 2026-07-17) - gleiche Mechanik wie der Letzter-Ordner-Fall: Bilder-Ordner
-                    ' als Basis laden, Immich-Ziel asynchron öffnen (Fallback bleibt so stehen).
-                    If ImmichService.IsConfigured Then
-                        Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
-                        If Directory.Exists(pictures) Then
-                            Gallery.SetInitialFolderNodeForPath(pictures)
-                            Gallery.NavigateToFolder(pictures)
-                        End If
-                        Dim ignored = Gallery.OpenImmichStartupTargetAsync("immich://all")
-                        Return
-                    End If
+                    ' 2026-07-17) - gleiche Mechanik wie der Letzter-Ordner-Fall.
+                    If ImmichService.IsConfigured Then Return (pictures, "immich://all")
             End Select
 
             If String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then
-                targetFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+                targetFolder = pictures
+            End If
+            Return (targetFolder, Nothing)
+        End Function
+
+        Private Sub OpenStartupGallery()
+            Dim resolved = ResolveStartupFolder()
+
+            If Not String.IsNullOrEmpty(resolved.LocalFolder) AndAlso Directory.Exists(resolved.LocalFolder) Then
+                Gallery.SetInitialFolderNodeForPath(resolved.LocalFolder)
+                Gallery.NavigateToFolder(resolved.LocalFolder)
             End If
 
-            If String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then Return
-
-            Gallery.SetInitialFolderNodeForPath(targetFolder)
-            Gallery.NavigateToFolder(targetFolder)
+            If Not String.IsNullOrEmpty(resolved.ImmichTarget) Then
+                Dim ignored = Gallery.OpenImmichStartupTargetAsync(resolved.ImmichTarget)
+            End If
         End Sub
 
         Public Sub RefreshThemeBindings()

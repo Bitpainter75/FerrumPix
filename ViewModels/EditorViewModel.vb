@@ -44,6 +44,21 @@ Namespace ViewModels
         ' Formatvorschlag, damit der Dialog den Projektnamen statt "base" vorschlägt.
         Private _currentFpxPath As String = ""
         Private _currentFpxTempDir As String = ""
+        ' Neu angelegtes, noch nie gespeichertes Dokument. Die leere Fläche liegt als PNG in einem
+        ' Temp-Ordner (siehe CreateNewDocumentAsync) - genau wie das entpackte Basisbild eines .fpx.
+        ' Dadurch bleiben alle File.Exists-/FileInfo-/Exif-Invarianten der Ladekette gültig; das Flag
+        ' unterdrückt nur, was für eine Temp-Datei sinnlos wäre (Pfadanzeige, Namensvorschlag).
+        Private _isNewDocument As Boolean = False
+        Private _currentNewDocTempDir As String = ""
+        ' Übergabe an OpenImageAsync: dort wird der ALTE Temp-Ordner aufgeräumt, bevor der neue
+        ' übernommen wird. Ohne diese Staffelübergabe würde derselbe Aufruf den Ordner löschen, aus
+        ' dem er gerade lädt (dasselbe Problem löst der .fpx-Zweig über newFpxTempDir).
+        Private _pendingNewDocTempDir As String = ""
+        ' Ein transparent angelegtes Dokument bringt seine Alpha-Löcher schon im Decode mit. Ohne
+        ' dieses Flag hielte das Arbeitsbild sie für „voll deckend" - kein Schachbrett, und beim
+        ' Speichern fiele die Transparenz weg (siehe WorkingImageService.HasAlphaHoles).
+        Private _newDocTransparentBackground As Boolean = False
+        Private _pendingNewDocTransparent As Boolean = False
         ' Immich-Album, aus dem das aktuelle Bild stammt - ein Upload des bearbeiteten Bildes nach Immich
         ' landet dann gleich in diesem Album (leer = nur in die Bibliothek).
         Private _immichSourceAlbumId As String = Nothing
@@ -1861,9 +1876,21 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Bei einem neuen, nie gespeicherten Bild bleibt der Filmstreifen AUS: er zeigte
+        ''' nur die eigene Temp-Datei („1 / 1"), und jede Navigation darin verwürfe das Dokument.
+        ''' Die Einstellung des Nutzers wird dabei nicht verändert - sie greift wieder, sobald ein
+        ''' echtes Bild geöffnet ist.</summary>
         Public ReadOnly Property ShowFilmstrip As Boolean
             Get
+                If _isNewDocument Then Return False
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorShowFilmstrip
+            End Get
+        End Property
+
+        ''' <summary>Solange ein neues Bild offen ist, lässt sich der Filmstreifen nicht einschalten.</summary>
+        Public ReadOnly Property CanToggleFilmstrip As Boolean
+            Get
+                Return Not _isNewDocument
             End Get
         End Property
 
@@ -1923,6 +1950,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsCurrentImageRaw))
                 Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
+                Me.RaisePropertyChanged(NameOf(HasDocument))
             End Set
         End Property
 
@@ -6252,6 +6280,341 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>False, solange der Editor gar kein Dokument hält - beim Start ohne Bilddatei oder
+        ''' nachdem der Neu-Dialog abgebrochen wurde. Steuert den Platzhalter in EditorView; die
+        ''' Werkzeugleisten und Panels liegen darunter und sind dann verdeckt.</summary>
+        Public ReadOnly Property HasDocument As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_currentImagePath)
+            End Get
+        End Property
+
+        ''' <summary>True, solange das Dokument nur im Temp-Ordner liegt und noch nie gespeichert wurde.
+        ''' Blendet die Pfadzeile der Info-Seitenleiste aus - ein Temp-Pfad hilft niemandem.</summary>
+        Public ReadOnly Property IsNewDocument As Boolean
+            Get
+                Return _isNewDocument
+            End Get
+        End Property
+
+#Region "Neues Bild - Dialog"
+
+        ' Der Dialogzustand sitzt am EditorViewModel und nicht am MainWindowViewModel: „Neues Bild" ist
+        ' rein editorseitig. Der Druckdialog hängt nur deshalb am Fenster, weil er aus Galerie,
+        ' Betrachter UND Editor erreichbar ist. Vorbild hier ist der Collage-Dialog am GalleryViewModel.
+        Private _isNewDocumentDialogOpen As Boolean = False
+        Private _newDocPresetId As String = "A4"
+        Private _newDocWidth As Double = 210
+        Private _newDocHeight As Double = 297
+        Private _newDocUnit As String = "mm"
+        Private _newDocDpi As Integer = 300
+        Private _newDocIsLandscape As Boolean = False
+        Private _newDocBackgroundMode As String = "White"
+        Private _newDocBackgroundColor As String = "#FFFFFFFF"
+
+        Public ReadOnly Property NewDocPhotoPresets As New ObservableCollection(Of NewDocPresetItem)(
+            DocumentPresetService.ByGroup(DocumentPresetService.GroupPhoto).Select(Function(p) New NewDocPresetItem(p)))
+        Public ReadOnly Property NewDocScreenPresets As New ObservableCollection(Of NewDocPresetItem)(
+            DocumentPresetService.ByGroup(DocumentPresetService.GroupScreen).Select(Function(p) New NewDocPresetItem(p)))
+        Public ReadOnly Property NewDocPaperPresets As New ObservableCollection(Of NewDocPresetItem)(
+            DocumentPresetService.ByGroup(DocumentPresetService.GroupPaper).Select(Function(p) New NewDocPresetItem(p)))
+
+        Private Iterator Function AllNewDocPresetItems() As IEnumerable(Of NewDocPresetItem)
+            For Each item In NewDocPhotoPresets : Yield item : Next
+            For Each item In NewDocScreenPresets : Yield item : Next
+            For Each item In NewDocPaperPresets : Yield item : Next
+        End Function
+
+        Private Sub SyncNewDocPresetSelection()
+            For Each item In AllNewDocPresetItems()
+                item.IsSelected = String.Equals(item.Id, _newDocPresetId, StringComparison.Ordinal)
+            Next
+        End Sub
+
+        Public ReadOnly Property NewDocUnitOptions As New ObservableCollection(Of String) From {"mm", "cm", "in", "px"}
+        Public ReadOnly Property NewDocDpiOptions As New ObservableCollection(Of Integer) From {72, 150, 300, 600}
+
+        Public Property IsNewDocumentDialogOpen As Boolean
+            Get
+                Return _isNewDocumentDialogOpen
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isNewDocumentDialogOpen, value)
+            End Set
+        End Property
+
+        Public Property NewDocPresetId As String
+            Get
+                Return _newDocPresetId
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_newDocPresetId, value)
+                Me.RaisePropertyChanged(NameOf(NewDocSelectedPresetId))
+            End Set
+        End Property
+
+        ''' <summary>Die Kacheln vergleichen ihre Id hiermit (Konverter in der View). Eigene Maße
+        ''' setzen die Id auf leer, damit keine Kachel mehr markiert ist.</summary>
+        Public ReadOnly Property NewDocSelectedPresetId As String
+            Get
+                Return _newDocPresetId
+            End Get
+        End Property
+
+        Public Property NewDocWidth As Double
+            Get
+                Return _newDocWidth
+            End Get
+            Set(value As Double)
+                If value <= 0 Then Return
+                Me.RaiseAndSetIfChanged(_newDocWidth, value)
+                ClearNewDocPreset()
+                RaiseNewDocumentPixelProperties()
+            End Set
+        End Property
+
+        Public Property NewDocHeight As Double
+            Get
+                Return _newDocHeight
+            End Get
+            Set(value As Double)
+                If value <= 0 Then Return
+                Me.RaiseAndSetIfChanged(_newDocHeight, value)
+                ClearNewDocPreset()
+                RaiseNewDocumentPixelProperties()
+            End Set
+        End Property
+
+        Public Property NewDocUnit As String
+            Get
+                Return _newDocUnit
+            End Get
+            Set(value As String)
+                Dim normalized = DocumentPresetService.NormalizeUnit(value)
+                If String.Equals(_newDocUnit, normalized, StringComparison.Ordinal) Then Return
+                ' Die MASSE bleiben dieselbe Fläche - nur ihre Schreibweise wechselt. Also über Pixel
+                ' umrechnen statt die Zahl stehen zu lassen (sonst würde aus 210 mm plötzlich 210 px).
+                Dim wPx = NewDocPixelWidth
+                Dim hPx = NewDocPixelHeight
+                Me.RaiseAndSetIfChanged(_newDocUnit, normalized)
+                _newDocWidth = DocumentPresetService.FromPixels(wPx, normalized, _newDocDpi)
+                _newDocHeight = DocumentPresetService.FromPixels(hPx, normalized, _newDocDpi)
+                Me.RaisePropertyChanged(NameOf(NewDocWidth))
+                Me.RaisePropertyChanged(NameOf(NewDocHeight))
+                RaiseNewDocumentUnitProperties()
+                RaiseNewDocumentPixelProperties()
+            End Set
+        End Property
+
+        Public Property NewDocDpi As Integer
+            Get
+                Return _newDocDpi
+            End Get
+            Set(value As Integer)
+                If value <= 0 Then Return
+                Me.RaiseAndSetIfChanged(_newDocDpi, value)
+                ' Bei physischen Einheiten ändert eine andere Auflösung die PIXEL, nicht die Maße.
+                ' Bei "px" ist es umgekehrt - dort bleibt die Pixelzahl und das physische Maß driftet.
+                RaiseNewDocumentDpiProperties()
+                RaiseNewDocumentPixelProperties()
+            End Set
+        End Property
+
+        Public Property NewDocIsLandscape As Boolean
+            Get
+                Return _newDocIsLandscape
+            End Get
+            Set(value As Boolean)
+                If _newDocIsLandscape = value Then Return
+                Me.RaiseAndSetIfChanged(_newDocIsLandscape, value)
+                Dim w = _newDocWidth
+                _newDocWidth = _newDocHeight
+                _newDocHeight = w
+                Me.RaisePropertyChanged(NameOf(NewDocWidth))
+                Me.RaisePropertyChanged(NameOf(NewDocHeight))
+                Me.RaisePropertyChanged(NameOf(IsNewDocPortrait))
+                RaiseNewDocumentPixelProperties()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsNewDocPortrait As Boolean
+            Get
+                Return Not _newDocIsLandscape
+            End Get
+        End Property
+
+        Public Property NewDocBackgroundMode As String
+            Get
+                Return _newDocBackgroundMode
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "").Trim()
+                If normalized <> "Transparent" AndAlso normalized <> "Color" Then normalized = "White"
+                Me.RaiseAndSetIfChanged(_newDocBackgroundMode, normalized)
+                Me.RaisePropertyChanged(NameOf(IsNewDocBackgroundWhite))
+                Me.RaisePropertyChanged(NameOf(IsNewDocBackgroundTransparent))
+                Me.RaisePropertyChanged(NameOf(IsNewDocBackgroundColor))
+            End Set
+        End Property
+
+        Public ReadOnly Property IsNewDocBackgroundWhite As Boolean
+            Get
+                Return _newDocBackgroundMode = "White"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsNewDocBackgroundTransparent As Boolean
+            Get
+                Return _newDocBackgroundMode = "Transparent"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsNewDocBackgroundColor As Boolean
+            Get
+                Return _newDocBackgroundMode = "Color"
+            End Get
+        End Property
+
+        Public Property NewDocBackgroundColor As String
+            Get
+                Return _newDocBackgroundColor
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_newDocBackgroundColor, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property IsNewDocUnitMm As Boolean
+            Get
+                Return _newDocUnit = "mm"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsNewDocUnitCm As Boolean
+            Get
+                Return _newDocUnit = "cm"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsNewDocUnitIn As Boolean
+            Get
+                Return _newDocUnit = "in"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsNewDocUnitPx As Boolean
+            Get
+                Return _newDocUnit = "px"
+            End Get
+        End Property
+
+        ''' <summary>Bei „px" ist die Auflösung bedeutungslos - das Feld wird dann ausgeblendet.</summary>
+        Public ReadOnly Property IsNewDocDpiRelevant As Boolean
+            Get
+                Return _newDocUnit <> "px"
+            End Get
+        End Property
+
+        Public ReadOnly Property NewDocPixelWidth As Integer
+            Get
+                Return DocumentPresetService.ToPixels(_newDocWidth, _newDocUnit, _newDocDpi)
+            End Get
+        End Property
+
+        Public ReadOnly Property NewDocPixelHeight As Integer
+            Get
+                Return DocumentPresetService.ToPixels(_newDocHeight, _newDocUnit, _newDocDpi)
+            End Get
+        End Property
+
+        ''' <summary>Die Zusammenfassung unter den Feldern: was tatsächlich angelegt wird.</summary>
+        Public ReadOnly Property NewDocSummaryText As String
+            Get
+                Return $"{NewDocPixelWidth} × {NewDocPixelHeight} px"
+            End Get
+        End Property
+
+        Private Sub ClearNewDocPreset()
+            If String.IsNullOrEmpty(_newDocPresetId) Then Return
+            _newDocPresetId = ""
+            Me.RaisePropertyChanged(NameOf(NewDocPresetId))
+            Me.RaisePropertyChanged(NameOf(NewDocSelectedPresetId))
+            SyncNewDocPresetSelection()
+        End Sub
+
+        Private Sub RaiseNewDocumentUnitProperties()
+            Me.RaisePropertyChanged(NameOf(IsNewDocUnitMm))
+            Me.RaisePropertyChanged(NameOf(IsNewDocUnitCm))
+            Me.RaisePropertyChanged(NameOf(IsNewDocUnitIn))
+            Me.RaisePropertyChanged(NameOf(IsNewDocUnitPx))
+            Me.RaisePropertyChanged(NameOf(IsNewDocDpiRelevant))
+        End Sub
+
+        Private Sub RaiseNewDocumentDpiProperties()
+            Me.RaisePropertyChanged(NameOf(NewDocDpi))
+        End Sub
+
+        Private Sub RaiseNewDocumentPixelProperties()
+            Me.RaisePropertyChanged(NameOf(NewDocPixelWidth))
+            Me.RaisePropertyChanged(NameOf(NewDocPixelHeight))
+            Me.RaisePropertyChanged(NameOf(NewDocSummaryText))
+        End Sub
+
+        ''' <summary>Öffnet den Dialog. Die Vorgabe wird dabei neu angewandt, damit Breite/Höhe zur
+        ''' aktuellen Einheit und Auflösung passen.</summary>
+        Public Sub ShowNewDocumentDialog()
+            ApplyNewDocPreset(_newDocPresetId)
+            IsNewDocumentDialogOpen = True
+        End Sub
+
+        Public Sub CloseNewDocumentDialog()
+            ' Kein Sonderfall nötig: der Platzhalter hängt an HasDocument und erscheint von selbst
+            ' wieder, wenn hier gar kein Dokument dahinterliegt.
+            IsNewDocumentDialogOpen = False
+        End Sub
+
+        Public Sub ApplyNewDocPreset(presetId As String)
+            Dim preset = DocumentPresetService.ById(presetId)
+            If preset Is Nothing Then Return
+
+            ' Pixelvorgaben (Full HD, 4K, Quadrat) haben kein physisches Maß - die Einheit springt
+            ' deshalb auf "px", sonst stünde im Feld ein sinnloser Millimeterwert.
+            If preset.IsPixelPreset Then
+                _newDocUnit = "px"
+                RaiseNewDocumentUnitProperties()
+                Me.RaisePropertyChanged(NameOf(NewDocUnit))
+                _newDocWidth = preset.WidthPx
+                _newDocHeight = preset.HeightPx
+            Else
+                If _newDocUnit = "px" Then
+                    _newDocUnit = "mm"
+                    RaiseNewDocumentUnitProperties()
+                    Me.RaisePropertyChanged(NameOf(NewDocUnit))
+                End If
+                _newDocWidth = DocumentPresetService.FromPixels(
+                    DocumentPresetService.MmToPixels(preset.WidthMm, _newDocDpi), _newDocUnit, _newDocDpi)
+                _newDocHeight = DocumentPresetService.FromPixels(
+                    DocumentPresetService.MmToPixels(preset.HeightMm, _newDocDpi), _newDocUnit, _newDocDpi)
+            End If
+
+            ' Die Vorgaben sind im Hochformat hinterlegt; bei Querformat werden sie gedreht.
+            If _newDocIsLandscape Then
+                Dim w = _newDocWidth
+                _newDocWidth = _newDocHeight
+                _newDocHeight = w
+            End If
+
+            _newDocPresetId = preset.Id
+            Me.RaisePropertyChanged(NameOf(NewDocWidth))
+            Me.RaisePropertyChanged(NameOf(NewDocHeight))
+            Me.RaisePropertyChanged(NameOf(NewDocPresetId))
+            Me.RaisePropertyChanged(NameOf(NewDocSelectedPresetId))
+            SyncNewDocPresetSelection()
+            RaiseNewDocumentPixelProperties()
+        End Sub
+
+#End Region
+
         Public ReadOnly Property OutputSizeText As String
             Get
                 Dim w = If(_resizeWidth > 0, _resizeWidth, GetCroppedWidth())
@@ -6396,6 +6759,14 @@ Namespace ViewModels
         Public ReadOnly Property RemoveTagCommand As ICommand
         Public ReadOnly Property SaveCommand As ICommand
         Public ReadOnly Property SaveAsCommand As ICommand
+        Public ReadOnly Property ShowNewDocumentDialogCommand As ICommand
+        Public ReadOnly Property CancelNewDocumentCommand As ICommand
+        Public ReadOnly Property ConfirmNewDocumentCommand As ICommand
+        Public ReadOnly Property SetNewDocPresetCommand As ICommand
+        Public ReadOnly Property SetNewDocUnitCommand As ICommand
+        Public ReadOnly Property SetNewDocDpiCommand As ICommand
+        Public ReadOnly Property SetNewDocOrientationCommand As ICommand
+        Public ReadOnly Property SetNewDocBackgroundCommand As ICommand
         Public ReadOnly Property CancelCommand As ICommand
         Public ReadOnly Property UndoCommand As ICommand
         Public ReadOnly Property RedoCommand As ICommand
@@ -6774,6 +7145,20 @@ Namespace ViewModels
             DeleteCurrentCommand = ReactiveCommand.Create(Sub() DeleteCurrent())
             PrintCommand = ReactiveCommand.CreateFromTask(Function() PrintCurrentAsync())
 
+            ShowNewDocumentDialogCommand = ReactiveCommand.Create(Sub() ShowNewDocumentDialog())
+            CancelNewDocumentCommand = ReactiveCommand.Create(Sub() CloseNewDocumentDialog())
+            ConfirmNewDocumentCommand = ReactiveCommand.CreateFromTask(Function() ConfirmNewDocumentAsync())
+            ' Logikschlüssel als Parameter, nie der übersetzte Anzeigetext (Hauskonvention, siehe
+            ' PrintDialogOverlayView.axaml.vb).
+            SetNewDocPresetCommand = ReactiveCommand.Create(Of String)(Sub(id) ApplyNewDocPreset(id))
+            SetNewDocUnitCommand = ReactiveCommand.Create(Of String)(Sub(u) NewDocUnit = u)
+            SetNewDocDpiCommand = ReactiveCommand.Create(Of String)(Sub(d)
+                                                                       Dim parsed As Integer
+                                                                       If Integer.TryParse(d, parsed) Then NewDocDpi = parsed
+                                                                   End Sub)
+            SetNewDocOrientationCommand = ReactiveCommand.Create(Of String)(Sub(o) NewDocIsLandscape = String.Equals(o, "Landscape", StringComparison.Ordinal))
+            SetNewDocBackgroundCommand = ReactiveCommand.Create(Of String)(Sub(b) NewDocBackgroundMode = b)
+
             If _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing Then
                 _saveQuality = _mainVm.Settings.JpgSaveQuality
             End If
@@ -6848,6 +7233,7 @@ Namespace ViewModels
                 ComparisonImage = Nothing
                 ClearPreviewSource()
                 CleanupCurrentFpxTempDir()
+                CleanupCurrentNewDocTempDir()
             End If
         End Sub
 
@@ -6861,6 +7247,17 @@ Namespace ViewModels
 
         Public Async Function BackToViewerAsync() As Task
             If Not Await ConfirmSaveBeforeLeavingAsync("den Editor verlässt") Then Return
+
+            ' Ein NIE GESPEICHERTES neues Bild liegt nur im Temp-Ordner. Dessen Pfad darf hier auf
+            ' keinen Fall als Ziel dienen - Galerie bzw. Betrachter landeten sonst im Temp-Ordner.
+            ' (Wurde per „Speichern unter" gesichert, ist _isNewDocument längst wieder aus, weil
+            ' SaveImageAsync die gespeicherte Datei neu öffnet - dann greift dieser Zweig nicht.)
+            If _isNewDocument Then
+                DiscardNewDocument()
+                _mainVm.ShowGalleryAtRealFolder()
+                Return
+            End If
+
             ' Galerie-Einstieg: zurück in die Galerie, auf dem zuletzt bearbeiteten Bild -
             ' nicht in den Viewer (Nutzerwunsch 2026-07-17).
             If _entryMode = AppMode.Gallery Then
@@ -6983,6 +7380,7 @@ Namespace ViewModels
                     _workingImageOverrideHasAlpha = False
                     _currentFpxPath = ""
                     CleanupCurrentFpxTempDir()
+                    CleanupCurrentNewDocTempDir()
                     StatusText = ""
                     Return
                 End If
@@ -7019,6 +7417,8 @@ Namespace ViewModels
             End If
 
             CleanupCurrentFpxTempDir()
+            ' Filmstreifen-Navigation verlässt ein neues Dokument endgültig - Temp-Ordner weg.
+            CleanupCurrentNewDocTempDir()
             _currentFpxPath = newFpxPath
             _renderSourcePathOverride = newRenderSourcePathOverride
             _currentFpxTempDir = newFpxTempDir
@@ -7113,6 +7513,18 @@ Namespace ViewModels
             End If
 
             CleanupCurrentFpxTempDir()
+            ' Staffelübergabe: erst den ALTEN Ordner des vorigen neuen Dokuments löschen, dann den
+            ' frisch angelegten übernehmen. Andernfalls löschte dieser Aufruf die Datei weg, die er
+            ' gerade öffnet.
+            Dim incomingNewDocTempDir = _pendingNewDocTempDir
+            Dim incomingNewDocTransparent = _pendingNewDocTransparent
+            _pendingNewDocTempDir = ""
+            _pendingNewDocTransparent = False
+            CleanupCurrentNewDocTempDir()
+            _currentNewDocTempDir = incomingNewDocTempDir
+            _isNewDocument = Not String.IsNullOrEmpty(incomingNewDocTempDir)
+            _newDocTransparentBackground = _isNewDocument AndAlso incomingNewDocTransparent
+            RaiseNewDocumentStateChanged()
             _currentFpxPath = newFpxPath
             _renderSourcePathOverride = newRenderSourcePathOverride
             _currentFpxTempDir = newFpxTempDir
@@ -7281,13 +7693,19 @@ Namespace ViewModels
             Next
         End Sub
 
-        Private Sub LoadFilmstripContext(imagePath As String, Optional allPaths As List(Of String) = Nothing)
+        ''' <summary>Leert den Filmstreifen samt Thumbnails. Herausgezogen, damit das Verwerfen eines
+        ''' neuen Bildes dieselbe Räumung nutzt wie der Neuaufbau beim Laden.</summary>
+        Private Sub ClearFilmstrip()
             For Each filmItem In FilmstripItems
                 filmItem?.EvictThumbnail()
             Next
             FilmstripItems.Clear()
             _folderPaths.Clear()
             _currentIndex = -1
+        End Sub
+
+        Private Sub LoadFilmstripContext(imagePath As String, Optional allPaths As List(Of String) = Nothing)
+            ClearFilmstrip()
 
             Try
                 If allPaths IsNot Nothing Then
@@ -8366,7 +8784,7 @@ Namespace ViewModels
             Dim source = If(fullDecode IsNot Nothing,
                             _workingImage.Init(fullDecode, PreviewMaxDimension,
                                                hasBakedContent:=bakedFromFpx,
-                                               hasAlphaHoles:=bakedFromFpx AndAlso _workingImageOverrideHasAlpha),
+                                               hasAlphaHoles:=(bakedFromFpx AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground),
                             Nothing)
             If source Is Nothing Then
                 ClearPreviewSource()
@@ -8437,6 +8855,160 @@ Namespace ViewModels
                 DiagnosticLogService.LogException("Editor.FpxTempCleanup", ex)
             End Try
         End Sub
+
+        ''' <summary>Meldet alles, was am Zustand „neues Bild" hängt. An JEDER Stelle aufzurufen, die
+        ''' _isNewDocument ändert - sonst bliebe etwa der Filmstreifen in seinem alten Zustand.</summary>
+        Private Sub RaiseNewDocumentStateChanged()
+            Me.RaisePropertyChanged(NameOf(IsNewDocument))
+            Me.RaisePropertyChanged(NameOf(ShowFilmstrip))
+            Me.RaisePropertyChanged(NameOf(CanToggleFilmstrip))
+        End Sub
+
+        ''' <summary>Räumt den Temp-Ordner eines neuen, nie gespeicherten Dokuments weg. Analog zu
+        ''' CleanupCurrentFpxTempDir und an denselben Stellen aufgerufen.</summary>
+        Private Sub CleanupCurrentNewDocTempDir()
+            Dim tempDir = _currentNewDocTempDir
+            _currentNewDocTempDir = ""
+            _isNewDocument = False
+            _newDocTransparentBackground = False
+            RaiseNewDocumentStateChanged()
+            If String.IsNullOrWhiteSpace(tempDir) Then Return
+            Try
+                If Directory.Exists(tempDir) Then Directory.Delete(tempDir, True)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.NewDocTempCleanup", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Verwirft ein nie gespeichertes neues Bild: Temp-Ordner weg, Editor leer. Danach
+        ''' greift der Platzhalter (HasDocument = False), und nichts zeigt mehr in den Temp-Ordner.
+        ''' Die Rückfrage nach ungespeicherten Änderungen ist zu diesem Zeitpunkt bereits gelaufen.</summary>
+        Private Sub DiscardNewDocument()
+            CurrentImage = Nothing
+            PreviewImage = Nothing
+            ComparisonImage = Nothing
+            ClearPreviewSource()
+            CleanupCurrentNewDocTempDir()
+            CleanupCurrentFpxTempDir()
+            CurrentImagePath = ""
+            _currentImagePath = ""
+            _renderSourcePathOverride = ""
+            _workingImageOverridePath = ""
+            _workingImageOverrideHasAlpha = False
+            _currentFpxPath = ""
+            _forceSaveAsOnly = False
+            ClearFilmstrip()
+            ClearUndoHistory()
+            ExifInfo = Nothing
+            ClearHistogramData()
+            StatusText = ""
+            _hasChanges = False
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            Me.RaisePropertyChanged(NameOf(IsNewDocument))
+        End Sub
+
+        ''' <summary>Übernimmt die Dialogwerte und legt das leere Dokument an.</summary>
+        Private Async Function ConfirmNewDocumentAsync() As Task
+            Dim widthPx = NewDocPixelWidth
+            Dim heightPx = NewDocPixelHeight
+            If widthPx <= 0 OrElse heightPx <= 0 Then Return
+
+            ' Deckel gegen Vertipper: 30000 px Kantenlänge sind bereits ~3,6 GB im Arbeitsbild.
+            If widthPx > 30000 OrElse heightPx > 30000 Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Neues Bild"),
+                                               LocalizationService.T("Die gewünschte Größe ist zu groß. Erlaubt sind bis zu 30000 Pixel je Kante."))
+                Return
+            End If
+
+            IsNewDocumentDialogOpen = False
+            Await CreateNewDocumentAsync(widthPx, heightPx, _newDocBackgroundMode, _newDocBackgroundColor)
+        End Function
+
+        ''' <summary>Legt ein leeres Dokument an und öffnet es im Editor.
+        '''
+        ''' Der Weg führt bewusst über eine TEMP-DATEI statt über einen pfadlosen Zustand: die ganze
+        ''' Ladekette (PreparePreviewSource, ExifService, FileInfo, FpxService.Save) setzt eine
+        ''' existierende Datei voraus, und ~15 Stellen lesen einen leeren _currentImagePath als „kein
+        ''' Dokument". Genau dieses Muster benutzt schon der .fpx-Zweig von OpenImageAsync für sein
+        ''' entpacktes Basisbild. Nebeneffekt, der uns entgegenkommt: die Nachfrage beim Verlassen
+        ''' (OpenImageAsync-Kopf) greift für ein ungespeichertes neues Dokument von allein.</summary>
+        Private Async Function CreateNewDocumentAsync(widthPx As Integer, heightPx As Integer,
+                                                      backgroundMode As String, backgroundColor As String) As Task(Of Boolean)
+            Dim transparent = String.Equals(backgroundMode, "Transparent", StringComparison.Ordinal)
+            Dim tempDir = ""
+            Dim tempPath = ""
+            Dim createFailed = False
+
+            Try
+                tempDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "NewDocument", Guid.NewGuid().ToString("N"))
+                Directory.CreateDirectory(tempDir)
+                ' PNG, damit ein transparenter Hintergrund die Datei übersteht.
+                tempPath = IO.Path.Combine(tempDir, LocalizationService.T("Unbenannt") & ".png")
+
+                Await Task.Run(Sub()
+                                   ' Direkt in Bgra8888/Premul anlegen - das Format, auf das
+                                   ' WorkingImageService.Init sonst erst umkopieren müsste.
+                                   Using bmp As New SKBitmap(New SKImageInfo(widthPx, heightPx, SKColorType.Bgra8888, SKAlphaType.Premul))
+                                       Using canvas As New SKCanvas(bmp)
+                                           If transparent Then
+                                               canvas.Clear(SKColors.Transparent)
+                                           Else
+                                               canvas.Clear(ParseNewDocColor(backgroundMode, backgroundColor))
+                                           End If
+                                       End Using
+                                       Using image = SKImage.FromBitmap(bmp)
+                                           Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                                               Using fs = File.Create(tempPath)
+                                                   data.SaveTo(fs)
+                                               End Using
+                                           End Using
+                                       End Using
+                                   End Using
+                               End Sub)
+            Catch ex As Exception
+                ' Await ist in VB in einem Catch-Block nicht erlaubt - deshalb nur merken und die
+                ' Meldung unten zeigen.
+                DiagnosticLogService.LogException("Editor.CreateNewDocument", ex)
+                createFailed = True
+            End Try
+
+            If createFailed Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Neues Bild"),
+                                               LocalizationService.T("Das leere Bild konnte nicht angelegt werden."))
+                Return False
+            End If
+
+            ' Erst NACH dem erfolgreichen Schreiben übernehmen: OpenImageAsync räumt den alten
+            ' Temp-Ordner auf und darf dabei nicht den gerade angelegten erwischen.
+            _pendingNewDocTempDir = tempDir
+            _pendingNewDocTransparent = transparent
+
+            ' Die einelementige Pfadliste ist Absicht: ohne allPaths liest LoadFilmstripContext das
+            ' VERZEICHNIS des Pfads aus - also den Temp-Ordner. So zeigt der Filmstreifen „1 / 1".
+            Dim opened = Await OpenImageAsync(tempPath, New List(Of String) From {tempPath}, forceSaveAsOnly:=True)
+            If Not opened Then
+                _pendingNewDocTempDir = ""
+                _pendingNewDocTransparent = False
+                Try
+                    If Directory.Exists(tempDir) Then Directory.Delete(tempDir, True)
+                Catch
+                End Try
+                Return False
+            End If
+
+            ' Ein frisch angelegtes Dokument ist noch unverändert - kein „ungespeicherte Änderungen".
+            _hasChanges = False
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            Me.RaisePropertyChanged(NameOf(IsNewDocument))
+            Return True
+        End Function
+
+        Private Shared Function ParseNewDocColor(backgroundMode As String, backgroundColor As String) As SKColor
+            If Not String.Equals(backgroundMode, "Color", StringComparison.Ordinal) Then Return SKColors.White
+            Dim parsed As SKColor
+            If SKColor.TryParse(backgroundColor, parsed) Then Return parsed
+            Return SKColors.White
+        End Function
 
         Private Function GetPreviewSource() As SKBitmap
             SyncLock _previewSync
@@ -8782,7 +9354,9 @@ Namespace ViewModels
                 Dim dir = If(fromFpx, IO.Path.GetDirectoryName(_currentFpxPath),
                              If(_forceSaveAsOnly, Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), IO.Path.GetDirectoryName(_currentImagePath)))
                 Dim name = IO.Path.GetFileNameWithoutExtension(If(fromFpx, _currentFpxPath, _currentImagePath))
-                Dim proposedName = name & "_bearbeitet"
+                ' Ein neu angelegtes Dokument wurde nie „bearbeitet" - es heißt schlicht „Unbenannt".
+                ' Ohne diesen Fall schlüge die Anwendung „Unbenannt_bearbeitet" vor.
+                Dim proposedName = If(_isNewDocument, name, name & "_bearbeitet")
                 ' FPX als Standard-Vorschlag (Nutzerwunsch 2026-07-17): das Projektformat erhält
                 ' Regler + Objekte editierbar - der Export in JPG/PNG/WEBP bleibt eine bewusste Wahl.
                 ' NormalizeSaveAsFormat fällt auf JPG zurück, falls FPX deaktiviert ist.

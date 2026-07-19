@@ -3488,4 +3488,115 @@
   <data name="Aquarell_b522f5aa" xml:space="preserve">
     <value>Aquarell</value>
   </data>
+  <data name="Alle_l_schen_a85903c2" xml:space="preserve">
+    <value>Alle löschen</value>
+  </data>
+  <data name="Alle_m_ssen_zutreffen_ce7a4cb4" xml:space="preserve">
+    <value>Alle müssen zutreffen</value>
+  </data>
+  <data name="Benutzerdefiniert_f054b12e" xml:space="preserve">
+    <value>Benutzerdefiniert</value>
+  </data>
+  <data name="Bereinigen_192d45a8" xml:space="preserve">
+    <value>Bereinigen</value>
+  </data>
+  <data name="Bilder_Ordner_dcc223e8" xml:space="preserve">
+    <value>Bilder-Ordner</value>
+  </data>
+  <data name="Cache_leeren_9720c6e9" xml:space="preserve">
+    <value>Cache leeren</value>
+  </data>
+  <data name="Eine_muss_zutreffen_dd198b00" xml:space="preserve">
+    <value>Eine muss zutreffen</value>
+  </data>
+  <data name="Hero_17f5d4f0" xml:space="preserve">
+    <value>Hero</value>
+  </data>
+  <data name="Immer_einpassen_8d7ca99c" xml:space="preserve">
+    <value>Immer einpassen</value>
+  </data>
+  <data name="Immich_Alle_Fotos_bad579d5" xml:space="preserve">
+    <value>Immich (Alle Fotos)</value>
+  </data>
+  <data name="Letzter_Ordner_4587eb4a" xml:space="preserve">
+    <value>Letzter Ordner</value>
+  </data>
+  <data name="Liste_4231be17" xml:space="preserve">
+    <value>Liste</value>
+  </data>
+  <data name="Lokale_Ordner_a6b71fce" xml:space="preserve">
+    <value>Lokale Ordner</value>
+  </data>
+  <data name="Nur_wenn_gr_er_2eb9c8b9" xml:space="preserve">
+    <value>Nur wenn größer</value>
+  </data>
+  <data name="Ohne_Favoriten_fbd3e9b0" xml:space="preserve">
+    <value>Ohne Favoriten</value>
+  </data>
+  <data name="Schachbrett_a23ca521" xml:space="preserve">
+    <value>Schachbrett</value>
+  </data>
+  <data name="Transparent_0491f7bd" xml:space="preserve">
+    <value>Transparent</value>
+  </data>
+  <data name="Verbindung_testen_e0cbe4f6" xml:space="preserve">
+    <value>Verbindung testen</value>
+  </data>
+  <data name="Zuf_llig_3eb82187" xml:space="preserve">
+    <value>Zufällig</value>
+  </data>
+  <data name="0_von_1_frei_a3906dfa" xml:space="preserve">
+    <value>{0} von {1} frei</value>
+  </data>
+  <data name="Alben_40991fbd" xml:space="preserve">
+    <value>Alben</value>
+  </data>
+  <data name="Aufl_sung_cc32da2e" xml:space="preserve">
+    <value>Auflösung</value>
+  </data>
+  <data name="Bildschirm_80864c61" xml:space="preserve">
+    <value>Bildschirm</value>
+  </data>
+  <data name="Fotoformate_a15137c2" xml:space="preserve">
+    <value>Fotoformate</value>
+  </data>
+  <data name="Papier_7bdd388d" xml:space="preserve">
+    <value>Papier</value>
+  </data>
+  <data name="Einheit_a759a4a5" xml:space="preserve">
+    <value>Einheit</value>
+  </data>
+  <data name="Pixel_e51f224d" xml:space="preserve">
+    <value>Pixel</value>
+  </data>
+  <data name="Zoll_6c82abf9" xml:space="preserve">
+    <value>Zoll</value>
+  </data>
+  <data name="Neues_Bild_28f91b41" xml:space="preserve">
+    <value>Neues Bild</value>
+  </data>
+  <data name="Neues_Bild_Strg_N_38de3aa5" xml:space="preserve">
+    <value>Neues Bild (Strg+N)</value>
+  </data>
+  <data name="Unbenannt_b34d612b" xml:space="preserve">
+    <value>Unbenannt</value>
+  </data>
+  <data name="Start_ohne_Bilddatei_72e8629d" xml:space="preserve">
+    <value>Start ohne Bilddatei</value>
+  </data>
+  <data name="Lege_ein_leeres_Bild_an_oder_ffne_eine_vorhanden_932cb164" xml:space="preserve">
+    <value>Lege ein leeres Bild an oder öffne eine vorhandene Datei.</value>
+  </data>
+  <data name="Das_leere_Bild_konnte_nicht_angelegt_werden_3284a6ef" xml:space="preserve">
+    <value>Das leere Bild konnte nicht angelegt werden.</value>
+  </data>
+  <data name="Die_gew_nschte_Gr_e_ist_zu_gro_Erlaubt_sind_bis__27934ec9" xml:space="preserve">
+    <value>Die gewünschte Größe ist zu groß. Erlaubt sind bis zu 30000 Pixel je Kante.</value>
+  </data>
+  <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_Da_eee99704" xml:space="preserve">
+    <value>Wähle eine Vorgabe oder trage eigene Maße ein. Das Bild wird leer angelegt und ist erst nach dem Speichern eine Datei.</value>
+  </data>
+  <data name="Legt_fest_was_erscheint_wenn_FerrumPix_ohne_ein__94a59cf0" xml:space="preserve">
+    <value>Legt fest, was erscheint, wenn FerrumPix ohne ein Bild geöffnet wird.</value>
+  </data>
 </root>

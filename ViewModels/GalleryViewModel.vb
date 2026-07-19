@@ -2947,7 +2947,7 @@ Namespace ViewModels
                     totalStr = CInt(Math.Round(totalGb)).ToString() & " GB"
                 End If
 
-                Return ($"{freeStr} von {totalStr} frei",
+                Return (String.Format(LocalizationService.T("{0} von {1} frei"), freeStr, totalStr),
                         Math.Max(0, Math.Min(100, (drive.TotalSize - drive.AvailableFreeSpace) / CDbl(drive.TotalSize) * 100)))
             Catch
                 Return ("", 0)
@@ -3367,6 +3367,23 @@ Namespace ViewModels
                 EnumerateFiles().
                 Where(Function(f) _imageExtensions.Contains(f.Extension.ToLowerInvariant())).
                 ToArray()
+        End Function
+
+        ''' <summary>Die Bilddateien eines Ordners, nach Namen sortiert - für den Start ohne Bilddatei
+        ''' im Betrachter (siehe MainWindowViewModel). Nutzt dieselbe Endungsliste wie die Galerie,
+        ''' damit der Filmstreifen des Betrachters genau die Dateien zeigt, die auch die Galerie
+        ''' zeigen würde. Leere Liste bei nicht lesbarem Ordner - der Aufrufer weicht dann aus.</summary>
+        Public Function GetFolderImagePaths(folderPath As String) As List(Of String)
+            If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return New List(Of String)()
+            Try
+                Return EnumerateImageFiles(folderPath).
+                    Select(Function(f) f.FullName).
+                    OrderBy(Function(p) p, StringComparer.OrdinalIgnoreCase).
+                    ToList()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.GetFolderImagePaths", ex)
+                Return New List(Of String)()
+            End Try
         End Function
 
         ''' <summary>Erzeugt die ImageItem-Objekte für eine Dateiliste und übernimmt die im Katalog

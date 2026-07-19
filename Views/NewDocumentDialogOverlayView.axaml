@@ -1,0 +1,239 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FerrumPix.Views.NewDocumentDialogOverlayView">
+
+    <UserControl.Styles>
+        <!-- Vorgabenkachel: schlichter Rahmen, der bei Auswahl die Akzentfarbe annimmt. -->
+        <Style Selector="Button.preset-tile">
+            <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Width" Value="150"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
+        <Style Selector="Button.preset-tile:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        </Style>
+        <Style Selector="Button.preset-tile.active">
+            <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Border Background="#B8000000"
+            IsVisible="{Binding IsNewDocumentDialogOpen}">
+        <Border Width="900"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{DynamicResource FP.Bg.Panel}"
+                BorderBrush="{DynamicResource FP.Border.Strong}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="22">
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Neues Bild"
+                               FontSize="{DynamicResource FP.Font.Heading}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource FP.Text.Primary}"/>
+                    <TextBlock Text="Wähle eine Vorgabe oder trage eigene Maße ein. Das Bild wird leer angelegt und ist erst nach dem Speichern eine Datei."
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="500,*"
+                      ColumnSpacing="28">
+
+                    <ScrollViewer Grid.Column="0" Height="420" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="Fotoformate"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <ItemsControl ItemsSource="{Binding NewDocPhotoPresets}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="preset-tile"
+                                                Classes.active="{Binding IsSelected}"
+                                                Margin="0,0,8,8"
+                                                Click="OnPresetClick"
+                                                Tag="{Binding Id}">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding SizeText}"
+                                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                                           FontSize="{DynamicResource FP.Font.Caption}"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="Bildschirm"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <ItemsControl ItemsSource="{Binding NewDocScreenPresets}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="preset-tile"
+                                                Classes.active="{Binding IsSelected}"
+                                                Margin="0,0,8,8"
+                                                Click="OnPresetClick"
+                                                Tag="{Binding Id}">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding SizeText}"
+                                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                                           FontSize="{DynamicResource FP.Font.Caption}"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="Papier"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <ItemsControl ItemsSource="{Binding NewDocPaperPresets}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="preset-tile"
+                                                Classes.active="{Binding IsSelected}"
+                                                Margin="0,0,8,8"
+                                                Click="OnPresetClick"
+                                                Tag="{Binding Id}">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding SizeText}"
+                                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                                           FontSize="{DynamicResource FP.Font.Caption}"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Grid Grid.Column="1"
+                          ColumnDefinitions="110,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                          ColumnSpacing="14"
+                          RowSpacing="14"
+                          VerticalAlignment="Top">
+
+                        <TextBlock Text="Ausrichtung"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button Classes="segmented" Classes.active="{Binding IsNewDocPortrait}"
+                                    Click="OnOrientationClick" Tag="Portrait">Hochformat</Button>
+                            <Button Classes="segmented" Classes.active="{Binding NewDocIsLandscape}"
+                                    Click="OnOrientationClick" Tag="Landscape">Querformat</Button>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="1" Text="Einheit"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button Classes="segmented" Classes.active="{Binding IsNewDocUnitMm}"
+                                    Click="OnUnitClick" Tag="mm">mm</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsNewDocUnitCm}"
+                                    Click="OnUnitClick" Tag="cm">cm</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsNewDocUnitIn}"
+                                    Click="OnUnitClick" Tag="in">Zoll</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsNewDocUnitPx}"
+                                    Click="OnUnitClick" Tag="px">Pixel</Button>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="2" Text="Auflösung"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsNewDocDpiRelevant}"/>
+                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                    IsVisible="{Binding IsNewDocDpiRelevant}">
+                            <ComboBox ItemsSource="{Binding NewDocDpiOptions}"
+                                      SelectedItem="{Binding NewDocDpi}"
+                                      MinHeight="34"
+                                      MinWidth="110"/>
+                            <TextBlock Text="dpi"
+                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="3" Text="Breite"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="3" Grid.Column="1"
+                                       Value="{Binding NewDocWidth}"
+                                       Minimum="1"
+                                       Maximum="100000"
+                                       Increment="1"
+                                       FormatString="0.##"
+                                       MinHeight="34"/>
+
+                        <TextBlock Grid.Row="4" Text="Höhe"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="4" Grid.Column="1"
+                                       Value="{Binding NewDocHeight}"
+                                       Minimum="1"
+                                       Maximum="100000"
+                                       Increment="1"
+                                       FormatString="0.##"
+                                       MinHeight="34"/>
+
+                        <TextBlock Grid.Row="5" Text="Hintergrund"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button Classes="segmented" Classes.active="{Binding IsNewDocBackgroundWhite}"
+                                    Click="OnBackgroundClick" Tag="White">Weiß</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsNewDocBackgroundTransparent}"
+                                    Click="OnBackgroundClick" Tag="Transparent">Transparent</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsNewDocBackgroundColor}"
+                                    Click="OnBackgroundClick" Tag="Color">Farbe</Button>
+                        </StackPanel>
+
+                        <TextBox Grid.Row="6" Grid.Column="1"
+                                 Text="{Binding NewDocBackgroundColor}"
+                                 PlaceholderText="#AARRGGBB"
+                                 MinHeight="34"
+                                 IsVisible="{Binding IsNewDocBackgroundColor}"/>
+                    </Grid>
+                </Grid>
+
+                <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding NewDocSummaryText}"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                        <Button Classes="ghost" Padding="14,8" Click="OnCancelClick">
+                            <TextBlock Text="Abbrechen"/>
+                        </Button>
+                        <Button Classes="accent" Padding="16,8" Click="OnCreateClick">
+                            <TextBlock Text="Erstellen"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Border>
+</UserControl>

@@ -40,6 +40,12 @@
                                        Width="20" Height="20" />
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
+                            Command="{Binding ShowNewDocumentDialogCommand}"
+                            ToolTip.Tip="Neues Bild (Strg+N)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
+                                       Width="20" Height="20" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding PrintCommand}"
                             ToolTip.Tip="Drucken (Strg+P)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/printer.svg"
@@ -169,6 +175,7 @@
                             Width="38" Height="38"
                             Click="OnToggleFilmstripClick"
                             Classes.active="{Binding ShowFilmstrip}"
+                            IsEnabled="{Binding CanToggleFilmstrip}"
                             ToolTip.Tip="Filmstreifen ein- oder ausblenden">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
                                        Width="18" Height="18" />
@@ -920,6 +927,40 @@
         <views:InfoSidebarView Grid.Row="1" Grid.Column="3" Width="320" />
 
         <views:LayersPanelView Grid.Row="1" Grid.Column="4" Width="300" />
+
+        <!-- Leerzustand: der Editor hält gar kein Dokument (Start ohne Bilddatei, oder der
+             Neu-Dialog wurde abgebrochen). Deckt die ganze Arbeitszeile ab - Werkzeuge und Panels
+             darunter wären ohne Dokument nur verwirrend. Steht NACH ihnen im Baum, liegt also
+             darüber. -->
+        <Border Grid.Row="1" Grid.ColumnSpan="5"
+                Background="{DynamicResource FP.Bg.Root}"
+                IsVisible="{Binding !HasDocument}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="420">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
+                               Width="56" Height="56"
+                               HorizontalAlignment="Center"
+                               IconBrush="{DynamicResource FP.Text.Secondary}" />
+                <TextBlock Text="Kein Bild geöffnet"
+                           HorizontalAlignment="Center"
+                           FontSize="{DynamicResource FP.Font.Subtitle}"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="Lege ein leeres Bild an oder öffne eine vorhandene Datei."
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Body}" />
+                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,8,0,0">
+                    <Button Classes="accent" Padding="16,8"
+                            Command="{Binding ShowNewDocumentDialogCommand}">Neues Bild</Button>
+                    <Button Classes="ghost" Padding="16,8"
+                            Click="OnPlaceholderOpenImageClick">Bild öffnen</Button>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Liegt über dem Platzhalter: beim Start ohne Bilddatei erscheinen beide, der Dialog vorn. -->
+        <views:NewDocumentDialogOverlayView Grid.Row="0" Grid.RowSpan="3" Grid.ColumnSpan="5" ZIndex="200" />
 
         <Border Grid.Row="2"
                 Grid.ColumnSpan="5"
