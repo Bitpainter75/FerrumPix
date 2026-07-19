@@ -539,6 +539,9 @@ Namespace ViewModels
         Private _newTagText As String = ""
         Private _hasChanges As Boolean
         Private _statusText As String = ""
+        ' True, solange die Statuszeile nichts Wichtiges sagt (leer oder „Vorschau bereit"). Nur dann
+        ' darf die Mausposition ihren Platz übernehmen - siehe FooterStatusText.
+        Private _statusIsIdle As Boolean = True
         Private _mousePositionText As String = ""
         Private _activeZoomPreset As ZoomPresetMode = ZoomPresetMode.Fit
         Private _saveQuality As Integer = 90
@@ -6105,7 +6108,13 @@ Namespace ViewModels
                 Return _statusText
             End Get
             Set(value As String)
+                ' Ruhezustand JETZT festhalten, nicht später vergleichen: der gespeicherte Text ist
+                ' bereits übersetzt, ein Vergleich zur Anzeigezeit wäre nach einem Sprachwechsel
+                ' falsch. Leer zählt mit dazu - dort verdeckt die Mausposition nichts.
+                _statusIsIdle = String.IsNullOrEmpty(value) OrElse
+                                String.Equals(value, LocalizationService.T("Vorschau bereit"), StringComparison.Ordinal)
                 Me.RaiseAndSetIfChanged(_statusText, value)
+                RaiseFooterStatusChanged()
             End Set
         End Property
 
@@ -6122,6 +6131,7 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_previewFailed, value)
+                RaiseFooterStatusChanged()
             End Set
         End Property
 
@@ -6133,8 +6143,39 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_mousePositionText, value)
+                RaiseFooterStatusChanged()
             End Set
         End Property
+
+        ''' <summary>Was rechts unten in der Fußleiste steht: die Mausposition, solange der Zeiger über
+        ''' dem Bild ist UND der Status im Ruhezustand ist. Jede echte Meldung - „wird aktualisiert",
+        ''' „gespeichert als …", die Maße nach dem Laden, ein Fehler - hat Vorrang und bleibt stehen;
+        ''' sie soll nicht ausgerechnet dann verschwinden, wenn man über das Bild fährt.</summary>
+        Public ReadOnly Property FooterStatusText As String
+            Get
+                If _statusIsIdle AndAlso Not String.IsNullOrEmpty(_mousePositionText) Then Return _mousePositionText
+                Return _statusText
+            End Get
+        End Property
+
+        ''' <summary>Rot nur, wenn dort wirklich der Fehlerstatus steht - eine Mausposition darf nie
+        ''' rot erscheinen, auch wenn die letzte Vorschau fehlgeschlagen ist.</summary>
+        Public ReadOnly Property IsFooterStatusFailed As Boolean
+            Get
+                Return _previewFailed AndAlso Not IsShowingMousePosition
+            End Get
+        End Property
+
+        Private ReadOnly Property IsShowingMousePosition As Boolean
+            Get
+                Return _statusIsIdle AndAlso Not String.IsNullOrEmpty(_mousePositionText)
+            End Get
+        End Property
+
+        Private Sub RaiseFooterStatusChanged()
+            Me.RaisePropertyChanged(NameOf(FooterStatusText))
+            Me.RaisePropertyChanged(NameOf(IsFooterStatusFailed))
+        End Sub
 
         ''' <summary>Zuletzt bewusst gewählter Zoom-Modus (Fit/Actual/Manual) - Pixel-/Pan-Mechanik
         ''' bleibt bewusst im Code-Behind (EditorView.axaml.vb), nur der Modus wandert hierher, damit

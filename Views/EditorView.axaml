@@ -51,18 +51,6 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/printer.svg"
                                        Width="20" Height="20" />
                     </Button>
-                    <!-- Der Dateiname sitzt in derselben Zeile wie die mittig zentrierten Modus-Schalter.
-                         Deshalb kleiner (Body statt Subtitle) UND hart begrenzt: allein eine kleinere
-                         Schrift verschiebt die Kollision nur auf den nächsten langen Dateinamen. -->
-                    <StackPanel Margin="26,0,0,0" VerticalAlignment="Center" MaxWidth="260">
-                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding CurrentFileName}" />
-                        <TextBlock Text="{Binding StatusText}"
-                                   Classes="status-text"
-                                   Classes.failed="{Binding PreviewFailed}"
-                                   TextTrimming="CharacterEllipsis"
-                                   FontSize="{DynamicResource FP.Font.Caption}" />
-                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="-110,0,0,0">
@@ -1044,10 +1032,20 @@
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding MousePositionText}"
-                                       IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
-                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}"
-                                       VerticalAlignment="Center" Margin="0,0,20,0" />
+                            <!-- Ein Platz für zwei Angaben: über dem Bild die Mausposition, sonst der
+                                 Status. Rechtsbündig, damit die Zahlen beim Fahren über das Bild nicht
+                                 unter den Sternen hin- und herspringen. -->
+                            <TextBlock Text="{Binding FooterStatusText}"
+                                       Classes="status-text"
+                                       Classes.failed="{Binding IsFooterStatusFailed}"
+                                       IsVisible="{Binding FooterStatusText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       TextAlignment="Right"
+                                       MaxWidth="320"
+                                       TextTrimming="CharacterEllipsis"
+                                       Margin="0,0,20,0" />
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center" 
                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="1">
