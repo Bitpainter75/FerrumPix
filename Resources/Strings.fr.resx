@@ -3599,4 +3599,13 @@
   <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_a6b96835" xml:space="preserve">
     <value>Choisissez un préréglage ou saisissez vos propres dimensions.</value>
   </data>
+  <data name="Retusche_und_Pinsel_e524a6ba" xml:space="preserve">
+    <value>Retouche et pinceau</value>
+  </data>
+  <data name="Retusche_und_Pinsel_ein_ausblenden_ausgeblendet__602193a1" xml:space="preserve">
+    <value>Afficher/masquer retouche et pinceau (masqué, les outils de dessin sont verrouillés)</value>
+  </data>
+  <data name="Ebene_ausgeblendet_2a99a3ad" xml:space="preserve">
+    <value>Calque masqué</value>
+  </data>
 </root>

@@ -343,6 +343,7 @@
 
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Pinsel"
+                            IsEnabled="{Binding CanUsePixelTools}"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Brush"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}"
@@ -354,6 +355,7 @@
                     </Button>
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Radiergummi"
+                            IsEnabled="{Binding CanUsePixelTools}"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Eraser"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}"
@@ -365,6 +367,7 @@
                     </Button>
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Verwischen"
+                            IsEnabled="{Binding CanUsePixelTools}"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Blur"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Blur}">
@@ -375,6 +378,7 @@
                     </Button>
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Reparaturpinsel"
+                            IsEnabled="{Binding CanUsePixelTools}"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Repair"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Repair}">
@@ -385,6 +389,7 @@
                     </Button>
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Stempel (Alt+Klick setzt die Quelle)"
+                            IsEnabled="{Binding CanUsePixelTools}"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Clone"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Clone}">

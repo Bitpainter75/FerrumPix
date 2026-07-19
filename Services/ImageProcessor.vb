@@ -116,8 +116,8 @@ Namespace Services
         Public Property HardnessPercent As Single = 100
         Public Property BrushPreset As String = "soft"
         Public Property ShadowEnabled As Boolean = False
-        Public Property ShadowOffsetXPercent As Single = 2
-        Public Property ShadowOffsetYPercent As Single = 2
+        Public Property ShadowOffsetXPercent As Single = 4
+        Public Property ShadowOffsetYPercent As Single = 4
         Public Property ShadowBlur As Single = 6
         Public Property ShadowStrength As Single = 100
         Public Property ShadowColor As String = "#80000000"
@@ -218,6 +218,8 @@ Namespace Services
         Private _isVisible As Boolean = True
         ' Vom Nutzer im Ebenen-Panel vergebener Name. Leer = automatische Beschriftung aus Art/Text/Datei.
         Private _customName As String = ""
+        ' Vorlagenname, aus dem ein Wasserzeichen entstanden ist. Leer = frei angelegt.
+        Private _watermarkPresetName As String = ""
         ' Reiner UI-Zustand: gerade wird der Name inline bearbeitet (nicht persistiert, nicht geklont).
         Private _isRenaming As Boolean = False
         Private _hardnessPercent As Single = 100
@@ -227,8 +229,8 @@ Namespace Services
         Private _gradientAngleDegrees As Single = 0
         Private _gradientInverted As Boolean = False
         Private _shadowEnabled As Boolean = False
-        Private _shadowOffsetXPercent As Single = 2
-        Private _shadowOffsetYPercent As Single = 2
+        Private _shadowOffsetXPercent As Single = 4
+        Private _shadowOffsetYPercent As Single = 4
         Private _shadowBlur As Single = 6
         Private _shadowStrength As Single = 100
         Private _shadowColor As String = "#80000000"
@@ -295,6 +297,18 @@ Namespace Services
                 SetField(_customName, If(value, ""))
                 RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(LayerLabel)))
                 RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(EditableName)))
+            End Set
+        End Property
+
+        ''' <summary>Name der Wasserzeichen-Vorlage, aus der dieses Objekt entstanden ist (leer = keine).
+        ''' Damit füllt das Eigenschaften-Panel das Namensfeld wieder vor, wenn das Objekt erneut markiert
+        ''' wird - erneutes Speichern überschreibt dann dieselbe Vorlage, statt eine zweite anzulegen.</summary>
+        Public Property WatermarkPresetName As String
+            Get
+                Return _watermarkPresetName
+            End Get
+            Set(value As String)
+                SetField(_watermarkPresetName, If(value, ""))
             End Set
         End Property
 
@@ -801,6 +815,7 @@ Namespace Services
                 .Kind = Kind,
                 .Text = Text,
                 .CustomName = CustomName,
+                .WatermarkPresetName = WatermarkPresetName,
                 .ImagePath = ImagePath,
                 .XPixels = XPixels,
                 .YPixels = YPixels,
@@ -1012,6 +1027,13 @@ Namespace Services
         ''' gehört NICHT zu den Eigenschaften, die ein einzelnes Objekt mitträgt (siehe StructuralPropertyNames).</summary>
         Public Property BackgroundHidden As Boolean = False
 
+        ''' <summary>True = die eingebackene Pixel-Ebene wird beim Zusammensetzen uebersprungen, der Render
+        ''' laeuft also auf dem UNGEBACKENEN Basisbild. Das ist die Ebene "Retusche und Pinsel" im
+        ''' Ebenen-Panel: Retusche, Striche und gerasterte Ebenen liegen alle in EINEM Arbeitsbild
+        ''' (siehe WorkingImageService) und lassen sich deshalb nur gemeinsam ausblenden. Strukturell,
+        ''' keine Pixel-Anpassung (siehe StructuralPropertyNames).</summary>
+        Public Property PixelLayerHidden As Boolean = False
+
         Public Shared Function IsIdentityCurve(pointsCsv As String) As Boolean
             Return String.IsNullOrWhiteSpace(pointsCsv) OrElse String.Equals(pointsCsv.Trim(), "0,0;255,255", StringComparison.Ordinal)
         End Function
@@ -1046,7 +1068,7 @@ Namespace Services
             "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
-            "SelectionMaskPngBase64", "SelectionFeatherPixels", "BackgroundHidden"
+            "SelectionMaskPngBase64", "SelectionFeatherPixels", "BackgroundHidden", "PixelLayerHidden"
         }
 
         Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing
@@ -1206,7 +1228,8 @@ Namespace Services
                 .SelectionMaskBottom = SelectionMaskBottom,
                 .SelectionMaskPngBase64 = SelectionMaskPngBase64,
                 .SelectionFeatherPixels = SelectionFeatherPixels,
-                .BackgroundHidden = BackgroundHidden
+                .BackgroundHidden = BackgroundHidden,
+                .PixelLayerHidden = PixelLayerHidden
             }
         End Function
     End Class
@@ -1769,7 +1792,7 @@ Namespace Services
             Dim effectPad = Math.Max(8.0F, annotation.StrokeWidth * 3.0F)
             If annotation.ShadowEnabled Then
                 Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
-                Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * 0.6F
+                Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor
                 Dim shadowOffset = Math.Max(Math.Abs(objSize * annotation.ShadowOffsetXPercent / 100.0F),
                                             Math.Abs(objSize * annotation.ShadowOffsetYPercent / 100.0F))
                 Dim shadowGrow = Math.Max(0.0F, Clamp(annotation.ShadowSizePercent, 10, 400) / 100.0F - 1.0F) * objSize * 0.5F
@@ -1923,7 +1946,7 @@ Namespace Services
             ' Faktor 1.7 deckt die Glow-Reichweite (Dilate + Blur, siehe DrawAnnotationEffects: ~1.5x objSize
             ' bei Maximalwert) mit etwas Reserve ab.
             Dim glowPad = If(renderAnnotation.GlowEnabled, objSize * Clamp(renderAnnotation.GlowBlur, 0, 100) / 100.0F * 1.7F, 0.0F)
-            Dim shadowPad = If(renderAnnotation.ShadowEnabled, objSize * Clamp(renderAnnotation.ShadowBlur, 0, 100) / 100.0F * 1.8F + shadowGrow, 0.0F)
+            Dim shadowPad = If(renderAnnotation.ShadowEnabled, objSize * Clamp(renderAnnotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor * 3.0F + shadowGrow, 0.0F)
             Dim offsetX = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetXPercent / 100.0F, 0.0F)
             Dim offsetY = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetYPercent / 100.0F, 0.0F)
             Dim effectPad = Math.Max(glowPad, shadowPad)
@@ -5013,6 +5036,19 @@ Namespace Services
         ''' hängen an FLÄCHE × RADIUS, deshalb müssen beide gedeckelt werden: Skias Dilate kostet linear im
         ''' Radius, und der Radius wächst mit der Objektgröße - aber auch ein kleiner Radius auf einer sehr
         ''' großen Maske ist teuer. Was darüber liegt, wird verkleinert gerechnet und wieder hochgezogen.</summary>
+        ''' <summary>Regler "Weichzeichnen" (0-100) -> Gauss-Sigma, bemessen an der Objektgroesse.
+        ''' Der Faktor lag bei 0.6, solange die Weichzeichnung wirkungslos war (MaskFilter bei
+        ''' DrawBitmap, siehe unten) - er war nie an einem sichtbaren Ergebnis geeicht. Mit wirksamem
+        ''' Blur war damit schon der Standardwert 6 stark verwaschen und die obere Haelfte des Reglers
+        ''' loeste den Schatten vollstaendig auf. Erst 0.15, dann 0.075: gemessen wurde nicht die
+        ''' Deckung in der Schattenmitte (die bleibt hoch), sondern der SICHTBARE Saum neben dem
+        ''' Objekt - und dessen Kontrast steckt fast ganz in der ersten Reglerhaelfte (Deckung 254 bei
+        ''' Regler 10, 177 bei 50, danach nur noch 161/153). Groesseres Sigma verteilt den Schatten
+        ''' dann bloss breiter, statt ihn sichtbar zu veraendern. Mit 0.075 liegt das alte Verhalten
+        ''' bei Regler 50 am Ende des Reglers, und der ganze Weg ist nutzbar (Nutzerbefund
+        ''' 2026-07-19: "macht nur bis zur Haelfte Sinn, danach ist der Schatten quasi weg").</summary>
+        Private Const ShadowBlurSigmaFactor As Single = 0.075F
+
         Private Const MaxGlowDilatePx As Single = 12.0F
         Private Const MaxGlowDim As Single = 512.0F
 
@@ -5035,7 +5071,7 @@ Namespace Services
             Dim glowDilate = Math.Max(0, CInt(Math.Round(glowReach * 0.5F)))
             Dim glowSigma = Math.Max(0.1F, glowReach * 0.17F)
             Dim glowMaskReach = glowDilate + 3.0F * glowSigma
-            Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * 0.6F
+            Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor
             Dim offsetX = objSize * annotation.ShadowOffsetXPercent / 100.0F
             Dim offsetY = objSize * annotation.ShadowOffsetYPercent / 100.0F
 
@@ -5133,20 +5169,13 @@ Namespace Services
                     Dim shadowSource = mask
                     Dim roundedShadowMask As SKBitmap = Nothing
                     Try
-                        ' Abgerundeter Schatten nutzt eine eigene Rechteck-Maske statt der exakten
-                        ' Objekt-Silhouette - der Glow-Effekt bleibt davon unberührt und folgt weiter
-                        ' der echten Objektform.
+                        ' Abgerundeter Schatten rundet die ECKEN DER SILHOUETTE ab (siehe
+                        ' BuildRoundedSilhouette) - die Objektform bleibt erhalten. Der Glow-Effekt
+                        ' bleibt davon unberührt und folgt weiter der ungerundeten Form.
                         If annotation.ShadowRounded Then
-                            roundedShadowMask = New SKBitmap(maskWidth, maskHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
-                            Using roundCanvas = New SKCanvas(roundedShadowMask)
-                                roundCanvas.Clear(SKColors.Transparent)
-                                roundCanvas.Translate(-maskLeft, -maskTop)
-                                Dim cornerRadius = Math.Min(rect.Width, rect.Height) / 2.0F * Clamp(annotation.ShadowCornerRadiusPercent, 0, 100) / 100.0F
-                                Using roundPaint = New SKPaint With {.Color = SKColors.Black, .IsAntialias = True}
-                                    roundCanvas.DrawRoundRect(rect, cornerRadius, cornerRadius, roundPaint)
-                                End Using
-                            End Using
-                            shadowSource = roundedShadowMask
+                            Dim cornerRadius = Math.Min(rect.Width, rect.Height) / 2.0F * Clamp(annotation.ShadowCornerRadiusPercent, 0, 100) / 100.0F
+                            roundedShadowMask = BuildRoundedSilhouette(mask, cornerRadius)
+                            If roundedShadowMask IsNot Nothing Then shadowSource = roundedShadowMask
                         End If
 
                         ' Schattengröße: um die Objektmitte skalieren, sodass der Schatten über das Objekt
@@ -5154,9 +5183,19 @@ Namespace Services
                         ' faktor geteilt, weil die anschließende Canvas-Skalierung ihn wieder hochmultipliziert -
                         ' so bleibt die Weichzeichnung unabhängig von der gewählten Größe.
                         Dim shadowScale = Clamp(annotation.ShadowSizePercent, 10, 400) / 100.0F
+                        Dim shadowSigma = Math.Max(0.1F, shadowBlurPx / shadowScale)
+                        ' Weichzeichnung MUSS hier ein ImageFilter sein, kein MaskFilter: der Schatten
+                        ' wird per DrawBitmap gezeichnet, und ein MaskFilter wirkt nur auf die Deckung
+                        ' gezeichneter GEOMETRIE - bei DrawBitmap tut er schlicht nichts (gemessen mit
+                        ' SkiaSharp 3.119, sigma 4/12/30 alle unveraendert hart). Genau daran lag der
+                        ' Befund "Schatten hat keine weiche Kante": der Weichzeichnen-Regler war
+                        ' wirkungslos, der Schatten immer eine harte Silhouette.
                         Using shadowColorFilter = SKColorFilter.CreateBlendMode(shadowColor, SKBlendMode.SrcIn)
-                            Using shadowMaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(0.1F, shadowBlurPx / shadowScale))
-                                Using paint = New SKPaint With {.ColorFilter = shadowColorFilter, .MaskFilter = shadowMaskFilter}
+                            Using shadowImageFilter = SKImageFilter.CreateBlur(shadowSigma, shadowSigma)
+                                Using paint = New SKPaint With {
+                                    .ColorFilter = shadowColorFilter,
+                                    .ImageFilter = shadowImageFilter
+                                }
                                     canvas.Save()
                                     ' Versatz unskaliert (außerhalb der Skalierung angewandt), Skalierung um die Objektmitte.
                                     canvas.Translate(rect.MidX + offsetX, rect.MidY + offsetY)
@@ -5173,6 +5212,46 @@ Namespace Services
                 End If
             End Using
         End Sub
+
+        ''' Harte Alpha-Schwelle bei halber Deckung: aus einer weichgezeichneten Maske wird wieder eine
+        ''' scharfe Form - nur eben mit runden Ecken. Die Farbkanaele bleiben unveraendert; die
+        ''' SkiaSharp-Bindung verlangt trotzdem ALLE VIER Tabellen (Nothing wirft).
+        Private Shared ReadOnly IdentityColorTable As Byte() = Enumerable.Range(0, 256).Select(Function(i) CByte(i)).ToArray()
+        Private Shared ReadOnly AlphaThresholdTable As Byte() = Enumerable.Range(0, 256).Select(Function(i) CByte(If(i < 128, 0, 255))).ToArray()
+
+        ''' <summary>Rundet die ECKEN einer Silhouette ab, ohne ihre Form zu ersetzen: weichzeichnen und
+        ''' anschliessend wieder hart schwellen. Ein Gauss zieht Ecken staerker ein als gerade Kanten,
+        ''' die Schwelle macht daraus wieder eine scharfe Kontur - der klassische Weg, weil Skias
+        ''' Dilate/Erode ein RECHTECKIGES Strukturelement nutzen und damit eckig blieben.
+        ''' Vorher zeichnete der Schalter ein abgerundetes Rechteck der Bounding-Box, warf also die
+        ''' Objektform weg - bei Text oder Ellipse wurde der Schatten zum Kasten (Nutzerbefund
+        ''' 2026-07-19). Nothing = kein Rundungsbedarf, der Aufrufer nimmt dann die Originalmaske.</summary>
+        Private Shared Function BuildRoundedSilhouette(mask As SKBitmap, cornerRadius As Single) As SKBitmap
+            If mask Is Nothing OrElse cornerRadius < 0.5F Then Return Nothing
+            ' Der Gauss rundet mit etwa dem doppelten Sigma - so trifft der Regler die gewuenschte Ecke.
+            Dim sigma = Math.Max(0.1F, cornerRadius * 0.5F)
+            Dim rounded As SKBitmap = Nothing
+            Try
+                rounded = New SKBitmap(mask.Width, mask.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using roundCanvas = New SKCanvas(rounded)
+                    roundCanvas.Clear(SKColors.Transparent)
+                    Using blur = SKImageFilter.CreateBlur(sigma, sigma)
+                        Using threshold = SKColorFilter.CreateTable(AlphaThresholdTable, IdentityColorTable,
+                                                                    IdentityColorTable, IdentityColorTable)
+                            Using sharpen = SKImageFilter.CreateColorFilter(threshold, blur)
+                                Using paint = New SKPaint With {.ImageFilter = sharpen}
+                                    roundCanvas.DrawBitmap(mask, 0, 0, paint)
+                                End Using
+                            End Using
+                        End Using
+                    End Using
+                End Using
+                Return rounded
+            Catch
+                rounded?.Dispose()
+                Return Nothing
+            End Try
+        End Function
 
         Private Shared Function ApplyAlpha(color As SKColor, factor As Single) As SKColor
             Return New SKColor(color.Red, color.Green, color.Blue, CByte(Math.Max(0, Math.Min(255, color.Alpha * Clamp(factor, 0, 1)))))
@@ -5885,7 +5964,7 @@ Namespace Services
             Dim objSize = Math.Max(1.0F, strokeWidth)
             Dim shadowDx = If(ann.ShadowEnabled, Clamp(ann.ShadowOffsetXPercent, -100, 100) / 100.0F * objSize, 0.0F)
             Dim shadowDy = If(ann.ShadowEnabled, Clamp(ann.ShadowOffsetYPercent, -100, 100) / 100.0F * objSize, 0.0F)
-            Dim shadowSigma = If(ann.ShadowEnabled, Clamp(ann.ShadowBlur, 0, 100) / 100.0F * objSize * 0.6F, 0.0F)
+            Dim shadowSigma = If(ann.ShadowEnabled, Clamp(ann.ShadowBlur, 0, 100) / 100.0F * objSize * ShadowBlurSigmaFactor, 0.0F)
             Dim glowSigma = If(ann.GlowEnabled, Clamp(ann.GlowBlur, 0, 100) / 100.0F * objSize * 0.8F, 0.0F)
 
             Dim pad = objSize + Math.Abs(shadowDx) + Math.Abs(shadowDy) + Math.Max(shadowSigma, glowSigma) * 3.0F + 4.0F

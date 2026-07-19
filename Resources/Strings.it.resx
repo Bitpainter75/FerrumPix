@@ -3599,4 +3599,13 @@
   <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_a6b96835" xml:space="preserve">
     <value>Scegli una preimpostazione o inserisci dimensioni personalizzate.</value>
   </data>
+  <data name="Retusche_und_Pinsel_e524a6ba" xml:space="preserve">
+    <value>Ritocco e pennello</value>
+  </data>
+  <data name="Retusche_und_Pinsel_ein_ausblenden_ausgeblendet__602193a1" xml:space="preserve">
+    <value>Mostra/nascondi ritocco e pennello (se nascosto blocca gli strumenti di disegno)</value>
+  </data>
+  <data name="Ebene_ausgeblendet_2a99a3ad" xml:space="preserve">
+    <value>Livello nascosto</value>
+  </data>
 </root>

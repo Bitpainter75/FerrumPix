@@ -163,8 +163,8 @@
         <CheckBox Content="Verlauf invertieren"
                   IsChecked="{Binding AnnotationGradientInverted}" FontSize="{DynamicResource FP.Font.Small}"
                   IsVisible="{Binding ShowRadialGradientControl}" />
-        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
-              IsVisible="{Binding ShowStrokeColorPicker}">
+        <!-- Beim QR-Code ist das die Modulfarbe ("Vordergrund", siehe StrokeColorLabel). -->
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
             <TextBlock Text="{Binding StrokeColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

@@ -18,6 +18,9 @@ Namespace Views
         Private Shared ReadOnly HiddenCursor As New Cursor(StandardCursorType.None)
         Private _isRestoringPlacement As Boolean = False
         Private _hasRestoredPlacement As Boolean = False
+        ''' Fensterzustand vor dem Wechsel ins Viewer-Vollbild - dorthin geht es beim Verlassen zurueck,
+        ''' statt immer auf Normalgroesse zu fallen.
+        Private _stateBeforeFullscreen As WindowState = WindowState.Normal
         Private _allowWindowClose As Boolean = False
 
         ''' <summary>Wer den Tastaturfokus hatte, bevor ein Overlay-Dialog ihn an sich gezogen hat.</summary>
@@ -92,6 +95,10 @@ Namespace Views
                 Width = placement.Width
                 Height = placement.Height
                 Position = placement.Position
+                ' Erst Groesse/Position, dann der Zustand: beim spaeteren Wiederherstellen
+                ' faellt das Fenster damit auf die zuletzt genutzte Normalgroesse zurueck.
+                If settings.MainWindowMaximized Then WindowState = WindowState.Maximized
+                UpdateMaximizeGlyph()
             Finally
                 _isRestoringPlacement = False
                 _hasRestoredPlacement = True
@@ -196,6 +203,7 @@ Namespace Views
                 If WindowState = WindowState.Normal Then
                     AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
                 End If
+                SaveWindowStateOnExit()
                 ' Einstellungen werden entprellt geschrieben; beim Schließen darf nichts ausstehen.
                 AppSettingsService.Flush()
                 Return
@@ -234,6 +242,7 @@ Namespace Views
             If WindowState = WindowState.Normal Then
                 AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
             End If
+            SaveWindowStateOnExit()
             AppSettingsService.Flush()
         End Sub
 
@@ -384,8 +393,20 @@ Namespace Views
 
         Private Sub OnMaximizeClick(sender As Object, e As RoutedEventArgs)
             WindowState = If(WindowState = WindowState.Maximized, WindowState.Normal, WindowState.Maximized)
+            UpdateMaximizeGlyph()
+        End Sub
+
+        Private Sub UpdateMaximizeGlyph()
             Dim glyph = Me.FindControl(Of TextBlock)("MaximizeGlyph")
             If glyph IsNot Nothing Then glyph.Text = If(WindowState = WindowState.Maximized, "❐", "□")
+        End Sub
+
+        ''' <summary>Merkt sich beim Beenden, ob das Fenster gross war. Der Viewer-Vollbildmodus zaehlt
+        ''' mit: er ist zwar ein Ansichts-Modus (der beim Start nicht wiederkehren soll), aber wer darin
+        ''' beendet, erwartet auch kein kleines Fenster zurueck - deshalb kommt er maximiert wieder.</summary>
+        Private Sub SaveWindowStateOnExit()
+            AppSettingsService.SaveMainWindowMaximized(
+                WindowState = WindowState.Maximized OrElse WindowState = WindowState.FullScreen)
         End Sub
 
         Private Sub OnCloseClick(sender As Object, e As RoutedEventArgs)
@@ -396,6 +417,8 @@ Namespace Views
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If vm Is Nothing Then Return
             If vm.IsFullscreen Then
+                ' Zustand vor dem Vollbild merken, damit das Verlassen dorthin zurueckfuehrt.
+                If WindowState <> WindowState.FullScreen Then _stateBeforeFullscreen = WindowState
                 WindowState = WindowState.FullScreen
                 Cursor = HiddenCursor
             Else
@@ -403,7 +426,17 @@ Namespace Views
                 ' Delay the window resize by one render cycle so the FullscreenViewport
                 ' can be hidden first, preventing the image from being briefly clipped
                 ' to the normal window bounds while still visible.
-                Dispatcher.UIThread.Post(Sub() WindowState = WindowState.Normal, DispatcherPriority.Background)
+                '
+                ' Nur zurueckschalten, wenn wir wirklich im Vollbild SIND. Vorher lief das
+                ' bedingungslos - und weil HandleDataContextChanged diese Methode beim Start
+                ' aufruft, kam das maximiert wiederhergestellte Fenster kurz gross und fiel dann
+                ' auf Normalgroesse zurueck (Nutzerbefund 2026-07-19).
+                Dispatcher.UIThread.Post(
+                    Sub()
+                        If WindowState <> WindowState.FullScreen Then Return
+                        WindowState = _stateBeforeFullscreen
+                        UpdateMaximizeGlyph()
+                    End Sub, DispatcherPriority.Background)
             End If
         End Sub
 

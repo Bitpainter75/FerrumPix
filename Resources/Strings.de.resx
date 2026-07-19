@@ -3599,4 +3599,13 @@
   <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_a6b96835" xml:space="preserve">
     <value>Wähle eine Vorgabe oder trage eigene Maße ein.</value>
   </data>
+  <data name="Retusche_und_Pinsel_e524a6ba" xml:space="preserve">
+    <value>Retusche und Pinsel</value>
+  </data>
+  <data name="Retusche_und_Pinsel_ein_ausblenden_ausgeblendet__602193a1" xml:space="preserve">
+    <value>Retusche und Pinsel ein-/ausblenden (ausgeblendet sperrt die Malwerkzeuge)</value>
+  </data>
+  <data name="Ebene_ausgeblendet_2a99a3ad" xml:space="preserve">
+    <value>Ebene ausgeblendet</value>
+  </data>
 </root>

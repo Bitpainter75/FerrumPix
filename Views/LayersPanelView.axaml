@@ -9,7 +9,7 @@
          Icon-Werkzeugleiste. Bindet ans EditorViewModel; alle Aktionen nutzen bestehende Kommandos. -->
     <Border x:Name="LayersPanelBorder" Classes="panel-right" Padding="0"
             IsVisible="{Binding IsLayersPanelVisible}">
-        <Grid RowDefinitions="Auto,*,Auto,Auto">
+        <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
 
             <!-- Kopfleiste: Deckkraft (Slider) über dem Mischmodus der markierten Ebene. -->
             <Border Grid.Row="0" Padding="10,10,10,8"
@@ -115,9 +115,46 @@
                     IsVisible="False" IsHitTestVisible="False" />
             </Grid>
 
+            <!-- Pixel-Ebene: Retusche, Pinsel-/Radiererstriche und gerasterte Ebenen liegen alle in EINEM
+                 Arbeitsbild (siehe WorkingImageService) und lassen sich deshalb nur gemeinsam ausblenden.
+                 Solange sie aus ist, sind die Mal- und Retuschewerkzeuge gesperrt (CanUsePixelTools). -->
+            <Border Grid.Row="2" Padding="8,5" MinHeight="42"
+                    BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
+                    Background="{DynamicResource FP.Bg.Dark}">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                    <Border Grid.Column="0" Width="30" Height="30" CornerRadius="3"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                            Background="{DynamicResource FP.Bg.Input}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg"
+                                       Width="16" Height="16"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Grid.Column="1" Text="Retusche und Pinsel"
+                               FontSize="{DynamicResource FP.Font.Small}"
+                               Margin="9,0,6,0" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                    <icons:SvgIcon Grid.Column="2"
+                                   Source="avares://FerrumPix/Assets/Icons/outline/lock.svg"
+                                   Width="13" Height="13" Margin="0,0,8,0"
+                                   IconBrush="{DynamicResource FP.Text.Muted}"
+                                   VerticalAlignment="Center" />
+                    <ToggleButton Grid.Column="3"
+                                  Classes="ghost layer-eye"
+                                  Width="24" Height="24" Padding="0"
+                                  IsChecked="{Binding IsPixelLayerVisible, Mode=OneWay}"
+                                  Command="{Binding TogglePixelLayerVisibilityCommand}"
+                                  ToolTip.Tip="Retusche und Pinsel ein-/ausblenden (ausgeblendet sperrt die Malwerkzeuge)">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                            Width="15" Height="15" />
+                    </ToggleButton>
+                </Grid>
+            </Border>
+
             <!-- Hintergrund-Ebene: das Basisbild, fest am Boden, gesperrt (nicht umsortier-/löschbar). Nur das
                  Auge blendet es aus (transparenter Grund, siehe ImageProcessor.ApplyAnnotations). -->
-            <Border Grid.Row="2" Padding="8,5" MinHeight="42"
+            <Border Grid.Row="3" Padding="8,5" MinHeight="42"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">
@@ -153,7 +190,7 @@
 
             <!-- Untere Werkzeugleiste: Aktionen auf der markierten Ebene (wie die Icon-Reihe unten in
                  üblichen Ebenen-Panels). Nur die tatsächlich unterstützten Aktionen, keine Attrappen. -->
-            <Border Grid.Row="3" Padding="8,6"
+            <Border Grid.Row="4" Padding="8,6"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0">
                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
@@ -179,7 +216,7 @@
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding RasterizeSelectedAnnotationCommand}"
-                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            IsEnabled="{Binding CanRasterizeSelectedAnnotation}"
                             ToolTip.Tip="Ebene rastern (ins Bild einbacken)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-union.svg"
                                        Width="16" Height="16" />

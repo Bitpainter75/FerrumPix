@@ -14,7 +14,7 @@
                               SecondaryFillColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}"
                               FillLabel="{Binding FillColorLabel}"
                               StrokeLabel="{Binding StrokeColorLabel}"
-                              ShowFill="{Binding ShowFillColorControls}"
+                              ShowFill="{Binding ShowFillColorPicker}"
                               ShowSecondaryFill="{Binding ShowGradientFillControls}" />
         </StackPanel>
 

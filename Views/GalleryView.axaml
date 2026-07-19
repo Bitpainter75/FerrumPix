@@ -668,11 +668,36 @@
                                   DragDrop.AllowDrop="True"
                                   DragDrop.DragOver="OnImmichTreeDragOver"
                                   DragDrop.Drop="OnImmichTreeDrop"
+                                  DragDrop.DragLeave="OnTreeDragLeave"
                                   SelectionChanged="OnVirtualTreeSelectionChanged">
+                            <TreeView.Styles>
+                                <!-- Das Element unter dem Zeiger ist der Border/ContentPresenter des
+                                     TreeViewItem-Templates, nicht unsere Zeilenvorlage - es spannt die ganze
+                                     Zeilenbreite darueber. Der Mauszeiger richtet sich nach diesem Element,
+                                     deshalb muss AllowDrop dort sitzen und nicht nur am TreeView (Messung
+                                     2026-07-19: quelle=Border/ContentPresenter, nie Grid). -->
+                                <Style Selector="TreeViewItem">
+                                    <Setter Property="DragDrop.AllowDrop" Value="True"/>
+                                </Style>
+                                <!-- Eigene Ablege-Rueckmeldung: Avalonia stellt unter X11 bei internem Ziehen
+                                     keine effektabhaengigen Mauszeiger dar (siehe HighlightDropRow). -->
+                                <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot">
+                                    <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                </Style>
+                            </TreeView.Styles>
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
+                                    <!-- AllowDrop auch auf der Zeile selbst: die Ereignisse blubbern zwar zum
+                                         TreeView hoch, aber der Mauszeiger richtet sich nach dem Element UNTER dem
+                                         Zeiger - ohne die Angabe gilt die Zeile nicht als Ziel und es erscheint das
+                                         Verbotszeichen, obwohl der Drop laeuft (Messung 2026-07-19). Die Kacheln in
+                                         der Galerie machen es genauso. -->
                                     <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center"
                                           HorizontalAlignment="Stretch" Background="Transparent" Margin="-34,3,0,3"
+                                          DragDrop.AllowDrop="True"
                                           PointerPressed="OnImmichNodePointerPressed">
                                         <Grid.ContextMenu>
                                             <ContextMenu>
@@ -716,7 +741,26 @@
                                   DragDrop.AllowDrop="True"
                                   DragDrop.DragOver="OnFolderTreeDragOver"
                                   DragDrop.Drop="OnFolderTreeDrop"
+                                  DragDrop.DragLeave="OnTreeDragLeave"
                                   SelectionChanged="OnFolderTreeSelectionChanged">
+                            <TreeView.Styles>
+                                <!-- Das Element unter dem Zeiger ist der Border/ContentPresenter des
+                                     TreeViewItem-Templates, nicht unsere Zeilenvorlage - es spannt die ganze
+                                     Zeilenbreite darueber. Der Mauszeiger richtet sich nach diesem Element,
+                                     deshalb muss AllowDrop dort sitzen und nicht nur am TreeView (Messung
+                                     2026-07-19: quelle=Border/ContentPresenter, nie Grid). -->
+                                <Style Selector="TreeViewItem">
+                                    <Setter Property="DragDrop.AllowDrop" Value="True"/>
+                                </Style>
+                                <!-- Eigene Ablege-Rueckmeldung: Avalonia stellt unter X11 bei internem Ziehen
+                                     keine effektabhaengigen Mauszeiger dar (siehe HighlightDropRow). -->
+                                <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot">
+                                    <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                </Style>
+                            </TreeView.Styles>
                             <TreeView.ContextMenu>
                                 <ContextMenu MaxHeight="1000">
                                     <MenuItem Name="FolderTreeCreateFolderMenuItem" Header="Neuer Ordner" Click="OnContextCreateFolder"/>
@@ -732,9 +776,14 @@
                             </TreeView.ContextMenu>
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
+                                    <!-- Background="Transparent" macht die ganze Zeile hittestbar (sonst treffen
+                                         nur Symbol und Beschriftung), DragDrop.AllowDrop meldet sie als Drop-Ziel
+                                         an - siehe Kommentar am Immich-Baum. -->
                                     <Grid ColumnDefinitions="Auto,*"
                                           VerticalAlignment="Center"
                                           HorizontalAlignment="Stretch"
+                                          Background="Transparent"
+                                          DragDrop.AllowDrop="True"
                                           Margin="4,4">
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
                                                Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>

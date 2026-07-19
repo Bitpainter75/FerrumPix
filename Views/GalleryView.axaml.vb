@@ -749,37 +749,57 @@ Namespace Views
 
         ' --- Drag&Drop lokal → Immich (Datei-Payload auf einen Immich-Knoten ablegen = Upload) ---
 
+        ''' <summary>Knoten unter dem Zeiger. Laeuft erst den LOGISCHEN, dann den VISUELLEN Elternpfad
+        ''' hoch: bei Inhalten aus einem ItemTemplate reisst die logische Kette ab, der Knoten waere sonst
+        ''' je nach getroffenem Element mal auffindbar und mal nicht - genau daraus entstand die
+        ''' Abweichung zwischen Mauszeiger und tatsaechlichem Ablegen (Nutzerbefund 2026-07-19).</summary>
         Private Function GetImmichDropNode(e As DragEventArgs) As VirtualNavigationNode
             Dim current = TryCast(e.Source, Control)
             While current IsNot Nothing
                 Dim node = TryCast(current.DataContext, VirtualNavigationNode)
                 If node IsNot Nothing Then Return node
-                current = TryCast(current.Parent, Control)
+                Dim logicalParent = TryCast(current.Parent, Control)
+                current = If(logicalParent, current.GetVisualParent(Of Control)())
             End While
             Return Nothing
         End Function
 
-        Public Sub OnImmichTreeDragOver(sender As Object, e As DragEventArgs)
+        ''' <summary>Ziel und Nutzlast eines Immich-Drops - EINE Quelle fuer Mauszeiger und Ablegen, damit
+        ''' die beiden nicht auseinanderlaufen koennen.
+        ''' <paramref name="requireExistingFiles"/>: beim Ablegen muessen die Dateien wirklich da sein;
+        ''' beim Ueberfliegen nicht - unter X11 reicht ein fremder Ziehvorgang die Dateiliste erst BEIM
+        ''' Ablegen heraus, waehrend DragOver liest sie sich leer. Der Zeiger zeigte deshalb "geht nicht",
+        ''' obwohl der Upload danach lief.</summary>
+        Private Function ResolveImmichDrop(e As DragEventArgs, requireExistingFiles As Boolean) _
+            As (Node As VirtualNavigationNode, LocalPaths As List(Of String), PayloadUnreadable As Boolean)
             Dim node = GetImmichDropNode(e)
+            If node Is Nothing OrElse Not node.IsImmichNode Then Return (Nothing, New List(Of String)(), False)
             Dim payload = GetDragPayload(e)
             ' Nur echte lokale Dateien auf einen Immich-Knoten - keine Immich-Pseudo-Pfade (Immich→Immich hier nicht).
-            Dim hasLocal = payload.Paths.Any(Function(p) Not ImmichService.IsImmichPseudoPath(p))
-            If node IsNot Nothing AndAlso node.IsImmichNode AndAlso hasLocal Then
+            Dim localPaths = payload.Paths.
+                Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso
+                                  (Not requireExistingFiles OrElse IO.File.Exists(p))).ToList()
+            Return (node, localPaths, payload.Paths.Count = 0)
+        End Function
+
+        Public Sub OnImmichTreeDragOver(sender As Object, e As DragEventArgs)
+            Dim drop = ResolveImmichDrop(e, requireExistingFiles:=False)
+            If drop.Node IsNot Nothing AndAlso (drop.LocalPaths.Count > 0 OrElse drop.PayloadUnreadable) Then
                 e.DragEffects = DragDropEffects.Copy
             Else
                 e.DragEffects = DragDropEffects.None
             End If
+            HighlightDropRow(e, e.DragEffects <> DragDropEffects.None)
             e.Handled = True
         End Sub
 
         Public Sub OnImmichTreeDrop(sender As Object, e As DragEventArgs)
-            Dim node = GetImmichDropNode(e)
-            If node Is Nothing OrElse Not node.IsImmichNode Then Return
-            Dim payload = GetDragPayload(e)
-            Dim localPaths = payload.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso IO.File.Exists(p)).ToList()
+            ClearDropHighlight()
+            Dim drop = ResolveImmichDrop(e, requireExistingFiles:=True)
+            If drop.Node Is Nothing Then Return
             e.Handled = True
-            If localPaths.Count = 0 Then Return
-            GetVm()?.UploadToImmich(node, localPaths)
+            If drop.LocalPaths.Count = 0 Then Return
+            GetVm()?.UploadToImmich(drop.Node, drop.LocalPaths)
         End Sub
 
         Public Async Sub OnImmichPasteClick(sender As Object, e As RoutedEventArgs)
@@ -1604,8 +1624,15 @@ Namespace Views
             Await PasteClipboardIntoFolder(node.FullPath)
         End Sub
 
+        ''' <summary>Stammt die Ziehlast aus Immich? Der Pseudo-Pfad allein reicht NICHT: eine Ziehgeste
+        ''' aus der Galerie laedt Immich-Assets vorher in TEMPORAERE Dateien (siehe OnItemsDragStart) und
+        ''' traegt danach nur noch deren echte Pfade. Ohne die Temp-Pruefung fiel so ein Drop in den
+        ''' "intern = verschieben"-Zweig, und Verschieben ist auf Temp-Dateien nicht erlaubt
+        ''' (FileOperationPolicy.CanMove verlangt einen Pfad im persoenlichen Ordner). Ergebnis:
+        ''' Mauszeiger "geht nicht" und Immich→Ordner ging gar nicht (Nutzerbefund 2026-07-19).</summary>
         Private Shared Function PayloadHasImmich(payload As (Paths As List(Of String), IsInternal As Boolean)) As Boolean
-            Return payload.Paths.Any(Function(p) ImmichService.IsImmichPseudoPath(p))
+            Return payload.Paths.Any(Function(p) ImmichService.IsImmichPseudoPath(p) OrElse
+                                                 ImmichService.IsImmichTempPath(p))
         End Function
 
         Private Function GetDropEffects(payload As (Paths As List(Of String), IsInternal As Boolean), targetFolder As String) As DragDropEffects
@@ -1636,10 +1663,47 @@ Namespace Views
         Public Sub OnFolderTreeDragOver(sender As Object, e As DragEventArgs)
             Dim target = GetDropFolder(e)
             e.DragEffects = GetDropEffects(GetDragPayload(e), target?.FullPath)
+            HighlightDropRow(e, e.DragEffects <> DragDropEffects.None)
             e.Handled = True
         End Sub
 
+        ''' <summary>Hebt die Zeile unter dem Zeiger hervor, solange dort abgelegt werden darf.
+        ''' Avalonia stellt unter X11 bei anwendungsinternem Ziehen KEINE effektabhaengigen Mauszeiger dar -
+        ''' gemessen 2026-07-19: Ziel, Nutzlast und Effekt stimmen (Move bzw. Copy, beides im erlaubten
+        ''' Satz), der Zeiger zeigte trotzdem durchgehend "verboten", auch mit AllowDrop direkt am
+        ''' getroffenen Element. Diese Rueckmeldung liegt dafuer vollstaendig in unserer Hand.</summary>
+        Private _dropHighlightRow As Control
+
+        Private Sub HighlightDropRow(e As DragEventArgs, erlaubt As Boolean)
+            Dim zeile As Control = Nothing
+            If erlaubt Then
+                Dim current = TryCast(e.Source, Control)
+                While current IsNot Nothing
+                    If TypeOf current Is TreeViewItem Then
+                        zeile = current
+                        Exit While
+                    End If
+                    Dim logicalParent = TryCast(current.Parent, Control)
+                    current = If(logicalParent, current.GetVisualParent(Of Control)())
+                End While
+            End If
+            If Object.ReferenceEquals(zeile, _dropHighlightRow) Then Return
+            _dropHighlightRow?.Classes.Remove("drop-target")
+            _dropHighlightRow = zeile
+            _dropHighlightRow?.Classes.Add("drop-target")
+        End Sub
+
+        Private Sub ClearDropHighlight()
+            _dropHighlightRow?.Classes.Remove("drop-target")
+            _dropHighlightRow = Nothing
+        End Sub
+
+        Public Sub OnTreeDragLeave(sender As Object, e As RoutedEventArgs)
+            ClearDropHighlight()
+        End Sub
+
         Public Async Sub OnFolderTreeDrop(sender As Object, e As DragEventArgs)
+            ClearDropHighlight()
             Dim target = GetDropFolder(e)
             If target Is Nothing Then Return
             Await ApplyDropAsync(GetDragPayload(e), target.FullPath)
@@ -1699,12 +1763,17 @@ Namespace Views
                    vm.SelectedImmichNode IsNot Nothing AndAlso vm.SelectedImmichNode.IsImmichNode
         End Function
 
+        ''' <summary>Ordnerknoten unter dem Zeiger. Wie GetImmichDropNode erst der LOGISCHE, dann der
+        ''' VISUELLE Elternpfad: bei Inhalten aus einem ItemTemplate reisst die logische Kette ab, und der
+        ''' Rueckfall unten liefert dann den MARKIERTEN statt des ueberflogenen Ordners - der Mauszeiger
+        ''' beschriebe also einen anderen Ordner als den, auf dem man steht.</summary>
         Private Function GetDropFolder(e As DragEventArgs) As FolderNode
             Dim current = TryCast(e.Source, Control)
             While current IsNot Nothing
                 Dim node = TryCast(current.DataContext, FolderNode)
                 If node IsNot Nothing Then Return node
-                current = TryCast(current.Parent, Control)
+                Dim logicalParent = TryCast(current.Parent, Control)
+                current = If(logicalParent, current.GetVisualParent(Of Control)())
             End While
             Return GetVm()?.SelectedFolderNode
         End Function

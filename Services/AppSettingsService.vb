@@ -151,6 +151,10 @@ Namespace Services
         Public Property MainWindowTop As Integer = -1
         Public Property MainWindowWidth As Double = 1536
         Public Property MainWindowHeight As Double = 1024
+        ''' Nur maximiert/nicht maximiert. Der Viewer-Vollbildmodus (WindowState.FullScreen mit
+        ''' verstecktem Zeiger) ist ein ANSICHTS-Modus und wird bewusst nicht wiederhergestellt -
+        ''' beim Start ohne Bild waere er eine Sackgasse. Wer im Vollbild beendet, kommt maximiert zurueck.
+        Public Property MainWindowMaximized As Boolean = False
         Public Property SavedSearches As New List(Of SavedSearchSettings)()
         Public Property VideoHardwareAcceleration As Boolean = False
         Public Property TransparencyBackgroundMode As String = "Checkerboard"
@@ -930,6 +934,10 @@ Namespace Services
 
         Public Shared Sub SaveEditorShowGrid(value As Boolean)
             Update(Sub(s) s.EditorShowGrid = value)
+        End Sub
+
+        Public Shared Sub SaveMainWindowMaximized(value As Boolean)
+            Update(Sub(s) s.MainWindowMaximized = value)
         End Sub
 
         Public Shared Sub SaveMainWindowPlacement(left As Integer, top As Integer, width As Double, height As Double)

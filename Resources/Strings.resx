@@ -3600,4 +3600,13 @@
   <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_a6b96835" xml:space="preserve">
     <value>Choose a preset or enter your own dimensions.</value>
   </data>
+  <data name="Retusche_und_Pinsel_e524a6ba" xml:space="preserve">
+    <value>Retouching and brush</value>
+  </data>
+  <data name="Retusche_und_Pinsel_ein_ausblenden_ausgeblendet__602193a1" xml:space="preserve">
+    <value>Show/hide retouching and brush (hiding locks the painting tools)</value>
+  </data>
+  <data name="Ebene_ausgeblendet_2a99a3ad" xml:space="preserve">
+    <value>Layer hidden</value>
+  </data>
 </root>

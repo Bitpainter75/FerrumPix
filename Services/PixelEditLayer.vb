@@ -13,8 +13,8 @@ Namespace Services
         Public Property HardnessPercent As Single = 100
         Public Property BrushPreset As String = "soft"
         Public Property ShadowEnabled As Boolean = False
-        Public Property ShadowOffsetXPercent As Single = 2
-        Public Property ShadowOffsetYPercent As Single = 2
+        Public Property ShadowOffsetXPercent As Single = 4
+        Public Property ShadowOffsetYPercent As Single = 4
         Public Property ShadowBlur As Single = 6
         Public Property ShadowStrength As Single = 100
         Public Property ShadowColor As String = "#80000000"

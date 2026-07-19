@@ -325,6 +325,7 @@ Namespace ViewModels
         ' Hintergrund-Ebene (Basisbild) im Ebenen-Panel aus-/eingeblendet. Wirkt strukturell übers
         ' Compositing (siehe ImageProcessor.ApplyAnnotations), nicht als Pixel-Anpassung.
         Private _backgroundHidden As Boolean = False
+        Private _pixelLayerHidden As Boolean = False
         Private _annotationRotation As Double = 0
         Private _annotationFlipH As Boolean = False
         ' Objekt-Anpassungsmodus: Solange ein Objekt markiert ist UND ein objektfähiges Werkzeug aktiv ist,
@@ -345,8 +346,8 @@ Namespace ViewModels
         Private _annotationGradientAngle As Double = 0
         Private _annotationGradientInverted As Boolean = False
         Private _annotationShadowEnabled As Boolean = False
-        Private _annotationShadowOffsetX As Double = 2
-        Private _annotationShadowOffsetY As Double = 2
+        Private _annotationShadowOffsetX As Double = 4
+        Private _annotationShadowOffsetY As Double = 4
         Private _annotationShadowLightAngle As Double = 225
         Private _annotationShadowBlur As Double = 6
         Private _annotationShadowStrength As Double = 100
@@ -1199,7 +1200,6 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFontControls))
             Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
             Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
-            Me.RaisePropertyChanged(NameOf(ShowStrokeColorPicker))
             Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
             Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
             Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
@@ -1317,6 +1317,11 @@ Namespace ViewModels
             existing.FillColor = _annotationFillColor
             PersistWatermarkPresets()
             SelectedWatermarkPresetName = name
+            ' Überschreibt der Nutzer die bereits gewählte Vorlage, ändert sich der Name nicht - der
+            ' Setter oben bricht dann ab und stempelt das Objekt nicht. Deshalb hier direkt.
+            If HasSelectedAnnotation AndAlso EffectiveAnnotationKind = "Watermark" Then
+                _annotations(_selectedAnnotationIndex).WatermarkPresetName = name
+            End If
         End Sub
 
         Public Sub DeleteCurrentWatermarkPreset()
@@ -1469,6 +1474,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
                 Me.RaisePropertyChanged(NameOf(SelectedLayer))
                 Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
+                Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationToolbarKind))
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
@@ -1487,7 +1493,6 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
-                Me.RaisePropertyChanged(NameOf(ShowStrokeColorPicker))
                 Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
                 Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
@@ -1540,7 +1545,6 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
-                Me.RaisePropertyChanged(NameOf(ShowStrokeColorPicker))
                 Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
                 Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
@@ -1601,29 +1605,25 @@ Namespace ViewModels
 
         ''' Füllung ergibt bei eingefügten Bildern keinen Sinn (DrawImageAnnotation zeichnet nur das
         ''' Bild selbst, keine Füllfarbe dahinter) - dort blendet das Eigenschaften-Panel den Regler aus.
-        Public ReadOnly Property ShowFillColorControls As Boolean
+        ''' Beim QR-Code ist die Füllfarbe der Hintergrund (siehe FillColorLabel).
+        Public ReadOnly Property ShowFillColorPicker As Boolean
             Get
                 Return EffectiveAnnotationKind <> "Image" AndAlso Not IsWatermarkImageSource
+            End Get
+        End Property
+
+        ''' Die Füllart (Vollfarbe/Verlauf/Radial) ist beim QR-Code wirkungslos: DrawQrCode zeichnet
+        ''' die Module immer als Vollfarbe auf Vollfarbe und kennt keinen Verlauf. Dort stehen
+        ''' stattdessen Vordergrund- und Hintergrundfarbe im Eigenschaften-Panel.
+        Public ReadOnly Property ShowFillColorControls As Boolean
+            Get
+                Return ShowFillColorPicker AndAlso EffectiveAnnotationKind <> "QR"
             End Get
         End Property
 
         Public ReadOnly Property ShowGradientFillControls As Boolean
             Get
                 Return ShowFillColorControls AndAlso Not String.Equals(_annotationFillKind, "Solid", StringComparison.OrdinalIgnoreCase)
-            End Get
-        End Property
-
-        ''' Beim QR-Code stehen Hintergrund (Füllfarbe) und Vordergrund (Konturfarbe) im Farbmischer.
-        ''' Die Farbfelder im Eigenschaften-Panel wären dann eine zweite Stelle für dieselben Werte.
-        Public ReadOnly Property ShowFillColorPicker As Boolean
-            Get
-                Return ShowFillColorControls AndAlso EffectiveAnnotationKind <> "QR"
-            End Get
-        End Property
-
-        Public ReadOnly Property ShowStrokeColorPicker As Boolean
-            Get
-                Return EffectiveAnnotationKind <> "QR"
             End Get
         End Property
 
@@ -1744,8 +1744,8 @@ Namespace ViewModels
             AnnotationGradientAngleDegrees = 0
             AnnotationGradientInverted = False
             AnnotationShadowEnabled = False
-            AnnotationShadowOffsetX = 2
-            AnnotationShadowOffsetY = 2
+            AnnotationShadowOffsetX = 4
+            AnnotationShadowOffsetY = 4
             Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
             AnnotationShadowBlur = 6
             AnnotationShadowStrength = 100
@@ -4041,6 +4041,38 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Sichtbarkeit der Pixel-Ebene "Retusche und Pinsel". Retusche, Striche und gerasterte
+        ''' Ebenen liegen alle in EINEM Arbeitsbild (siehe WorkingImageService) und lassen sich deshalb nur
+        ''' gemeinsam ein-/ausblenden. True = sichtbar.</summary>
+        Public ReadOnly Property IsPixelLayerVisible As Boolean
+            Get
+                Return Not _pixelLayerHidden
+            End Get
+        End Property
+
+        ''' <summary>Solange die Pixel-Ebene ausgeblendet ist, sind Pinsel, Radiergummi, Verwischen,
+        ''' Stempel und Reparaturpinsel gesperrt (Nutzerentscheidung 2026-07-19, wie das Malen auf einer
+        ''' unsichtbaren Ebene in ueblichen Bildbearbeitungen). Sonst liefen die Commits in ein
+        ''' Arbeitsbild, das gerade gar nicht angezeigt wird.</summary>
+        Public ReadOnly Property CanUsePixelTools As Boolean
+            Get
+                Return Not _pixelLayerHidden
+            End Get
+        End Property
+
+        ''' <summary>Rastern backt ins Arbeitsbild - bei ausgeblendeter Pixel-Ebene gesperrt.</summary>
+        Public ReadOnly Property CanRasterizeSelectedAnnotation As Boolean
+            Get
+                Return HasSelectedAnnotation AndAlso CanUsePixelTools
+            End Get
+        End Property
+
+        Public ReadOnly Property PixelToolsLockedHint As String
+            Get
+                Return If(_pixelLayerHidden, LocalizationService.T("Ebene ausgeblendet"), "")
+            End Get
+        End Property
+
         Public Property AnnotationRotation As Double
             Get
                 Return _annotationRotation
@@ -4990,7 +5022,7 @@ Namespace ViewModels
             Dim bounds As SKRectI
             Using mask = ImageProcessor.BuildMagicWandMaskFromFile(RenderSourcePath, GetCurrentAdjustments(),
                                                                    seedX, seedY, CSng(_selectionTolerance / 100.0), bounds,
-                                                                   workingFull:=_workingImage.CloneFull())
+                                                                   workingFull:=CloneWorkingFullForRender())
                 If mask Is Nothing OrElse bounds.Width <= 0 OrElse bounds.Height <= 0 Then Return
                 PushUndo()
                 ' Kein Polygonzug: für maskenbasierte Auswahlen zeichnet das Overlay die Ameisenlinie aus den
@@ -5360,13 +5392,13 @@ Namespace ViewModels
                     If mask Is Nothing Then Return Nothing
                     placementPx = maskRect
                     If Not ImageProcessor.ExtractRegionToFileMasked(RenderSourcePath, adj, maskRect, mask, tempPath,
-                                                                    workingFull:=_workingImage.CloneFull()) Then Return Nothing
+                                                                    workingFull:=CloneWorkingFullForRender()) Then Return Nothing
                 Finally
                     If ownsMask Then mask.Dispose()
                 End Try
             Else
                 If Not ImageProcessor.ExtractRegionToFile(RenderSourcePath, adj, placementPx, tempPath,
-                                                          workingFull:=_workingImage.CloneFull()) Then Return Nothing
+                                                          workingFull:=CloneWorkingFullForRender()) Then Return Nothing
             End If
             Return tempPath
         End Function
@@ -6863,6 +6895,7 @@ Namespace ViewModels
         Public ReadOnly Property RasterizeSelectedAnnotationCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationUpCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationDownCommand As ICommand
+        Public ReadOnly Property TogglePixelLayerVisibilityCommand As ICommand
         Public ReadOnly Property ToggleBackgroundVisibilityCommand As ICommand
         Public ReadOnly Property ResetCurrentToolCommand As ICommand
         Public ReadOnly Property ResetLightCommand As ICommand
@@ -7097,6 +7130,7 @@ Namespace ViewModels
                                                                            MoveSelectedAnnotation(-1)
                                                                        End Sub)
             ToggleBackgroundVisibilityCommand = ReactiveCommand.Create(Sub() ToggleBackgroundVisibility())
+            TogglePixelLayerVisibilityCommand = ReactiveCommand.Create(Sub() TogglePixelLayerVisibility())
             ResetCurrentToolCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo()
                                                                  ResetCurrentToolInternal()
@@ -7263,7 +7297,7 @@ Namespace ViewModels
                                         ' preserveMetadata:=False - eine Temp-Datei braucht kein EXIF.
                                         Return ImageProcessor.SaveImage(sourcePath, tempPath, adj, 100,
                                                                         preserveMetadata:=False,
-                                                                        workingFull:=_workingImage.CloneFull())
+                                                                        workingFull:=CloneWorkingFullForRender())
                                     End Function)
             StatusText = ""
 
@@ -7358,6 +7392,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
             Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
+            Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
         End Sub
 
         Public Sub ActivateDefaultToolForModeEntry()
@@ -9076,9 +9111,25 @@ Namespace ViewModels
         End Function
 
         Private Function GetPreviewSource() As SKBitmap
+            ' Ausgeblendete Pixel-Ebene: der Render laeuft auf dem UNGEBACKENEN Originaldecode statt auf
+            ' der Arbeitsbild-Ableitung. Beide haben dieselben Masse (gleicher Pfad, gleiches
+            ' PreviewMaxDimension), Dirty-Rects und Objektgeometrie bleiben also gueltig. Malen ist
+            ' waehrenddessen gesperrt (siehe CanUsePixelTools), deshalb kann kein Commit ins Leere laufen.
+            If _pixelLayerHidden Then
+                Dim unbaked = GetComparisonOriginalSource()
+                If unbaked IsNot Nothing Then Return unbaked
+            End If
             SyncLock _previewSync
                 Return _previewSource
             End SyncLock
+        End Function
+
+        ''' <summary>Arbeitsbild fuer den Voll-Render (Export/Speichern). Nothing bei ausgeblendeter
+        ''' Pixel-Ebene - der Renderer faellt dann auf den Datei-Decode des Basisbilds zurueck, also auf
+        ''' denselben ungebackenen Stand, den die Vorschau zeigt.</summary>
+        Private Function CloneWorkingFullForRender() As SKBitmap
+            If _pixelLayerHidden Then Return Nothing
+            Return _workingImage.CloneFull()
         End Function
 
         ''' <summary>Liefert (und cached) den Vorschau-Decode der ORIGINAL-Datei für das
@@ -9536,7 +9587,7 @@ Namespace ViewModels
                     ' Arbeitsbild als Pipeline-Eingang (Stufe C): CloneFull ist threadsicher und
                     ' wartet automatisch auf einen laufenden Region-Commit.
                     ok = Await Task.Run(Function() ImageProcessor.SaveImage(RenderSourcePath, targetPath, adj, targetQuality, preserveMetadata,
-                                                                            workingFull:=_workingImage.CloneFull()))
+                                                                            workingFull:=CloneWorkingFullForRender()))
                 End If
                 If ok AndAlso saveToImmich Then
                     ' Ziel Immich: Mit "Vorhandene Assets aktualisieren" UND einer Immich-Quelle wird
@@ -9649,7 +9700,7 @@ Namespace ViewModels
                 Dim adj = GetCurrentAdjustments()
                 Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
                 Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(sourcePath, renderPath, adj, SaveQuality, preserveMetadata,
-                                                                            workingFull:=_workingImage.CloneFull()))
+                                                                            workingFull:=CloneWorkingFullForRender()))
                 If Not ok Then
                     StatusText = LocalizationService.T("Speichern fehlgeschlagen")
                     Return False
@@ -9865,6 +9916,7 @@ Namespace ViewModels
                 .LutStrength = CSng(_lutStrength),
                 .Annotations = _annotations.Select(Function(a) a.Clone()).ToList(),
                 .BackgroundHidden = _backgroundHidden,
+                .PixelLayerHidden = _pixelLayerHidden,
                 .HasActiveSelection = _hasActiveSelection,
                 .SelectionXPercent = _selectionXPercent,
                 .SelectionYPercent = _selectionYPercent,
@@ -10248,6 +10300,8 @@ Namespace ViewModels
             _hasActiveSelection = adj.HasActiveSelection
             _backgroundHidden = adj.BackgroundHidden
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            _pixelLayerHidden = adj.PixelLayerHidden
+            RaisePixelLayerVisibilityChanged()
             _selectionFeather = adj.SelectionFeatherPixels
             Me.RaisePropertyChanged(NameOf(SelectionFeather))
             _selectionXPercent = adj.SelectionXPercent
@@ -10300,6 +10354,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
             Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
+            Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(HasActiveSelection))
             Me.RaisePropertyChanged(NameOf(SelectionXPercent))
             Me.RaisePropertyChanged(NameOf(SelectionYPercent))
@@ -10464,6 +10519,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
             Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
+            Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(Brightness))
             Me.RaisePropertyChanged(NameOf(Contrast))
             Me.RaisePropertyChanged(NameOf(Saturation))
@@ -10552,8 +10608,8 @@ Namespace ViewModels
             _annotationGradientAngle = 0
             _annotationGradientInverted = False
             _annotationShadowEnabled = False
-            _annotationShadowOffsetX = 2
-            _annotationShadowOffsetY = 2
+            _annotationShadowOffsetX = 4
+            _annotationShadowOffsetY = 4
             _annotationShadowLightAngle = ComputeShadowLightAngle(_annotationShadowOffsetX, _annotationShadowOffsetY)
             _annotationShadowBlur = 6
             _annotationShadowStrength = 100
@@ -10568,6 +10624,7 @@ Namespace ViewModels
 
             ClearSelection(captureUndo:=False)
             _backgroundHidden = False
+            _pixelLayerHidden = False
             _selectionXPercent = 0
             _selectionYPercent = 0
             _selectionWidthPercent = 0
@@ -10605,6 +10662,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsLayersTabSelected))
             Me.RaisePropertyChanged(NameOf(IsHistoryTabSelected))
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            RaisePixelLayerVisibilityChanged()
             Me.RaisePropertyChanged(NameOf(ShapeIconSearchText))
             UpdateShapeIconStates()
 
@@ -11300,6 +11358,7 @@ Namespace ViewModels
         ''' eingebacken (Hintergrund-Queue). Undo läuft über den Vorher-Patch des Commits.
         ''' Pinsel und Radierer sind keine Overlay-Objekte und erzeugen keine Ebenen.
         Public Sub AddBrushStroke(points As IEnumerable(Of Avalonia.Point), Optional isEraser As Boolean = False)
+            If Not CanUsePixelTools Then Return
             If points Is Nothing Then Return
             Dim normalized = points.ToList()
             If normalized.Count < 2 Then Return
@@ -11427,6 +11486,28 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Blendet die Pixel-Ebene (Retusche/Striche/gerastertes) ein/aus. Waehrend noch Commits
+        ''' in der Queue stecken, wird nicht umgeschaltet: der Commit meint das Arbeitsbild, das gerade
+        ''' aus dem Render fliegt - sein Ergebnis waere sonst weder sichtbar noch nachvollziehbar.</summary>
+        Private Sub TogglePixelLayerVisibility()
+            If _pendingWorkingCommits > 0 Then Return
+            CaptureUndoState("PixelLayerVisibility")
+            _pixelLayerHidden = Not _pixelLayerHidden
+            ' Ein ausgeblendetes Arbeitsbild darf nicht weiter bemalt werden - eine laufende
+            ' Mal-Sitzung endet hier, sonst haenge der naechste Zug an einem unsichtbaren Strich.
+            If _pixelLayerHidden Then _pixelEditLayer.ResetActiveStroke()
+            RaisePixelLayerVisibilityChanged()
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        Private Sub RaisePixelLayerVisibilityChanged()
+            Me.RaisePropertyChanged(NameOf(IsPixelLayerVisible))
+            Me.RaisePropertyChanged(NameOf(CanUsePixelTools))
+            Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
+            Me.RaisePropertyChanged(NameOf(PixelToolsLockedHint))
+        End Sub
+
         ''' <summary>Startet das Inline-Umbenennen einer Ebene (Doppelklick im Panel): Undo-Punkt setzen und
         ''' den Bearbeitungszustand exklusiv auf diese Ebene legen (nur eine wird gleichzeitig bearbeitet).</summary>
         Public Sub BeginLayerRename(annotation As ImageAnnotation)
@@ -11541,6 +11622,7 @@ Namespace ViewModels
         ''' Mischmodi rechnen ab jetzt gegen das unangepasste Arbeitsbild - der Look kann beim
         ''' Rastern mit aktiven Anpassungen leicht umspringen (bewusst, siehe Rendering-Notizen).
         Private Sub RasterizeSelectedAnnotation()
+            If Not CanUsePixelTools Then Return
             If _rasterizeInFlight Then Return
             Dim index = _selectedAnnotationIndex
             If index < 0 OrElse index >= _annotations.Count Then Return
@@ -11792,6 +11874,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
             Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
+            Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
         End Sub
 
         ''' <summary>True, während die Regler ein Objekt bedienen.</summary>
@@ -11808,10 +11891,13 @@ Namespace ViewModels
                     Dim a = _annotations(_selectedAnnotationIndex)
                     Dim normalizedKind = NormalizeAnnotationKind(a.Kind)
                     _watermarkImagePath = If(NormalizeAnnotationKind(a.Kind) = "Watermark", a.ImagePath, "")
-                    ' Der Vorlagenname beschreibt das zuvor selektierte Objekt und passt nicht mehr zu
-                    ' den gleich geladenen Werten.
-                    _selectedWatermarkPresetName = ""
-                    _watermarkPresetNameDraft = ""
+                    ' Der Vorlagenname des zuvor selektierten Objekts passt nicht mehr zu den gleich
+                    ' geladenen Werten - stattdessen die am Objekt hinterlegte Vorlage übernehmen
+                    ' (leer, wenn es nicht aus einer Vorlage stammt).
+                    Dim presetOfAnnotation = If(normalizedKind = "Watermark", If(a.WatermarkPresetName, ""), "")
+                    If Not WatermarkPresetNames.Contains(presetOfAnnotation) Then presetOfAnnotation = ""
+                    _selectedWatermarkPresetName = presetOfAnnotation
+                    _watermarkPresetNameDraft = presetOfAnnotation
                     Me.RaisePropertyChanged(NameOf(SelectedWatermarkPresetName))
                     Me.RaisePropertyChanged(NameOf(WatermarkPresetNameDraft))
                     AnnotationText = a.Text
@@ -11902,6 +11988,9 @@ Namespace ViewModels
             End If
             If normalizedKind = "Watermark" Then
                 a.ImagePath = _watermarkImagePath
+                ' Vorlagenbezug am Objekt festhalten, damit das Namensfeld beim erneuten Markieren
+                ' wieder gefüllt ist und "Speichern" dieselbe Vorlage überschreibt.
+                a.WatermarkPresetName = If(_selectedWatermarkPresetName, "")
             End If
             a.FillColor = _annotationFillColor
             a.StrokeColor = _annotationStrokeColor
@@ -12143,6 +12232,7 @@ Namespace ViewModels
         ''' captureUndo=True markiert den Beginn eines Zuges (Mausklick), False die Zwischenpunkte
         ''' beim Ziehen.
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
+            If Not CanUsePixelTools Then Return
             ' Der Stempel braucht eine Quelle. Ohne sie würde er stillschweigend zur Retusche -
             ' der Nutzer soll stattdessen erst Alt+Klick machen (siehe RetouchHintText).
             If IsCloneMode AndAlso Not HasCloneSource Then Return
