@@ -84,6 +84,65 @@ Supported Immich work includes:
 - Optionally update existing Immich assets in place.
 - Optionally delete Immich photos and albums when this is enabled in Settings.
 
+### Required API key permissions
+
+FerrumPix authenticates with an Immich API key. A key with `all` works, but if you prefer a restricted key, these are the permissions FerrumPix actually uses. Every feature calls its own endpoint, so a missing permission disables that one function instead of breaking the whole integration — you can start narrow and widen later.
+
+Build the key up in layers, depending on how much you want FerrumPix to do:
+
+**Read-only — browse, view, download:**
+
+```
+user.read  asset.read  asset.view  asset.download  album.read  person.read  tag.read
+```
+
+**Add for writing metadata** — ratings, favorites, description, keywords:
+
+```
+asset.update  tag.create  tag.asset
+```
+
+**Add for uploading** — upload from the gallery, and saving an edited photo as a new asset:
+
+```
+asset.upload  albumAsset.create  asset.copy
+```
+
+Plus `album.create` and `album.update` if FerrumPix should be able to create and rename albums.
+
+**Add for deleting** — only needed when *Allow deleting* is enabled in Settings:
+
+```
+asset.delete  album.delete
+```
+
+The full mapping, in case you want to know what each one is actually for:
+
+| What it enables | Immich endpoint | Permission |
+| --- | --- | --- |
+| Connection test in Settings | `GET /users/me` | `user.read` |
+| Browsing photos, search lists, places, people counts | `POST /search/metadata`, `POST /search/smart`, `GET /search/explore`, `GET /search/cities` | `asset.read` |
+| Thumbnails in gallery and filmstrip | `GET /assets/{id}/thumbnail` | `asset.view` |
+| Opening and downloading originals | `GET /assets/{id}/original` | `asset.download` |
+| Metadata of a single photo | `GET /assets/{id}` | `asset.read` |
+| Albums as virtual folders | `GET /albums` | `album.read` |
+| People as virtual folders | `GET /people` | `person.read` |
+| Reading keywords | `GET /tags` | `tag.read` |
+| Sync of ratings, favorites and description | `PUT /assets/{id}` | `asset.update` |
+| Writing keywords | `PUT /tags`, `PUT`/`DELETE /tags/{id}/assets` | `tag.create`, `tag.asset` |
+| Upload from the gallery, and saving an edited photo as a new asset | `POST /assets` | `asset.upload` |
+| Putting an uploaded photo into an album | `PUT /albums/{id}/assets` | `albumAsset.create` |
+| Creating an album | `POST /albums` | `album.create` |
+| Renaming an album | `PATCH /albums/{id}` | `album.update` |
+| Deleting an album (Settings → *Allow deleting*) | `DELETE /albums/{id}` | `album.delete` |
+| Deleting photos (Settings → *Allow deleting*) | `DELETE /assets` | `asset.delete` |
+| Carrying albums, favorite, stack and shared links over to a replaced asset | `PUT /assets/copy` | `asset.copy` |
+| *Update existing assets* — writing an edit back onto the original asset | `PUT /assets/{id}/original` | see note below |
+
+Note on *Update existing assets*: that option replaces the file of an existing asset. The permission guarding this endpoint could not be confirmed against the current Immich source, and it has changed names across versions. If the option is enabled and saving fails with HTTP 403, check the permission list in your Immich version's API key dialog for the entry covering asset replacement — or leave the option off, in which case FerrumPix always creates a new asset and this endpoint is never called.
+
+Permission names come from the Immich server source and apply to reasonably recent versions; older servers with a single all-access key are unaffected.
+
 ## Settings
 
 <img src="Screenshots/Settings.png" />
