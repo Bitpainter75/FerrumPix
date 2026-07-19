@@ -3593,10 +3593,10 @@
   <data name="Die_gew_nschte_Gr_e_ist_zu_gro_Erlaubt_sind_bis__27934ec9" xml:space="preserve">
     <value>Die gewünschte Größe ist zu groß. Erlaubt sind bis zu 30000 Pixel je Kante.</value>
   </data>
-  <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_Da_eee99704" xml:space="preserve">
-    <value>Wähle eine Vorgabe oder trage eigene Maße ein. Das Bild wird leer angelegt und ist erst nach dem Speichern eine Datei.</value>
-  </data>
   <data name="Legt_fest_was_erscheint_wenn_FerrumPix_ohne_ein__94a59cf0" xml:space="preserve">
     <value>Legt fest, was erscheint, wenn FerrumPix ohne ein Bild geöffnet wird.</value>
+  </data>
+  <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_a6b96835" xml:space="preserve">
+    <value>Wähle eine Vorgabe oder trage eigene Maße ein.</value>
   </data>
 </root>

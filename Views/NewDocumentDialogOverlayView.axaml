@@ -38,7 +38,7 @@
                                FontSize="{DynamicResource FP.Font.Heading}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource FP.Text.Primary}"/>
-                    <TextBlock Text="Wähle eine Vorgabe oder trage eigene Maße ein. Das Bild wird leer angelegt und ist erst nach dem Speichern eine Datei."
+                    <TextBlock Text="Wähle eine Vorgabe oder trage eigene Maße ein."
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                TextWrapping="Wrap"/>
                 </StackPanel>
@@ -182,6 +182,7 @@
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
                         <NumericUpDown Grid.Row="3" Grid.Column="1"
+                                       Classes="combo-like"
                                        Value="{Binding NewDocWidth}"
                                        Minimum="1"
                                        Maximum="100000"
@@ -193,6 +194,7 @@
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
                         <NumericUpDown Grid.Row="4" Grid.Column="1"
+                                       Classes="combo-like"
                                        Value="{Binding NewDocHeight}"
                                        Minimum="1"
                                        Maximum="100000"
@@ -212,11 +214,46 @@
                                     Click="OnBackgroundClick" Tag="Color">Farbe</Button>
                         </StackPanel>
 
-                        <TextBox Grid.Row="6" Grid.Column="1"
-                                 Text="{Binding NewDocBackgroundColor}"
-                                 PlaceholderText="#AARRGGBB"
-                                 MinHeight="34"
-                                 IsVisible="{Binding IsNewDocBackgroundColor}"/>
+                        <!-- Farbfeld + Hex-Wert auf dem Knopf, Farbwähler im Flyout - dasselbe Muster
+                             wie beim Collage-Hintergrund und beim Transparenz-Hintergrund. -->
+                        <Button Grid.Row="6" Grid.Column="1"
+                                Classes="ghost"
+                                Padding="10,6"
+                                MinHeight="34"
+                                HorizontalAlignment="Left"
+                                HorizontalContentAlignment="Left"
+                                IsVisible="{Binding IsNewDocBackgroundColor}">
+                            <Grid ColumnDefinitions="28,*" ColumnSpacing="8" MinWidth="150">
+                                <Border Width="24"
+                                        Height="20"
+                                        Background="{Binding NewDocBackgroundBrush}"
+                                        BorderBrush="{DynamicResource FP.Border.Strong}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding NewDocBackgroundColor}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <Border Background="{DynamicResource FP.Bg.Panel}"
+                                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="10">
+                                        <StackPanel Spacing="6" Width="230">
+                                            <ColorPicker Color="{Binding NewDocBackgroundColorValue, Mode=TwoWay}"
+                                                         ColorModel="Rgba"
+                                                         HorizontalAlignment="Stretch"/>
+                                            <TextBox Text="{Binding NewDocBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     PlaceholderText="#AARRGGBB"
+                                                     FontSize="{DynamicResource FP.Font.Body}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
                     </Grid>
                 </Grid>
 

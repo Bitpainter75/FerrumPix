@@ -3594,10 +3594,10 @@
   <data name="Die_gew_nschte_Gr_e_ist_zu_gro_Erlaubt_sind_bis__27934ec9" xml:space="preserve">
     <value>The requested size is too large. Up to 30000 pixels per edge are allowed.</value>
   </data>
-  <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_Da_eee99704" xml:space="preserve">
-    <value>Choose a preset or enter your own dimensions. The image is created blank and only becomes a file once you save it.</value>
-  </data>
   <data name="Legt_fest_was_erscheint_wenn_FerrumPix_ohne_ein__94a59cf0" xml:space="preserve">
     <value>Determines what appears when FerrumPix is opened without an image.</value>
+  </data>
+  <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_a6b96835" xml:space="preserve">
+    <value>Choose a preset or enter your own dimensions.</value>
   </data>
 </root>

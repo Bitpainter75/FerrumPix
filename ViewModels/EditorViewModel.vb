@@ -6481,7 +6481,31 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_newDocBackgroundColor, value)
+                Me.RaisePropertyChanged(NameOf(NewDocBackgroundColorValue))
+                Me.RaisePropertyChanged(NameOf(NewDocBackgroundBrush))
             End Set
+        End Property
+
+        ''' <summary>Dieselbe Farbe als Color für den ColorPicker. Ein unlesbarer Hex-Wert im Textfeld
+        ''' darf den Dialog nicht sprengen - dann gilt Weiß (wie beim Collage-Hintergrund).</summary>
+        Public Property NewDocBackgroundColorValue As Avalonia.Media.Color
+            Get
+                Try
+                    Return Avalonia.Media.Color.Parse(_newDocBackgroundColor)
+                Catch
+                    Return Avalonia.Media.Colors.White
+                End Try
+            End Get
+            Set(value As Avalonia.Media.Color)
+                NewDocBackgroundColor = value.ToString()
+            End Set
+        End Property
+
+        ''' <summary>Das Farbfeld auf dem Knopf, der den Farbwähler aufklappt.</summary>
+        Public ReadOnly Property NewDocBackgroundBrush As Avalonia.Media.IBrush
+            Get
+                Return New Avalonia.Media.SolidColorBrush(NewDocBackgroundColorValue)
+            End Get
         End Property
 
         Public ReadOnly Property IsNewDocUnitMm As Boolean

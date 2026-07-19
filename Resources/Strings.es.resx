@@ -3593,10 +3593,10 @@
   <data name="Die_gew_nschte_Gr_e_ist_zu_gro_Erlaubt_sind_bis__27934ec9" xml:space="preserve">
     <value>El tamaño solicitado es demasiado grande. Se permiten hasta 30000 píxeles por lado.</value>
   </data>
-  <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_Da_eee99704" xml:space="preserve">
-    <value>Elige un ajuste preestablecido o introduce tus propias dimensiones. La imagen se crea vacía y solo se convierte en archivo al guardarla.</value>
-  </data>
   <data name="Legt_fest_was_erscheint_wenn_FerrumPix_ohne_ein__94a59cf0" xml:space="preserve">
     <value>Determina qué aparece cuando FerrumPix se abre sin una imagen.</value>
+  </data>
+  <data name="W_hle_eine_Vorgabe_oder_trage_eigene_Ma_e_ein_a6b96835" xml:space="preserve">
+    <value>Elige un ajuste preestablecido o introduce tus propias dimensiones.</value>
   </data>
 </root>
