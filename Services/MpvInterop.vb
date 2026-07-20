@@ -25,7 +25,7 @@ Namespace Services
         Public Shared Function IsAvailable() As Boolean
             EnsureResolver()
             Dim handle As IntPtr
-            If TryLoadBundledLibrary(handle) OrElse NativeLibrary.TryLoad("libmpv", GetType(MpvInterop).Assembly, Nothing, handle) Then
+            If TryLoadPreferSystem(GetType(MpvInterop).Assembly, Nothing, handle) Then
                 NativeLibrary.Free(handle)
                 Return True
             End If
@@ -35,23 +35,31 @@ Namespace Services
         Private Shared Function ResolveLibrary(libraryName As String, assembly As Assembly, searchPath As DllImportSearchPath?) As IntPtr
             If Not String.Equals(libraryName, "libmpv", StringComparison.Ordinal) Then Return IntPtr.Zero
 
-            Dim candidates As String()
-            If OperatingSystem.IsWindows() Then
-                candidates = {"mpv-2.dll", "libmpv-2.dll", "mpv-1.dll", "libmpv.dll", "mpv.dll"}
-            ElseIf OperatingSystem.IsMacOS() Then
-                candidates = {"libmpv.2.dylib", "libmpv.dylib"}
-            Else
-                candidates = {"libmpv.so.2", "libmpv.so"}
-            End If
-
             Dim handle As IntPtr
-            If TryLoadBundledLibrary(handle) Then Return handle
-
-            For Each candidate In candidates
-                If NativeLibrary.TryLoad(candidate, assembly, searchPath, handle) Then Return handle
-            Next
-
+            If TryLoadPreferSystem(assembly, searchPath, handle) Then Return handle
             Return IntPtr.Zero
+        End Function
+
+        ''' <summary>Erst die Bibliothek des Systems, dann die mitgelieferte.
+        '''
+        ''' Die Reihenfolge ist Absicht: eine vom Paketverwalter gepflegte libmpv bekommt
+        ''' Sicherheitsaktualisierungen und passt zu den Codecs, Treibern und Ausgabepfaden des
+        ''' Systems. Die mitgelieferte Fassung ist der Rückfall für Umgebungen, die keine haben -
+        ''' Windows und die portablen Pakete.</summary>
+        Private Shared Function TryLoadPreferSystem(assembly As Assembly, searchPath As DllImportSearchPath?, ByRef handle As IntPtr) As Boolean
+            For Each candidate In LibraryNames()
+                If NativeLibrary.TryLoad(candidate, assembly, searchPath, handle) Then Return True
+            Next
+            Return TryLoadBundledLibrary(handle)
+        End Function
+
+        Private Shared Function LibraryNames() As String()
+            If OperatingSystem.IsWindows() Then
+                Return {"mpv-2.dll", "libmpv-2.dll", "mpv-1.dll", "libmpv.dll", "mpv.dll"}
+            ElseIf OperatingSystem.IsMacOS() Then
+                Return {"libmpv.2.dylib", "libmpv.dylib"}
+            End If
+            Return {"libmpv.so.2", "libmpv.so"}
         End Function
 
         Private Shared Function TryLoadBundledLibrary(ByRef handle As IntPtr) As Boolean
@@ -66,16 +74,7 @@ Namespace Services
             Dim baseDir = AppContext.BaseDirectory
             Dim rid = GetCurrentRuntimeIdentifier()
 
-            Dim names As String()
-            If OperatingSystem.IsWindows() Then
-                names = {"mpv-2.dll", "libmpv-2.dll", "mpv-1.dll", "libmpv.dll", "mpv.dll"}
-            ElseIf OperatingSystem.IsMacOS() Then
-                names = {"libmpv.2.dylib", "libmpv.dylib"}
-            Else
-                names = {"libmpv.so.2", "libmpv.so"}
-            End If
-
-            For Each name In names
+            For Each name In LibraryNames()
                 Yield Path.Combine(baseDir, name)
                 If Not String.IsNullOrEmpty(rid) Then Yield Path.Combine(baseDir, "runtimes", rid, "native", name)
             Next

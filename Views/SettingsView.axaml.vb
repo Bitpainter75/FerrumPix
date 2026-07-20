@@ -96,6 +96,15 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Öffnet den Lizenztext des angeklickten Bestandteils. Die Adresse steht im
+        ''' Tag der Schaltfläche, damit die Liste im XAML gepflegt werden kann, ohne hier für
+        ''' jeden Eintrag eine eigene Behandlung anzulegen.</summary>
+        Public Sub OnLicenseLinkClick(sender As Object, e As RoutedEventArgs)
+            Dim url = TryCast(TryCast(sender, Control)?.Tag, String)
+            If Not String.IsNullOrWhiteSpace(url) Then OpenExternalUrl(url)
+            e.Handled = True
+        End Sub
+
         Private Shared Sub OpenExternalUrl(url As String)
             Try
                 Process.Start(New ProcessStartInfo With {

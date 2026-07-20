@@ -20,7 +20,8 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - View photos fullscreen with zoom, pan, filmstrip navigation, metadata and histogram.
 - Edit photos with crop, resize, rotate, color tools, tone curves, filters, text, shapes, symbols, retouch tools, paint tools and selections.
 - Run batch work from the gallery, including rename, convert, resize, watermark, metadata removal and filters.
-- Work with common image and video formats.
+- Develop RAW files from the sensor data, with automatic sidecar files that keep the original untouched.
+- Work with common image and video formats, including Photoshop files (read-only).
 - Connect to a self-hosted Immich server for browsing, upload, download, editing and metadata sync.
 
 ## Gallery
@@ -30,6 +31,8 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 The gallery is built for daily photo work. It supports folder browsing, fast thumbnails, file operations, ratings, favorites, tags and saved searches.
 
 Search can combine normal text with metadata such as camera, ISO, aperture, focal length, date taken and image size. Batch tools are available from the context menu and from the footer menu.
+
+The sidebar is split into *Folders*, *Immich* and *Favourites*. Folders, Immich entries and saved searches can be pinned to Favourites by right-click, then reordered or removed; the *Immich* tab only appears when a server is configured.
 
 Printing works from the context menu, the footer menu or with `Ctrl+P`. A multiple selection becomes a multi-page document, or a contact sheet with 4, 9 or 16 images per page. The dialog can print borderless, and for a single selected image it can repeat the same photo several times on a sheet.
 
@@ -52,15 +55,23 @@ The editor covers the most common photo work:
 - Create a blank image with `Ctrl+N`: presets for photo, screen and paper sizes, free width and height in mm, cm, inches or pixels at 72–600 dpi, and a white, transparent or coloured background.
 - Crop, resize, rotate, flip and canvas resize.
 - Exposure, brightness, contrast, highlights, shadows, tone curves and white balance.
-- Color tools with HSL, vibrance, saturation and split toning.
+- Color tools with HSL, vibrance, saturation, split toning, camera calibration and colour noise reduction.
 - Filters, LUT files and Lightroom `.xmp` preset import.
 - Film negative conversion for scanned negatives.
-- Text, shapes, symbols, images, QR codes and watermarks.
+- Text, shapes, symbols, images, QR codes and watermarks. Text can be set bold or italic, spaced out, and placed along an arc, a circle or a wave.
 - Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools. The brush picker offers 13 variants — soft round, pencil, marker, grainy acrylic, sandpaper, smudge, spatter, charcoal, crayon, airbrush, calligraphy, stipple and watercolor.
 - Rectangle, ellipse, lasso and magic wand selections.
 - Per object editing with opacity, blend modes, shadows, glow and transform controls.
 - A toggleable Layers panel with the full object stack: per-layer visibility, opacity, blend mode, drag-and-drop reorder, rename (double-click or F2), rasterize (bake a layer into the image so retouching can work on its pixels) and delete, plus the base image as a hideable background layer.
 - A native project format (`.fpx`): *Save as…* can bundle the whole edit — adjustments, layer stack and the baked working image — so it can be reopened and continued. Adjustments and object layers stay editable after reopening; retouching, brush strokes and rasterized layers are baked into the image (undo covers them only within the session). `.fpx` projects show up in the gallery, viewer and fullscreen like any image.
+
+### RAW and Photoshop files
+
+RAW files are developed from the actual sensor data — full-resolution demosaic, camera white balance, sRGB — instead of editing the embedded JPEG preview. The status bar shows whether you are working on *RAW developed* or *RAW preview*. LibRaw comes with the packages: Linux packages depend on the system library, the Flatpak builds it in, and Windows releases bundle it.
+
+Slider edits on RAW files are remembered in a small `.fpxmp` sidecar file next to the RAW and re-applied the next time you open it. The RAW itself is never modified. Sidecars travel with the RAW when it is moved, copied, renamed or deleted in FerrumPix, and can be turned off in *Settings → Editor*.
+
+Photoshop files (`.psd`/`.psb`) open in the gallery, viewer and editor. FerrumPix reads the flattened composite and never writes them back — *Save* is disabled, *Save as…* exports to the usual formats.
 
 Exporting to JPEG/PNG/WEBP writes the result into pixels; while the editor is open, changes can be undone and objects stay editable. Save as a `.fpx` project (or use *Save as* to a normal image) if the original file should stay untouched.
 
@@ -149,6 +160,8 @@ Permission names come from the Immich server source and apply to reasonably rece
 
 Settings cover theme, accent color, language, thumbnail quality, export quality, metadata handling, video support, UI scale, font scale, cache cleanup and Immich connection details.
 
+The last two sections are reference material: a full list of keyboard and mouse shortcuts for gallery, viewer and editor, and a *Technology* section listing everything FerrumPix is built on, with a link to each project and to its licence text.
+
 ## Technology
 
 - [Avalonia UI](https://avaloniaui.net/) 12.1
@@ -160,6 +173,7 @@ Settings cover theme, accent color, language, thumbnail quality, export quality,
 - [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet)
 - [QRCoder](https://github.com/codebude/QRCoder)
 - [libmpv](https://mpv.io/)
+- [LibRaw](https://www.libraw.org/) (RAW development)
 - [Tabler Icons](https://github.com/tabler/tabler-icons)
 
 ## Installation
@@ -185,7 +199,9 @@ And as a package in the AUR:
 
 The packages are self-contained and include the .NET runtime.
 
-Video playback and video thumbnails use `libmpv`. Linux packages use the system `libmpv`; Windows releases bundle the mpv runtime under `runtimes/win-x64/native`.
+`libmpv` (video playback and thumbnails) and `libraw` (RAW development) are required, not optional. The Linux packages declare them as dependencies, so the package manager installs them along with FerrumPix. The Flatpak builds both in, and Windows releases bundle them under `runtimes/win-x64/native`.
+
+The portable ZIPs have no package manager to pull anything in: the Windows ZIP carries both libraries, while the Linux ZIP and the AppImage expect `libmpv` and `libraw` to be present on the system. The experimental macOS builds ship without LibRaw — install it with `brew install libraw`. Wherever a library is genuinely missing, FerrumPix keeps running: video files are then unavailable and RAW files fall back to their embedded preview.
 
 ## Building From Source
 

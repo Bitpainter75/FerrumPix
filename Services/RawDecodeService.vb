@@ -6,12 +6,17 @@ Imports SkiaSharp
 Namespace Services
 
     ''' <summary>
-    ''' Echte RAW-Entwicklung über das SYSTEM-libraw (Demosaicing der Sensordaten), statt nur die
-    ''' eingebettete JPEG-Vorschau zu lesen. Bewusst gegen die installierte Bibliothek gebunden
-    ''' (Arch: pacman -S libraw, Flatpak: eigenes Modul, AUR: optdepends) - die NuGet-Bindings
+    ''' Echte RAW-Entwicklung über libraw (Demosaicing der Sensordaten), statt nur die eingebettete
+    ''' JPEG-Vorschau zu lesen. Bewusst dynamisch geladen statt über NuGet gebunden - die Bindings
     ''' liefern keine Binaries für macOS/ARM64 und die Linux-Binary ist an Ubuntus glibc gebunden.
-    ''' Fehlt die Bibliothek, meldet IsAvailable False und ALLES läuft wie bisher über
-    ''' RawPreviewService (eingebettete Vorschau) - kein Absturz, keine Verhaltensänderung.
+    '''
+    ''' Reihenfolge: ERST die Bibliothek des Systems (deb/rpm/AUR verlangen sie, der Flatpak baut
+    ''' sie mit), DANN die mitgelieferte neben der Anwendung. Die des Systems bekommt Sicherheits-
+    ''' aktualisierungen und die Kameraunterstützung neuerer Modelle; die mitgelieferte ist der
+    ''' Rückfall für Windows und die portablen Pakete.
+    '''
+    ''' Fehlt beides, meldet IsAvailable False und ALLES läuft wie bisher über RawPreviewService
+    ''' (eingebettete Vorschau) - kein Absturz, keine Verhaltensänderung.
     '''
     ''' Geladen wird über NativeLibrary.Load + Delegates statt DllImport: der DllImport-Resolver
     ''' der Assembly ist bereits durch MpvInterop belegt (nur EINER erlaubt), und so bleibt die
@@ -87,6 +92,27 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Die Pfade, unter denen eine mitgelieferte LibRaw liegen kann: direkt neben der
+        ''' Anwendung oder unter runtimes/&lt;rid&gt;/native, wohin packaging/package.sh sie kopiert.</summary>
+        Private Shared Iterator Function MitgelieferteKandidaten(namen As String()) As IEnumerable(Of String)
+            Dim baseDir = AppContext.BaseDirectory
+
+            Dim archSuffix = If(RuntimeInformation.ProcessArchitecture = Architecture.Arm64, "arm64", "x64")
+            Dim rid As String = ""
+            If OperatingSystem.IsWindows() Then
+                rid = $"win-{archSuffix}"
+            ElseIf OperatingSystem.IsLinux() Then
+                rid = $"linux-{archSuffix}"
+            ElseIf OperatingSystem.IsMacOS() Then
+                rid = $"osx-{archSuffix}"
+            End If
+
+            For Each name In namen
+                Yield Path.Combine(baseDir, name)
+                If rid.Length > 0 Then Yield Path.Combine(baseDir, "runtimes", rid, "native", name)
+            Next
+        End Function
+
         Private Shared Sub EnsureLoaded()
             SyncLock _initLock
                 If _initialized Then Return
@@ -111,6 +137,10 @@ Namespace Services
 
                 Dim handle As IntPtr
                 Dim geladen As String = Nothing
+
+                ' ERST das System: eine vom Paketverwalter gepflegte LibRaw bekommt Sicherheits-
+                ' aktualisierungen und vor allem die Kameraunterstützung neuerer Modelle. Die
+                ' nackten Namen gehen über den Suchpfad des Betriebssystems.
                 For Each candidate In candidates
                     If NativeLibrary.TryLoad(candidate, handle) Then
                         geladen = candidate
@@ -118,6 +148,20 @@ Namespace Services
                     End If
                     handle = IntPtr.Zero
                 Next
+
+                ' DANN die mitgelieferte: Windows und die portablen Pakete haben keine System-
+                ' bibliothek. Sie liegt neben der Anwendung bzw. unter runtimes/<rid>/native -
+                ' ein nackter Name findet sie dort NICHT, es braucht den vollen Pfad.
+                If handle = IntPtr.Zero Then
+                    For Each pfad In MitgelieferteKandidaten(candidates)
+                        If NativeLibrary.TryLoad(pfad, handle) Then
+                            geladen = Path.GetFileName(pfad)
+                            Exit For
+                        End If
+                        handle = IntPtr.Zero
+                    Next
+                End If
+
                 If handle = IntPtr.Zero Then Return
 
                 ' Ist es die reentrante Variante? Wenn nicht, werden die nativen Aufrufe serialisiert -

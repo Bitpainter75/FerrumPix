@@ -3747,4 +3747,112 @@
   <data name="Blau_S_ttigung_66494e39" xml:space="preserve">
     <value>Blue saturation</value>
   </data>
+  <data name="Strg_N_275f0654" xml:space="preserve">
+    <value>Ctrl+N</value>
+  </data>
+  <data name="Neues_Bild_anlegen_9b816660" xml:space="preserve">
+    <value>Create a new image</value>
+  </data>
+  <data name="Technologie_1d6b9194" xml:space="preserve">
+    <value>Technology</value>
+  </data>
+  <data name="FerrumPix_baut_auf_diesen_Projekten_auf_Die_Scha_c1b0fd1a" xml:space="preserve">
+    <value>FerrumPix builds on these projects. The buttons open the respective licence text in your browser.</value>
+  </data>
+  <data name="Diese_Anwendung_416efc74" xml:space="preserve">
+    <value>This application</value>
+  </data>
+  <data name="Laufzeitumgebung_6cedefca" xml:space="preserve">
+    <value>Runtime</value>
+  </data>
+  <data name="Oberfl_che_und_Fensterverwaltung_0219945b" xml:space="preserve">
+    <value>User interface and window management</value>
+  </data>
+  <data name="Datenbindung_der_Ansichtsmodelle_5d651ef3" xml:space="preserve">
+    <value>Data binding for the view models</value>
+  </data>
+  <data name="Bildbearbeitung_und_Zeichnen_22eb169c" xml:space="preserve">
+    <value>Image processing and drawing</value>
+  </data>
+  <data name="SVG_Symbole_darstellen_3fe48291" xml:space="preserve">
+    <value>Rendering SVG icons</value>
+  </data>
+  <data name="Datenbank_f_r_Bewertungen_Tags_und_Zwischenspeic_dcd39467" xml:space="preserve">
+    <value>Database for ratings, tags and caches</value>
+  </data>
+  <data name="EXIF_und_IPTC_Daten_lesen_e97651d2" xml:space="preserve">
+    <value>Reading EXIF and IPTC data</value>
+  </data>
+  <data name="QR_Codes_erzeugen_f736c213" xml:space="preserve">
+    <value>Generating QR codes</value>
+  </data>
+  <data name="Symbolsatz_der_Oberfl_che_4c05b17f" xml:space="preserve">
+    <value>Icon set of the interface</value>
+  </data>
+  <data name="RAW_Dateien_entwickeln_c85fb82f" xml:space="preserve">
+    <value>Developing RAW files</value>
+  </data>
+  <data name="Videowiedergabe_und_Video_Vorschaubilder_b2bcf9a7" xml:space="preserve">
+    <value>Video playback and video thumbnails</value>
+  </data>
+  <data name="LibRaw_und_libmpv_stehen_unter_der_LGPL_sie_werd_bf6db0e8" xml:space="preserve">
+    <value>LibRaw and libmpv are licensed under the LGPL: they are used unmodified and loaded dynamically, and can be replaced with your own build of the same version. The licence texts and provenance records are in the licenses folder next to the application.</value>
+  </data>
+  <data name="GPL_3_0_5af8926d" xml:space="preserve">
+    <value>GPL-3.0</value>
+  </data>
+  <data name="MIT_89690ac5" xml:space="preserve">
+    <value>MIT</value>
+  </data>
+  <data name="Apache_2_0_9e50bc5c" xml:space="preserve">
+    <value>Apache-2.0</value>
+  </data>
+  <data name="LGPL_2_1_6b15c16d" xml:space="preserve">
+    <value>LGPL-2.1</value>
+  </data>
+  <data name="LGPL_2_1_5ed68bd8" xml:space="preserve">
+    <value>LGPL-2.1+</value>
+  </data>
+  <data name="NET_10_8bf9a6bd" xml:space="preserve">
+    <value>.NET 10</value>
+  </data>
+  <data name="Avalonia_UI_12_1_1d800bc5" xml:space="preserve">
+    <value>Avalonia UI 12.1</value>
+  </data>
+  <data name="ReactiveUI_12_0_c41ec9b5" xml:space="preserve">
+    <value>ReactiveUI 12.0</value>
+  </data>
+  <data name="SkiaSharp_3_119_ae18eca1" xml:space="preserve">
+    <value>SkiaSharp 3.119</value>
+  </data>
+  <data name="Svg_Skia_5_1_4e33cc4c" xml:space="preserve">
+    <value>Svg.Skia 5.1</value>
+  </data>
+  <data name="Microsoft_Data_Sqlite_9_0_bdd43cad" xml:space="preserve">
+    <value>Microsoft.Data.Sqlite 9.0</value>
+  </data>
+  <data name="MetadataExtractor_2_8_2582524c" xml:space="preserve">
+    <value>MetadataExtractor 2.8</value>
+  </data>
+  <data name="QRCoder_1_6_c853cfc4" xml:space="preserve">
+    <value>QRCoder 1.6</value>
+  </data>
+  <data name="Tabler_Icons_414587a7" xml:space="preserve">
+    <value>Tabler Icons</value>
+  </data>
+  <data name="LibRaw_e88f46b3" xml:space="preserve">
+    <value>LibRaw</value>
+  </data>
+  <data name="libmpv_mpv_af60de11" xml:space="preserve">
+    <value>libmpv (mpv)</value>
+  </data>
+  <data name="FerrumPix_baut_auf_diesen_Projekten_auf_Die_Scha_2a64a0ad" xml:space="preserve">
+    <value>FerrumPix builds on these projects. The buttons open the project page and the licence text in your browser.</value>
+  </data>
+  <data name="Projektseite_ffnen_8fd319e6" xml:space="preserve">
+    <value>Open project page</value>
+  </data>
+  <data name="Lizenztext_ffnen_9fd765be" xml:space="preserve">
+    <value>Open licence text</value>
+  </data>
 </root>
