@@ -242,6 +242,17 @@ Namespace Views
             Return String.Equals(mainVm?.Settings?.ViewerFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
         End Function
 
+        ''' Endungen, die DrawImageAnnotation wirklich zeichnen kann (SKBitmap.Decode). EINE Quelle
+        ''' fuer den Dateidialog und fuer das Ablegen per Drag&amp;Drop, damit die Leinwand nicht
+        ''' annimmt, was der Dialog gar nicht erst anbietet (PSD/RAW zeichnen als Objekt nicht).
+        Private Shared ReadOnly InsertableImageExtensions As String() =
+            {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff", ".avif", ".ico"}
+
+        Private Shared Function IsInsertableImagePath(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Return InsertableImageExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
+        End Function
+
         ''' <paramref name="includeReadOnlyFormats"/>: PSD/PSB nur beim OEFFNEN eines Dokuments
         ''' anbieten - als eingefuegtes Bildobjekt zeichnet DrawImageAnnotation sie nicht
         ''' (SKBitmap.Decode kennt das Format nicht), die Auswahl waere dort ein stiller No-Op.
@@ -250,7 +261,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return Nothing
-                Dim patterns As New List(Of String) From {"*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.tif", "*.tiff", "*.avif", "*.ico"}
+                Dim patterns = InsertableImageExtensions.Select(Function(ext) "*" & ext).ToList()
                 If includeReadOnlyFormats Then
                     patterns.Add("*.psd")
                     patterns.Add("*.psb")
@@ -291,6 +302,51 @@ Namespace Views
                 End If
             Catch
             End Try
+        End Sub
+
+        ''' Bilddateien aus einem fremden Dateimanager auf die Leinwand ziehen legt sie als neue
+        ''' Bild-Objekte an - derselbe Weg wie das Einfuegen per Werkzeug, nur ohne Dateidialog.
+        Private Shared Function GetDroppedImagePaths(e As DragEventArgs) As List(Of String)
+            Try
+                Dim files = e.DataTransfer?.TryGetFiles()
+                If files Is Nothing Then Return New List(Of String)()
+                Return ClipboardPathService.ToLocalPaths(files).Where(AddressOf IsInsertableImagePath).ToList()
+            Catch
+                Return New List(Of String)()
+            End Try
+        End Function
+
+        Public Sub OnPreviewCanvasDragOver(sender As Object, e As DragEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim canvas = TryCast(sender, Canvas)
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            Dim erlaubt = imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso GetDroppedImagePaths(e).Count > 0
+            e.DragEffects = If(erlaubt, DragDropEffects.Copy, DragDropEffects.None)
+            e.Handled = True
+        End Sub
+
+        Public Sub OnPreviewCanvasDrop(sender As Object, e As DragEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim canvas = TryCast(sender, Canvas)
+            If vm Is Nothing OrElse canvas Is Nothing Then Return
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+
+            Dim paths = GetDroppedImagePaths(e)
+            If paths.Count = 0 Then Return
+
+            Dim pos = ClampPointToRect(e.GetPosition(canvas), imageRect)
+            Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
+            Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
+
+            ' Mehrere Dateien versetzt stapeln, sonst verdeckt das letzte Objekt alle davor.
+            Const cascadePercent As Double = 3.0
+            For i = 0 To paths.Count - 1
+                vm.AddImageAnnotationAt(paths(i), xPct + i * cascadePercent, yPct + i * cascadePercent)
+            Next
+
+            e.DragEffects = DragDropEffects.Copy
+            e.Handled = True
         End Sub
 
         Public Async Sub OnWatermarkChooseImageClick(sender As Object, e As RoutedEventArgs)

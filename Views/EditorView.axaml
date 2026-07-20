@@ -480,7 +480,10 @@
                             PointerPressed="OnSliderPointerPressed"
                             PointerMoved="OnSliderPointerMoved"
                             PointerReleased="OnSliderPointerReleased"
-                            PointerExited="OnPreviewCanvasPointerExited">
+                            PointerExited="OnPreviewCanvasPointerExited"
+                            DragDrop.AllowDrop="True"
+                            DragDrop.DragOver="OnPreviewCanvasDragOver"
+                            DragDrop.Drop="OnPreviewCanvasDrop">
                         <Border x:Name="ImageBackgroundBorder"
                                 Background="{Binding TransparencyBackgroundBrush}"
                                 IsHitTestVisible="False" />
