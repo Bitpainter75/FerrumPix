@@ -211,8 +211,26 @@ Namespace Services
         ' der Cache-Datei-Zugriff, daher lohnt sich für sie kein Thumbnail-Cache-Eintrag.
         Private Shared ReadOnly UncachedExtensions As String() = {".svg", ".gif", ".ico"}
 
+        ''' <summary>Das Systemtemp-Verzeichnis, einmal kanonisch aufgeloest.</summary>
+        Private Shared ReadOnly TempRoot As String = PathIdentity.Normalize(IO.Path.GetTempPath())
+
+        ''' <summary>Liegt die Datei im Temp-Verzeichnis? Dann ist sie fluechtig, und ein Cache auf
+        ''' der Platte waere per Definition Muell: die Datei ist beim naechsten Start weg, der
+        ''' Cache-Ordner bleibt.
+        '''
+        ''' Konkreter Anlass (Nutzer-Befund 2026-07-20): jedes NEUE Bild im Editor legt sich unter
+        ''' "/tmp/FerrumPix/NewDocument/&lt;guid&gt;" an - also ein eigener Ordner je Bild. Der
+        ''' Thumbnail-Cache registrierte jeden davon, und die Einstellungen fuellten sich mit
+        ''' Cache-Ordnern, die auf laengst geloeschte Verzeichnisse zeigen. Betrifft genauso die
+        ''' entpackten .fpx-Buendel, die Immich-Stapelkopien und die Druck-Zwischendateien.</summary>
+        Private Shared Function IsTemporaryPath(filePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) OrElse TempRoot.Length = 0 Then Return False
+            Return PathIdentity.IsAncestorOrSelf(TempRoot, filePath)
+        End Function
+
         Private Shared Function ShouldSkipCache(filePath As String) As Boolean
-            Return UncachedExtensions.Contains(IO.Path.GetExtension(filePath).ToLowerInvariant())
+            If UncachedExtensions.Contains(IO.Path.GetExtension(filePath).ToLowerInvariant()) Then Return True
+            Return IsTemporaryPath(filePath)
         End Function
 
         Public Shared Function LoadCached(filePath As String,
@@ -386,11 +404,26 @@ Namespace Services
             Next
 
             Dim freshStats As New Dictionary(Of String, (Count As Integer, SizeBytes As Long, StampUtc As DateTime))(StringComparer.OrdinalIgnoreCase)
+            Dim entfernteTempIds As New List(Of String)()
 
             For Each folder In entries.Values
                 Try
                     Dim folderCachePath = IO.Path.Combine(CacheRoot, folder.Id)
                     If Not Directory.Exists(folderCachePath) Then Continue For
+
+                    ' Altlast aufraeumen: bis 2026-07-20 legte JEDES neue Bild im Editor einen
+                    ' Cache-Ordner fuer sein Temp-Verzeichnis an (/tmp/FerrumPix/NewDocument/<guid>).
+                    ' Solche Eintraege zeigen auf laengst geloeschte Ordner und sind nur Muell in der
+                    ' Liste - sie werden hier still entfernt, statt den Nutzer aufraeumen zu lassen.
+                    ' Neue entstehen nicht mehr (siehe IsTemporaryPath/ShouldSkipCache).
+                    If IsTemporaryPath(folder.FolderPath) AndAlso Not Directory.Exists(folder.FolderPath) Then
+                        Try
+                            Directory.Delete(folderCachePath, True)
+                            entfernteTempIds.Add(folder.Id)
+                        Catch
+                        End Try
+                        Continue For
+                    End If
 
                     Dim stamp = Directory.GetLastWriteTimeUtc(folderCachePath)
                     If folder.ThumbnailCount < 0 OrElse folder.StatsStampUtc <> stamp Then
@@ -424,6 +457,7 @@ Namespace Services
             Next
 
             MergeFolderStats(freshStats)
+            If entfernteTempIds.Count > 0 Then RemoveFoldersFromRootIndex(entfernteTempIds)
 
             Return result.
                 OrderByDescending(Function(i) i.SizeBytes).
@@ -824,6 +858,27 @@ Namespace Services
         ''' Trägt die frisch gezählten Kennzahlen nach. Bewusst getrennt vom Zählen selbst: der Index
         ''' wird nur für den kurzen Lesen-Ändern-Schreiben-Abschnitt gesperrt, nicht für den langen
         ''' Verzeichnisdurchlauf.
+        ''' <summary>Streicht Ordner endgueltig aus dem Wurzelverzeichnis - fuer aufgeraeumte
+        ''' Temp-Altlasten. Bleibt der Eintrag stehen, taucht der Ordner in den Einstellungen
+        ''' weiter als "Ordner fehlt" auf, obwohl nichts mehr da ist.</summary>
+        Private Shared Sub RemoveFoldersFromRootIndex(ids As List(Of String))
+            If ids Is Nothing OrElse ids.Count = 0 Then Return
+            Try
+                SyncLock _rootIndexLock
+                    Dim rootIndex = LoadRootIndex()
+                    Dim vorher = rootIndex.Folders.Count
+                    rootIndex.Folders.RemoveAll(Function(f) f IsNot Nothing AndAlso
+                                                            ids.Contains(f.Id, StringComparer.OrdinalIgnoreCase))
+                    If rootIndex.Folders.Count <> vorher Then SaveRootIndex(rootIndex)
+                End SyncLock
+                For Each id In ids
+                    _registeredFolderIds.TryRemove(id, Nothing)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ThumbnailCache.RemoveTempFolders", ex)
+            End Try
+        End Sub
+
         Private Shared Sub MergeFolderStats(stats As Dictionary(Of String, (Count As Integer, SizeBytes As Long, StampUtc As DateTime)))
             If stats Is Nothing OrElse stats.Count = 0 Then Return
             Try
