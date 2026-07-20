@@ -1056,7 +1056,7 @@ Namespace ViewModels
                     ' Gedrehte RAWs tragen ihre Drehung im Sidecar (die Datei selbst wird nie
                     ' neu geschrieben) - beim Anzeigen also wieder drauflegen.
                     Return If(preview IsNot Nothing,
-                              ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(path)),
+                              ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(path), rawContainerPath:=path),
                               Nothing)
                 End Using
             End If
@@ -1072,7 +1072,10 @@ Namespace ViewModels
             End If
             If PsdPreviewService.IsSupportedPsd(path) Then
                 Using preview = PsdPreviewService.ExtractPreview(path)
-                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                    ' Wie RAW: eine gedrehte PSD traegt ihre Drehung im Sidecar, nicht in den Pixeln.
+                    Return If(preview IsNot Nothing,
+                              ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(path)),
+                              Nothing)
                 End Using
             End If
             If FpxService.IsFpx(path) Then
@@ -1615,7 +1618,7 @@ Namespace ViewModels
         ''' <summary>Kann die Drehung dieses Bildes überhaupt dauerhaft werden - gebacken oder als
         ''' Rezept neben der Datei?</summary>
         Private Shared Function CanPersistRotation(path As String) As Boolean
-            Return CanBakeRotation(path) OrElse RawPreviewService.IsSupportedRaw(path)
+            Return CanBakeRotation(path) OrElse RawSidecarService.IsSidecarFormat(path)
         End Function
 
         Public Async Function ConfirmPendingRotationAsync(actionDescription As String) As Task(Of Boolean)
@@ -1658,11 +1661,11 @@ Namespace ViewModels
 
             Dim source = _currentImagePath
 
-            ' RAW wird NIE neu geschrieben - wir könnten das Format gar nicht erzeugen und würden
-            ' die Rohdaten durch ihre eigene eingebettete JPEG-Vorschau ersetzen. Die Drehung geht
+            ' RAW und PSD werden NIE neu geschrieben - wir könnten die Formate gar nicht erzeugen
+            ' und würden die Datei durch ihre eigene eingebettete Vorschau ersetzen. Die Drehung geht
             ' stattdessen nicht-destruktiv in die Rezept-Begleitdatei (foto.cr2.fpxmp), genau wie
             ' beim Editor. Viewer, Filmstreifen und Kacheln lesen sie beim Anzeigen wieder aus.
-            If RawPreviewService.IsSupportedRaw(source) Then Return Await SaveRotationToSidecarAsync(source, angle)
+            If RawSidecarService.IsSidecarFormat(source) Then Return Await SaveRotationToSidecarAsync(source, angle)
 
             Dim ext = IO.Path.GetExtension(source)
             Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-rotate-{Guid.NewGuid():N}{ext}")
@@ -1711,13 +1714,10 @@ Namespace ViewModels
                                     End Function)
                 If ok Then
                     ' Das Original ist unverändert - nur der Sidecar ist neu. Der Disk-Cache merkt das
-                    ' von selbst (ThumbnailCacheService zieht die Sidecar-Zeit in den Dateinamen), aber
-                    ' die bereits geladenen Bitmaps im Speicher muessen weg, sonst bleibt die Kachel
-                    ' im Filmstreifen und in der Gallery ungedreht stehen.
-                    For Each filmItem In FilmstripItems.Where(Function(i) i IsNot Nothing AndAlso PathIdentity.AreSame(i.FilePath, source))
-                        filmItem.EvictThumbnail()
-                    Next
-                    _mainVm?.Gallery?.RefreshThumbnailFor(source)
+                    ' von selbst (der Drehwinkel steckt im Cache-Dateinamen), aber die bereits
+                    ' geladenen Bitmaps im Speicher muessen neu geladen werden, sonst bleibt die
+                    ' Kachel im Filmstreifen und in der Gallery ungedreht stehen.
+                    _mainVm?.ReloadThumbnailsForFile(source)
                     LoadBitmap()
                     ResetViewerRotation()
                     UpdateStatus()

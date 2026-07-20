@@ -3641,15 +3641,6 @@
   <data name="RAW_Vorschau_e60fc82f" xml:space="preserve">
     <value>RAW-Vorschau</value>
   </data>
-  <data name="RAW_Bearbeitungen_als_Begleitdatei_merken_7ed96c34" xml:space="preserve">
-    <value>RAW-Bearbeitungen als Begleitdatei merken</value>
-  </data>
-  <data name="Legt_die_Reglerwerte_als_kleine_fpxmp_Datei_nebe_5c2fe1d3" xml:space="preserve">
-    <value>Legt die Reglerwerte als kleine .fpxmp-Datei neben die RAW-Datei und wendet sie beim nächsten Öffnen automatisch an. Die RAW-Datei selbst bleibt unverändert; Pinsel- und Retusche-Striche brauchen weiterhin eine .fpx-Projektdatei.</value>
-  </data>
-  <data name="RAW_Bearbeitung_in_Begleitdatei_gespeichert_b7fd049e" xml:space="preserve">
-    <value>RAW-Bearbeitung in Begleitdatei gespeichert</value>
-  </data>
   <data name="Farbrauschen_7e6f8299" xml:space="preserve">
     <value>Farbrauschen</value>
   </data>
@@ -3661,9 +3652,6 @@
   </data>
   <data name="Positiv_f_gt_Rauschen_hinzu_negativ_reduziert_es_1decfbdc" xml:space="preserve">
     <value>Positiv fügt Rauschen hinzu, negativ reduziert es (gleichmäßiges Weichzeichnen).</value>
-  </data>
-  <data name="Der_Speichern_Knopf_legt_die_Reglerwerte_als_kle_a767a98a" xml:space="preserve">
-    <value>Der Speichern-Knopf legt die Reglerwerte als kleine .fpxmp-Datei neben die RAW-Datei; beim nächsten Öffnen werden sie automatisch angewendet. Die RAW-Datei selbst bleibt unverändert; Pinsel- und Retusche-Striche brauchen weiterhin eine .fpx-Projektdatei.</value>
   </data>
   <data name="Begleitdatei_konnte_nicht_geschrieben_werden_7f337000" xml:space="preserve">
     <value>Begleitdatei konnte nicht geschrieben werden</value>
@@ -3856,5 +3844,8 @@
   </data>
   <data name="Drehung_konnte_nicht_gespeichert_werden_d7da8820" xml:space="preserve">
     <value>Drehung konnte nicht gespeichert werden</value>
+  </data>
+  <data name="Bearbeitung_in_Begleitdatei_gespeichert_3dc10f16" xml:space="preserve">
+    <value>Bearbeitung in Begleitdatei gespeichert</value>
   </data>
 </root>

@@ -7,7 +7,8 @@ Imports System.Xml.Linq
 Namespace Services
 
     ''' <summary>
-    ''' Rezept-Begleitdatei fuer RAW-Bilder ("foto.cr2" -> "foto.cr2.fpxmp"): am XMP-Sidecar-Konzept
+    ''' Rezept-Begleitdatei fuer NUR-LESBARE Bildformate ("foto.cr2" -> "foto.cr2.fpxmp",
+    ''' "foto.psd" -> "foto.psd.fpxmp"): am XMP-Sidecar-Konzept
     ''' orientiert (kleine XML-Datei NEBEN dem Original, wird beim Oeffnen automatisch geladen und
     ''' beim Verlassen aktualisiert), aber ein EIGENES Format - die Reglermodelle sind nicht
     ''' Adobe-kompatibel, ein echtes XMP wuerde nur so tun als ob.
@@ -21,11 +22,26 @@ Namespace Services
     ''' Ebenen) stecken im ARBEITSBILD, nicht im Rezept - dafuer bleibt die .fpx zustaendig; der
     ''' Editor schreibt den Sidecar nur, solange nichts gebacken wurde. Bild-Objekte referenzieren
     ''' ihre Dateien mit absolutem Pfad (keine Einbettung wie im .fpx-Buendel).
+    '''
+    ''' Der Sidecar ist NICHT abschaltbar (die Einstellung dafuer ist am 2026-07-20 entfallen): fuer
+    ''' RAW und PSD ist er der EINZIGE Weg, eine Bearbeitung zu behalten, ohne die Quelldatei zu
+    ''' zerstoeren - beide Formate koennen wir nicht schreiben. Ein Schalter dafuer hiess in der
+    ''' Praxis "Bearbeitung stillschweigend wegwerfen", und er liess Viewer und Editor
+    ''' auseinanderlaufen: der Viewer las den Sidecar bedingungslos, der Editor nur bei aktiver
+    ''' Einstellung, womit dieselbe Datei je nach Ansicht anders gedreht aussah.
     ''' </summary>
     Public NotInheritable Class RawSidecarService
 
         Private Sub New()
         End Sub
+
+        ''' <summary>Formate, deren Bearbeitung in den Sidecar geht statt in die Datei: RAW und
+        ''' PSD/PSB. Beide sind nur-lesend (siehe die Schreibsperre in ImageProcessor.SaveImage),
+        ''' beide sollen trotzdem Reglerwerte behalten koennen.</summary>
+        Public Shared Function IsSidecarFormat(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Return RawPreviewService.IsSupportedRaw(path) OrElse PsdPreviewService.IsSupportedPsd(path)
+        End Function
 
         Public Const Extension As String = ".fpxmp"
         Private Const FormatVersion As Integer = 1

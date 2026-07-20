@@ -442,6 +442,10 @@ Namespace Services
                 Using codec = SKCodec.Create(source)
                     If codec Is Nothing Then Return False
 
+                    ' Bei RAW traegt die eingebettete Vorschau oft kein eigenes Orientation-Tag -
+                    ' dann gilt das des Containers, sonst steht die Kachel quer zum Editor.
+                    Dim origin = PreviewOriginFor(filePath, codec.EncodedOrigin, codec.Info.Width, codec.Info.Height)
+
                     Using original = DecodeScaledOriented(codec, CacheWidth)
                         If original Is Nothing Then Return False
 
@@ -449,7 +453,7 @@ Namespace Services
                         ' inzwischen weggescrollt wurde, lohnt sich der Rest der Arbeit nicht mehr.
                         If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
 
-                        Dim corrected = ImageOrientationService.ApplyOrientation(original, codec.EncodedOrigin)
+                        Dim corrected = ImageOrientationService.ApplyOrientation(original, origin)
                         ' Eine im Viewer gedrehte RAW-Datei bleibt auf der Platte unveraendert - ihre
                         ' Drehung steht im Sidecar und muss hier oben drauf, sonst zeigt die Kachel
                         ' weiter die ungedrehte eingebettete Vorschau.
@@ -599,10 +603,17 @@ Namespace Services
 
         ' Dekodiert per SKCodec, korrigiert die EXIF-Orientierung und skaliert auf maxWidth.
         ' Fällt bei jedem SKCodec-Fehler auf das bisherige Bitmap.DecodeToWidth zurück.
-        Private Shared Function DecodeCorrectedAndResize(stream As Stream, maxWidth As Integer, Optional extraRotationDegrees As Integer = 0) As Bitmap
+        Private Shared Function DecodeCorrectedAndResize(stream As Stream, maxWidth As Integer,
+                                                        Optional extraRotationDegrees As Integer = 0,
+                                                        Optional rawContainerPath As String = Nothing) As Bitmap
             Dim rotation = ImageOrientationService.NormalizeQuarterTurn(extraRotationDegrees)
             Using codec = SKCodec.Create(stream)
-                If codec Is Nothing OrElse (codec.EncodedOrigin = SKEncodedOrigin.TopLeft AndAlso rotation = 0) Then
+                If codec Is Nothing Then
+                    stream.Seek(0, SeekOrigin.Begin)
+                    Return Bitmap.DecodeToWidth(stream, maxWidth)
+                End If
+                Dim origin = PreviewOriginFor(rawContainerPath, codec.EncodedOrigin, codec.Info.Width, codec.Info.Height)
+                If origin = SKEncodedOrigin.TopLeft AndAlso rotation = 0 Then
                     stream.Seek(0, SeekOrigin.Begin)
                     Return Bitmap.DecodeToWidth(stream, maxWidth)
                 End If
@@ -613,7 +624,7 @@ Namespace Services
                         Return Bitmap.DecodeToWidth(stream, maxWidth)
                     End If
 
-                    Dim corrected = ImageOrientationService.ApplyOrientation(original, codec.EncodedOrigin)
+                    Dim corrected = ImageOrientationService.ApplyOrientation(original, origin)
                     Dim oriented = ImageOrientationService.ApplyQuarterRotation(corrected, rotation)
                     Try
                         Dim targetWidth = Math.Min(maxWidth, oriented.Width)
@@ -632,8 +643,17 @@ Namespace Services
 
         ''' <summary>Drehung aus dem RAW-Sidecar (0 fuer alle anderen Formate). Die Vorschau in der
         ''' RAW-Datei bleibt beim Drehen im Viewer unangetastet - die Drehung liegt daneben.</summary>
+        ''' <summary>Orientierung, die auf eine gerade dekodierte Vorschau anzuwenden ist. Bei RAW
+        ''' zaehlt der Container, wenn die Vorschau selbst kein Tag traegt (siehe RawPreviewOrigin);
+        ''' fuer alle anderen Formate bleibt es beim Tag der Datei.</summary>
+        Private Shared Function PreviewOriginFor(filePath As String, codecOrigin As SKEncodedOrigin,
+                                                 width As Integer, height As Integer) As SKEncodedOrigin
+            If String.IsNullOrWhiteSpace(filePath) OrElse Not RawPreviewService.IsSupportedRaw(filePath) Then Return codecOrigin
+            Return ImageOrientationService.RawPreviewOrigin(filePath, codecOrigin, width, height)
+        End Function
+
         Private Shared Function SidecarRotationFor(filePath As String) As Integer
-            If Not RawPreviewService.IsSupportedRaw(filePath) Then Return 0
+            If Not RawSidecarService.IsSidecarFormat(filePath) Then Return 0
             Return RawSidecarService.ReadRotationDegrees(filePath)
         End Function
 
@@ -658,7 +678,7 @@ Namespace Services
                 If RawPreviewService.IsSupportedRaw(filePath) Then
                     Using preview = OpenRawThumbnailSource(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
+                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath), rawContainerPath:=filePath)
                     End Using
                 ElseIf SvgPreviewService.IsSupportedSvg(filePath) Then
                     Using preview = SvgPreviewService.ExtractPreview(filePath, CacheWidth)
@@ -673,7 +693,7 @@ Namespace Services
                 ElseIf PsdPreviewService.IsSupportedPsd(filePath) Then
                     Using preview = PsdPreviewService.ExtractPreview(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
+                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
                     End Using
                 ElseIf FpxService.IsFpx(filePath) Then
                     Using preview = FpxService.ExtractComposite(filePath)

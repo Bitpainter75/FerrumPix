@@ -157,9 +157,6 @@ Namespace Services
         Public Property MainWindowMaximized As Boolean = False
         Public Property SavedSearches As New List(Of SavedSearchSettings)()
         Public Property VideoHardwareAcceleration As Boolean = False
-        ''' RAW-Bearbeitungen automatisch als Begleitdatei (.fpxmp) neben der RAW-Datei merken
-        ''' und beim Oeffnen wieder anwenden - siehe RawSidecarService.
-        Public Property RawSidecarEnabled As Boolean = True
         Public Property TransparencyBackgroundMode As String = "Checkerboard"
         Public Property TransparencyBackgroundColor As String = "#FFFFFFFF"
         Public Property LastBatchRenamePattern As String = "{name}_###"
@@ -937,10 +934,6 @@ Namespace Services
 
         Public Shared Sub SaveEditorShowGrid(value As Boolean)
             Update(Sub(s) s.EditorShowGrid = value)
-        End Sub
-
-        Public Shared Sub SaveRawSidecarEnabled(value As Boolean)
-            Update(Sub(s) s.RawSidecarEnabled = value)
         End Sub
 
         Public Shared Sub SaveMainWindowMaximized(value As Boolean)

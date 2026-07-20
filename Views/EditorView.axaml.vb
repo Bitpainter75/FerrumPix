@@ -1040,7 +1040,9 @@ Namespace Views
 
             If vm IsNot Nothing Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
-                If imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso Not imageRect.Contains(e.GetPosition(canvas)) Then
+                If imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso
+                   Not imageRect.Contains(e.GetPosition(canvas)) AndAlso
+                   Not BrushCircleTouchesImage(e.GetPosition(canvas), imageRect, vm) Then
                     ' Anfasser (und Objektteile) koennen AUSSERHALB des Bildes liegen, wenn das Objekt
                     ' am Rand steht: erst pruefen, ob der Klick eine Zone der aktuellen Selektion
                     ' trifft - sonst waere ein solcher Griff nie greifbar, weil der Klick sofort
@@ -1223,7 +1225,10 @@ Namespace Views
             If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Retouch Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-                Dim pos = ClampPointToRect(e.GetPosition(canvas), imageRect)
+                ' NICHT auf den Bildrand klemmen: ein Ansetzen knapp ausserhalb meint den Teil des
+                ' Pinselkreises, der ueber dem Bild liegt. AddRetouchSpot begrenzt den Mittelpunkt
+                ' auf einen Radius Abstand, das Zeichnen klemmt auf die Bitmapgrenzen.
+                Dim pos = e.GetPosition(canvas)
                 Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                 Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
 
@@ -1545,7 +1550,10 @@ Namespace Views
 
         Private Sub AddBrushPoint(position As Avalonia.Point, imageRect As Avalonia.Rect)
             If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-            Dim pos = ClampPointToRect(position, imageRect)
+            ' Wie bei der Retusche: bis zu einem Pinselradius ausserhalb zulassen, damit am Bildrand
+            ' der sichtbare Teilkreis wirkt statt eines auf den Rand gezogenen Vollkreises.
+            Dim reach = BrushDiameterOnScreen(imageRect, TryCast(DataContext, EditorViewModel)) / 2.0
+            Dim pos = ClampPointToRect(position, imageRect.Inflate(reach))
             Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
             Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
             If _brushPoints.Count > 0 Then
@@ -1641,6 +1649,36 @@ Namespace Views
             }
         End Function
 
+        ''' <summary>Durchmesser des Pinsel-/Retuschekreises in BILDSCHIRM-Pixeln - dieselbe Rechnung,
+        ''' die auch den angezeigten Cursorring bemisst, damit Ring und Wirkung nie auseinanderlaufen.
+        ''' 0, wenn gerade kein Pixelwerkzeug aktiv ist.</summary>
+        Private Function BrushDiameterOnScreen(imageRect As Avalonia.Rect, vm As EditorViewModel) As Double
+            If vm Is Nothing Then Return 0
+            If vm.CurrentTool <> EditorTool.Draw AndAlso vm.CurrentTool <> EditorTool.Retouch Then Return 0
+            Dim scale = 1.0
+            If vm.CurrentImage IsNot Nothing AndAlso vm.CurrentImage.PixelSize.Width > 0 AndAlso vm.CurrentImage.PixelSize.Height > 0 Then
+                scale = Math.Min(imageRect.Width / vm.CurrentImage.PixelSize.Width, imageRect.Height / vm.CurrentImage.PixelSize.Height)
+            End If
+            Return Math.Max(4.0, If(vm.CurrentTool = EditorTool.Draw, vm.BrushSize, vm.RetouchRadius * 2.0) * scale)
+        End Function
+
+        ''' <summary>Ragt der Pinselkreis noch ins Bild, obwohl der Zeiger daneben steht?
+        '''
+        ''' Das entscheidet, ob ein Druck am Bildrand ein Strich ist oder ein Klick ins Leere. Vorher
+        ''' zaehlte allein die Zeigerposition: wer mit grossem Pinsel bewusst am Rand ansetzte, dessen
+        ''' Klick wurde komplett verworfen, obwohl der halbe Kreis ueber dem Bild lag - Pinsel und
+        ''' Retusche "machten dann nichts" (Nutzer-Befund 2026-07-20). Alle tieferen Ebenen klemmen
+        ''' den Punkt laengst sauber ins Bild (ClampPointToRect, AddRetouchSpot, DrawRetouchSpot);
+        ''' sie wurden nur nie erreicht. Ein Klick weit weg vom Bild deselektiert weiterhin.</summary>
+        Private Function BrushCircleTouchesImage(position As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel) As Boolean
+            Dim radius = BrushDiameterOnScreen(imageRect, vm) / 2.0
+            If radius <= 0 Then Return False
+            ' Abstand vom Zeiger zum naechsten Punkt des Bildrechtecks.
+            Dim dx = Math.Max(imageRect.Left - position.X, Math.Max(0.0, position.X - imageRect.Right))
+            Dim dy = Math.Max(imageRect.Top - position.Y, Math.Max(0.0, position.Y - imageRect.Bottom))
+            Return (dx * dx + dy * dy) < radius * radius
+        End Function
+
         Private Sub UpdateBrushCursorPreview(position As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel)
             Dim cursor = Me.FindControl(Of Ellipse)("BrushCursorPreview")
             If cursor Is Nothing Then Return
@@ -1650,12 +1688,7 @@ Namespace Views
             cursor.IsVisible = showCursor
             If Not showCursor Then Return
 
-            Dim scale = 1.0
-            If vm.CurrentImage IsNot Nothing AndAlso vm.CurrentImage.PixelSize.Width > 0 AndAlso vm.CurrentImage.PixelSize.Height > 0 Then
-                scale = Math.Min(imageRect.Width / vm.CurrentImage.PixelSize.Width, imageRect.Height / vm.CurrentImage.PixelSize.Height)
-            End If
-            Dim diameter = If(vm.CurrentTool = EditorTool.Draw, vm.BrushSize, vm.RetouchRadius * 2.0) * scale
-            diameter = Math.Max(4.0, diameter)
+            Dim diameter = BrushDiameterOnScreen(imageRect, vm)
             cursor.Width = diameter
             cursor.Height = diameter
             Canvas.SetLeft(cursor, position.X - diameter / 2.0)

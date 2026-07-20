@@ -3642,15 +3642,6 @@
   <data name="RAW_Vorschau_e60fc82f" xml:space="preserve">
     <value>RAW preview</value>
   </data>
-  <data name="RAW_Bearbeitungen_als_Begleitdatei_merken_7ed96c34" xml:space="preserve">
-    <value>Remember RAW edits in a sidecar file</value>
-  </data>
-  <data name="Legt_die_Reglerwerte_als_kleine_fpxmp_Datei_nebe_5c2fe1d3" xml:space="preserve">
-    <value>Stores the slider values as a small .fpxmp file next to the RAW file and re-applies them the next time it is opened. The RAW file itself is never modified; brush and retouching strokes still need an .fpx project file.</value>
-  </data>
-  <data name="RAW_Bearbeitung_in_Begleitdatei_gespeichert_b7fd049e" xml:space="preserve">
-    <value>RAW edits saved to sidecar file</value>
-  </data>
   <data name="Farbrauschen_7e6f8299" xml:space="preserve">
     <value>Color noise</value>
   </data>
@@ -3662,9 +3653,6 @@
   </data>
   <data name="Positiv_f_gt_Rauschen_hinzu_negativ_reduziert_es_1decfbdc" xml:space="preserve">
     <value>Positive adds noise; negative reduces it (uniform smoothing).</value>
-  </data>
-  <data name="Der_Speichern_Knopf_legt_die_Reglerwerte_als_kle_a767a98a" xml:space="preserve">
-    <value>The Save button stores the slider values as a small .fpxmp file next to the RAW file; they are re-applied automatically the next time it is opened. The RAW file itself is never modified; brush and retouching strokes still need an .fpx project file.</value>
   </data>
   <data name="Begleitdatei_konnte_nicht_geschrieben_werden_7f337000" xml:space="preserve">
     <value>Sidecar file could not be written</value>
@@ -3857,5 +3845,8 @@
   </data>
   <data name="Drehung_konnte_nicht_gespeichert_werden_d7da8820" xml:space="preserve">
     <value>Rotation could not be saved</value>
+  </data>
+  <data name="Bearbeitung_in_Begleitdatei_gespeichert_3dc10f16" xml:space="preserve">
+    <value>Edit saved to sidecar file</value>
   </data>
 </root>

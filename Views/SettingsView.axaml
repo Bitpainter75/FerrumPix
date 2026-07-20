@@ -760,18 +760,6 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
-                                <TextBlock Text="RAW-Bearbeitungen als Begleitdatei merken" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Der Speichern-Knopf legt die Reglerwerte als kleine .fpxmp-Datei neben die RAW-Datei; beim nächsten Öffnen werden sie automatisch angewendet. Die RAW-Datei selbst bleibt unverändert; Pinsel- und Retusche-Striche brauchen weiterhin eine .fpx-Projektdatei." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding RawSidecarEnabled}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2">
                                 <TextBlock Text="Info-Seitenleiste im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>

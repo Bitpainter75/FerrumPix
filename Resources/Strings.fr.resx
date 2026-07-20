@@ -3641,15 +3641,6 @@
   <data name="RAW_Vorschau_e60fc82f" xml:space="preserve">
     <value>Aperçu RAW</value>
   </data>
-  <data name="RAW_Bearbeitungen_als_Begleitdatei_merken_7ed96c34" xml:space="preserve">
-    <value>Mémoriser les retouches RAW dans un fichier annexe</value>
-  </data>
-  <data name="Legt_die_Reglerwerte_als_kleine_fpxmp_Datei_nebe_5c2fe1d3" xml:space="preserve">
-    <value>Enregistre les valeurs des curseurs dans un petit fichier .fpxmp à côté du fichier RAW et les réapplique à la prochaine ouverture. Le fichier RAW lui-même n&#x27;est jamais modifié ; les coups de pinceau et retouches nécessitent toujours un projet .fpx.</value>
-  </data>
-  <data name="RAW_Bearbeitung_in_Begleitdatei_gespeichert_b7fd049e" xml:space="preserve">
-    <value>Retouches RAW enregistrées dans le fichier annexe</value>
-  </data>
   <data name="Farbrauschen_7e6f8299" xml:space="preserve">
     <value>Bruit de couleur</value>
   </data>
@@ -3661,9 +3652,6 @@
   </data>
   <data name="Positiv_f_gt_Rauschen_hinzu_negativ_reduziert_es_1decfbdc" xml:space="preserve">
     <value>En positif, ajoute du bruit ; en négatif, le réduit (lissage uniforme).</value>
-  </data>
-  <data name="Der_Speichern_Knopf_legt_die_Reglerwerte_als_kle_a767a98a" xml:space="preserve">
-    <value>Le bouton Enregistrer stocke les valeurs des curseurs dans un petit fichier .fpxmp à côté du fichier RAW ; elles sont réappliquées automatiquement à la prochaine ouverture. Le fichier RAW lui-même n&#x27;est jamais modifié ; les coups de pinceau et retouches nécessitent toujours un projet .fpx.</value>
   </data>
   <data name="Begleitdatei_konnte_nicht_geschrieben_werden_7f337000" xml:space="preserve">
     <value>Le fichier annexe n&#x27;a pas pu être écrit</value>
@@ -3856,5 +3844,8 @@
   </data>
   <data name="Drehung_konnte_nicht_gespeichert_werden_d7da8820" xml:space="preserve">
     <value>La rotation n'a pas pu être enregistrée</value>
+  </data>
+  <data name="Bearbeitung_in_Begleitdatei_gespeichert_3dc10f16" xml:space="preserve">
+    <value>Modification enregistrée dans le fichier annexe</value>
   </data>
 </root>

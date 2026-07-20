@@ -89,7 +89,11 @@ Namespace Services
         ' (wie in einer früheren Version) über einen PNG-Encode/Decode-Umweg zu schicken.
         ''' <paramref name="extraRotationDegrees"/>: zusaetzliche Viertel-Drehung NACH der
         ''' EXIF-Korrektur - fuer RAW-Dateien, deren Drehung im Sidecar steht statt in den Pixeln.
-        Public Shared Function LoadOrientedAvaloniaBitmap(stream As Stream, Optional extraRotationDegrees As Integer = 0) As Bitmap
+        ''' <paramref name="rawContainerPath"/>: Pfad der RAW-Datei, aus der dieser Strom stammt.
+        ''' Traegt die eingebettete Vorschau kein eigenes Orientation-Tag, wird das des Containers
+        ''' herangezogen (siehe RawPreviewOrigin) - sonst steht die Anzeige quer zur Entwicklung.
+        Public Shared Function LoadOrientedAvaloniaBitmap(stream As Stream, Optional extraRotationDegrees As Integer = 0,
+                                                          Optional rawContainerPath As String = Nothing) As Bitmap
             ' Den Inhalt EINMAL puffern und alle Decode-Wege daraus bedienen.
             ' Grund: SKCodec.Create(Stream) uebernimmt den Strom, und manche Codecs - allen voran
             ' WebP - schliessen ihn dabei sofort. Das spaetere stream.Seek fuer den Rueckfall warf
@@ -108,8 +112,13 @@ Namespace Services
 
             Using data
                 Using codec = SKCodec.Create(data)
-                    If codec Is Nothing OrElse
-                       (codec.EncodedOrigin = SKEncodedOrigin.TopLeft AndAlso NormalizeQuarterTurn(extraRotationDegrees) = 0) Then
+                    If codec Is Nothing Then Return BitmapFromData(data)
+
+                    Dim origin = codec.EncodedOrigin
+                    If Not String.IsNullOrWhiteSpace(rawContainerPath) Then
+                        origin = RawPreviewOrigin(rawContainerPath, origin, codec.Info.Width, codec.Info.Height)
+                    End If
+                    If origin = SKEncodedOrigin.TopLeft AndAlso NormalizeQuarterTurn(extraRotationDegrees) = 0 Then
                         Return BitmapFromData(data)
                     End If
 
@@ -121,7 +130,7 @@ Namespace Services
                             Return BitmapFromData(data)
                         End If
 
-                        Dim corrected = ApplyOrientation(original, codec.EncodedOrigin)
+                        Dim corrected = ApplyOrientation(original, origin)
                         Try
                             Dim rotated = ApplyQuarterRotation(corrected, extraRotationDegrees)
                             Try
@@ -135,6 +144,139 @@ Namespace Services
                     End Using
                 End Using
             End Using
+        End Function
+
+        ' ── Orientierung einer RAW-Datei aus ihrem TIFF-Kopf ──────────────────────
+        ' Hintergrund (Nutzer-Befund 2026-07-20, belegt an PENTAX .PEF und Sony .ARW): die in eine
+        ' RAW-Datei eingebettete JPEG-Vorschau traegt haeufig KEIN eigenes Orientation-Tag - sie
+        ' liegt so quer da, wie der Sensor sie aufgenommen hat. libraw dreht die Entwicklung
+        ' dagegen selbst anhand des Tags im RAW-CONTAINER. Ergebnis: der Editor zeigte das Bild
+        ' hochkant, Viewer und Kacheln quer - bei derselben Datei, ohne jedes Zutun des Nutzers.
+        '
+        ' Deshalb wird die Orientierung des Containers gelesen und auf die Vorschau angewandt.
+        ' Die meisten RAW-Formate (PEF, ARW, NEF, CR2, DNG, RW2, ORF) sind TIFF-basiert; alles
+        ' andere liefert schlicht TopLeft, also das bisherige Verhalten.
+
+        Private Structure RawContainerInfo
+            Public Origin As SKEncodedOrigin
+            Public SensorWidth As Integer
+            Public SensorHeight As Integer
+        End Structure
+
+        ''' <summary>Effektive Orientierung fuer eine aus einer RAW-Datei extrahierte Vorschau.
+        '''
+        ''' Reihenfolge: bringt die Vorschau ein eigenes Tag mit, gilt das (die Kamera hat sie dann
+        ''' bewusst so beschriftet). Sonst zaehlt das Tag des Containers - aber nur, wenn die
+        ''' Vorschau auch wirklich noch ungedreht ist. Manche Kameras betten eine BEREITS aufrecht
+        ''' stehende Vorschau ohne Tag ein; die wuerde ein blindes Anwenden ein zweites Mal drehen.
+        ''' Erkannt wird das am Seitenverhaeltnis: liegt die Vorschau so herum wie der ungedrehte
+        ''' Sensor, muss noch gedreht werden - steht sie schon anders, ist es bereits geschehen.</summary>
+        Public Shared Function RawPreviewOrigin(rawPath As String, previewOrigin As SKEncodedOrigin,
+                                                previewWidth As Integer, previewHeight As Integer) As SKEncodedOrigin
+            If previewOrigin <> SKEncodedOrigin.TopLeft Then Return previewOrigin
+            If String.IsNullOrWhiteSpace(rawPath) OrElse previewWidth <= 0 OrElse previewHeight <= 0 Then Return previewOrigin
+
+            Dim container = ReadRawContainerInfo(rawPath)
+            If container.Origin = SKEncodedOrigin.TopLeft Then Return previewOrigin
+
+            Dim tauscht = container.Origin = SKEncodedOrigin.LeftTop OrElse container.Origin = SKEncodedOrigin.RightTop OrElse
+                          container.Origin = SKEncodedOrigin.RightBottom OrElse container.Origin = SKEncodedOrigin.LeftBottom
+            If tauscht AndAlso container.SensorWidth > 0 AndAlso container.SensorHeight > 0 Then
+                Dim sensorQuer = container.SensorWidth >= container.SensorHeight
+                Dim vorschauQuer = previewWidth >= previewHeight
+                ' Vorschau steht schon anders herum als der Sensor -> sie wurde bereits gedreht.
+                If sensorQuer <> vorschauQuer Then Return previewOrigin
+            End If
+            Return container.Origin
+        End Function
+
+        ''' <summary>Orientation (0x0112) und Sensormasse (0x0100/0x0101) aus der ersten IFD eines
+        ''' TIFF-basierten RAW. Bei allem, was kein TIFF ist oder unterwegs nicht aufgeht: TopLeft.</summary>
+        Private Shared Function ReadRawContainerInfo(path As String) As RawContainerInfo
+            Dim result As RawContainerInfo
+            result.Origin = SKEncodedOrigin.TopLeft
+            Try
+                Using fs = File.OpenRead(path)
+                    Dim header(7) As Byte
+                    If fs.Read(header, 0, 8) <> 8 Then Return result
+                    Dim littleEndian As Boolean
+                    If header(0) = &H49 AndAlso header(1) = &H49 Then
+                        littleEndian = True
+                    ElseIf header(0) = &H4D AndAlso header(1) = &H4D Then
+                        littleEndian = False
+                    Else
+                        Return result
+                    End If
+                    ' 42 kennzeichnet TIFF. Manche Formate nutzen andere Magic-Werte (etwa 0x55 bei
+                    ' Panasonic RW2) - deren IFD-Aufbau ist derselbe, deshalb nicht darauf bestehen.
+                    Dim ifdOffset = CLng(ToU32(header, 4, littleEndian))
+                    If ifdOffset <= 0 OrElse ifdOffset >= fs.Length Then Return result
+
+                    fs.Position = ifdOffset
+                    Dim countBuf(1) As Byte
+                    If fs.Read(countBuf, 0, 2) <> 2 Then Return result
+                    Dim entries = ToU16(countBuf, 0, littleEndian)
+                    ' Ein Kopf mit tausenden Eintraegen ist kaputt oder kein TIFF - nicht weiterlesen.
+                    If entries <= 0 OrElse entries > 512 Then Return result
+
+                    Dim entry(11) As Byte
+                    For i = 0 To entries - 1
+                        If fs.Read(entry, 0, 12) <> 12 Then Exit For
+                        Dim tag = ToU16(entry, 0, littleEndian)
+                        Dim fieldType = ToU16(entry, 2, littleEndian)
+                        ' Der Wert steht im Eintrag selbst, solange er in vier Bytes passt (SHORT/LONG).
+                        Dim value As Long
+                        If fieldType = 3 Then          ' SHORT
+                            value = ToU16(entry, 8, littleEndian)
+                        ElseIf fieldType = 4 Then      ' LONG
+                            value = CLng(ToU32(entry, 8, littleEndian))
+                        Else
+                            Continue For
+                        End If
+                        Select Case tag
+                            Case &H112 : result.Origin = ToEncodedOrigin(CInt(value))
+                            Case &H100 : result.SensorWidth = CInt(Math.Min(value, Integer.MaxValue))
+                            Case &H101 : result.SensorHeight = CInt(Math.Min(value, Integer.MaxValue))
+                        End Select
+                    Next
+                End Using
+            Catch
+                result.Origin = SKEncodedOrigin.TopLeft
+            End Try
+            Return result
+        End Function
+
+        ' ACHTUNG: die Zwischenwerte MUESSEN Integer sein. In VB.NET ist "Byte << 8" ein No-Op
+        ' (das Ergebnis bleibt ein Byte), was hier still falsche Zahlen liefern wuerde - dieselbe
+        ' Falle hat schon die Metadatenkopie und die RAW-Vorschau zerlegt.
+        Private Shared Function ToU16(buffer As Byte(), offset As Integer, littleEndian As Boolean) As Integer
+            Dim a = CInt(buffer(offset))
+            Dim b = CInt(buffer(offset + 1))
+            Return If(littleEndian, (b << 8) Or a, (a << 8) Or b)
+        End Function
+
+        Private Shared Function ToU32(buffer As Byte(), offset As Integer, littleEndian As Boolean) As UInteger
+            Dim a = CUInt(buffer(offset))
+            Dim b = CUInt(buffer(offset + 1))
+            Dim c = CUInt(buffer(offset + 2))
+            Dim d = CUInt(buffer(offset + 3))
+            Return If(littleEndian,
+                      (d << 24) Or (c << 16) Or (b << 8) Or a,
+                      (a << 24) Or (b << 16) Or (c << 8) Or d)
+        End Function
+
+        Private Shared Function ToEncodedOrigin(exifValue As Integer) As SKEncodedOrigin
+            Select Case exifValue
+                Case 1 : Return SKEncodedOrigin.TopLeft
+                Case 2 : Return SKEncodedOrigin.TopRight
+                Case 3 : Return SKEncodedOrigin.BottomRight
+                Case 4 : Return SKEncodedOrigin.BottomLeft
+                Case 5 : Return SKEncodedOrigin.LeftTop
+                Case 6 : Return SKEncodedOrigin.RightTop
+                Case 7 : Return SKEncodedOrigin.RightBottom
+                Case 8 : Return SKEncodedOrigin.LeftBottom
+                Case Else : Return SKEncodedOrigin.TopLeft
+            End Select
         End Function
 
         ''' <summary>Winkel auf 0/90/180/270 normieren - alles andere kann eine Viertel-Drehung nicht
@@ -217,13 +359,14 @@ Namespace Services
                     If stream Is Nothing Then Return Nothing
                     ' Eine im Viewer gedrehte RAW steckt ihre Drehung ins Sidecar, nicht in die Pixel.
                     Dim rotation = If(applySidecarRotation, RawSidecarService.ReadRotationDegrees(filePath), 0)
-                    Return LoadOrientedAvaloniaBitmap(stream, rotation)
+                    Return LoadOrientedAvaloniaBitmap(stream, rotation, rawContainerPath:=filePath)
                 End Using
             End If
             If PsdPreviewService.IsSupportedPsd(filePath) Then
                 Using stream = PsdPreviewService.ExtractPreview(filePath)
                     If stream Is Nothing Then Return Nothing
-                    Return LoadOrientedAvaloniaBitmap(stream)
+                    Dim psdRotation = If(applySidecarRotation, RawSidecarService.ReadRotationDegrees(filePath), 0)
+                    Return LoadOrientedAvaloniaBitmap(stream, psdRotation)
                 End Using
             End If
             Return LoadOrientedAvaloniaBitmap(filePath)

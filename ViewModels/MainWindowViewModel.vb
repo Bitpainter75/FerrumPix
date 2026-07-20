@@ -9,6 +9,7 @@ Imports System.Text.RegularExpressions
 Imports System.Globalization
 Imports ReactiveUI
 Imports Avalonia.Threading
+Imports FerrumPix.Models
 Imports FerrumPix.Services
 
 Namespace ViewModels
@@ -2342,6 +2343,21 @@ Namespace ViewModels
             ElseIf IO.Directory.Exists(itemPath) Then
                 IO.Directory.Delete(itemPath, True)
             End If
+        End Sub
+
+        ''' <summary>Laedt die Vorschaubilder EINER Datei in allen drei Ansichten neu: Galerie-Kacheln
+        ''' und die Filmstreifen von Viewer und Editor.
+        '''
+        ''' Gebraucht, wenn sich das ANGEZEIGTE Bild aendert, ohne dass die Datei angefasst wird -
+        ''' bislang genau ein Fall: die Drehung einer RAW/PSD landet im .fpxmp-Sidecar. Bewusst hier
+        ''' und nicht je Ansicht: Viewer und Editor koennen beide einen Sidecar schreiben, und die
+        ''' erste Fassung hatte in genau dieser Doppelung den Editor-Fall vergessen (Nutzer-Befund
+        ''' 2026-07-20: "auch bei Thumbnails wird nicht korrekt gedreht").</summary>
+        Public Sub ReloadThumbnailsForFile(path As String)
+            If String.IsNullOrWhiteSpace(path) Then Return
+            Gallery?.RefreshThumbnailFor(path)
+            ImageItem.ReloadThumbnailsFor(Viewer?.FilmstripItems, path)
+            ImageItem.ReloadThumbnailsFor(Editor?.FilmstripItems, path)
         End Sub
 
         ''' Bei Dateien (nicht Ordnern) wird nur der Basisname ohne Endung im Eingabefeld angezeigt -

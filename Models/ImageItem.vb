@@ -1257,6 +1257,31 @@ Namespace Models
             End SyncLock
         End Sub
 
+        ''' <summary>Verwirft das Vorschaubild und fordert SOFORT ein neues an - fuer Aenderungen,
+        ''' die das angezeigte Bild betreffen, ohne dass die Kachel neu aufgebaut wird (Drehung
+        ''' einer RAW/PSD ueber den .fpxmp-Sidecar).
+        '''
+        ''' Warum nicht EvictThumbnail: das storniert nur ANGEFORDERTE, noch nicht fertige Ladungen
+        ''' (_thumbState = 1) und ist bei einem bereits geladenen Bild (_thumbState = 2 - der
+        ''' Normalfall fuer das Bild, das man gerade ansieht) ein No-Op. Genau daran blieb die
+        ''' gedrehte RAW in Filmstreifen und Galerie ungedreht stehen (Nutzer-Befund 2026-07-20).
+        ''' Und ClearThumbnail allein reicht auch nicht: es leert nur, niemand laedt danach nach -
+        ''' die Kachel bliebe leer, bis sie zufaellig erneut ins Sichtfenster geriete.</summary>
+        Public Sub ReloadThumbnail()
+            If IsFolder Then Return
+            ClearThumbnail()
+            QueueThumbnail(ViewportThumbnailPriority)
+        End Sub
+
+        ''' <summary>ReloadThumbnail fuer alle Eintraege einer Liste, die auf denselben Pfad zeigen.
+        ''' Nimmt Nothing als Liste an (eine Ansicht, die es gerade nicht gibt).</summary>
+        Public Shared Sub ReloadThumbnailsFor(items As IEnumerable(Of ImageItem), path As String)
+            If items Is Nothing OrElse String.IsNullOrWhiteSpace(path) Then Return
+            For Each item In items.ToList()
+                If item IsNot Nothing AndAlso PathIdentity.AreSame(item.FilePath, path) Then item.ReloadThumbnail()
+            Next
+        End Sub
+
         Public Sub ClearThumbnail()
             Dim bmp As Bitmap = Nothing
             SyncLock _thumbnailQueueLock

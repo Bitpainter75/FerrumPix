@@ -464,7 +464,7 @@ Namespace ViewModels
                             Finally
                                 ' Ein Commit kann der erste GEBACKENE Inhalt sein - dann kippt bei
                                 ' RAW-Quellen der Speichern-Weg von Sidecar auf "Speichern unter".
-                                Me.RaisePropertyChanged(NameOf(CanSaveRawSidecar))
+                                Me.RaisePropertyChanged(NameOf(CanSaveSidecar))
                                 Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
                                 Me.RaisePropertyChanged(NameOf(CanUndo))
                                 Me.RaisePropertyChanged(NameOf(CanRedo))
@@ -2032,7 +2032,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImageRaw))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImagePsd))
-                Me.RaisePropertyChanged(NameOf(CanSaveRawSidecar))
+                Me.RaisePropertyChanged(NameOf(CanSaveSidecar))
                 Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
                 Me.RaisePropertyChanged(NameOf(HasDocument))
@@ -7107,13 +7107,22 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Steuert, ob der "Speichern"-Button (in-place) aktiv ist - bei RAW-Bildern ist nur
-        ''' "Speichern unter" erlaubt (siehe SaveImageAsync/ConfirmSaveBeforeLeavingAsync).
+        ''' <summary>RAW oder PSD - beide behalten ihre Bearbeitung im .fpxmp-Sidecar, weil wir
+        ''' keines der beiden Formate schreiben koennen.</summary>
+        Public ReadOnly Property IsCurrentImageSidecarFormat As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso RawSidecarService.IsSidecarFormat(RenderSourcePath)
+            End Get
+        End Property
+
+        ''' Steuert, ob der "Speichern"-Button (in-place) aktiv ist. Bei RAW und PSD schreibt
+        ''' "Speichern" nicht die Datei, sondern das Rezept in die Begleitdatei - der Knopf ist
+        ''' also aktiv, solange dieser Weg offen steht (CanSaveSidecar).
         ''' Immich-Bilder liegen als Temp-Kopie vor (_forceSaveAsOnly): dort ist "Speichern" nur dann
         ''' sinnvoll, wenn es das Quell-Asset ersetzen darf - siehe SavesBackToImmich.
         Public ReadOnly Property CanSaveInPlace As Boolean
             Get
-                Return (Not IsCurrentImageRaw OrElse CanSaveRawSidecar) AndAlso Not IsCurrentImagePsd AndAlso
+                Return (Not IsCurrentImageSidecarFormat OrElse CanSaveSidecar) AndAlso
                        (Not _forceSaveAsOnly OrElse SavesBackToImmich OrElse Not String.IsNullOrEmpty(_currentFpxPath))
             End Get
         End Property
@@ -7882,8 +7891,7 @@ Namespace ViewModels
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
                 newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
-            ElseIf RawPreviewService.IsSupportedRaw(path) AndAlso
-                   AppSettingsService.Load().RawSidecarEnabled AndAlso
+            ElseIf RawSidecarService.IsSidecarFormat(path) AndAlso
                    RawSidecarService.Exists(path) Then
                 ' Rezept-Begleitdatei (.fpxmp): die zuletzt gespeicherten Regler kommen wie beim
                 ' .fpx-Laden wieder an - ein defekter Sidecar wird still ignoriert.
@@ -8001,8 +8009,7 @@ Namespace ViewModels
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
                 newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
-            ElseIf RawPreviewService.IsSupportedRaw(imagePath) AndAlso
-                   AppSettingsService.Load().RawSidecarEnabled AndAlso
+            ElseIf RawSidecarService.IsSidecarFormat(imagePath) AndAlso
                    RawSidecarService.Exists(imagePath) Then
                 fpxAdjustments = RawSidecarService.TryRead(imagePath)
             End If
@@ -9953,9 +9960,9 @@ Namespace ViewModels
             If Not saveAs AndAlso Not CanSaveInPlace Then Return False
             ' "Speichern" bei einem Immich-Bild schreibt nicht die Temp-Kopie zurück, sondern das Asset.
             If Not saveAs AndAlso SavesBackToImmich Then Return Await SaveBackToImmichAsync()
-            ' "Speichern" bei einer RAW-Quelle = Rezept in die Begleitdatei (.fpxmp) schreiben -
-            ' die RAW-Datei selbst ist nie ein Schreibziel.
-            If Not saveAs AndAlso IsCurrentImageRaw Then Return TrySaveRawSidecar()
+            ' "Speichern" bei RAW oder PSD = Rezept in die Begleitdatei (.fpxmp) schreiben -
+            ' keines dieser Formate ist je ein Schreibziel.
+            If Not saveAs AndAlso IsCurrentImageSidecarFormat Then Return TrySaveSidecar()
             Dim targetPath = _currentImagePath
             Dim targetQuality = SaveQuality
             Dim saveToImmich As Boolean = False
@@ -10267,26 +10274,28 @@ Namespace ViewModels
         ''' Geschrieben wird AUSSCHLIESSLICH ueber die Speichern-Funktion, nie nebenbei beim
         ''' Verlassen (Nutzerentscheidung 2026-07-19: Dateien entstehen nur durch bewusstes
         ''' Speichern).</summary>
-        Public ReadOnly Property CanSaveRawSidecar As Boolean
+        Public ReadOnly Property CanSaveSidecar As Boolean
             Get
-                Return RawPreviewService.IsSupportedRaw(RenderSourcePath) AndAlso
+                Return RawSidecarService.IsSidecarFormat(RenderSourcePath) AndAlso
                        String.IsNullOrEmpty(_currentFpxPath) AndAlso
-                       Not _workingImage.HasBakedContent AndAlso
-                       AppSettingsService.Load().RawSidecarEnabled
+                       Not _workingImage.HasBakedContent
             End Get
         End Property
 
-        ''' <summary>"Speichern" fuer eine RAW-Quelle: schreibt das Rezept in die Begleitdatei
-        ''' (die RAW-Datei selbst wird nie angefasst).</summary>
-        Private Function TrySaveRawSidecar() As Boolean
-            If Not CanSaveRawSidecar Then Return False
+        ''' <summary>"Speichern" fuer RAW/PSD: schreibt das Rezept in die Begleitdatei
+        ''' (die Quelldatei selbst wird nie angefasst).</summary>
+        Private Function TrySaveSidecar() As Boolean
+            If Not CanSaveSidecar Then Return False
             If Not RawSidecarService.TryWrite(RenderSourcePath, GetCurrentAdjustments()) Then
                 StatusText = LocalizationService.T("Begleitdatei konnte nicht geschrieben werden")
                 Return False
             End If
             _hasChanges = False
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
-            StatusText = LocalizationService.T("RAW-Bearbeitung in Begleitdatei gespeichert")
+            ' Die Quelldatei ist unveraendert - ohne diesen Anstoss behielten Galerie und
+            ' Filmstreifen ihre alte Kachel, obwohl das Rezept (z.B. eine Drehung) jetzt anders ist.
+            _mainVm?.ReloadThumbnailsForFile(RenderSourcePath)
+            StatusText = LocalizationService.T("Bearbeitung in Begleitdatei gespeichert")
             Return True
         End Function
 
@@ -12861,8 +12870,14 @@ Namespace ViewModels
 
             Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
-            Dim targetX = Math.Max(0, Math.Min(baseWidth, PercentXToPixels(xPercent)))
-            Dim targetY = Math.Max(0, Math.Min(baseHeight, PercentYToPixels(yPercent)))
+            ' Der Mittelpunkt darf bis zu EINEN RADIUS ausserhalb liegen: wer am Bildrand ansetzt,
+            ' meint den Teil des Kreises, der ueber dem Bild liegt. Frueher wurde hart auf den Rand
+            ' geklemmt - dann wirkte dort ein VOLLER Kreis, also mehr als der Cursorring anzeigte.
+            ' Weiter als einen Radius hinaus beruehrt der Kreis das Bild ohnehin nicht mehr; das
+            ' Zeichnen selbst klemmt zusaetzlich auf die Bitmapgrenzen (DrawRetouchSpot).
+            Dim reach = Math.Max(1, CInt(Math.Ceiling(_retouchRadius)))
+            Dim targetX = Math.Max(-reach, Math.Min(baseWidth + reach, PercentXToPixels(xPercent)))
+            Dim targetY = Math.Max(-reach, Math.Min(baseHeight + reach, PercentYToPixels(yPercent)))
 
             Dim spot = New RetouchSpot With {
                 .XPixels = CSng(targetX),

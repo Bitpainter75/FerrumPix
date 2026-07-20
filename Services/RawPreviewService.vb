@@ -1,6 +1,7 @@
 Imports System
 Imports System.IO
 Imports System.Linq
+Imports SkiaSharp
 
 Namespace Services
 
@@ -51,17 +52,69 @@ Namespace Services
         ''' kommt - dort zaehlt Tempo, nicht Aufloesung.</summary>
         Public Shared Function ExtractPreviewWithFallback(filePath As String) As MemoryStream
             Dim scanned = ExtractPreview(filePath)
-            If scanned IsNot Nothing AndAlso scanned.Length > 0 Then Return scanned
-            scanned?.Dispose()
+            If IsBigEnoughForDisplay(scanned) Then Return scanned
 
             Dim thumb = RawDecodeService.TryExtractThumbnail(filePath)
-            If thumb IsNot Nothing AndAlso thumb.Length > 0 Then Return thumb
-            thumb?.Dispose()
+            If IsBigEnoughForDisplay(thumb) Then
+                scanned?.Dispose()
+                Return thumb
+            End If
 
-            ' Letzte Stufe: manche Dateien betten GAR KEINE Vorschau ein (gemessen an einer
-            ' Leica-Digilux2-.RAW) - dann bleibt nur das echte Entwickeln. Teuer (Demosaic), aber
-            ' die Alternative waere eine dauerhaft leere Kachel bzw. ein schwarzer Betrachter.
-            Return RawDecodeService.TryRenderPreviewPng(filePath)
+            ' Letzte Stufe: manche Dateien betten GAR KEINE brauchbare Vorschau ein - dann bleibt nur
+            ' das echte Entwickeln. Teuer (Demosaic), aber die Alternative ist ein winziges Bild auf
+            ' Bildschirmgroesse gezogen. Die Leica M8 legt als einzige Vorschau ein 320x240-TIFF ab
+            ' (kein JPEG, der Scanner findet also nichts); LibRaws Thumb-API lieferte genau dieses
+            ' Miniaturbild, und WEIL sie etwas lieferte, wurde nie entwickelt - der Betrachter zeigte
+            ' 320x240 formatfuellend hochskaliert (Nutzer-Befund 2026-07-20).
+            Dim developed = RawDecodeService.TryRenderPreviewPng(filePath)
+            If developed IsNot Nothing AndAlso developed.Length > 0 Then
+                scanned?.Dispose()
+                thumb?.Dispose()
+                Return developed
+            End If
+            developed?.Dispose()
+
+            ' Entwickeln ging nicht (libraw fehlt oder kennt die Datei nicht): dann ist ein kleines
+            ' Bild immer noch besser als ein schwarzer Betrachter. Groesseres von beiden nehmen.
+            If LongestEdge(scanned) >= LongestEdge(thumb) Then
+                thumb?.Dispose()
+                Return If(LongestEdge(scanned) > 0, scanned, Nothing)
+            End If
+            scanned?.Dispose()
+            Return thumb
+        End Function
+
+        ''' <summary>Ab dieser Kantenlaenge gilt eine eingebettete Vorschau als anzeigetauglich.
+        ''' Darunter wird lieber entwickelt. Bewusst nicht hoeher: die allermeisten Kameras betten
+        ''' eine nahezu vollaufgeloeste Vorschau ein (gemessen: PENTAX 3872, Sony 8640) - die soll
+        ''' weiterhin sofort und ohne Demosaic angezeigt werden.</summary>
+        Private Const MinDisplayEdge As Integer = 1024
+
+        Private Shared Function IsBigEnoughForDisplay(stream As MemoryStream) As Boolean
+            Return LongestEdge(stream) >= MinDisplayEdge
+        End Function
+
+        ''' <summary>Laengste Kante eines Vorschau-Stroms, 0 wenn nicht lesbar. Liest NUR den Kopf.
+        ''' Ueber eine Kopie der Bytes, weil SKCodec.Create den Strom sonst uebernimmt und schliesst -
+        ''' der Aufrufer braucht ihn danach aber noch (dieselbe Falle wie in DecodeOriented).</summary>
+        Private Shared Function LongestEdge(stream As MemoryStream) As Integer
+            If stream Is Nothing OrElse stream.Length = 0 Then Return 0
+            Try
+                stream.Position = 0
+                Using data = SKData.CreateCopy(stream.ToArray())
+                    Using codec = SKCodec.Create(data)
+                        If codec Is Nothing Then Return 0
+                        Return Math.Max(codec.Info.Width, codec.Info.Height)
+                    End Using
+                End Using
+            Catch
+                Return 0
+            Finally
+                Try
+                    stream.Position = 0
+                Catch
+                End Try
+            End Try
         End Function
 
         ''' Returns a MemoryStream with JPEG bytes (positioned at 0), or Nothing on failure.

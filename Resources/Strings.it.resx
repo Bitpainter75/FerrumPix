@@ -3641,15 +3641,6 @@
   <data name="RAW_Vorschau_e60fc82f" xml:space="preserve">
     <value>Anteprima RAW</value>
   </data>
-  <data name="RAW_Bearbeitungen_als_Begleitdatei_merken_7ed96c34" xml:space="preserve">
-    <value>Ricorda le modifiche RAW in un file collaterale</value>
-  </data>
-  <data name="Legt_die_Reglerwerte_als_kleine_fpxmp_Datei_nebe_5c2fe1d3" xml:space="preserve">
-    <value>Salva i valori dei cursori come piccolo file .fpxmp accanto al file RAW e li riapplica alla prossima apertura. Il file RAW non viene mai modificato; i tratti di pennello e ritocco richiedono ancora un progetto .fpx.</value>
-  </data>
-  <data name="RAW_Bearbeitung_in_Begleitdatei_gespeichert_b7fd049e" xml:space="preserve">
-    <value>Modifiche RAW salvate nel file collaterale</value>
-  </data>
   <data name="Farbrauschen_7e6f8299" xml:space="preserve">
     <value>Rumore cromatico</value>
   </data>
@@ -3661,9 +3652,6 @@
   </data>
   <data name="Positiv_f_gt_Rauschen_hinzu_negativ_reduziert_es_1decfbdc" xml:space="preserve">
     <value>In positivo aggiunge rumore; in negativo lo riduce (sfocatura uniforme).</value>
-  </data>
-  <data name="Der_Speichern_Knopf_legt_die_Reglerwerte_als_kle_a767a98a" xml:space="preserve">
-    <value>Il pulsante Salva memorizza i valori dei cursori come piccolo file .fpxmp accanto al file RAW; alla prossima apertura vengono riapplicati automaticamente. Il file RAW non viene mai modificato; i tratti di pennello e ritocco richiedono ancora un progetto .fpx.</value>
   </data>
   <data name="Begleitdatei_konnte_nicht_geschrieben_werden_7f337000" xml:space="preserve">
     <value>Impossibile scrivere il file collaterale</value>
@@ -3856,5 +3844,8 @@
   </data>
   <data name="Drehung_konnte_nicht_gespeichert_werden_d7da8820" xml:space="preserve">
     <value>Impossibile salvare la rotazione</value>
+  </data>
+  <data name="Bearbeitung_in_Begleitdatei_gespeichert_3dc10f16" xml:space="preserve">
+    <value>Modifica salvata nel file collegato</value>
   </data>
 </root>

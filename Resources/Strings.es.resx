@@ -3641,15 +3641,6 @@
   <data name="RAW_Vorschau_e60fc82f" xml:space="preserve">
     <value>Vista previa RAW</value>
   </data>
-  <data name="RAW_Bearbeitungen_als_Begleitdatei_merken_7ed96c34" xml:space="preserve">
-    <value>Recordar las ediciones RAW en un archivo adjunto</value>
-  </data>
-  <data name="Legt_die_Reglerwerte_als_kleine_fpxmp_Datei_nebe_5c2fe1d3" xml:space="preserve">
-    <value>Guarda los valores de los controles como un pequeño archivo .fpxmp junto al archivo RAW y los aplica automáticamente la próxima vez que se abra. El archivo RAW no se modifica; los trazos de pincel y retoque siguen necesitando un proyecto .fpx.</value>
-  </data>
-  <data name="RAW_Bearbeitung_in_Begleitdatei_gespeichert_b7fd049e" xml:space="preserve">
-    <value>Ediciones RAW guardadas en el archivo adjunto</value>
-  </data>
   <data name="Farbrauschen_7e6f8299" xml:space="preserve">
     <value>Ruido de color</value>
   </data>
@@ -3661,9 +3652,6 @@
   </data>
   <data name="Positiv_f_gt_Rauschen_hinzu_negativ_reduziert_es_1decfbdc" xml:space="preserve">
     <value>En positivo añade ruido; en negativo lo reduce (suavizado uniforme).</value>
-  </data>
-  <data name="Der_Speichern_Knopf_legt_die_Reglerwerte_als_kle_a767a98a" xml:space="preserve">
-    <value>El botón Guardar almacena los valores de los controles como un pequeño archivo .fpxmp junto al archivo RAW; se aplican automáticamente la próxima vez que se abra. El archivo RAW no se modifica; los trazos de pincel y retoque siguen necesitando un proyecto .fpx.</value>
   </data>
   <data name="Begleitdatei_konnte_nicht_geschrieben_werden_7f337000" xml:space="preserve">
     <value>No se pudo escribir el archivo adjunto</value>
@@ -3856,5 +3844,8 @@
   </data>
   <data name="Drehung_konnte_nicht_gespeichert_werden_d7da8820" xml:space="preserve">
     <value>No se pudo guardar la rotación</value>
+  </data>
+  <data name="Bearbeitung_in_Begleitdatei_gespeichert_3dc10f16" xml:space="preserve">
+    <value>Edición guardada en el archivo adjunto</value>
   </data>
 </root>
