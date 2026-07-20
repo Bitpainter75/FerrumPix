@@ -897,6 +897,11 @@
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowColorAdjustments}">
+                                <panels:CalibrationPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowAnnotationProperties}">
                                 <panels:AnnotationPropertiesPanel />
                             </Border>
@@ -957,6 +962,7 @@
 
         <Border Grid.Row="2"
                 Grid.ColumnSpan="5"
+                Classes="window-drag"
                 Background="{DynamicResource FP.Bg.Dark}"
                 BorderBrush="{DynamicResource FP.Border.Subtle}"
                 BorderThickness="0,1,0,0"
@@ -997,7 +1003,18 @@
                         <!-- Farbetikett des Bildes (gleiche Darstellung wie auf der Galerie-Kachel). -->
                         <Ellipse Width="10" Height="10" Fill="{Binding ColorLabelBrush}"
                                  IsVisible="{Binding HasColorLabel}" VerticalAlignment="Center" Margin="0,0,-10,0"/>
-                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
+                        <!-- Akzentfarbe = dieses RAW wurde WIRKLICH ueber libraw entwickelt (echte Sensordaten),
+                             Standardfarbe = normale Datei oder nur die eingebettete RAW-Vorschau. -->
+                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"
+                                   Classes.raw-developed="{Binding IsRawDeveloped}"
+                                   ToolTip.Tip="{Binding RawFooterTooltip}">
+                            <TextBlock.Styles>
+                                <Style Selector="TextBlock.raw-developed">
+                                    <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Style>
+                            </TextBlock.Styles>
+                        </TextBlock>
                         <!-- KEIN StatusText hier: die Fußzeile ist die linke Spalte eines *,Auto,*-Rasters
                              und wächst mit dem Text, bis sie die mittig zentrierten Zoom-Bedienelemente
                              überdeckt („Gespeichert als <langer Dateiname>"). Der Status steht ohnehin

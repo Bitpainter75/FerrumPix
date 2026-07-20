@@ -38,8 +38,21 @@ Namespace Services
             If TryGetXmpDouble(values, "Saturation", d) Then adj.Saturation = Clamp100(d)
             If TryGetXmpDouble(values, "Sharpness", d) Then adj.Sharpness = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "LuminanceSmoothing", d) Then adj.NoiseReduction = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "ColorNoiseReduction", d) Then adj.ColorNoiseReduction = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "GrainAmount", d) Then adj.Grain = Clamp(d, 0, 100)
-            If TryGetXmpDouble(values, "PostCropVignetteAmount", d) Then adj.Vignette = Clamp(-d, -150, 150)
+            If TryGetXmpDouble(values, "PostCropVignetteAmount", d) Then
+                adj.Vignette = Clamp(-d, -150, 150)
+                ' Mittelpunkt und weiche Kante sind semantisch deckungsgleich mit VignetteTransition/
+                ' VignetteFeather (beide 0-100, hoeher = weiter aussen bzw. weicher) - aber nur bei
+                ' AKTIVER Vignette uebernehmen, sonst ueberschrieben Preset-Defaults die App-Defaults.
+                ' PostCropVignetteRoundness wird bewusst NICHT uebertragen: bei Adobe steuert es die
+                ' Kreisform, bei uns die Achsen-Verzerrung des Ovals - eine Uebernahme saehe anders aus.
+                If d <> 0 Then
+                    Dim v As Double
+                    If TryGetXmpDouble(values, "PostCropVignetteMidpoint", v) Then adj.VignetteTransition = Clamp(v, 0, 100)
+                    If TryGetXmpDouble(values, "PostCropVignetteFeather", v) Then adj.VignetteFeather = Clamp(v, 0, 100)
+                End If
+            End If
 
             ''' crs:Temperature/crs:WhiteBalance sind NICHT übernehmbar: Lightroom speichert dort einen
             ''' absoluten Kelvin-Wert (z.B. 5500) bzw. "As Shot"/"Custom", während der Temperatur-Regler
@@ -49,6 +62,20 @@ Namespace Services
             ''' Presets liegen praktisch immer in dieser Form vor). Ohne sie ging die Farbstimmung jedes
             ''' Presets verloren, das seinen Look über die Weißabgleich-Regler aufbaut. crs:Tint ohne Präfix
             ''' wird weiterhin akzeptiert, ist bei RAW-Presets aber ebenfalls relativ gemeint.
+            ' KAMERAKALIBRIERUNG. Steckte in 3 von 5 untersuchten Presets und war der groesste
+            ' verbliebene Import-Ausfall: sie dreht und saettigt die Primaerfarben und macht damit
+            ' einen guten Teil des charakteristischen Farbstichs aus. Ohne sie kam ein Preset
+            ' strukturell unvollstaendig an, ohne dass etwas darauf hindeutete.
+            ' Achtung bei den Namen: crs:RedHue ist die KALIBRIERUNG, crs:HueAdjustmentRed dagegen
+            ' das HSL-Farbband - zwei verschiedene Regler mit aehnlichem Namen.
+            If TryGetXmpDouble(values, "RedHue", d) Then adj.CalibrationRedHue = Clamp100(d)
+            If TryGetXmpDouble(values, "RedSaturation", d) Then adj.CalibrationRedSaturation = Clamp100(d)
+            If TryGetXmpDouble(values, "GreenHue", d) Then adj.CalibrationGreenHue = Clamp100(d)
+            If TryGetXmpDouble(values, "GreenSaturation", d) Then adj.CalibrationGreenSaturation = Clamp100(d)
+            If TryGetXmpDouble(values, "BlueHue", d) Then adj.CalibrationBlueHue = Clamp100(d)
+            If TryGetXmpDouble(values, "BlueSaturation", d) Then adj.CalibrationBlueSaturation = Clamp100(d)
+            If TryGetXmpDouble(values, "ShadowTint", d) Then adj.CalibrationShadowTint = Clamp100(d)
+
             If TryGetXmpDouble(values, "IncrementalTemperature", d) Then adj.Temperature = Clamp100(d)
             If TryGetXmpDouble(values, "IncrementalTint", d) Then
                 adj.Tint = Clamp100(d)

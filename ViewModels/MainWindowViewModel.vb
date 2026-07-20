@@ -2109,7 +2109,7 @@ Namespace ViewModels
             DialogBatchRenamePreview.Clear()
             If _dialogBatchRenamePaths Is Nothing OrElse _dialogBatchRenamePaths.Count = 0 Then Return
 
-            Dim usedTargets As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Dim usedTargets As New HashSet(Of String)(PathIdentity.Comparer)
             Dim counter = _dialogBatchRenameStart
 
             For Each sourcePath In _dialogBatchRenamePaths
@@ -2130,7 +2130,7 @@ Namespace ViewModels
                 ElseIf Not usedTargets.Add(NormalizePath(targetPath)) Then
                     status = LocalizationService.T("Doppelter Zielname")
                     hasProblem = True
-                ElseIf Not String.Equals(NormalizePath(sourcePath), NormalizePath(targetPath), StringComparison.OrdinalIgnoreCase) AndAlso
+                ElseIf Not String.Equals(NormalizePath(sourcePath), NormalizePath(targetPath), PathIdentity.Comparison) AndAlso
                        (IO.File.Exists(targetPath) OrElse IO.Directory.Exists(targetPath)) Then
                     status = LocalizationService.T("Existiert bereits")
                     hasProblem = True
@@ -2332,11 +2332,13 @@ Namespace ViewModels
                 If Not TrashService.MoveToTrash(itemPath) Then
                     Throw New IOException("Papierkorb nicht verfügbar")
                 End If
+                RawSidecarService.AccompanyDelete(itemPath, useTrash:=True)
                 Return
             End If
 
             If IO.File.Exists(itemPath) Then
                 IO.File.Delete(itemPath)
+                RawSidecarService.AccompanyDelete(itemPath, useTrash:=False)
             ElseIf IO.Directory.Exists(itemPath) Then
                 IO.Directory.Delete(itemPath, True)
             End If
@@ -2368,6 +2370,7 @@ Namespace ViewModels
                     Viewer.ReleaseCurrentImageIfAny({itemPath})
                     Editor.ReleaseCurrentImageIfAny({itemPath})
                     IO.File.Move(itemPath, target)
+                    RawSidecarService.AccompanyMove(itemPath, target)
                 Else
                     IO.Directory.Move(itemPath, target)
                 End If

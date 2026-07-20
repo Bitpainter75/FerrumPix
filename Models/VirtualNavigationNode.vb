@@ -26,6 +26,10 @@ Namespace Models
         Public Property Conditions As New List(Of SearchCondition)()
         Public Property ConditionCombinator As String = "AND"
         Public Property IsRemovable As Boolean
+        ''' <summary>Gesetzt, wenn dieser Knoten im Favoriten-Tab steht: Schluessel des
+        ''' FavoriteEntry (siehe FavoritesService). Leer bei allen Knoten der Herkunfts-Baeume -
+        ''' daran unterscheidet das Kontextmenue "Als Favorit" von "Aus Favoriten entfernen".</summary>
+        Public Property FavoriteKey As String = ""
         Public Property Children As ObservableCollection(Of VirtualNavigationNode)
 
         ''' <summary>Aufgeklappt im Navigationsbaum. Der TreeViewItem-Style der Galerie bindet IsExpanded
@@ -68,6 +72,55 @@ Namespace Models
                     Case "ImmichPerson" : Return "avares://FerrumPix/Assets/Icons/outline/user.svg"
                     Case "ImmichPlacesRoot", "ImmichPlace" : Return "avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
                     Case Else : Return "avares://FerrumPix/Assets/Icons/outline/cloud.svg"
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Symbol im Favoriten-Tab: der Favorit zeigt das Symbol SEINES ZIELS, damit man
+        ''' Ordner, Immich-Knoten und Suchen in der gemischten Liste auseinanderhaelt.</summary>
+        Public ReadOnly Property FavoriteIconSource As String
+            Get
+                Select Case Kind
+                    Case "FavoriteFolder" : Return "avares://FerrumPix/Assets/Icons/outline/folder.svg"
+                    Case "SavedSearch" : Return "avares://FerrumPix/Assets/Icons/outline/search.svg"
+                    Case "FavoriteMissing" : Return "avares://FerrumPix/Assets/Icons/outline/alert-triangle.svg"
+                    Case Else : Return ImmichIconSource
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Favorit, der auf einen ORDNER zeigt - bekommt im Favoriten-Tab dasselbe
+        ''' Kontextmenue wie der Ordnerbaum.</summary>
+        Public ReadOnly Property IsFolderFavorite As Boolean
+            Get
+                Return String.Equals(Kind, "FavoriteFolder", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Gespeicherte Suche - bekommt Bearbeiten/Entfernen wie im Suchbaum.</summary>
+        Public ReadOnly Property IsSavedSearchNode As Boolean
+            Get
+                Return String.Equals(Kind, "SavedSearch", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' True, solange dieser Knoten in einem Favoriten-Tab steht (Kontextmenue zeigt dann
+        ''' "Aus Favoriten entfernen" statt "Als Favorit").
+        Public ReadOnly Property IsFavoriteNode As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(FavoriteKey)
+            End Get
+        End Property
+
+        ''' <summary>Kann dieser Knoten Favorit werden? Alles Navigierbare - Ordner-Ersatzknoten,
+        ''' gespeicherte Suchen und echte Immich-Ziele. NICHT: "Neue Suche" und die reinen
+        ''' Klapp-Knoten (Personen/Orte-Wurzel).</summary>
+        Public ReadOnly Property CanBecomeFavorite As Boolean
+            Get
+                If IsFavoriteNode Then Return False
+                Select Case Kind
+                    Case "SavedSearch", "ImmichAll", "ImmichAlbum", "ImmichPerson", "ImmichPlace" : Return True
+                    Case Else : Return False
                 End Select
             End Get
         End Property

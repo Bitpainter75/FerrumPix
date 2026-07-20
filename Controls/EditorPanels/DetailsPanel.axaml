@@ -46,7 +46,8 @@
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Staub/Kratzer" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Positiv fügt Staubkörner und Kratzer hinzu (Film-Look), negativ entfernt Störungen kantenerhaltend." />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        Value="{Binding DustScratches}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -62,11 +63,25 @@
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Rauschen" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Positiv fügt Rauschen hinzu, negativ reduziert es (gleichmäßiges Weichzeichnen)." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       DefaultValue="0"
                                        Value="{Binding AddNoise}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding AddNoise, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding AddNoise, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                </Grid>
+                <!-- Direkt unter "Rauschen": alles mit Rauschen im Namen an einem Ort
+                     (Nutzerentscheidung 2026-07-19). -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Farbrauschen" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Glättet nur die Farbanteile (Chroma), die Helligkeit und damit Details bleiben erhalten." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="0"
+                                       Value="{Binding ColorNoiseReduction}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding ColorNoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Struktur" Foreground="{DynamicResource FP.Text.Secondary}"

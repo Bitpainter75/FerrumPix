@@ -509,15 +509,78 @@ Namespace Services
             Return bmp
         End Function
 
+        ''' <summary>Vorschaubild einer RAW-Datei in ZWEI Stufen: erst LibRaws eigene Thumbnail-API
+        ''' (formatkundig - sie weiss, wo die Vorschau liegt; kein Demosaic, daher schnell), sonst
+        ''' unser eigener JPEG-Scanner, der die Datei nach Signaturen durchsucht. Der Scanner bleibt
+        ''' als Rueckfall unverzichtbar: ohne installiertes LibRaw ist er der einzige Weg, und bei
+        ''' JPEG-XL-/H265-Vorschauen neuerer Kameras liefert LibRaw etwas, das SkiaSharp nicht
+        ''' dekodieren kann.</summary>
+        Private Shared Function OpenRawThumbnailSource(filePath As String) As Stream
+            ' Stufe 1: LibRaws Thumbnail-API - formatkundig und schnell (bei einer 50-MP-.arw
+            ' 2 ms gegen 26 ms des Scanners, der bis zu 16 MB nach JPEG-Signaturen durchsucht).
+            Dim viaLibRaw = RawDecodeService.TryExtractThumbnail(filePath)
+            If IsBigEnoughForTile(viaLibRaw) Then Return viaLibRaw
+            viaLibRaw?.Dispose()
+
+            ' Stufe 2: eigener Scanner - er nimmt das GROESSTE eingebettete JPEG und ist damit die
+            ' Rettung, wenn die Kamera nur ein Mini-Thumbnail als primaere Vorschau fuehrt.
+            Dim scanned = RawPreviewService.ExtractPreview(filePath)
+            If IsBigEnoughForTile(scanned) Then Return scanned
+            scanned?.Dispose()
+
+            ' Stufe 3: wirklich entwickeln. Fuer Dateien ohne jede eingebettete Vorschau (Leica
+            ' Digilux 2) und fuer zu kleine Vorschauen (Leica M8 fuehrt nur 320x240, was auf einer
+            ' 480er Kachel sichtbar matschig waere; der Decode kostet dort 345 ms). Einmalig -
+            ' danach liegt die Kachel im Thumbnail-Cache.
+            Dim developed = RawDecodeService.TryRenderPreviewPng(filePath)
+            If developed IsNot Nothing AndAlso developed.Length > 0 Then Return developed
+            developed?.Dispose()
+
+            ' Nichts hat die Zielgroesse erreicht - dann lieber eine kleine Vorschau als gar keine.
+            Return RawPreviewService.ExtractPreviewWithFallback(filePath)
+        End Function
+
+        ''' <summary>Taugt diese Vorschau fuer eine Kachel, oder muesste sie hochskaliert (und damit
+        ''' unscharf) werden? Liest NUR den Kopf ueber SKCodec - kein voller Decode.</summary>
+        Private Shared Function IsBigEnoughForTile(stream As MemoryStream) As Boolean
+            If stream Is Nothing OrElse stream.Length = 0 Then Return False
+            Try
+                ' NICHT SKCodec.Create(Stream): der uebernimmt den Strom und schliesst ihn - der
+                ' Aufrufer braucht ihn danach aber noch zum Dekodieren (dieselbe Falle wie in
+                ' ImageProcessor.DecodeOriented). Deshalb ueber eine Kopie der Bytes; bei einer
+                ' Vorschau sind das wenige hundert KB.
+                stream.Position = 0
+                Using data = SKData.CreateCopy(stream.ToArray())
+                    Using codec = SKCodec.Create(data)
+                        If codec Is Nothing Then Return False
+                        Dim info = codec.Info
+                        ' Kachelbreite mit etwas Toleranz: eine 460-px-Vorschau auf 480 zu strecken
+                        ' faellt nicht auf, ein 320-px-Bild schon.
+                        Return Math.Max(info.Width, info.Height) >= CacheWidth * 0.9
+                    End Using
+                End Using
+            Catch
+                Return False
+            Finally
+                Try
+                    stream.Position = 0
+                Catch
+                End Try
+            End Try
+        End Function
+
         Private Shared Function OpenThumbnailSource(filePath As String) As Stream
             If RawPreviewService.IsSupportedRaw(filePath) Then
-                Return RawPreviewService.ExtractPreview(filePath)
+                Return OpenRawThumbnailSource(filePath)
             End If
             If SvgPreviewService.IsSupportedSvg(filePath) Then
                 Return SvgPreviewService.ExtractPreview(filePath, CacheWidth)
             End If
             If IcoPreviewService.IsSupportedIco(filePath) Then
                 Return IcoPreviewService.ExtractPreview(filePath)
+            End If
+            If PsdPreviewService.IsSupportedPsd(filePath) Then
+                Return PsdPreviewService.ExtractPreview(filePath)
             End If
             If FpxService.IsFpx(filePath) Then
                 Return FpxService.ExtractComposite(filePath)
@@ -563,7 +626,7 @@ Namespace Services
             Try
                 cancellationToken.ThrowIfCancellationRequested()
                 If RawPreviewService.IsSupportedRaw(filePath) Then
-                    Using preview = RawPreviewService.ExtractPreview(filePath)
+                    Using preview = OpenRawThumbnailSource(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth)
                     End Using
@@ -574,6 +637,11 @@ Namespace Services
                     End Using
                 ElseIf IcoPreviewService.IsSupportedIco(filePath) Then
                     Using preview = IcoPreviewService.ExtractPreview(filePath)
+                        cancellationToken.ThrowIfCancellationRequested()
+                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
+                    End Using
+                ElseIf PsdPreviewService.IsSupportedPsd(filePath) Then
+                    Using preview = PsdPreviewService.ExtractPreview(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
                     End Using
@@ -752,13 +820,14 @@ Namespace Services
             End Try
         End Sub
 
+        ''' <summary>Pfad-Schluessel fuer den Cache-Hash. Frueher wurde hier IMMER uppercased -
+        ''' auf Linux bekamen damit /Bilder/RAW und /Bilder/raw denselben Cache-Ordner und
+        ''' vermischten ihre Thumbnails. PathIdentity ebnet die Schreibweise nur unter Windows ein.
+        ''' NEBENWIRKUNG: auf Linux/macOS aendert sich dadurch der Hash bestehender Caches. Sie
+        ''' werden einmalig neu aufgebaut; die alten Ordner sind verwaist und lassen sich ueber
+        ''' Einstellungen -> Cache leeren entfernen.</summary>
         Private Shared Function NormalizePath(path As String) As String
-            If String.IsNullOrEmpty(path) Then Return ""
-            Try
-                Return IO.Path.GetFullPath(path).TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar).ToUpperInvariant()
-            Catch
-                Return path.Trim().ToUpperInvariant()
-            End Try
+            Return PathIdentity.Normalize(path)
         End Function
 
         Private Shared Function HashText(value As String) As String

@@ -17,8 +17,10 @@ Namespace Services
         Private Const TileSize As Double = 16.0
 
         Private Shared ReadOnly _checkerboardBrush As IBrush = BuildCheckerboardBrush()
-        Private Shared ReadOnly _alphaCache As New Dictionary(Of String, Boolean)(StringComparer.OrdinalIgnoreCase)
-        Private Shared ReadOnly _alphaPending As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        ' Pfad-Schluessel: siehe PathIdentity - auf Linux sind Pfade case-sensitiv, und zwei
+        ' Dateien, die sich nur darin unterscheiden, teilten sich sonst das Transparenz-Ergebnis.
+        Private Shared ReadOnly _alphaCache As New Dictionary(Of String, Boolean)(PathIdentity.Comparer)
+        Private Shared ReadOnly _alphaPending As New HashSet(Of String)(PathIdentity.Comparer)
         Private Shared ReadOnly _alphaLock As New Object()
         ' Grober Deckel gegen unbegrenztes Wachstum über lange Sitzungen; bei Überlauf wird komplett
         ' geleert (die Berechnung ist nach dem Roh-Puffer-Umbau billig genug für Wiederholung).
@@ -31,11 +33,12 @@ Namespace Services
         ' Formaten nie etwas "durchscheinen" lassen, sondern nur an Rundungs-/Letterbox-Rändern
         ' fälschlich sichtbar werden. Alle anderen (unbekannten) Formate gelten konservativ weiterhin
         ' als potenziell transparent.
+        ''' RAW-Endungen kommen aus RawPreviewService.SupportedExtensions - eine eigene Kopie
+        ''' wuerde beim naechsten neuen Format vergessen (siehe Kommentar dort).
         Private Shared ReadOnly OpaqueOnlyExtensions As String() = {
             ".jpg", ".jpeg", ".jpe", ".jfif", ".bmp",
-            ".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2",
             ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
-        }
+        }.Concat(RawPreviewService.SupportedExtensions).ToArray()
 
         Public Shared Function CanHaveTransparency(filePath As String) As Boolean
             If String.IsNullOrEmpty(filePath) Then Return True

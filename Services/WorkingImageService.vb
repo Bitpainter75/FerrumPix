@@ -82,10 +82,23 @@ Namespace Services
             ' so die Radierer-Transparenz (Nutzer-Befund 2026-07-17, nur bei JPG-Basisbild).
             ' Das Arbeitsbild muss jederzeit Löcher können: hier einmalig auf Premul normalisieren.
             If fullBitmap.AlphaType = SKAlphaType.Opaque Then
+                ' Den FARBTYP erhalten und nur den Alphatyp normalisieren. Vorher stand hier hart
+                ' Bgra8888 - damit wurde ein Rgba8888-Bild (Objekt-Ebenen) ohne Not umkopiert, und
+                ' ein Bitmap mit hoeherer Tiefe waere STILL auf 8 Bit zurueckgedreht worden, ohne
+                ' jede Fehlermeldung.
+                ' Unbekannte Farbtypen (Gray8, Alpha8 ...) laufen weiterhin nach Bgra8888: der Rest
+                ' der Pipeline kennt nur die hier aufgezaehlten.
+                Dim zielTyp = fullBitmap.ColorType
+                Select Case zielTyp
+                    Case SKColorType.Bgra8888, SKColorType.Rgba8888
+                        ' beibehalten
+                    Case Else
+                        zielTyp = SKColorType.Bgra8888
+                End Select
                 Dim converted As SKBitmap = Nothing
                 Try
                     converted = New SKBitmap(New SKImageInfo(fullBitmap.Width, fullBitmap.Height,
-                                                             SKColorType.Bgra8888, SKAlphaType.Premul))
+                                                             zielTyp, SKAlphaType.Premul))
                     Using cv As New SKCanvas(converted)
                         cv.DrawBitmap(fullBitmap, 0, 0)
                     End Using
@@ -153,8 +166,27 @@ Namespace Services
             Dim clone = CloneFull()
             If clone Is Nothing Then Return Nothing
             Try
+                ' Ungewoehnliche Farbtypen vor dem Encode auf 8 Bit bringen: SKImage.FromBitmap
+                ' liefert fuer manche (etwa Rgba16161616) Nothing, und der Encode lief danach in
+                ' eine NullReferenceException - das Sichern einer .fpx haette die gebackene
+                ' Retusche VERLOREN, ohne Fehlermeldung.
+                ' 8 Bit ist hier auch inhaltlich richtig: die retouch.png traegt Pinselstriche und
+                ' Retusche, keine Tonwertreserve.
+                If clone.ColorType <> SKColorType.Bgra8888 AndAlso clone.ColorType <> SKColorType.Rgba8888 Then
+                    Dim acht = New SKBitmap(New SKImageInfo(clone.Width, clone.Height,
+                                                            SKColorType.Bgra8888, SKAlphaType.Premul))
+                    Using cv As New SKCanvas(acht)
+                        cv.Clear(SKColors.Transparent)
+                        cv.DrawBitmap(clone, 0, 0)
+                    End Using
+                    clone.Dispose()
+                    clone = acht
+                End If
+
                 Using image = SKImage.FromBitmap(clone)
+                    If image Is Nothing Then Return Nothing
                     Using data = image.Encode(SKEncodedImageFormat.Png, 60)
+                        If data Is Nothing Then Return Nothing
                         Dim ms As New IO.MemoryStream()
                         data.SaveTo(ms)
                         ms.Position = 0
@@ -224,6 +256,24 @@ Namespace Services
         Public Function CloneFull() As SKBitmap
             SyncLock _lock
                 Return _full?.Copy()
+            End SyncLock
+        End Function
+
+        ''' <summary>Fuehrt <paramref name="fn"/> unter dem Service-Lock auf dem VOLL-Bitmap aus und
+        ''' gibt dessen Ergebnis zurueck; Nothing ohne Init.
+        '''
+        ''' Gedacht fuer Aufrufer, die aus dem Arbeitsbild etwas ABLEITEN wollen, ohne es zu kopieren -
+        ''' etwa das Anzeige-Bitmap des Editors. CloneFull waere dafuer zu teuer (bei 45 MP rund
+        ''' 180 MB nur, um sie gleich wieder wegzuwerfen).
+        '''
+        ''' Der Callback darf das Bitmap NUR LESEN und die Referenz nicht ueber den Aufruf hinaus
+        ''' behalten - sie gehoert dem Service und kann danach ersetzt oder disposed werden. Er laeuft
+        ''' unter dem Lock, blockiert also Commits: kurz halten.</summary>
+        Public Function WithFull(Of T)(fn As Func(Of SKBitmap, T)) As T
+            If fn Is Nothing Then Return Nothing
+            SyncLock _lock
+                If _full Is Nothing Then Return Nothing
+                Return fn(_full)
             End SyncLock
         End Function
 

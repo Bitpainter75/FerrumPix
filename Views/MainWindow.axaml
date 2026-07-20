@@ -16,7 +16,9 @@
             <Grid x:Name="TitleBar"
                   RowDefinitions="Auto,*"
                   IsHitTestVisible="{Binding IsAppContentHitTestVisible}">
-                <Border Grid.Row="0" Classes="toolbar" Height="50"
+                <!-- window-drag: hier (und nur in den Fusszeilen der Modus-Views) laesst sich das
+                     Fenster verschieben - siehe MainWindow.IsInWindowDragArea. -->
+                <Border Grid.Row="0" Classes="toolbar window-drag" Height="50"
                         IsVisible="{Binding IsWindowChromeVisible}">
                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
                         <StackPanel Grid.Column="0"

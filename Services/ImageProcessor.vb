@@ -225,6 +225,14 @@ Namespace Services
         Private _hardnessPercent As Single = 100
         Private _brushPreset As String = "soft"
         Private _fillKind As String = "Solid"
+        ' Text an Pfaden (nur Kind "Text"): "" = gerade, sonst "Arc"/"Circle"/"Wave". Der Pfad wird
+        ' aus dem Objektrechteck abgeleitet - Selektion/Anfasser/Verschieben bleiben unveraendert.
+        Private _textPathKind As String = ""
+        Private _textPathBend As Single = 50
+        Private _textPathStartOffset As Single
+        Private _letterSpacingPercent As Single
+        Private _bold As Boolean
+        Private _italic As Boolean = 0
         Private _fillColor2 As String = "#FFFFFFFF"
         Private _gradientAngleDegrees As Single = 0
         Private _gradientInverted As Boolean = False
@@ -662,6 +670,73 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Pfadform fuer Text: "" (gerade), "Arc", "Circle" oder "Wave" - siehe BuildTextPath.</summary>
+        Public Property TextPathKind As String
+            Get
+                Return _textPathKind
+            End Get
+            Set(value As String)
+                SetField(_textPathKind, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Kruemmung -100..100: bei Bogen/Welle Staerke und Richtung der Biegung,
+        ''' beim Kreis die Laufrichtung (negativ = innen/gegen den Uhrzeigersinn).</summary>
+        Public Property TextPathBend As Single
+            Get
+                Return _textPathBend
+            End Get
+            Set(value As Single)
+                SetField(_textPathBend, Math.Max(-100.0F, Math.Min(100.0F, value)))
+            End Set
+        End Property
+
+        ''' <summary>Startversatz auf dem Pfad in Prozent (0-100): beim Kreis der Startwinkel,
+        ''' bei Bogen/Welle die Verschiebung entlang des Pfades.</summary>
+        Public Property TextPathStartOffset As Single
+            Get
+                Return _textPathStartOffset
+            End Get
+            Set(value As Single)
+                SetField(_textPathStartOffset, Math.Max(0.0F, Math.Min(100.0F, value)))
+            End Set
+        End Property
+
+        ''' <summary>Zeichenabstand in PROZENT DER SCHRIFTGROESSE (-20 bis 200). Prozent statt
+        ''' Pixel, damit der Abstand beim Skalieren des Objekts mitwaechst - sonst risse der Text
+        ''' bei grosser Schrift auseinander und klebte bei kleiner zusammen.
+        ''' Achtung: bei einem Wert ungleich 0 werden die Zeichen EINZELN gesetzt; Kerning und
+        ''' Ligaturen entfallen dann. Das ist bei Zeichenabstand ueblich und gewollt.</summary>
+        Public Property LetterSpacingPercent As Single
+            Get
+                Return _letterSpacingPercent
+            End Get
+            Set(value As Single)
+                SetField(_letterSpacingPercent, Math.Max(-20.0F, Math.Min(200.0F, value)))
+            End Set
+        End Property
+
+        ''' <summary>Fetter Schriftschnitt. Wirkt nur, wenn die Familie einen hat - Skia stellt
+        ''' keinen synthetischen her.</summary>
+        Public Property Bold As Boolean
+            Get
+                Return _bold
+            End Get
+            Set(value As Boolean)
+                SetField(_bold, value)
+            End Set
+        End Property
+
+        ''' <summary>Kursiver Schriftschnitt. Gilt dieselbe Einschraenkung wie bei Bold.</summary>
+        Public Property Italic As Boolean
+            Get
+                Return _italic
+            End Get
+            Set(value As Boolean)
+                SetField(_italic, value)
+            End Set
+        End Property
+
         Public Property FillColor2 As String
             Get
                 Return _fillColor2
@@ -840,6 +915,12 @@ Namespace Services
                 .HardnessPercent = HardnessPercent,
                 .BrushPreset = BrushPreset,
                 .FillKind = FillKind,
+                .TextPathKind = TextPathKind,
+                .TextPathBend = TextPathBend,
+                .TextPathStartOffset = TextPathStartOffset,
+                .LetterSpacingPercent = LetterSpacingPercent,
+                .Bold = Bold,
+                .Italic = Italic,
                 .FillColor2 = FillColor2,
                 .GradientAngleDegrees = GradientAngleDegrees,
                 .GradientInverted = GradientInverted,
@@ -902,12 +983,32 @@ Namespace Services
         Public Property Sharpness As Single = 0
         Public Property NoiseReduction As Single = 0
         Public Property NoiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
+        ''' Farb-Rauschreduzierung 0-100: glaettet NUR die Farbanteile (Chroma), die Helligkeit
+        ''' bleibt unangetastet - Details bleiben stehen, Farbflecken verschwinden. Gerade bei der
+        ''' echten RAW-Entwicklung sichtbar, wo die Kamera-Vorschau schon entrauscht war.
+        Public Property ColorNoiseReduction As Single = 0
         Public Property DustScratches As Single = 0
         Public Property Haze As Single = 0
         Public Property AddNoise As Single = 0
         Public Property [Structure] As Single = 0
         Public Property Glow As Single = 0
         Public Property Vibrance As Single = 0
+
+        ''' KAMERAKALIBRIERUNG (Lightroom-Panel "Kalibrierung", crs:RedHue/RedSaturation/...).
+        ''' Dreht und saettigt die drei PRIMAERFARBEN und ist damit das, was vielen Presets ihren
+        ''' charakteristischen Farbstich gibt - ohne sie kam ein Preset strukturell unvollstaendig an.
+        ''' Alle Werte -100..100. Naeherung: Farbton = Drehung der Primaerfarbe um die Grauachse
+        ''' (bis +/-30 Grad), Saettigung = Abstand von der Grauachse. Adobes exakte Rechnung sitzt
+        ''' im Kameraprofil und ist nicht oeffentlich; diese Form ist verbreitet und reproduzierbar.
+        Public Property CalibrationRedHue As Single = 0
+        Public Property CalibrationRedSaturation As Single = 0
+        Public Property CalibrationGreenHue As Single = 0
+        Public Property CalibrationGreenSaturation As Single = 0
+        Public Property CalibrationBlueHue As Single = 0
+        Public Property CalibrationBlueSaturation As Single = 0
+
+        ''' Gruen-/Magenta-Verschiebung, die nur die TIEFEN faerbt (crs:ShadowTint).
+        Public Property CalibrationShadowTint As Single = 0
         Public Property Vignette As Single = 0
         Public Property VignetteTransition As Single = 55
         Public Property VignetteRoundness As Single = 0
@@ -1124,6 +1225,13 @@ Namespace Services
                 .Contrast = Contrast,
                 .Saturation = Saturation,
                 .Vibrance = Vibrance,
+                .CalibrationRedHue = CalibrationRedHue,
+                .CalibrationRedSaturation = CalibrationRedSaturation,
+                .CalibrationGreenHue = CalibrationGreenHue,
+                .CalibrationGreenSaturation = CalibrationGreenSaturation,
+                .CalibrationBlueHue = CalibrationBlueHue,
+                .CalibrationBlueSaturation = CalibrationBlueSaturation,
+                .CalibrationShadowTint = CalibrationShadowTint,
                 .Highlights = Highlights,
                 .ShadowsLevel = ShadowsLevel,
                 .Whites = Whites,
@@ -1133,6 +1241,7 @@ Namespace Services
                 .Sharpness = Sharpness,
                 .NoiseReduction = NoiseReduction,
                 .NoiseReductionMethod = NoiseReductionMethod,
+                .ColorNoiseReduction = ColorNoiseReduction,
                 .DustScratches = DustScratches,
                 .Haze = Haze,
                 .AddNoise = AddNoise,
@@ -1283,15 +1392,17 @@ Namespace Services
         End Function
     End Module
 
-    Public Class ImageProcessor
+    ' Partial: die Gleitkomma-Tonwertkette liegt in ImageProcessorPointOps.vb (Umbau 2026-07-20).
+    Partial Public Class ImageProcessor
 
         Private Const FastPngCompressionQuality As Integer = 60
 
         ''' SKPaint trug bis SkiaSharp 2 die Schrift selbst. Sein interner Ersatz-SKFont hat
         ''' LinearMetrics=True - ein frisch erzeugter SKFont dagegen False, was Textbreiten und das
         ''' Rendering messbar verändert (geprüft: identische Bytes erst mit LinearMetrics=True).
-        Private Shared Function CreateFont(fontFamily As String, fontSize As Single) As SKFont
-            Return New SKFont(GetTypeface(fontFamily), fontSize) With {.LinearMetrics = True}
+        Private Shared Function CreateFont(fontFamily As String, fontSize As Single,
+                                           Optional bold As Boolean = False, Optional italic As Boolean = False) As SKFont
+            Return New SKFont(GetTypeface(fontFamily, bold, italic), fontSize) With {.LinearMetrics = True}
         End Function
 
         ''' SkiaSharp hat SKFilterQuality zugunsten von SKSamplingOptions abgekündigt. Diese Werte sind
@@ -1337,16 +1448,25 @@ Namespace Services
         ' Ersetzt SKBitmap.Decode(path) an den Stellen, die das tatsächlich bearbeitete Foto laden
         ' (nicht Icons/Sticker-Assets oder reine Pixel-Statistik) - korrigiert die EXIF-Orientierung
         ' einmalig an der Quelle, damit die gesamte Anpassungs-/Export-Pipeline darauf aufbaut.
-        ''' Liefert den zu dekodierenden Bild-Stream für einen Pfad - bei RAW-Dateien die
-        ''' eingebettete JPEG-Vorschau (RawPreviewService.ExtractPreview), da die RAW-Rohdaten
-        ''' selbst hier nicht dekodiert werden können; sonst die Datei direkt. Einziger Engpass
-        ''' hinter Preview, Geometrie-Preview UND Speichern (siehe DecodeOriented) - macht RAW an
-        ''' allen drei Stellen mit einer einzigen Änderung nutzbar, ohne die RAW-Datei je selbst
-        ''' als Schreibziel zu berühren (Speichern schreibt immer in eine neue Zieldatei).
+        ''' Liefert den zu dekodierenden Bild-Stream für einen Pfad: bei RAW die eingebettete
+        ''' JPEG-Vorschau (RawPreviewService), bei PSD/PSB das zusammengesetzte Gesamtbild, sonst
+        ''' die Datei direkt.
+        '''
+        ''' ACHTUNG - das ist NICHT mehr der einzige RAW-Weg: DecodeOriented versucht ZUERST die
+        ''' echte RAW-Entwicklung über das System-libraw (volles Demosaic mit Kamera-Weißabgleich,
+        ''' und landet erst dann hier. Diese Funktion ist also der
+        ''' RÜCKFALL, wenn libraw fehlt oder die Datei nicht entwickelt werden kann.
+        ''' Der Satz "Bearbeitung wirkt bei RAW nur auf die eingebettete Vorschau" stimmt seit der
+        ''' libraw-Anbindung nur noch für diesen Rückfall.
+        '''
+        ''' Unverändert gilt: die RAW-Datei wird nie als Schreibziel berührt - Speichern schreibt
+        ''' immer in eine neue Zieldatei, Reglerstände gehen in das .fpxmp-Sidecar.
         Private Shared Function OpenSourceStream(path As String) As Stream
             If RawPreviewService.IsSupportedRaw(path) Then Return RawPreviewService.ExtractPreview(path)
             ' ICO ist ein Container, den SkiaSharp nicht kennt - hier als PNG hereingereicht.
             If IcoPreviewService.IsSupportedIco(path) Then Return IcoPreviewService.ExtractPreview(path)
+            ' PSD/PSB nur-lesend: das zusammengesetzte Gesamtbild als PNG (siehe PsdPreviewService).
+            If PsdPreviewService.IsSupportedPsd(path) Then Return PsdPreviewService.ExtractPreview(path)
             Return File.OpenRead(path)
         End Function
 
@@ -1361,7 +1481,17 @@ Namespace Services
 
         ''' <summary>Friend statt Private, damit PrintService dieselbe Dekodier-Route benutzt -
         ''' sie ist die einzige, die RAW/ICO/WebP und die EXIF-Orientierung korrekt behandelt.</summary>
-        Friend Shared Function DecodeOriented(path As String) As SKBitmap
+Friend Shared Function DecodeOriented(path As String) As SKBitmap
+            ' Echte RAW-Entwicklung, wenn das System-libraw da ist: voll aufgelöstes Demosaic mit
+            ' Kamera-Weißabgleich statt der eingebetteten JPEG-Vorschau. Liefert der Decode nichts
+            ' (defekte Datei, exotisches Format), greift darunter der bisherige Vorschau-Weg.
+            If RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
+                Dim developed = RawDecodeService.TryDecode(path)
+                If developed IsNot Nothing Then Return developed
+            ElseIf Not RawPreviewService.IsSupportedRaw(path) Then
+                ' Anderes Hauptbild -> der ~180-MB-Entwicklungs-Cache ist stale und kann weg.
+                RawDecodeService.ClearCache()
+            End If
             ' SKCodec.Create(Stream) übernimmt den Stream, und manche Codecs (insbesondere WebP) schließen
             ' ihn dabei sofort. Ein späteres stream.Seek für den Fallback-Decode wirft dann
             ' ObjectDisposedException - WebP-Quellen ließen sich deshalb weder öffnen noch konvertieren.
@@ -1790,6 +1920,12 @@ Namespace Services
 
             Dim extent = Math.Max(rect.Width, rect.Height)
             Dim effectPad = Math.Max(8.0F, annotation.StrokeWidth * 3.0F)
+            ' Text an Pfad: die Glyphen stehen SENKRECHT zum Pfad und ragen bis zu einer
+            ' Schrifthoehe ueber das Layout-Rechteck hinaus (Baseline liegt AUF dem Pfad).
+            If Not String.IsNullOrWhiteSpace(annotation.TextPathKind) Then
+                ' EFFEKTIVE Groesse: der Kreis-Fit kann die Schrift ueber FontSizePixels hinaus wachsen lassen.
+                effectPad = Math.Max(effectPad, annotation.FontSizePixels * ComputeTextPathFitRatio(annotation) * 1.2F)
+            End If
             If annotation.ShadowEnabled Then
                 Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
                 Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor
@@ -1950,6 +2086,9 @@ Namespace Services
             Dim offsetX = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetXPercent / 100.0F, 0.0F)
             Dim offsetY = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetYPercent / 100.0F, 0.0F)
             Dim effectPad = Math.Max(glowPad, shadowPad)
+            If Not String.IsNullOrWhiteSpace(renderAnnotation.TextPathKind) Then
+                effectPad = Math.Max(effectPad, renderAnnotation.FontSizePixels * ComputeTextPathFitRatio(renderAnnotation) * 1.2F)
+            End If
             ' Auf ganze Pixel aufrunden, damit das Objekt verlustfrei im Bitmap-Raster liegt: die View
             ' skaliert genau dieses Rechteck auf die Border, jeder Bruchteil würde das Objekt verzerren.
             Dim leftPad = CInt(Math.Ceiling(4.0F + effectPad + Math.Max(0.0F, -offsetX)))
@@ -2154,6 +2293,13 @@ Namespace Services
         ''' nicht bestimmbar; der Aufrufer behandelt das als „Prüfung nicht möglich".</summary>
         Public Shared Function GetOrientedImageSize(path As String) As (Width As Integer, Height As Integer)
             Try
+                ' RAW mit warmem Entwicklungs-Cache: dessen Maße sind die des echten Decodes.
+                ' Kalter Cache -> weiter unten die eingebettete Vorschau (kein Demosaic nur für
+                ' eine Größenabfrage; die Maße stimmen bei modernen Kameras überein).
+                If RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
+                    Dim cached = RawDecodeService.TryGetCachedSize(path)
+                    If cached.Width > 0 Then Return cached
+                End If
                 Dim data As SKData
                 Using stream = OpenSourceStream(path)
                     If stream Is Nothing Then Return (0, 0)
@@ -2225,107 +2371,11 @@ Namespace Services
             Return (0, 0)
         End Function
 
-        Private Shared Function ApplyColorAdjustments(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            If adj.Exposure = 0 AndAlso adj.Temperature = 0 AndAlso adj.Tint = 0 AndAlso adj.Saturation = 0 AndAlso
-               adj.Vibrance = 0 AndAlso adj.Contrast = 0 AndAlso adj.Brightness = 0 Then
-                Return source
-            End If
-
-            ' Belichtung ist ein reiner Kanal-Faktor und wandert deshalb aus der Farbmatrix in die
-            ' Tonwertkurve unten: Dort greift die weiche Schulter. In der Matrix wurde alles über Weiß
-            ' hart abgeschnitten - eine um +1 EV angehobene Aufnahme verlor ihre Lichter ersatzlos.
-            ' Skalare Verstärkung und die (lineare) Sättigungs-/Temperaturmatrix sind vertauschbar,
-            ' das Ergebnis bleibt in der Bildmitte also dasselbe.
-            Dim exposureGain = CSng(Math.Pow(2.0, adj.Exposure / 100.0 * 4.0))
-
-            ' Temperatur: warm = mehr Rot/weniger Blau, kalt = mehr Blau/weniger Rot
-            Dim tempR = 1.0F + adj.Temperature / 200.0F
-            Dim tempB = 1.0F - adj.Temperature / 200.0F
-
-            ' Farbstich (Tint): grün/magenta
-            Dim tintG = 1.0F + adj.Tint / 200.0F
-
-            ' Sättigung: De-/Saturierung mit Luminanz-Gewichten
-            Dim lumR = 0.299F
-            Dim lumG = 0.587F
-            Dim lumB = 0.114F
-            Dim sat = 1.0F + adj.Saturation / 100.0F + adj.Vibrance / 200.0F
-            Dim invSat = 1.0F - sat
-
-            Dim colorMatrix = New Single() {
-                (lumR * invSat + sat) * tempR, lumG * invSat * tempR, lumB * invSat * tempR, 0, 0,
-                lumR * invSat, (lumG * invSat + sat) * tintG, lumB * invSat, 0, 0,
-                lumR * invSat * tempB, lumG * invSat * tempB, (lumB * invSat + sat) * tempB, 0, 0,
-                0, 0, 0, 1, 0
-            }
-
-            ' Kontrast: Faktor 0,25 … 1,75. Mit dem früheren Halbfaktor (0,5 … 1,5) hob der Vollausschlag
-            ' die Streuung nur um gut ein Drittel an - zu zaghaft für einen Regler am Anschlag.
-            Dim contrast = Math.Max(0.0F, 1.0F + adj.Contrast / 100.0F * 0.75F)
-            ' Helligkeit in Tonwertstufen (80 von 255) statt der früheren 48: Der Vollausschlag verschob ein
-            ' normal belichtetes Foto sonst nur um knapp ein Fünftel des Tonwertumfangs.
-            Dim brightness = adj.Brightness / 100.0F * 80.0F / 255.0F
-
-            Dim toneLut = BuildToneCurveLut(exposureGain, contrast, brightness)
-
-            Dim colorFilter = SKColorFilter.CreateColorMatrix(colorMatrix)
-            Dim toneFilter = SKColorFilter.CreateTable(IdentityByteTable, toneLut, toneLut, toneLut)
-            Dim paint = New SKPaint With {.ColorFilter = colorFilter}
-
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using stage = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-                Using canvas = New SKCanvas(stage)
-                    canvas.DrawBitmap(source, 0, 0, paint)
-                End Using
-                paint.Dispose()
-                colorFilter.Dispose()
-
-                Using tonePaint = New SKPaint With {.ColorFilter = toneFilter}
-                    Using canvas = New SKCanvas(result)
-                        canvas.DrawBitmap(stage, 0, 0, tonePaint)
-                    End Using
-                End Using
-            End Using
-
-            toneFilter.Dispose()
-
-            Return result
-        End Function
 
         ''' <summary>Grundbreite von Fuß und Schulter der Tonwertkurve, in Anteilen des Tonwertumfangs.</summary>
         Private Const ToneShoulderBase As Single = 0.12F
         Private Const ToneShoulderMax As Single = 0.4F
 
-        ''' <summary>Belichtung, Kontrast und Helligkeit als eine gemeinsame Tonwertkurve. Der lineare Teil
-        ''' bleibt unverändert - die Kurve knickt erst kurz vor Schwarz und Weiß ab und nähert sich den
-        ''' Enden asymptotisch, statt dort abgeschnitten zu werden. Vorher wurde hart geklemmt: Kontrast am
-        ''' Anschlag riss rund ein Fünftel der Pixel auf reines Schwarz oder Weiß, und Belichtung +50
-        ''' (= +2 EV) brannte vier Fünftel des Bildes ersatzlos weiß aus. Die Schulter wird nur so weit
-        ''' eingeblendet, wie die Einstellung überhaupt aus dem Tonwertumfang herausläuft - eine Einstellung,
-        ''' die ohnehin nirgends anstößt, geht damit unverändert durch.</summary>
-        Private Shared Function BuildToneCurveLut(exposureGain As Single, contrast As Single, brightness As Single) As Byte()
-            Dim low = ToneTransfer(0.0F, exposureGain, contrast, brightness)
-            Dim high = ToneTransfer(1.0F, exposureGain, contrast, brightness)
-            Dim overshootHigh = Math.Max(0.0F, high - 1.0F)
-            Dim overshootLow = Math.Max(0.0F, -low)
-
-            ' Schulter und Fuß wachsen mit dem, was hinausläuft: Eine feste, schmale Schulter reicht für
-            ' Kontrast und Helligkeit, presst aber bei +1 EV die halbe Tonwertskala in die obersten 12% -
-            ' das bleibt optisch Weiß. Je weiter die Einstellung übersteuert, desto früher setzt die
-            ' Kurve an und desto mehr Zeichnung bleibt in Lichtern bzw. Tiefen.
-            Dim shoulder = Clamp(ToneShoulderBase + 0.5F * overshootHigh, ToneShoulderBase, ToneShoulderMax)
-            Dim toe = Clamp(ToneShoulderBase + 0.5F * overshootLow, ToneShoulderBase, ToneShoulderMax)
-            Dim rolloff = Clamp((overshootHigh + overshootLow) / ToneShoulderBase, 0.0F, 1.0F)
-
-            Dim lut = New Byte(255) {}
-            For i As Integer = 0 To 255
-                Dim y = ToneTransfer(i / 255.0F, exposureGain, contrast, brightness)
-                Dim hard = Clamp(y, 0.0F, 1.0F)
-                Dim soft = SoftShoulder(y, toe, shoulder)
-                lut(i) = ClampToByte(255.0F * (hard + (soft - hard) * rolloff))
-            Next
-            Return lut
-        End Function
 
         Private Shared Function ToneTransfer(x As Single, exposureGain As Single, contrast As Single, brightness As Single) As Single
             Dim y = x * exposureGain
@@ -2351,6 +2401,9 @@ Namespace Services
         ' ProcessBitmap sowie vom Basis-Cache in ApplyAdjustments(source As SKBitmap, ...) genutzt.
         ' ARBEITSBILD (Stufe E): Retusche ist KEIN Pipeline-Schritt mehr - sie steckt bereits im
         ' Eingangsbild (Arbeitsbild); die Pipeline beginnt direkt mit der Geometrie.
+        ''' <summary>Schaltet zwischen der alten Stufenkette und der verschmolzenen
+        ''' Gleitkomma-Kette um. Waehrend der Migration (Phase 2) laufen beide nebeneinander, damit
+        ''' der Aequivalenztest der Diagnose sie vergleichen kann.</summary>
         Private Shared Function ProcessBitmapBase(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim processed As SKBitmap = CloneBitmap(source)
 
@@ -2359,17 +2412,23 @@ Namespace Services
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
             processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
-            ' Die Umkehr steht VOR allen Farbanpassungen: Belichtung, Weißabgleich, Kurven und Filter
-            ' sollen auf dem fertigen Positiv arbeiten - auf dem Negativ wären sie seitenverkehrt
-            ' (Aufhellen würde abdunkeln) und für den Nutzer unbrauchbar.
-            processed = ReplaceBitmap(processed, ApplyFilmNegative(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyColorAdjustments(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyTonalLUT(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyCurve(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyHsl(processed, adj))
-            processed = ReplaceBitmap(processed, ApplySplitToning(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyFilterPreset(processed, adj.FilterPreset, adj.FilterStrength / 100.0F))
-            processed = ReplaceBitmap(processed, ApplyCubeLut(processed, adj.LutPath, adj.LutStrength / 100.0F))
+            ' Alle Farb-Punktoperationen laufen in EINER verschmolzenen Gleitkomma-Stufe
+            ' (ImageProcessorPointOps.vb): Filmnegativ, Farbmatrix, Tonwertkurve, Lichter/Tiefen/
+            ' Weiß/Schwarz, RGB- und Kanalkurven, Luminanzkurve, HSL-Bänder, Split-Toning,
+            ' Preset-Matrix und Cube-LUT. Vorher waren das acht aufeinanderfolgende Stufen mit je
+            ' einem eigenen 8-Bit-Zwischenbild - die gestapelten Rundungen waren die Streifenbildung
+            ' in Himmel und Hauttönen. Jetzt wird EINMAL am Ende quantisiert (mit Dither).
+            ' Die Umkehr steckt dabei ganz vorn in der Kette: Belichtung, Weißabgleich, Kurven und
+            ' Filter sollen auf dem fertigen Positiv arbeiten - auf dem Negativ wären sie
+            ' seitenverkehrt (Aufhellen würde abdunkeln).
+            processed = ReplaceBitmap(processed, ApplyPointOpChain(processed, adj))
+
+            ' "weich" steht im selben Select Case wie die 15 Farbpresets, ist aber als einziges KEINE
+            ' Punktoperation, sondern eine echte räumliche Unschärfe. BuildFilterPresetMatrix liefert
+            ' dafür bewusst Nothing; die Stufe läuft hier getrennt.
+            If String.Equals(If(adj.FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase) Then
+                processed = ReplaceBitmap(processed, ApplySoftFocusBlur(processed, Clamp(adj.FilterStrength / 100.0F, 0, 1)))
+            End If
 
             If adj.Clarity <> 0 Then
                 processed = ReplaceBitmap(processed, ApplyClarity(processed, adj.Clarity / 100.0F))
@@ -2387,6 +2446,9 @@ Namespace Services
                 Else
                     processed = ReplaceBitmap(processed, ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F))
                 End If
+            End If
+            If adj.ColorNoiseReduction > 0 Then
+                processed = ReplaceBitmap(processed, ApplyColorNoiseReduction(processed, adj.ColorNoiseReduction / 100.0F))
             End If
             If adj.DustScratches <> 0 Then
                 processed = ReplaceBitmap(processed, ApplyDustScratches(processed, adj.DustScratches / 100.0F))
@@ -2408,6 +2470,10 @@ Namespace Services
             End If
             If adj.AddNoise > 0 Then
                 processed = ReplaceBitmap(processed, ApplyAddNoise(processed, adj.AddNoise / 100.0F))
+            ElseIf adj.AddNoise < 0 Then
+                ' Negative Haelfte = Rauschen REDUZIEREN (gleichmaessiges Weichzeichnen wie der
+                ' Gaussian-Modus der Rauschreduzierung) - ein Regler, beide Richtungen.
+                processed = ReplaceBitmap(processed, ApplyNoiseReduction(processed, -adj.AddNoise / 100.0F))
             End If
 
             If adj.BorderSize > 0 Then
@@ -2645,12 +2711,27 @@ Namespace Services
         ' Signatur aller Anpassungen AUSSER Annotations - solange sie sich nicht ändert, kann die
         ' gecachte Basis wiederverwendet werden. Friend: der Editor nutzt sie auch als
         ' Gültigkeitsstempel der vorgewärmten Retusche-Live-Puffer.
+        ''' <summary>Kulturunabhaengige Textform eines Schluesselbestandteils. String.Join ruft sonst
+        ''' das implizite ToString auf, und das formatiert Single/Double nach der aktuellen Kultur -
+        ''' "0,5" hier und "0.5" dort. Der Schluessel ist zwar nur sitzungsintern, aber ein
+        ''' Kulturwechsel zur Laufzeit (Spracheinstellung) wuerde den Cache stillschweigend
+        ''' entwerten oder - schlimmer - zwei verschiedene Einstellungen gleich benennen.</summary>
+        Private Shared Function KeyPart(value As Object) As String
+            If value Is Nothing Then Return ""
+            Dim f = TryCast(value, IFormattable)
+            If f IsNot Nothing Then Return f.ToString(Nothing, Globalization.CultureInfo.InvariantCulture)
+            Return value.ToString()
+        End Function
+
         Friend Shared Function ComputeBaseKey(adj As ImageAdjustments) As String
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
-                adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.NoiseReduction, adj.NoiseReductionMethod,
+                adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.NoiseReduction, adj.NoiseReductionMethod, adj.ColorNoiseReduction,
                 adj.DustScratches, adj.Haze, adj.AddNoise, adj.[Structure], adj.Glow,
-                adj.Vibrance, adj.Vignette, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather,
+adj.CalibrationRedHue, adj.CalibrationRedSaturation,
+                adj.CalibrationGreenHue, adj.CalibrationGreenSaturation,
+                adj.CalibrationBlueHue, adj.CalibrationBlueSaturation, adj.CalibrationShadowTint,
+                                adj.Vibrance, adj.Vignette, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather,
                 adj.VignetteCenterX, adj.VignetteCenterY, adj.Grain, adj.BorderSize, adj.BorderColor,
                 adj.BorderCornerRadius, adj.BorderEffect, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
@@ -2669,10 +2750,48 @@ Namespace Services
                 adj.HasActiveSelection, adj.SelectionXPercent, adj.SelectionYPercent,
                 adj.SelectionWidthPercent, adj.SelectionHeightPercent, adj.SelectionShapeMode,
                 adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
-                If(String.IsNullOrEmpty(adj.SelectionMaskPngBase64), 0, adj.SelectionMaskPngBase64.Length),
+                SelectionMaskFingerprint(adj.SelectionMaskPngBase64),
                 adj.SelectionFeatherPixels,
                 adj.WorkingImageVersion
-            })
+            }.Select(AddressOf KeyPart))
+        End Function
+
+        ''' <summary>Stabiler Fingerabdruck der Auswahlmaske für den Basis-Cache-Schlüssel.
+        '''
+        ''' Vorher stand hier nur die LÄNGE der Base64-Zeichenkette. Zwei verschiedene Masken mit
+        ''' gleicher Bounding-Box und gleicher Länge bekamen damit denselben Cache-Schlüssel - die
+        ''' zweite Vorschau lief dann mit dem selektiv gerechneten Ergebnis der ERSTEN Maske. Das ist
+        ''' ein echter Bildfehler, kein Performance-Thema.
+        '''
+        ''' Und es war nicht selten: an 63 lasso-artigen Masken mit identischer Bounding-Box gemessen
+        ''' teilten sich 90,5 % ihre Base64-Länge mit einer anderen Maske - PNG-Kompression
+        ''' quantisiert die Längen stark (drei verschiedene Masken lagen auf exakt 1092 Zeichen).
+        '''
+        ''' Gemerkt wird der letzte Wert: ComputeBaseKey läuft bei jedem Vorschaubild, die Maske
+        ''' ändert sich beim Ziehen an einem Regler aber nicht. Ohne das Merken würde bei jedem Frame
+        ''' über eine womöglich megabytegroße Zeichenkette gehasht.</summary>
+        Private Shared _maskFingerprintSource As String
+        Private Shared _maskFingerprintValue As String
+        Private Shared ReadOnly _maskFingerprintLock As New Object()
+
+        Private Shared Function SelectionMaskFingerprint(maskBase64 As String) As String
+            If String.IsNullOrEmpty(maskBase64) Then Return "0"
+            SyncLock _maskFingerprintLock
+                ' Referenzgleichheit zuerst: waehrend eines Reglerzugs ist es dieselbe Instanz.
+                If _maskFingerprintSource IsNot Nothing AndAlso
+                   (Object.ReferenceEquals(_maskFingerprintSource, maskBase64) OrElse
+                    String.Equals(_maskFingerprintSource, maskBase64, StringComparison.Ordinal)) Then
+                    Return _maskFingerprintValue
+                End If
+
+                Dim hash As String
+                Using sha = Security.Cryptography.SHA256.Create()
+                    hash = Convert.ToHexString(sha.ComputeHash(Text.Encoding.ASCII.GetBytes(maskBase64)))
+                End Using
+                _maskFingerprintSource = maskBase64
+                _maskFingerprintValue = hash
+                Return hash
+            End SyncLock
         End Function
 
         Private Shared Function ReplaceBitmap(oldBitmap As SKBitmap, newBitmap As SKBitmap) As SKBitmap
@@ -5011,12 +5130,15 @@ Namespace Services
                     Else
                         Dim watermark = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
                         Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                        ' Pfad-Parameter durchreichen wie beim normalen Text: der Renderer kann
+                        ' das laengst, hier wurden sie nur nicht weitergegeben - das Wasserzeichen
+                        ' blieb dadurch immer gerade (Nutzerbefund 2026-07-20).
+                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic)
                     End If
                 Case Else
                     If Not String.IsNullOrWhiteSpace(annotation.Text) Then
                         Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic)
                     End If
             End Select
         End Sub
@@ -5081,6 +5203,13 @@ Namespace Services
             Dim maskHeight = canvasHeight
             If Math.Abs(annotation.RotationDegrees) <= 0.01F Then
                 Dim pad = Math.Max(glowMaskReach, shadowBlurPx * 3.0F) + Math.Max(Math.Abs(offsetX), Math.Abs(offsetY)) + 4.0F
+                ' Text an Pfad: die Glyphen ragen bis zu einer Schrifthoehe ueber das
+                ' Layout-Rechteck hinaus. Ohne den Zusatzrand beschneidet der Masken-Ausschnitt
+                ' die Silhouette - Schatten/Gluehen fehlten an den Enden des gebogenen Textes
+                ' bzw. brachen hart ab (Nutzerbefund 2026-07-19).
+                If Not String.IsNullOrWhiteSpace(annotation.TextPathKind) Then
+                    pad += annotation.FontSizePixels * ComputeTextPathFitRatio(annotation) * 1.2F
+                End If
                 maskLeft = Math.Max(0, CInt(Math.Floor(rect.Left - pad)))
                 maskTop = Math.Max(0, CInt(Math.Floor(rect.Top - pad)))
                 Dim maskRight = Math.Min(canvasWidth, CInt(Math.Ceiling(rect.Right + pad)))
@@ -5265,43 +5394,264 @@ Namespace Services
         Private Shared ReadOnly _typefaceCache As New Dictionary(Of String, SKTypeface)()
         Private Shared ReadOnly _typefaceCacheLock As New Object()
 
-        Private Shared Function GetTypeface(fontFamily As String) As SKTypeface
-            Dim key = If(fontFamily, "")
+        ''' <summary>Schriftschnitt aus Familie und Stil. Der Cacheschluessel enthaelt den STIL -
+        ''' ohne ihn haette der erste Aufruf (etwa normal) alle spaeteren ueberdeckt und Fett/Kursiv
+        ''' waeren wirkungslos geblieben, ohne Fehlermeldung.
+        ''' Fehlt der Familie ein echter Fett- oder Kursivschnitt, faellt Skia auf den naechsten
+        ''' vorhandenen zurueck; ein synthetisches Schraegstellen macht es NICHT.</summary>
+        Private Shared Function GetTypeface(fontFamily As String, Optional bold As Boolean = False,
+                                            Optional italic As Boolean = False) As SKTypeface
+            Dim key = If(fontFamily, "") & "|" & If(bold, "b", "") & If(italic, "i", "")
             SyncLock _typefaceCacheLock
                 Dim cached As SKTypeface = Nothing
                 If _typefaceCache.TryGetValue(key, cached) Then Return cached
-                Dim created = SKTypeface.FromFamilyName(fontFamily)
+                Dim stil = New SKFontStyle(If(bold, SKFontStyleWeight.Bold, SKFontStyleWeight.Normal),
+                                           SKFontStyleWidth.Normal,
+                                           If(italic, SKFontStyleSlant.Italic, SKFontStyleSlant.Upright))
+                Dim created = SKTypeface.FromFamilyName(fontFamily, stil)
                 _typefaceCache(key) = created
                 Return created
             End SyncLock
         End Function
 
-        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
-            Using font = CreateFont(fontFamily, fontSize)
-                If strokeWidth > 0 Then
-                    Using strokePaint = New SKPaint With {
-                        .Color = stroke,
-                        .IsAntialias = True,
-                        .Style = SKPaintStyle.Stroke,
-                        .StrokeWidth = Math.Max(1.0F, strokeWidth)
-                    }
-                        DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint)
-                    End Using
-                End If
-
-                Using fillPaint = New SKPaint With {
-                    .Color = fill,
-                    .IsAntialias = True,
-                    .Style = SKPaintStyle.Fill
-                }
-                    Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
-                    If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
-                        fillPaint.Shader = CreateFillGradientShader(bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False, Optional textPathKind As String = "", Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False)
+            ' Text an Pfad: EIN Zweig fuer Kontur und Fuellung, damit beide exakt dieselben
+            ' Glyphenpositionen bekommen (und damit auch die Effekt-Maske, die ueber dieselbe
+            ' Routine laeuft - Regel "Objektinhalt nur aus GENAU EINEM Renderpfad").
+            ' warpGlyphs:=False ist entscheidend: mit dem Standard (True) VERBIEGT Skia jede
+            ' Buchstabenkontur entlang der Kruemmung (innen gestaucht, aussen gedehnt) - bei
+            ' grosser Schrift auf enger Kurve wirkte der Text stark verzerrt (Nutzerbefund
+            ' 2026-07-19). False platziert die Glyphen STARR und rotiert sie nur zur Tangente,
+            ' wie Illustrator/Photoshop es tun.
+            Dim path As SKPath = Nothing
+            If Not String.IsNullOrWhiteSpace(textPathKind) Then
+                path = BuildTextPath(bounds, textPathKind, textPathBend, textPathStartOffset)
+            End If
+            Try
+                Using font = CreateFont(fontFamily, fontSize, bold, italic)
+                    ' Abstand in Pixeln aus dem Prozentwert - relativ zur EFFEKTIVEN Schriftgroesse,
+                    ' die die Pfad-Einpassung unten noch aendern kann. Wird deshalb nach jeder
+                    ' Groessenaenderung neu berechnet.
+                    Dim spacing = font.Size * letterSpacingPercent / 100.0F
+                    ' Auf dem Pfad gibt es keinen Zeilenumbruch - Absaetze laufen als eine Zeile weiter.
+                    Dim pathText = If(path IsNot Nothing,
+                                      text.Replace(vbCrLf, " ").Replace(vbCr, " ").Replace(vbLf, " "),
+                                      text)
+                    If path IsNot Nothing Then
+                        ' Text mittig auf den Pfad setzen; der Startversatz verschiebt von dort.
+                        ' Der Start wird IN DEN PFAD gebacken (GetSegment) statt als hOffset
+                        ' uebergeben: beide DrawTextOnPath-Ueberladungen wenden den Offset in
+                        ' SkiaSharp 3.119 DOPPELT an (gemessen: Offset 100 -> Start +200) und
+                        ' verschieben auf gekruemmten Pfaden zusaetzlich quer zur Kurve.
+                        Using measure = New SKPathMeasure(path, False)
+                            Dim pathLength = measure.Length
+                            Dim textWidth = MeasureTextSpaced(font, pathText, spacing)
+                            ' Schrift an den Pfad anpassen, damit kein Buchstabe wegfaellt: Kreis
+                            ' waechst UND schrumpft auf den Umfang (kleine Fuge), Bogen/Welle
+                            ' schrumpfen nur bei Ueberlaenge. Gleiche Formel wie
+                            ' ComputeTextPathFitRatio - die Rand-Berechnungen rechnen damit.
+                            If textWidth > 0 Then
+                                Dim fit As Single
+                                ' StartsWith, nicht Equals: "CircleInverted" ist derselbe geschlossene
+                                ' Kreis. Mit Equals waere der invertierte Modus ohne Groessenanpassung
+                                ' geblieben - der Text haette den Kreis ueber- oder unterlaufen.
+                                If textPathKind.StartsWith("Circle", StringComparison.OrdinalIgnoreCase) Then
+                                    ' Gleiche Deckelung wie in ComputeTextPathFitRatio (halber
+                                    ' Radius als Obergrenze der Glyphenhoehe) - beide Formeln muessen
+                                    ' synchron bleiben, sonst weichen Raender und Render voneinander ab.
+                                    Dim maxGrow = Math.Max(1.0F, Math.Min(bounds.Width, bounds.Height) * 0.25F / Math.Max(1.0F, font.Size))
+                                    fit = Math.Max(0.02F, Math.Min(maxGrow, pathLength * 0.97F / textWidth))
+                                Else
+                                    fit = Math.Max(0.02F, Math.Min(1.0F, pathLength / textWidth))
+                                End If
+                                If Math.Abs(fit - 1.0F) > 0.005F Then
+                                    font.Size = font.Size * fit
+                                    ' Abstand haengt an der Schriftgroesse - nach dem Einpassen neu.
+                                    spacing = font.Size * letterSpacingPercent / 100.0F
+                                    textWidth = MeasureTextSpaced(font, pathText, spacing)
+                                End If
+                            End If
+                            Dim startDistance = Math.Max(0.0F, (pathLength - textWidth) / 2.0F)
+                            ' Beim geschlossenen Kreis steckt der Startversatz bereits im Startwinkel.
+                            ' Auch hier StartsWith: beim geschlossenen Kreis - egal ob normal oder
+                            ' invertiert - steckt der Startversatz bereits im Startwinkel und darf
+                            ' nicht ein zweites Mal aufaddiert werden.
+                            If Not textPathKind.StartsWith("Circle", StringComparison.OrdinalIgnoreCase) Then
+                                startDistance += textPathStartOffset / 100.0F * pathLength
+                            End If
+                            If startDistance > 0.5F AndAlso startDistance < pathLength - 1.0F Then
+                                Dim segment As New SKPath()
+                                If measure.GetSegment(startDistance, pathLength, segment, startWithMoveTo:=True) Then
+                                    path.Dispose()
+                                    path = segment
+                                Else
+                                    segment.Dispose()
+                                End If
+                            End If
+                        End Using
                     End If
-                    DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, fillPaint)
+
+                    If strokeWidth > 0 Then
+                        Using strokePaint = New SKPaint With {
+                            .Color = stroke,
+                            .IsAntialias = True,
+                            .Style = SKPaintStyle.Stroke,
+                            .StrokeWidth = Math.Max(1.0F, strokeWidth)
+                        }
+                            If path IsNot Nothing Then
+                                DrawTextOnPathSpaced(canvas, pathText, path, font, strokePaint, spacing)
+                            Else
+                                DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint, spacing)
+                            End If
+                        End Using
+                    End If
+
+                    Using fillPaint = New SKPaint With {
+                        .Color = fill,
+                        .IsAntialias = True,
+                        .Style = SKPaintStyle.Fill
+                    }
+                        Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
+                        If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
+                            fillPaint.Shader = CreateFillGradientShader(bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+                        End If
+                        If path IsNot Nothing Then
+                            DrawTextOnPathSpaced(canvas, pathText, path, font, fillPaint, spacing)
+                        Else
+                            DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, fillPaint, spacing)
+                        End If
+                    End Using
                 End Using
-            End Using
+            Finally
+                path?.Dispose()
+            End Try
         End Sub
+
+        ''' <summary>Faktor, um den die Schrift eines Pfadtextes skaliert wird, damit ALLE Buchstaben
+        ''' auf den Pfad passen (Nutzerbefund 2026-07-19: beim Kreis fielen ueberzaehlige Buchstaben
+        ''' einfach weg). Kreis: Text laeuft immer genau einmal um den Umfang - waechst UND schrumpft
+        ''' (kleine Fuge, damit Ende und Anfang nicht kollidieren). Bogen/Welle: nur schrumpfen bei
+        ''' Ueberlaenge, sonst bleibt der Groessen-Regler das Mass. Skalenunabhaengig (Pfadlaenge und
+        ''' Textbreite wachsen mit demselben Faktor), daher fuer Basis- wie Vorschau-Koordinaten gueltig.
+        ''' Wird auch von den Rand-Berechnungen (Dirty-Rect/Overlay/Effekt-Maske) benutzt - die muessen
+        ''' mit der EFFEKTIVEN Groesse rechnen, sonst beschneiden sie gewachsene Kreis-Texte.</summary>
+        Friend Shared Function ComputeTextPathFitRatio(annotation As ImageAnnotation) As Single
+            If annotation Is Nothing OrElse String.IsNullOrWhiteSpace(annotation.TextPathKind) Then Return 1.0F
+            Dim text = If(annotation.Text, "").Replace(vbCrLf, " ").Replace(vbCr, " ").Replace(vbLf, " ")
+            ' Ein Wasserzeichen ohne eigenen Text wird als "FerrumPix" gezeichnet - die Einpassung
+            ' muss auf DEMSELBEN Text rechnen, sonst passt der Kreis nicht zum sichtbaren Wort.
+            If String.IsNullOrWhiteSpace(text) AndAlso
+               String.Equals(annotation.Kind, "Watermark", StringComparison.OrdinalIgnoreCase) Then
+                text = "FerrumPix"
+            End If
+            If String.IsNullOrWhiteSpace(text) Then Return 1.0F
+            Try
+                Dim rect = SKRect.Create(0, 0, Math.Max(1.0F, annotation.WidthPixels), Math.Max(1.0F, annotation.HeightPixels))
+                Using path = BuildTextPath(rect, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset)
+                    Using measure = New SKPathMeasure(path, False)
+                        Using font = CreateFont(annotation.FontFamily, Math.Max(1.0F, annotation.FontSizePixels), annotation.Bold, annotation.Italic)
+                            ' Abstand einrechnen - sonst weicht die Einpassung vom gezeichneten
+                            ' Text ab, und beim Kreis liefe der Text ueber den Umfang hinaus.
+                            Dim abstand = font.Size * annotation.LetterSpacingPercent / 100.0F
+                            Dim textWidth = MeasureTextSpaced(font, text, abstand)
+                            If textWidth <= 0 Then Return 1.0F
+                            ' StartsWith statt Equals: "CircleInverted" ist geometrisch derselbe
+                            ' geschlossene Kreis und braucht dieselbe Deckelung. Mit Equals waere
+                            ' der neue Modus stillschweigend ohne Groessenanpassung geblieben.
+                            If annotation.TextPathKind.StartsWith("Circle", StringComparison.OrdinalIgnoreCase) Then
+                                ' Wachstum gedeckelt: Glyphenhoehe hoechstens der HALBE Radius -
+                                ' beim vollen Radius sprengten zwei Riesenbuchstaben Box und Kreis
+                                ' (visuell verifiziert 2026-07-19).
+                                Dim maxGrow = Math.Max(1.0F, Math.Min(rect.Width, rect.Height) * 0.25F / Math.Max(1.0F, annotation.FontSizePixels))
+                                Return Math.Max(0.02F, Math.Min(maxGrow, measure.Length * 0.97F / textWidth))
+                            End If
+                            Return Math.Max(0.02F, Math.Min(1.0F, measure.Length / textWidth))
+                        End Using
+                    End Using
+                End Using
+            Catch
+                Return 1.0F
+            End Try
+        End Function
+
+        ''' <summary>Pfad fuer "Text an Pfad", aus dem Objektrechteck abgeleitet und als dichte
+        ''' Punktfolge aufgebaut (die Glyphen werden per Bogenlaenge platziert, eine Polylinie mit
+        ''' 96 Stuetzen ist dafuer unsichtbar glatt und erspart die Winkelmathematik dreier
+        ''' Sonderfaelle). Bogen: Kreisbogen ueber die Rechteckbreite, Pfeilhoehe aus der Kruemmung
+        ''' (negativ = nach unten). Welle: eine Sinusperiode, Amplitude aus der Kruemmung. Kreis:
+        ''' ins Rechteck eingepasst, Start oben plus Startversatz; negative Kruemmung laeuft innen
+        ''' (gegen den Uhrzeigersinn).</summary>
+        Private Shared Function BuildTextPath(rect As SKRect, kind As String, bend As Single, startOffset As Single) As SKPath
+            Const Steps As Integer = 96
+            Dim path = New SKPath()
+            Dim normalized = If(kind, "").Trim().ToLowerInvariant()
+            Dim amount = Math.Max(-100.0F, Math.Min(100.0F, bend)) / 100.0F
+
+            Select Case normalized
+                Case "circle", "circleinverted"
+                    ' Radius aus min(Breite, Hoehe): ein Kreis bleibt ein Kreis. Ihn ueber das
+                    ' Rechteck zu strecken ergaebe bei breiten Objekten eine flache Ellipse - also
+                    ' faktisch einen Bogen (2026-07-20 ausprobiert und wieder verworfen).
+                    Dim radius = Math.Min(rect.Width, rect.Height) / 2.0F
+                    Dim cx = rect.MidX, cy = rect.MidY
+                    Dim inverted = normalized = "circleinverted"
+
+                    ' Bildschirmkoordinaten (y nach UNTEN): der Punkt zum Winkel a ist
+                    ' (cos a, sin a), also a=90 Grad = unten, a=270 Grad = oben.
+                    ' Der Text wird auf dem Pfad zentriert; seine Mitte liegt damit eine halbe Runde
+                    ' hinter dem Start. Beide Varianten starten deshalb UNTEN, damit der Text OBEN
+                    ' sitzt - sie unterscheiden sich NUR in der Laufrichtung.
+                    '
+                    ' NORMAL (Winkel waechst): oben laeuft die Tangente nach rechts. Die Buchstaben
+                    ' stehen mit dem Fuss auf dem Kreis und dem Kopf nach AUSSEN - Abzeichen-Oberseite.
+                    '
+                    ' INVERTIERT (Winkel faellt): oben laeuft die Tangente nach links, und damit
+                    ' kippt die Aufrechte der Buchstaben mit. Sie haengen dann mit dem Kopf nach
+                    ' INNEN und dem Fuss nach aussen - der Text liegt gleichsam auf der Innenseite
+                    ' des Rings. Es ist derselbe Ort wie bei "Kreis", nur die Schrift ist auf der
+                    ' Linie umgeschlagen.
+                    Dim basisRichtung = If(inverted, -1.0, 1.0)
+                    Dim startAngle = Math.PI / 2.0 + basisRichtung * startOffset / 100.0 * 2.0 * Math.PI
+                    ' Negative Kruemmung dreht die Laufrichtung wie bisher zusaetzlich um.
+                    Dim direction = If(amount < 0, -basisRichtung, basisRichtung)
+                    For i = 0 To Steps
+                        Dim a = startAngle + direction * 2.0 * Math.PI * i / Steps
+                        Dim px = CSng(cx + radius * Math.Cos(a))
+                        Dim py = CSng(cy + radius * Math.Sin(a))
+                        If i = 0 Then path.MoveTo(px, py) Else path.LineTo(px, py)
+                    Next
+
+                Case "wave"
+                    Dim amplitude = amount * rect.Height / 2.0F
+                    For i = 0 To Steps
+                        Dim t = i / CSng(Steps)
+                        Dim px = rect.Left + t * rect.Width
+                        Dim py = CSng(rect.MidY - amplitude * Math.Sin(t * 2.0 * Math.PI))
+                        If i = 0 Then path.MoveTo(px, py) Else path.LineTo(px, py)
+                    Next
+
+                Case Else ' "arc"
+                    ' Kreisbogen durch die beiden Seitenmitten, Pfeilhoehe aus der Kruemmung.
+                    ' Praktisch keine Biegung -> gerade Linie (die Sehnenformel wuerde degenerieren).
+                    Dim sagitta = amount * rect.Height / 2.0F
+                    If Math.Abs(sagitta) < 0.5F Then
+                        path.MoveTo(rect.Left, rect.MidY)
+                        path.LineTo(rect.Right, rect.MidY)
+                    Else
+                        Dim half = rect.Width / 2.0F
+                        Dim radius = (half * half + sagitta * sagitta) / (2.0F * Math.Abs(sagitta))
+                        Dim cy = rect.MidY + Math.Sign(sagitta) * (radius - Math.Abs(sagitta))
+                        Dim halfSweep = Math.Asin(Math.Min(1.0, half / radius))
+                        For i = 0 To Steps
+                            Dim a = -halfSweep + 2.0 * halfSweep * i / Steps
+                            Dim px = CSng(rect.MidX + radius * Math.Sin(a))
+                            Dim py = CSng(cy - Math.Sign(sagitta) * radius * Math.Cos(a))
+                            If i = 0 Then path.MoveTo(px, py) Else path.LineTo(px, py)
+                        Next
+                    End If
+            End Select
+            Return path
+        End Function
 
         ''' opacity ist auf der 0-100-Skala (wie annotation.Opacity), NICHT der bereits normalisierten
         ''' 0-1 alphaFactor-Skala, die für die übrigen (bereits alpha-vorgemischten) Fill/Stroke-Farben
@@ -6631,7 +6981,66 @@ Namespace Services
             Return New SKColor(color.Red, color.Green, color.Blue, alpha)
         End Function
 
-        Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint)
+        ''' <summary>Textbreite EINSCHLIESSLICH Zeichenabstand. Muss ueberall dort benutzt werden,
+        ''' wo bisher font.MeasureText stand - sonst passt die Einpassung auf den Pfad nicht mehr
+        ''' zum tatsaechlich gezeichneten Text.</summary>
+        Private Shared Function MeasureTextSpaced(font As SKFont, text As String, spacing As Single) As Single
+            If String.IsNullOrEmpty(text) Then Return 0.0F
+            Dim w = font.MeasureText(text)
+            If spacing <> 0.0F AndAlso text.Length > 1 Then w += spacing * (text.Length - 1)
+            Return w
+        End Function
+
+        ''' <summary>Zeichnet eine Zeile mit Zeichenabstand. Bei spacing = 0 exakt der bisherige
+        ''' Weg (ein DrawText fuer die ganze Zeile, mit Kerning) - der Normalfall bleibt also
+        ''' unveraendert. Erst ein gesetzter Abstand setzt die Zeichen einzeln.</summary>
+        Private Shared Sub DrawTextSpaced(canvas As SKCanvas, text As String, x As Single, baseline As Single,
+                                          font As SKFont, paint As SKPaint, spacing As Single)
+            If spacing = 0.0F Then
+                canvas.DrawText(text, x, baseline, font, paint)
+                Return
+            End If
+            Dim cx = x
+            For Each ch In text
+                Dim einzeln = ch.ToString()
+                canvas.DrawText(einzeln, cx, baseline, font, paint)
+                cx += font.MeasureText(einzeln) + spacing
+            Next
+        End Sub
+
+        ''' <summary>Text auf einem Pfad mit Zeichenabstand. Bei spacing = 0 bleibt es bei Skias
+        ''' DrawTextOnPath; sonst werden die Zeichen einzeln gesetzt und zur Tangente gedreht -
+        ''' dasselbe Verhalten wie warpGlyphs:=False, nur mit eigenem Vorschub.
+        ''' Ohne diesen Zweig waere der Zeichenabstand bei gesetztem Pfad wirkungslos gewesen.</summary>
+        Private Shared Sub DrawTextOnPathSpaced(canvas As SKCanvas, text As String, path As SKPath,
+                                                font As SKFont, paint As SKPaint, spacing As Single)
+            If spacing = 0.0F Then
+                canvas.DrawTextOnPath(text, path, New SKPoint(0, 0), warpGlyphs:=False, font, paint)
+                Return
+            End If
+            Using measure = New SKPathMeasure(path, False)
+                Dim laenge = measure.Length
+                Dim d As Single = 0.0F
+                For Each ch In text
+                    Dim einzeln = ch.ToString()
+                    Dim breite = font.MeasureText(einzeln)
+                    Dim mitte = d + breite / 2.0F
+                    If mitte > laenge Then Exit For
+                    Dim pos As SKPoint, tangente As SKPoint
+                    If measure.GetPositionAndTangent(mitte, pos, tangente) Then
+                        Dim winkel = CSng(Math.Atan2(tangente.Y, tangente.X) * 180.0 / Math.PI)
+                        Dim zustand = canvas.Save()
+                        canvas.Translate(pos.X, pos.Y)
+                        canvas.RotateDegrees(winkel)
+                        canvas.DrawText(einzeln, -breite / 2.0F, 0, font, paint)
+                        canvas.RestoreToCount(zustand)
+                    End If
+                    d += breite + spacing
+                Next
+            End Using
+        End Sub
+
+        Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint, Optional spacing As Single = 0)
             If String.IsNullOrEmpty(text) Then Return
             Dim lineHeight = GetLineHeight(font.Metrics)
             Dim baseline = y + fontSize
@@ -6640,8 +7049,8 @@ Namespace Services
                 Dim current = ""
                 For Each word In paragraph.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
                     Dim candidate = If(String.IsNullOrEmpty(current), word, current & " " & word)
-                    If current.Length > 0 AndAlso font.MeasureText(candidate, paint) > maxWidth Then
-                        canvas.DrawText(current, x, baseline, font, paint)
+                    If current.Length > 0 AndAlso MeasureTextSpaced(font, candidate, spacing) > maxWidth Then
+                        DrawTextSpaced(canvas, current, x, baseline, font, paint, spacing)
                         baseline += lineHeight
                         current = word
                     Else
@@ -6650,7 +7059,7 @@ Namespace Services
                 Next
 
                 If current.Length > 0 Then
-                    canvas.DrawText(current, x, baseline, font, paint)
+                    DrawTextSpaced(canvas, current, x, baseline, font, paint, spacing)
                 End If
                 baseline += lineHeight
             Next
@@ -6672,24 +7081,59 @@ Namespace Services
             Return fallback
         End Function
 
+        ''' <summary>Unschaerfemaske mit Kreuz-Kern (5 Taps):
+        '''      0   -a    0
+        '''     -a  1+4a  -a
+        '''      0   -a    0
+        '''
+        ''' Lief bis 2026-07-20 ueber SKImageFilter.CreateMatrixConvolution. Skias CPU-Faltung ist
+        ''' dafuer pathologisch langsam: gemessen 8,6 s bei 6,3 MP - fuer fuenf Multiplikationen je
+        ''' Pixel. Zum Vergleich braucht die gesamte verschmolzene Farbkette 17 ms.
+        '''
+        ''' Randbehandlung wie zuvor SKShaderTileMode.Clamp: ausserhalb liegende Nachbarn werden auf
+        ''' den Rand geklemmt. Alpha bleibt unveraendert (entsprach convolveAlpha:=False).</summary>
         Private Shared Function ApplySharpness(source As SKBitmap, amount As Single) As SKBitmap
-            ' Einfacher Schärfe-Kernel (Unsharp Mask)
-            Dim kernel = New Single() {
-                0, -amount, 0,
-                -amount, 1 + 4 * amount, -amount,
-                0, -amount, 0
-            }
-            Dim imageFilter = SKImageFilter.CreateMatrixConvolution(
-                New SKSizeI(3, 3), kernel, 1.0F, 0.0F,
-                New SKPointI(1, 1), SKShaderTileMode.Clamp, False)
-
-            Dim paint = New SKPaint With {.ImageFilter = imageFilter}
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using canvas = New SKCanvas(result)
-                canvas.DrawBitmap(source, 0, 0, paint)
-            End Using
-            imageFilter.Dispose()
-            paint.Dispose()
+            Dim srcBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
+
+            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            Dim w = source.Width
+            Dim h = source.Height
+            Dim mitte = 1.0F + 4.0F * amount
+
+            ForEachRow(w, h,
+                Sub(y)
+                    Dim oben = If(y > 0, (y - 1) * stride, 0)
+                    Dim mittig = y * stride
+                    Dim unten = If(y < h - 1, (y + 1) * stride, (h - 1) * stride)
+                    For x = 0 To w - 1
+                        Dim o = mittig + x * 4
+                        Dim links = mittig + If(x > 0, (x - 1) * 4, 0)
+                        Dim rechts = mittig + If(x < w - 1, (x + 1) * 4, (w - 1) * 4)
+                        Dim ob = oben + x * 4
+                        Dim un = unten + x * 4
+
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                        Dim lr As Integer, lg As Integer, lb As Integer, la As Integer
+                        Dim rr2 As Integer, rg As Integer, rb As Integer, ra As Integer
+                        Dim tr As Integer, tg As Integer, tb As Integer, ta As Integer
+                        Dim br As Integer, bg As Integer, bb As Integer, ba As Integer
+                        ReadUnpremultiplied(srcBuf, links, ri, gi, bi, ai, lr, lg, lb, la)
+                        ReadUnpremultiplied(srcBuf, rechts, ri, gi, bi, ai, rr2, rg, rb, ra)
+                        ReadUnpremultiplied(srcBuf, ob, ri, gi, bi, ai, tr, tg, tb, ta)
+                        ReadUnpremultiplied(srcBuf, un, ri, gi, bi, ai, br, bg, bb, ba)
+
+                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                            ClampToByte(cr * mitte - amount * (lr + rr2 + tr + br)),
+                            ClampToByte(cg * mitte - amount * (lg + rg + tg + bg)),
+                            ClampToByte(cb * mitte - amount * (lb + rb + tb + bb)), a)
+                    Next
+                End Sub)
+
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
             Return result
         End Function
 
@@ -6790,7 +7234,10 @@ Namespace Services
             ' Zentraler Schutz: Bearbeitung einer RAW-Quelle wirkt nur auf deren eingebettete
             ' JPEG-Vorschau (siehe OpenSourceStream/DecodeOriented) - ein Speichern-in-place würde
             ' hier fälschlich die RAW-Rohdaten JPEG-kodiert über die Original-RAW-Datei schreiben.
-            If RawPreviewService.IsSupportedRaw(sourcePath) AndAlso String.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase) Then
+            ' PSD/PSB sind NUR-LESEND (die Pipeline sieht nur das zusammengesetzte Gesamtbild,
+            ' Ebenen gingen beim Überschreiben verloren) - gleiches Verbot.
+            If (RawPreviewService.IsSupportedRaw(sourcePath) OrElse PsdPreviewService.IsSupportedPsd(sourcePath)) AndAlso
+               String.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase) Then
                 workingFull?.Dispose()
                 Return False
             End If
@@ -7820,6 +8267,67 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Farb-Rauschreduzierung (crs:ColorNoiseReduction): das Bild wird weichgezeichnet,
+        ''' danach bekommt jedes Pixel seine ORIGINAL-Helligkeit zurueck (Differenz der Rec.601-Luma
+        ''' auf alle Kanaele addiert). Ergebnis: Chroma aus dem Blur, Luminanz vom Original - Kanten
+        ''' und Details bleiben stehen, Farbflecken verschwinden. Chroma vertraegt deutlich mehr
+        ''' Glaettung als Helligkeit, daher ein groesseres Sigma als bei ApplyNoiseReduction.</summary>
+        Private Shared Function ApplyColorNoiseReduction(source As SKBitmap, amount As Single) As SKBitmap
+            amount = Clamp(amount, 0, 1)
+            ' Sigma waechst nur noch bis 2,5 statt 4,5 Pixel, und die Staerke blendet zusaetzlich
+            ' zwischen Original-Chroma und geglaetteter Chroma ueber.
+            ' Vorher steuerte NUR das Sigma - und weil schon rund 2 Pixel pixelweises Farbrauschen
+            ' vollstaendig ausloeschen, war der Regler ab etwa 30 wirkungslos: gemessen aenderten 50
+            ' und 100 dieselben 53 bzw. 54 % der Pixel bei maximal 7 bzw. 6 Tonwerten. Der halbe
+            ' Reglerweg tat also sichtbar nichts (gemeldet 2026-07-20 als "macht nix").
+            Dim sigma = 0.5F + amount * 2.0F
+            Dim blurred = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using filter = SKImageFilter.CreateBlur(sigma, sigma)
+                Using paint = New SKPaint With {.ImageFilter = filter}
+                    Using canvas = New SKCanvas(blurred)
+                        canvas.DrawBitmap(source, 0, 0, paint)
+                    End Using
+                End Using
+            End Using
+
+            Dim srcBuf As Byte() = Nothing
+            Dim srcStride As Integer = 0
+            Dim blurBuf As Byte() = Nothing
+            Dim blurStride As Integer = 0
+            If Not TryBorrowBgraBuffer(source, srcBuf, srcStride) OrElse
+               Not TryBorrowBgraBuffer(blurred, blurBuf, blurStride) Then
+                Return blurred
+            End If
+
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim dstBuf(srcBuf.Length - 1) As Byte
+            ForEachRow(source.Width, source.Height, Sub(y)
+                                                        Dim so = y * srcStride
+                                                        Dim bo = y * blurStride
+                                                        For x = 0 To source.Width - 1
+                                                            Dim si = so + x * 4
+                                                            Dim bi = bo + x * 4
+                                                            ' Rec.601-Luma in Ganzzahlarithmetik (x1024).
+                                                            Dim lumaSrc = (299 * CInt(srcBuf(si + 2)) + 587 * CInt(srcBuf(si + 1)) + 114 * CInt(srcBuf(si))) \ 1000
+                                                            Dim lumaBlur = (299 * CInt(blurBuf(bi + 2)) + 587 * CInt(blurBuf(bi + 1)) + 114 * CInt(blurBuf(bi))) \ 1000
+                                                            Dim delta = lumaSrc - lumaBlur
+                                                            ' Chroma aus dem Blur, Luminanz vom Original - und beides
+                                                            ' anteilig ueber das Original geblendet, damit der Regler
+                                                            ' ueber den ganzen Weg etwas tut.
+                                                            Dim nb0 = CInt(blurBuf(bi)) + delta
+                                                            Dim nb1 = CInt(blurBuf(bi + 1)) + delta
+                                                            Dim nb2 = CInt(blurBuf(bi + 2)) + delta
+                                                            dstBuf(si) = ClampToByte(CInt(srcBuf(si)) + (nb0 - CInt(srcBuf(si))) * amount)
+                                                            dstBuf(si + 1) = ClampToByte(CInt(srcBuf(si + 1)) + (nb1 - CInt(srcBuf(si + 1))) * amount)
+                                                            dstBuf(si + 2) = ClampToByte(CInt(srcBuf(si + 2)) + (nb2 - CInt(srcBuf(si + 2))) * amount)
+                                                            dstBuf(si + 3) = srcBuf(si + 3)
+                                                        Next
+                                                    End Sub)
+            blurred.Dispose()
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Return result
+        End Function
+
         Private Shared Function ApplyNoiseReduction(source As SKBitmap, amount As Single) As SKBitmap
             Dim sigma = 0.25F + Clamp(amount, 0, 1) * 2.2F
             Dim filter = SKImageFilter.CreateBlur(sigma, sigma)
@@ -7948,23 +8456,85 @@ Namespace Services
 
         ''' Gemeinsamer Unsharp-Mask-artiger Lokalkontrast-Kern für Clarity/Structure - Unterschied
         ''' zwischen beiden Reglern ist ausschließlich blurSigma (Frequenzband) und strengthMultiplier.
+        ''' <summary>Lokaler Kontrast (Unschaerfemaske) - Grundlage von Klarheit und Struktur.
+        '''
+        ''' Lief bis 2026-07-20 ueber GetPixel/SetPixel, also mit einem P/Invoke JE PIXEL. Gemessen
+        ''' kostete Klarheit dadurch 4,3 s bei 6,3 MP - waehrend die gesamte verschmolzene Farbkette
+        ''' 17 ms braucht. Jetzt ueber geliehene Puffer und ForEachRow, wie der Rest der Pipeline.
+        '''
+        ''' WICHTIG fuer die Bitgleichheit: GetPixel ENTpremultipliziert und SetPixel premultipliziert
+        ''' wieder (gemessen 2026-07-20: gespeichert (100,50,25,128) liefert GetPixel (199,100,50,128)).
+        ''' Ein naiver Umbau auf Rohbytes wuerde deshalb bei teiltransparenten Pixeln ANDERE Ergebnisse
+        ''' liefern. Das Verhalten ist unten exakt nachgebildet.</summary>
         Private Shared Function ApplyLocalContrast(source As SKBitmap, blurSigma As Single, amount As Single, strengthMultiplier As Single) As SKBitmap
             Using blurred = ApplyNoiseReduction(source, blurSigma / 8.0F)
                 Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-                For y As Integer = 0 To source.Height - 1
-                    For x As Integer = 0 To source.Width - 1
-                        Dim c = source.GetPixel(x, y)
-                        Dim b = blurred.GetPixel(x, y)
-                        ' Ohne die expliziten CInt-Weitungen würde "c.Red - b.Red" als Byte-Subtraktion
-                        ' ausgewertet - da Byte vorzeichenlos ist, wirft VB im Checked-Kontext eine
-                        ' OverflowException, sobald der weichgezeichnete Pixel heller ist als das
-                        ' Original (b.Red > c.Red), was in praktisch jedem Foto ständig vorkommt.
-                        Dim r = ClampToByte(CInt(c.Red) + (CInt(c.Red) - CInt(b.Red)) * amount * strengthMultiplier)
-                        Dim g = ClampToByte(CInt(c.Green) + (CInt(c.Green) - CInt(b.Green)) * amount * strengthMultiplier)
-                        Dim bl = ClampToByte(CInt(c.Blue) + (CInt(c.Blue) - CInt(b.Blue)) * amount * strengthMultiplier)
-                        result.SetPixel(x, y, New SKColor(r, g, bl, c.Alpha))
-                    Next
-                Next
+
+                Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing
+                Dim sStride, bStride, ri, gi, bi, ai As Integer
+                Dim bri, bgi, bbi, bai As Integer
+                If Not TryBorrowRgbaLikeBuffer(source, srcBuf, sStride, ri, gi, bi, ai) OrElse
+                   Not TryBorrowRgbaLikeBuffer(blurred, blurBuf, bStride, bri, bgi, bbi, bai) Then
+                    Return result
+                End If
+
+                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+                Dim faktor = amount * strengthMultiplier
+                Dim width = source.Width
+
+                ForEachRow(width, source.Height,
+                    Sub(y)
+                        Dim so = y * sStride
+                        Dim bo = y * bStride
+                        For x = 0 To width - 1
+                            Dim o = so + x * 4
+                            Dim p = bo + x * 4
+                            Dim a = srcBuf(o + ai)
+                            If a = 0 Then
+                                dstBuf(o) = 0 : dstBuf(o + 1) = 0 : dstBuf(o + 2) = 0 : dstBuf(o + 3) = 0
+                                Continue For
+                            End If
+
+                            ' Entpremultiplizieren wie GetPixel es tut - sonst weicht das Ergebnis
+                            ' bei teiltransparenten Pixeln vom bisherigen Verhalten ab.
+                            Dim cr As Integer, cg As Integer, cb As Integer
+                            Dim br As Integer, bg As Integer, bb As Integer
+                            If a = 255 Then
+                                cr = srcBuf(o + ri) : cg = srcBuf(o + gi) : cb = srcBuf(o + bi)
+                                br = blurBuf(p + bri) : bg = blurBuf(p + bgi) : bb = blurBuf(p + bbi)
+                            Else
+                                cr = Math.Min(255, srcBuf(o + ri) * 255 \ a)
+                                cg = Math.Min(255, srcBuf(o + gi) * 255 \ a)
+                                cb = Math.Min(255, srcBuf(o + bi) * 255 \ a)
+                                Dim ba = blurBuf(p + bai)
+                                If ba = 0 Then
+                                    br = 0 : bg = 0 : bb = 0
+                                Else
+                                    br = Math.Min(255, blurBuf(p + bri) * 255 \ ba)
+                                    bg = Math.Min(255, blurBuf(p + bgi) * 255 \ ba)
+                                    bb = Math.Min(255, blurBuf(p + bbi) * 255 \ ba)
+                                End If
+                            End If
+
+                            Dim nr = ClampToByte(cr + (cr - br) * faktor)
+                            Dim ng = ClampToByte(cg + (cg - bg) * faktor)
+                            Dim nb = ClampToByte(cb + (cb - bb) * faktor)
+
+                            If a <> 255 Then
+                                ' Zurueck nach premultipliziert, wie SetPixel es tut.
+                                nr = CByte(Math.Min(CInt(a), CInt(nr) * a \ 255))
+                                ng = CByte(Math.Min(CInt(a), CInt(ng) * a \ 255))
+                                nb = CByte(Math.Min(CInt(a), CInt(nb) * a \ 255))
+                            End If
+
+                            dstBuf(o + ri) = nr
+                            dstBuf(o + gi) = ng
+                            dstBuf(o + bi) = nb
+                            dstBuf(o + ai) = a
+                        Next
+                    End Sub)
+
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
                 Return result
             End Using
         End Function
@@ -7991,74 +8561,111 @@ Namespace Services
             Return ApplyLocalContrast(source, 3.6F, clamped, 2.4F)
         End Function
 
+        ''' <summary>Dunst. Lief bis 2026-07-20 ueber GetPixel/SetPixel (P/Invoke je Pixel, gemessen
+        ''' 4,3 s bei 6,3 MP); jetzt ueber geliehene Puffer. Die Alpha-Semantik von GetPixel/SetPixel
+        ''' ist ueber ReadUnpremultiplied/WritePremultiplied exakt nachgebildet.</summary>
         Private Shared Function ApplyHaze(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            For y As Integer = 0 To source.Height - 1
-                For x As Integer = 0 To source.Width - 1
-                    Dim c = source.GetPixel(x, y)
-                    If strength > 0 Then
-                        Dim s = strength * 0.45F
-                        result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + (255 - c.Red) * s),
-                                                          ClampToByte(c.Green + (255 - c.Green) * s),
-                                                          ClampToByte(c.Blue + (255 - c.Blue) * s),
-                                                          c.Alpha))
-                    Else
-                        Dim s = -strength
-                        Dim contrast = 1.0F + s * 0.55F
-                        result.SetPixel(x, y, New SKColor(ClampToByte((c.Red - 128) * contrast + 128 - s * 10),
-                                                          ClampToByte((c.Green - 128) * contrast + 128 - s * 10),
-                                                          ClampToByte((c.Blue - 128) * contrast + 128 - s * 10),
-                                                          c.Alpha))
-                    End If
-                Next
-            Next
+
+            Dim srcBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
+            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            Dim width = source.Width
+
+            ForEachRow(width, source.Height,
+                Sub(y)
+                    Dim rowOffset = y * stride
+                    For x = 0 To width - 1
+                        Dim o = rowOffset + x * 4
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                        Dim nr As Byte, ng As Byte, nb As Byte
+                        If strength > 0 Then
+                            Dim sv = strength * 0.45F
+                            nr = ClampToByte(cr + (255 - cr) * sv)
+                            ng = ClampToByte(cg + (255 - cg) * sv)
+                            nb = ClampToByte(cb + (255 - cb) * sv)
+                        Else
+                            Dim sv = -strength
+                            Dim contrast = 1.0F + sv * 0.55F
+                            nr = ClampToByte((cr - 128) * contrast + 128 - sv * 10)
+                            ng = ClampToByte((cg - 128) * contrast + 128 - sv * 10)
+                            nb = ClampToByte((cb - 128) * contrast + 128 - sv * 10)
+                        End If
+                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai, nr, ng, nb, a)
+                    Next
+                End Sub)
+
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
             Return result
         End Function
 
+        ''' <summary>Leuchten. Wie ApplyHaze von GetPixel/SetPixel auf Puffer umgestellt
+        ''' (2026-07-20, gemessen 4,5 s bei 6,3 MP).</summary>
         Private Shared Function ApplyImageGlow(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
             Using blurred = ApplyNoiseReduction(source, 0.8F)
                 Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-                For y As Integer = 0 To source.Height - 1
-                    For x As Integer = 0 To source.Width - 1
-                        Dim c = source.GetPixel(x, y)
-                        Dim b = blurred.GetPixel(x, y)
-                        If strength > 0 Then
-                            Dim s = strength * 0.55F
-                            result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + b.Red * s),
-                                                              ClampToByte(c.Green + b.Green * s),
-                                                              ClampToByte(c.Blue + b.Blue * s),
-                                                              c.Alpha))
-                        Else
-                            Dim s = -strength * 0.55F
-                            result.SetPixel(x, y, New SKColor(ClampToByte(c.Red - b.Red * s),
-                                                              ClampToByte(c.Green - b.Green * s),
-                                                              ClampToByte(c.Blue - b.Blue * s),
-                                                              c.Alpha))
-                        End If
-                    Next
-                Next
+
+                Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing
+                Dim sStride, bStride, ri, gi, bi, ai As Integer
+                Dim bri, bgi, bbi, bai As Integer
+                If Not TryBorrowRgbaLikeBuffer(source, srcBuf, sStride, ri, gi, bi, ai) OrElse
+                   Not TryBorrowRgbaLikeBuffer(blurred, blurBuf, bStride, bri, bgi, bbi, bai) Then
+                    Return result
+                End If
+                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+                Dim width = source.Width
+                Dim positiv = strength > 0
+                Dim sv = If(positiv, strength * 0.55F, -strength * 0.55F)
+
+                ForEachRow(width, source.Height,
+                    Sub(y)
+                        Dim so = y * sStride
+                        Dim bo = y * bStride
+                        For x = 0 To width - 1
+                            Dim o = so + x * 4
+                            Dim p = bo + x * 4
+                            Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                            Dim br As Integer, bg As Integer, bb As Integer, ba As Integer
+                            ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                            ReadUnpremultiplied(blurBuf, p, bri, bgi, bbi, bai, br, bg, bb, ba)
+                            Dim nr As Byte, ng As Byte, nb As Byte
+                            If positiv Then
+                                nr = ClampToByte(cr + br * sv) : ng = ClampToByte(cg + bg * sv) : nb = ClampToByte(cb + bb * sv)
+                            Else
+                                nr = ClampToByte(cr - br * sv) : ng = ClampToByte(cg - bg * sv) : nb = ClampToByte(cb - bb * sv)
+                            End If
+                            WritePremultiplied(dstBuf, o, ri, gi, bi, ai, nr, ng, nb, a)
+                        Next
+                    End Sub)
+
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
                 Return result
             End Using
         End Function
 
+        ''' <summary>Staub/Kratzer, Richtung wie bei den Nachbarn im Panel (positiv = den benannten
+        ''' Effekt HINZUFUEGEN): positiv streut Staubkoerner und wenige fast senkrechte Kratzer wie
+        ''' auf gescanntem Film, negativ ENTFERNT Stoerungen per Medianfilter (vorher war es genau
+        ''' umgekehrt und die zufaelligen Querstriche sahen nach nichts aus - Nutzerbefund 2026-07-19).</summary>
         Private Shared Function ApplyDustScratches(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
 
-            If strength > 0 Then
-                ' Der Median-Radius ist zwangsläufig ganzzahlig. Durch den früheren 0,75-Faktor erreichte er
-                ' über den ganzen Reglerweg nur die Stufen 1 und 2 und stand ab etwa 35 fest - die Werte 50
-                ' und 100 lieferten pixelgleiche Bilder, die obere Reglerhälfte tat also nichts. Jetzt läuft
-                ' der Radius über seinen vollen Bereich, und die Zwischenstufen kommen aus der Deckkraft,
-                ' mit der das Medianbild über das Original gelegt wird.
-                Using median = ApplyMedianBlur(source, strength)
+            If strength < 0 Then
+                ' ENTFERNEN. Der Median-Radius ist zwangslaeufig ganzzahlig - er laeuft ueber den
+                ' vollen Reglerbereich, die Zwischenstufen kommen aus der Deckkraft, mit der das
+                ' Medianbild ueber das Original gelegt wird (siehe Regler-Bereichs-Diagnose).
+                Dim removeStrength = -strength
+                Using median = ApplyMedianBlur(source, removeStrength)
                     Dim blended = CloneBitmap(source)
                     Using canvas = New SKCanvas(blended)
-                        Using paint = New SKPaint With {.Color = New SKColor(255, 255, 255, ClampToByte(255.0F * strength))}
+                        Using paint = New SKPaint With {.Color = New SKColor(255, 255, 255, ClampToByte(255.0F * removeStrength))}
                             canvas.DrawBitmap(median, 0, 0, paint)
                         End Using
                     End Using
@@ -8066,89 +8673,50 @@ Namespace Services
                 End Using
             End If
 
+            ' HINZUFUEGEN: ueberwiegend helle Staubkoerner (Film: Staub streut Licht) plus wenige
+            ' lange, fast senkrechte, leicht gewellte Kratzer - senkrecht, weil echte Kratzer vom
+            ' Filmtransport in Laufrichtung entstehen. Fester Seed: gleiches Bild -> gleiches Muster.
             Dim result = CloneBitmap(source)
             Dim random = New Random(source.Width * 997 Xor source.Height * 331)
-            Dim count = CInt(Math.Round(source.Width * source.Height / 9000.0 * -strength))
             Using canvas = New SKCanvas(result)
-                For i = 0 To count - 1
-                    Dim x = random.Next(0, source.Width)
-                    Dim y = random.Next(0, source.Height)
-                    Dim len = random.Next(2, Math.Max(3, CInt(12 + 30 * -strength)))
-                    Dim color = If(random.NextDouble() < 0.5, SKColors.White, SKColors.Black)
-                    Using paint = New SKPaint With {.Color = New SKColor(color.Red, color.Green, color.Blue, CByte(80 + 100 * -strength)), .StrokeWidth = Math.Max(1.0F, 1.5F * -strength), .IsAntialias = True}
-                        canvas.DrawLine(x, y, Math.Min(source.Width - 1, x + len), Math.Min(source.Height - 1, y + random.Next(-2, 3)), paint)
+                Dim speckCount = CInt(Math.Round(source.Width * source.Height / 4500.0 * strength))
+                For i = 0 To speckCount - 1
+                    Dim bright = random.NextDouble() < 0.72
+                    Dim tone = If(bright, CByte(210 + random.Next(0, 46)), CByte(random.Next(0, 40)))
+                    Dim alpha = CByte(60 + random.Next(0, CInt(70 + 90 * strength)))
+                    Using paint = New SKPaint With {.Color = New SKColor(tone, tone, tone, alpha), .IsAntialias = True}
+                        canvas.DrawCircle(random.Next(0, source.Width), random.Next(0, source.Height),
+                                          0.5F + CSng(random.NextDouble()) * 1.1F, paint)
+                    End Using
+                Next
+
+                Dim scratchCount = Math.Max(1, CInt(Math.Round(9.0 * strength)))
+                For i = 0 To scratchCount - 1
+                    Dim x = CSng(random.NextDouble() * source.Width)
+                    Dim y = CSng(random.NextDouble() * source.Height * 0.6)
+                    Dim length = CSng(source.Height * (0.15 + random.NextDouble() * 0.35))
+                    Dim bright = random.NextDouble() < 0.65
+                    Dim tone = If(bright, CByte(225), CByte(25))
+                    Dim alpha = CByte(35 + random.Next(0, CInt(30 + 60 * strength)))
+                    Using path = New SKPath()
+                        path.MoveTo(x, y)
+                        Dim segments = Math.Max(3, CInt(length / 14.0F))
+                        For seg = 1 To segments
+                            ' Leichte seitliche Wanderung - ein schnurgerader Strich wirkt kuenstlich.
+                            x += CSng((random.NextDouble() - 0.5) * 2.4)
+                            path.LineTo(x, y + length * seg / segments)
+                        Next
+                        Using paint = New SKPaint With {.Color = New SKColor(tone, tone, tone, alpha),
+                                                        .Style = SKPaintStyle.Stroke, .StrokeWidth = 1.0F, .IsAntialias = True}
+                            canvas.DrawPath(path, paint)
+                        End Using
                     End Using
                 Next
             End Using
             Return result
         End Function
 
-        ''' <summary>Rechnet ein gescanntes Filmnegativ in ein Positiv um. Jeder Kanal wird zwischen der
-        ''' Filmbasis (dem hellsten Wert des Scans = unbelichteter Träger = Schatten der Szene) und dem
-        ''' dichtesten Wert (= hellstes Motivdetail) normiert und umgekehrt. Weil jeder Kanal auf seine
-        ''' EIGENE Basis normiert wird, fällt die orange Maske des Farbnegativfilms von selbst heraus -
-        ''' eine bloße 255-x-Umkehr würde sie als kräftigen Blaustich stehen lassen.</summary>
-        Private Shared Function ApplyFilmNegative(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            If Not adj.NegativeEnabled Then Return source
 
-            Dim stats = ResolveFilmNegativeStats(source, adj)
-            Dim gamma = CSng(Math.Pow(2.0, adj.NegativeGamma / 100.0))
-            Dim redLut = BuildFilmNegativeLut(stats.BaseColor.Red, stats.DensityColor.Red, gamma)
-            Dim greenLut = BuildFilmNegativeLut(stats.BaseColor.Green, stats.DensityColor.Green, gamma)
-            Dim blueLut = BuildFilmNegativeLut(stats.BaseColor.Blue, stats.DensityColor.Blue, gamma)
-
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Dim tableFilter = SKColorFilter.CreateTable(IdentityByteTable, redLut, greenLut, blueLut)
-            Dim filter = tableFilter
-            Dim grayFilter As SKColorFilter = Nothing
-            If adj.NegativeMonochrome Then
-                ' S/W-Negativ: erst wie beim Farbfilm kanalweise auf die eigene Basis normieren (das
-                ' nimmt auch dem S/W-Träger seinen leichten Eigenfarbton), dann entsättigen. Nur so ist
-                ' das Ergebnis wirklich neutral - eine gemeinsame Graubasis für alle Kanäle würde einen
-                ' farbigen Träger als Farbstich stehen lassen.
-                grayFilter = SKColorFilter.CreateColorMatrix(New Single() {
-                    0.299F, 0.587F, 0.114F, 0, 0,
-                    0.299F, 0.587F, 0.114F, 0, 0,
-                    0.299F, 0.587F, 0.114F, 0, 0,
-                    0, 0, 0, 1, 0
-                })
-                filter = SKColorFilter.CreateCompose(grayFilter, tableFilter)
-            End If
-
-            Using paint = New SKPaint With {.ColorFilter = filter}
-                Using canvas = New SKCanvas(result)
-                    canvas.DrawBitmap(source, 0, 0, paint)
-                End Using
-            End Using
-
-            If Not Object.ReferenceEquals(filter, tableFilter) Then filter.Dispose()
-            grayFilter?.Dispose()
-            tableFilter.Dispose()
-            Return result
-        End Function
-
-        ''' <summary>Tonwerttabelle eines Kanals: <paramref name="baseValue"/> (Filmbasis) wird zu Schwarz,
-        ''' <paramref name="densityValue"/> (der dichteste, also dunkelste Wert) zu Weiß. Dazwischen wird in
-        ''' Dichte gerechnet, nicht linear: die Silberschicht dämpft das Licht multiplikativ, der Logarithmus
-        ''' ist also die natürliche Achse des Films. Eine lineare Umkehr staucht dagegen die Lichter und
-        ''' erzeugt den typischen flauen, milchigen Scan-Look.</summary>
-        Private Shared Function BuildFilmNegativeLut(baseValue As Byte, densityValue As Byte, gamma As Single) As Byte()
-            ' Basis und Dichtepunkt dürfen weder null noch identisch sein, sonst hat die Kurve keine
-            ' Spanne (und der Logarithmus keinen definierten Wert).
-            Dim baseLevel = Math.Max(2.0, CDbl(baseValue))
-            Dim densityLevel = Math.Min(Math.Max(1.0, CDbl(densityValue)), baseLevel - 1.0)
-            Dim span = Math.Log(baseLevel / densityLevel)
-
-            Dim lut = New Byte(255) {}
-            Dim invGamma = 1.0 / Math.Max(0.05, CDbl(gamma))
-            For i As Integer = 0 To 255
-                Dim level = Math.Max(1.0, CDbl(i))
-                ' 0 an der Filmbasis (dort war kein Licht -> Schwarz), 1 am dichtesten Punkt (-> Weiß).
-                Dim t = Clamp(CSng(Math.Log(baseLevel / level) / span), 0.0F, 1.0F)
-                lut(i) = ClampToByte(255.0 * Math.Pow(t, invGamma))
-            Next
-            Return lut
-        End Function
 
         Private Shared Function ResolveFilmNegativeStats(source As SKBitmap, adj As ImageAdjustments) As (BaseColor As SKColor, DensityColor As SKColor)
             Dim hasBase = Not String.IsNullOrWhiteSpace(adj.NegativeBaseColor)
@@ -8224,78 +8792,6 @@ Namespace Services
             Return 255
         End Function
 
-        Private Shared Function ApplyCurve(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            If ImageAdjustments.IsIdentityCurve(adj.CurveRgbPoints) AndAlso ImageAdjustments.IsIdentityCurve(adj.CurveRedPoints) AndAlso
-               ImageAdjustments.IsIdentityCurve(adj.CurveGreenPoints) AndAlso ImageAdjustments.IsIdentityCurve(adj.CurveBluePoints) AndAlso
-               ImageAdjustments.IsIdentityCurve(adj.CurveLuminancePoints) Then
-                Return source
-            End If
-
-            Dim rgbLut = BuildCurveLut(adj.CurveRgbPoints)
-            Dim redLut = BuildCurveLut(adj.CurveRedPoints)
-            Dim greenLut = BuildCurveLut(adj.CurveGreenPoints)
-            Dim blueLut = BuildCurveLut(adj.CurveBluePoints)
-
-            Dim finalR = New Byte(255) {}
-            Dim finalG = New Byte(255) {}
-            Dim finalB = New Byte(255) {}
-            For i As Integer = 0 To 255
-                finalR(i) = redLut(rgbLut(i))
-                finalG(i) = greenLut(rgbLut(i))
-                finalB(i) = blueLut(rgbLut(i))
-            Next
-
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using filter = SKColorFilter.CreateTable(IdentityByteTable, finalR, finalG, finalB)
-                Using paint = New SKPaint With {.ColorFilter = filter}
-                    Using canvas = New SKCanvas(result)
-                        canvas.DrawBitmap(source, 0, 0, paint)
-                    End Using
-                End Using
-            End Using
-
-            If Not ImageAdjustments.IsIdentityCurve(adj.CurveLuminancePoints) Then
-                Dim lumLut = BuildCurveLut(adj.CurveLuminancePoints)
-                Dim withLuminance = New SKBitmap(result.Width, result.Height, result.ColorType, result.AlphaType)
-
-                Dim srcBuf As Byte() = Nothing
-                Dim stride As Integer = 0
-                If TryBorrowBgraBuffer(result, srcBuf, stride) Then
-                    Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                    ForEachRow(result.Width, result.Height, Sub(y)
-                                                                Dim rowOffset = y * stride
-                                                                For x As Integer = 0 To result.Width - 1
-                                                                    Dim o = rowOffset + x * 4
-                                                                    Dim h As Double
-                                                                    Dim s As Double
-                                                                    Dim l As Double
-                                                                    RgbToHsl(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), h, s, l)
-                                                                    Dim newL = lumLut(ClampToByte(l * 255.0)) / 255.0
-                                                                    Dim nc = HslToRgb(h, s, newL, srcBuf(o + 3))
-                                                                    dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
-                                                                Next
-                                                            End Sub)
-                    CommitBgraBuffer(withLuminance, dstBuf)
-                Else
-                    For y As Integer = 0 To result.Height - 1
-                        For x As Integer = 0 To result.Width - 1
-                            Dim c = result.GetPixel(x, y)
-                            Dim h As Double
-                            Dim s As Double
-                            Dim l As Double
-                            RgbToHsl(c.Red, c.Green, c.Blue, h, s, l)
-                            Dim newL = lumLut(ClampToByte(l * 255.0)) / 255.0
-                            withLuminance.SetPixel(x, y, HslToRgb(h, s, newL, c.Alpha))
-                        Next
-                    Next
-                End If
-
-                result.Dispose()
-                result = withLuminance
-            End If
-
-            Return result
-        End Function
 
         ' Parst "x1,y1;x2,y2;..." zu sortierten, X-eindeutigen Stützpunkten (0..255) für die Tonwertkurve.
         Private Shared Function ParseCurvePoints(pointsCsv As String) As List(Of (X As Double, Y As Double))
@@ -8329,22 +8825,6 @@ Namespace Services
             Return result
         End Function
 
-        ' Baut per Catmull-Rom-Spline eine 256-Byte-LUT aus den Kurvenpunkten.
-        Private Shared Function BuildCurveLut(pointsCsv As String) As Byte()
-            Dim lut = New Byte(255) {}
-            If ImageAdjustments.IsIdentityCurve(pointsCsv) Then
-                For i As Integer = 0 To 255
-                    lut(i) = CByte(i)
-                Next
-                Return lut
-            End If
-
-            Dim points = ParseCurvePoints(pointsCsv)
-            For i As Integer = 0 To 255
-                lut(i) = ClampToByte(EvaluateCurveSpline(points, i))
-            Next
-            Return lut
-        End Function
 
         Private Shared Function EvaluateCurveSpline(points As List(Of (X As Double, Y As Double)), x As Double) As Double
             Dim n = points.Count
@@ -8410,154 +8890,110 @@ Namespace Services
             End Try
         End Function
 
-        Private Shared Function ProcessHslPixel(r As Byte, g As Byte, b As Byte, a As Byte, adj As ImageAdjustments) As SKColor
-            Dim h As Double
-            Dim s As Double
-            Dim l As Double
-            RgbToHsl(r, g, b, h, s, l)
-            Dim hueShift As Single = 0
-            Dim satShift As Single = 0
-            Dim lumShift As Single = 0
-            GetHslBandAdjustments(h, adj, hueShift, satShift, lumShift)
-            h = (h + hueShift + 360.0) Mod 360.0
-            s = Math.Max(0.0, Math.Min(1.0, s * (1.0 + satShift / 100.0)))
-            ' Luminanz multiplikativ wie die Sättigung: -100 zieht das Farbband nach Schwarz, +100
-            ' verdoppelt seine Helligkeit. Graue Pixel haben keinen Farbton und bleiben unberührt.
-            l = Math.Max(0.0, Math.Min(1.0, l * (1.0 + lumShift / 100.0)))
-            Return HslToRgb(h, s, l, a)
-        End Function
 
-        Private Shared Function ApplyHsl(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            If Not adj.HasHslChanges() Then Return source
 
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+        ''' Obergrenzen der acht Farbbänder. Grenze k trennt Band k von Band k+1; Rot läuft über 345
+        ''' zurück auf 15 (deshalb wird ein Farbton ab 345 unten auf negativ verschoben).
+        Private Shared ReadOnly HslBandBounds As Double() = {15.0, 45.0, 75.0, 165.0, 195.0, 255.0, 285.0, 345.0}
 
-            Dim srcBuf As Byte() = Nothing
-            Dim stride As Integer = 0
-            If TryBorrowBgraBuffer(source, srcBuf, stride) Then
-                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                ForEachRow(source.Width, source.Height, Sub(y)
-                                                            Dim rowOffset = y * stride
-                                                            For x As Integer = 0 To source.Width - 1
-                                                                Dim o = rowOffset + x * 4
-                                                                Dim nc = ProcessHslPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), adj)
-                                                                dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
-                                                            Next
-                                                        End Sub)
-                CommitBgraBuffer(result, dstBuf)
-                Return result
-            End If
+        ''' <summary>Übergangsbreite an einer Bandgrenze, in Grad Farbton. Auf halber Strecke (also
+        ''' genau auf der Grenze) mischen beide Bänder je zur Hälfte.
+        ''' Die SCHMALSTEN Bänder sind 30 Grad breit (Orange, Gelb, Aqua, Lila) - mehr als 15 wäre
+        ''' hier also falsch, weil sich die Übergänge zweier Grenzen sonst überlappen und ein
+        ''' schmales Band nie mehr rein wirkt. 10 lässt jedem Band einen ungemischten Kern.</summary>
+        Private Const HslBandBlendDegrees As Double = 10.0
 
-            For y As Integer = 0 To source.Height - 1
-                For x As Integer = 0 To source.Width - 1
-                    Dim c = source.GetPixel(x, y)
-                    result.SetPixel(x, y, ProcessHslPixel(c.Red, c.Green, c.Blue, c.Alpha, adj))
-                Next
-            Next
-            Return result
-        End Function
-
-        Private Shared Sub GetHslBandAdjustments(hue As Double, adj As ImageAdjustments, ByRef hueShift As Single, ByRef satShift As Single, ByRef lumShift As Single)
-            Select Case hue
-                Case < 15, >= 345
-                    hueShift = adj.RedHue : satShift = adj.RedSaturation : lumShift = adj.RedLuminance
-                Case < 45
-                    hueShift = adj.OrangeHue : satShift = adj.OrangeSaturation : lumShift = adj.OrangeLuminance
-                Case < 75
-                    hueShift = adj.YellowHue : satShift = adj.YellowSaturation : lumShift = adj.YellowLuminance
-                Case < 165
-                    hueShift = adj.GreenHue : satShift = adj.GreenSaturation : lumShift = adj.GreenLuminance
-                Case < 195
-                    hueShift = adj.AquaHue : satShift = adj.AquaSaturation : lumShift = adj.AquaLuminance
-                Case < 255
-                    hueShift = adj.BlueHue : satShift = adj.BlueSaturation : lumShift = adj.BlueLuminance
-                Case < 285
-                    hueShift = adj.PurpleHue : satShift = adj.PurpleSaturation : lumShift = adj.PurpleLuminance
-                Case Else
-                    hueShift = adj.MagentaHue : satShift = adj.MagentaSaturation : lumShift = adj.MagentaLuminance
+        Private Shared Sub GetHslBandValues(index As Integer, adj As ImageAdjustments,
+                                            ByRef hueShift As Single, ByRef satShift As Single, ByRef lumShift As Single)
+            Select Case index
+                Case 0 : hueShift = adj.RedHue : satShift = adj.RedSaturation : lumShift = adj.RedLuminance
+                Case 1 : hueShift = adj.OrangeHue : satShift = adj.OrangeSaturation : lumShift = adj.OrangeLuminance
+                Case 2 : hueShift = adj.YellowHue : satShift = adj.YellowSaturation : lumShift = adj.YellowLuminance
+                Case 3 : hueShift = adj.GreenHue : satShift = adj.GreenSaturation : lumShift = adj.GreenLuminance
+                Case 4 : hueShift = adj.AquaHue : satShift = adj.AquaSaturation : lumShift = adj.AquaLuminance
+                Case 5 : hueShift = adj.BlueHue : satShift = adj.BlueSaturation : lumShift = adj.BlueLuminance
+                Case 6 : hueShift = adj.PurpleHue : satShift = adj.PurpleSaturation : lumShift = adj.PurpleLuminance
+                Case Else : hueShift = adj.MagentaHue : satShift = adj.MagentaSaturation : lumShift = adj.MagentaLuminance
             End Select
         End Sub
 
-        ''' Färbt Schatten und Lichter getrennt ein (Lightroom-Split-Toning-Konzept): Balance verschiebt
-        ''' den Umschlagpunkt zwischen "gilt als Schatten" und "gilt als Licht" auf der Luminanzachse,
-        ''' die Sättigungsregler steuern zugleich die Deckkraft der jeweiligen Einfärbung.
-        Private Shared Function ProcessSplitToningPixel(r As Byte, g As Byte, b As Byte, a As Byte, adj As ImageAdjustments,
-                                                         hasShadow As Boolean, hasHighlight As Boolean, pivot As Double) As SKColor
-            Dim h As Double
-            Dim s As Double
-            Dim l As Double
-            RgbToHsl(r, g, b, h, s, l)
+        ''' <summary>Die Regler des Farbbands, in dem der Farbton liegt - an den Bandgrenzen WEICH in
+        ''' das Nachbarband übergeblendet.
+        '''
+        ''' Vorher wählte diese Funktion hart per Select Case. Das machte das Ergebnis genau auf einer
+        ''' Grenze unstetig: gemessen 2026-07-20 ergaben (255,191,0) und (255,192,0) - ein Tonwert
+        ''' Unterschied im Grünkanal, Farbton 44,94 gegen 45,18 - einen Sprung von 153 Tonwerten,
+        ''' sobald die Nachbarbänder verschieden eingestellt waren. Im Bild war das eine sichtbare
+        ''' harte Kante quer durch jeden weichen Farbverlauf, der eine Bandgrenze kreuzt (Himmel,
+        ''' Hauttöne). Aufgefallen ist es, weil derselbe Farbton in Single und Double auf verschiedene
+        ''' Seiten der Grenze fiel - das war aber nur der Bote, nicht die Ursache.
+        '''
+        ''' Auf der Grenze selbst mischen beide Bänder je zur Hälfte, der Verlauf dorthin ist
+        ''' smoothstep-geglättet (Ableitung an beiden Enden null, sonst wäre die Kante nur verschoben
+        ''' statt beseitigt).</summary>
+        Private Shared Sub GetHslBandAdjustments(hue As Double, adj As ImageAdjustments, ByRef hueShift As Single, ByRef satShift As Single, ByRef lumShift As Single)
+            Dim h = ((hue Mod 360.0) + 360.0) Mod 360.0
 
-            Dim rr As Double = r
-            Dim gg As Double = g
-            Dim bb As Double = b
-
-            If hasShadow Then
-                Dim weight = Math.Max(0.0, Math.Min(1.0, (pivot - l) / pivot))
-                If weight > 0 Then
-                    Dim tint = HslToRgb(adj.SplitToningShadowHue, adj.SplitToningShadowSaturation / 100.0, l, 255)
-                    Dim amount = weight * (adj.SplitToningShadowSaturation / 100.0)
-                    rr += (tint.Red - rr) * amount
-                    gg += (tint.Green - gg) * amount
-                    bb += (tint.Blue - bb) * amount
+            Dim index = 0
+            For k = 0 To 7
+                If h < HslBandBounds(k) Then
+                    index = k
+                    Exit For
                 End If
-            End If
-            If hasHighlight Then
-                Dim weight = Math.Max(0.0, Math.Min(1.0, (l - pivot) / (1.0 - pivot)))
-                If weight > 0 Then
-                    Dim tint = HslToRgb(adj.SplitToningHighlightHue, adj.SplitToningHighlightSaturation / 100.0, l, 255)
-                    Dim amount = weight * (adj.SplitToningHighlightSaturation / 100.0)
-                    rr += (tint.Red - rr) * amount
-                    gg += (tint.Green - gg) * amount
-                    bb += (tint.Blue - bb) * amount
-                End If
-            End If
-
-            Return New SKColor(ClampToByte(rr), ClampToByte(gg), ClampToByte(bb), a)
-        End Function
-
-        Private Shared Function ApplySplitToning(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            Dim hasShadow = adj.SplitToningShadowSaturation <> 0
-            Dim hasHighlight = adj.SplitToningHighlightSaturation <> 0
-            If Not hasShadow AndAlso Not hasHighlight Then Return source
-
-            Dim balance = Clamp(adj.SplitToningBalance, -100, 100) / 100.0
-            Dim pivot = Math.Max(0.1, Math.Min(0.9, 0.5 - balance * 0.4))
-
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-
-            Dim srcBuf As Byte() = Nothing
-            Dim stride As Integer = 0
-            If TryBorrowBgraBuffer(source, srcBuf, stride) Then
-                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                ForEachRow(source.Width, source.Height, Sub(y)
-                                                            Dim rowOffset = y * stride
-                                                            For x As Integer = 0 To source.Width - 1
-                                                                Dim o = rowOffset + x * 4
-                                                                Dim nc = ProcessSplitToningPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), adj, hasShadow, hasHighlight, pivot)
-                                                                dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
-                                                            Next
-                                                        End Sub)
-                CommitBgraBuffer(result, dstBuf)
-                Return result
-            End If
-
-            For y As Integer = 0 To source.Height - 1
-                For x As Integer = 0 To source.Width - 1
-                    Dim c = source.GetPixel(x, y)
-                    result.SetPixel(x, y, ProcessSplitToningPixel(c.Red, c.Green, c.Blue, c.Alpha, adj, hasShadow, hasHighlight, pivot))
-                Next
+                If k = 7 Then index = 0        ' ab 345 Grad wieder Rot
             Next
-            Return result
-        End Function
 
-        Private Shared Function ApplyFilterPreset(source As SKBitmap, preset As String, strength As Single) As SKBitmap
-            If String.IsNullOrWhiteSpace(preset) OrElse String.Equals(preset, "Keine", StringComparison.OrdinalIgnoreCase) Then
-                Return source
+            ' Untere/obere Grenze des getroffenen Bands. Rot ist der Sonderfall: es läuft über den
+            ' Nullpunkt, deshalb wird der Farbton dort auf [-15, 15) gelegt.
+            Dim lower, upper As Double
+            If index = 0 Then
+                If h >= HslBandBounds(7) Then h -= 360.0
+                lower = HslBandBounds(7) - 360.0
+                upper = HslBandBounds(0)
+            Else
+                lower = HslBandBounds(index - 1)
+                upper = HslBandBounds(index)
             End If
-            strength = Clamp(strength, 0, 1)
-            If strength <= 0 Then Return source
 
+            GetHslBandValues(index, adj, hueShift, satShift, lumShift)
+
+            ' Nur in Grenznähe wird gemischt - im Kern des Bands bleibt es exakt beim eigenen Regler.
+            Dim neighbour As Integer
+            Dim toEdge As Double
+            If h - lower < HslBandBlendDegrees Then
+                neighbour = (index + 7) Mod 8
+                toEdge = h - lower
+            ElseIf upper - h < HslBandBlendDegrees Then
+                neighbour = (index + 1) Mod 8
+                toEdge = upper - h
+            Else
+                Return
+            End If
+
+            ' 0 am Rand -> t=0,5 (halbe/halbe), volle Übergangsbreite -> t=1 (reines eigenes Band).
+            Dim t = 0.5 + 0.5 * (toEdge / HslBandBlendDegrees)
+            Dim eigen = CSng(t * t * (3.0 - 2.0 * t))
+
+            Dim nh, ns, nl As Single
+            GetHslBandValues(neighbour, adj, nh, ns, nl)
+            hueShift = nh + (hueShift - nh) * eigen
+            satShift = ns + (satShift - ns) * eigen
+            lumShift = nl + (lumShift - nl) * eigen
+        End Sub
+
+
+
+
+        ''' <summary>Die Farbmatrix eines Presets - einzige Quelle für ApplyFilterPreset UND die
+        ''' verschmolzene Punktoperationskette. Nothing heißt "keine Matrix": unbekanntes Preset oder
+        ''' "weich" (das ist ein Weichzeichner, kein Farbfilter).
+        ''' Skia liest die 5. Matrixspalte (Offset) in der Skala 0..1, NICHT 0..255 - gemessen
+        ''' 2026-07-20: Offset 0.1 auf Grau 100 ergibt 126, also +25.5 Tonwerte. Die Offsets unten
+        ''' sind aber als TONWERTE gemeint. Ohne die Division waren fuenf Presets unbrauchbar:
+        ''' "Fade"/"Vintage" lieferten reines Weiss, "Kontrast" reines Schwarz, "Warm"/"Kuehl"
+        ''' knallorange bzw. knallblau. Die Zahlen bleiben in Tonwerten lesbar, geteilt wird hier.
+        ''' </summary>
+        Friend Shared Function BuildFilterPresetMatrix(preset As String) As Single()
             Dim matrix As Single() = Nothing
             Select Case preset.Trim().ToLowerInvariant()
                 Case "s/w", "schwarzweiss", "schwarzweiß"
@@ -8568,31 +9004,35 @@ Namespace Services
                         0, 0, 0, 1, 0
                     }
                 Case "warm"
+                    ' Werte 2026-07-20 angezogen: bei 50 % Standardstaerke war der Look zuvor
+                    ' praktisch unsichtbar (Kanalshift 12) - siehe Kommentar an DefaultFilterStrength.
                     matrix = New Single() {
-                        1.04F, 0, 0, 0, 2,
-                        0, 1.01F, 0, 0, 0,
-                        0, 0, 0.97F, 0, -2,
+                        1.12F, 0.02F, 0, 0, 8.0F / 255.0F,
+                        0, 1.03F, 0, 0, 2.0F / 255.0F,
+                        0, 0, 0.88F, 0, -10.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "kühl", "kuehl"
                     matrix = New Single() {
-                        0.92F, 0, 0, 0, -4,
+                        0.92F, 0, 0, 0, -4.0F / 255.0F,
                         0, 1.01F, 0, 0, 0,
-                        0, 0, 1.1F, 0, 8,
+                        0, 0, 1.1F, 0, 8.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "fade"
+                    ' Werte 2026-07-20 angezogen (vorher Kanalshift 10, unsichtbar): ein "Fade"
+                    ' lebt vom angehobenen Schwarzpunkt - Koeffizienten runter, Offset deutlich rauf.
                     matrix = New Single() {
-                        0.96F, 0.02F, 0.02F, 0, 8,
-                        0.02F, 0.96F, 0.02F, 0, 8,
-                        0.02F, 0.02F, 0.96F, 0, 8,
+                        0.80F, 0.04F, 0.04F, 0, 30.0F / 255.0F,
+                        0.04F, 0.80F, 0.04F, 0, 30.0F / 255.0F,
+                        0.04F, 0.04F, 0.82F, 0, 34.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "kontrast"
                     matrix = New Single() {
-                        1.16F, 0, 0, 0, -18,
-                        0, 1.16F, 0, 0, -18,
-                        0, 0, 1.16F, 0, -18,
+                        1.16F, 0, 0, 0, -18.0F / 255.0F,
+                        0, 1.16F, 0, 0, -18.0F / 255.0F,
+                        0, 0, 1.16F, 0, -18.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "sepia"
@@ -8603,37 +9043,40 @@ Namespace Services
                         0, 0, 0, 1, 0
                     }
                 Case "matt"
+                    ' Werte 2026-07-20 angezogen (vorher Kanalshift 15). Matt = flacher Kontrast mit
+                    ' leicht warmem Grundton, deutlicher abgesetzt von "Fade" (neutral).
                     matrix = New Single() {
-                        0.92F, 0.03F, 0.02F, 0, 14,
-                        0.02F, 0.92F, 0.02F, 0, 14,
-                        0.02F, 0.03F, 0.92F, 0, 14,
+                        0.84F, 0.06F, 0.04F, 0, 26.0F / 255.0F,
+                        0.04F, 0.84F, 0.04F, 0, 24.0F / 255.0F,
+                        0.04F, 0.06F, 0.80F, 0, 20.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "cross"
+                    ' Werte 2026-07-20 angezogen (vorher Kanalshift 15). Kreuzentwicklung lebt von
+                    ' GEGENLAEUFIGEN Kanaelen: Lichter ins Gruengelbe, Schatten ins Blaue.
                     matrix = New Single() {
-                        1.08F, 0, 0, 0, -4,
-                        0, 1.0F, 0, 0, 4,
-                        0, 0, 0.9F, 0, 10,
+                        1.22F, 0, 0, 0, -16.0F / 255.0F,
+                        0, 1.06F, 0, 0, 6.0F / 255.0F,
+                        0, 0, 0.82F, 0, 26.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "dramatisch"
                     matrix = New Single() {
-                        1.24F, 0, 0, 0, -28,
-                        0, 1.18F, 0, 0, -24,
-                        0, 0, 1.12F, 0, -18,
+                        1.24F, 0, 0, 0, -28.0F / 255.0F,
+                        0, 1.18F, 0, 0, -24.0F / 255.0F,
+                        0, 0, 1.12F, 0, -18.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "weich"
-                    ''' Echte räumliche Unschärfe statt nur einer Farbmatrix - eine Farbmatrix wirkt
-                    ''' pro Pixel und kann strukturell nicht weichzeichnen (das war vorher hier nur ein
-                    ''' minimaler Weißabgleich/Aufhellungs-Trick, sah "Weich" praktisch identisch zu
-                    ''' "Matt"/"Fade").
-                    Return ApplySoftFocusBlur(source, strength)
+                    ' Echte räumliche Unschärfe statt nur einer Farbmatrix - eine Farbmatrix wirkt pro
+                    ' Pixel und kann strukturell nicht weichzeichnen. Steht nur im selben Select Case,
+                    ' ist aber KEIN Farbfilter: der Aufrufer fängt es vor der Matrix ab.
+                    Return Nothing
                 Case "noir"
                     matrix = New Single() {
-                        0.404F, 0.792F, 0.154F, 0, -38,
-                        0.404F, 0.792F, 0.154F, 0, -38,
-                        0.404F, 0.792F, 0.154F, 0, -38,
+                        0.404F, 0.792F, 0.154F, 0, -38.0F / 255.0F,
+                        0.404F, 0.792F, 0.154F, 0, -38.0F / 255.0F,
+                        0.404F, 0.792F, 0.154F, 0, -38.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "duoton", "duotone"
@@ -8641,50 +9084,39 @@ Namespace Services
                     ' Jeder Pixel landet exakt auf der Verlaufslinie zwischen den beiden Zielfarben - unabhängig
                     ' vom Ausgangston. Endpunkte sind bewusst kräftig/gesättigt, nicht Richtung Weiß.
                     matrix = New Single() {
-                        0.2815F, 0.5525F, 0.1073F, 0, 15,
-                        0.1759F, 0.3453F, 0.0671F, 0, 15,
-                        -0.0235F, -0.0460F, -0.0089F, 0, 60,
+                        0.2815F, 0.5525F, 0.1073F, 0, 15.0F / 255.0F,
+                        0.1759F, 0.3453F, 0.0671F, 0, 15.0F / 255.0F,
+                        -0.0235F, -0.0460F, -0.0089F, 0, 60.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "polaroid"
                     ' Kräftiger warmer Gelbstich mit moderat angehobenen Schwarzwerten (Sofortbild-Charakter),
                     ' Kontrast bleibt weitgehend erhalten statt komplett verwaschen wie bei "Fade".
                     matrix = New Single() {
-                        0.95F, 0.15F, -0.05F, 0, 10,
-                        0.05F, 0.90F, 0.05F, 0, 6,
-                        -0.05F, 0.05F, 0.75F, 0, 2,
+                        0.95F, 0.15F, -0.05F, 0, 10.0F / 255.0F,
+                        0.05F, 0.90F, 0.05F, 0, 6.0F / 255.0F,
+                        -0.05F, 0.05F, 0.75F, 0, 2.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "vhs"
                     ' Deutlich kühlerer Cyan-/Blaustich mit sichtbarem Kanal-Bluten, typisch für Analogvideo.
                     matrix = New Single() {
                         0.70F, 0.15F, 0.15F, 0, 0,
-                        0.10F, 0.85F, 0.15F, 0, 4,
-                        0.05F, 0.20F, 0.85F, 0, 10,
+                        0.10F, 0.85F, 0.15F, 0, 4.0F / 255.0F,
+                        0.05F, 0.20F, 0.85F, 0, 10.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "bild auf alt", "alt", "antik", "vintage"
                     matrix = New Single() {
-                        0.78F, 0.26F, 0.08F, 0, 18,
-                        0.18F, 0.74F, 0.10F, 0, 10,
-                        0.06F, 0.18F, 0.62F, 0, 2,
+                        0.78F, 0.26F, 0.08F, 0, 18.0F / 255.0F,
+                        0.18F, 0.74F, 0.10F, 0, 10.0F / 255.0F,
+                        0.06F, 0.18F, 0.62F, 0, 2.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case Else
-                    Return source
+                    Return Nothing
             End Select
-
-            Dim colorFilter = SKColorFilter.CreateColorMatrix(matrix)
-            Dim paint = New SKPaint With {.ColorFilter = colorFilter}
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using canvas = New SKCanvas(result)
-                canvas.DrawBitmap(source, 0, 0)
-                paint.Color = New SKColor(255, 255, 255, ClampToByte(255 * strength))
-                canvas.DrawBitmap(source, 0, 0, paint)
-            End Using
-            colorFilter.Dispose()
-            paint.Dispose()
-            Return result
+            Return matrix
         End Function
 
         ''' Blendet eine leicht gaußgeweichzeichnete Kopie über das scharfe Original - der Radius
@@ -8783,71 +9215,7 @@ Namespace Services
             Return c0 + (c1 - c0) * bt
         End Function
 
-        Private Shared Function ProcessCubeLutPixel(r As Byte, g As Byte, b As Byte, a As Byte, table As Single(), size As Integer, maxIndex As Integer, strength As Single) As SKColor
-            Dim rf = r / 255.0F * maxIndex
-            Dim gf = g / 255.0F * maxIndex
-            Dim bf = b / 255.0F * maxIndex
 
-            Dim r0 = CInt(Math.Floor(rf))
-            Dim g0 = CInt(Math.Floor(gf))
-            Dim b0 = CInt(Math.Floor(bf))
-            Dim r1 = Math.Min(maxIndex, r0 + 1)
-            Dim g1 = Math.Min(maxIndex, g0 + 1)
-            Dim b1 = Math.Min(maxIndex, b0 + 1)
-            Dim rt = rf - r0
-            Dim gt = gf - g0
-            Dim bt = bf - b0
-
-            Dim outR = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 0) * 255.0F
-            Dim outG = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 1) * 255.0F
-            Dim outB = TrilinearChannel(table, size, r0, r1, g0, g1, b0, b1, rt, gt, bt, 2) * 255.0F
-
-            If strength >= 0.999F Then
-                Return New SKColor(ClampToByte(outR), ClampToByte(outG), ClampToByte(outB), a)
-            End If
-            Return New SKColor(
-                ClampToByte(r + (outR - r) * strength),
-                ClampToByte(g + (outG - g) * strength),
-                ClampToByte(b + (outB - b) * strength),
-                a)
-        End Function
-
-        Private Shared Function ApplyCubeLut(source As SKBitmap, path As String, strength As Single) As SKBitmap
-            strength = Clamp(strength, 0, 1)
-            If strength <= 0 OrElse String.IsNullOrWhiteSpace(path) Then Return source
-
-            Dim lut = LoadCubeLut(path)
-            If lut Is Nothing Then Return source
-
-            Dim size = lut.Size
-            Dim maxIndex = size - 1
-            Dim table = lut.Table
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-
-            Dim srcBuf As Byte() = Nothing
-            Dim stride As Integer = 0
-            If TryBorrowBgraBuffer(source, srcBuf, stride) Then
-                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                ForEachRow(source.Width, source.Height, Sub(y)
-                                                            Dim rowOffset = y * stride
-                                                            For x = 0 To source.Width - 1
-                                                                Dim o = rowOffset + x * 4
-                                                                Dim nc = ProcessCubeLutPixel(srcBuf(o + 2), srcBuf(o + 1), srcBuf(o), srcBuf(o + 3), table, size, maxIndex, strength)
-                                                                dstBuf(o) = nc.Blue : dstBuf(o + 1) = nc.Green : dstBuf(o + 2) = nc.Red : dstBuf(o + 3) = nc.Alpha
-                                                            Next
-                                                        End Sub)
-                CommitBgraBuffer(result, dstBuf)
-                Return result
-            End If
-
-            For y = 0 To source.Height - 1
-                For x = 0 To source.Width - 1
-                    Dim c = source.GetPixel(x, y)
-                    result.SetPixel(x, y, ProcessCubeLutPixel(c.Red, c.Green, c.Blue, c.Alpha, table, size, maxIndex, strength))
-                Next
-            Next
-            Return result
-        End Function
 
         Private Shared Function ApplyVignette(source As SKBitmap, amount As Single, transition As Single, roundness As Single, feather As Single, centerXPercent As Single, centerYPercent As Single) As SKBitmap
             ''' Obergrenze 1.5 statt 1 - der Stärke-Regler in EffectsPanel.axaml geht bis ±150, was hier
@@ -8929,49 +9297,73 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Koernung. Von GetPixel/SetPixel auf Puffer umgestellt (2026-07-20, gemessen
+        ''' 4,3 s bei 6,3 MP).
+        ''' BEWUSST SERIELL: der Zufallsstrom haengt an der Durchlaufreihenfolge. Parallel wuerde das
+        ''' Korn bei jedem Lauf anders fallen - die Diagnose prueft Bitgleichheit (Abschnitt C), und
+        ''' ein Bild, das sich beim zweiten Rendern aendert, waere auch fuer den Nutzer falsch.
+        ''' Der Gewinn kommt allein aus dem Wegfall des P/Invoke je Pixel.</summary>
         Private Shared Function ApplyGrain(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, 0, 1)
             If strength <= 0 Then Return source
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim srcBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
+            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+
             Dim random = New Random(source.Width * 397 Xor source.Height * 151)
             Dim amplitude = 8.0 + strength * 34.0
 
             For y As Integer = 0 To source.Height - 1
+                Dim rowOffset = y * stride
                 For x As Integer = 0 To source.Width - 1
-                    Dim c = source.GetPixel(x, y)
+                    Dim o = rowOffset + x * 4
+                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
                     Dim noise = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                    Dim r = ClampToByte(c.Red + noise)
-                    Dim g = ClampToByte(c.Green + noise)
-                    Dim b = ClampToByte(c.Blue + noise)
-                    result.SetPixel(x, y, New SKColor(r, g, b, c.Alpha))
+                    WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                       ClampToByte(cr + noise), ClampToByte(cg + noise), ClampToByte(cb + noise), a)
                 Next
             Next
 
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
             Return result
         End Function
 
+        ''' <summary>Rauschen hinzufuegen. Von GetPixel/SetPixel auf Puffer umgestellt (2026-07-20).
+        ''' Seriell aus demselben Grund wie ApplyGrain: der Zufallsstrom haengt an der Reihenfolge.</summary>
         Private Shared Function ApplyAddNoise(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, 0, 1)
             If strength <= 0 Then Return source
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim srcBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
+            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+
             Dim random = New Random(source.Width * 541 Xor source.Height * 877)
             Dim amplitude = strength * 72.0
+
             For y As Integer = 0 To source.Height - 1
+                Dim rowOffset = y * stride
                 For x As Integer = 0 To source.Width - 1
-                    Dim c = source.GetPixel(x, y)
+                    Dim o = rowOffset + x * 4
+                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
                     ' Digitales Rauschen ist chromatisch: pro Kanal ein eigener Zufallswert, damit
                     ' farbige Sensor-Speckles entstehen. Das unterscheidet "Rauschen" klar von der
-                    ' monochromen "Körnung" (ApplyGrain), die denselben Wert auf alle Kanäle legt.
+                    ' monochromen "Koernung" (ApplyGrain), die denselben Wert auf alle Kanaele legt.
                     Dim noiseR = (random.NextDouble() * 2.0 - 1.0) * amplitude
                     Dim noiseG = (random.NextDouble() * 2.0 - 1.0) * amplitude
                     Dim noiseB = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                    result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + noiseR),
-                                                      ClampToByte(c.Green + noiseG),
-                                                      ClampToByte(c.Blue + noiseB),
-                                                      c.Alpha))
+                    WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                       ClampToByte(cr + noiseR), ClampToByte(cg + noiseG), ClampToByte(cb + noiseB), a)
                 Next
             Next
+
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
             Return result
         End Function
 
@@ -9210,45 +9602,6 @@ Namespace Services
             End Using
         End Sub
 
-        Private Shared Function ApplyTonalLUT(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            If adj.Highlights = 0 AndAlso adj.ShadowsLevel = 0 AndAlso adj.Whites = 0 AndAlso adj.Blacks = 0 Then
-                Return source
-            End If
-
-            Dim lut = New Byte(255) {}
-            For i As Integer = 0 To 255
-                Dim v = CDbl(i) / 255.0
-
-                ' Blacks: Schwarzpunkt anheben/senken (0 bis 0.4) - breiteres Fenster und stärkerer Effekt,
-                ' damit die Änderung auch auf normal belichteten Fotos deutlich sichtbar ist.
-                Dim bw = Math.Max(0.0, 1.0 - v * 2.5)
-                v += (adj.Blacks / 100.0) * bw * 0.4
-
-                ' Shadows: zentriert bei 0.25
-                Dim sw = Math.Max(0.0, 1.0 - Math.Abs(v - 0.25) * 6.0)
-                v += (adj.ShadowsLevel / 100.0) * sw * 0.35
-
-                ' Whites: Weißpunkt anheben/senken (0.6 bis 1.0)
-                Dim ww = Math.Max(0.0, 1.0 - (1.0 - v) * 2.5)
-                v += (adj.Whites / 100.0) * ww * 0.4
-
-                ' Highlights: zentriert bei 0.75
-                Dim hw = Math.Max(0.0, 1.0 - Math.Abs(v - 0.75) * 6.0)
-                v += (adj.Highlights / 100.0) * hw * 0.35
-
-                lut(i) = ClampToByte(v * 255.0)
-            Next
-
-            Dim colorFilter = SKColorFilter.CreateTable(IdentityByteTable, lut, lut, lut)
-            Dim paint = New SKPaint With {.ColorFilter = colorFilter}
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using canvas = New SKCanvas(result)
-                canvas.DrawBitmap(source, 0, 0, paint)
-            End Using
-            colorFilter.Dispose()
-            paint.Dispose()
-            Return result
-        End Function
 
         ''' Wird für JEDEN Live-Vorschau-Frame aufgerufen (Regler, Filter, Annotationen, Histogramm),
         ''' daher lohnt sich hier der schnelle Direktkopie-Pfad (ImageOrientationService.ToAvaloniaBitmapFast)
@@ -9268,15 +9621,28 @@ Namespace Services
                 Return ToAvaloniaBitmapFastRgba(skBitmap)
             End If
 
-            Using image = SKImage.FromBitmap(skBitmap)
-                Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                    Using ms = New MemoryStream()
-                        data.SaveTo(ms)
-                        ms.Seek(0, SeekOrigin.Begin)
-                        Return New Bitmap(ms)
-                    End Using
+            ' Jedes andere Format erst auf 8 Bit bringen und dann denselben schnellen Weg nehmen.
+            '
+            ' NICHT ueber einen PNG-Umweg, wie es hier frueher stand: SKImage.FromBitmap liefert
+            ' fuer manche Farbtypen (etwa Rgba16161616) schlicht Nothing, und der Encode lief danach
+            ' in eine NullReferenceException. Das riss beim Oeffnen jeder RAW-Datei die Anwendung um,
+            ' solange das Arbeitsbild 16 Bit trug (2026-07-20). Der 16-Bit-Weg ist inzwischen wieder
+            ' ausgebaut, die Konvertierung hier bleibt aber der robustere Weg fuer alles Unerwartete.
+            '
+            ' Bewusst OHNE Try/Catch um den Aufruf: ein erster Anlauf fing hier breit ab und gab im
+            ' Fehlerfall Nothing zurueck - damit haette ein echter Plattformfehler stumm ein leeres
+            ' Bild ergeben statt einer Meldung. Faellt hier etwas aus, soll es auffallen.
+            Dim acht = New SKBitmap(New SKImageInfo(skBitmap.Width, skBitmap.Height,
+                                                    SKColorType.Bgra8888, SKAlphaType.Premul))
+            Try
+                Using cv As New SKCanvas(acht)
+                    cv.Clear(SKColors.Transparent)
+                    cv.DrawBitmap(skBitmap, 0, 0)
                 End Using
-            End Using
+                Return ImageOrientationService.ToAvaloniaBitmapFast(acht)
+            Finally
+                acht.Dispose()
+            End Try
         End Function
 
         ''' <summary>Wie ImageOrientationService.ToAvaloniaBitmapFast, nur fuer Rgba8888/Premul

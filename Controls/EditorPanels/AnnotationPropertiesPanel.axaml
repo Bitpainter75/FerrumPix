@@ -101,6 +101,111 @@
                                      Minimum="8" Maximum="5000" Increment="1"
                                      FormatString="F0" />
         </Grid>
+        <!-- Schriftschnitt: wirkt nur, wenn die Familie Fett bzw. Kursiv mitbringt -
+             Skia erzeugt keinen synthetischen Schnitt. -->
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
+              IsVisible="{Binding ShowFontControls}">
+            <TextBlock Text="Schnitt" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+            <WrapPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0">
+                <ToggleButton Classes="ghost" Padding="10,4" Margin="0,0,6,4"
+                              IsChecked="{Binding AnnotationBold}"
+                              ToolTip.Tip="Fett">
+                    <TextBlock Text="F" FontWeight="Bold" FontSize="{DynamicResource FP.Font.Small}" />
+                </ToggleButton>
+                <ToggleButton Classes="ghost" Padding="10,4" Margin="0,0,6,4"
+                              IsChecked="{Binding AnnotationItalic}"
+                              ToolTip.Tip="Kursiv">
+                    <TextBlock Text="K" FontStyle="Italic" FontSize="{DynamicResource FP.Font.Small}" />
+                </ToggleButton>
+            </WrapPanel>
+        </Grid>
+        <!-- Zeichenabstand in Prozent der Schriftgroesse: waechst dadurch beim Skalieren mit.
+             Gilt auch fuer Text auf Pfaden - dort werden die Zeichen einzeln gesetzt. -->
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+              IsVisible="{Binding ShowFontControls}">
+            <TextBlock Text="Zeichenabstand" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+            <icons:RoundSlider Grid.Column="1" Minimum="-20" Maximum="200"
+                               DefaultValue="0"
+                               Value="{Binding AnnotationLetterSpacingPercent}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationLetterSpacingPercent, Mode=TwoWay}"
+                                     Minimum="-20" Maximum="200" Increment="1"
+                                     FormatString="F0" />
+        </Grid>
+        <!-- Text an Pfad: vorgefertigte Pfadformen (aus dem Objektrechteck abgeleitet), dazu
+             Krümmung und Startversatz. Nur bei echten Text-Objekten (ShowTextPathRow). -->
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
+              IsVisible="{Binding ShowTextPathRow}">
+            <TextBlock Text="Pfad" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+            <!-- WrapPanel statt StackPanel: fünf Knöpfe passen nicht in eine Zeile der 330 px
+                 breiten Spalte (Nutzerbefund 2026-07-20, "Welle" wurde abgeschnitten). Der Umbruch
+                 richtet sich nach der tatsächlichen Breite - in Spanisch und Italienisch sind die
+                 Wörter länger ("Ninguno"/"Nessuno" statt "Kein"), eine fest verdrahtete
+                 3+2-Aufteilung würde dort wieder klemmen.
+                 Abstände über Margin je Knopf, weil WrapPanel kein Spacing kennt. -->
+            <WrapPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0">
+                <!-- Leeres ConverterParameter= bricht den XAML-Compiler (AVLN2000) - der
+                     "Kein"-Zustand kommt deshalb als eigene VM-Eigenschaft. -->
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationTextPathKindCommand}"
+                        CommandParameter="None"
+                        Classes.active="{Binding IsTextPathNone}">
+                    <TextBlock Text="Kein" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationTextPathKindCommand}"
+                        CommandParameter="Arc"
+                        Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Arc}">
+                    <TextBlock Text="Bogen" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationTextPathKindCommand}"
+                        CommandParameter="Circle"
+                        Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Circle}">
+                    <TextBlock Text="Kreis" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationTextPathKindCommand}"
+                        CommandParameter="Wave"
+                        Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Wave}">
+                    <TextBlock Text="Welle" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationTextPathKindCommand}"
+                        CommandParameter="CircleInverted"
+                        ToolTip.Tip="Buchstaben auf der Linie umgeschlagen - Kopf zur Kreismitte"
+                        Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=CircleInverted}">
+                    <TextBlock Text="Kreis invers" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+            </WrapPanel>
+        </Grid>
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+              IsVisible="{Binding ShowTextPathControls}">
+            <TextBlock Text="Krümmung" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+            <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                               DefaultValue="50"
+                               Value="{Binding AnnotationTextPathBend}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationTextPathBend, Mode=TwoWay}"
+                                     Minimum="-100" Maximum="100" Increment="1"
+                                     FormatString="F0" />
+        </Grid>
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+              IsVisible="{Binding ShowTextPathControls}">
+            <TextBlock Text="Startversatz" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                               DefaultValue="0"
+                               Value="{Binding AnnotationTextPathStartOffset}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationTextPathStartOffset, Mode=TwoWay}"
+                                     Minimum="0" Maximum="100" Increment="1"
+                                     FormatString="F0" />
+        </Grid>
         <!-- Beim QR-Code werden Hintergrund und Vordergrund über den Farbmischer gesetzt. -->
         <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowFillColorPicker}">
@@ -116,27 +221,31 @@
               IsVisible="{Binding ShowFillColorControls}">
             <TextBlock Text="Füllart" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
-                        Margin="6,0,0,0">
-                <Button Classes="ghost" Padding="8,4"
+            <!-- WrapPanel statt StackPanel: die Beschriftungen sprengen sonst die Spaltenbreite.
+                 In der laengsten Sprache summieren sich "Vollfarbe|Verlauf|Radial" auf 28 Zeichen -
+                 im Deutschen passt es knapp, anderswo nicht. Umbruch statt fester Aufteilung, damit
+                 es sich nach der tatsaechlichen Breite richtet.
+                 Abstaende ueber Margin je Knopf, weil WrapPanel kein Spacing kennt. -->
+            <WrapPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0">
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                         Command="{Binding SetAnnotationFillKindCommand}"
                         CommandParameter="Solid"
                         Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
                     <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
-                <Button Classes="ghost" Padding="8,4"
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                         Command="{Binding SetAnnotationFillKindCommand}"
                         CommandParameter="LinearGradient"
                         Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
                     <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
-                <Button Classes="ghost" Padding="8,4"
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                         Command="{Binding SetAnnotationFillKindCommand}"
                         CommandParameter="RadialGradient"
                         Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
                     <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
-            </StackPanel>
+            </WrapPanel>
         </Grid>
         <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowGradientFillControls}">

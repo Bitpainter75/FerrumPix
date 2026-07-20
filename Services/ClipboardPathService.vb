@@ -36,7 +36,7 @@ Namespace Services
 
             Dim validPaths = paths.
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
-                Distinct(StringComparer.OrdinalIgnoreCase).
+                Distinct(PathIdentity.Comparer).
                 ToList()
             If validPaths.Count = 0 Then Return
 
@@ -111,7 +111,7 @@ Namespace Services
             Return items.
                 Select(Function(f) TryGetLocalPath(f)).
                 Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
-                Distinct(StringComparer.OrdinalIgnoreCase).
+                Distinct(PathIdentity.Comparer).
                 ToList()
         End Function
 
@@ -187,7 +187,7 @@ Namespace Services
                         Dim rawPaths = internalRaw.
                             Split({ControlChars.Cr, ControlChars.Lf}, StringSplitOptions.RemoveEmptyEntries).
                             Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
-                            Distinct(StringComparer.OrdinalIgnoreCase).
+                            Distinct(PathIdentity.Comparer).
                             ToList()
                         If rawPaths.Count > 0 Then
                             Dim internalCut = False
@@ -259,7 +259,7 @@ Namespace Services
             Next
 
             Return New ClipboardPathData With {
-                .Paths = result.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                .Paths = result.Distinct(PathIdentity.Comparer).ToList(),
                 .IsCut = isCut
             }
         End Function

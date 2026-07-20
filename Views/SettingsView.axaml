@@ -119,7 +119,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Homepage" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="https://ferrumpix.app" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="https://ferrumpix.app" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <Button Grid.Column="1" Classes="ghost" Padding="12,7" Click="OnHomepageClick">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -132,7 +132,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="GitHub Repository" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="https://github.com/Bitpainter75/FerrumPix" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="https://github.com/Bitpainter75/FerrumPix" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <Button Grid.Column="1" Classes="ghost" Padding="12,7" Click="OnGitHubClick">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -146,13 +146,13 @@
 
                         <StackPanel Spacing="2">
                             <TextBlock Text="Allgemein" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Grundlegende Einstellungen für Startverhalten und Sprache." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            <TextBlock Text="Grundlegende Einstellungen für Startverhalten und Sprache." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Start mit Bilddatei" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt fest, welcher Modus verwendet wird, wenn FerrumPix mit einem Bild als Parameter geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Legt fest, welcher Modus verwendet wird, wenn FerrumPix mit einem Bild als Parameter geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"
@@ -181,7 +181,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Start ohne Bilddatei" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt fest, was erscheint, wenn FerrumPix ohne ein Bild geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Legt fest, was erscheint, wenn FerrumPix ohne ein Bild geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"
@@ -205,7 +205,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Sprache" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Verwendet standardmäßig die Systemsprache; falls nicht unterstützt, Englisch." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Verwendet standardmäßig die Systemsprache; falls nicht unterstützt, Englisch." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"
@@ -244,7 +244,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Papierkorb überspringen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Löscht Dateien und Ordner dauerhaft, statt sie in den Papierkorb zu verschieben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Löscht Dateien und Ordner dauerhaft, statt sie in den Papierkorb zu verschieben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding DeleteSkipTrash}"
@@ -256,7 +256,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Sicherheitsabfrage beim Löschen überspringen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Löscht Dateien und Ordner ohne vorherige Bestätigung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Löscht Dateien und Ordner ohne vorherige Bestätigung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding DeleteSkipConfirmation}"
@@ -271,7 +271,7 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Darstellung" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Wählen Sie das Erscheinungsbild der Benutzeroberfläche." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            <TextBlock Text="Wählen Sie das Erscheinungsbild der Benutzeroberfläche." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <Grid ColumnDefinitions="*,*,*,*">
                             <Button Grid.Column="0"
@@ -339,7 +339,7 @@
                         <StackPanel Spacing="12" Margin="0,4,0,0">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Akzentfarbe" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Wählen Sie eine Akzentfarbe für Hervorhebungen und aktive Elemente." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            <TextBlock Text="Wählen Sie eine Akzentfarbe für Hervorhebungen und aktive Elemente." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <Button Classes="swatch" Classes.active="{Binding IsOrangeAccent}" Background="#F08A1A" Command="{Binding SetAccentColorCommand}" CommandParameter="#F08A1A"/>
@@ -357,13 +357,13 @@
                         <StackPanel Spacing="12" Margin="0,4,0,0">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Transparenz-Hintergrund" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                                <TextBlock Text="Legt fest, wie transparente Bildbereiche in Viewer und Editor dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Legt fest, wie transparente Bildbereiche in Viewer und Editor dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
 
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Darstellung" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Schachbrettmuster (Standard), echt durchsichtig oder eine feste Farbe." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    <TextBlock Text="Schachbrettmuster (Standard), echt durchsichtig oder eine feste Farbe." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                     <Button Classes="ghost"
@@ -387,7 +387,7 @@
                             <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsTransparencySolidMode}">
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Hintergrundfarbe" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Volltonfarbe hinter transparenten Bereichen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    <TextBlock Text="Volltonfarbe hinter transparenten Bereichen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <Button Grid.Column="1" Classes="ghost" Height="34" Padding="6,4" Width="140" ToolTip.Tip="Hintergrundfarbe wählen">
                                     <Grid ColumnDefinitions="28,*" ColumnSpacing="8">
@@ -429,7 +429,7 @@
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Schriftgrad" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Vergrößert oder verkleinert die Schrift der Oberfläche in ganzen Stufen. Wirkt sofort."
-                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
@@ -454,7 +454,7 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Anwendungsskalierung" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Skaliert die komplette Oberfläche beim nächsten Start." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    <TextBlock Text="Skaliert die komplette Oberfläche beim nächsten Start." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                     <icons:RoundSlider Width="150"
@@ -473,7 +473,7 @@
                             <Grid ColumnDefinitions="*,220">
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Bildschirm für Skalierung" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Legt fest, auf welchem Bildschirm die gewählte Skalierung angewendet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    <TextBlock Text="Legt fest, auf welchem Bildschirm die gewählte Skalierung angewendet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <Button Grid.Column="1"
                                         Classes="dropdown-btn"
@@ -515,7 +515,7 @@
                             <TextBlock Text="Änderung wird nach einem Neustart aktiv."
                                        Foreground="{DynamicResource FP.Accent}"
                                        FontSize="{DynamicResource FP.Font.Caption}"
-                                       IsVisible="{Binding IsApplicationScaleRestartRequired}"/>
+                                       IsVisible="{Binding IsApplicationScaleRestartRequired}" TextWrapping="Wrap"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -524,13 +524,13 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Galerie" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Einstellungen für die Ordner- und Dateiansicht im Seitenbereich." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            <TextBlock Text="Einstellungen für die Ordner- und Dateiansicht im Seitenbereich." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Versteckte Ordner anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt Ordner an, deren Name mit einem Punkt beginnt (z. B. .config, .local)." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Zeigt Ordner an, deren Name mit einem Punkt beginnt (z. B. .config, .local)." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowHiddenFolders}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                         </Grid>
@@ -538,7 +538,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Ordner in der Galerie anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt Unterordner neben Bildern an; Doppelklick öffnet den Ordner." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Zeigt Unterordner neben Bildern an; Doppelklick öffnet den Ordner." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryShowFolders}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                         </Grid>
@@ -546,7 +546,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Übergeordnete Ordner anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Blendet in der Galerie zusätzlich einen Eintrag für den übergeordneten Ordner ein." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Blendet in der Galerie zusätzlich einen Eintrag für den übergeordneten Ordner ein." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryShowParentFolder}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                         </Grid>
@@ -554,7 +554,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Ansicht" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt fest, ob die Galerie als Raster oder als Liste angezeigt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Legt fest, ob die Galerie als Raster oder als Liste angezeigt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"
@@ -573,7 +573,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Zeitleiste am rechten Rand" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt Jahre bzw. Anfangsbuchstaben passend zur Sortierung; Klick oder Ziehen springt an die Stelle." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Zeigt Jahre bzw. Anfangsbuchstaben passend zur Sortierung; Klick oder Ziehen springt an die Stelle." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Right">
                                 <Button Classes="ghost"
@@ -602,7 +602,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Startordner der Galerie" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Bestimmt, welcher Ordner beim Start der Anwendung geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Bestimmt, welcher Ordner beim Start der Anwendung geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right">
                                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
@@ -647,13 +647,13 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Betrachter" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Legt fest, wie Bilder beim Öffnen dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            <TextBlock Text="Legt fest, wie Bilder beim Öffnen dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Bilder an Fenstergröße anpassen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Öffnet Bilder skaliert auf die verfügbare Fensterfläche statt in Originalgröße." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Öffnet Bilder skaliert auf die verfügbare Fensterfläche statt in Originalgröße." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding ViewerOpenFitToWindow}"
@@ -684,7 +684,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Filmstrip im Viewer anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt die Bildleiste am unteren Rand des Viewers an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Zeigt die Bildleiste am unteren Rand des Viewers an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding ViewerShowFilmstrip}"
@@ -696,7 +696,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Info-Seitenleiste im Viewer anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding ViewerInfoSidebarExpanded}"
@@ -708,7 +708,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Diashow-Dauer" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt fest, wie lange ein Bild in der Diashow sichtbar bleibt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Legt fest, wie lange ein Bild in der Diashow sichtbar bleibt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
@@ -727,7 +727,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Hardwarebeschleunigung für Videowiedergabe" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Nutzt die Grafikhardware zur Videodekodierung. Bei Bildfehlern in der Videowiedergabe deaktivieren (Software-Decoding). Wirkt beim nächsten Öffnen eines Videos." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Nutzt die Grafikhardware zur Videodekodierung. Bei Bildfehlern in der Videowiedergabe deaktivieren (Software-Decoding). Wirkt beim nächsten Öffnen eines Videos." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding VideoHardwareAcceleration}"
@@ -743,13 +743,13 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Editor" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Einstellungen für Bearbeitung und Vorschau." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            <TextBlock Text="Einstellungen für Bearbeitung und Vorschau." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Filmstrip im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt die Bildleiste am unteren Rand des Editors an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Zeigt die Bildleiste am unteren Rand des Editors an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EditorShowFilmstrip}"
@@ -760,8 +760,20 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
+                                <TextBlock Text="RAW-Bearbeitungen als Begleitdatei merken" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Der Speichern-Knopf legt die Reglerwerte als kleine .fpxmp-Datei neben die RAW-Datei; beim nächsten Öffnen werden sie automatisch angewendet. Die RAW-Datei selbst bleibt unverändert; Pinsel- und Retusche-Striche brauchen weiterhin eine .fpx-Projektdatei." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding RawSidecarEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
                                 <TextBlock Text="Info-Seitenleiste im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EditorInfoSidebarExpanded}"
@@ -773,7 +785,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Ebenen-Seitenleiste im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Blendet das Ebenen-Panel neben der Info-Leiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Blendet das Ebenen-Panel neben der Info-Leiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EditorLayersPanelExpanded}"
@@ -803,7 +815,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="JPG-Qualität" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Wird für das Speichern und Exportieren als JPG verwendet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Wird für das Speichern und Exportieren als JPG verwendet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
@@ -822,7 +834,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Metadaten beim Speichern übernehmen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Übernimmt EXIF/XMP beim Speichern unter, Exportieren und Konvertieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Übernimmt EXIF/XMP beim Speichern unter, Exportieren und Konvertieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding PreserveMetadataOnSave}"
@@ -834,7 +846,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Lineale im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Blendet die Pixel-Lineale am oberen und linken Rand der Vorschau ein." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Blendet die Pixel-Lineale am oberen und linken Rand der Vorschau ein." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EditorShowRulers}"
@@ -846,7 +858,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Raster im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt ein Pixelraster über dem Bild an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Zeigt ein Pixelraster über dem Bild an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EditorShowGrid}"
@@ -858,7 +870,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Rastergröße" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Kantenlänge einer Rasterzelle im Editor, in Bildpixeln." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Kantenlänge einer Rasterzelle im Editor, in Bildpixeln." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
@@ -880,13 +892,13 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Immich" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Bindet einen self-hosted Immich-Server ein. Alben erscheinen im Navigationsbereich der Galerie; Bilder lassen sich betrachten und (als Kopie) bearbeiten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            <TextBlock Text="Bindet einen self-hosted Immich-Server ein. Alben erscheinen im Navigationsbereich der Galerie; Bilder lassen sich betrachten und (als Kopie) bearbeiten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Immich aktivieren" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt den Immich-Zweig mit deinen Alben im Galeriebaum an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Zeigt den Immich-Zweig mit deinen Alben im Galeriebaum an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichEnabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                         </Grid>
@@ -894,7 +906,7 @@
                         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Server-URL" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Basis-Adresse deiner Immich-Instanz, z. B. http://nas:2283" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Basis-Adresse deiner Immich-Instanz, z. B. http://nas:2283" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <TextBox Grid.Column="1" Width="320"
                                      PlaceholderText="http://nas:2283"
@@ -905,7 +917,7 @@
                         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="API-Key" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Im Immich-Webinterface unter Konto → API-Keys erzeugen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Im Immich-Webinterface unter Konto → API-Keys erzeugen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <TextBox Grid.Column="1" Width="320"
                                      PasswordChar="•"
@@ -985,13 +997,13 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Leistung" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Cache und Verarbeitung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            <TextBlock Text="Cache und Verarbeitung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Vorschaubilder zwischenspeichern" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Speichert Vorschaubilder auf dem Gerät, damit Ordner beim nächsten Öffnen schneller geladen werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Speichert Vorschaubilder auf dem Gerät, damit Ordner beim nächsten Öffnen schneller geladen werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding ThumbnailCacheEnabled}"
@@ -1003,7 +1015,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Vorschaubild-Qualität" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Bestimmt die JPEG-Qualität neu erzeugter zwischengespeicherter Vorschaubilder." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Bestimmt die JPEG-Qualität neu erzeugter zwischengespeicherter Vorschaubilder." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
@@ -1041,7 +1053,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Datenbank bereinigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Entfernt Metadaten (Bewertungen, Favoriten, Tags) von Bildern, die nicht mehr existieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Entfernt Metadaten (Bewertungen, Favoriten, Tags) von Bildern, die nicht mehr existieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding CleanupResultMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center"/>
@@ -1052,7 +1064,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Fehlerdiagnose-Protokoll" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Schreibt Details zu Vorschau-/Wiedergabe-Fehlern nach %LocalAppData%/FerrumPix/logs/diagnostics.log. Nur bei Bedarf zur Fehlersuche einschalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Schreibt Details zu Vorschau-/Wiedergabe-Fehlern nach %LocalAppData%/FerrumPix/logs/diagnostics.log. Nur bei Bedarf zur Fehlersuche einschalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EnableDiagnosticLogging}"
@@ -1065,7 +1077,7 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Vorschaubild-Cache nach Ordnern" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="{Binding ThumbnailCacheSummaryText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    <TextBlock Text="{Binding ThumbnailCacheSummaryText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding ThumbnailCacheResultMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center"/>
@@ -1115,21 +1127,21 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Tastenkürzel" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Übersicht der Tasten- und Mausbelegung in Galerie, Betrachter und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            <TextBlock Text="Übersicht der Tasten- und Mausbelegung in Galerie, Betrachter und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <TextBlock Text="Überall" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}"/>
                         <StackPanel Spacing="6">
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="F11" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="F11" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Vollbild ein/aus" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+1–5" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+1–5" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bewertung setzen (dieselbe Zahl erneut oder Strg+0 entfernt sie)" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Q" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+Q" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Favorit ein/aus" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                         </StackPanel>
@@ -1141,55 +1153,55 @@
                                 <TextBlock Grid.Column="1" Text="Auswahl bewegen (Umschalt: Bereich erweitern)" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Eingabe oder Doppelklick" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Eingabe oder Doppelklick" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bild öffnen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Leertaste (halten)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Leertaste (halten)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Schnellvorschau" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+A" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+A" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Alles auswählen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+C / Strg+X / Strg+V" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+C / Strg+X / Strg+V" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Kopieren / Ausschneiden / Einfügen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+F" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+F" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Suche" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+W" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+W" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Filter anwenden" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+R" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+R" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bildgröße ändern" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+D" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+D" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Konvertieren nach" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl drucken" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Löschen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="F2" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="F2" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Umbenennen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="F5" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="F5" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Aktualisieren" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl aufheben" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1205,43 +1217,43 @@
                                 <TextBlock Grid.Column="1" Text="Voriges / nächstes Bild" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Plus / Minus" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Plus / Minus" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Zoomen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="0" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="0" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bild einpassen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Leertaste" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Leertaste" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Diashow starten/stoppen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+L / Strg+R" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+L / Strg+R" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Nach links / rechts drehen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+I" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+I" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Info-Leiste ein/aus" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+E" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+E" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Im Editor öffnen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Drucken" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Löschen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="F2" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="F2" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Umbenennen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Zurück zur Galerie (im Vollbild: Vollbild verlassen)" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1253,31 +1265,31 @@
                         <TextBlock Text="Editor" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
                         <StackPanel Spacing="6">
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Z / Strg+Y" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+Z / Strg+Y" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Rückgängig / Wiederholen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+S" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+S" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Speichern (wenn nicht möglich: Speichern unter)" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+A" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+A" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Alles auswählen (bei Auswahl-Werkzeugen)" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+C / Strg+V" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+C / Strg+V" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl kopieren / einfügen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+D" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+D" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Objekt duplizieren; ohne Objekt: Auswahl aufheben" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Umschalt+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+Umschalt+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Vorschau anwenden" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Drucken (aktueller Bearbeitungsstand)" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1285,11 +1297,11 @@
                                 <TextBlock Grid.Column="1" Text="Werkzeug: Drehen / Text / Zeichnen / Einfügen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+E" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Strg+E" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Radierer umschalten (im Zeichnen-Werkzeug)" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Pfeiltasten" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Pfeiltasten" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Objekt verschieben (Umschalt: größere Schritte)" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1297,19 +1309,19 @@
                                 <TextBlock Grid.Column="1" Text="Einrasten vorübergehend aus" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Eckige Klammern [ ]" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Eckige Klammern [ ]" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Werkzeuggröße kleiner / größer" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Leertaste (halten)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Leertaste (halten)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bildausschnitt verschieben" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Objekt löschen; ohne Objekt: Bild löschen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl abwählen, Zug abbrechen, Editor verlassen" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">

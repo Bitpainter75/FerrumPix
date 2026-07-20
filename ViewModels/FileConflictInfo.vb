@@ -42,11 +42,11 @@ Namespace ViewModels
             Try
                 Dim bitmap As Bitmap = Nothing
                 If RawPreviewService.IsSupportedRaw(path) Then
-                    Using preview = RawPreviewService.ExtractPreview(path)
+                    Using preview = RawPreviewService.ExtractPreviewWithFallback(path)
                         If preview IsNot Nothing Then bitmap = ImageOrientationService.LoadOrientedAvaloniaBitmap(preview)
                     End Using
                 Else
-                    bitmap = ImageOrientationService.LoadOrientedAvaloniaBitmap(path)
+                    bitmap = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(path)
                 End If
 
                 If bitmap IsNot Nothing Then

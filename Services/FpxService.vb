@@ -72,6 +72,17 @@ Namespace Services
             }
         End Function
 
+        ''' <summary>Rezept-JSON fuer den RAW-Sidecar (RawSidecarService): exakt dieselben
+        ''' Serialisierungsregeln wie im .fpx-Buendel, damit beide Formate nie auseinanderdriften.</summary>
+        Friend Shared Function SerializeAdjustments(adjustments As ImageAdjustments) As String
+            Return JsonSerializer.Serialize(adjustments, JsonOptions)
+        End Function
+
+        Friend Shared Function DeserializeAdjustments(json As String) As ImageAdjustments
+            If String.IsNullOrWhiteSpace(json) Then Return Nothing
+            Return JsonSerializer.Deserialize(Of ImageAdjustments)(json, JsonOptions)
+        End Function
+
         ' ── Speichern ───────────────────────────────────────────────────────────
 
         ''' <summary>Schreibt die Bearbeitung als <c>.fpx</c>-Bündel. <paramref name="compositePng"/> ist das

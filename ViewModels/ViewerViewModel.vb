@@ -1052,7 +1052,7 @@ Namespace ViewModels
         ''' Reiner Decode ohne ViewModel-Zustand - laeuft im Task.Run-Worker.
         Private Shared Function DecodeViewerBitmap(path As String) As Bitmap
             If RawPreviewService.IsSupportedRaw(path) Then
-                Using preview = RawPreviewService.ExtractPreview(path)
+                Using preview = RawPreviewService.ExtractPreviewWithFallback(path)
                     Return If(preview IsNot Nothing, ImageOrientationService.LoadOrientedAvaloniaBitmap(preview), Nothing)
                 End Using
             End If
@@ -1063,6 +1063,11 @@ Namespace ViewModels
             End If
             If IcoPreviewService.IsSupportedIco(path) Then
                 Using preview = IcoPreviewService.ExtractPreview(path)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                End Using
+            End If
+            If PsdPreviewService.IsSupportedPsd(path) Then
+                Using preview = PsdPreviewService.ExtractPreview(path)
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
                 End Using
             End If
@@ -1273,7 +1278,12 @@ Namespace ViewModels
 
         Private Sub LoadFolderContext(folder As String, currentPath As String)
             ' ".fpx" gehört dazu: Projekte blättern im Viewer/Vollbild mit (Anzeige aus dem Composite).
-            Dim exts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico", ".svg", ".fpx", ".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2", ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
+            ' Feste Formate plus die kanonischen RAW-Endungen (RawPreviewService.SupportedExtensions).
+            Dim exts = {
+                ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif",
+                ".ico", ".svg", ".fpx", ".psd", ".psb",
+                ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
+            }.Concat(RawPreviewService.SupportedExtensions).ToArray()
             Try
                 _folderPaths = Directory.GetFiles(folder).
                     Where(Function(f) exts.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).

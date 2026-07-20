@@ -3608,4 +3608,142 @@
   <data name="Ebene_ausgeblendet_2a99a3ad" xml:space="preserve">
     <value>Capa oculta</value>
   </data>
+  <data name="PSD_ohne_lesbares_Gesamtbild_in_Photoshop_mit_ma_fd7c8a13" xml:space="preserve">
+    <value>PSD sin imagen compuesta legible: guárdelo en Photoshop con compatibilidad máxima</value>
+  </data>
+  <data name="Keine_Vorschau_aus_dieser_RAW_Datei_extrahierbar_1240acf9" xml:space="preserve">
+    <value>No se pudo extraer una vista previa de este archivo RAW</value>
+  </data>
+  <data name="Pfad_40f869cd" xml:space="preserve">
+    <value>Trazado</value>
+  </data>
+  <data name="Kein_61494817" xml:space="preserve">
+    <value>Ninguno</value>
+  </data>
+  <data name="Bogen_cc3fd7d6" xml:space="preserve">
+    <value>Arco</value>
+  </data>
+  <data name="Kreis_78ba515b" xml:space="preserve">
+    <value>Círculo</value>
+  </data>
+  <data name="Welle_abea34da" xml:space="preserve">
+    <value>Onda</value>
+  </data>
+  <data name="Kr_mmung_ae4648c8" xml:space="preserve">
+    <value>Curvatura</value>
+  </data>
+  <data name="Startversatz_2ca61397" xml:space="preserve">
+    <value>Desplazamiento inicial</value>
+  </data>
+  <data name="RAW_entwickelt_8ef68cd6" xml:space="preserve">
+    <value>RAW revelado</value>
+  </data>
+  <data name="RAW_Vorschau_e60fc82f" xml:space="preserve">
+    <value>Vista previa RAW</value>
+  </data>
+  <data name="RAW_Bearbeitungen_als_Begleitdatei_merken_7ed96c34" xml:space="preserve">
+    <value>Recordar las ediciones RAW en un archivo adjunto</value>
+  </data>
+  <data name="Legt_die_Reglerwerte_als_kleine_fpxmp_Datei_nebe_5c2fe1d3" xml:space="preserve">
+    <value>Guarda los valores de los controles como un pequeño archivo .fpxmp junto al archivo RAW y los aplica automáticamente la próxima vez que se abra. El archivo RAW no se modifica; los trazos de pincel y retoque siguen necesitando un proyecto .fpx.</value>
+  </data>
+  <data name="RAW_Bearbeitung_in_Begleitdatei_gespeichert_b7fd049e" xml:space="preserve">
+    <value>Ediciones RAW guardadas en el archivo adjunto</value>
+  </data>
+  <data name="Farbrauschen_7e6f8299" xml:space="preserve">
+    <value>Ruido de color</value>
+  </data>
+  <data name="Gl_ttet_nur_die_Farbanteile_Chroma_die_Helligkei_1c158f60" xml:space="preserve">
+    <value>Suaviza solo los componentes de color (croma); la luminosidad y, por tanto, los detalles se conservan.</value>
+  </data>
+  <data name="Positiv_f_gt_Staubk_rner_und_Kratzer_hinzu_Film__1d1681ed" xml:space="preserve">
+    <value>En positivo añade motas de polvo y arañazos (aspecto de película); en negativo elimina defectos conservando los bordes.</value>
+  </data>
+  <data name="Positiv_f_gt_Rauschen_hinzu_negativ_reduziert_es_1decfbdc" xml:space="preserve">
+    <value>En positivo añade ruido; en negativo lo reduce (suavizado uniforme).</value>
+  </data>
+  <data name="Der_Speichern_Knopf_legt_die_Reglerwerte_als_kle_a767a98a" xml:space="preserve">
+    <value>El botón Guardar almacena los valores de los controles como un pequeño archivo .fpxmp junto al archivo RAW; se aplican automáticamente la próxima vez que se abra. El archivo RAW no se modifica; los trazos de pincel y retoque siguen necesitando un proyecto .fpx.</value>
+  </data>
+  <data name="Begleitdatei_konnte_nicht_geschrieben_werden_7f337000" xml:space="preserve">
+    <value>No se pudo escribir el archivo adjunto</value>
+  </data>
+  <data name="Als_Favorit_3cb310d8" xml:space="preserve">
+    <value>Añadir a favoritos</value>
+  </data>
+  <data name="Aus_Favoriten_entfernen_ffcbb223" xml:space="preserve">
+    <value>Quitar de favoritos</value>
+  </data>
+  <data name="Nach_oben_8f26ce2a" xml:space="preserve">
+    <value>Subir</value>
+  </data>
+  <data name="Nach_unten_006cca92" xml:space="preserve">
+    <value>Bajar</value>
+  </data>
+  <data name="Noch_keine_Favoriten_Ordner_Immich_Eintr_ge_und__0f8084c9" xml:space="preserve">
+    <value>Aún no hay favoritos. Haga clic derecho en una carpeta, entrada de Immich o lista de búsqueda para añadirla aquí.</value>
+  </data>
+  <data name="Das_Ziel_dieses_Favoriten_existiert_nicht_mehr_07e4e4a0" xml:space="preserve">
+    <value>El destino de este favorito ya no existe</value>
+  </data>
+  <data name="0_zu_den_Favoriten_hinzugef_gt_6af3561c" xml:space="preserve">
+    <value>{0} añadido a favoritos</value>
+  </data>
+  <data name="0_ist_bereits_ein_Favorit_b14efcfc" xml:space="preserve">
+    <value>{0} ya es un favorito</value>
+  </data>
+  <data name="0_aus_den_Favoriten_entfernt_7f2da5f8" xml:space="preserve">
+    <value>{0} eliminado de favoritos</value>
+  </data>
+  <data name="Zu_Favoriten_hinzuf_gen_a5f5194e" xml:space="preserve">
+    <value>Añadir a favoritos</value>
+  </data>
+  <data name="RAW_wird_entwickelt_cd804af0" xml:space="preserve">
+    <value>Revelando RAW …</value>
+  </data>
+  <data name="Kreis_invers_ed6ffbac" xml:space="preserve">
+    <value>Círculo invertido</value>
+  </data>
+  <data name="Buchstaben_auf_der_Linie_umgeschlagen_Kopf_zur_K_843a54f9" xml:space="preserve">
+    <value>Letras volteadas sobre la línea: la parte superior hacia el centro</value>
+  </data>
+  <data name="Zeichenabstand_f441362a" xml:space="preserve">
+    <value>Espaciado</value>
+  </data>
+  <data name="Schnitt_3d351f2a" xml:space="preserve">
+    <value>Estilo</value>
+  </data>
+  <data name="Fett_acf4dbde" xml:space="preserve">
+    <value>Negrita</value>
+  </data>
+  <data name="Kursiv_8a921708" xml:space="preserve">
+    <value>Cursiva</value>
+  </data>
+  <data name="Kalibrierung_d72a0824" xml:space="preserve">
+    <value>Calibración</value>
+  </data>
+  <data name="Kalibrierung_zur_cksetzen_698d90c9" xml:space="preserve">
+    <value>Restablecer calibración</value>
+  </data>
+  <data name="Tiefen_T_nung_b2c599bd" xml:space="preserve">
+    <value>Matiz de sombras</value>
+  </data>
+  <data name="Rot_Farbton_056dc2c0" xml:space="preserve">
+    <value>Tono rojo</value>
+  </data>
+  <data name="Rot_S_ttigung_d6eee052" xml:space="preserve">
+    <value>Saturación rojo</value>
+  </data>
+  <data name="Gr_n_Farbton_26d7d29c" xml:space="preserve">
+    <value>Tono verde</value>
+  </data>
+  <data name="Gr_n_S_ttigung_8d890d49" xml:space="preserve">
+    <value>Saturación verde</value>
+  </data>
+  <data name="Blau_Farbton_08dc7df1" xml:space="preserve">
+    <value>Tono azul</value>
+  </data>
+  <data name="Blau_S_ttigung_66494e39" xml:space="preserve">
+    <value>Saturación azul</value>
+  </data>
 </root>

@@ -377,15 +377,34 @@ Namespace Views
             End Sub
         End Sub
 
+        ''' <summary>Fenster verschieben: NUR aus Kopf- und Fusszeile heraus. Der Handler haengt am
+        ''' Wurzel-Grid "TitleBar", das die GANZE Fensterflaeche umfasst - ohne die Pruefung unten
+        ''' liesse sich das Fenster an beliebiger Stelle im Inhalt greifen (Nutzerbefund 2026-07-19).
+        ''' Ziehbereiche werden deshalb ausdruecklich mit der Style-Klasse "window-drag" markiert
+        ''' (Kopfleiste in dieser Datei, die Fusszeilen in Galerie/Betrachter/Editor). Bedienelemente
+        ''' darin bleiben bedienbar: die Suche nach oben bricht an Knoepfen, Eingabefeldern,
+        ''' Schiebereglern und Listen ab, bevor sie den Ziehbereich erreicht.</summary>
         Private Sub TitleBarPointerPressed(sender As Object, e As PointerPressedEventArgs)
-            Dim ctrl = TryCast(e.Source, Control)
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
+            If Not IsInWindowDragArea(TryCast(e.Source, Control)) Then Return
+            BeginMoveDrag(e)
+        End Sub
+
+        Private Shared Function IsInWindowDragArea(source As Control) As Boolean
+            Dim ctrl = source
             While ctrl IsNot Nothing
-                If TypeOf ctrl Is Button OrElse TypeOf ctrl Is TextBox Then Return
+                ' Alles Bedienbare gewinnt gegen den Ziehbereich - sonst waere ein Knopf in der
+                ' Fusszeile nicht mehr klickbar, weil der Zug schon beim Druecken beginnt.
+                If TypeOf ctrl Is Button OrElse TypeOf ctrl Is TextBox OrElse
+                   TypeOf ctrl Is Slider OrElse TypeOf ctrl Is ComboBox OrElse
+                   TypeOf ctrl Is ListBox OrElse TypeOf ctrl Is CheckBox OrElse
+                   TypeOf ctrl Is Avalonia.Controls.Primitives.ToggleButton OrElse
+                   TypeOf ctrl Is Avalonia.Controls.Primitives.ScrollBar Then Return False
+                If ctrl.Classes.Contains("window-drag") Then Return True
                 ctrl = TryCast(ctrl.Parent, Control)
             End While
-
-            If e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then BeginMoveDrag(e)
-        End Sub
+            Return False
+        End Function
 
         Private Sub OnMinimizeClick(sender As Object, e As RoutedEventArgs)
             WindowState = WindowState.Minimized

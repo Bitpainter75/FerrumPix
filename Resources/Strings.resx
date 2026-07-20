@@ -3609,4 +3609,142 @@
   <data name="Ebene_ausgeblendet_2a99a3ad" xml:space="preserve">
     <value>Layer hidden</value>
   </data>
+  <data name="PSD_ohne_lesbares_Gesamtbild_in_Photoshop_mit_ma_fd7c8a13" xml:space="preserve">
+    <value>PSD without a readable composite - save it in Photoshop with Maximize Compatibility</value>
+  </data>
+  <data name="Keine_Vorschau_aus_dieser_RAW_Datei_extrahierbar_1240acf9" xml:space="preserve">
+    <value>No preview could be extracted from this RAW file</value>
+  </data>
+  <data name="Pfad_40f869cd" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="Kein_61494817" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Bogen_cc3fd7d6" xml:space="preserve">
+    <value>Arc</value>
+  </data>
+  <data name="Kreis_78ba515b" xml:space="preserve">
+    <value>Circle</value>
+  </data>
+  <data name="Welle_abea34da" xml:space="preserve">
+    <value>Wave</value>
+  </data>
+  <data name="Kr_mmung_ae4648c8" xml:space="preserve">
+    <value>Curvature</value>
+  </data>
+  <data name="Startversatz_2ca61397" xml:space="preserve">
+    <value>Start offset</value>
+  </data>
+  <data name="RAW_entwickelt_8ef68cd6" xml:space="preserve">
+    <value>RAW developed</value>
+  </data>
+  <data name="RAW_Vorschau_e60fc82f" xml:space="preserve">
+    <value>RAW preview</value>
+  </data>
+  <data name="RAW_Bearbeitungen_als_Begleitdatei_merken_7ed96c34" xml:space="preserve">
+    <value>Remember RAW edits in a sidecar file</value>
+  </data>
+  <data name="Legt_die_Reglerwerte_als_kleine_fpxmp_Datei_nebe_5c2fe1d3" xml:space="preserve">
+    <value>Stores the slider values as a small .fpxmp file next to the RAW file and re-applies them the next time it is opened. The RAW file itself is never modified; brush and retouching strokes still need an .fpx project file.</value>
+  </data>
+  <data name="RAW_Bearbeitung_in_Begleitdatei_gespeichert_b7fd049e" xml:space="preserve">
+    <value>RAW edits saved to sidecar file</value>
+  </data>
+  <data name="Farbrauschen_7e6f8299" xml:space="preserve">
+    <value>Color noise</value>
+  </data>
+  <data name="Gl_ttet_nur_die_Farbanteile_Chroma_die_Helligkei_1c158f60" xml:space="preserve">
+    <value>Smooths only the colour (chroma) components; luminance and therefore detail are preserved.</value>
+  </data>
+  <data name="Positiv_f_gt_Staubk_rner_und_Kratzer_hinzu_Film__1d1681ed" xml:space="preserve">
+    <value>Positive adds dust specks and scratches (film look); negative removes defects while preserving edges.</value>
+  </data>
+  <data name="Positiv_f_gt_Rauschen_hinzu_negativ_reduziert_es_1decfbdc" xml:space="preserve">
+    <value>Positive adds noise; negative reduces it (uniform smoothing).</value>
+  </data>
+  <data name="Der_Speichern_Knopf_legt_die_Reglerwerte_als_kle_a767a98a" xml:space="preserve">
+    <value>The Save button stores the slider values as a small .fpxmp file next to the RAW file; they are re-applied automatically the next time it is opened. The RAW file itself is never modified; brush and retouching strokes still need an .fpx project file.</value>
+  </data>
+  <data name="Begleitdatei_konnte_nicht_geschrieben_werden_7f337000" xml:space="preserve">
+    <value>Sidecar file could not be written</value>
+  </data>
+  <data name="Als_Favorit_3cb310d8" xml:space="preserve">
+    <value>Add to favourites</value>
+  </data>
+  <data name="Aus_Favoriten_entfernen_ffcbb223" xml:space="preserve">
+    <value>Remove from favourites</value>
+  </data>
+  <data name="Nach_oben_8f26ce2a" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="Nach_unten_006cca92" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="Noch_keine_Favoriten_Ordner_Immich_Eintr_ge_und__0f8084c9" xml:space="preserve">
+    <value>No favourites yet. Right-click a folder, Immich entry or search list to add it here.</value>
+  </data>
+  <data name="Das_Ziel_dieses_Favoriten_existiert_nicht_mehr_07e4e4a0" xml:space="preserve">
+    <value>The target of this favourite no longer exists</value>
+  </data>
+  <data name="0_zu_den_Favoriten_hinzugef_gt_6af3561c" xml:space="preserve">
+    <value>{0} added to favourites</value>
+  </data>
+  <data name="0_ist_bereits_ein_Favorit_b14efcfc" xml:space="preserve">
+    <value>{0} is already a favourite</value>
+  </data>
+  <data name="0_aus_den_Favoriten_entfernt_7f2da5f8" xml:space="preserve">
+    <value>{0} removed from favourites</value>
+  </data>
+  <data name="Zu_Favoriten_hinzuf_gen_a5f5194e" xml:space="preserve">
+    <value>Add to favourites</value>
+  </data>
+  <data name="RAW_wird_entwickelt_cd804af0" xml:space="preserve">
+    <value>Developing RAW …</value>
+  </data>
+  <data name="Kreis_invers_ed6ffbac" xml:space="preserve">
+    <value>Circle inverted</value>
+  </data>
+  <data name="Buchstaben_auf_der_Linie_umgeschlagen_Kopf_zur_K_843a54f9" xml:space="preserve">
+    <value>Letters flipped on the line - tops facing the centre</value>
+  </data>
+  <data name="Zeichenabstand_f441362a" xml:space="preserve">
+    <value>Letter spacing</value>
+  </data>
+  <data name="Schnitt_3d351f2a" xml:space="preserve">
+    <value>Style</value>
+  </data>
+  <data name="Fett_acf4dbde" xml:space="preserve">
+    <value>Bold</value>
+  </data>
+  <data name="Kursiv_8a921708" xml:space="preserve">
+    <value>Italic</value>
+  </data>
+  <data name="Kalibrierung_d72a0824" xml:space="preserve">
+    <value>Calibration</value>
+  </data>
+  <data name="Kalibrierung_zur_cksetzen_698d90c9" xml:space="preserve">
+    <value>Reset calibration</value>
+  </data>
+  <data name="Tiefen_T_nung_b2c599bd" xml:space="preserve">
+    <value>Shadow tint</value>
+  </data>
+  <data name="Rot_Farbton_056dc2c0" xml:space="preserve">
+    <value>Red hue</value>
+  </data>
+  <data name="Rot_S_ttigung_d6eee052" xml:space="preserve">
+    <value>Red saturation</value>
+  </data>
+  <data name="Gr_n_Farbton_26d7d29c" xml:space="preserve">
+    <value>Green hue</value>
+  </data>
+  <data name="Gr_n_S_ttigung_8d890d49" xml:space="preserve">
+    <value>Green saturation</value>
+  </data>
+  <data name="Blau_Farbton_08dc7df1" xml:space="preserve">
+    <value>Blue hue</value>
+  </data>
+  <data name="Blau_S_ttigung_66494e39" xml:space="preserve">
+    <value>Blue saturation</value>
+  </data>
 </root>

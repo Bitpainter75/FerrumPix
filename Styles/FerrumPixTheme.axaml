@@ -432,6 +432,26 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent.Light}"/>
         <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent.Light}"/>
     </Style>
+    <!-- Tabs der Galerie-Seitenleiste (Ordner/Immich/Favoriten): flache Textknoepfe, der aktive
+         traegt die Akzentfarbe und eine Unterstreichung. -->
+    <Style Selector="Button.sidebar-tab">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="2,4"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.sidebar-tab:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="Button.sidebar-tab.active">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+
     <Style Selector="Button.icon-btn">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>

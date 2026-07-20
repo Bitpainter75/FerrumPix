@@ -3608,4 +3608,142 @@
   <data name="Ebene_ausgeblendet_2a99a3ad" xml:space="preserve">
     <value>Ebene ausgeblendet</value>
   </data>
+  <data name="PSD_ohne_lesbares_Gesamtbild_in_Photoshop_mit_ma_fd7c8a13" xml:space="preserve">
+    <value>PSD ohne lesbares Gesamtbild - in Photoshop mit maximaler Kompatibilität speichern</value>
+  </data>
+  <data name="Keine_Vorschau_aus_dieser_RAW_Datei_extrahierbar_1240acf9" xml:space="preserve">
+    <value>Keine Vorschau aus dieser RAW-Datei extrahierbar</value>
+  </data>
+  <data name="Pfad_40f869cd" xml:space="preserve">
+    <value>Pfad</value>
+  </data>
+  <data name="Kein_61494817" xml:space="preserve">
+    <value>Kein</value>
+  </data>
+  <data name="Bogen_cc3fd7d6" xml:space="preserve">
+    <value>Bogen</value>
+  </data>
+  <data name="Kreis_78ba515b" xml:space="preserve">
+    <value>Kreis</value>
+  </data>
+  <data name="Welle_abea34da" xml:space="preserve">
+    <value>Welle</value>
+  </data>
+  <data name="Kr_mmung_ae4648c8" xml:space="preserve">
+    <value>Krümmung</value>
+  </data>
+  <data name="Startversatz_2ca61397" xml:space="preserve">
+    <value>Startversatz</value>
+  </data>
+  <data name="RAW_entwickelt_8ef68cd6" xml:space="preserve">
+    <value>RAW entwickelt</value>
+  </data>
+  <data name="RAW_Vorschau_e60fc82f" xml:space="preserve">
+    <value>RAW-Vorschau</value>
+  </data>
+  <data name="RAW_Bearbeitungen_als_Begleitdatei_merken_7ed96c34" xml:space="preserve">
+    <value>RAW-Bearbeitungen als Begleitdatei merken</value>
+  </data>
+  <data name="Legt_die_Reglerwerte_als_kleine_fpxmp_Datei_nebe_5c2fe1d3" xml:space="preserve">
+    <value>Legt die Reglerwerte als kleine .fpxmp-Datei neben die RAW-Datei und wendet sie beim nächsten Öffnen automatisch an. Die RAW-Datei selbst bleibt unverändert; Pinsel- und Retusche-Striche brauchen weiterhin eine .fpx-Projektdatei.</value>
+  </data>
+  <data name="RAW_Bearbeitung_in_Begleitdatei_gespeichert_b7fd049e" xml:space="preserve">
+    <value>RAW-Bearbeitung in Begleitdatei gespeichert</value>
+  </data>
+  <data name="Farbrauschen_7e6f8299" xml:space="preserve">
+    <value>Farbrauschen</value>
+  </data>
+  <data name="Gl_ttet_nur_die_Farbanteile_Chroma_die_Helligkei_1c158f60" xml:space="preserve">
+    <value>Glättet nur die Farbanteile (Chroma), die Helligkeit und damit Details bleiben erhalten.</value>
+  </data>
+  <data name="Positiv_f_gt_Staubk_rner_und_Kratzer_hinzu_Film__1d1681ed" xml:space="preserve">
+    <value>Positiv fügt Staubkörner und Kratzer hinzu (Film-Look), negativ entfernt Störungen kantenerhaltend.</value>
+  </data>
+  <data name="Positiv_f_gt_Rauschen_hinzu_negativ_reduziert_es_1decfbdc" xml:space="preserve">
+    <value>Positiv fügt Rauschen hinzu, negativ reduziert es (gleichmäßiges Weichzeichnen).</value>
+  </data>
+  <data name="Der_Speichern_Knopf_legt_die_Reglerwerte_als_kle_a767a98a" xml:space="preserve">
+    <value>Der Speichern-Knopf legt die Reglerwerte als kleine .fpxmp-Datei neben die RAW-Datei; beim nächsten Öffnen werden sie automatisch angewendet. Die RAW-Datei selbst bleibt unverändert; Pinsel- und Retusche-Striche brauchen weiterhin eine .fpx-Projektdatei.</value>
+  </data>
+  <data name="Begleitdatei_konnte_nicht_geschrieben_werden_7f337000" xml:space="preserve">
+    <value>Begleitdatei konnte nicht geschrieben werden</value>
+  </data>
+  <data name="Als_Favorit_3cb310d8" xml:space="preserve">
+    <value>Als Favorit</value>
+  </data>
+  <data name="Aus_Favoriten_entfernen_ffcbb223" xml:space="preserve">
+    <value>Aus Favoriten entfernen</value>
+  </data>
+  <data name="Nach_oben_8f26ce2a" xml:space="preserve">
+    <value>Nach oben</value>
+  </data>
+  <data name="Nach_unten_006cca92" xml:space="preserve">
+    <value>Nach unten</value>
+  </data>
+  <data name="Noch_keine_Favoriten_Ordner_Immich_Eintr_ge_und__0f8084c9" xml:space="preserve">
+    <value>Noch keine Favoriten. Ordner, Immich-Einträge und Suchlisten lassen sich per Rechtsklick als Favorit ablegen.</value>
+  </data>
+  <data name="Das_Ziel_dieses_Favoriten_existiert_nicht_mehr_07e4e4a0" xml:space="preserve">
+    <value>Das Ziel dieses Favoriten existiert nicht mehr</value>
+  </data>
+  <data name="0_zu_den_Favoriten_hinzugef_gt_6af3561c" xml:space="preserve">
+    <value>{0} zu den Favoriten hinzugefügt</value>
+  </data>
+  <data name="0_ist_bereits_ein_Favorit_b14efcfc" xml:space="preserve">
+    <value>{0} ist bereits ein Favorit</value>
+  </data>
+  <data name="0_aus_den_Favoriten_entfernt_7f2da5f8" xml:space="preserve">
+    <value>{0} aus den Favoriten entfernt</value>
+  </data>
+  <data name="Zu_Favoriten_hinzuf_gen_a5f5194e" xml:space="preserve">
+    <value>Zu Favoriten hinzufügen</value>
+  </data>
+  <data name="RAW_wird_entwickelt_cd804af0" xml:space="preserve">
+    <value>RAW wird entwickelt …</value>
+  </data>
+  <data name="Kreis_invers_ed6ffbac" xml:space="preserve">
+    <value>Kreis invers</value>
+  </data>
+  <data name="Buchstaben_auf_der_Linie_umgeschlagen_Kopf_zur_K_843a54f9" xml:space="preserve">
+    <value>Buchstaben auf der Linie umgeschlagen - Kopf zur Kreismitte</value>
+  </data>
+  <data name="Zeichenabstand_f441362a" xml:space="preserve">
+    <value>Zeichenabstand</value>
+  </data>
+  <data name="Schnitt_3d351f2a" xml:space="preserve">
+    <value>Schnitt</value>
+  </data>
+  <data name="Fett_acf4dbde" xml:space="preserve">
+    <value>Fett</value>
+  </data>
+  <data name="Kursiv_8a921708" xml:space="preserve">
+    <value>Kursiv</value>
+  </data>
+  <data name="Kalibrierung_d72a0824" xml:space="preserve">
+    <value>Kalibrierung</value>
+  </data>
+  <data name="Kalibrierung_zur_cksetzen_698d90c9" xml:space="preserve">
+    <value>Kalibrierung zurücksetzen</value>
+  </data>
+  <data name="Tiefen_T_nung_b2c599bd" xml:space="preserve">
+    <value>Tiefen Tönung</value>
+  </data>
+  <data name="Rot_Farbton_056dc2c0" xml:space="preserve">
+    <value>Rot Farbton</value>
+  </data>
+  <data name="Rot_S_ttigung_d6eee052" xml:space="preserve">
+    <value>Rot Sättigung</value>
+  </data>
+  <data name="Gr_n_Farbton_26d7d29c" xml:space="preserve">
+    <value>Grün Farbton</value>
+  </data>
+  <data name="Gr_n_S_ttigung_8d890d49" xml:space="preserve">
+    <value>Grün Sättigung</value>
+  </data>
+  <data name="Blau_Farbton_08dc7df1" xml:space="preserve">
+    <value>Blau Farbton</value>
+  </data>
+  <data name="Blau_S_ttigung_66494e39" xml:space="preserve">
+    <value>Blau Sättigung</value>
+  </data>
 </root>

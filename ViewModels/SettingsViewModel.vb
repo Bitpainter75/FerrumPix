@@ -115,6 +115,7 @@ Namespace ViewModels
         Private _savedApplicationScale As Double = 1.0
         Private _savedApplicationScaleScreen As String = "HDMI-A-1"
         Private _savedVideoHardwareAcceleration As Boolean = False
+        Private _rawSidecarEnabled As Boolean = True
         Private _savedTransparencyBackgroundMode As String = "Checkerboard"
         Private _savedTransparencyBackgroundColor As String = "#FFFFFFFF"
 
@@ -930,6 +931,19 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' RAW-Rezept-Sidecar (.fpxmp): Regler-Bearbeitungen an RAW-Dateien automatisch neben dem
+        ''' Original merken und beim naechsten Oeffnen wieder anwenden.
+        Public Property RawSidecarEnabled As Boolean
+            Get
+                Return _rawSidecarEnabled
+            End Get
+            Set(value As Boolean)
+                If _rawSidecarEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_rawSidecarEnabled, value)
+                AppSettingsService.SaveRawSidecarEnabled(value)
+            End Set
+        End Property
+
         ''' Bestimmt, wie der Bereich hinter transparenten Bildbereichen in Viewer und Editor
         ''' dargestellt wird: "Checkerboard" (Standard) zeigt das übliche Schachbrettmuster,
         ''' "None" zeigt gar keinen Hintergrund (echt durchsichtig, kein Muster), "Solid" eine per
@@ -1217,6 +1231,7 @@ Namespace ViewModels
             _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
             _editorShowFilmstrip = _appSettings.EditorShowFilmstrip
+            _rawSidecarEnabled = _appSettings.RawSidecarEnabled
             _editorGridSize = AppSettingsService.NormalizeEditorGridSize(_appSettings.EditorGridSize)
             _editorShowRulers = _appSettings.EditorShowRulers
             _editorShowGrid = _appSettings.EditorShowGrid

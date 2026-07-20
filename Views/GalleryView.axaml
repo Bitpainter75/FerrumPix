@@ -592,22 +592,302 @@
 
         <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Classes="sidebar">
             <Grid RowDefinitions="Auto,*,Auto">
-                <StackPanel Grid.Row="0"
-                            Margin="24,22,12,8"
-                            Spacing="6"
-                            ClipToBounds="True">
-                    <Grid ColumnDefinitions="*" Margin="0,0,14,8">
-                        <TextBlock Text="Suchen" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
-                    </Grid>
-                    <!-- Suchen- und Immich-Bereich sind hart gedeckelt und scrollen intern; der
-                         Ordnerbaum darunter hat zusätzlich eine Mindesthöhe (siehe Row 1) - er darf
-                         von wachsenden Suchlisten/Immich-Knoten (Alben, Personen, Orte) nie aus dem
-                         sichtbaren Bereich gedrängt werden. -->
-                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto"
-                                  MaxHeight="150">
+                <!-- Navigations-Tabs: Ordner / Immich / Favoriten. Der Immich-Tab existiert nur,
+                     wenn Immich hinterlegt ist (HasImmich); faellt die Konfiguration weg, springt die
+                     Auswahl im ViewModel auf Ordner zurueck (SyncSidebarTabWithImmich). Jeder Tab traegt
+                     seine EIGENEN Suchlisten - eine Dateisystem-Suche gehoert nicht neben Immich-Alben. -->
+                <Grid Grid.Row="0" Margin="24,22,24,4" ColumnDefinitions="*,*,*">
+                    <Button Grid.Column="0" Classes="sidebar-tab"
+                            Command="{Binding SetSidebarTabCommand}" CommandParameter="Folders"
+                            Classes.active="{Binding IsFoldersTab}">
+                        <TextBlock Text="Ordner" FontSize="{DynamicResource FP.Font.Body}"/>
+                    </Button>
+                    <Button Grid.Column="1" Classes="sidebar-tab"
+                            IsVisible="{Binding HasImmich}"
+                            Command="{Binding SetSidebarTabCommand}" CommandParameter="Immich"
+                            Classes.active="{Binding IsImmichTab}">
+                        <TextBlock Text="Immich" FontSize="{DynamicResource FP.Font.Body}"/>
+                    </Button>
+                    <Button Grid.Column="2" Classes="sidebar-tab"
+                            Command="{Binding SetSidebarTabCommand}" CommandParameter="Favorites"
+                            Classes.active="{Binding IsFavoritesTab}">
+                        <TextBlock Text="Favoriten" FontSize="{DynamicResource FP.Font.Body}"/>
+                    </Button>
+                </Grid>
+
+                <!-- ORDNER-TAB: eigene Suchlisten oben, Ordnerbaum darunter. Die Suchliste waechst
+                     mit ihren Eintraegen, aber nur bis 260 px und scrollt danach intern - der Baum
+                     darunter darf nie aus dem sichtbaren Bereich gedraengt werden. -->
+                <Grid Grid.Row="1" Margin="24,8,12,0" RowDefinitions="Auto,Auto,Auto,*"
+                      ClipToBounds="True" IsVisible="{Binding IsFoldersTab}">
+                    <TextBlock Grid.Row="0" Text="Suchen" Margin="0,0,14,8"
+                               FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto" MaxHeight="260">
                         <TreeView Name="SearchTreeView"
-                                  ItemsSource="{Binding SearchTree}"
+                                        ItemsSource="{Binding SearchTree}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                        SelectionChanged="OnVirtualTreeSelectionChanged">
+                                  <TreeView.ItemTemplate>
+                                      <TreeDataTemplate ItemsSource="{Binding Children}">
+                                          <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-34,3,0,3"
+                                                ContextRequested="OnSearchNodeContextRequested">
+                                              <Grid.ContextMenu>
+                                                  <ContextMenu>
+                                                      <MenuItem Header="Zu Favoriten hinzufügen"
+                                                                IsVisible="{Binding CanBecomeFavorite}"
+                                                                Click="OnAddNodeFavoriteClick"/>
+                                                      <MenuItem Header="Bearbeiten"
+                                                                IsVisible="{Binding IsRemovable}"
+                                                                Click="OnEditVirtualSearchClick"/>
+                                                      <MenuItem Header="Entfernen"
+                                                                IsVisible="{Binding IsRemovable}"
+                                                                Click="OnRemoveVirtualSearchClick"/>
+                                                  </ContextMenu>
+                                              </Grid.ContextMenu>
+                                              <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
+                                                             Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
+                                              <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
+                                                         VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
+                                                         TextTrimming="CharacterEllipsis"/>
+                                              <Button Grid.Column="2"
+                                                      Classes="ghost"
+                                                      Width="18"
+                                                      Height="18"
+                                                      Padding="0"
+                                                      Margin="4,0,4,0"
+                                                      IsVisible="{Binding IsRemovable}"
+                                                      Click="OnRemoveVirtualSearchClick"
+                                                      ToolTip.Tip="Suche entfernen">
+                                                  <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                                                 Width="12"
+                                                                 Height="12"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"
+                                                                 Opacity="0.75"/>
+                                              </Button>
+                                          </Grid>
+                                      </TreeDataTemplate>
+                                  </TreeView.ItemTemplate>
+                              </TreeView>
+                    </ScrollViewer>
+                    <TextBlock Grid.Row="2" Text="Ordner" Margin="0,26,14,8"
+                               FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                    <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <TreeView Name="FolderTreeView"
+                                        ItemsSource="{Binding FolderTree}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                        ContextRequested="OnFolderTreeContextRequested"
+                                        DragDrop.AllowDrop="True"
+                                        DragDrop.DragOver="OnFolderTreeDragOver"
+                                        DragDrop.Drop="OnFolderTreeDrop"
+                                        DragDrop.DragLeave="OnTreeDragLeave"
+                                        SelectionChanged="OnFolderTreeSelectionChanged">
+                                  <TreeView.Styles>
+                                      <!-- Das Element unter dem Zeiger ist der Border/ContentPresenter des
+                                           TreeViewItem-Templates, nicht unsere Zeilenvorlage - es spannt die ganze
+                                           Zeilenbreite darueber. Der Mauszeiger richtet sich nach diesem Element,
+                                           deshalb muss AllowDrop dort sitzen und nicht nur am TreeView (Messung
+                                           2026-07-19: quelle=Border/ContentPresenter, nie Grid). -->
+                                      <Style Selector="TreeViewItem">
+                                          <Setter Property="DragDrop.AllowDrop" Value="True"/>
+                                      </Style>
+                                      <!-- Eigene Ablege-Rueckmeldung: Avalonia stellt unter X11 bei internem Ziehen
+                                           keine effektabhaengigen Mauszeiger dar (siehe HighlightDropRow). -->
+                                      <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot">
+                                          <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+                                          <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+                                          <Setter Property="BorderThickness" Value="1"/>
+                                          <Setter Property="CornerRadius" Value="8"/>
+                                      </Style>
+                                  </TreeView.Styles>
+                                  <TreeView.ContextMenu>
+                                      <ContextMenu MaxHeight="1000">
+                                          <MenuItem Header="Zu Favoriten hinzufügen" Click="OnAddFolderFavoriteClick"/>
+                                          <Separator/>
+                                          <MenuItem Name="FolderTreeCreateFolderMenuItem" Header="Neuer Ordner" Click="OnContextCreateFolder"/>
+                                          <Separator/>
+                                          <MenuItem Name="FolderTreeRenameMenuItem" Header="Umbenennen" Click="OnContextRenameFolder"/>
+                                          <MenuItem Name="FolderTreeCopyMenuItem" Header="Kopieren" Click="OnContextCopyFolder"/>
+                                          <MenuItem Name="FolderTreeCutMenuItem" Header="Ausschneiden" Click="OnContextCutFolder"/>
+                                          <MenuItem Name="FolderTreePasteMenuItem" Header="Einfügen" Click="OnContextPasteFolder"/>
+                                          <MenuItem Header="Pfad kopieren" Click="OnContextCopyFolderPath"/>
+                                          <Separator/>
+                                          <MenuItem Name="FolderTreeDeleteMenuItem" Header="Löschen" Click="OnContextDeleteFolder"/>
+                                      </ContextMenu>
+                                  </TreeView.ContextMenu>
+                                  <TreeView.ItemTemplate>
+                                      <TreeDataTemplate ItemsSource="{Binding Children}">
+                                          <!-- Background="Transparent" macht die ganze Zeile hittestbar (sonst treffen
+                                               nur Symbol und Beschriftung), DragDrop.AllowDrop meldet sie als Drop-Ziel
+                                               an - siehe Kommentar am Immich-Baum. -->
+                                          <Grid ColumnDefinitions="Auto,*"
+                                                VerticalAlignment="Center"
+                                                HorizontalAlignment="Stretch"
+                                                Background="Transparent"
+                                                DragDrop.AllowDrop="True"
+                                                Margin="4,4">
+                                              <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
+                                                     Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
+                                              <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="10,0,0,0"
+                                                         VerticalAlignment="Center"
+                                                         HorizontalAlignment="Stretch"
+                                                         FontSize="{DynamicResource FP.Font.Body}"
+                                                         TextTrimming="CharacterEllipsis"
+                                                         ToolTip.Tip="{Binding FullPath}"/>
+                                          </Grid>
+                                      </TreeDataTemplate>
+                                      </TreeView.ItemTemplate>
+                              </TreeView>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- IMMICH-TAB: Immich-Suchlisten oben, Immich-Baum (Alle Fotos/Alben/Personen/Orte) darunter. -->
+                <Grid Grid.Row="1" Margin="24,8,12,0" RowDefinitions="Auto,Auto,Auto,*"
+                      ClipToBounds="True" IsVisible="{Binding IsImmichTab}">
+                    <TextBlock Grid.Row="0" Text="Suchen" Margin="0,0,14,8"
+                               FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto" MaxHeight="260">
+                        <TreeView Name="ImmichSearchTreeView"
+                                        ItemsSource="{Binding ImmichSearchTree}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                        SelectionChanged="OnVirtualTreeSelectionChanged">
+                                  <TreeView.ItemTemplate>
+                                      <TreeDataTemplate ItemsSource="{Binding Children}">
+                                          <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-34,3,0,3"
+                                                ContextRequested="OnSearchNodeContextRequested">
+                                              <Grid.ContextMenu>
+                                                  <ContextMenu>
+                                                      <MenuItem Header="Zu Favoriten hinzufügen"
+                                                                IsVisible="{Binding CanBecomeFavorite}"
+                                                                Click="OnAddNodeFavoriteClick"/>
+                                                      <MenuItem Header="Bearbeiten"
+                                                                IsVisible="{Binding IsRemovable}"
+                                                                Click="OnEditVirtualSearchClick"/>
+                                                      <MenuItem Header="Entfernen"
+                                                                IsVisible="{Binding IsRemovable}"
+                                                                Click="OnRemoveVirtualSearchClick"/>
+                                                  </ContextMenu>
+                                              </Grid.ContextMenu>
+                                              <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
+                                                             Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
+                                              <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
+                                                         VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
+                                                         TextTrimming="CharacterEllipsis"/>
+                                              <Button Grid.Column="2"
+                                                      Classes="ghost"
+                                                      Width="18"
+                                                      Height="18"
+                                                      Padding="0"
+                                                      Margin="4,0,4,0"
+                                                      IsVisible="{Binding IsRemovable}"
+                                                      Click="OnRemoveVirtualSearchClick"
+                                                      ToolTip.Tip="Suche entfernen">
+                                                  <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                                                 Width="12"
+                                                                 Height="12"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"
+                                                                 Opacity="0.75"/>
+                                              </Button>
+                                          </Grid>
+                                      </TreeDataTemplate>
+                                  </TreeView.ItemTemplate>
+                              </TreeView>
+                    </ScrollViewer>
+                    <TextBlock Grid.Row="2" Text="Immich" Margin="0,26,14,8"
+                               FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                    <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <TreeView Name="ImmichTreeView"
+                                        ItemsSource="{Binding ImmichTree}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                        DragDrop.AllowDrop="True"
+                                        DragDrop.DragOver="OnImmichTreeDragOver"
+                                        DragDrop.Drop="OnImmichTreeDrop"
+                                        DragDrop.DragLeave="OnTreeDragLeave"
+                                        SelectionChanged="OnVirtualTreeSelectionChanged">
+                                  <TreeView.Styles>
+                                      <!-- Das Element unter dem Zeiger ist der Border/ContentPresenter des
+                                           TreeViewItem-Templates, nicht unsere Zeilenvorlage - es spannt die ganze
+                                           Zeilenbreite darueber. Der Mauszeiger richtet sich nach diesem Element,
+                                           deshalb muss AllowDrop dort sitzen und nicht nur am TreeView (Messung
+                                           2026-07-19: quelle=Border/ContentPresenter, nie Grid). -->
+                                      <Style Selector="TreeViewItem">
+                                          <Setter Property="DragDrop.AllowDrop" Value="True"/>
+                                      </Style>
+                                      <!-- Eigene Ablege-Rueckmeldung: Avalonia stellt unter X11 bei internem Ziehen
+                                           keine effektabhaengigen Mauszeiger dar (siehe HighlightDropRow). -->
+                                      <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot">
+                                          <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+                                          <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+                                          <Setter Property="BorderThickness" Value="1"/>
+                                          <Setter Property="CornerRadius" Value="8"/>
+                                      </Style>
+                                  </TreeView.Styles>
+                                  <TreeView.ItemTemplate>
+                                      <TreeDataTemplate ItemsSource="{Binding Children}">
+                                          <!-- AllowDrop auch auf der Zeile selbst: die Ereignisse blubbern zwar zum
+                                               TreeView hoch, aber der Mauszeiger richtet sich nach dem Element UNTER dem
+                                               Zeiger - ohne die Angabe gilt die Zeile nicht als Ziel und es erscheint das
+                                               Verbotszeichen, obwohl der Drop laeuft (Messung 2026-07-19). Die Kacheln in
+                                               der Galerie machen es genauso. -->
+                                          <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center"
+                                                HorizontalAlignment="Stretch" Background="Transparent" Margin="-34,3,0,3"
+                                                DragDrop.AllowDrop="True"
+                                                PointerPressed="OnImmichNodePointerPressed">
+                                              <Grid.ContextMenu>
+                                                  <ContextMenu>
+                                                      <MenuItem Header="Zu Favoriten hinzufügen"
+                                                                IsVisible="{Binding CanBecomeFavorite}"
+                                                                Click="OnAddNodeFavoriteClick"/>
+                                                      <Separator/>
+                                                      <MenuItem Header="Bilder hochladen…" Click="OnImmichUploadClick"/>
+                                                      <MenuItem Header="Einfügen (nach Immich)" Click="OnImmichPasteClick"/>
+                                                      <MenuItem Header="Album umbenennen" IsVisible="{Binding IsImmichAlbumNode}" Click="OnImmichRenameAlbumClick"/>
+                                                      <MenuItem Header="Album löschen" IsVisible="{Binding CanDeleteImmichAlbum}" Click="OnImmichDeleteAlbumClick"/>
+                                                      <Separator/>
+                                                      <MenuItem Header="Neues Album…" Click="OnImmichNewAlbumClick"/>
+                                                  </ContextMenu>
+                                              </Grid.ContextMenu>
+                                              <icons:SvgIcon Source="{Binding ImmichIconSource}"
+                                                             Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
+                                              <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
+                                                         VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
+                                                         TextTrimming="CharacterEllipsis"/>
+                                          </Grid>
+                                      </TreeDataTemplate>
+                                  </TreeView.ItemTemplate>
+                              </TreeView>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- FAVORITEN-TAB: gemischte Liste aus Ordnern, Immich-Zielen und Suchlisten. -->
+                <Grid Grid.Row="1" Margin="24,8,12,0" RowDefinitions="Auto,*"
+                      ClipToBounds="True" IsVisible="{Binding IsFavoritesTab}">
+                    <TextBlock Grid.Row="0" Text="Favoriten" Margin="0,0,14,8"
+                               FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                    <Panel Grid.Row="1">
+                        <TextBlock Text="Noch keine Favoriten. Ordner, Immich-Einträge und Suchlisten lassen sich per Rechtsklick als Favorit ablegen."
+                                   TextWrapping="Wrap" Margin="0,4,14,0"
+                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                   FontSize="{DynamicResource FP.Font.Caption}"
+                                   IsVisible="{Binding !HasFavorites}"/>
+                        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto"
+                                      IsVisible="{Binding HasFavorites}">
+                            <TreeView Name="FavoritesTreeView"
+                                  ItemsSource="{Binding FavoritesTree}"
                                   Background="Transparent"
                                   BorderThickness="0"
                                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -615,189 +895,69 @@
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
                                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-34,3,0,3"
-                                          ContextRequested="OnSearchNodeContextRequested">
+                                          Background="Transparent">
+                                        <!-- Die Favoriten fuehren die Kontextmenues ihrer Ziele mit: je nach
+                                             Art des Favoriten erscheinen die Ordner-, Immich- oder Such-Eintraege
+                                             (Nutzerwunsch 2026-07-19). Sie rufen dieselben Handler wie in den
+                                             Herkunftsbaeumen - "Aus Favoriten entfernen" steht bewusst getrennt
+                                             darunter, damit es nicht mit "Loeschen" verwechselt wird. -->
                                         <Grid.ContextMenu>
                                             <ContextMenu>
-                                                <MenuItem Header="Bearbeiten"
-                                                          IsVisible="{Binding IsRemovable}"
+                                                <MenuItem Header="Neuer Ordner" IsVisible="{Binding IsFolderFavorite}"
+                                                          Click="OnFavoriteCreateFolderClick"/>
+                                                <MenuItem Header="Umbenennen" IsVisible="{Binding IsFolderFavorite}"
+                                                          Click="OnFavoriteRenameFolderClick"/>
+                                                <MenuItem Header="Kopieren" IsVisible="{Binding IsFolderFavorite}"
+                                                          Click="OnFavoriteCopyFolderClick"/>
+                                                <MenuItem Header="Ausschneiden" IsVisible="{Binding IsFolderFavorite}"
+                                                          Click="OnFavoriteCutFolderClick"/>
+                                                <MenuItem Header="Einfügen" IsVisible="{Binding IsFolderFavorite}"
+                                                          Click="OnFavoritePasteFolderClick"/>
+                                                <MenuItem Header="Pfad kopieren" IsVisible="{Binding IsFolderFavorite}"
+                                                          Click="OnFavoriteCopyFolderPathClick"/>
+                                                <MenuItem Header="Löschen" IsVisible="{Binding IsFolderFavorite}"
+                                                          Click="OnFavoriteDeleteFolderClick"/>
+
+                                                <MenuItem Header="Bearbeiten" IsVisible="{Binding IsSavedSearchNode}"
                                                           Click="OnEditVirtualSearchClick"/>
-                                                <MenuItem Header="Entfernen"
-                                                          IsVisible="{Binding IsRemovable}"
+                                                <MenuItem Header="Suche entfernen" IsVisible="{Binding IsSavedSearchNode}"
                                                           Click="OnRemoveVirtualSearchClick"/>
+
+                                                <MenuItem Header="Bilder hochladen…" IsVisible="{Binding IsImmichNode}"
+                                                          Click="OnImmichUploadClick"/>
+                                                <MenuItem Header="Einfügen (nach Immich)" IsVisible="{Binding IsImmichNode}"
+                                                          Click="OnImmichPasteClick"/>
+                                                <MenuItem Header="Album umbenennen" IsVisible="{Binding IsImmichAlbumNode}"
+                                                          Click="OnImmichRenameAlbumClick"/>
+                                                <MenuItem Header="Album löschen" IsVisible="{Binding CanDeleteImmichAlbum}"
+                                                          Click="OnImmichDeleteAlbumClick"/>
+
+                                                <Separator/>
+                                                <MenuItem Header="Aus Favoriten entfernen" Click="OnRemoveFavoriteClick"/>
                                             </ContextMenu>
                                         </Grid.ContextMenu>
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
+                                        <icons:SvgIcon Source="{Binding FavoriteIconSource}"
                                                        Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
                                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip.Tip="{Binding RootFolder}"/>
                                         <Button Grid.Column="2"
                                                 Classes="ghost"
-                                                Width="18"
-                                                Height="18"
-                                                Padding="0"
-                                                Margin="4,0,4,0"
-                                                IsVisible="{Binding IsRemovable}"
-                                                Click="OnRemoveVirtualSearchClick"
-                                                ToolTip.Tip="Suche entfernen">
+                                                Width="18" Height="18" Padding="0" Margin="4,0,4,0"
+                                                Click="OnRemoveFavoriteClick"
+                                                ToolTip.Tip="Aus Favoriten entfernen">
                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
-                                                           Width="12"
-                                                           Height="12"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
+                                                           Width="12" Height="12"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
                                                            Opacity="0.75"/>
                                         </Button>
                                     </Grid>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>
                         </TreeView>
-                    </ScrollViewer>
-
-                    <Grid ColumnDefinitions="*" Margin="0,6,14,8" IsVisible="{Binding HasImmich}">
-                        <TextBlock Text="Immich" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
-                    </Grid>
-                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto"
-                                  MaxHeight="220"
-                                  IsVisible="{Binding HasImmich}">
-                        <TreeView Name="ImmichTreeView"
-                                  ItemsSource="{Binding ImmichTree}"
-                                  Background="Transparent"
-                                  BorderThickness="0"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                  DragDrop.AllowDrop="True"
-                                  DragDrop.DragOver="OnImmichTreeDragOver"
-                                  DragDrop.Drop="OnImmichTreeDrop"
-                                  DragDrop.DragLeave="OnTreeDragLeave"
-                                  SelectionChanged="OnVirtualTreeSelectionChanged">
-                            <TreeView.Styles>
-                                <!-- Das Element unter dem Zeiger ist der Border/ContentPresenter des
-                                     TreeViewItem-Templates, nicht unsere Zeilenvorlage - es spannt die ganze
-                                     Zeilenbreite darueber. Der Mauszeiger richtet sich nach diesem Element,
-                                     deshalb muss AllowDrop dort sitzen und nicht nur am TreeView (Messung
-                                     2026-07-19: quelle=Border/ContentPresenter, nie Grid). -->
-                                <Style Selector="TreeViewItem">
-                                    <Setter Property="DragDrop.AllowDrop" Value="True"/>
-                                </Style>
-                                <!-- Eigene Ablege-Rueckmeldung: Avalonia stellt unter X11 bei internem Ziehen
-                                     keine effektabhaengigen Mauszeiger dar (siehe HighlightDropRow). -->
-                                <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot">
-                                    <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
-                                    <Setter Property="BorderThickness" Value="1"/>
-                                    <Setter Property="CornerRadius" Value="8"/>
-                                </Style>
-                            </TreeView.Styles>
-                            <TreeView.ItemTemplate>
-                                <TreeDataTemplate ItemsSource="{Binding Children}">
-                                    <!-- AllowDrop auch auf der Zeile selbst: die Ereignisse blubbern zwar zum
-                                         TreeView hoch, aber der Mauszeiger richtet sich nach dem Element UNTER dem
-                                         Zeiger - ohne die Angabe gilt die Zeile nicht als Ziel und es erscheint das
-                                         Verbotszeichen, obwohl der Drop laeuft (Messung 2026-07-19). Die Kacheln in
-                                         der Galerie machen es genauso. -->
-                                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center"
-                                          HorizontalAlignment="Stretch" Background="Transparent" Margin="-34,3,0,3"
-                                          DragDrop.AllowDrop="True"
-                                          PointerPressed="OnImmichNodePointerPressed">
-                                        <Grid.ContextMenu>
-                                            <ContextMenu>
-                                                <MenuItem Header="Bilder hochladen…" Click="OnImmichUploadClick"/>
-                                                <MenuItem Header="Einfügen (nach Immich)" Click="OnImmichPasteClick"/>
-                                                <MenuItem Header="Album umbenennen" IsVisible="{Binding IsImmichAlbumNode}" Click="OnImmichRenameAlbumClick"/>
-                                                <MenuItem Header="Album löschen" IsVisible="{Binding CanDeleteImmichAlbum}" Click="OnImmichDeleteAlbumClick"/>
-                                                <Separator/>
-                                                <MenuItem Header="Neues Album…" Click="OnImmichNewAlbumClick"/>
-                                            </ContextMenu>
-                                        </Grid.ContextMenu>
-                                        <icons:SvgIcon Source="{Binding ImmichIconSource}"
-                                                       Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
-                                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </Grid>
-                                </TreeDataTemplate>
-                            </TreeView.ItemTemplate>
-                        </TreeView>
-                    </ScrollViewer>
-                </StackPanel>
-
-                <Grid Grid.Row="1"
-                      Margin="24,8,12,0"
-                      RowDefinitions="Auto,*"
-                      MinHeight="180"
-                      ClipToBounds="True">
-                    <Grid ColumnDefinitions="*" Margin="0,0,14,8">
-                        <TextBlock Text="Ordner" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
-                    </Grid>
-                    <ScrollViewer Grid.Row="1"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto">
-                        <TreeView Name="FolderTreeView"
-                                  ItemsSource="{Binding FolderTree}"
-                                  Background="Transparent"
-                                  BorderThickness="0"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                  ContextRequested="OnFolderTreeContextRequested"
-                                  DragDrop.AllowDrop="True"
-                                  DragDrop.DragOver="OnFolderTreeDragOver"
-                                  DragDrop.Drop="OnFolderTreeDrop"
-                                  DragDrop.DragLeave="OnTreeDragLeave"
-                                  SelectionChanged="OnFolderTreeSelectionChanged">
-                            <TreeView.Styles>
-                                <!-- Das Element unter dem Zeiger ist der Border/ContentPresenter des
-                                     TreeViewItem-Templates, nicht unsere Zeilenvorlage - es spannt die ganze
-                                     Zeilenbreite darueber. Der Mauszeiger richtet sich nach diesem Element,
-                                     deshalb muss AllowDrop dort sitzen und nicht nur am TreeView (Messung
-                                     2026-07-19: quelle=Border/ContentPresenter, nie Grid). -->
-                                <Style Selector="TreeViewItem">
-                                    <Setter Property="DragDrop.AllowDrop" Value="True"/>
-                                </Style>
-                                <!-- Eigene Ablege-Rueckmeldung: Avalonia stellt unter X11 bei internem Ziehen
-                                     keine effektabhaengigen Mauszeiger dar (siehe HighlightDropRow). -->
-                                <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot">
-                                    <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
-                                    <Setter Property="BorderThickness" Value="1"/>
-                                    <Setter Property="CornerRadius" Value="8"/>
-                                </Style>
-                            </TreeView.Styles>
-                            <TreeView.ContextMenu>
-                                <ContextMenu MaxHeight="1000">
-                                    <MenuItem Name="FolderTreeCreateFolderMenuItem" Header="Neuer Ordner" Click="OnContextCreateFolder"/>
-                                    <Separator/>
-                                    <MenuItem Name="FolderTreeRenameMenuItem" Header="Umbenennen" Click="OnContextRenameFolder"/>
-                                    <MenuItem Name="FolderTreeCopyMenuItem" Header="Kopieren" Click="OnContextCopyFolder"/>
-                                    <MenuItem Name="FolderTreeCutMenuItem" Header="Ausschneiden" Click="OnContextCutFolder"/>
-                                    <MenuItem Name="FolderTreePasteMenuItem" Header="Einfügen" Click="OnContextPasteFolder"/>
-                                    <MenuItem Header="Pfad kopieren" Click="OnContextCopyFolderPath"/>
-                                    <Separator/>
-                                    <MenuItem Name="FolderTreeDeleteMenuItem" Header="Löschen" Click="OnContextDeleteFolder"/>
-                                </ContextMenu>
-                            </TreeView.ContextMenu>
-                            <TreeView.ItemTemplate>
-                                <TreeDataTemplate ItemsSource="{Binding Children}">
-                                    <!-- Background="Transparent" macht die ganze Zeile hittestbar (sonst treffen
-                                         nur Symbol und Beschriftung), DragDrop.AllowDrop meldet sie als Drop-Ziel
-                                         an - siehe Kommentar am Immich-Baum. -->
-                                    <Grid ColumnDefinitions="Auto,*"
-                                          VerticalAlignment="Center"
-                                          HorizontalAlignment="Stretch"
-                                          Background="Transparent"
-                                          DragDrop.AllowDrop="True"
-                                          Margin="4,4">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
-                                               Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="10,0,0,0"
-                                                   VerticalAlignment="Center"
-                                                   HorizontalAlignment="Stretch"
-                                                   FontSize="{DynamicResource FP.Font.Body}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   ToolTip.Tip="{Binding FullPath}"/>
-                                    </Grid>
-                                </TreeDataTemplate>
-                                </TreeView.ItemTemplate>
-                        </TreeView>
-                    </ScrollViewer>
+                        </ScrollViewer>
+                    </Panel>
                 </Grid>
 
                 <StackPanel Grid.Row="2" Margin="24,18,24,21" Spacing="9">
@@ -1628,7 +1788,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Grid.Column="2" Classes="statusbar" Height="60" Padding="20,10">
+        <Border Grid.Row="2" Grid.Column="2" Classes="statusbar window-drag" Height="60" Padding="20,10">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
                     <!-- Zeigt dasselbe Menü wie ein Rechtsklick auf ein Bild: dort stecken inzwischen die

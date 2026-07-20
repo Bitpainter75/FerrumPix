@@ -10,13 +10,58 @@ Namespace Services
     ''' CR3 (Canon BMFF) is additionally parsed via its ISO BMFF box structure.
     Public Class RawPreviewService
 
-        Private Shared ReadOnly AllRaw As String() = {
-            ".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2"
+        ''' <summary>DIE kanonische Liste der RAW-Endungen - alle anderen Stellen (Galerie,
+        ''' Betrachter, Transparenzpruefung, Diagnose) leiten davon ab, statt eigene Kopien zu
+        ''' fuehren. Beim PSD-Einbau waren fuenf getrennte Listen zu pflegen, das driftet
+        ''' zwangslaeufig auseinander (2026-07-19).
+        ''' Der Umfang folgt dem, was LibRaw dekodieren kann; ohne LibRaw greift fuer alle
+        ''' dieselbe eingebettete JPEG-Vorschau, die formatunabhaengig gesucht wird.
+        ''' ".raw" ist mit dabei (Leica/Panasonic): die Endung ist generisch, eine gleichnamige
+        ''' Nicht-Bilddatei erscheint deshalb als leere Kachel - bewusst in Kauf genommen.</summary>
+        Public Shared ReadOnly SupportedExtensions As String() = {
+            ".cr2", ".cr3", ".crw",            ' Canon
+            ".nef", ".nrw",                    ' Nikon
+            ".arw", ".srf", ".sr2", ".arq",    ' Sony
+            ".raf",                            ' Fujifilm (X-Trans)
+            ".orf",                            ' Olympus/OM System
+            ".rw2",                            ' Panasonic
+            ".pef", ".dng",                    ' Pentax / Adobe
+            ".srw",                            ' Samsung
+            ".rwl", ".raw",                    ' Leica (.raw auch Panasonic)
+            ".3fr", ".fff",                    ' Hasselblad
+            ".iiq", ".cap",                    ' Phase One
+            ".mrw",                            ' Minolta
+            ".erf",                            ' Epson
+            ".mef",                            ' Mamiya
+            ".mos",                            ' Leaf
+            ".kdc", ".dcr",                    ' Kodak
+            ".x3f"                             ' Sigma (Foveon; LibRaw-Unterstuetzung eingeschraenkt)
         }
 
         Public Shared Function IsSupportedRaw(filePath As String) As Boolean
             Dim ext = Path.GetExtension(filePath).ToLowerInvariant()
-            Return AllRaw.Contains(ext)
+            Return SupportedExtensions.Contains(ext)
+        End Function
+
+        ''' <summary>Grosse Vorschau fuer Betrachter/Editor-Anzeige in ZWEI Stufen: erst der eigene
+        ''' Scanner (er sucht das GROESSTE eingebettete JPEG - fuer die Anzeige zaehlt Aufloesung),
+        ''' sonst LibRaws Thumbnail-API. Der Rueckfall ist nicht theoretisch: Leica-DNGs betten kein
+        ''' vom Scanner auffindbares JPEG ein, dort blieb die Anzeige sonst leer (gemessen
+        ''' 2026-07-19). Umgekehrte Reihenfolge als bei den Galerie-Kacheln, wo LibRaw zuerst
+        ''' kommt - dort zaehlt Tempo, nicht Aufloesung.</summary>
+        Public Shared Function ExtractPreviewWithFallback(filePath As String) As MemoryStream
+            Dim scanned = ExtractPreview(filePath)
+            If scanned IsNot Nothing AndAlso scanned.Length > 0 Then Return scanned
+            scanned?.Dispose()
+
+            Dim thumb = RawDecodeService.TryExtractThumbnail(filePath)
+            If thumb IsNot Nothing AndAlso thumb.Length > 0 Then Return thumb
+            thumb?.Dispose()
+
+            ' Letzte Stufe: manche Dateien betten GAR KEINE Vorschau ein (gemessen an einer
+            ' Leica-Digilux2-.RAW) - dann bleibt nur das echte Entwickeln. Teuer (Demosaic), aber
+            ' die Alternative waere eine dauerhaft leere Kachel bzw. ein schwarzer Betrachter.
+            Return RawDecodeService.TryRenderPreviewPng(filePath)
         End Function
 
         ''' Returns a MemoryStream with JPEG bytes (positioned at 0), or Nothing on failure.

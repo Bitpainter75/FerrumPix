@@ -242,16 +242,25 @@ Namespace Views
             Return String.Equals(mainVm?.Settings?.ViewerFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
         End Function
 
-        Private Async Function PickSingleImagePathAsync(title As String) As Task(Of String)
+        ''' <paramref name="includeReadOnlyFormats"/>: PSD/PSB nur beim OEFFNEN eines Dokuments
+        ''' anbieten - als eingefuegtes Bildobjekt zeichnet DrawImageAnnotation sie nicht
+        ''' (SKBitmap.Decode kennt das Format nicht), die Auswahl waere dort ein stiller No-Op.
+        Private Async Function PickSingleImagePathAsync(title As String,
+                                                        Optional includeReadOnlyFormats As Boolean = False) As Task(Of String)
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return Nothing
+                Dim patterns As New List(Of String) From {"*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.tif", "*.tiff", "*.avif", "*.ico"}
+                If includeReadOnlyFormats Then
+                    patterns.Add("*.psd")
+                    patterns.Add("*.psb")
+                End If
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
                     .Title = title,
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
                         New FilePickerFileType(LocalizationService.T("Bilder")) With {
-                            .Patterns = New String() {"*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.tif", "*.tiff", "*.avif", "*.ico"}
+                            .Patterns = patterns.ToArray()
                         }
                     }
                 })
@@ -266,7 +275,7 @@ Namespace Views
         Public Async Sub OnPlaceholderOpenImageClick(sender As Object, e As RoutedEventArgs)
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             If mainVm Is Nothing Then Return
-            Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild öffnen"))
+            Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild öffnen"), includeReadOnlyFormats:=True)
             If String.IsNullOrWhiteSpace(path) Then Return
             Await mainVm.OpenImageInEditor(path)
         End Sub
@@ -3002,12 +3011,16 @@ Namespace Views
                 ' und Wasserzeichen-Bilder fehlten ganz. Shift erzwingt weiterhin, QR bleibt hart 1:1.
                 Dim isAspectLockedKind = (String.Equals(vm.EffectiveAnnotationKind, "Image", StringComparison.OrdinalIgnoreCase) OrElse
                                           vm.IsWatermarkImageSource) AndAlso vm.AnnotationLockAspect
+                ' Text auf einem KREISPFAD verhaelt sich wie QR: hart 1:1. Der Kreisradius ist
+                ' min(Breite, Hoehe) - eine nicht-quadratische Box liesse den Selektionsrahmen weit
+                ' um den Text herum stehen (Nutzerbefund 2026-07-20).
+                Dim isCircleText = EditorViewModel.IsCircleTextPath(vm.AnnotationTextPathKind)
                 Dim keepAspect = (e.KeyModifiers.HasFlag(KeyModifiers.Shift) OrElse
                                   isAspectLockedKind OrElse
-                                  isQr) AndAlso
+                                  isQr OrElse isCircleText) AndAlso
                                  _textDragAspect > 0 AndAlso IsTextCornerMode(_textDragMode)
                 If keepAspect Then
-                    Dim aspect = If(isQr, 1.0, _textDragAspect)
+                    Dim aspect = If(isQr OrElse isCircleText, 1.0, _textDragAspect)
                     Dim targetHeight = Math.Max(minSize, (right - left) / aspect)
                     Select Case _textDragMode
                         Case TextDragMode.TopLeft, TextDragMode.TopRight

@@ -225,6 +225,7 @@
         <views:InfoSidebarView Grid.Row="1" Grid.Column="1" Width="320"/>
 
         <Border Grid.Row="2" Grid.ColumnSpan="2"
+                Classes="window-drag"
                 Background="{DynamicResource FP.Bg.Dark}"
                 BorderBrush="{DynamicResource FP.Border.Subtle}"
                 BorderThickness="0,1,0,0"

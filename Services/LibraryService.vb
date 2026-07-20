@@ -239,7 +239,7 @@ Namespace Services
                                  Optional copyColorLabel As Boolean = True,
                                  Optional copyKeywords As Boolean = True)
             If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return
-            If String.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase) Then Return
+            If String.Equals(sourcePath, targetPath, PathIdentity.Comparison) Then Return
             Try
                 If copyRating Then
                     Dim rating = GetRating(sourcePath)
@@ -263,7 +263,7 @@ Namespace Services
         ''' Immich-Items: statt zehntausende Pseudo-Pfade einzeln abzufragen, wird die kleine Menge
         ''' tatsächlich etikettierter Einträge geladen und darüber zugeordnet.</summary>
         Public Function GetAllColorLabels() As Dictionary(Of String, String)
-            Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            Dim result As New Dictionary(Of String, String)(PathIdentity.Comparer)
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
@@ -552,7 +552,7 @@ Namespace Services
 
         ''' <summary>Lädt alle Metadaten (inkl. EXIF) für alle Dateien im angegebenen Ordner in einem einzigen Query.</summary>
         Public Function GetFolderMeta(folderPath As String) As Dictionary(Of String, LibraryImageMeta)
-            Dim result As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
+            Dim result As New Dictionary(Of String, LibraryImageMeta)(PathIdentity.Comparer)
             Dim prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
@@ -571,10 +571,10 @@ Namespace Services
         End Function
 
         Public Function GetMetaForPaths(paths As IEnumerable(Of String)) As Dictionary(Of String, LibraryImageMeta)
-            Dim result As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
+            Dim result As New Dictionary(Of String, LibraryImageMeta)(PathIdentity.Comparer)
             Dim list = If(paths, Enumerable.Empty(Of String)()).
                 Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
-                Distinct(StringComparer.OrdinalIgnoreCase).
+                Distinct(PathIdentity.Comparer).
                 ToList()
             If list.Count = 0 Then Return result
 

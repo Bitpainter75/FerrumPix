@@ -101,7 +101,10 @@ Namespace Services
         End Class
 
         Private Shared ReadOnly _cacheLock As New Object()
-        Private Shared ReadOnly _cache As New Dictionary(Of String, ExifCacheEntry)(StringComparer.OrdinalIgnoreCase)
+        ' Pfad-Schluessel: PathIdentity.Comparer statt OrdinalIgnoreCase. Auf Linux sind
+        ' /Bilder/RAW.jpg und /Bilder/raw.jpg zwei Dateien - vorher teilten sie sich den
+        ' EXIF-Eintrag, die zweite Datei bekam also die Aufnahmedaten der ersten angezeigt.
+        Private Shared ReadOnly _cache As New Dictionary(Of String, ExifCacheEntry)(PathIdentity.Comparer)
 
         ''' <summary>
         ''' EXIF ändert sich nach der Aufnahme normalerweise nicht mehr nachträglich - ein

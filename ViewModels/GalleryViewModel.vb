@@ -82,12 +82,22 @@ Namespace ViewModels
         Private _activeSearchCts As CancellationTokenSource
         Private ReadOnly _virtualPathSet As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Private ReadOnly _savedSearches As New List(Of SearchListEntry)()
-        Private ReadOnly _rawExtensions As String() = {".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2"}
+        ' Kanonische Liste, siehe RawPreviewService.SupportedExtensions.
+        Private ReadOnly _rawExtensions As String() = RawPreviewService.SupportedExtensions
 
         Public Event RequestScrollToItem As EventHandler
 
         Public Property FolderTree As ObservableCollection(Of FolderNode)
+        ''' <summary>Suchlisten des Ordner-Tabs (Source="Local") - inklusive "Neue Suche".</summary>
         Public Property SearchTree As ObservableCollection(Of VirtualNavigationNode)
+        ''' <summary>Suchlisten des Immich-Tabs (Source="Immich"). Die Suchen sind nach Quelle
+        ''' getrennt, weil sie im jeweiligen Tab neben ihrem Baum stehen sollen - eine
+        ''' Dateisystem-Suche gehoert nicht neben die Immich-Alben und umgekehrt.</summary>
+        Public Property ImmichSearchTree As ObservableCollection(Of VirtualNavigationNode)
+        ''' <summary>Favoriten-Tab: frei zusammengestellte Verweise auf Ordner, Immich-Knoten und
+        ''' Suchlisten (siehe FavoritesService). Die Knoten sind vollwertige Navigationsknoten -
+        ''' ein Klick tut genau dasselbe wie im Herkunfts-Tab.</summary>
+        Public Property FavoritesTree As ObservableCollection(Of VirtualNavigationNode)
         ''' <summary>Eigener Immich-Bereich im Navigationsbereich (getrennt von der Suche): der
         ''' „Alle Fotos"-Knoten plus je ein Knoten pro Album.</summary>
         Public Property ImmichTree As ObservableCollection(Of VirtualNavigationNode)
@@ -1168,7 +1178,10 @@ Namespace ViewModels
             DisplayItems = New BulkObservableCollection(Of ImageItem)()
             SelectedItems = New ObservableCollection(Of ImageItem)()
             FolderTree = New ObservableCollection(Of FolderNode)()
+            SetSidebarTabCommand = ReactiveCommand.Create(Of String)(Sub(tab) SidebarTab = tab)
             SearchTree = New ObservableCollection(Of VirtualNavigationNode)()
+            ImmichSearchTree = New ObservableCollection(Of VirtualNavigationNode)()
+            FavoritesTree = New ObservableCollection(Of VirtualNavigationNode)()
             ImmichTree = New ObservableCollection(Of VirtualNavigationNode)()
 
             _collagePreviewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(350)}
@@ -1503,19 +1516,260 @@ Namespace ViewModels
 
         Private Sub InitializeVirtualNavigation()
             SearchTree.Clear()
+            ImmichSearchTree.Clear()
+            ' "Neue Suche" steht in BEIDEN Tabs: der Suchdialog fragt die Quelle ohnehin ab, und so
+            ' ist der Einstieg dort, wo der Nutzer gerade arbeitet.
             SearchTree.Add(New VirtualNavigationNode(LocalizationService.T("Neue Suche"), "NewSearch"))
+            ImmichSearchTree.Add(New VirtualNavigationNode(LocalizationService.T("Neue Suche"), "NewSearch"))
             _savedSearches.Clear()
             _savedSearches.AddRange(SearchListService.Load())
             For Each search In _savedSearches
-                SearchTree.Add(CreateSavedSearchNode(search))
+                Dim node = CreateSavedSearchNode(search)
+                If String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase) Then
+                    ImmichSearchTree.Add(node)
+                Else
+                    SearchTree.Add(node)
+                End If
             Next
+            RefreshFavorites()
         End Sub
+
+        ' ── Favoriten ────────────────────────────────────────────────────────────
+
+        ''' <summary>Baut den Favoriten-Tab aus der gespeicherten Liste neu auf. Ziele, die es nicht
+        ''' mehr gibt (geloeschte Suche, entfernter Ordner), werden als "fehlt" markiert statt still
+        ''' zu verschwinden - sonst wundert man sich, wo der Favorit hin ist.</summary>
+        Public Sub RefreshFavorites()
+            FavoritesTree.Clear()
+            ' Nach Namen sortiert (Nutzerwunsch 2026-07-19) - kulturabhaengig, damit Umlaute dort
+            ' stehen, wo man sie sucht. Die gespeicherte Reihenfolge bleibt davon unberuehrt.
+            For Each fav In FavoritesService.Load().
+                    OrderBy(Function(f) If(f.Name, ""), StringComparer.CurrentCultureIgnoreCase)
+                Dim node = CreateFavoriteNode(fav)
+                If node IsNot Nothing Then FavoritesTree.Add(node)
+            Next
+            ' Der Baum wurde neu aufgebaut - die gemerkte Auswahl zeigt sonst auf ein weggeworfenes
+            ' Objekt, und die Wiederherstellung nach einem Moduswechsel liefe ins Leere (kein Rahmen).
+            ' Ueber den stabilen Schluessel wieder auf den NEUEN Knoten zeigen.
+            If SelectedFavoriteNode IsNot Nothing Then
+                Dim key = SelectedFavoriteNode.FavoriteKey
+                SelectedFavoriteNode = FavoritesTree.FirstOrDefault(
+                    Function(n) String.Equals(n.FavoriteKey, key, StringComparison.Ordinal))
+            End If
+            Me.RaisePropertyChanged(NameOf(HasFavorites))
+        End Sub
+
+        ' ── Seitenleisten-Tabs ───────────────────────────────────────────────────
+
+        Private _sidebarTab As String = "Folders"
+
+        ''' <summary>Aktiver Tab der Navigations-Seitenleiste: "Folders", "Immich" oder "Favorites".
+        ''' Der Immich-Tab existiert nur, wenn Immich hinterlegt ist (HasImmich) - faellt die
+        ''' Konfiguration weg, waehrend er offen ist, springt die Auswahl auf Ordner zurueck.</summary>
+        Public Property SidebarTab As String
+            Get
+                Return _sidebarTab
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "Folders").Trim()
+                Select Case normalized.ToLowerInvariant()
+                    Case "immich" : normalized = "Immich"
+                    Case "favorites" : normalized = "Favorites"
+                    Case Else : normalized = "Folders"
+                End Select
+                If normalized = "Immich" AndAlso Not HasImmich Then normalized = "Folders"
+                If String.Equals(_sidebarTab, normalized, StringComparison.Ordinal) Then Return
+                _sidebarTab = normalized
+                RaiseSidebarTabProperties()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsFoldersTab As Boolean
+            Get
+                Return String.Equals(_sidebarTab, "Folders", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsImmichTab As Boolean
+            Get
+                Return String.Equals(_sidebarTab, "Immich", StringComparison.Ordinal) AndAlso HasImmich
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFavoritesTab As Boolean
+            Get
+                Return String.Equals(_sidebarTab, "Favorites", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property SetSidebarTabCommand As ICommand
+
+        Private Sub RaiseSidebarTabProperties()
+            Me.RaisePropertyChanged(NameOf(SidebarTab))
+            Me.RaisePropertyChanged(NameOf(IsFoldersTab))
+            Me.RaisePropertyChanged(NameOf(IsImmichTab))
+            Me.RaisePropertyChanged(NameOf(IsFavoritesTab))
+        End Sub
+
+        Public ReadOnly Property HasFavorites As Boolean
+            Get
+                Return FavoritesTree IsNot Nothing AndAlso FavoritesTree.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Ordner-Favorit oeffnen: Ansicht wechseln UND den Ordnerbaum nachziehen, damit
+        ''' der Ordner-Tab denselben Stand zeigt (sonst steht dort noch die alte Markierung).</summary>
+        ''' <summary>Wechsel in einen echten Ordner: Tab auf Ordner ziehen und die
+        ''' Favoriten-Markierung loesen - sonst zeigte die Rueckkehr aus dem Viewer den
+        ''' Favoriten-Tab, obwohl laengst im Ordnerbaum navigiert wurde.</summary>
+        Friend Sub NoteFolderNavigation()
+            SelectedFavoriteNode = Nothing
+            SidebarTab = "Folders"
+        End Sub
+
+        Private Sub OpenFolderFromFavorite(folderPath As String)
+            If String.IsNullOrWhiteSpace(folderPath) OrElse Not IO.Directory.Exists(folderPath) Then
+                StatusText = LocalizationService.T("Das Ziel dieses Favoriten existiert nicht mehr")
+                Return
+            End If
+            ' Der Tab bleibt auf Favoriten: die daraus folgende Baummarkierung laeuft in der View
+            ' unter _restoringFolderTreeSelection und meldet deshalb keine Nutzer-Navigation.
+            CurrentFolder = folderPath
+            LoadFolderImages(folderPath)
+            SelectFolderInTreeByPath(folderPath)
+        End Sub
+
+        ''' <summary>In welchem Tab ein Knoten zu Hause ist. Favoriten gewinnen: ein aus dem
+        ''' Favoriten-Tab geoeffnetes Immich-Album soll beim Zurueckkommen wieder DORT stehen.</summary>
+        Private Function TabForNode(node As VirtualNavigationNode) As String
+            If node Is Nothing Then Return SidebarTab
+            If node.IsFavoriteNode Then Return "Favorites"
+            Select Case node.Kind
+                Case "ImmichAll", "ImmichAlbum", "ImmichPerson", "ImmichPlace", "ImmichPeopleRoot", "ImmichPlacesRoot"
+                    Return "Immich"
+                Case "SavedSearch"
+                    Return If(String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Folders")
+                Case Else
+                    Return SidebarTab
+            End Select
+        End Function
+
+        ''' <summary>Zuletzt aus dem Favoriten-Tab geoeffneter Knoten - die GalleryView stellt damit
+        ''' nach einem Moduswechsel die Markierung im Favoriten-Baum wieder her (Gegenstueck zu
+        ''' SelectedSearchNode/SelectedImmichNode fuer die anderen Baeume).</summary>
+        Public Property SelectedFavoriteNode As VirtualNavigationNode
+
+        ''' <summary>Name des TreeView, in dem nach einer Neuinstanziierung der GalleryView die
+        ''' Markierung wiederherzustellen ist - passend zum aktiven Tab. Nothing, wenn gerade ein
+        ''' echter Ordner aktiv ist (dann uebernimmt der Ordnerbaum).</summary>
+        Public ReadOnly Property NavigationRestoreTreeName As String
+            Get
+                If SelectedFavoriteNode IsNot Nothing AndAlso IsFavoritesTab Then Return "FavoritesTreeView"
+                If SelectedImmichNode IsNot Nothing Then Return "ImmichTreeView"
+                If SelectedSearchNode IsNot Nothing Then
+                    Return If(String.Equals(SelectedSearchNode.Source, "Immich", StringComparison.OrdinalIgnoreCase),
+                              "ImmichSearchTreeView", "SearchTreeView")
+                End If
+                Return Nothing
+            End Get
+        End Property
+
+        ''' <summary>Knoten, der zu NavigationRestoreTreeName gehoert.</summary>
+        Public ReadOnly Property NavigationRestoreNode As VirtualNavigationNode
+            Get
+                If SelectedFavoriteNode IsNot Nothing AndAlso IsFavoritesTab Then Return SelectedFavoriteNode
+                Return If(SelectedImmichNode, SelectedSearchNode)
+            End Get
+        End Property
+
+        Private Function CreateFavoriteNode(fav As FavoriteEntry) As VirtualNavigationNode
+            If fav Is Nothing Then Return Nothing
+            Select Case fav.Kind
+                Case "Search"
+                    Dim search = _savedSearches.FirstOrDefault(Function(s) String.Equals(s.Id, fav.SearchId, StringComparison.OrdinalIgnoreCase))
+                    If search Is Nothing Then
+                        Return New VirtualNavigationNode(fav.Name, "FavoriteMissing") With {.FavoriteKey = fav.Key, .IsRemovable = True}
+                    End If
+                    Dim node = CreateSavedSearchNode(search)
+                    node.Name = If(String.IsNullOrWhiteSpace(fav.Name), search.Name, fav.Name)
+                    node.FavoriteKey = fav.Key
+                    Return node
+                Case "Immich"
+                    If Not ImmichService.IsConfigured Then Return Nothing
+                    Return New VirtualNavigationNode(fav.Name, fav.ImmichKind) With {
+                        .Id = fav.ImmichId,
+                        .Query = fav.ImmichId,
+                        .FavoriteKey = fav.Key
+                    }
+                Case Else
+                    If Not IO.Directory.Exists(fav.Path) Then
+                        Return New VirtualNavigationNode(fav.Name, "FavoriteMissing") With {.FavoriteKey = fav.Key, .IsRemovable = True}
+                    End If
+                    Return New VirtualNavigationNode(fav.Name, "FavoriteFolder") With {
+                        .Query = fav.Path,
+                        .RootFolder = fav.Path,
+                        .FavoriteKey = fav.Key
+                    }
+            End Select
+        End Function
+
+        ''' <summary>Legt einen Ordner als Favorit an (Kontextmenue im Ordnerbaum).</summary>
+        Public Sub AddFolderFavorite(folderPath As String)
+            If String.IsNullOrWhiteSpace(folderPath) OrElse Not IO.Directory.Exists(folderPath) Then Return
+            Dim name = IO.Path.GetFileName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
+            If String.IsNullOrWhiteSpace(name) Then name = folderPath
+            AnnounceFavorite(FavoritesService.Add(New FavoriteEntry With {.Kind = "Folder", .Name = name, .Path = folderPath}), name)
+        End Sub
+
+        ''' <summary>Legt einen Immich-Knoten oder eine gespeicherte Suche als Favorit an
+        ''' (Kontextmenue im jeweiligen Baum).</summary>
+        Public Sub AddNodeFavorite(node As VirtualNavigationNode)
+            If node Is Nothing Then Return
+            Dim entry As FavoriteEntry = Nothing
+            Select Case node.Kind
+                Case "SavedSearch"
+                    If String.IsNullOrWhiteSpace(node.Id) Then Return
+                    entry = New FavoriteEntry With {.Kind = "Search", .Name = node.Name, .SearchId = node.Id}
+                Case "ImmichAll", "ImmichAlbum", "ImmichPerson", "ImmichPlace"
+                    entry = New FavoriteEntry With {
+                        .Kind = "Immich", .Name = node.Name, .ImmichKind = node.Kind,
+                        .ImmichId = If(String.IsNullOrWhiteSpace(node.Id), If(node.Query, ""), node.Id)}
+                Case "FavoriteFolder"
+                    AddFolderFavorite(node.RootFolder)
+                    Return
+            End Select
+            If entry Is Nothing Then Return
+            AnnounceFavorite(FavoritesService.Add(entry), node.Name)
+        End Sub
+
+        Private Sub AnnounceFavorite(added As Boolean, name As String)
+            If added Then
+                RefreshFavorites()
+                StatusText = String.Format(LocalizationService.T("{0} zu den Favoriten hinzugefügt"), name)
+            Else
+                StatusText = String.Format(LocalizationService.T("{0} ist bereits ein Favorit"), name)
+            End If
+        End Sub
+
+        Public Sub RemoveFavorite(node As VirtualNavigationNode)
+            If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.FavoriteKey) Then Return
+            If FavoritesService.Remove(node.FavoriteKey) Then
+                RefreshFavorites()
+                StatusText = String.Format(LocalizationService.T("{0} aus den Favoriten entfernt"), node.Name)
+            End If
+        End Sub
+
 
         ''' <summary>Gibt False zurück, wenn "Neue Suche" per Dialog-Abbruch verworfen wurde - der
         ''' Aufrufer (GalleryView) nutzt das, um die sichtbare Baumauswahl in dem Fall wieder auf
         ''' den tatsächlich aktiven Ordner statt auf den "Neue Suche"-Eintrag zurückzusetzen.</summary>
         Public Async Function OpenVirtualNavigationNode(node As VirtualNavigationNode) As Task(Of Boolean)
             If node Is Nothing Then Return True
+            ' Der Tab folgt dem geoeffneten Ziel: kommt man aus Viewer/Editor in die Galerie
+            ' zurueck, steht wieder derselbe Tab offen wie beim Verlassen (die GalleryView wird
+            ' beim Moduswechsel neu gebaut, das ViewModel ueberlebt - siehe RestoreNavigationTab).
+            SidebarTab = TabForNode(node)
+            SelectedFavoriteNode = If(node.IsFavoriteNode, node, Nothing)
             Select Case node.Kind
                 Case "NewSearch"
                     Return Await OpenSearchDialog()
@@ -1532,6 +1786,11 @@ Namespace ViewModels
                 Case "ImmichPeopleRoot", "ImmichPlacesRoot"
                     ' Elternknoten: nur auf-/zuklappen, keine Ansicht öffnen.
                     node.IsExpanded = Not node.IsExpanded
+                Case "FavoriteFolder"
+                    ' Favorit auf einen Ordner: exakt derselbe Weg wie ein Klick im Ordnerbaum.
+                    OpenFolderFromFavorite(node.RootFolder)
+                Case "FavoriteMissing"
+                    StatusText = LocalizationService.T("Das Ziel dieses Favoriten existiert nicht mehr")
             End Select
             Return True
         End Function
@@ -1542,14 +1801,25 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Nach jeder Aenderung an HasImmich aufrufen: verschwindet Immich, waehrend sein
+        ''' Tab offen ist, faellt die Auswahl auf Ordner zurueck (sonst zeigt die Seitenleiste einen
+        ''' Tab, den es nicht mehr gibt).</summary>
+        Private Sub SyncSidebarTabWithImmich()
+            Me.RaisePropertyChanged(NameOf(HasImmich))
+            If Not HasImmich AndAlso String.Equals(_sidebarTab, "Immich", StringComparison.Ordinal) Then
+                _sidebarTab = "Folders"
+            End If
+            RaiseSidebarTabProperties()
+        End Sub
+
         ''' <summary>Baut den eigenen Immich-Bereich auf, sofern konfiguriert: „Alle Fotos" plus die
         ''' Alben (im Hintergrund nachgeladen). No-op, wenn Immich deaktiviert/unkonfiguriert ist.</summary>
         Private Sub InitializeImmich()
             ImmichTree.Clear()
-            Me.RaisePropertyChanged(NameOf(HasImmich))
+            SyncSidebarTabWithImmich()
             If Not ImmichService.IsConfigured Then Return
             ImmichTree.Add(New VirtualNavigationNode(LocalizationService.T("Alle Fotos"), "ImmichAll"))
-            Me.RaisePropertyChanged(NameOf(HasImmich))
+            SyncSidebarTabWithImmich()
             RefreshImmichAlbumsAsync()
         End Sub
 
@@ -1712,7 +1982,7 @@ Namespace ViewModels
                                                    Next
                                                    ImmichTree.Add(placesRoot)
                                                End If
-                                               Me.RaisePropertyChanged(NameOf(HasImmich))
+                                               SyncSidebarTabWithImmich()
                                            End Sub)
                                    End Function)
         End Sub
@@ -2846,7 +3116,7 @@ Namespace ViewModels
             Dim source = If(currentRunResults, target.Results)
             Dim cleaned = source.
                 Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso File.Exists(p)).
-                Distinct(StringComparer.OrdinalIgnoreCase).
+                Distinct(PathIdentity.Comparer).
                 ToList()
             Dim changed = cleaned.Count <> target.Results.Count
             If Not changed Then
@@ -2861,7 +3131,7 @@ Namespace ViewModels
                 target.Results = cleaned
                 node.Results = cleaned.ToList()
                 If currentRunResults IsNot Nothing Then
-                    Dim keep = cleaned.ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    Dim keep = cleaned.ToHashSet(PathIdentity.Comparer)
                     _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not keep.Contains(i.FilePath))
                     FilterAndSort()
                 End If
@@ -2895,7 +3165,12 @@ Namespace ViewModels
 
         ' ".fpx" gehört dazu: FerrumPix-Projekte erscheinen wie Bilder in Galerie und Filmstreifen
         ' (Thumbnail aus dem eingebetteten Composite, siehe ThumbnailCacheService).
-        Private ReadOnly _imageExtensions As String() = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico", ".svg", ".fpx", ".cr2", ".cr3", ".nef", ".arw", ".dng", ".pef", ".rw2", ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
+        ' Anzeigbare Medien: feste Formate plus die kanonischen RAW-Endungen.
+        Private ReadOnly _imageExtensions As String() = {
+            ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif",
+            ".ico", ".svg", ".fpx", ".psd", ".psb",
+            ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
+        }.Concat(RawPreviewService.SupportedExtensions).ToArray()
 
         ''' <summary>
         ''' Freier Speicherplatz des Laufwerks, auf dem der aktuelle Ordner liegt. Läuft im Hintergrund:
@@ -3338,7 +3613,7 @@ Namespace ViewModels
         Public Sub RefreshChangedFiles(paths As IEnumerable(Of String))
             Dim changed = If(paths, Enumerable.Empty(Of String)()).
                 Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
-                ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ToHashSet(PathIdentity.Comparer)
             If changed.Count = 0 Then Return
 
             For Each item In _allItems.Where(Function(i) i IsNot Nothing AndAlso changed.Contains(i.FilePath))
@@ -3954,12 +4229,12 @@ Namespace ViewModels
         Public Sub DeletePaths(paths As IEnumerable(Of String))
             Dim targets = If(paths, Enumerable.Empty(Of String)()).
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
-                Distinct(StringComparer.OrdinalIgnoreCase).
+                Distinct(PathIdentity.Comparer).
                 ToList()
             targets = targets.Where(Function(p) FileOperationPolicy.CanDelete(p)).ToList()
             If targets.Count = 0 Then Return
             If _isVirtualFolder Then
-                Dim deletedSet = targets.ToHashSet(StringComparer.OrdinalIgnoreCase)
+                Dim deletedSet = targets.ToHashSet(PathIdentity.Comparer)
                 _mainVm.RequestDeletePaths(targets, Sub()
                                                         ClearSelection()
                                                         _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso deletedSet.Contains(i.FilePath))
@@ -4087,11 +4362,14 @@ Namespace ViewModels
 
                 For Each mapping In result.Mappings
                     If String.IsNullOrEmpty(mapping.SourcePath) OrElse String.IsNullOrEmpty(mapping.TargetPath) Then Continue For
-                    If String.Equals(NormalizePath(mapping.SourcePath), NormalizePath(mapping.TargetPath), StringComparison.OrdinalIgnoreCase) Then Continue For
+                    ' Reines Aendern der Gross-/Kleinschreibung ist auf Linux eine ECHTE Umbenennung
+                ' (RAW.jpg und raw.jpg sind zwei Dateien) und darf nicht uebersprungen werden.
+                If String.Equals(NormalizePath(mapping.SourcePath), NormalizePath(mapping.TargetPath), PathIdentity.Comparison) Then Continue For
                     If File.Exists(mapping.TargetPath) OrElse Directory.Exists(mapping.TargetPath) Then Throw New IOException("Ein Zielname existiert bereits.")
 
                     If File.Exists(mapping.SourcePath) Then
                         File.Move(mapping.SourcePath, mapping.TargetPath)
+                        RawSidecarService.AccompanyMove(mapping.SourcePath, mapping.TargetPath)
                     ElseIf Directory.Exists(mapping.SourcePath) Then
                         Directory.Move(mapping.SourcePath, mapping.TargetPath)
                     End If
@@ -4100,7 +4378,7 @@ Namespace ViewModels
                 ClearSelection()
                 SyncFolderItems()
                 RefreshTree()
-                Dim renamedPaths = result.Mappings.Select(Function(m) m.TargetPath).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                Dim renamedPaths = result.Mappings.Select(Function(m) m.TargetPath).ToHashSet(PathIdentity.Comparer)
                 ReplaceSelection(Items.Where(Function(i) i IsNot Nothing AndAlso renamedPaths.Contains(i.FilePath)))
             Catch ex As Exception
                 errorMessage = ex.Message
@@ -4145,7 +4423,7 @@ Namespace ViewModels
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsParentFolderEntry).
                 Select(Function(i) i.FilePath).
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
-                Distinct(StringComparer.OrdinalIgnoreCase).
+                Distinct(PathIdentity.Comparer).
                 ToList()
         End Function
 
@@ -4347,7 +4625,7 @@ Namespace ViewModels
 
         Private Shared Function IsImagePath(path As String) As Boolean
             Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
-            Return {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico"}.Contains(ext)
+            Return {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico", ".psd", ".psb"}.Contains(ext)
         End Function
 
         Public Sub StoreClipboard(cut As Boolean)
@@ -4366,7 +4644,7 @@ Namespace ViewModels
             Dim validPaths = If(paths, Enumerable.Empty(Of String)()).
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
                 Where(Function(p) If(cut, FileOperationPolicy.CanRename(p), FileOperationPolicy.CanCopy(p))).
-                Distinct(StringComparer.OrdinalIgnoreCase).
+                Distinct(PathIdentity.Comparer).
                 ToList()
             If validPaths.Count = 0 Then
                 StatusText = LocalizationService.T("Kein Element ausgewählt")
@@ -4404,8 +4682,8 @@ Namespace ViewModels
             Try
                 sourcePaths = paths.
                     Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (File.Exists(p) OrElse Directory.Exists(p))).
-                    Distinct(StringComparer.OrdinalIgnoreCase).
-                    Where(Function(p) Not String.Equals(NormalizePath(p), NormalizePath(targetFolder), StringComparison.OrdinalIgnoreCase)).
+                    Distinct(PathIdentity.Comparer).
+                    Where(Function(p) Not String.Equals(NormalizePath(p), NormalizePath(targetFolder), PathIdentity.Comparison)).
                     Where(Function(p) If(cut, FileOperationPolicy.CanMove(p, targetFolder), FileOperationPolicy.CanCopy(p))).
                     ToList()
 
@@ -5212,8 +5490,8 @@ Namespace ViewModels
             Try
                 sourcePaths = paths.
                     Where(Function(p) Not String.IsNullOrEmpty(p)).
-                    Distinct(StringComparer.OrdinalIgnoreCase).
-                    Where(Function(p) Not String.Equals(NormalizePath(p), NormalizePath(targetFolder), StringComparison.OrdinalIgnoreCase)).
+                    Distinct(PathIdentity.Comparer).
+                    Where(Function(p) Not String.Equals(NormalizePath(p), NormalizePath(targetFolder), PathIdentity.Comparison)).
                     Where(Function(p) FileOperationPolicy.CanMove(p, targetFolder)).
                     ToList()
                 If sourcePaths.Count = 0 Then Return
@@ -5258,7 +5536,7 @@ Namespace ViewModels
 
         Private Sub RemovePathsFromVirtualFolder(paths As IEnumerable(Of String))
             If paths Is Nothing Then Return
-            Dim moved = paths.ToHashSet(StringComparer.OrdinalIgnoreCase)
+            Dim moved = paths.ToHashSet(PathIdentity.Comparer)
             _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso moved.Contains(i.FilePath))
         End Sub
 
@@ -5285,8 +5563,10 @@ Namespace ViewModels
                                If File.Exists(source) Then
                                    If movePath Then
                                        File.Move(source, target)
+                                       RawSidecarService.AccompanyMove(source, target)
                                    Else
                                        File.Copy(source, target)
+                                       RawSidecarService.AccompanyCopy(source, target)
                                    End If
                                Else
                                    If movePath Then
@@ -5307,7 +5587,7 @@ Namespace ViewModels
             Dim normalizedSource = NormalizePath(source)
             Dim normalizedTarget = NormalizePath(target)
 
-            If String.Equals(normalizedSource, normalizedTarget, StringComparison.OrdinalIgnoreCase) Then
+            If String.Equals(normalizedSource, normalizedTarget, PathIdentity.Comparison) Then
                 If movePath Then Return Nothing
                 Return CreateUniquePath(target)
             End If
@@ -5426,15 +5706,15 @@ Namespace ViewModels
             Dim parent = NormalizePath(parentPath)
             Dim child = NormalizePath(childPath)
             If String.IsNullOrEmpty(parent) OrElse String.IsNullOrEmpty(child) Then Return False
-            Return child.Equals(parent, StringComparison.OrdinalIgnoreCase) OrElse
-                   child.StartsWith(AppendDirectorySeparator(parent), StringComparison.OrdinalIgnoreCase)
+            Return child.Equals(parent, PathIdentity.Comparison) OrElse
+                   child.StartsWith(AppendDirectorySeparator(parent), PathIdentity.Comparison)
         End Function
 
         Private Shared Function NormalizePath(path As String) As String
             If String.IsNullOrEmpty(path) Then Return ""
             Dim fullPath = IO.Path.GetFullPath(path)
             Dim root = IO.Path.GetPathRoot(fullPath)
-            If String.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase) Then Return fullPath
+            If String.Equals(fullPath, root, PathIdentity.Comparison) Then Return fullPath
             Return fullPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
         End Function
 

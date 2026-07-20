@@ -88,29 +88,53 @@ Namespace Services
         ' nehmen den langsameren SKCodec-Pfad, und selbst der kopiert die Pixel direkt statt sie
         ' (wie in einer früheren Version) über einen PNG-Encode/Decode-Umweg zu schicken.
         Public Shared Function LoadOrientedAvaloniaBitmap(stream As Stream) As Bitmap
-            Dim startPos = stream.Position
-            Using codec = SKCodec.Create(stream)
-                If codec Is Nothing OrElse codec.EncodedOrigin = SKEncodedOrigin.TopLeft Then
-                    stream.Seek(startPos, SeekOrigin.Begin)
-                    Return New Bitmap(stream)
-                End If
+            ' Den Inhalt EINMAL puffern und alle Decode-Wege daraus bedienen.
+            ' Grund: SKCodec.Create(Stream) uebernimmt den Strom, und manche Codecs - allen voran
+            ' WebP - schliessen ihn dabei sofort. Das spaetere stream.Seek fuer den Rueckfall warf
+            ' dann ObjectDisposedException ("Cannot access a closed file"), womit sich WebP-Dateien
+            ' im Editor gar nicht anzeigen liessen (gefunden 2026-07-20 durch die neue Pruefung
+            ' "Anzeigebild aus dem Arbeitsbild stimmt mit dem separaten Decode ueberein").
+            ' ImageProcessor.DecodeOriented hatte dieselbe Falle und loest sie genauso - der
+            ' Anzeigeweg war nur nie nachgezogen worden.
+            Dim data As SKData
+            Try
+                data = SKData.Create(stream)
+            Catch
+                data = Nothing
+            End Try
+            If data Is Nothing Then Return Nothing
 
-                Dim info = codec.Info
-                Dim decodeInfo = New SKImageInfo(info.Width, info.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
-                Using original = New SKBitmap(decodeInfo)
-                    Dim decodeResult = codec.GetPixels(decodeInfo, original.GetPixels())
-                    If decodeResult <> SKCodecResult.Success AndAlso decodeResult <> SKCodecResult.IncompleteInput Then
-                        stream.Seek(startPos, SeekOrigin.Begin)
-                        Return New Bitmap(stream)
+            Using data
+                Using codec = SKCodec.Create(data)
+                    If codec Is Nothing OrElse codec.EncodedOrigin = SKEncodedOrigin.TopLeft Then
+                        Return BitmapFromData(data)
                     End If
 
-                    Dim corrected = ApplyOrientation(original, codec.EncodedOrigin)
-                    Try
-                        Return ToAvaloniaBitmapFast(corrected)
-                    Finally
-                        If Not Object.ReferenceEquals(corrected, original) Then corrected.Dispose()
-                    End Try
+                    Dim info = codec.Info
+                    Dim decodeInfo = New SKImageInfo(info.Width, info.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                    Using original = New SKBitmap(decodeInfo)
+                        Dim decodeResult = codec.GetPixels(decodeInfo, original.GetPixels())
+                        If decodeResult <> SKCodecResult.Success AndAlso decodeResult <> SKCodecResult.IncompleteInput Then
+                            Return BitmapFromData(data)
+                        End If
+
+                        Dim corrected = ApplyOrientation(original, codec.EncodedOrigin)
+                        Try
+                            Return ToAvaloniaBitmapFast(corrected)
+                        Finally
+                            If Not Object.ReferenceEquals(corrected, original) Then corrected.Dispose()
+                        End Try
+                    End Using
                 End Using
+            End Using
+        End Function
+
+        ''' <summary>Avalonia-Bitmap aus gepufferten Bilddaten - der Rueckfall, wenn keine
+        ''' Orientierungskorrektur noetig oder moeglich ist. Eigener Strom je Aufruf, damit der
+        ''' Puffer wiederverwendbar bleibt.</summary>
+        Private Shared Function BitmapFromData(data As SKData) As Bitmap
+            Using ms As New MemoryStream(data.ToArray())
+                Return New Bitmap(ms)
             End Using
         End Function
 
@@ -120,13 +144,31 @@ Namespace Services
             End Using
         End Function
 
-        ''' Wie LoadOrientedAvaloniaBitmap(filePath), erkennt aber RAW-Dateien und dekodiert
-        ''' stattdessen deren eingebettete JPEG-Vorschau (RawPreviewService.ExtractPreview) - RAW-
-        ''' Rohdaten selbst können hier nicht dekodiert werden. Liefert Nothing, falls aus einer
-        ''' RAW-Datei keine Vorschau extrahiert werden konnte.
+        ''' Wie LoadOrientedAvaloniaBitmap(filePath), erkennt aber Formate, die SkiaSharp nicht
+        ''' selbst dekodiert, und reicht stattdessen deren aufbereiteten Strom herein: RAW über
+        ''' RawPreviewService.ExtractPreviewWithFallback, PSD/PSB über PsdPreviewService.
+        ''' Liefert Nothing, wenn daraus nichts zu holen war.
+        '''
+        ''' Zur Einordnung der drei RAW-Wege - sie sind bewusst verschieden:
+        '''   * ANZEIGE (hier): schnelle eingebettete Vorschau; findet der Scanner nichts, stößt
+        '''     ExtractPreviewWithFallback doch noch libraw an (etwa bei Leica-RAWs).
+        '''   * RENDER/ARBEITSBILD (ImageProcessor.DecodeOriented): echte Entwicklung über libraw,
+        '''     erst danach der Vorschau-Rückfall.
+        '''   * SPEICHERN: die RAW-Datei ist nie Ziel - Export in eine neue Datei, Reglerstände ins
+        '''     .fpxmp-Sidecar.
+        ''' WICHTIG: das ist der ANZEIGE-Pfad des Editors (CurrentImage) - er ist von
+        ''' ImageProcessor.OpenSourceStream (Render/Export) getrennt, beide muessen dieselben
+        ''' Sonderformate kennen. Genau das fehlte fuer PSD: die Render-Pipeline konnte es,
+        ''' der Editor zeigte trotzdem nichts (Nutzerbefund 2026-07-19).
         Public Shared Function LoadOrientedAvaloniaBitmapAuto(filePath As String) As Bitmap
             If RawPreviewService.IsSupportedRaw(filePath) Then
-                Using stream = RawPreviewService.ExtractPreview(filePath)
+                Using stream = RawPreviewService.ExtractPreviewWithFallback(filePath)
+                    If stream Is Nothing Then Return Nothing
+                    Return LoadOrientedAvaloniaBitmap(stream)
+                End Using
+            End If
+            If PsdPreviewService.IsSupportedPsd(filePath) Then
+                Using stream = PsdPreviewService.ExtractPreview(filePath)
                     If stream Is Nothing Then Return Nothing
                     Return LoadOrientedAvaloniaBitmap(stream)
                 End Using

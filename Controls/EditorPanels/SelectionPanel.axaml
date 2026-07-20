@@ -142,26 +142,31 @@
         <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4,0,0" />
         <TextBlock Text="Füllen" Foreground="{DynamicResource FP.Text.Secondary}"
                    FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
-        <StackPanel Orientation="Horizontal" Spacing="6">
-            <Button Classes="ghost" Padding="8,4"
+        <!-- WrapPanel statt StackPanel: die Beschriftungen sprengen sonst die Spaltenbreite.
+             In der laengsten Sprache summieren sich "Vollfarbe|Verlauf|Radial" auf 28 Zeichen -
+             im Deutschen passt es knapp, anderswo nicht. Umbruch statt fester Aufteilung, damit
+             es sich nach der tatsaechlichen Breite richtet.
+             Abstaende ueber Margin je Knopf, weil WrapPanel kein Spacing kennt. -->
+        <WrapPanel Orientation="Horizontal">
+            <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                     Command="{Binding SetAnnotationFillKindCommand}"
                     CommandParameter="Solid"
                     Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
                 <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
             </Button>
-            <Button Classes="ghost" Padding="8,4"
+            <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                     Command="{Binding SetAnnotationFillKindCommand}"
                     CommandParameter="LinearGradient"
                     Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
                 <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
             </Button>
-            <Button Classes="ghost" Padding="8,4"
+            <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                     Command="{Binding SetAnnotationFillKindCommand}"
                     CommandParameter="RadialGradient"
                     Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
                 <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
             </Button>
-        </StackPanel>
+        </WrapPanel>
         <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
             <TextBlock Text="Farbe 1" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

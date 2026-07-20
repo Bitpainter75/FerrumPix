@@ -89,6 +89,7 @@ Namespace ViewModels
         Private _exposure As Double = 0
         Private _sharpness As Double = 0
         Private _noiseReduction As Double = 0
+        Private _colorNoiseReduction As Double = 0
         Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
         Private _dustScratches As Double = 0
         Private _haze As Double = 0
@@ -326,6 +327,11 @@ Namespace ViewModels
         ' Compositing (siehe ImageProcessor.ApplyAnnotations), nicht als Pixel-Anpassung.
         Private _backgroundHidden As Boolean = False
         Private _pixelLayerHidden As Boolean = False
+
+        ''' True, solange die eingebettete RAW-Vorschau angezeigt wird und die echte Entwicklung noch
+        ''' laeuft. In diesem Fenster gibt es noch KEIN Arbeitsbild - Pinsel und Retusche muessen
+        ''' gesperrt bleiben, sonst liefen ihre Commits ins Leere.
+        Private _workingImagePending As Boolean = False
         Private _annotationRotation As Double = 0
         Private _annotationFlipH As Boolean = False
         ' Objekt-Anpassungsmodus: Solange ein Objekt markiert ist UND ein objektfähiges Werkzeug aktiv ist,
@@ -342,6 +348,19 @@ Namespace ViewModels
         Private _annotationWidthPercent As Double = 30
         Private _annotationHeightPercent As Double = 12
         Private _annotationFillKind As String = "Solid"
+        Private _annotationTextPathKind As String = ""
+        Private _annotationTextPathBend As Double = 50
+        Private _annotationTextPathStartOffset As Double = 0
+        Private _calibrationRedHue As Double = 0
+        Private _calibrationRedSaturation As Double = 0
+        Private _calibrationGreenHue As Double = 0
+        Private _calibrationGreenSaturation As Double = 0
+        Private _calibrationBlueHue As Double = 0
+        Private _calibrationBlueSaturation As Double = 0
+        Private _calibrationShadowTint As Double = 0
+        Private _annotationLetterSpacingPercent As Double = 0
+        Private _annotationBold As Boolean = False
+        Private _annotationItalic As Boolean = False
         Private _annotationFillColor2 As String = "#FFFFFFFF"
         Private _annotationGradientAngle As Double = 0
         Private _annotationGradientInverted As Boolean = False
@@ -443,6 +462,10 @@ Namespace ViewModels
                             Try
                                 If onDoneUi IsNot Nothing Then onDoneUi(patch)
                             Finally
+                                ' Ein Commit kann der erste GEBACKENE Inhalt sein - dann kippt bei
+                                ' RAW-Quellen der Speichern-Weg von Sidecar auf "Speichern unter".
+                                Me.RaisePropertyChanged(NameOf(CanSaveRawSidecar))
+                                Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
                                 Me.RaisePropertyChanged(NameOf(CanUndo))
                                 Me.RaisePropertyChanged(NameOf(CanRedo))
                             End Try
@@ -569,6 +592,11 @@ Namespace ViewModels
         Private _previewSource As SKBitmap
         Private _previewRenderCts As CancellationTokenSource
         Private _previewRequestId As Integer
+
+        ''' Marke des QUELLWECHSELS (Bild öffnen/wechseln). Bewusst getrennt von _previewRequestId,
+        ''' den auch jeder Render-Start hochzählt - sonst würde ein währenddessen anlaufender Render
+        ''' einen völlig gültigen Decode verwerfen lassen.
+        Private _previewSourceSwapId As Long = 0
         Private _lastRetouchLivePreviewUtc As DateTime = DateTime.MinValue
         Private Const RetouchLivePreviewMinIntervalMs As Double = 70.0
         Private _retouchStrokeActive As Boolean = False
@@ -1198,6 +1226,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationYLabel))
             Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
             Me.RaisePropertyChanged(NameOf(ShowFontControls))
+                Me.RaisePropertyChanged(NameOf(ShowTextPathRow))
+                Me.RaisePropertyChanged(NameOf(ShowTextPathControls))
             Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
             Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
             Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
@@ -1425,6 +1455,44 @@ Namespace ViewModels
             Return Math.Max(-AnnotationOffsetLimitPercent, Math.Min(AnnotationOffsetLimitPercent, value))
         End Function
 
+        ''' <summary>Bei Text auf einem KREISPFAD ist der gemessene Textkasten die falsche Box: er
+        ''' ist breit und flach, der Kreis nutzt davon aber nur min(Breite, Hoehe) - der
+        ''' Selektionsrahmen stand dadurch weit um einen kleinen Kreis herum (Nutzerbefund
+        ''' 2026-07-20, zweimal gemeldet).
+        ''' Stattdessen eine QUADRATISCHE Box, deren Umfang zum Text passt: der Text laeuft einmal
+        ''' herum, also Durchmesser = Textbreite / Pi. Damit umschliesst der Rahmen den Kreis, und
+        ''' die Groesse folgt weiterhin der Schrift - genau wie beim geraden Text.
+        ''' Aendert nichts, wenn kein Kreispfad aktiv ist.</summary>
+        Private Sub FitBoxToCircleTextPath()
+            If Not IsCircleTextPath(_annotationTextPathKind) Then Return
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            If baseW <= 0 OrElse baseH <= 0 Then Return
+
+            ' Breite des gemessenen Textkastens in Pixeln -> Durchmesser des Kreises.
+            Dim textBreite = _annotationWidthPercent / 100.0 * baseW
+            If textBreite <= 0 Then Return
+            Dim seite = textBreite / Math.PI
+            ' Untergrenze, damit ein sehr kurzer Text nicht zu einem Punkt schrumpft.
+            seite = Math.Max(seite, _annotationFontSize * 2.5)
+
+            ' Um den MITTELPUNKT wachsen, nicht von der oberen linken Ecke: der Textkasten ist
+            ' breit und flach, der Kreis deutlich schmaler - ohne das saesse er am linken Ende
+            ' dessen, wo vorher der Text stand, und spraenge beim Tippen mit.
+            Dim alteBreite = _annotationWidthPercent
+            Dim alteHoehe = _annotationHeightPercent
+            Dim neueBreite = Math.Max(2.0, Math.Min(100.0, seite / baseW * 100.0))
+            Dim neueHoehe = Math.Max(2.0, Math.Min(100.0, seite / baseH * 100.0))
+            _annotationWidthPercent = neueBreite
+            _annotationHeightPercent = neueHoehe
+
+            ' Verankerte Wasserzeichen rechnen ihre Lage aus dem Anker - dort nicht eingreifen.
+            If Not ShowWatermarkAnchorControls Then
+                _annotationXPercent = Math.Max(-neueBreite + 1, Math.Min(100 - 1, _annotationXPercent + (alteBreite - neueBreite) / 2.0))
+                _annotationYPercent = Math.Max(-neueHoehe + 1, Math.Min(100 - 1, _annotationYPercent + (alteHoehe - neueHoehe) / 2.0))
+            End If
+        End Sub
+
         Private Function GetCurrentAnnotationDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
             Dim origin = ComputeAnnotationOriginPercent(EffectiveAnnotationKind, _annotationXPercent, _annotationYPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
             Return (origin.X, origin.Y, _annotationWidthPercent, _annotationHeightPercent)
@@ -1491,6 +1559,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
+                Me.RaisePropertyChanged(NameOf(ShowTextPathRow))
+                Me.RaisePropertyChanged(NameOf(ShowTextPathControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
                 Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
@@ -1543,6 +1613,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
+                Me.RaisePropertyChanged(NameOf(ShowTextPathRow))
+                Me.RaisePropertyChanged(NameOf(ShowTextPathControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
                 Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
@@ -1757,6 +1829,12 @@ Namespace ViewModels
             AnnotationGlowBlur = 10
             AnnotationGlowStrength = 100
             AnnotationGlowColor = "#FFFFFF00"
+            AnnotationTextPathKind = ""
+            AnnotationTextPathBend = 50
+            AnnotationTextPathStartOffset = 0
+            AnnotationLetterSpacingPercent = 0
+            AnnotationBold = False
+            AnnotationItalic = False
             If normalizedKind = "Watermark" Then
                 _annotationXPercent = 4
                 _annotationYPercent = 4
@@ -1950,7 +2028,11 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_currentImagePath, value)
                 Me.RaisePropertyChanged(NameOf(CurrentFileName))
+                Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+                Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImageRaw))
+                Me.RaisePropertyChanged(NameOf(IsCurrentImagePsd))
+                Me.RaisePropertyChanged(NameOf(CanSaveRawSidecar))
                 Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
                 Me.RaisePropertyChanged(NameOf(HasDocument))
@@ -2622,6 +2704,16 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' Farb-Rauschreduzierung (Chroma): glaettet nur die Farbanteile, Helligkeit bleibt.
+        Public Property ColorNoiseReduction As Double
+            Get
+                Return _colorNoiseReduction
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorNoiseReduction, Math.Max(0, Math.Min(100, value)), NameOf(ColorNoiseReduction))
+            End Set
+        End Property
+
         Public Property DustScratches As Double
             Get
                 Return _dustScratches
@@ -2645,7 +2737,7 @@ Namespace ViewModels
                 Return _addNoise
             End Get
             Set(value As Double)
-                SetUndoableDouble(_addNoise, Math.Max(0, Math.Min(100, value)), NameOf(AddNoise))
+                SetUndoableDouble(_addNoise, Math.Max(-100, Math.Min(100, value)), NameOf(AddNoise))
             End Set
         End Property
 
@@ -4053,10 +4145,12 @@ Namespace ViewModels
         ''' <summary>Solange die Pixel-Ebene ausgeblendet ist, sind Pinsel, Radiergummi, Verwischen,
         ''' Stempel und Reparaturpinsel gesperrt (Nutzerentscheidung 2026-07-19, wie das Malen auf einer
         ''' unsichtbaren Ebene in ueblichen Bildbearbeitungen). Sonst liefen die Commits in ein
-        ''' Arbeitsbild, das gerade gar nicht angezeigt wird.</summary>
+        ''' Arbeitsbild, das gerade gar nicht angezeigt wird.
+        ''' Dieselbe Sperre greift, solange nur die eingebettete RAW-Vorschau steht und die echte
+        ''' Entwicklung noch laeuft - dann gibt es das Arbeitsbild schlicht noch nicht.</summary>
         Public ReadOnly Property CanUsePixelTools As Boolean
             Get
-                Return Not _pixelLayerHidden
+                Return Not _pixelLayerHidden AndAlso Not _workingImagePending
             End Get
         End Property
 
@@ -4069,6 +4163,7 @@ Namespace ViewModels
 
         Public ReadOnly Property PixelToolsLockedHint As String
             Get
+                If _workingImagePending Then Return LocalizationService.T("RAW wird entwickelt …")
                 Return If(_pixelLayerHidden, LocalizationService.T("Ebene ausgeblendet"), "")
             End Get
         End Property
@@ -4309,6 +4404,217 @@ Namespace ViewModels
                 SyncSelectedAnnotation()
             End Set
         End Property
+
+        ''' <summary>Pfadform des Text-Objekts: "" (gerade), "Arc", "Circle", "Wave".</summary>
+        Public Property AnnotationTextPathKind As String
+            Get
+                Return _annotationTextPathKind
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_annotationTextPathKind, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(ShowTextPathControls))
+                Me.RaisePropertyChanged(NameOf(IsTextPathNone))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public Property AnnotationTextPathBend As Double
+            Get
+                Return _annotationTextPathBend
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_annotationTextPathBend, Math.Max(-100, Math.Min(100, value)))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public Property AnnotationTextPathStartOffset As Double
+            Get
+                Return _annotationTextPathStartOffset
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_annotationTextPathStartOffset, Math.Max(0, Math.Min(100, value)))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Zeichenabstand in Prozent der Schriftgroesse. Prozent statt Pixel, damit der
+        ''' Abstand beim Skalieren des Objekts mitwaechst.</summary>
+
+        ''' KAMERAKALIBRIERUNG: dreht und saettigt die Primaerfarben, wirkt vor Weissabgleich und
+        ''' Saettigung. Macht einen guten Teil des Farbstichs importierter Presets aus.
+        Public Property CalibrationRedHue As Double
+            Get
+                Return _calibrationRedHue
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_calibrationRedHue, Math.Max(-100, Math.Min(100, value)))
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property CalibrationRedSaturation As Double
+            Get
+                Return _calibrationRedSaturation
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_calibrationRedSaturation, Math.Max(-100, Math.Min(100, value)))
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property CalibrationGreenHue As Double
+            Get
+                Return _calibrationGreenHue
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_calibrationGreenHue, Math.Max(-100, Math.Min(100, value)))
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property CalibrationGreenSaturation As Double
+            Get
+                Return _calibrationGreenSaturation
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_calibrationGreenSaturation, Math.Max(-100, Math.Min(100, value)))
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property CalibrationBlueHue As Double
+            Get
+                Return _calibrationBlueHue
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_calibrationBlueHue, Math.Max(-100, Math.Min(100, value)))
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property CalibrationBlueSaturation As Double
+            Get
+                Return _calibrationBlueSaturation
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_calibrationBlueSaturation, Math.Max(-100, Math.Min(100, value)))
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property CalibrationShadowTint As Double
+            Get
+                Return _calibrationShadowTint
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_calibrationShadowTint, Math.Max(-100, Math.Min(100, value)))
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property AnnotationLetterSpacingPercent As Double
+            Get
+                Return _annotationLetterSpacingPercent
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_annotationLetterSpacingPercent, Math.Max(-20, Math.Min(200, value)))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Fett/Kursiv des Text-Objekts. Wirkt nur, wenn die gewaehlte Schriftfamilie
+        ''' einen solchen Schnitt mitbringt - Skia erzeugt keinen synthetischen.</summary>
+        Public Property AnnotationBold As Boolean
+            Get
+                Return _annotationBold
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_annotationBold, value)
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public Property AnnotationItalic As Boolean
+            Get
+                Return _annotationItalic
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_annotationItalic, value)
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Die Pfad-Zeile gilt fuer alles, was Text zeichnet - also auch fuer das
+        ''' Wasserzeichen. Frueher war sie dort ausgeblendet, weil die Zeichenstelle die
+        ''' Pfad-Parameter nicht durchreichte; der Renderer selbst konnte es immer schon
+        ''' (Nutzerbefund 2026-07-20).
+        ''' Ein Wasserzeichen mit BILD hat keinen Text und damit auch keinen Pfad.</summary>
+        Public ReadOnly Property ShowTextPathRow As Boolean
+            Get
+                If EffectiveAnnotationKind = "Text" Then Return True
+                Return EffectiveAnnotationKind = "Watermark" AndAlso String.IsNullOrWhiteSpace(SelectedAnnotationImagePath)
+            End Get
+        End Property
+
+        ''' <summary>Kruemmungs-/Startregler nur, wenn ueberhaupt eine Pfadform gewaehlt ist.</summary>
+        Public ReadOnly Property ShowTextPathControls As Boolean
+            Get
+                Return ShowTextPathRow AndAlso Not String.IsNullOrWhiteSpace(_annotationTextPathKind)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsTextPathNone As Boolean
+            Get
+                Return String.IsNullOrWhiteSpace(_annotationTextPathKind)
+            End Get
+        End Property
+
+        ''' "None" kommt vom "Kein"-Knopf: ein leeres CommandParameter laesst sich in XAML nicht
+        ''' ausdruecken, ohne den XAML-Compiler zu brechen (AVLN2000 bei ConverterParameter=).
+        ''' <summary>True fuer beide Kreisformen. Bewusst StartsWith - "CircleInverted" ist
+        ''' geometrisch derselbe Kreis, und ein Equals-Vergleich hat den invertierten Modus schon
+        ''' einmal stillschweigend anders behandelt.</summary>
+        Friend Shared Function IsCircleTextPath(kind As String) As Boolean
+            Return Not String.IsNullOrWhiteSpace(kind) AndAlso
+                   kind.StartsWith("Circle", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        Public Sub SetAnnotationTextPathKind(kind As String)
+            AnnotationTextPathKind = If(String.Equals(kind, "None", StringComparison.OrdinalIgnoreCase), "", If(kind, ""))
+            ' Ein Kreis braucht eine quadratische Box, sonst steht der Selektionsrahmen weit um den
+            ' Text herum: der Radius ist min(Breite, Hoehe), eine breite Textbox laesst also den
+            ' groessten Teil des Rahmens leer (Nutzerbefund 2026-07-20, mit Bild).
+            ' Die Alternative - den Kreis ueber das Rechteck strecken - ergaebe bei breiten Objekten
+            ' eine flache Ellipse und damit faktisch einen Bogen; ausprobiert und verworfen.
+            ' Box sofort an den Kreis anpassen. MakeAnnotationBoxSquare reicht dafuer NICHT:
+            ' bei Textobjekten wird die Box laufend aus dem gemessenen Textkasten neu berechnet und
+            ' das Quadrat sofort wieder ueberschrieben - deshalb FitBoxToCircleTextPath, das an
+            ' genau diesen Stellen mitlaeuft.
+            If IsCircleTextPath(AnnotationTextPathKind) Then
+                FitBoxToCircleTextPath()
+                Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+                Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+                SyncSelectedAnnotation()
+            End If
+        End Sub
+
+        ''' <summary>Macht die Objektbox quadratisch (kleinere Seite gewinnt) und behaelt dabei den
+        ''' Mittelpunkt, damit der Text nicht wegspringt.</summary>
+        Private Sub MakeAnnotationBoxSquare()
+            Dim breite = AnnotationWidthPixels
+            Dim hoehe = AnnotationHeightPixels
+            If breite <= 0 OrElse hoehe <= 0 OrElse breite = hoehe Then Return
+
+            Dim seite = Math.Min(breite, hoehe)
+            Dim mitteX = AnnotationXPixels + breite \ 2
+            Dim mitteY = AnnotationYPixels + hoehe \ 2
+
+            AnnotationWidthPixels = seite
+            AnnotationHeightPixels = seite
+            AnnotationXPixels = Math.Max(0, mitteX - seite \ 2)
+            AnnotationYPixels = Math.Max(0, mitteY - seite \ 2)
+        End Sub
 
         Public Property AnnotationFillColor2 As String
             Get
@@ -5773,6 +6079,7 @@ Namespace ViewModels
                 Dim fitted = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
                 _annotationWidthPercent = fitted.WidthPercent
                 _annotationHeightPercent = fitted.HeightPercent
+                FitBoxToCircleTextPath()
             End If
             If ShowWatermarkAnchorControls Then
                 Dim offset = ComputeAnnotationOffsetPercent(EffectiveAnnotationKind, xPercent, yPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
@@ -6353,6 +6660,27 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>True, wenn das aktuelle Bild WIRKLICH ueber libraw entwickelt wurde (der
+        ''' Entwicklungs-Cache ist nach dem Decode warm) - die Fusszeile faerbt den Dateinamen dann
+        ''' in der Akzentfarbe, damit sichtbar ist, ob echte Sensordaten oder nur die eingebettete
+        ''' Vorschau bearbeitet werden.</summary>
+        Public ReadOnly Property IsRawDeveloped As Boolean
+            Get
+                Return RawPreviewService.IsSupportedRaw(RenderSourcePath) AndAlso
+                       RawDecodeService.IsAvailable AndAlso
+                       RawDecodeService.TryGetCachedSize(RenderSourcePath).Width > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property RawFooterTooltip As String
+            Get
+                If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return Nothing
+                Return If(IsRawDeveloped,
+                          LocalizationService.T("RAW entwickelt"),
+                          LocalizationService.T("RAW-Vorschau"))
+            End Get
+        End Property
+
         ''' <summary>False, solange der Editor gar kein Dokument hält - beim Start ohne Bilddatei oder
         ''' nachdem der Neu-Dialog abgebrochen wurde. Steuert den Platzhalter in EditorView; die
         ''' Werkzeugleisten und Panels liegen darunter und sind dann verdeckt.</summary>
@@ -6745,11 +7073,37 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Bearbeitung wirkt bei RAW-Quellen nur auf die eingebettete JPEG-Vorschau (siehe
-        ''' ImageProcessor.OpenSourceStream) - die RAW-Datei selbst darf nie als Speicherziel dienen.
+        ''' <summary>Anhang für die Statuszeile bei RAW-Quellen: unterscheidet echte Entwicklung
+        ''' (System-libraw: volles Demosaic mit Kamera-Weißabgleich) von der eingebetteten
+        ''' JPEG-Vorschau, auf die ohne libraw zurückgefallen wird.
+        '''
+        ''' Der Zustand wird derzeit über die Cache-Wärme erschlossen, nicht über den tatsächlich
+        ''' gegangenen Decode-Weg. Das ist die schwächere Auskunft: unmittelbar nach dem Leeren des
+        ''' Caches kann sie kurz "Vorschau" zeigen, obwohl entwickelt wurde. Sauberer wäre, dass
+        ''' DecodeOriented mitteilt, welchen Weg es genommen hat.
+        '''
+        ''' Unabhängig davon gilt: die RAW-Datei ist nie Speicherziel - Export schreibt in eine neue
+        ''' Datei, Reglerstände gehen in das .fpxmp-Sidecar.</summary>
+        Private Function RawStatusSuffix() As String
+            If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return ""
+            Dim developed = RawDecodeService.IsAvailable AndAlso
+                            RawDecodeService.TryGetCachedSize(RenderSourcePath).Width > 0
+            Return "  •  " & If(developed,
+                                LocalizationService.T("RAW entwickelt"),
+                                LocalizationService.T("RAW-Vorschau"))
+        End Function
+
         Public ReadOnly Property IsCurrentImageRaw As Boolean
             Get
                 Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso RawPreviewService.IsSupportedRaw(RenderSourcePath)
+            End Get
+        End Property
+
+        ''' PSD/PSB sind nur-lesend: die Pipeline arbeitet auf dem zusammengesetzten Gesamtbild
+        ''' (PsdPreviewService), ein Zurückschreiben würde die Ebenen der Datei zerstören.
+        Public ReadOnly Property IsCurrentImagePsd As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso PsdPreviewService.IsSupportedPsd(RenderSourcePath)
             End Get
         End Property
 
@@ -6759,7 +7113,7 @@ Namespace ViewModels
         ''' sinnvoll, wenn es das Quell-Asset ersetzen darf - siehe SavesBackToImmich.
         Public ReadOnly Property CanSaveInPlace As Boolean
             Get
-                Return Not IsCurrentImageRaw AndAlso
+                Return (Not IsCurrentImageRaw OrElse CanSaveRawSidecar) AndAlso Not IsCurrentImagePsd AndAlso
                        (Not _forceSaveAsOnly OrElse SavesBackToImmich OrElse Not String.IsNullOrEmpty(_currentFpxPath))
             End Get
         End Property
@@ -6909,6 +7263,7 @@ Namespace ViewModels
         Public ReadOnly Property FillSelectionCommand As ICommand
         Public ReadOnly Property SetSelectionModeCommand As ICommand
         Public ReadOnly Property SetSelectionCombineModeCommand As ICommand
+        Public ReadOnly Property SetAnnotationTextPathKindCommand As ICommand
         Public ReadOnly Property SetAnnotationFillKindCommand As ICommand
         Public ReadOnly Property SetAnnotationAnchorCommand As ICommand
         Public ReadOnly Property ResetTransformCommand As ICommand
@@ -6918,6 +7273,7 @@ Namespace ViewModels
         Public ReadOnly Property ResetCurveCommand As ICommand
         Public ReadOnly Property SetCurveChannelCommand As ICommand
         Public ReadOnly Property ResetHslCommand As ICommand
+        Public ReadOnly Property ResetCalibrationCommand As ICommand
         Public ReadOnly Property ResetSplitToningCommand As ICommand
         Public ReadOnly Property PickNegativeBaseCommand As ICommand
         Public ReadOnly Property AutoNegativeBaseCommand As ICommand
@@ -7177,6 +7533,7 @@ Namespace ViewModels
             SetSelectionCombineModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionCombineMode(mode))
             SetAnnotationAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) AnnotationAnchor = anchor)
             SetAnnotationFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationFillKind(kind))
+            SetAnnotationTextPathKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationTextPathKind(kind))
             ResetTransformCommand = ReactiveCommand.Create(Sub()
                                                                PushUndo()
                                                                ResetTransformInternal()
@@ -7210,6 +7567,17 @@ Namespace ViewModels
                                                                   PushUndo()
                                                                   ResetSplitToningInternal()
                                                               End Sub)
+
+            ResetCalibrationCommand = ReactiveCommand.Create(Sub()
+                                                                 PushUndo()
+                                                                 CalibrationRedHue = 0
+                                                                 CalibrationRedSaturation = 0
+                                                                 CalibrationGreenHue = 0
+                                                                 CalibrationGreenSaturation = 0
+                                                                 CalibrationBlueHue = 0
+                                                                 CalibrationBlueSaturation = 0
+                                                                 CalibrationShadowTint = 0
+                                                             End Sub)
 
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub()
                                                                    If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
@@ -7418,7 +7786,7 @@ Namespace ViewModels
             If idx < 0 Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("dieses Bild öffnest") Then Return
             _currentIndex = idx
-            LoadImageContent(item.FilePath)
+            Await LoadImageContent(item.FilePath)
         End Function
 
         ''' Wird vom Mausrad-Handler auf dem Filmstrip (schnelles Scrollen -> viele Events kurz
@@ -7445,7 +7813,7 @@ Namespace ViewModels
             If idx < 0 OrElse idx >= _folderPaths.Count OrElse idx = _currentIndex Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("das nächste Bild öffnest") Then Return
             _currentIndex = idx
-            LoadImageContent(_folderPaths(_currentIndex))
+            Await LoadImageContent(_folderPaths(_currentIndex))
         End Function
 
         Public Async Function NavigateNextAsync() As Task
@@ -7462,7 +7830,7 @@ Namespace ViewModels
             Await NavigateToFilmstripIndexAsync(previousIndex)
         End Function
 
-        Private Sub LoadImageContent(path As String)
+        Private Async Function LoadImageContent(path As String) As Task
             If String.IsNullOrEmpty(path) OrElse Not File.Exists(path) Then
                 If Not String.IsNullOrEmpty(path) Then
                     _folderPaths.RemoveAll(Function(p) String.Equals(p, path, StringComparison.OrdinalIgnoreCase))
@@ -7486,7 +7854,7 @@ Namespace ViewModels
                 End If
 
                 Dim fallbackIndex = Math.Max(0, Math.Min(_currentIndex, _folderPaths.Count - 1))
-                LoadImageContent(_folderPaths(fallbackIndex))
+                Await LoadImageContent(_folderPaths(fallbackIndex))
                 Return
             End If
 
@@ -7514,6 +7882,12 @@ Namespace ViewModels
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
                 newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
+            ElseIf RawPreviewService.IsSupportedRaw(path) AndAlso
+                   AppSettingsService.Load().RawSidecarEnabled AndAlso
+                   RawSidecarService.Exists(path) Then
+                ' Rezept-Begleitdatei (.fpxmp): die zuletzt gespeicherten Regler kommen wie beim
+                ' .fpx-Laden wieder an - ein defekter Sidecar wird still ignoriert.
+                fpxAdjustments = RawSidecarService.TryRead(path)
             End If
 
             CleanupCurrentFpxTempDir()
@@ -7541,7 +7915,7 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
                 ExifInfo = Nothing
                 ClearHistogramData()
-                PreparePreviewSource(RenderSourcePath)
+                Await PreparePreviewSourceAsync(RenderSourcePath)
                 If fpxAdjustments IsNot Nothing Then
                     ApplyAdjustments(fpxAdjustments)
                     _hasChanges = False
@@ -7555,9 +7929,20 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(PositionText))
             MarkCurrentFilmstripItem()
             Try
-                CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath)
+                ' PreparePreviewSource leitet CurrentImage bereits aus dem Arbeitsbild ab - ein
+                ' zweiter Decode derselben Datei entfaellt damit im Normalfall.
+                ' Der Rueckfall bleibt trotzdem stehen: die beiden Wege koennen divergieren. Genau
+                ' das war der PSD-Befund vom 2026-07-19 - die Render-Pipeline konnte das Format,
+                ' der Anzeigeweg nicht. Hier ist es die Gegenrichtung, aber dasselbe Risiko.
                 If CurrentImage Is Nothing Then
-                    StatusText = If(RawPreviewService.IsSupportedRaw(RenderSourcePath), "Keine Vorschau aus dieser RAW-Datei extrahierbar", "Fehler beim Laden")
+                    CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath)
+                End If
+                If CurrentImage Is Nothing Then
+                    StatusText = If(RawPreviewService.IsSupportedRaw(RenderSourcePath),
+                                    LocalizationService.T("Keine Vorschau aus dieser RAW-Datei extrahierbar"),
+                                    If(PsdPreviewService.IsSupportedPsd(RenderSourcePath),
+                                       LocalizationService.T("PSD ohne lesbares Gesamtbild - in Photoshop mit maximaler Kompatibilität speichern"),
+                                       LocalizationService.T("Fehler beim Laden")))
                     Return
                 End If
                 VerifyWorkingImageDimensions()
@@ -7567,12 +7952,16 @@ Namespace ViewModels
                 Dim kb = info.Length / 1024.0
                 Dim sizeStr = If(kb < 1024, $"{kb:F0} KB", $"{kb / 1024:F1} MB")
                 Dim mp = CurrentImage.Size.Width * CurrentImage.Size.Height / 1_000_000.0
-                StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}"
+                ' Bei RAW-Quellen zeigt die Statuszeile, WORAUF gearbeitet wird: echte Entwicklung
+                ' (System-libraw, voller Sensor-Decode) oder nur die eingebettete JPEG-Vorschau.
+                StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}{RawStatusSuffix()}"
+                Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+                Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Catch
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
             If fpxAdjustments IsNot Nothing Then ScheduleToolPreviewUpdate()
-        End Sub
+        End Function
 
         Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing)
             Dim ignored = OpenImageAsync(imagePath, allPaths)
@@ -7610,6 +7999,10 @@ Namespace ViewModels
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
                 newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
+            ElseIf RawPreviewService.IsSupportedRaw(imagePath) AndAlso
+                   AppSettingsService.Load().RawSidecarEnabled AndAlso
+                   RawSidecarService.Exists(imagePath) Then
+                fpxAdjustments = RawSidecarService.TryRead(imagePath)
             End If
 
             CleanupCurrentFpxTempDir()
@@ -7651,7 +8044,7 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
                 ExifInfo = Nothing
                 ClearHistogramData()
-                PreparePreviewSource(RenderSourcePath)
+                Await PreparePreviewSourceAsync(RenderSourcePath)
                 ' Gespeicherten Bearbeitungszustand aus der .fpx wiederherstellen (Regler, Ebenenstapel, Auswahl …)
                 ' und als "keine ungespeicherten Änderungen" markieren - es ist ja gerade der gespeicherte Stand.
                 If fpxAdjustments IsNot Nothing Then
@@ -7676,7 +8069,14 @@ Namespace ViewModels
             If immichAssetId IsNot Nothing Then Await LoadImmichMetaAsync(immichAssetId)
 
             Try
-                CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath)
+                ' PreparePreviewSource leitet CurrentImage bereits aus dem Arbeitsbild ab - ein
+                ' zweiter Decode derselben Datei entfaellt damit im Normalfall.
+                ' Der Rueckfall bleibt trotzdem stehen: die beiden Wege koennen divergieren. Genau
+                ' das war der PSD-Befund vom 2026-07-19 - die Render-Pipeline konnte das Format,
+                ' der Anzeigeweg nicht. Hier ist es die Gegenrichtung, aber dasselbe Risiko.
+                If CurrentImage Is Nothing Then
+                    CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath)
+                End If
                 If CurrentImage Is Nothing Then
                     Dim message = If(RawPreviewService.IsSupportedRaw(RenderSourcePath),
                         LocalizationService.T("Aus dieser RAW-Datei konnte keine Vorschau extrahiert werden."),
@@ -7696,7 +8096,11 @@ Namespace ViewModels
                 Dim kb = info.Length / 1024.0
                 Dim sizeStr = If(kb < 1024, $"{kb:F0} KB", $"{kb / 1024:F1} MB")
                 Dim mp = CurrentImage.Size.Width * CurrentImage.Size.Height / 1_000_000.0
-                StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}"
+                ' Bei RAW-Quellen zeigt die Statuszeile, WORAUF gearbeitet wird: echte Entwicklung
+                ' (System-libraw, voller Sensor-Decode) oder nur die eingebettete JPEG-Vorschau.
+                StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}{RawStatusSuffix()}"
+                Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+                Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Catch ex As Exception
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
@@ -7864,7 +8268,8 @@ Namespace ViewModels
             Dim editableExts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico"}
             ' .fpx-Projekte sind im Editor voll bearbeitbar (Rezept wird wiederhergestellt) und
             ' gehoeren deshalb in den Filmstreifen - solange das Format aktiviert ist.
-            Return editableExts.Contains(ext) OrElse RawPreviewService.IsSupportedRaw(path) OrElse FpxService.IsFpx(path)
+            Return editableExts.Contains(ext) OrElse RawPreviewService.IsSupportedRaw(path) OrElse
+                   PsdPreviewService.IsSupportedPsd(path) OrElse FpxService.IsFpx(path)
         End Function
 
         Private Sub SchedulePreviewUpdate()
@@ -8835,7 +9240,10 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Vorschau bereit")
         End Sub
 
-        Private Sub PreparePreviewSource(imagePath As String, Optional scheduleInitialRender As Boolean = True)
+        ''' <summary>Quellwechsel Teil 1: alles aufräumen, was zur ALTEN Quelle gehört. Rein
+        ''' UI-Thread, billig. Liefert die Marke des Wechsels zurück - oder -1, wenn es nichts zu
+        ''' laden gibt (dann ist bereits geleert).</summary>
+        Private Function BeginPreviewSourceSwap(imagePath As String) As Long
             InvalidatePreviewWork()
             DisposeRetouchLiveBuffers()
             ClearRetouchLivePatch()
@@ -8849,22 +9257,41 @@ Namespace ViewModels
             _sceneSk?.Dispose()
             _sceneSk = Nothing
             _sceneDisplay = Nothing
+
+            ' EIGENER Zähler, nicht _previewRequestId: der wird auch von jedem Render-Start
+            ' hochgezählt (RegisterPreviewRenderStart). Als Veraltungs-Marke für den Quellwechsel
+            ' wäre er untauglich - ein Render, der während des Decodes anläuft, würde ein völlig
+            ' gültiges Ergebnis verwerfen lassen.
+            Dim token = Threading.Interlocked.Increment(_previewSourceSwapId)
+
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then
                 ClearPreviewSource()
-                Return
+                Return -1
             End If
 
-            ' TEMPORÄR (Untersuchung #7): einmalige Farbraum-Diagnose des Datei-Decodes.
-            ImageProcessor.LogDecodeColorDiagnostics(RenderSourcePath)
+            ' Farbraum-Diagnose (Untersuchung "Vorher/Nachher dunkler"): NUR auf Anforderung.
+            ' Sie war als "temporär" markiert, lief aber bei JEDEM Laden mit - und sie ist nicht
+            ' billig: voller Datei-Decode plus zwei bildgroße Zeichenvorgänge, gemessen 243 ms bei
+            ' einem 12-MP-NEF, obendrauf auf den ohnehin teuren RAW-Weg. Die Untersuchung ist noch
+            ' offen, deshalb bleibt das Werkzeug erhalten - aber hinter einem Schalter:
+            '   FERRUMPIX_COLOR_DIAG=1 ferrumpix
+            If Environment.GetEnvironmentVariable("FERRUMPIX_COLOR_DIAG") = "1" Then
+                ImageProcessor.LogDecodeColorDiagnostics(RenderSourcePath)
+            End If
+            Return token
+        End Function
 
-            ' ARBEITSBILD: voll dekodieren, Vorschau daraus ableiten. Bei einer .fpx mit voll
-            ' aufgelöstem retouch.png ist DAS BÜNDEL-Arbeitsbild der Decode (Striche/Retusche
-            ' bereits eingebacken); ein Vorschauauflösungs-Altbestand (Seed 2026-07-17) fällt
-            ' über die Maße-Prüfung sauber auf das Basisbild zurück.
+        ''' <summary>Quellwechsel Teil 2: der TEURE Decode. Fasst keinen UI-Zustand an und darf
+        ''' deshalb im Hintergrund laufen - bei RAW steckt hier die komplette Entwicklung.
+        '''
+        ''' Bei einer .fpx mit voll aufgelöstem retouch.png ist DAS BÜNDEL-Arbeitsbild der Decode
+        ''' (Striche/Retusche bereits eingebacken); ein Vorschauauflösungs-Altbestand
+        ''' (Seed 2026-07-17) fällt über die Maße-Prüfung sauber auf das Basisbild zurück.</summary>
+        Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String) As (Full As SKBitmap, Baked As Boolean)
             Dim fullDecode As SKBitmap = Nothing
             Dim bakedFromFpx = False
-            If Not String.IsNullOrEmpty(_workingImageOverridePath) AndAlso File.Exists(_workingImageOverridePath) Then
-                fullDecode = ImageProcessor.DecodeWorkingImage(_workingImageOverridePath)
+            If Not String.IsNullOrEmpty(overridePath) AndAlso File.Exists(overridePath) Then
+                fullDecode = ImageProcessor.DecodeWorkingImage(overridePath)
                 If fullDecode IsNot Nothing Then
                     Dim baseSize = ImageProcessor.GetOrientedImageSize(imagePath)
                     If baseSize.Width > 0 AndAlso (fullDecode.Width <> baseSize.Width OrElse fullDecode.Height <> baseSize.Height) Then
@@ -8876,20 +9303,46 @@ Namespace ViewModels
                     Else
                         bakedFromFpx = True
                         DiagnosticLogService.LogAlways("Editor.WorkingImage",
-                            $"fpxOverride used size={fullDecode.Width}x{fullDecode.Height} alpha={_workingImageOverrideHasAlpha}")
+                            $"fpxOverride used size={fullDecode.Width}x{fullDecode.Height}")
                     End If
                 End If
             End If
             If fullDecode Is Nothing Then fullDecode = ImageProcessor.DecodeWorkingImage(imagePath)
-            Dim source = If(fullDecode IsNot Nothing,
-                            _workingImage.Init(fullDecode, PreviewMaxDimension,
-                                               hasBakedContent:=bakedFromFpx,
-                                               hasAlphaHoles:=(bakedFromFpx AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground),
+            Return (fullDecode, bakedFromFpx)
+        End Function
+
+        ''' <summary>Quellwechsel Teil 3: das Ergebnis übernehmen - wieder UI-Thread.
+        ''' Ist die Marke veraltet (der Nutzer hat inzwischen weitergeblättert), wird das
+        ''' Dekodierte verworfen statt über die neue Quelle geschrieben.</summary>
+        Private Function CompletePreviewSourceSwap(decoded As (Full As SKBitmap, Baked As Boolean),
+                                                   token As Long, scheduleInitialRender As Boolean) As Boolean
+            If token < 0 OrElse Threading.Interlocked.Read(_previewSourceSwapId) <> token Then
+                ' Veraltet: NICHT entsperren - der neue Wechsel hat seine eigene Sperre gesetzt und
+                ' ist noch unterwegs. Ein Entsperren hier gäbe die Werkzeuge frei, obwohl das
+                ' Arbeitsbild der NEUEN Quelle noch fehlt.
+                decoded.Full?.Dispose()
+                Return False
+            End If
+            SetWorkingImagePending(False)
+
+            Dim source = If(decoded.Full IsNot Nothing,
+                            _workingImage.Init(decoded.Full, PreviewMaxDimension,
+                                               hasBakedContent:=decoded.Baked,
+                                               hasAlphaHoles:=(decoded.Baked AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground),
                             Nothing)
             If source Is Nothing Then
                 ClearPreviewSource()
-                Return
+                Return False
             End If
+
+            ' ANZEIGE-BILD aus dem gerade dekodierten Arbeitsbild ableiten, statt die Datei ein
+            ' ZWEITES Mal zu lesen. Vorher rief der Aufrufer direkt danach
+            ' ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath) - ein
+            ' kompletter zweiter Decode desselben Bildes, bei RAW ohne brauchbare eingebettete
+            ' Vorschau sogar eine zweite volle Entwicklung.
+            ' WithFull statt CloneFull: ToAvaloniaBitmap kopiert die Pixel ohnehin in ein
+            ' Avalonia-Bitmap, eine 180-MB-Zwischenkopie waere reine Verschwendung.
+            CurrentImage = _workingImage.WithFull(Function(full) ImageProcessor.ToAvaloniaBitmap(full))
 
             Dim oldSource As SKBitmap = Nothing
             SyncLock _previewSync
@@ -8909,15 +9362,58 @@ Namespace ViewModels
             ' gedeckelte Auflösung ~1 s). Ohne ihn bleibt der Cache kalt, bis der Nutzer die erste
             ' Anpassung macht - und ALLE Patch-Pfade (Blend, Malen, Objekt-Move) schlagen bis dahin
             ' still mit cacheMissOrBusy fehl, weil der Annotation-Pfad bewusst nie zum Full-Render
-            ' eskaliert (Log-Befund 2026-07-16). Früher wärmte zufällig das Objekt-Anlegen den Cache
-            ' (SchedulePreviewUpdate) - das ist seit dem regionsbezogenen Anlegen weg. Nebeneffekt:
-            ' DisplayImage wechselt sofort von _currentImage (Avalonia-Decode, voll aufgelöst) auf
-            ' die Skia-Vorschau - kein sichtbarer Render-Sprung mehr bei der ersten Anpassung.
-            ' ScheduleToolPreviewUpdate statt SchedulePreviewUpdate: das Öffnen ist keine Änderung.
+            ' eskaliert (Log-Befund 2026-07-16).
             If scheduleInitialRender Then ScheduleToolPreviewUpdate()
+            Return True
+        End Function
+
+        ''' <summary>Synchrone Fassung - für Aufrufer, die das Ergebnis SOFORT brauchen
+        ''' (UpdatePreviewAsync liest direkt danach GetPreviewSource, ResetAdjustmentsInternal baut
+        ''' das Arbeitsbild neu auf). Die Öffnen-Pfade nehmen PreparePreviewSourceAsync.</summary>
+        Private Sub PreparePreviewSource(imagePath As String, Optional scheduleInitialRender As Boolean = True)
+            Dim token = BeginPreviewSourceSwap(imagePath)
+            If token < 0 Then Return
+            CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath),
+                                      token, scheduleInitialRender)
         End Sub
 
+        ''' <summary>Dasselbe, aber der teure Decode läuft im Hintergrund - die Oberfläche friert
+        ''' beim Öffnen nicht mehr ein. Blättert der Nutzer währenddessen weiter, verwirft
+        ''' CompletePreviewSourceSwap das Ergebnis anhand der Marke.</summary>
+        Private Async Function PreparePreviewSourceAsync(imagePath As String,
+                                                         Optional scheduleInitialRender As Boolean = True) As Task
+            Dim token = BeginPreviewSourceSwap(imagePath)
+            If token < 0 Then Return
+
+            ' RAW: die EINGEBETTETE Vorschau sofort zeigen, damit nicht Sekunden lang eine leere
+            ' Fläche steht. Bewusst ExtractPreview und NICHT ExtractPreviewWithFallback - dessen
+            ' dritte Stufe entwickelt die Datei selbst und würde genau die Blockade zurückholen,
+            ' die dieser Umbau beseitigt. Findet der Scanner nichts (etwa bei Leica-RAWs), bleibt
+            ' es beim bisherigen Verhalten: kurz leer, bis die Entwicklung steht.
+            If RawPreviewService.IsSupportedRaw(imagePath) Then
+                Try
+                    Using vorschau = RawPreviewService.ExtractPreview(imagePath)
+                        If vorschau IsNot Nothing AndAlso vorschau.Length > 0 Then
+                            CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmap(vorschau)
+                        End If
+                    End Using
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Editor.RawQuickPreview", ex)
+                End Try
+                ' Auch ohne Vorschau sperren: entscheidend ist, dass es noch KEIN Arbeitsbild gibt.
+                SetWorkingImagePending(True)
+            End If
+
+            ' Feld VOR dem Wechsel in den Hintergrund lesen - es gehört dem UI-Thread.
+            Dim overridePath = _workingImageOverridePath
+            Dim decoded = Await Task.Run(Function() DecodeForPreviewSource(imagePath, overridePath))
+            CompletePreviewSourceSwap(decoded, token, scheduleInitialRender)
+        End Function
+
         Private Sub ClearPreviewSource()
+            ' Ohne Quelle gibt es auch nichts mehr zu entwickeln - eine noch stehende
+            ' "RAW wird entwickelt"-Sperre bliebe sonst fuer immer haengen.
+            SetWorkingImagePending(False)
             InvalidatePreviewWork()
             DisposeRetouchLiveBuffers()
             ClearRetouchLivePatch()
@@ -9453,6 +9949,9 @@ Namespace ViewModels
             If Not saveAs AndAlso Not CanSaveInPlace Then Return False
             ' "Speichern" bei einem Immich-Bild schreibt nicht die Temp-Kopie zurück, sondern das Asset.
             If Not saveAs AndAlso SavesBackToImmich Then Return Await SaveBackToImmichAsync()
+            ' "Speichern" bei einer RAW-Quelle = Rezept in die Begleitdatei (.fpxmp) schreiben -
+            ' die RAW-Datei selbst ist nie ein Schreibziel.
+            If Not saveAs AndAlso IsCurrentImageRaw Then Return TrySaveRawSidecar()
             Dim targetPath = _currentImagePath
             Dim targetQuality = SaveQuality
             Dim saveToImmich As Boolean = False
@@ -9758,6 +10257,35 @@ Namespace ViewModels
             If gallery IsNot Nothing Then Await gallery.RefreshImmichViewAsync()
         End Function
 
+        ''' <summary>Ob "Speichern" (in-place) bei der aktuellen RAW-Quelle den Rezept-Sidecar
+        ''' schreiben kann: Einstellung an, kein offenes .fpx, nichts ins Arbeitsbild gebacken
+        ''' (Pinsel/Retusche/Rastern stecken NICHT im Rezept - dafuer bleibt die .fpx zustaendig).
+        ''' Geschrieben wird AUSSCHLIESSLICH ueber die Speichern-Funktion, nie nebenbei beim
+        ''' Verlassen (Nutzerentscheidung 2026-07-19: Dateien entstehen nur durch bewusstes
+        ''' Speichern).</summary>
+        Public ReadOnly Property CanSaveRawSidecar As Boolean
+            Get
+                Return RawPreviewService.IsSupportedRaw(RenderSourcePath) AndAlso
+                       String.IsNullOrEmpty(_currentFpxPath) AndAlso
+                       Not _workingImage.HasBakedContent AndAlso
+                       AppSettingsService.Load().RawSidecarEnabled
+            End Get
+        End Property
+
+        ''' <summary>"Speichern" fuer eine RAW-Quelle: schreibt das Rezept in die Begleitdatei
+        ''' (die RAW-Datei selbst wird nie angefasst).</summary>
+        Private Function TrySaveRawSidecar() As Boolean
+            If Not CanSaveRawSidecar Then Return False
+            If Not RawSidecarService.TryWrite(RenderSourcePath, GetCurrentAdjustments()) Then
+                StatusText = LocalizationService.T("Begleitdatei konnte nicht geschrieben werden")
+                Return False
+            End If
+            _hasChanges = False
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            StatusText = LocalizationService.T("RAW-Bearbeitung in Begleitdatei gespeichert")
+            Return True
+        End Function
+
         Public Async Function ConfirmSaveBeforeLeavingAsync(actionDescription As String) As Task(Of Boolean)
             If Not _hasChanges Then Return True
             If _mainVm Is Nothing Then Return True
@@ -9822,6 +10350,13 @@ Namespace ViewModels
                 .Contrast = CSng(_contrast),
                 .Saturation = CSng(_saturation),
                 .Vibrance = CSng(_vibrance),
+                .CalibrationRedHue = CSng(_calibrationRedHue),
+                .CalibrationRedSaturation = CSng(_calibrationRedSaturation),
+                .CalibrationGreenHue = CSng(_calibrationGreenHue),
+                .CalibrationGreenSaturation = CSng(_calibrationGreenSaturation),
+                .CalibrationBlueHue = CSng(_calibrationBlueHue),
+                .CalibrationBlueSaturation = CSng(_calibrationBlueSaturation),
+                .CalibrationShadowTint = CSng(_calibrationShadowTint),
                 .Highlights = CSng(_highlights),
                 .ShadowsLevel = CSng(_shadowsLevel),
                 .Whites = CSng(_whites),
@@ -9831,6 +10366,7 @@ Namespace ViewModels
                 .Exposure = CSng(_exposure),
                 .Sharpness = CSng(_sharpness),
                 .NoiseReduction = CSng(_noiseReduction),
+                .ColorNoiseReduction = CSng(_colorNoiseReduction),
                 .NoiseReductionMethod = _noiseReductionMethod,
                 .DustScratches = CSng(_dustScratches),
                 .Haze = CSng(_haze),
@@ -10182,6 +10718,13 @@ Namespace ViewModels
             _contrast = adj.Contrast
             _saturation = adj.Saturation
             _vibrance = adj.Vibrance
+            _calibrationRedHue = adj.CalibrationRedHue
+            _calibrationRedSaturation = adj.CalibrationRedSaturation
+            _calibrationGreenHue = adj.CalibrationGreenHue
+            _calibrationGreenSaturation = adj.CalibrationGreenSaturation
+            _calibrationBlueHue = adj.CalibrationBlueHue
+            _calibrationBlueSaturation = adj.CalibrationBlueSaturation
+            _calibrationShadowTint = adj.CalibrationShadowTint
             _highlights = adj.Highlights
             _shadowsLevel = adj.ShadowsLevel
             _whites = adj.Whites
@@ -10191,6 +10734,7 @@ Namespace ViewModels
             _exposure = adj.Exposure
             _sharpness = adj.Sharpness
             _noiseReduction = adj.NoiseReduction
+            _colorNoiseReduction = adj.ColorNoiseReduction
             _noiseReductionMethod = adj.NoiseReductionMethod
             _dustScratches = adj.DustScratches
             _haze = adj.Haze
@@ -10319,6 +10863,13 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Contrast))
             Me.RaisePropertyChanged(NameOf(Saturation))
             Me.RaisePropertyChanged(NameOf(Vibrance))
+            Me.RaisePropertyChanged(NameOf(CalibrationRedHue))
+            Me.RaisePropertyChanged(NameOf(CalibrationRedSaturation))
+            Me.RaisePropertyChanged(NameOf(CalibrationGreenHue))
+            Me.RaisePropertyChanged(NameOf(CalibrationGreenSaturation))
+            Me.RaisePropertyChanged(NameOf(CalibrationBlueHue))
+            Me.RaisePropertyChanged(NameOf(CalibrationBlueSaturation))
+            Me.RaisePropertyChanged(NameOf(CalibrationShadowTint))
             Me.RaisePropertyChanged(NameOf(Highlights))
             Me.RaisePropertyChanged(NameOf(ShadowsLevel))
             Me.RaisePropertyChanged(NameOf(Whites))
@@ -10328,6 +10879,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Exposure))
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
@@ -10462,6 +11014,7 @@ Namespace ViewModels
             _exposure = 0
             _sharpness = 0
             _noiseReduction = 0
+            _colorNoiseReduction = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             _vignette = 0
             _grain = 0
@@ -10533,6 +11086,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Exposure))
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
@@ -10604,6 +11158,16 @@ Namespace ViewModels
             _annotationWidthPercent = 30
             _annotationHeightPercent = 12
             _annotationFillKind = "Solid"
+            _annotationTextPathKind = ""
+            _annotationTextPathBend = 50
+            _annotationTextPathStartOffset = 0
+            Me.RaisePropertyChanged(NameOf(AnnotationTextPathKind))
+            Me.RaisePropertyChanged(NameOf(AnnotationTextPathBend))
+            Me.RaisePropertyChanged(NameOf(AnnotationTextPathStartOffset))
+            Me.RaisePropertyChanged(NameOf(AnnotationLetterSpacingPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationBold))
+            Me.RaisePropertyChanged(NameOf(AnnotationItalic))
+            Me.RaisePropertyChanged(NameOf(ShowTextPathControls))
             _annotationFillColor2 = "#FFFFFFFF"
             _annotationGradientAngle = 0
             _annotationGradientInverted = False
@@ -10857,6 +11421,7 @@ Namespace ViewModels
             Dim size = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
             _annotationWidthPercent = size.WidthPercent
             _annotationHeightPercent = size.HeightPercent
+            FitBoxToCircleTextPath()
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
@@ -10881,6 +11446,7 @@ Namespace ViewModels
 
             _annotationWidthPercent = size.WidthPercent
             _annotationHeightPercent = size.HeightPercent
+            FitBoxToCircleTextPath()
             ' Die Box kann jetzt auch schrumpfen: die Position muss neu in die Bildgrenzen geklemmt
             ' werden, sonst bliebe ein am Rand ausgerichtetes Objekt am alten (größeren) Rand hängen.
             If Not ShowWatermarkAnchorControls Then
@@ -11501,6 +12067,19 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Setzt den "Arbeitsbild fehlt noch"-Zustand und meldet die davon abhaengigen
+        ''' Eigenschaften. Auch die Statuszeile haengt daran.</summary>
+        Private Sub SetWorkingImagePending(pending As Boolean)
+            If _workingImagePending = pending Then Return
+            _workingImagePending = pending
+            RaisePixelLayerVisibilityChanged()
+            If pending Then
+                StatusText = LocalizationService.T("RAW wird entwickelt …")
+            ElseIf StatusText = LocalizationService.T("RAW wird entwickelt …") Then
+                StatusText = ""
+            End If
+        End Sub
+
         Private Sub RaisePixelLayerVisibilityChanged()
             Me.RaisePropertyChanged(NameOf(IsPixelLayerVisible))
             Me.RaisePropertyChanged(NameOf(CanUsePixelTools))
@@ -11919,6 +12498,12 @@ Namespace ViewModels
                     AnnotationWidthPercent = AnnotationStoredWidthToPercent(a)
                     AnnotationHeightPercent = AnnotationStoredHeightToPercent(a)
                     AnnotationFillKind = a.FillKind
+                    AnnotationTextPathKind = a.TextPathKind
+                    AnnotationTextPathBend = a.TextPathBend
+                    AnnotationTextPathStartOffset = a.TextPathStartOffset
+                    AnnotationLetterSpacingPercent = a.LetterSpacingPercent
+                    AnnotationBold = a.Bold
+                    AnnotationItalic = a.Italic
                     AnnotationFillColor2 = a.FillColor2
                     AnnotationGradientAngleDegrees = a.GradientAngleDegrees
                     AnnotationGradientInverted = a.GradientInverted
@@ -12016,6 +12601,12 @@ Namespace ViewModels
             a.WidthPixels = CSng(Math.Max(1, AnnotationWidthPixels))
             a.HeightPixels = CSng(Math.Max(1, AnnotationHeightPixels))
             a.FillKind = _annotationFillKind
+            a.TextPathKind = _annotationTextPathKind
+            a.TextPathBend = CSng(_annotationTextPathBend)
+            a.TextPathStartOffset = CSng(_annotationTextPathStartOffset)
+            a.LetterSpacingPercent = CSng(_annotationLetterSpacingPercent)
+            a.Bold = _annotationBold
+            a.Italic = _annotationItalic
             a.FillColor2 = _annotationFillColor2
             a.GradientAngleDegrees = CSng(_annotationGradientAngle)
             a.GradientInverted = _annotationGradientInverted
@@ -12821,6 +13412,7 @@ Namespace ViewModels
             _clarity = 0
             _sharpness = 0
             _noiseReduction = 0
+            _colorNoiseReduction = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             _dustScratches = 0
             _haze = 0
@@ -13013,6 +13605,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Clarity))
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             Me.RaisePropertyChanged(NameOf(DustScratches))
             Me.RaisePropertyChanged(NameOf(Haze))
@@ -13196,7 +13789,7 @@ Namespace ViewModels
                Not ImageAdjustments.IsIdentityCurve(adj.CurveGreenPoints) OrElse Not ImageAdjustments.IsIdentityCurve(adj.CurveBluePoints) OrElse
                Not ImageAdjustments.IsIdentityCurve(adj.CurveLuminancePoints) Then Return "Tonwertkurve"
             If adj.HasHslChanges() Then Return "Farbmischer"
-            If adj.Clarity <> 0 OrElse adj.Sharpness <> 0 OrElse adj.NoiseReduction <> 0 OrElse adj.Grain <> 0 Then Return "Details"
+            If adj.Clarity <> 0 OrElse adj.Sharpness <> 0 OrElse adj.NoiseReduction <> 0 OrElse adj.ColorNoiseReduction <> 0 OrElse adj.Grain <> 0 Then Return "Details"
             If adj.Vignette <> 0 OrElse adj.BorderSize <> 0 Then Return "Vignette/Rahmen"
             If Not String.Equals(adj.FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase) Then Return "Filter"
             Return "Anpassung"
@@ -13273,8 +13866,11 @@ Namespace ViewModels
             Saturation = look.Saturation
             Sharpness = look.Sharpness
             NoiseReduction = look.NoiseReduction
+            ColorNoiseReduction = look.ColorNoiseReduction
             Grain = look.Grain
             Vignette = look.Vignette
+            VignetteTransition = look.VignetteTransition
+            VignetteFeather = look.VignetteFeather
             Temperature = look.Temperature
             Tint = look.Tint
 
@@ -13439,6 +14035,8 @@ Namespace ViewModels
 
         Public Sub RefreshLocalization()
             Me.RaisePropertyChanged(NameOf(CurrentFileName))
+                Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+                Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Me.RaisePropertyChanged(NameOf(StatusText))
         End Sub
 

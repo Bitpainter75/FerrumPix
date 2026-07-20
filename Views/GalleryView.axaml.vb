@@ -243,14 +243,18 @@ Namespace Views
             ' neu gestartet wird).
             ' Gilt für JEDEN virtuellen Ordner (Suchliste ODER Immich): nach Neuinstanziierung nicht in
             ' den Startordner navigieren, sondern die Auswahl im passenden Baum wiederherstellen.
-            If vm.IsVirtualFolder AndAlso (vm.SelectedSearchNode IsNot Nothing OrElse vm.SelectedImmichNode IsNot Nothing) Then
+            ' Nicht an IsVirtualFolder haengen: ein ORDNER-Favorit oeffnet einen echten Ordner,
+            ' waere damit durchgefallen und der Favoriten-Eintrag verlor beim Zurueckkommen seinen
+            ' Rahmen (Nutzerbefund 2026-07-19). Massgeblich ist allein, ob das ViewModel ein
+            ' wiederherzustellendes Navigationsziel kennt.
+            If vm.NavigationRestoreNode IsNot Nothing Then
                 _initialSelectionDone = True
-                Dim searchNode = vm.SelectedSearchNode
-                Dim immichNode = vm.SelectedImmichNode
+                ' Baum UND Tab kommen aus dem ViewModel (das den Moduswechsel ueberlebt) - seit dem
+                ' Tab-Umbau gibt es je Tab eine eigene Suchliste, "SearchTreeView" waere zu wenig.
+                Dim treeName = vm.NavigationRestoreTreeName
+                Dim targetNode = vm.NavigationRestoreNode
                 Dispatcher.UIThread.Post(Sub()
-                    Dim treeName = If(searchNode IsNot Nothing, "SearchTreeView", "ImmichTreeView")
-                    Dim targetNode = If(searchNode, immichNode)
-                    Dim tree = Me.FindControl(Of TreeView)(treeName)
+                    Dim tree = If(String.IsNullOrEmpty(treeName), Nothing, Me.FindControl(Of TreeView)(treeName))
                     If tree IsNot Nothing AndAlso targetNode IsNot Nothing Then
                         _clearingNavigationSelection = True
                         Try
@@ -642,10 +646,13 @@ Namespace Views
             Dim node = TryCast(e.AddedItems.Item(0), FolderNode)
             If node IsNot Nothing Then
                 ClearVirtualTreeSelections()
+                ' Tab auf "Ordner" ziehen: die Rueckkehr aus Viewer/Editor soll denselben Tab
+                ' zeigen, in dem zuletzt navigiert wurde.
+                vm.NoteFolderNavigation()
                 vm.SelectedFolderNode = node
                 node.EnsureChildrenLoaded()
                 If _isDragging Then Return
-                If String.Equals(NormalizePath(vm.CurrentFolder), NormalizePath(node.FullPath), StringComparison.OrdinalIgnoreCase) Then Return
+                If String.Equals(NormalizePath(vm.CurrentFolder), NormalizePath(node.FullPath), PathIdentity.Comparison) Then Return
                 vm.NavigateToFolder(node.FullPath)
             End If
         End Sub
@@ -696,13 +703,19 @@ Namespace Views
             RestoreFolderTreeSelection(Me.FindControl(Of TreeView)("FolderTreeView"), vm)
         End Sub
 
+        ''' Namen aller virtuellen Baeume - seit dem Tab-Umbau vier Stueck (je Tab eigene
+        ''' Suchliste plus Immich-Baum und Favoriten). Wer hier einen vergisst, bekommt zwei
+        ''' gleichzeitig markierte Baeume.
+        Private Shared ReadOnly VirtualTreeNames As String() =
+            {"SearchTreeView", "ImmichSearchTreeView", "ImmichTreeView", "FavoritesTreeView"}
+
         Private Sub ClearVirtualTreeSelections()
             _clearingNavigationSelection = True
             Try
-                Dim searchTree = Me.FindControl(Of TreeView)("SearchTreeView")
-                If searchTree IsNot Nothing Then searchTree.SelectedItem = Nothing
-                Dim immichTree = Me.FindControl(Of TreeView)("ImmichTreeView")
-                If immichTree IsNot Nothing Then immichTree.SelectedItem = Nothing
+                For Each treeName As String In VirtualTreeNames
+                    Dim tree = Me.FindControl(Of TreeView)(treeName)
+                    If tree IsNot Nothing Then tree.SelectedItem = Nothing
+                Next
             Finally
                 _clearingNavigationSelection = False
             End Try
@@ -711,11 +724,11 @@ Namespace Views
         Private Sub ClearOtherNavigationSelections(activeTree As TreeView)
             _clearingNavigationSelection = True
             Try
-                Dim searchTree = Me.FindControl(Of TreeView)("SearchTreeView")
+                For Each treeName As String In VirtualTreeNames
+                    Dim tree = Me.FindControl(Of TreeView)(treeName)
+                    If tree IsNot Nothing AndAlso Not Object.ReferenceEquals(tree, activeTree) Then tree.SelectedItem = Nothing
+                Next
                 Dim folderTree = Me.FindControl(Of TreeView)("FolderTreeView")
-                Dim immichTree = Me.FindControl(Of TreeView)("ImmichTreeView")
-                If searchTree IsNot Nothing AndAlso Not Object.ReferenceEquals(searchTree, activeTree) Then searchTree.SelectedItem = Nothing
-                If immichTree IsNot Nothing AndAlso Not Object.ReferenceEquals(immichTree, activeTree) Then immichTree.SelectedItem = Nothing
                 If folderTree IsNot Nothing Then folderTree.SelectedItem = Nothing
             Finally
                 _clearingNavigationSelection = False
@@ -1190,7 +1203,7 @@ Namespace Views
             Try
                 Dim bmp = Await Task.Run(Function() As Bitmap
                                              If RawPreviewService.IsSupportedRaw(item.FilePath) Then
-                                                 Using preview = RawPreviewService.ExtractPreview(item.FilePath)
+                                                 Using preview = RawPreviewService.ExtractPreviewWithFallback(item.FilePath)
                                                      Return If(preview IsNot Nothing, ImageOrientationService.LoadOrientedAvaloniaBitmap(preview), Nothing)
                                                  End Using
                                              End If
@@ -1400,6 +1413,92 @@ Namespace Views
             SetMenuItemVisible("FolderTreePasteMenuItem", vm.CanPasteIntoFolder(path))
             SetMenuItemVisible("FolderTreeDeleteMenuItem", vm.CanDeletePath(path))
         End Sub
+
+        ' ── Favoriten ────────────────────────────────────────────────────────────
+
+        ''' <summary>"Als Favorit" im Ordnerbaum - nimmt den Knoten unter dem Rechtsklick
+        ''' (GetFolderTreeContextNode faellt auf den markierten Ordner zurueck).</summary>
+        Public Sub OnAddFolderFavoriteClick(sender As Object, e As RoutedEventArgs)
+            Dim node = GetFolderTreeContextNode()
+            If node Is Nothing Then Return
+            GetVm()?.AddFolderFavorite(node.FullPath)
+        End Sub
+
+        ''' <summary>Ordnerpfad eines Ordner-Favoriten aus dem angeklickten Menuepunkt. Die
+        ''' Ordner-Aktionen arbeiten alle mit PFADEN, nicht mit FolderNode-Objekten - der Favorit
+        ''' braucht deshalb keinen Umweg ueber den (womoeglich noch gar nicht geladenen) Ordnerbaum.</summary>
+        Private Function GetFavoriteFolderPath(sender As Object) As String
+            Dim node = GetVirtualNodeFromSender(sender)
+            If node Is Nothing OrElse Not node.IsFolderFavorite Then Return Nothing
+            Dim path = node.RootFolder
+            Return If(String.IsNullOrWhiteSpace(path), Nothing, path)
+        End Function
+
+        Public Sub OnFavoriteCreateFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim path = GetFavoriteFolderPath(sender)
+            If path Is Nothing Then Return
+            GetVm()?.CreateFolderIn(path)
+        End Sub
+
+        Public Sub OnFavoriteRenameFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim path = GetFavoriteFolderPath(sender)
+            If path Is Nothing Then Return
+            GetVm()?.RenamePath(path)
+        End Sub
+
+        Public Sub OnFavoriteCopyFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = GetVm()
+            Dim path = GetFavoriteFolderPath(sender)
+            If vm Is Nothing OrElse path Is Nothing Then Return
+            vm.StoreClipboardPaths({path}, False)
+            CopyPathsToClipboard(New List(Of String) From {path}, False)
+        End Sub
+
+        Public Sub OnFavoriteCutFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = GetVm()
+            Dim path = GetFavoriteFolderPath(sender)
+            If vm Is Nothing OrElse path Is Nothing Then Return
+            vm.StoreClipboardPaths({path}, True)
+            CopyPathsToClipboard(New List(Of String) From {path}, True)
+        End Sub
+
+        Public Async Sub OnFavoritePasteFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim path = GetFavoriteFolderPath(sender)
+            If path Is Nothing Then Return
+            Await PasteClipboardIntoFolder(path)
+        End Sub
+
+        Public Sub OnFavoriteCopyFolderPathClick(sender As Object, e As RoutedEventArgs)
+            Dim path = GetFavoriteFolderPath(sender)
+            If path Is Nothing Then Return
+            Task.Run(Async Function()
+                         Dim clip = TopLevel.GetTopLevel(Me)?.Clipboard
+                         If clip IsNot Nothing Then Await clip.SetTextAsync(path)
+                     End Function)
+        End Sub
+
+        ''' <summary>Loescht den ORDNER (nicht nur den Favoriten) - wie im Ordnerbaum. Der Favorit
+        ''' bleibt danach als "fehlt"-Eintrag stehen, bis er entfernt wird.</summary>
+        Public Sub OnFavoriteDeleteFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim path = GetFavoriteFolderPath(sender)
+            If path Is Nothing Then Return
+            GetVm()?.DeletePaths({path})
+        End Sub
+
+        ''' <summary>"Als Favorit" im Immich- oder Suchbaum.</summary>
+        Public Sub OnAddNodeFavoriteClick(sender As Object, e As RoutedEventArgs)
+            Dim node = GetVirtualNodeFromSender(sender)
+            If node Is Nothing Then Return
+            GetVm()?.AddNodeFavorite(node)
+        End Sub
+
+        Public Sub OnRemoveFavoriteClick(sender As Object, e As RoutedEventArgs)
+            e.Handled = True
+            Dim node = GetVirtualNodeFromSender(sender)
+            If node Is Nothing Then Return
+            GetVm()?.RemoveFavorite(node)
+        End Sub
+
 
         Private Function GetFolderTreeContextNode() As FolderNode
             Return If(_folderTreeContextNode, GetVm()?.SelectedFolderNode)
@@ -1787,7 +1886,7 @@ Namespace Views
                     Dim internalPaths = internal.
                         Split({ControlChars.Cr, ControlChars.Lf}, StringSplitOptions.RemoveEmptyEntries).
                         Where(Function(p) Not String.IsNullOrEmpty(p)).
-                        Distinct(StringComparer.OrdinalIgnoreCase).
+                        Distinct(PathIdentity.Comparer).
                         ToList()
                     If internalPaths.Count > 0 Then Return (internalPaths, True)
                 End If
@@ -2217,6 +2316,12 @@ Namespace Views
         ''' Selektiert und expandiert den Ordner im Baum. Bewusst OHNE Auto-Scrollen: das Nachziehen
         ''' in die Mitte bei jeder Navigation stoerte (Nutzer-Feedback 2026-07-16) - nur das initiale
         ''' Anzeigen der TreeView stellt Sichtbarkeit her (RestoreFolderTreeSelection).
+        ''' <summary>Gleicht die Baummarkierung an den bereits gewechselten Ordner an (laeuft ueber
+        ''' CurrentFolder-PropertyChanged, also NACH der Navigation). Das ist ein Wiederherstellen,
+        ''' keine Nutzer-Navigation - deshalb unter _restoringFolderTreeSelection, damit
+        ''' OnFolderTreeSelectionChanged nicht erneut navigiert UND den Seitenleisten-Tab nicht auf
+        ''' "Ordner" umreisst. Genau das passierte beim Klick auf einen Ordner-Favoriten: die Ansicht
+        ''' wechselte korrekt, aber der Tab sprang von Favoriten weg (Nutzerbefund 2026-07-19).</summary>
         Private Sub SelectFolderInTree(folderPath As String)
             Dim vm = GetVm()
             Dim tree = Me.FindControl(Of TreeView)("FolderTreeView")
@@ -2224,7 +2329,15 @@ Namespace Views
 
             Dim node = FindFolderNode(vm.FolderTree, folderPath)
             If node IsNot Nothing Then
-                tree.SelectedItem = node
+                _restoringFolderTreeSelection = True
+                Try
+                    tree.SelectedItem = node
+                Finally
+                    _restoringFolderTreeSelection = False
+                End Try
+                ' Der uebersprungene Handler haette das mitgesetzt - der Ordnerbaum muss den
+                ' aktiven Ordner trotzdem als markiert kennen (Kontextmenue, Wiederherstellung).
+                vm.SelectedFolderNode = node
                 node.EnsureChildrenLoaded()
                 node.IsExpanded = True
             End If
@@ -2288,7 +2401,7 @@ Namespace Views
 
         Private Function FindFolderNode(nodes As IEnumerable(Of FolderNode), folderPath As String) As FolderNode
             For Each node In nodes
-                If String.Equals(NormalizePath(node.FullPath), NormalizePath(folderPath), StringComparison.OrdinalIgnoreCase) Then
+                If String.Equals(NormalizePath(node.FullPath), NormalizePath(folderPath), PathIdentity.Comparison) Then
                     Return node
                 End If
 
@@ -2310,8 +2423,8 @@ Namespace Views
             Dim child = NormalizePath(childPath)
             If String.IsNullOrEmpty(parent) OrElse String.IsNullOrEmpty(child) Then Return False
 
-            Return child.Equals(parent, StringComparison.OrdinalIgnoreCase) OrElse
-                   child.StartsWith(parent.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar) & IO.Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            Return child.Equals(parent, PathIdentity.Comparison) OrElse
+                   child.StartsWith(parent.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar) & IO.Path.DirectorySeparatorChar, PathIdentity.Comparison)
         End Function
 
         Private Shared Function NormalizePath(path As String) As String
