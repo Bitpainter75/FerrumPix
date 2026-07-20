@@ -1,0 +1,118 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.ColorGradingPanel">
+    <UserControl.Styles>
+        <!-- Vier Zonen, viermal derselbe Aufbau (Beschriftung, Rad, Luminanzregler) - die
+             wiederkehrenden Maße deshalb als Stil statt vierfach kopiert. -->
+        <Style Selector="TextBlock.zone-label">
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FP.Font.Small}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style Selector="icons|ColorGradeWheel">
+            <Setter Property="Width" Value="86"/>
+            <Setter Property="Height" Value="86"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Expander Header="Farbgradierung" IsExpanded="True">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/color-filter.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="icon-btn group-reset"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetColorGradingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Farbgradierung zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="2" Margin="0,8,0,0">
+
+            <!-- Vier Räder im 2x2-Raster: nebeneinander wären sie in der schmalen Seitenleiste zu
+                 klein, um einen Farbton noch treffen zu können. -->
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" Margin="0,0,0,6">
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,8">
+                    <TextBlock Classes="zone-label" Text="Schatten"/>
+                    <icons:ColorGradeWheel Hue="{Binding ColorGradeShadowHue, Mode=TwoWay}"
+                                           Saturation="{Binding ColorGradeShadowSaturation, Mode=TwoWay}"
+                                           ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit Umschalt nur die Sättigung"/>
+                    <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
+                        <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeShadowLuminance}"/>
+                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
+                                                 Value="{Binding ColorGradeShadowLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"/>
+                    </Grid>
+                </StackPanel>
+
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="4,0,0,8">
+                    <TextBlock Classes="zone-label" Text="Mitten"/>
+                    <icons:ColorGradeWheel Hue="{Binding ColorGradeMidtoneHue, Mode=TwoWay}"
+                                           Saturation="{Binding ColorGradeMidtoneSaturation, Mode=TwoWay}"
+                                           ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit Umschalt nur die Sättigung"/>
+                    <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
+                        <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeMidtoneLuminance}"/>
+                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
+                                                 Value="{Binding ColorGradeMidtoneLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"/>
+                    </Grid>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,4,0">
+                    <TextBlock Classes="zone-label" Text="Lichter"/>
+                    <icons:ColorGradeWheel Hue="{Binding ColorGradeHighlightHue, Mode=TwoWay}"
+                                           Saturation="{Binding ColorGradeHighlightSaturation, Mode=TwoWay}"
+                                           ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit Umschalt nur die Sättigung"/>
+                    <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
+                        <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeHighlightLuminance}"/>
+                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
+                                                 Value="{Binding ColorGradeHighlightLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"/>
+                    </Grid>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="4,0,0,0">
+                    <TextBlock Classes="zone-label" Text="Global"/>
+                    <icons:ColorGradeWheel Hue="{Binding ColorGradeGlobalHue, Mode=TwoWay}"
+                                           Saturation="{Binding ColorGradeGlobalSaturation, Mode=TwoWay}"
+                                           ToolTip.Tip="Wirkt auf das ganze Bild, unabhängig vom Tonwert"/>
+                    <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
+                        <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeGlobalLuminance}"/>
+                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
+                                                 Value="{Binding ColorGradeGlobalLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"/>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Balance" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                   Value="{Binding ColorGradeBalance}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding ColorGradeBalance, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Überblendung" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   Value="{Binding ColorGradeBlending}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding ColorGradeBlending, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+        </StackPanel>
+    </Expander>
+</UserControl>

@@ -479,6 +479,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsColorLabelCyan))
             Me.RaisePropertyChanged(NameOf(IsColorLabelTeal))
             Me.RaisePropertyChanged(NameOf(IsColorLabelGreen))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelYellow))
             Me.RaisePropertyChanged(NameOf(HasColorLabel))
             Me.RaisePropertyChanged(NameOf(ColorLabelBrush))
         End Sub
@@ -543,6 +544,12 @@ Namespace ViewModels
         Public ReadOnly Property IsColorLabelGreen As Boolean
             Get
                 Return IsColorLabelValue("#22C55E")
+            End Get
+        End Property
+        ''' Gelb kam mit dem XMP-Sidecar-Import dazu (xmp:Label="Yellow").
+        Public ReadOnly Property IsColorLabelYellow As Boolean
+            Get
+                Return IsColorLabelValue("#FACC15")
             End Get
         End Property
 

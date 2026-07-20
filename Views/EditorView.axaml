@@ -896,7 +896,7 @@
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowColorAdjustments}">
-                                <panels:SplitToningPanel />
+                                <panels:ColorGradingPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"

@@ -3,7 +3,7 @@ Imports Avalonia.Markup.Xaml
 
 Namespace Controls.EditorPanels
 
-    Public Class SplitToningPanel
+    Public Class ColorGradingPanel
         Inherits UserControl
 
         Public Sub New()

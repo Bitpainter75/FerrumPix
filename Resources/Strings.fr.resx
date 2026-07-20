@@ -3857,4 +3857,34 @@
   <data name="Portugiesisch_7c92b2b6" xml:space="preserve">
     <value>Portugais</value>
   </data>
+  <data name="Farbgradierung_7c624b2d" xml:space="preserve">
+    <value>Étalonnage des couleurs</value>
+  </data>
+  <data name="Farbgradierung_zur_cksetzen_ffa13609" xml:space="preserve">
+    <value>Réinitialiser l'étalonnage</value>
+  </data>
+  <data name="Global_5f1184f7" xml:space="preserve">
+    <value>Global</value>
+  </data>
+  <data name="berblendung_7441d5c9" xml:space="preserve">
+    <value>Fondu</value>
+  </data>
+  <data name="Ziehen_setzt_Farbton_und_S_ttigung_mit_Umschalt__8bcf3a0f" xml:space="preserve">
+    <value>Faites glisser pour la teinte et la saturation ; avec Maj, saturation seule</value>
+  </data>
+  <data name="Wirkt_auf_das_ganze_Bild_unabh_ngig_vom_Tonwert_ddd82eb2" xml:space="preserve">
+    <value>S'applique à toute l'image, quel que soit le ton</value>
+  </data>
+  <data name="Entfernt_Filter_LUT_und_Lightroom_Preset_dec8af39" xml:space="preserve">
+    <value>Supprime le filtre, la LUT et le préréglage Lightroom</value>
+  </data>
+  <data name="LUT_entfernen_528e89c6" xml:space="preserve">
+    <value>Supprimer la LUT</value>
+  </data>
+  <data name="Preset_entfernen_und_Regler_zur_cksetzen_90d4a142" xml:space="preserve">
+    <value>Supprimer le préréglage et réinitialiser les curseurs</value>
+  </data>
+  <data name="Sch_rfe_und_Weichzeichnen_zur_cksetzen_c929583d" xml:space="preserve">
+    <value>Réinitialiser la netteté et le flou</value>
+  </data>
 </root>

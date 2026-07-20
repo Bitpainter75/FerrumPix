@@ -3856,4 +3856,34 @@
   <data name="Portugiesisch_7c92b2b6" xml:space="preserve">
     <value>Português</value>
   </data>
+  <data name="Farbgradierung_7c624b2d" xml:space="preserve">
+    <value>Gradação de cor</value>
+  </data>
+  <data name="Farbgradierung_zur_cksetzen_ffa13609" xml:space="preserve">
+    <value>Repor gradação de cor</value>
+  </data>
+  <data name="Global_5f1184f7" xml:space="preserve">
+    <value>Global</value>
+  </data>
+  <data name="berblendung_7441d5c9" xml:space="preserve">
+    <value>Mistura</value>
+  </data>
+  <data name="Ziehen_setzt_Farbton_und_S_ttigung_mit_Umschalt__8bcf3a0f" xml:space="preserve">
+    <value>Arraste para matiz e saturação; com Shift apenas a saturação</value>
+  </data>
+  <data name="Wirkt_auf_das_ganze_Bild_unabh_ngig_vom_Tonwert_ddd82eb2" xml:space="preserve">
+    <value>Afeta toda a imagem, independentemente do tom</value>
+  </data>
+  <data name="Entfernt_Filter_LUT_und_Lightroom_Preset_dec8af39" xml:space="preserve">
+    <value>Remove filtro, LUT e predefinição do Lightroom</value>
+  </data>
+  <data name="LUT_entfernen_528e89c6" xml:space="preserve">
+    <value>Remover LUT</value>
+  </data>
+  <data name="Preset_entfernen_und_Regler_zur_cksetzen_90d4a142" xml:space="preserve">
+    <value>Remover predefinição e repor os controlos</value>
+  </data>
+  <data name="Sch_rfe_und_Weichzeichnen_zur_cksetzen_c929583d" xml:space="preserve">
+    <value>Repor nitidez e suavização</value>
+  </data>
 </root>

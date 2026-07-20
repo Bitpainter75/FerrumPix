@@ -13,7 +13,7 @@
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
                     <Button Grid.Column="1"
-                            Classes="icon-btn"
+                            Classes="icon-btn group-reset"
                             Width="28"
                             Height="28"
                             Padding="0"
@@ -44,11 +44,6 @@
                                          FormatString="F0" />
             </Grid>
             <WrapPanel>
-                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Keine}"
-                        Command="{Binding SetFilterPresetCommand}" CommandParameter="Keine">
-                    <TextBlock Text="Keine" FontSize="{DynamicResource FP.Font.Small}" />
-                </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=S/W}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="S/W">

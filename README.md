@@ -32,6 +32,8 @@ The gallery is built for daily photo work. It supports folder browsing, fast thu
 
 Search can combine normal text with metadata such as camera, ISO, aperture, focal length, date taken and image size. Batch tools are available from the context menu and from the footer menu.
 
+Ratings, colour labels and keywords are read from XMP sidecar files written by Lightroom, darktable or digiKam, so a collection you tagged elsewhere shows up here. Only empty fields are filled and keywords are merged — nothing you set in FerrumPix is overwritten.
+
 The sidebar is split into *Folders*, *Immich* and *Favourites*. Folders, Immich entries and saved searches can be pinned to Favourites by right-click, then reordered or removed; the *Immich* tab only appears when a server is configured.
 
 Printing works from the context menu, the footer menu or with `Ctrl+P`. A multiple selection becomes a multi-page document, or a contact sheet with 4, 9 or 16 images per page. The dialog can print borderless, and for a single selected image it can repeat the same photo several times on a sheet.
@@ -55,8 +57,8 @@ The editor covers the most common photo work:
 - Create a blank image with `Ctrl+N`: presets for photo, screen and paper sizes, free width and height in mm, cm, inches or pixels at 72–600 dpi, and a white, transparent or coloured background.
 - Crop, resize, rotate, flip and canvas resize.
 - Exposure, brightness, contrast, highlights, shadows, tone curves and white balance.
-- Color tools with HSL, vibrance, saturation, split toning, camera calibration and colour noise reduction.
-- Filters, LUT files and Lightroom `.xmp` preset import.
+- Color tools with HSL, vibrance, saturation, colour grading (four colour wheels for shadows, midtones, highlights and global), camera calibration and colour noise reduction.
+- Filters, LUT files and Lightroom `.xmp` preset import, including the newer colour-grading keys and black-and-white presets.
 - Film negative conversion for scanned negatives.
 - Text, shapes, symbols, images, QR codes and watermarks. Text can be set bold or italic, spaced out, and placed along an arc, a circle or a wave.
 - Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools. The brush picker offers 13 variants — soft round, pencil, marker, grainy acrylic, sandpaper, smudge, spatter, charcoal, crayon, airbrush, calligraphy, stipple and watercolor.
@@ -69,7 +71,7 @@ The editor covers the most common photo work:
 
 RAW files are developed from the actual sensor data — full-resolution demosaic, camera white balance, sRGB — instead of editing the embedded JPEG preview. The status bar shows whether you are working on *RAW developed* or *RAW preview*. LibRaw comes with the packages: Linux packages depend on the system library, the Flatpak builds it in, and Windows releases bundle it.
 
-Slider edits on RAW files are remembered in a small `.fpxmp` sidecar file next to the RAW and re-applied the next time you open it. The RAW itself is never modified. Sidecars travel with the RAW when it is moved, copied, renamed or deleted in FerrumPix, and can be turned off in *Settings → Editor*.
+Slider edits on RAW files are remembered in a small `.fpxmp` sidecar file next to the RAW and re-applied the next time you open it. The RAW itself is never modified. Sidecars travel with the RAW when it is moved, copied, renamed or deleted in FerrumPix. If a RAW carries a Lightroom `.xmp` sidecar with develop settings, they are converted once into an `.fpxmp` recipe so the photo opens the way you left it elsewhere.
 
 Photoshop files (`.psd`/`.psb`) open in the gallery, viewer and editor. FerrumPix reads the flattened composite and never writes them back — *Save* is disabled, *Save as…* exports to the usual formats.
 

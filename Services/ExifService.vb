@@ -659,9 +659,16 @@ Namespace Services
         Public Shared Function WriteXmpRatingSidecar(imagePath As String, rating As Integer, createIfMissing As Boolean) As Boolean
             If String.IsNullOrWhiteSpace(imagePath) Then Return False
 
-            Dim sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
-            If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
-            If Not System.IO.File.Exists(sidecarPath) AndAlso Not createIfMissing Then Return False
+            ' Eine VORHANDENE Sidecar unter beiden Namenskonventionen suchen ("foto.cr2.xmp" wie
+            ' darktable/digiKam, "foto.xmp" wie Adobe). Vorher stand hier nur ChangeExtension - eine
+            ' darktable-Sidecar wurde deshalb nie gefunden und die Bewertung lief ins Leere.
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) Then
+                ' Neu anlegen (nur wenn ausdrücklich erlaubt) in der Adobe-Form.
+                If Not createIfMissing Then Return False
+                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
+            End If
 
             Dim xNamespace As XNamespace = "adobe:ns:meta/"
             Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"

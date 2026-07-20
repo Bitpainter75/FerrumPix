@@ -81,11 +81,20 @@ Namespace ViewModels
         Private _blacks As Double = 0
         Private _temperature As Double = 0
         Private _tint As Double = 0
-        Private _splitToningShadowHue As Double = 0
-        Private _splitToningShadowSaturation As Double = 0
-        Private _splitToningHighlightHue As Double = 0
-        Private _splitToningHighlightSaturation As Double = 0
-        Private _splitToningBalance As Double = 0
+        Private _colorGradeShadowHue As Double = 0
+        Private _colorGradeShadowSaturation As Double = 0
+        Private _colorGradeHighlightHue As Double = 0
+        Private _colorGradeHighlightSaturation As Double = 0
+        Private _colorGradeBalance As Double = 0
+        Private _colorGradeShadowLuminance As Double = 0
+        Private _colorGradeMidtoneHue As Double = 0
+        Private _colorGradeMidtoneSaturation As Double = 0
+        Private _colorGradeMidtoneLuminance As Double = 0
+        Private _colorGradeHighlightLuminance As Double = 0
+        Private _colorGradeGlobalHue As Double = 0
+        Private _colorGradeGlobalSaturation As Double = 0
+        Private _colorGradeGlobalLuminance As Double = 0
+        Private _colorGradeBlending As Double = 50
         Private _exposure As Double = 0
         Private _sharpness As Double = 0
         Private _noiseReduction As Double = 0
@@ -771,9 +780,19 @@ Namespace ViewModels
         Public ReadOnly Property SavedLightroomPresets As ObservableCollection(Of LightroomPresetSettings) = New ObservableCollection(Of LightroomPresetSettings)()
         Public ReadOnly Property SavedLutPresets As ObservableCollection(Of LutPresetSettings) = New ObservableCollection(Of LutPresetSettings)()
 
+        ''' <summary>Der Name des zuletzt angewendeten Filters - und "Keine", wenn ÜBERHAUPT KEIN Look
+        ''' anliegt, also weder Filter noch LUT noch Lightroom-Preset.
+        '''
+        ''' Damit markiert der Knopf „Keine" den Zustand, den er herstellt: er ist das globale
+        ''' Zurücksetzen aller drei Look-Quellen (siehe ApplyExclusiveFilterPreset, das ResetFilterInternal
+        ''' vorschaltet). Vorher lieferte das Feld für „Keine" einen leeren Namen, der Knopf leuchtete
+        ''' also nie - man sah dem Bereich nicht an, ob gerade etwas anliegt oder nicht.</summary>
         Public ReadOnly Property LastAppliedFilterPresetName As String
             Get
-                Return _lastAppliedFilterPresetName
+                If Not String.IsNullOrEmpty(_lastAppliedFilterPresetName) Then Return _lastAppliedFilterPresetName
+                If Not String.IsNullOrWhiteSpace(_lastAppliedLightroomPresetPath) Then Return ""
+                If Not String.IsNullOrWhiteSpace(_lastAppliedLutPresetPath) Then Return ""
+                Return "Keine"
             End Get
         End Property
         Public ReadOnly Property WatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
@@ -1278,6 +1297,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
             Me.RaisePropertyChanged(NameOf(AnnotationRotation))
+            Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(AnnotationOpacity))
             Me.RaisePropertyChanged(NameOf(AnnotationFontFamily))
             Me.RaisePropertyChanged(NameOf(AnnotationFontSize))
@@ -1463,35 +1483,59 @@ Namespace ViewModels
         ''' herum, also Durchmesser = Textbreite / Pi. Damit umschliesst der Rahmen den Kreis, und
         ''' die Groesse folgt weiterhin der Schrift - genau wie beim geraden Text.
         ''' Aendert nichts, wenn kein Kreispfad aktiv ist.</summary>
-        Private Sub FitBoxToCircleTextPath()
+        ''' <summary>Formt die Box eines Kreistext-Objekts aus dem gemessenen Textkasten: dessen Breite
+        ''' ist der Umfang, also ist der Durchmesser Breite/π.
+        '''
+        ''' <paramref name="alteBreite"/>/<paramref name="alteHoehe"/> sind die Maße, die die Box VOR
+        ''' dem Aufruf hatte. Sie müssen von außen kommen, weil jeder Aufrufer die Felder unmittelbar
+        ''' davor mit dem Textkasten überschreibt. Genau daran ist es vorher gescheitert: die
+        ''' Mittelpunkt-Korrektur unten rechnete gegen den flachen Textkasten statt gegen den
+        ''' vorherigen KREIS, und weil sie bei jedem Tastendruck erneut lief, wanderte das Objekt mit
+        ''' jedem Zeichen ein Stück nach rechts unten (Nutzerbefund 2026-07-21).</summary>
+        Private Sub FitBoxToCircleTextPath(alteBreite As Double, alteHoehe As Double)
             If Not IsCircleTextPath(_annotationTextPathKind) Then Return
+            Dim ziel = ComputeCircleTextBoxPercent(_annotationWidthPercent)
+            If ziel.Breite <= 0 Then Return
+
+            ' Unveraendert? Dann die vom Aufrufer eingetragenen Textkastenmasse zuruecknehmen und
+            ' NICHTS verschieben. Ohne diesen Ausstieg addiert sich die Korrektur unten bei jedem
+            ' Aufruf erneut auf - und aufgerufen wird bei jeder Eigenschaftsaenderung, nicht nur
+            ' beim Tippen.
+            If Math.Abs(ziel.Breite - alteBreite) < 0.0001 AndAlso Math.Abs(ziel.Hoehe - alteHoehe) < 0.0001 Then
+                _annotationWidthPercent = alteBreite
+                _annotationHeightPercent = alteHoehe
+                Return
+            End If
+
+            _annotationWidthPercent = ziel.Breite
+            _annotationHeightPercent = ziel.Hoehe
+
+            ' Um den MITTELPUNKT wachsen, nicht von der oberen linken Ecke: der Textkasten ist
+            ' breit und flach, der Kreis deutlich schmaler - ohne das saesse er am linken Ende
+            ' dessen, wo vorher der Text stand.
+            ' Verankerte Wasserzeichen rechnen ihre Lage aus dem Anker - dort nicht eingreifen.
+            If Not ShowWatermarkAnchorControls Then
+                _annotationXPercent = Math.Max(-ziel.Breite + 1, Math.Min(100 - 1, _annotationXPercent + (alteBreite - ziel.Breite) / 2.0))
+                _annotationYPercent = Math.Max(-ziel.Hoehe + 1, Math.Min(100 - 1, _annotationYPercent + (alteHoehe - ziel.Hoehe) / 2.0))
+            End If
+        End Sub
+
+        ''' Reine Rechnung ohne Nebenwirkung, damit derselbe Zielwert vor dem Zuweisen mit dem
+        ''' Istzustand verglichen werden kann.
+        Private Function ComputeCircleTextBoxPercent(textBreitePercent As Double) As (Breite As Double, Hoehe As Double)
             Dim baseW = GetBaseWidth()
             Dim baseH = GetBaseHeight()
-            If baseW <= 0 OrElse baseH <= 0 Then Return
+            If baseW <= 0 OrElse baseH <= 0 Then Return (0, 0)
 
-            ' Breite des gemessenen Textkastens in Pixeln -> Durchmesser des Kreises.
-            Dim textBreite = _annotationWidthPercent / 100.0 * baseW
-            If textBreite <= 0 Then Return
+            Dim textBreite = textBreitePercent / 100.0 * baseW
+            If textBreite <= 0 Then Return (0, 0)
             Dim seite = textBreite / Math.PI
             ' Untergrenze, damit ein sehr kurzer Text nicht zu einem Punkt schrumpft.
             seite = Math.Max(seite, _annotationFontSize * 2.5)
 
-            ' Um den MITTELPUNKT wachsen, nicht von der oberen linken Ecke: der Textkasten ist
-            ' breit und flach, der Kreis deutlich schmaler - ohne das saesse er am linken Ende
-            ' dessen, wo vorher der Text stand, und spraenge beim Tippen mit.
-            Dim alteBreite = _annotationWidthPercent
-            Dim alteHoehe = _annotationHeightPercent
-            Dim neueBreite = Math.Max(2.0, Math.Min(100.0, seite / baseW * 100.0))
-            Dim neueHoehe = Math.Max(2.0, Math.Min(100.0, seite / baseH * 100.0))
-            _annotationWidthPercent = neueBreite
-            _annotationHeightPercent = neueHoehe
-
-            ' Verankerte Wasserzeichen rechnen ihre Lage aus dem Anker - dort nicht eingreifen.
-            If Not ShowWatermarkAnchorControls Then
-                _annotationXPercent = Math.Max(-neueBreite + 1, Math.Min(100 - 1, _annotationXPercent + (alteBreite - neueBreite) / 2.0))
-                _annotationYPercent = Math.Max(-neueHoehe + 1, Math.Min(100 - 1, _annotationYPercent + (alteHoehe - neueHoehe) / 2.0))
-            End If
-        End Sub
+            Return (Math.Max(2.0, Math.Min(100.0, seite / baseW * 100.0)),
+                    Math.Max(2.0, Math.Min(100.0, seite / baseH * 100.0)))
+        End Function
 
         Private Function GetCurrentAnnotationDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
             Dim origin = ComputeAnnotationOriginPercent(EffectiveAnnotationKind, _annotationXPercent, _annotationYPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
@@ -2608,48 +2652,129 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public Property SplitToningShadowHue As Double
+        Public Property ColorGradeShadowHue As Double
             Get
-                Return _splitToningShadowHue
+                Return _colorGradeShadowHue
             End Get
             Set(value As Double)
-                SetUndoableDouble(_splitToningShadowHue, Math.Max(0, Math.Min(360, value)), NameOf(SplitToningShadowHue))
+                SetUndoableDouble(_colorGradeShadowHue, Math.Max(0, Math.Min(360, value)), NameOf(ColorGradeShadowHue))
             End Set
         End Property
 
-        Public Property SplitToningShadowSaturation As Double
+        Public Property ColorGradeShadowSaturation As Double
             Get
-                Return _splitToningShadowSaturation
+                Return _colorGradeShadowSaturation
             End Get
             Set(value As Double)
-                SetUndoableDouble(_splitToningShadowSaturation, Math.Max(0, Math.Min(100, value)), NameOf(SplitToningShadowSaturation))
+                SetUndoableDouble(_colorGradeShadowSaturation, Math.Max(0, Math.Min(100, value)), NameOf(ColorGradeShadowSaturation))
             End Set
         End Property
 
-        Public Property SplitToningHighlightHue As Double
+        Public Property ColorGradeHighlightHue As Double
             Get
-                Return _splitToningHighlightHue
+                Return _colorGradeHighlightHue
             End Get
             Set(value As Double)
-                SetUndoableDouble(_splitToningHighlightHue, Math.Max(0, Math.Min(360, value)), NameOf(SplitToningHighlightHue))
+                SetUndoableDouble(_colorGradeHighlightHue, Math.Max(0, Math.Min(360, value)), NameOf(ColorGradeHighlightHue))
             End Set
         End Property
 
-        Public Property SplitToningHighlightSaturation As Double
+        Public Property ColorGradeHighlightSaturation As Double
             Get
-                Return _splitToningHighlightSaturation
+                Return _colorGradeHighlightSaturation
             End Get
             Set(value As Double)
-                SetUndoableDouble(_splitToningHighlightSaturation, Math.Max(0, Math.Min(100, value)), NameOf(SplitToningHighlightSaturation))
+                SetUndoableDouble(_colorGradeHighlightSaturation, Math.Max(0, Math.Min(100, value)), NameOf(ColorGradeHighlightSaturation))
             End Set
         End Property
 
-        Public Property SplitToningBalance As Double
+        Public Property ColorGradeBalance As Double
             Get
-                Return _splitToningBalance
+                Return _colorGradeBalance
             End Get
             Set(value As Double)
-                SetUndoableDouble(_splitToningBalance, Math.Max(-100, Math.Min(100, value)), NameOf(SplitToningBalance))
+                SetUndoableDouble(_colorGradeBalance, Math.Max(-100, Math.Min(100, value)), NameOf(ColorGradeBalance))
+            End Set
+        End Property
+
+        Public Property ColorGradeShadowLuminance As Double
+            Get
+                Return _colorGradeShadowLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorGradeShadowLuminance, Math.Max(-100, Math.Min(100, value)), NameOf(ColorGradeShadowLuminance))
+            End Set
+        End Property
+
+        Public Property ColorGradeMidtoneHue As Double
+            Get
+                Return _colorGradeMidtoneHue
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorGradeMidtoneHue, Math.Max(0, Math.Min(360, value)), NameOf(ColorGradeMidtoneHue))
+            End Set
+        End Property
+
+        Public Property ColorGradeMidtoneSaturation As Double
+            Get
+                Return _colorGradeMidtoneSaturation
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorGradeMidtoneSaturation, Math.Max(0, Math.Min(100, value)), NameOf(ColorGradeMidtoneSaturation))
+            End Set
+        End Property
+
+        Public Property ColorGradeMidtoneLuminance As Double
+            Get
+                Return _colorGradeMidtoneLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorGradeMidtoneLuminance, Math.Max(-100, Math.Min(100, value)), NameOf(ColorGradeMidtoneLuminance))
+            End Set
+        End Property
+
+        Public Property ColorGradeHighlightLuminance As Double
+            Get
+                Return _colorGradeHighlightLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorGradeHighlightLuminance, Math.Max(-100, Math.Min(100, value)), NameOf(ColorGradeHighlightLuminance))
+            End Set
+        End Property
+
+        Public Property ColorGradeGlobalHue As Double
+            Get
+                Return _colorGradeGlobalHue
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorGradeGlobalHue, Math.Max(0, Math.Min(360, value)), NameOf(ColorGradeGlobalHue))
+            End Set
+        End Property
+
+        Public Property ColorGradeGlobalSaturation As Double
+            Get
+                Return _colorGradeGlobalSaturation
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorGradeGlobalSaturation, Math.Max(0, Math.Min(100, value)), NameOf(ColorGradeGlobalSaturation))
+            End Set
+        End Property
+
+        Public Property ColorGradeGlobalLuminance As Double
+            Get
+                Return _colorGradeGlobalLuminance
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorGradeGlobalLuminance, Math.Max(-100, Math.Min(100, value)), NameOf(ColorGradeGlobalLuminance))
+            End Set
+        End Property
+
+        Public Property ColorGradeBlending As Double
+            Get
+                Return _colorGradeBlending
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_colorGradeBlending, Math.Max(0, Math.Min(100, value)), NameOf(ColorGradeBlending))
             End Set
         End Property
 
@@ -4175,6 +4300,9 @@ Namespace ViewModels
             Set(value As Double)
                 ' Nur 1 Nachkommastelle: der Slider-Drag liefert sonst beliebig krumme Gradwerte.
                 Me.RaiseAndSetIfChanged(_annotationRotation, Math.Round(Math.Max(-180, Math.Min(180, value)), 1))
+                ' Der Begradigen-Regler zeigt bei markiertem Objekt dessen Drehung - mitziehen, damit
+                ' er nach den 90°-Knöpfen und beim freien Drehen am Anfasser aktuell bleibt.
+                Me.RaisePropertyChanged(NameOf(StraightenDegrees))
                 SyncSelectedAnnotation(refreshOverlay:=False)
             End Set
         End Property
@@ -4592,7 +4720,9 @@ Namespace ViewModels
             ' das Quadrat sofort wieder ueberschrieben - deshalb FitBoxToCircleTextPath, das an
             ' genau diesen Stellen mitlaeuft.
             If IsCircleTextPath(AnnotationTextPathKind) Then
-                FitBoxToCircleTextPath()
+                ' Beim Umschalten auf Kreis steht in der Box noch der Textkasten - er IST hier der
+                ' Vorzustand, gegen den die Mittelpunkt-Korrektur rechnen muss.
+                FitBoxToCircleTextPath(_annotationWidthPercent, _annotationHeightPercent)
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
                 SyncSelectedAnnotation()
@@ -6076,10 +6206,12 @@ Namespace ViewModels
             ' bliebe hier die gezogene Größe stehen, sobald der Schriftgrad auf denselben ganzen Pixel
             ' gerundet wird - und der Rahmen stünde wieder neben dem Text.
             If isTextual Then
+                Dim vorherBreite = _annotationWidthPercent
+                Dim vorherHoehe = _annotationHeightPercent
                 Dim fitted = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
                 _annotationWidthPercent = fitted.WidthPercent
                 _annotationHeightPercent = fitted.HeightPercent
-                FitBoxToCircleTextPath()
+                FitBoxToCircleTextPath(vorherBreite, vorherHoehe)
             End If
             If ShowWatermarkAnchorControls Then
                 Dim offset = ComputeAnnotationOffsetPercent(EffectiveAnnotationKind, xPercent, yPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
@@ -6233,11 +6365,22 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Der Regler „Begradigen" im Drehen-Werkzeug. Ist ein OBJEKT markiert, dreht er dieses
+        ''' Objekt (feinstufig), sonst begradigt er das Bild.
+        '''
+        ''' Ohne diese Fallunterscheidung drehte der Regler immer das Bild - auch bei markiertem Objekt,
+        ''' während die 90°-Knöpfe daneben längst aufs Objekt wirkten. Man markierte ein Objekt, zog am
+        ''' Regler und das ganze Bild kippte (Nutzerbefund 2026-07-21). Die 90°-Knöpfe und dieser Regler
+        ''' müssen dasselbe Ziel haben.</summary>
         Public Property StraightenDegrees As Double
             Get
-                Return _straightenDegrees
+                Return If(HasSelectedAnnotation, _annotationRotation, _straightenDegrees)
             End Get
             Set(value As Double)
+                If HasSelectedAnnotation Then
+                    AnnotationRotation = value
+                    Return
+                End If
                 ' Nur 1 Nachkommastelle - siehe AnnotationRotation.
                 Dim clamped = Math.Round(Math.Max(-180, Math.Min(180, value)), 1)
                 If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
@@ -6366,6 +6509,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsColorLabelCyan))
             Me.RaisePropertyChanged(NameOf(IsColorLabelTeal))
             Me.RaisePropertyChanged(NameOf(IsColorLabelGreen))
+            Me.RaisePropertyChanged(NameOf(IsColorLabelYellow))
             Me.RaisePropertyChanged(NameOf(HasColorLabel))
             Me.RaisePropertyChanged(NameOf(ColorLabelBrush))
         End Sub
@@ -6430,6 +6574,12 @@ Namespace ViewModels
         Public ReadOnly Property IsColorLabelGreen As Boolean
             Get
                 Return IsColorLabelValue("#22C55E")
+            End Get
+        End Property
+        ''' Gelb kam mit dem XMP-Sidecar-Import dazu (xmp:Label="Yellow").
+        Public ReadOnly Property IsColorLabelYellow As Boolean
+            Get
+                Return IsColorLabelValue("#FACC15")
             End Get
         End Property
 
@@ -7278,12 +7428,16 @@ Namespace ViewModels
         Public ReadOnly Property ResetTransformCommand As ICommand
         Public ReadOnly Property SetBrushPresetCommand As ICommand
         Public ReadOnly Property SetFilterPresetCommand As ICommand
+        Public ReadOnly Property ResetSharpnessCommand As ICommand
+        Public ReadOnly Property ResetLutCommand As ICommand
+        Public ReadOnly Property ResetLightroomPresetCommand As ICommand
+        Public ReadOnly Property ResetFrameCommand As ICommand
         Public ReadOnly Property ResetFilterCommand As ICommand
         Public ReadOnly Property ResetCurveCommand As ICommand
         Public ReadOnly Property SetCurveChannelCommand As ICommand
         Public ReadOnly Property ResetHslCommand As ICommand
         Public ReadOnly Property ResetCalibrationCommand As ICommand
-        Public ReadOnly Property ResetSplitToningCommand As ICommand
+        Public ReadOnly Property ResetColorGradingCommand As ICommand
         Public ReadOnly Property PickNegativeBaseCommand As ICommand
         Public ReadOnly Property AutoNegativeBaseCommand As ICommand
         Public ReadOnly Property ResetNegativeCommand As ICommand
@@ -7552,10 +7706,35 @@ Namespace ViewModels
                                                                           PushUndo()
                                                                           ApplyExclusiveFilterPreset(preset)
                                                                       End Sub)
+            ' Gruppen-Zurücksetzer: nur die Filter-Regler. Das globale Verwerfen des ganzen Looks
+            ' sitzt sichtbar auf dem Knopf „Keine".
             ResetFilterCommand = ReactiveCommand.Create(Sub()
                                                             PushUndo()
-                                                            ResetFilterInternal()
+                                                            ResetFilterGroupInternal()
                                                         End Sub)
+            ResetFrameCommand = ReactiveCommand.Create(Sub()
+                                                           PushUndo()
+                                                           ResetFrameInternal()
+                                                       End Sub)
+            ' Die LUT-Gruppe traegt nur Pfad und Staerke - mehr raeumt ihr Zuruecksetzer nicht weg.
+            ' "Schärfe und Weichzeichnen" hing am Details-Zurücksetzer und nahm Klarheit, Struktur,
+            ' Dunst, Glühen, Korn und Staub mit weg - die stehen alle in der Gruppe "Details".
+            ResetSharpnessCommand = ReactiveCommand.Create(Sub()
+                                                               PushUndo()
+                                                               ResetSharpnessInternal()
+                                                           End Sub)
+            ResetLutCommand = ReactiveCommand.Create(Sub()
+                                                         PushUndo()
+                                                         ResetLutInternal()
+                                                     End Sub)
+            ' Die Preset-Gruppe ist der Sonderfall: ein Lightroom-Preset SCHREIBT in Licht, Farbe,
+            ' Details, Effekte, HSL, Farbgradierung und Kurven. Sein Zuruecksetzer muss deshalb
+            ' genauso weit reichen - hier ist die weite Wirkung nicht ueberraschend, sondern genau
+            ' das, was "Preset entfernen" bedeutet.
+            ResetLightroomPresetCommand = ReactiveCommand.Create(Sub()
+                                                                     PushUndo()
+                                                                     ResetFilterInternal()
+                                                                 End Sub)
             ResetCurveCommand = ReactiveCommand.Create(Sub()
                                                            PushUndo()
                                                            ResetCurvePoints()
@@ -7572,9 +7751,9 @@ Namespace ViewModels
                                                          PushUndo()
                                                          ResetHslInternal()
                                                      End Sub)
-            ResetSplitToningCommand = ReactiveCommand.Create(Sub()
+            ResetColorGradingCommand = ReactiveCommand.Create(Sub()
                                                                   PushUndo()
-                                                                  ResetSplitToningInternal()
+                                                                  ResetColorGradingInternal()
                                                               End Sub)
 
             ResetCalibrationCommand = ReactiveCommand.Create(Sub()
@@ -10440,11 +10619,20 @@ Namespace ViewModels
                 .MagentaHue = CSng(_magentaHue),
                 .MagentaSaturation = CSng(_magentaSaturation),
                 .MagentaLuminance = CSng(_magentaLuminance),
-                .SplitToningShadowHue = CSng(_splitToningShadowHue),
-                .SplitToningShadowSaturation = CSng(_splitToningShadowSaturation),
-                .SplitToningHighlightHue = CSng(_splitToningHighlightHue),
-                .SplitToningHighlightSaturation = CSng(_splitToningHighlightSaturation),
-                .SplitToningBalance = CSng(_splitToningBalance),
+                .ColorGradeShadowHue = CSng(_colorGradeShadowHue),
+                .ColorGradeShadowSaturation = CSng(_colorGradeShadowSaturation),
+                .ColorGradeHighlightHue = CSng(_colorGradeHighlightHue),
+                .ColorGradeHighlightSaturation = CSng(_colorGradeHighlightSaturation),
+                .ColorGradeBalance = CSng(_colorGradeBalance),
+                .ColorGradeShadowLuminance = CSng(_colorGradeShadowLuminance),
+                .ColorGradeMidtoneHue = CSng(_colorGradeMidtoneHue),
+                .ColorGradeMidtoneSaturation = CSng(_colorGradeMidtoneSaturation),
+                .ColorGradeMidtoneLuminance = CSng(_colorGradeMidtoneLuminance),
+                .ColorGradeHighlightLuminance = CSng(_colorGradeHighlightLuminance),
+                .ColorGradeGlobalHue = CSng(_colorGradeGlobalHue),
+                .ColorGradeGlobalSaturation = CSng(_colorGradeGlobalSaturation),
+                .ColorGradeGlobalLuminance = CSng(_colorGradeGlobalLuminance),
+                .ColorGradeBlending = CSng(_colorGradeBlending),
                 .RotationDegrees = If(forPreview, _rotationDegrees, _appliedRotationDegrees),
                 .StraightenDegrees = CSng(If(forPreview, _straightenDegrees, _appliedStraightenDegrees)),
                 .StraightenExpandCanvas = If(forPreview, _straightenExpandCanvas, _appliedStraightenExpandCanvas),
@@ -10808,11 +10996,20 @@ Namespace ViewModels
             _magentaHue = adj.MagentaHue
             _magentaSaturation = adj.MagentaSaturation
             _magentaLuminance = adj.MagentaLuminance
-            _splitToningShadowHue = adj.SplitToningShadowHue
-            _splitToningShadowSaturation = adj.SplitToningShadowSaturation
-            _splitToningHighlightHue = adj.SplitToningHighlightHue
-            _splitToningHighlightSaturation = adj.SplitToningHighlightSaturation
-            _splitToningBalance = adj.SplitToningBalance
+            _colorGradeShadowHue = adj.ColorGradeShadowHue
+            _colorGradeShadowSaturation = adj.ColorGradeShadowSaturation
+            _colorGradeHighlightHue = adj.ColorGradeHighlightHue
+            _colorGradeHighlightSaturation = adj.ColorGradeHighlightSaturation
+            _colorGradeBalance = adj.ColorGradeBalance
+            _colorGradeShadowLuminance = adj.ColorGradeShadowLuminance
+            _colorGradeMidtoneHue = adj.ColorGradeMidtoneHue
+            _colorGradeMidtoneSaturation = adj.ColorGradeMidtoneSaturation
+            _colorGradeMidtoneLuminance = adj.ColorGradeMidtoneLuminance
+            _colorGradeHighlightLuminance = adj.ColorGradeHighlightLuminance
+            _colorGradeGlobalHue = adj.ColorGradeGlobalHue
+            _colorGradeGlobalSaturation = adj.ColorGradeGlobalSaturation
+            _colorGradeGlobalLuminance = adj.ColorGradeGlobalLuminance
+            _colorGradeBlending = adj.ColorGradeBlending
             _rotationDegrees = adj.RotationDegrees
             _straightenDegrees = adj.StraightenDegrees
             _straightenExpandCanvas = adj.StraightenExpandCanvas
@@ -11027,11 +11224,20 @@ Namespace ViewModels
             _blacks = 0
             _temperature = 0
             _tint = 0
-            _splitToningShadowHue = 0
-            _splitToningShadowSaturation = 0
-            _splitToningHighlightHue = 0
-            _splitToningHighlightSaturation = 0
-            _splitToningBalance = 0
+            _colorGradeShadowHue = 0
+            _colorGradeShadowSaturation = 0
+            _colorGradeHighlightHue = 0
+            _colorGradeHighlightSaturation = 0
+            _colorGradeBalance = 0
+            _colorGradeShadowLuminance = 0
+            _colorGradeMidtoneHue = 0
+            _colorGradeMidtoneSaturation = 0
+            _colorGradeMidtoneLuminance = 0
+            _colorGradeHighlightLuminance = 0
+            _colorGradeGlobalHue = 0
+            _colorGradeGlobalSaturation = 0
+            _colorGradeGlobalLuminance = 0
+            _colorGradeBlending = 50
             _exposure = 0
             _sharpness = 0
             _noiseReduction = 0
@@ -11284,6 +11490,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
             Me.RaisePropertyChanged(NameOf(AnnotationRotation))
+            Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
             Me.RaisePropertyChanged(NameOf(AnnotationIsVisible))
             Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
@@ -11439,10 +11646,12 @@ Namespace ViewModels
             ' Textbreite springen.
             If IsWatermarkImageSource Then Return
 
+            Dim vorherBreite = _annotationWidthPercent
+            Dim vorherHoehe = _annotationHeightPercent
             Dim size = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
             _annotationWidthPercent = size.WidthPercent
             _annotationHeightPercent = size.HeightPercent
-            FitBoxToCircleTextPath()
+            FitBoxToCircleTextPath(vorherBreite, vorherHoehe)
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
@@ -11462,12 +11671,18 @@ Namespace ViewModels
             If IsWatermarkImageSource Then Return
 
             Dim size = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
-            If Math.Abs(size.WidthPercent - _annotationWidthPercent) < 0.0001 AndAlso
+            ' Der Vergleich taugt nur ohne Pfad: bei Kreistext steht in der Box der KREIS, im
+            ' Schaetzwert der Textkasten - die beiden sind nie gleich, der Ausstieg griffe nie.
+            ' Fuer den Kreis uebernimmt FitBoxToCircleTextPath die Unveraendert-Erkennung selbst.
+            If Not IsCircleTextPath(_annotationTextPathKind) AndAlso
+               Math.Abs(size.WidthPercent - _annotationWidthPercent) < 0.0001 AndAlso
                Math.Abs(size.HeightPercent - _annotationHeightPercent) < 0.0001 Then Return
 
+            Dim vorherBreite = _annotationWidthPercent
+            Dim vorherHoehe = _annotationHeightPercent
             _annotationWidthPercent = size.WidthPercent
             _annotationHeightPercent = size.HeightPercent
-            FitBoxToCircleTextPath()
+            FitBoxToCircleTextPath(vorherBreite, vorherHoehe)
             ' Die Box kann jetzt auch schrumpfen: die Position muss neu in die Bildgrenzen geklemmt
             ' werden, sonst bliebe ein am Rand ausgerichtetes Objekt am alten (größeren) Rand hängen.
             If Not ShowWatermarkAnchorControls Then
@@ -13378,17 +13593,37 @@ Namespace ViewModels
 
         ''' Eigene Gruppe im Werkzeug "Farbe" (unterhalb des HSL-Farbmischers) - wird sowohl vom
         ''' eigenen Reset-Icon der Split-Toning-Gruppe als auch vom "Farbe"-Tool-Reset aufgerufen.
-        Private Sub ResetSplitToningInternal()
-            _splitToningShadowHue = 0
-            _splitToningShadowSaturation = 0
-            _splitToningHighlightHue = 0
-            _splitToningHighlightSaturation = 0
-            _splitToningBalance = 0
-            Me.RaisePropertyChanged(NameOf(SplitToningShadowHue))
-            Me.RaisePropertyChanged(NameOf(SplitToningShadowSaturation))
-            Me.RaisePropertyChanged(NameOf(SplitToningHighlightHue))
-            Me.RaisePropertyChanged(NameOf(SplitToningHighlightSaturation))
-            Me.RaisePropertyChanged(NameOf(SplitToningBalance))
+        Private Sub ResetColorGradingInternal()
+            _colorGradeShadowHue = 0
+            _colorGradeShadowSaturation = 0
+            _colorGradeHighlightHue = 0
+            _colorGradeHighlightSaturation = 0
+            _colorGradeBalance = 0
+            _colorGradeShadowLuminance = 0
+            _colorGradeMidtoneHue = 0
+            _colorGradeMidtoneSaturation = 0
+            _colorGradeMidtoneLuminance = 0
+            _colorGradeHighlightLuminance = 0
+            _colorGradeGlobalHue = 0
+            _colorGradeGlobalSaturation = 0
+            _colorGradeGlobalLuminance = 0
+            ' Blending ist der einzige Regler hier mit einem Neutralwert ungleich 0: 50 ergibt den
+            ' Exponenten 1 und damit exakt die Zonengrenzen des frueheren Split-Tonings.
+            _colorGradeBlending = 50
+            Me.RaisePropertyChanged(NameOf(ColorGradeShadowHue))
+            Me.RaisePropertyChanged(NameOf(ColorGradeShadowSaturation))
+            Me.RaisePropertyChanged(NameOf(ColorGradeHighlightHue))
+            Me.RaisePropertyChanged(NameOf(ColorGradeHighlightSaturation))
+            Me.RaisePropertyChanged(NameOf(ColorGradeBalance))
+            Me.RaisePropertyChanged(NameOf(ColorGradeShadowLuminance))
+            Me.RaisePropertyChanged(NameOf(ColorGradeMidtoneHue))
+            Me.RaisePropertyChanged(NameOf(ColorGradeMidtoneSaturation))
+            Me.RaisePropertyChanged(NameOf(ColorGradeMidtoneLuminance))
+            Me.RaisePropertyChanged(NameOf(ColorGradeHighlightLuminance))
+            Me.RaisePropertyChanged(NameOf(ColorGradeGlobalHue))
+            Me.RaisePropertyChanged(NameOf(ColorGradeGlobalSaturation))
+            Me.RaisePropertyChanged(NameOf(ColorGradeGlobalLuminance))
+            Me.RaisePropertyChanged(NameOf(ColorGradeBlending))
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -13419,7 +13654,7 @@ Namespace ViewModels
                 Case EditorTool.Color
                     ResetColorInternal()
                     ResetHslInternal()
-                    ResetSplitToningInternal()
+                    ResetColorGradingInternal()
                 Case EditorTool.Effects
                     ResetDetailInternal()
                     ResetEffectsInternal()
@@ -13468,10 +13703,68 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Setzt NUR die Regler der Filter-Gruppe zurück (Preset und Stärke), so wie jeder
+        ''' Gruppen-Zurücksetzer oben rechts nur seine eigene Gruppe anfasst.
+        '''
+        ''' Bis 2026-07-21 hing der Knopf am weit greifenden <see cref="ResetFilterInternal"/> und
+        ''' räumte damit auch Licht, Farbe, Details, Effekte, HSL, Farbgradierung und Kurven weg. Die
+        ''' Begründung dafür war, dass Lightroom-Presets und LUTs im selben Bereich angewendet werden
+        ''' - nur sah man dem kleinen Pfeil in der Ecke nicht an, dass er die ganze Bearbeitung
+        ''' verwirft. Dieser Weg gibt es weiterhin, aber sichtbar beschriftet: der Knopf „Keine".</summary>
+        Private Sub ResetFilterGroupInternal()
+            _filterPreset = "Keine"
+            _filterStrength = 50
+            SetLastAppliedFilterPreset("Keine")
+            Me.RaisePropertyChanged(NameOf(FilterPreset))
+            Me.RaisePropertyChanged(NameOf(FilterStrength))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Setzt nur Schärfe und Weichzeichnen zurück - die drei Regler dieser Gruppe.</summary>
+        Private Sub ResetSharpnessInternal()
+            _sharpness = 0
+            _noiseReduction = 0
+            _noiseReductionMethod = NoiseReductionMethod.Gaussian
+            Me.RaisePropertyChanged(NameOf(Sharpness))
+            Me.RaisePropertyChanged(NameOf(NoiseReduction))
+            Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
+            Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Setzt nur die LUT-Gruppe zurück (Pfad und Stärke).</summary>
+        Private Sub ResetLutInternal()
+            _lutPath = ""
+            _lutStrength = 100
+            _lastAppliedLutPresetPath = ""
+            SyncLastAppliedLutPreset()
+            Me.RaisePropertyChanged(NameOf(LutPath))
+            Me.RaisePropertyChanged(NameOf(LutStrength))
+            Me.RaisePropertyChanged(NameOf(HasLutApplied))
+            Me.RaisePropertyChanged(NameOf(LastAppliedFilterPresetName))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Setzt nur die Rahmen-Regler zurück. Die Rahmen-Gruppe hing vorher am
+        ''' Effekte-Zurücksetzer und nahm Vignette und Korn mit, die in einer anderen Gruppe stehen.</summary>
+        Private Sub ResetFrameInternal()
+            _borderSize = 0
+            _borderCornerRadius = 0
+            _borderEffect = "Einfach"
+            _borderColor = "#FFFFFFFF"
+            RaiseEffectsPropertiesChanged()
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
         ''' Setzt neben den eigentlichen Filter-Werten (FilterPreset/FilterStrength) auch alle Werte
-        ''' zurück, die ApplyLightroomPreset schreibt (Light/Color/Detail/Effects/HSL/Split-Toning/
-        ''' Tonwertkurve) sowie die angewendete LUT - Lightroom-Presets und LUTs werden im selben Tab
-        ''' angewendet, daher muss der "Filter zurücksetzen"-Button auch sie rückgängig machen können.
+        ''' zurück, die ApplyLightroomPreset schreibt (Light/Color/Detail/Effects/HSL/Farbgradierung/
+        ''' Tonwertkurve) sowie die angewendete LUT. Das ist der Rumpf hinter dem Knopf „Keine" und
+        ''' hinter jedem Preset-Wechsel (ein Preset ERSETZT den Look) - NICHT der Gruppen-Zurücksetzer,
+        ''' dafür gibt es ResetFilterGroupInternal.
         Private Sub ResetFilterInternal()
             _filterPreset = "Keine"
             _filterStrength = 50
@@ -13488,7 +13781,7 @@ Namespace ViewModels
             ResetDetailInternal()
             ResetEffectsInternal()
             ResetHslInternal()
-            ResetSplitToningInternal()
+            ResetColorGradingInternal()
             ResetCurvePoints()
             RaiseExtendedAdjustmentProperties()
             RaiseResetButtonStateChanged()
@@ -13656,8 +13949,9 @@ Namespace ViewModels
                 NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(PurpleLuminance),
                 NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance),
                 NameOf(ActiveHslHue), NameOf(ActiveHslSaturation), NameOf(ActiveHslLuminance),
-                NameOf(SplitToningShadowHue), NameOf(SplitToningShadowSaturation),
-                NameOf(SplitToningHighlightHue), NameOf(SplitToningHighlightSaturation), NameOf(SplitToningBalance),
+                NameOf(ColorGradeShadowHue), NameOf(ColorGradeShadowSaturation),
+                NameOf(ColorGradeHighlightHue), NameOf(ColorGradeHighlightSaturation), NameOf(ColorGradeBalance),
+                NameOf(ColorGradeShadowLuminance), NameOf(ColorGradeMidtoneHue), NameOf(ColorGradeMidtoneSaturation), NameOf(ColorGradeMidtoneLuminance), NameOf(ColorGradeHighlightLuminance), NameOf(ColorGradeGlobalHue), NameOf(ColorGradeGlobalSaturation), NameOf(ColorGradeGlobalLuminance), NameOf(ColorGradeBlending),
                 NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)}
                 Me.RaisePropertyChanged(name)
             Next
@@ -13881,6 +14175,7 @@ Namespace ViewModels
         ''' Handbedienung. Geometrie, Beschnitt, Objekte und Auswahl fasst es NICHT an.
         Private Sub ApplyLookAdjustments(look As ImageAdjustments)
             Exposure = look.Exposure
+            Brightness = look.Brightness
             Contrast = look.Contrast
             Highlights = look.Highlights
             ShadowsLevel = look.ShadowsLevel
@@ -13910,11 +14205,37 @@ Namespace ViewModels
             PurpleHue = look.PurpleHue : PurpleSaturation = look.PurpleSaturation : PurpleLuminance = look.PurpleLuminance
             MagentaHue = look.MagentaHue : MagentaSaturation = look.MagentaSaturation : MagentaLuminance = look.MagentaLuminance
 
-            SplitToningShadowHue = look.SplitToningShadowHue
-            SplitToningShadowSaturation = look.SplitToningShadowSaturation
-            SplitToningHighlightHue = look.SplitToningHighlightHue
-            SplitToningHighlightSaturation = look.SplitToningHighlightSaturation
-            SplitToningBalance = look.SplitToningBalance
+            ' Der Filter kommt aus dem Preset (S/W-Umwandlung). ResetFilterInternal hat unmittelbar davor
+            ' auf "Keine" zurückgesetzt - ohne diese Zeilen bliebe es dabei und das Preset käme bunt an.
+            FilterPreset = look.FilterPreset
+            FilterStrength = look.FilterStrength
+
+            ' Kamerakalibrierung: fehlte hier, obwohl LoadLook sie liest - der Import kam damit in der
+            ' Stapelverarbeitung an (die reicht das ganze ImageAdjustments durch), im Editor aber nicht.
+            ' Genau diese Lücke deckt die Diagnose-Prüfung „Preset-Import: alles, was LoadLook setzt,
+            ' kommt auch im Editor an" ab, damit sie sich nicht wiederholt.
+            CalibrationRedHue = look.CalibrationRedHue
+            CalibrationRedSaturation = look.CalibrationRedSaturation
+            CalibrationGreenHue = look.CalibrationGreenHue
+            CalibrationGreenSaturation = look.CalibrationGreenSaturation
+            CalibrationBlueHue = look.CalibrationBlueHue
+            CalibrationBlueSaturation = look.CalibrationBlueSaturation
+            CalibrationShadowTint = look.CalibrationShadowTint
+
+            ColorGradeShadowHue = look.ColorGradeShadowHue
+            ColorGradeShadowSaturation = look.ColorGradeShadowSaturation
+            ColorGradeHighlightHue = look.ColorGradeHighlightHue
+            ColorGradeHighlightSaturation = look.ColorGradeHighlightSaturation
+            ColorGradeBalance = look.ColorGradeBalance
+            ColorGradeShadowLuminance = look.ColorGradeShadowLuminance
+            ColorGradeMidtoneHue = look.ColorGradeMidtoneHue
+            ColorGradeMidtoneSaturation = look.ColorGradeMidtoneSaturation
+            ColorGradeMidtoneLuminance = look.ColorGradeMidtoneLuminance
+            ColorGradeHighlightLuminance = look.ColorGradeHighlightLuminance
+            ColorGradeGlobalHue = look.ColorGradeGlobalHue
+            ColorGradeGlobalSaturation = look.ColorGradeGlobalSaturation
+            ColorGradeGlobalLuminance = look.ColorGradeGlobalLuminance
+            ColorGradeBlending = look.ColorGradeBlending
 
             LoadCurvePointsFromString(_curveRgbPoints, look.CurveRgbPoints)
             LoadCurvePointsFromString(_curveRedPoints, look.CurveRedPoints)

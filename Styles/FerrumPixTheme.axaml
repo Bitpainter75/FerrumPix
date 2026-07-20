@@ -1177,10 +1177,14 @@
     <Style Selector="Border.adjustment-group Expander:pointerover">
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
-    <!-- Blendet die Zurücksetzen-Buttons in den Expander-Köpfen aus; zurückgesetzt wird zentral über
-         den Knopf in der Panel-Kopfzeile. Buttons, die zum Inhalt einer Gruppe gehören statt sie
-         zurückzusetzen (z.B. Tauschen und Pipette im Farbmischer), tragen "group-action". -->
-    <Style Selector="Border.adjustment-group Button.icon-btn:not(.group-action)">
+    <!-- Blendet Symbolknöpfe in Anpassungsgruppen aus, die weder zum Inhalt der Gruppe gehören noch
+         sie zurücksetzen. Zwei Ausnahmen tragen eine eigene Klasse:
+         "group-action" = Teil des Gruppeninhalts (z.B. Tauschen und Pipette im Farbmischer),
+         "group-reset"  = der Zurücksetzer oben rechts, der NUR seine eigene Gruppe zurücksetzt.
+         Die Zurücksetzer waren bis 2026-07-21 mit ausgeblendet - zurückgesetzt wurde zentral über
+         einen Knopf in der Panel-Kopfzeile. Das ist zurückgenommen: jede Gruppe setzt sich selbst
+         zurück, und dafür muss ihr Knopf auch sichtbar sein. -->
+    <Style Selector="Border.adjustment-group Button.icon-btn:not(.group-action):not(.group-reset)">
         <Setter Property="IsVisible" Value="False"/>
     </Style>
     <Style Selector="Border.divider">

@@ -25,10 +25,32 @@ Namespace Services
             Dim adj As New ImageAdjustments()
             Dim d As Double
 
-            If TryGetXmpDouble(values, "Exposure2012", d) Then adj.Exposure = Clamp100(d * 25.0)
-            If TryGetXmpDouble(values, "Contrast2012", d) Then adj.Contrast = Clamp100(d)
+            ''' Die *2012-Schlüssel stammen aus Prozessversion 2012 (Lightroom 4, 2012) und sind bei allem
+            ''' üblich, was danach entstand. Ältere Presets (PV2003/PV2010) schreiben dieselben Regler OHNE
+            ''' Suffix und teils unter anderen Namen. Ohne Rückfall kommen sie vollständig leer an, ohne dass
+            ''' irgendetwas darauf hindeutet - der Nutzer sieht ein Preset, das nichts tut. Deshalb je Regler
+            ''' erst der moderne Schlüssel, dann der alte.
+            If TryGetXmpDouble(values, "Exposure2012", d) Then
+                adj.Exposure = Clamp100(d * 25.0)
+            ElseIf TryGetXmpDouble(values, "Exposure", d) Then
+                ' Auch die alte Belichtung steht in Blendenstufen, gleiche Skalierung.
+                adj.Exposure = Clamp100(d * 25.0)
+            End If
+            ' Das alte crs:Brightness (-150..+150) hat in PV2012 keine Entsprechung mehr; es kommt der
+            ' Helligkeit am nächsten und wird auf deren ±100 gestaucht.
+            If TryGetXmpDouble(values, "Brightness", d) Then adj.Brightness = Clamp100(d / 1.5)
+            If TryGetXmpDouble(values, "Contrast2012", d) Then
+                adj.Contrast = Clamp100(d)
+            ElseIf TryGetXmpDouble(values, "Contrast", d) Then
+                adj.Contrast = Clamp100(d)
+            End If
             If TryGetXmpDouble(values, "Highlights2012", d) Then adj.Highlights = Clamp100(d)
-            If TryGetXmpDouble(values, "Shadows2012", d) Then adj.ShadowsLevel = Clamp100(d)
+            If TryGetXmpDouble(values, "Shadows2012", d) Then
+                adj.ShadowsLevel = Clamp100(d)
+            ElseIf TryGetXmpDouble(values, "FillLight", d) Then
+                ' PV2003/2010 hellte Schatten über „Aufhelllicht" auf: 0..100, nur in eine Richtung.
+                adj.ShadowsLevel = Clamp(d, 0, 100)
+            End If
             If TryGetXmpDouble(values, "Whites2012", d) Then adj.Whites = Clamp100(d)
             If TryGetXmpDouble(values, "Blacks2012", d) Then adj.Blacks = Clamp100(d)
             If TryGetXmpDouble(values, "Clarity2012", d) Then adj.Clarity = Clamp100(d)
@@ -52,6 +74,16 @@ Namespace Services
                     If TryGetXmpDouble(values, "PostCropVignetteMidpoint", v) Then adj.VignetteTransition = Clamp(v, 0, 100)
                     If TryGetXmpDouble(values, "PostCropVignetteFeather", v) Then adj.VignetteFeather = Clamp(v, 0, 100)
                 End If
+            End If
+
+            ''' Schwarzweiß. PV2012 schreibt crs:Treatment="Black &amp; White", ältere Fassungen
+            ''' crs:ConvertToGrayscale="True" - beide Formen kommen in freier Wildbahn vor. Ohne das kam
+            ''' ein S/W-Preset in voller Farbe an, und zwar wortlos: alle anderen Regler stimmten, nur die
+            ''' Umwandlung fehlte. Der Filtername ist zugleich der Schaltschlüssel in BuildFilterPresetMatrix.
+            If IsXmpTrue(values, "ConvertToGrayscale") OrElse
+               GetXmpString(values, "Treatment").StartsWith("Black", StringComparison.OrdinalIgnoreCase) Then
+                adj.FilterPreset = "S/W"
+                adj.FilterStrength = ImageAdjustments.DefaultFilterStrength("S/W")
             End If
 
             ''' crs:Temperature/crs:WhiteBalance sind NICHT übernehmbar: Lightroom speichert dort einen
@@ -110,11 +142,31 @@ Namespace Services
 
             ''' crs:SplitToning*Hue ist bereits 0..360, *Saturation 0..100 - beides deckungsgleich mit den
             ''' Split-Toning-Reglern dieser App, keine Skalierung nötig. Balance ist bei beiden -100..100.
-            If TryGetXmpDouble(values, "SplitToningShadowHue", d) Then adj.SplitToningShadowHue = Clamp(d, 0, 360)
-            If TryGetXmpDouble(values, "SplitToningShadowSaturation", d) Then adj.SplitToningShadowSaturation = Clamp(d, 0, 100)
-            If TryGetXmpDouble(values, "SplitToningHighlightHue", d) Then adj.SplitToningHighlightHue = Clamp(d, 0, 360)
-            If TryGetXmpDouble(values, "SplitToningHighlightSaturation", d) Then adj.SplitToningHighlightSaturation = Clamp(d, 0, 100)
-            If TryGetXmpDouble(values, "SplitToningBalance", d) Then adj.SplitToningBalance = Clamp100(d)
+            If TryGetXmpDouble(values, "SplitToningShadowHue", d) Then adj.ColorGradeShadowHue = Clamp(d, 0, 360)
+            If TryGetXmpDouble(values, "SplitToningShadowSaturation", d) Then adj.ColorGradeShadowSaturation = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "SplitToningHighlightHue", d) Then adj.ColorGradeHighlightHue = Clamp(d, 0, 360)
+            If TryGetXmpDouble(values, "SplitToningHighlightSaturation", d) Then adj.ColorGradeHighlightSaturation = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "SplitToningBalance", d) Then adj.ColorGradeBalance = Clamp100(d)
+
+            ''' FARBGRADIERUNG (crs:ColorGrade*, ab Lightroom 2020). Sie hat das Split-Toning oben
+            ''' abgelöst: Presets aus dieser Zeit schreiben NUR noch diese Schlüssel, und weil wir bis
+            ''' 2026-07-21 allein die alten lasen, kam ihre Farbstimmung überhaupt nicht an - wortlos,
+            ''' denn alle übrigen Regler stimmten. Sie stehen bewusst NACH den alten Schlüsseln: liegen
+            ''' beide in derselben Datei (Lightroom schreibt zur Rückwärtskompatibilität oft beides),
+            ''' gewinnt die neuere Angabe. Die Skalen sind deckungsgleich, keine Umrechnung nötig.
+            If TryGetXmpDouble(values, "ColorGradeShadowHue", d) Then adj.ColorGradeShadowHue = Clamp(d, 0, 360)
+            If TryGetXmpDouble(values, "ColorGradeShadowSat", d) Then adj.ColorGradeShadowSaturation = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "ColorGradeShadowLum", d) Then adj.ColorGradeShadowLuminance = Clamp100(d)
+            If TryGetXmpDouble(values, "ColorGradeMidtoneHue", d) Then adj.ColorGradeMidtoneHue = Clamp(d, 0, 360)
+            If TryGetXmpDouble(values, "ColorGradeMidtoneSat", d) Then adj.ColorGradeMidtoneSaturation = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "ColorGradeMidtoneLum", d) Then adj.ColorGradeMidtoneLuminance = Clamp100(d)
+            If TryGetXmpDouble(values, "ColorGradeHighlightHue", d) Then adj.ColorGradeHighlightHue = Clamp(d, 0, 360)
+            If TryGetXmpDouble(values, "ColorGradeHighlightSat", d) Then adj.ColorGradeHighlightSaturation = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "ColorGradeHighlightLum", d) Then adj.ColorGradeHighlightLuminance = Clamp100(d)
+            If TryGetXmpDouble(values, "ColorGradeGlobalHue", d) Then adj.ColorGradeGlobalHue = Clamp(d, 0, 360)
+            If TryGetXmpDouble(values, "ColorGradeGlobalSat", d) Then adj.ColorGradeGlobalSaturation = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "ColorGradeGlobalLum", d) Then adj.ColorGradeGlobalLuminance = Clamp100(d)
+            If TryGetXmpDouble(values, "ColorGradeBlending", d) Then adj.ColorGradeBlending = Clamp(d, 0, 100)
 
             ''' Tonwertkurven liegen als verschachtelte rdf:Seq/rdf:li-Listen vor, nicht als einfache
             ''' Attribute - der Attribut-Regex oben kann sie nicht erfassen, daher eine eigene, gezielte
@@ -237,6 +289,19 @@ Namespace Services
                 result(m.Groups("name").Value) = m.Groups("value").Value
             Next
             Return result
+        End Function
+
+        ''' Leer, wenn der Schlüssel fehlt - Aufrufer können damit ohne Fallunterscheidung vergleichen.
+        Private Shared Function GetXmpString(values As Dictionary(Of String, String), name As String) As String
+            Dim raw As String = Nothing
+            If Not values.TryGetValue(name, raw) Then Return ""
+            Return If(raw, "").Trim()
+        End Function
+
+        ''' XMP kennt für Wahrheitswerte "True"/"False"; manche Erzeuger schreiben "1"/"0".
+        Private Shared Function IsXmpTrue(values As Dictionary(Of String, String), name As String) As Boolean
+            Dim raw = GetXmpString(values, name)
+            Return String.Equals(raw, "True", StringComparison.OrdinalIgnoreCase) OrElse raw = "1"
         End Function
 
         Private Shared Function TryGetXmpDouble(values As Dictionary(Of String, String), name As String, ByRef result As Double) As Boolean

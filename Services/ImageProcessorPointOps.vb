@@ -76,6 +76,11 @@ Namespace Services
             Public SplitPivot As Double
             Public SplitHasShadow As Boolean
             Public SplitHasHighlight As Boolean
+            Public SplitHasMidtone As Boolean
+            Public SplitHasGlobal As Boolean
+            Public SplitHasLuminance As Boolean
+            ''' Exponent auf die Zonengewichte (ColorGradeBlending). 1 = wie frueheres Split-Toning.
+            Public SplitBlendExponent As Single
 
             ''' Gruen-/Magenta-Verschiebung nur in den Tiefen (crs:ShadowTint). Luminanzabhaengig,
             ''' laesst sich also nicht in die Matrix falten.
@@ -196,15 +201,27 @@ Namespace Services
                 chain.IsIdentity = False
             End If
 
-            ' --- Split-Toning: exakt die Bedingung aus ApplySplitToning ---
-            Dim hasShadow = adj.SplitToningShadowSaturation <> 0
-            Dim hasHighlight = adj.SplitToningHighlightSaturation <> 0
-            If hasShadow OrElse hasHighlight Then
-                Dim balance = Clamp(adj.SplitToningBalance, -100, 100) / 100.0
+            ' --- Farbgradierung (frueher Split-Toning) ---
+            ' Jede Zone einzeln pruefen: sonst faellt eine reine Mitten- oder Global-Toenung durch das
+            ' Gitter und die Stufe wird uebersprungen, obwohl sie etwas zu tun haette.
+            Dim hasShadow = adj.ColorGradeShadowSaturation <> 0
+            Dim hasHighlight = adj.ColorGradeHighlightSaturation <> 0
+            Dim hasMidtone = adj.ColorGradeMidtoneSaturation <> 0
+            Dim hasGlobal = adj.ColorGradeGlobalSaturation <> 0
+            Dim hasLuminance = adj.ColorGradeShadowLuminance <> 0 OrElse adj.ColorGradeMidtoneLuminance <> 0 OrElse
+                               adj.ColorGradeHighlightLuminance <> 0 OrElse adj.ColorGradeGlobalLuminance <> 0
+            If hasShadow OrElse hasHighlight OrElse hasMidtone OrElse hasGlobal OrElse hasLuminance Then
+                Dim balance = Clamp(adj.ColorGradeBalance, -100, 100) / 100.0
                 chain.SplitToning = adj
                 chain.SplitPivot = Math.Max(0.1, Math.Min(0.9, 0.5 - balance * 0.4))
                 chain.SplitHasShadow = hasShadow
                 chain.SplitHasHighlight = hasHighlight
+                chain.SplitHasMidtone = hasMidtone
+                chain.SplitHasGlobal = hasGlobal
+                chain.SplitHasLuminance = hasLuminance
+                ' Blending 50 ergibt Exponent 1 und damit exakt die frueheren Rampen; darunter bleiben
+                ' die Toenungen staerker in ihrer Zone, darueber greifen sie weiter ineinander.
+                chain.SplitBlendExponent = CSng(Math.Pow(2.0, (50.0 - Clamp(adj.ColorGradeBlending, 0, 100)) / 50.0))
                 chain.IsIdentity = False
             End If
 
@@ -446,6 +463,21 @@ Namespace Services
 
         ''' <summary>Tabellenzugriff mit linearer Interpolation. <paramref name="v"/> wird geklemmt -
         ''' die Kette darf nie ausserhalb [0,1] indizieren.</summary>
+        ''' <summary>Mischt eine Zonen-Toenung in den Pixel. Die Tintfarbe uebernimmt die Luminanz des
+        ''' Pixels - es wird also nur chromatisch verschoben, nicht aufgehellt (dafuer ist die getrennte
+        ''' Luminanz-Achse da). Anteil = Zonengewicht mal Saettigung, wie in der Altstufe.</summary>
+        Private Shared Sub ApplyColorGradeTint(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                               weight As Single, hue As Single, saturation As Single, lum As Double)
+            If weight <= 0.0F OrElse saturation = 0.0F Then Return
+            Dim tintSat = Math.Max(0.0, Math.Min(1.0, saturation / 100.0))
+            Dim tr As Double, tg As Double, tb As Double
+            HslToRgbF(hue, tintSat, lum, tr, tg, tb)
+            Dim amount = CSng(weight * tintSat)
+            rr += CSng(tr - rr) * amount
+            gg += CSng(tg - gg) * amount
+            bb += CSng(tb - bb) * amount
+        End Sub
+
         Private Shared Function SampleTable(table As Single(), v As Single) As Single
             If v <= 0.0F Then Return table(0)
             If v >= 1.0F Then Return table(PointOpTableSize - 1)
@@ -693,6 +725,10 @@ Namespace Services
             Dim splitPivot = chain.SplitPivot
             Dim splitShadow = chain.SplitHasShadow
             Dim splitHighlight = chain.SplitHasHighlight
+            Dim splitMidtone = chain.SplitHasMidtone
+            Dim splitGlobal = chain.SplitHasGlobal
+            Dim splitLumShift = chain.SplitHasLuminance
+            Dim splitBlendExp = chain.SplitBlendExponent
             Dim pm = chain.PresetMatrix
             Dim pmStrength = chain.PresetStrength
             Dim cube = chain.CubeTable
@@ -786,6 +822,36 @@ Namespace Services
                                 lum = Math.Max(0.0, Math.Min(1.0, lum * (1.0 + lumShift / 100.0)))
                             End If
 
+                            ' --- Farbgradierung: Zonengewichte ---
+                            ' Schatten und Lichter sind zwei lineare Rampen, die sich am Pivot treffen;
+                            ' die MITTEN sind bewusst als REST definiert (1 - Schatten - Lichter) statt
+                            ' als eigene Kurve. Dadurch summieren sich die drei Zonen fuer jeden
+                            ' Exponenten exakt auf 1, und bei Mitten-Saettigung 0 rechnet die Kette
+                            ' bitgenau wie das frueher hier stehende Split-Toning - der Umbau ist fuer
+                            ' bestehende Bilder wirkungsneutral (siehe Diagnose-Pruefung dazu).
+                            Dim wShadow As Single = 0.0F, wMid As Single = 0.0F, wHigh As Single = 0.0F
+                            If splitAdj IsNot Nothing Then
+                                wShadow = Clamp(CSng((splitPivot - lum) / splitPivot), 0.0F, 1.0F)
+                                wHigh = Clamp(CSng((lum - splitPivot) / (1.0 - splitPivot)), 0.0F, 1.0F)
+                                If splitBlendExp <> 1.0F Then
+                                    wShadow = CSng(Math.Pow(wShadow, splitBlendExp))
+                                    wHigh = CSng(Math.Pow(wHigh, splitBlendExp))
+                                End If
+                                wMid = Clamp(1.0F - wShadow - wHigh, 0.0F, 1.0F)
+
+                                ' Luminanz je Zone: noch VOR der Rueckrechnung nach RGB, weil wir hier
+                                ' ohnehin im HSL-Raum stehen. Die Gewichte stammen aus dem Wert VOR der
+                                ' Verschiebung - sonst wanderte ein Pixel beim Aufhellen in die naechste
+                                ' Zone und tuente sich selbst um.
+                                If splitLumShift Then
+                                    Dim shift = (wShadow * splitAdj.ColorGradeShadowLuminance +
+                                                 wMid * splitAdj.ColorGradeMidtoneLuminance +
+                                                 wHigh * splitAdj.ColorGradeHighlightLuminance +
+                                                 splitAdj.ColorGradeGlobalLuminance) / 100.0F
+                                    lum = Math.Max(0.0, Math.Min(1.0, lum + shift * 0.5))
+                                End If
+                            End If
+
                             Dim hr As Double, hg As Double, hb As Double
                             HslToRgbF(h, sat, lum, hr, hg, hb)
                             rr = CSng(hr) : gg = CSng(hg) : bb = CSng(hb)
@@ -794,28 +860,21 @@ Namespace Services
                                 ' Die Altstufe rechnet in 0..255; hier auf 0..1 normiert, sonst
                                 ' stimmt der Anteil nicht.
                                 If splitShadow Then
-                                    Dim w = Clamp(CSng((splitPivot - lum) / splitPivot), 0.0F, 1.0F)
-                                    If w > 0.0F Then
-                                        Dim tr As Double, tg As Double, tb As Double
-                                        Dim tintSat = splitAdj.SplitToningShadowSaturation / 100.0
-                                        HslToRgbF(splitAdj.SplitToningShadowHue, Math.Max(0.0, Math.Min(1.0, tintSat)), lum, tr, tg, tb)
-                                        Dim amount = CSng(w * tintSat)
-                                        rr += CSng(tr - rr) * amount
-                                        gg += CSng(tg - gg) * amount
-                                        bb += CSng(tb - bb) * amount
-                                    End If
+                                    ApplyColorGradeTint(rr, gg, bb, wShadow, splitAdj.ColorGradeShadowHue,
+                                                        splitAdj.ColorGradeShadowSaturation, lum)
+                                End If
+                                If splitMidtone Then
+                                    ApplyColorGradeTint(rr, gg, bb, wMid, splitAdj.ColorGradeMidtoneHue,
+                                                        splitAdj.ColorGradeMidtoneSaturation, lum)
                                 End If
                                 If splitHighlight Then
-                                    Dim w = Clamp(CSng((lum - splitPivot) / (1.0 - splitPivot)), 0.0F, 1.0F)
-                                    If w > 0.0F Then
-                                        Dim tr As Double, tg As Double, tb As Double
-                                        Dim tintSat = splitAdj.SplitToningHighlightSaturation / 100.0
-                                        HslToRgbF(splitAdj.SplitToningHighlightHue, Math.Max(0.0, Math.Min(1.0, tintSat)), lum, tr, tg, tb)
-                                        Dim amount = CSng(w * tintSat)
-                                        rr += CSng(tr - rr) * amount
-                                        gg += CSng(tg - gg) * amount
-                                        bb += CSng(tb - bb) * amount
-                                    End If
+                                    ApplyColorGradeTint(rr, gg, bb, wHigh, splitAdj.ColorGradeHighlightHue,
+                                                        splitAdj.ColorGradeHighlightSaturation, lum)
+                                End If
+                                ' Global wirkt ueberall gleich stark - Gewicht 1, keine Zonengrenze.
+                                If splitGlobal Then
+                                    ApplyColorGradeTint(rr, gg, bb, 1.0F, splitAdj.ColorGradeGlobalHue,
+                                                        splitAdj.ColorGradeGlobalSaturation, lum)
                                 End If
                                 rr = Clamp(rr, 0.0F, 1.0F)
                                 gg = Clamp(gg, 0.0F, 1.0F)

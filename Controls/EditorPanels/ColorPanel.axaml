@@ -14,7 +14,7 @@
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
                     <Button Grid.Column="1"
-                            Classes="icon-btn"
+                            Classes="icon-btn group-reset"
                             Width="28"
                             Height="28"
                             Padding="0"

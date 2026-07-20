@@ -167,6 +167,43 @@ Namespace Services
 
         Private Shared ReadOnly _rotationCache As New ConcurrentDictionary(Of String, CachedRotation)(PathIdentity.Comparer)
 
+        ''' <summary>Übernimmt die Entwicklungseinstellungen aus einer Lightroom-/Camera-Raw-Sidecar
+        ''' ("foto.cr2.xmp" oder "foto.xmp") in eine neue .fpxmp - EINMALIG, solange es noch keine gibt.
+        '''
+        ''' Damit gibt es genau EINEN Ort, an dem crs:-Werte in unser Rezeptformat übersetzt werden: der
+        ''' Ordner-Scan, der die Beistelldateien ohnehin schon wegen Bewertung und Stichworten anfasst.
+        ''' Editor und Viewer müssen XMP dadurch überhaupt nicht kennen und arbeiten weiter allein auf
+        ''' der .fpxmp.
+        '''
+        ''' Drei Bedingungen, alle nötig: nur für RAW/PSD (bei schreibbaren Formaten gibt es kein Rezept
+        ''' daneben), nur wenn noch keine .fpxmp existiert (ein eigenes Rezept wird NIE überschrieben),
+        ''' und nur wenn die Sidecar wirklich Reglerwerte trägt. Letzteres ist wichtig: die allermeisten
+        ''' XMP-Beistelldateien enthalten nur Katalogdaten, und eine neutrale .fpxmp neben jedes Foto zu
+        ''' legen wäre eine Dateiflut ohne jeden Inhalt.</summary>
+        Public Shared Function TryImportFromXmpSidecar(rawPath As String) As Boolean
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            If Exists(rawPath) Then Return False
+            Try
+                Dim xmpPath = XmpSidecarService.FindSidecar(rawPath)
+                If String.IsNullOrEmpty(xmpPath) Then Return False
+                Dim look = LightroomPresetService.LoadLook(xmpPath)
+                If look Is Nothing OrElse Not HasAnyAdjustment(look) Then Return False
+                Return TryWrite(rawPath, look)
+            Catch
+                Return False
+            End Try
+        End Function
+
+        ''' Vergleicht gegen ein frisches ImageAdjustments statt gegen eine handgepflegte Feldliste -
+        ''' ein neuer Regler ist damit automatisch dabei und kann nicht vergessen werden.
+        Private Shared Function HasAnyAdjustment(look As ImageAdjustments) As Boolean
+            Dim neutral As New ImageAdjustments()
+            For Each p In ImageAdjustments.PixelAdjustmentProperties()
+                If Not Equals(p.GetValue(look), p.GetValue(neutral)) Then Return True
+            Next
+            Return False
+        End Function
+
         ''' <summary>Liest das Rezept aus dem Sidecar. Nothing, wenn keiner da ist, die Version
         ''' unbekannt oder die Datei defekt ist - der Editor startet dann wie ohne Sidecar.</summary>
         Public Shared Function TryRead(rawPath As String) As ImageAdjustments

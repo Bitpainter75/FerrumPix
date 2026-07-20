@@ -1066,11 +1066,29 @@ Namespace Services
         Public Property MagentaHue As Single = 0
         Public Property MagentaSaturation As Single = 0
         Public Property MagentaLuminance As Single = 0
-        Public Property SplitToningShadowHue As Single = 0
-        Public Property SplitToningShadowSaturation As Single = 0
-        Public Property SplitToningHighlightHue As Single = 0
-        Public Property SplitToningHighlightSaturation As Single = 0
-        Public Property SplitToningBalance As Single = 0
+        ''' <summary>Farbgradierung: vier Zonen (Schatten/Mitten/Lichter/Global) mit je Farbton (0-360),
+        ''' Sättigung (0-100) und Luminanz (±100). Die Schatten- und Lichter-Felder hießen bis 2026-07-21
+        ''' SplitToning*: Split-Toning ist die Zweizonen-Variante desselben Werkzeugs, und Adobe hat es
+        ''' ab Lightroom 2020 genauso in die Farbgradierung überführt (crs:SplitToning* wird beim Import
+        ''' weiterhin gelesen, siehe LightroomPresetService).</summary>
+        Public Property ColorGradeShadowHue As Single = 0
+        Public Property ColorGradeShadowSaturation As Single = 0
+        Public Property ColorGradeShadowLuminance As Single = 0
+        Public Property ColorGradeMidtoneHue As Single = 0
+        Public Property ColorGradeMidtoneSaturation As Single = 0
+        Public Property ColorGradeMidtoneLuminance As Single = 0
+        Public Property ColorGradeHighlightHue As Single = 0
+        Public Property ColorGradeHighlightSaturation As Single = 0
+        Public Property ColorGradeHighlightLuminance As Single = 0
+        Public Property ColorGradeGlobalHue As Single = 0
+        Public Property ColorGradeGlobalSaturation As Single = 0
+        Public Property ColorGradeGlobalLuminance As Single = 0
+        ''' <summary>Verschiebt die Grenze zwischen Schatten- und Lichterzone (±100).</summary>
+        Public Property ColorGradeBalance As Single = 0
+        ''' <summary>Wie weich die Zonen ineinander übergehen (0-100, 50 = neutral). Wirkt als Exponent
+        ''' auf die Zonengewichte: kleiner = die Tönungen bleiben stärker in ihrer Zone, größer = sie
+        ''' greifen weiter ineinander. Bei 50 rechnet die Kette exakt wie das frühere Split-Toning.</summary>
+        Public Property ColorGradeBlending As Single = 50
         Public Property RotationDegrees As Integer = 0
         Public Property StraightenDegrees As Single = 0
         Public Property StraightenExpandCanvas As Boolean = False
@@ -1293,11 +1311,20 @@ Namespace Services
                 .MagentaHue = MagentaHue,
                 .MagentaSaturation = MagentaSaturation,
                 .MagentaLuminance = MagentaLuminance,
-                .SplitToningShadowHue = SplitToningShadowHue,
-                .SplitToningShadowSaturation = SplitToningShadowSaturation,
-                .SplitToningHighlightHue = SplitToningHighlightHue,
-                .SplitToningHighlightSaturation = SplitToningHighlightSaturation,
-                .SplitToningBalance = SplitToningBalance,
+                .ColorGradeShadowHue = ColorGradeShadowHue,
+                .ColorGradeShadowSaturation = ColorGradeShadowSaturation,
+                .ColorGradeShadowLuminance = ColorGradeShadowLuminance,
+                .ColorGradeMidtoneHue = ColorGradeMidtoneHue,
+                .ColorGradeMidtoneSaturation = ColorGradeMidtoneSaturation,
+                .ColorGradeMidtoneLuminance = ColorGradeMidtoneLuminance,
+                .ColorGradeHighlightHue = ColorGradeHighlightHue,
+                .ColorGradeHighlightSaturation = ColorGradeHighlightSaturation,
+                .ColorGradeHighlightLuminance = ColorGradeHighlightLuminance,
+                .ColorGradeGlobalHue = ColorGradeGlobalHue,
+                .ColorGradeGlobalSaturation = ColorGradeGlobalSaturation,
+                .ColorGradeGlobalLuminance = ColorGradeGlobalLuminance,
+                .ColorGradeBalance = ColorGradeBalance,
+                .ColorGradeBlending = ColorGradeBlending,
                 .RotationDegrees = RotationDegrees,
                 .StraightenDegrees = StraightenDegrees,
                 .StraightenExpandCanvas = StraightenExpandCanvas,
@@ -2740,8 +2767,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.YellowHue, adj.YellowSaturation, adj.YellowLuminance, adj.GreenHue, adj.GreenSaturation, adj.GreenLuminance,
                 adj.AquaHue, adj.AquaSaturation, adj.AquaLuminance, adj.BlueHue, adj.BlueSaturation, adj.BlueLuminance,
                 adj.PurpleHue, adj.PurpleSaturation, adj.PurpleLuminance, adj.MagentaHue, adj.MagentaSaturation, adj.MagentaLuminance,
-                adj.SplitToningShadowHue, adj.SplitToningShadowSaturation,
-                adj.SplitToningHighlightHue, adj.SplitToningHighlightSaturation, adj.SplitToningBalance,
+                adj.ColorGradeShadowHue, adj.ColorGradeShadowSaturation, adj.ColorGradeShadowLuminance,
+                adj.ColorGradeMidtoneHue, adj.ColorGradeMidtoneSaturation, adj.ColorGradeMidtoneLuminance,
+                adj.ColorGradeHighlightHue, adj.ColorGradeHighlightSaturation, adj.ColorGradeHighlightLuminance,
+                adj.ColorGradeGlobalHue, adj.ColorGradeGlobalSaturation, adj.ColorGradeGlobalLuminance,
+                adj.ColorGradeBalance, adj.ColorGradeBlending,
                 adj.RotationDegrees, adj.StraightenDegrees, adj.StraightenExpandCanvas, adj.FlipHorizontal, adj.FlipVertical,
                 adj.CropLeftPercent, adj.CropTopPercent, adj.CropRightPercent, adj.CropBottomPercent,
                 adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeInterpolation,

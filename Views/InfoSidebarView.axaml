@@ -202,6 +202,14 @@
                                     </Grid>
                                 </Button>
                                 <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                        Command="{Binding SetColorLabelCommand}" CommandParameter="#FACC15" ToolTip.Tip="Gelb">
+                                    <Grid>
+                                        <Ellipse Width="16" Height="16" Fill="#FACC15"/>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsColorLabelYellow}" Foreground="Black"
+                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="" ToolTip.Tip="Kein Etikett">
                                     <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                Foreground="{DynamicResource FP.Text.Secondary}"/>

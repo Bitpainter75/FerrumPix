@@ -47,6 +47,11 @@ Namespace Services
         ''' EXIF-Extraktion galt. Dient als Invalidierungs-Schlüssel: stimmt dieser Wert noch mit dem
         ''' aktuellen Dateisystem-Änderungsdatum überein, müssen EXIF-Daten nicht erneut gelesen werden.</summary>
         Public Property ScannedSourceModifiedAt As String = ""
+        ''' <summary>Dasselbe für die XMP-Beistelldatei, falls es eine gibt (leer sonst). Sie braucht einen
+        ''' EIGENEN Stempel: ein Fremdprogramm ändert Bewertung oder Stichworte in "foto.cr2.xmp", ohne die
+        ''' Bilddatei anzufassen. Ohne diesen Wert bliebe der Schnappschuss "frisch", der Hintergrundscan
+        ''' überspränge die Datei, und der Sidecar-Import wäre bei bereits eingelesenen Ordnern wirkungslos.</summary>
+        Public Property ScannedSidecarModifiedAt As String = ""
     End Class
 
     Public Class LibraryService
@@ -120,7 +125,8 @@ Namespace Services
             ("HasIccProfile", "INTEGER NOT NULL DEFAULT 0"),
             ("IccSummary", "TEXT"),
             ("SummaryFormat", "TEXT"),
-            ("ColorLabel", "TEXT")
+            ("ColorLabel", "TEXT"),
+            ("ScannedSidecarModifiedAt", "TEXT")
         }
 
         Private Shared Sub EnsureExifColumns(conn As SqliteConnection)
@@ -413,9 +419,12 @@ Namespace Services
             Catch
             End Try
 
+            Dim currentSidecarAt = SidecarStamp(filePath)
+
             Dim existing = GetMetaForPaths({filePath}).Values.FirstOrDefault()
             If existing IsNot Nothing AndAlso
                String.Equals(existing.ScannedSourceModifiedAt, currentModifiedAt, StringComparison.Ordinal) AndAlso
+               String.Equals(existing.ScannedSidecarModifiedAt, currentSidecarAt, StringComparison.Ordinal) AndAlso
                ExifDataMatches(existing, exif, summary) Then
                 Return
             End If
@@ -447,6 +456,27 @@ Namespace Services
                    NullableEquals(existing.ImageHeight, exif.ImageHeight)
         End Function
 
+        ''' <summary>Zustand der Begleitdateien als eine Zeichenkette: Änderungsdatum der XMP-Beistelldatei
+        ''' plus ein Merker, ob daneben schon ein eigenes Rezept (.fpxmp) liegt.
+        '''
+        ''' Der Merker gehört dazu, damit das LÖSCHEN der .fpxmp bemerkt wird. Wer sie wegwirft, will
+        ''' die Entwicklung aus der XMP neu übernehmen - ohne diesen Teil ändert das Löschen aber weder
+        ''' die Bilddatei noch die XMP, der Schnappschuss bliebe „frisch", der Hintergrundscan
+        ''' überspränge die Datei und die .fpxmp entstünde nie wieder.
+        '''
+        ''' EINE Quelle für Schreiben (SetExifData) und Prüfen (SyncExifData, GalleryViewModel) - zwei
+        ''' Fassungen davon liefen garantiert auseinander und der Schnappschuss wäre nie mehr frisch.</summary>
+        Public Shared Function SidecarStamp(filePath As String) As String
+            Try
+                Dim sidecar = XmpSidecarService.FindSidecar(filePath)
+                If String.IsNullOrEmpty(sidecar) Then Return ""
+                Dim rezept = If(RawSidecarService.Exists(filePath), "|fpxmp", "|-")
+                Return File.GetLastWriteTime(sidecar).ToString("o") & rezept
+            Catch
+                Return ""
+            End Try
+        End Function
+
         Private Shared Function NullableEquals(Of T As Structure)(a As T?, b As T?) As Boolean
             If Not a.HasValue AndAlso Not b.HasValue Then Return True
             If a.HasValue <> b.HasValue Then Return False
@@ -472,8 +502,8 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile) " &
-                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
                         "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
@@ -482,6 +512,7 @@ Namespace Services
                         "FileCreatedAt=excluded.FileCreatedAt, HasExifMetadata=excluded.HasExifMetadata, " &
                         "HasIptcMetadata=excluded.HasIptcMetadata, HasXmpMetadata=excluded.HasXmpMetadata, " &
                         "ScannedSourceModifiedAt=excluded.ScannedSourceModifiedAt, " &
+                        "ScannedSidecarModifiedAt=excluded.ScannedSidecarModifiedAt, " &
                         "ExifSummary=excluded.ExifSummary, IptcSummary=excluded.IptcSummary, XmpSummary=excluded.XmpSummary, " &
                         "IccSummary=excluded.IccSummary, SummaryFormat=excluded.SummaryFormat, " &
                         "HasIccProfile=excluded.HasIccProfile"
@@ -499,6 +530,7 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$width", NullableToDbValue(exif.ImageWidth))
                     cmd.Parameters.AddWithValue("$height", NullableToDbValue(exif.ImageHeight))
                     cmd.Parameters.AddWithValue("$fileCreatedAt", fileCreatedAt)
+                    cmd.Parameters.AddWithValue("$scannedSidecarModifiedAt", SidecarStamp(filePath))
                     cmd.Parameters.AddWithValue("$hasExifMetadata", If(summary.HasExifMetadata, 1, 0))
                     cmd.Parameters.AddWithValue("$hasIptcMetadata", If(summary.HasIptcMetadata, 1, 0))
                     cmd.Parameters.AddWithValue("$hasXmpMetadata", If(summary.HasXmpMetadata, 1, 0))
@@ -514,8 +546,10 @@ Namespace Services
             End Using
         End Sub
 
+        ''' ACHTUNG: ReadMetaRow greift über SPALTENNUMMERN zu - neue Spalten gehören ans Ende, sonst
+        ''' verschieben sich alle folgenden Indizes stillschweigend auf die falschen Werte.
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -546,7 +580,8 @@ Namespace Services
                 .HasIccProfile = Not reader.IsDBNull(24) AndAlso reader.GetInt32(24) <> 0,
                 .IccSummary = If(reader.IsDBNull(25), "", reader.GetString(25)),
                 .SummaryFormat = If(reader.IsDBNull(26), "", reader.GetString(26)),
-                .ColorLabel = If(reader.IsDBNull(27), "", reader.GetString(27))
+                .ColorLabel = If(reader.IsDBNull(27), "", reader.GetString(27)),
+                .ScannedSidecarModifiedAt = If(reader.IsDBNull(28), "", reader.GetString(28))
             }
         End Function
 

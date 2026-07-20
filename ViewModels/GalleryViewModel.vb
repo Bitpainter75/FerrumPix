@@ -514,6 +514,7 @@ Namespace ViewModels
                 NameOf(IsFilterLabelCyan),
                 NameOf(IsFilterLabelTeal),
                 NameOf(IsFilterLabelGreen),
+                NameOf(IsFilterLabelYellow),
                 NameOf(HasActiveFilter),
                 NameOf(FilterLabel)
             }
@@ -566,6 +567,14 @@ Namespace ViewModels
         Public ReadOnly Property IsFilterLabelGreen As Boolean
             Get
                 Return _filterColorLabels.Contains("#22C55E")
+            End Get
+        End Property
+        ''' Gelb kam mit dem XMP-Sidecar-Import dazu: xmp:Label="Yellow" ist eines der fünf Etiketten,
+        ''' die Lightroom vergibt. Ohne diesen Filter landeten importierte Fotos in einer Markierung,
+        ''' nach der man nicht filtern kann.
+        Public ReadOnly Property IsFilterLabelYellow As Boolean
+            Get
+                Return _filterColorLabels.Contains("#FACC15")
             End Get
         End Property
 
@@ -1250,6 +1259,7 @@ Namespace ViewModels
                                 NameOf(IsFilterLabelAll), NameOf(IsFilterLabelOrange), NameOf(IsFilterLabelRed),
                                 NameOf(IsFilterLabelPink), NameOf(IsFilterLabelPurple), NameOf(IsFilterLabelBlue),
                                 NameOf(IsFilterLabelCyan), NameOf(IsFilterLabelTeal), NameOf(IsFilterLabelGreen),
+                                NameOf(IsFilterLabelYellow),
                                 NameOf(HasActiveFilter), NameOf(FilterLabel)}
                     Me.RaisePropertyChanged(n)
                 Next
@@ -2757,11 +2767,17 @@ Namespace ViewModels
 
         ''' <summary>Vergleicht den beim letzten EXIF-Scan festgehaltenen Dateisystem-Zeitstempel mit dem
         ''' aktuellen - True, wenn beide übereinstimmen (Katalogeintrag ist noch gültig).</summary>
-        Private Shared Function IsScannedSnapshotFresh(scannedSourceModifiedAt As String, currentModified As DateTime) As Boolean
+        ''' <paramref name="scannedSidecarModifiedAt"/> und <paramref name="currentSidecar"/> tragen
+        ''' dasselbe für die XMP-Beistelldatei. Sie muss getrennt geprüft werden: ein Fremdprogramm
+        ''' ändert Bewertung oder Stichworte in "foto.cr2.xmp", ohne die Bilddatei anzufassen - ohne
+        ''' diesen zweiten Vergleich bliebe der Eintrag "frisch" und der Import liefe nie an.
+        Private Shared Function IsScannedSnapshotFresh(scannedSourceModifiedAt As String, currentModified As DateTime,
+                                                       scannedSidecarModifiedAt As String, currentSidecar As String) As Boolean
             If String.IsNullOrWhiteSpace(scannedSourceModifiedAt) Then Return False
             Dim scanned As DateTime
             If Not DateTime.TryParse(scannedSourceModifiedAt, Globalization.CultureInfo.InvariantCulture, Globalization.DateTimeStyles.RoundtripKind, scanned) Then Return False
-            Return scanned = currentModified
+            If scanned <> currentModified Then Return False
+            Return String.Equals(If(scannedSidecarModifiedAt, ""), If(currentSidecar, ""), StringComparison.Ordinal)
         End Function
 
         ''' <summary>Snapshot-Vergleich: Der SQLite-Katalog invalidiert sich sonst nie automatisch bei
@@ -2769,10 +2785,70 @@ Namespace ViewModels
         ''' Check würden nach dem ersten erfolgreichen Lesen dauerhaft veraltete EXIF-Werte geliefert.</summary>
         Private Shared Function IsMetaStale(meta As LibraryImageMeta) As Boolean
             Try
-                Return Not IsScannedSnapshotFresh(meta.ScannedSourceModifiedAt, File.GetLastWriteTime(meta.FilePath))
+                Return Not IsScannedSnapshotFresh(meta.ScannedSourceModifiedAt, File.GetLastWriteTime(meta.FilePath),
+                                                  meta.ScannedSidecarModifiedAt, LibraryService.SidecarStamp(meta.FilePath))
             Catch
                 Return True
             End Try
+        End Function
+
+        ''' <summary>Übernimmt Bewertung, Farbetikett und Stichworte aus einer XMP-Beistelldatei (und die
+        ''' Bewertung aus eingebettetem XMP) in die Bibliothek. Liefert zurück, was sich geändert hat,
+        ''' damit der Aufrufer die Anzeige nachziehen kann - Nothing/leer heißt „nichts angefasst".
+        '''
+        ''' REGEL: Es wird nur gefüllt, was in FerrumPix leer ist. Eine selbst vergebene Bewertung oder
+        ''' Markierung darf ein Scan niemals überschreiben - genau das tat der Import des eingebetteten
+        ''' Ratings vorher bedingungslos, sodass eigene Bewertungen bei jedem erneuten Einlesen verloren
+        ''' gingen. Stichworte sind der Sonderfall: dort ist Vereinigen richtig, nicht Ersetzen, weil
+        ''' beide Seiten unabhängig voneinander sinnvolle Einträge haben können.</summary>
+        Private Shared Function ImportSidecarCatalogData(filePath As String,
+                                                        embeddedRating As Integer?,
+                                                        currentRating As Integer,
+                                                        currentColorLabel As String,
+                                                        currentTags As List(Of String)) _
+                                                        As (Rating As Integer?, ColorLabel As String, Tags As List(Of String))
+            Dim result As (Rating As Integer?, ColorLabel As String, Tags As List(Of String)) = (Nothing, "", Nothing)
+            Try
+                Dim sidecar As XmpSidecarService.XmpSidecarData = Nothing
+                Dim sidecarPath = XmpSidecarService.FindSidecar(filePath)
+                If Not String.IsNullOrEmpty(sidecarPath) Then sidecar = XmpSidecarService.ReadSidecar(sidecarPath)
+
+                ' Trägt dieselbe Sidecar auch Entwicklungseinstellungen (crs:), werden sie hier einmalig
+                ' in eine .fpxmp übersetzt - der EINE Ort, an dem das passiert. Editor und Viewer kennen
+                ' XMP dadurch gar nicht und arbeiten weiter allein auf dem eigenen Rezeptformat.
+                RawSidecarService.TryImportFromXmpSidecar(filePath)
+
+                ' Die Beistelldatei ist die speziellere Quelle und schlägt eingebettetes XMP.
+                Dim ratingSource = If(sidecar?.Rating, embeddedRating)
+                If ratingSource.HasValue AndAlso ratingSource.Value > 0 AndAlso currentRating = 0 Then
+                    LibraryService.Instance.SetRating(filePath, ratingSource.Value)
+                    result.Rating = ratingSource.Value
+                End If
+
+                If sidecar IsNot Nothing Then
+                    If Not String.IsNullOrEmpty(sidecar.ColorLabel) AndAlso String.IsNullOrEmpty(currentColorLabel) Then
+                        LibraryService.Instance.SetColorLabelForMany({filePath}, sidecar.ColorLabel)
+                        result.ColorLabel = sidecar.ColorLabel
+                    End If
+
+                    If sidecar.Keywords.Count > 0 Then
+                        Dim merged As New List(Of String)(If(currentTags, New List(Of String)()))
+                        Dim added = False
+                        For Each keyword In sidecar.Keywords
+                            If Not merged.Any(Function(t) String.Equals(t, keyword, StringComparison.OrdinalIgnoreCase)) Then
+                                merged.Add(keyword)
+                                added = True
+                            End If
+                        Next
+                        If added Then
+                            LibraryService.Instance.SetTags(filePath, merged)
+                            result.Tags = merged
+                        End If
+                    End If
+                End If
+            Catch
+            End Try
+            Return result
         End Function
 
         Private Shared Sub ResolveMissingMetaFields(meta As LibraryImageMeta)
@@ -2781,10 +2857,12 @@ Namespace ViewModels
                 Dim fields = ExifService.ExtractSearchFields(data, meta.FilePath)
                 Dim xmpRating = ExifService.GetXmpRating(data)
                 Dim catalogSummary = ExifService.BuildCatalogSummary(data, fields)
+                ' Erst importieren, dann den Schnappschuss schreiben - siehe QueueBackgroundMetaRefresh.
+                Dim imported = ImportSidecarCatalogData(meta.FilePath, xmpRating, meta.Rating, meta.ColorLabel, meta.Tags)
                 LibraryService.Instance.SyncExifData(meta.FilePath, fields, catalogSummary)
-                If xmpRating.HasValue Then
-                    LibraryService.Instance.SetRating(meta.FilePath, xmpRating.Value)
-                End If
+                If imported.Rating.HasValue Then meta.Rating = imported.Rating.Value
+                If Not String.IsNullOrEmpty(imported.ColorLabel) Then meta.ColorLabel = imported.ColorLabel
+                If imported.Tags IsNot Nothing Then meta.Tags = imported.Tags
                 meta.DateTaken = fields.DateTaken
                 meta.DateModifiedExif = fields.DateModifiedExif
                 meta.Camera = fields.Camera
@@ -3481,10 +3559,14 @@ Namespace ViewModels
                                                                Dim iptcSummary = catalogSummary.IptcSummary
                                                                Dim xmpSummary = catalogSummary.XmpSummary
                                                                Dim iccSummary = catalogSummary.IccSummary
+                                                               ' ImportSidecarCatalogData legt ggf. die .fpxmp an, und deren
+                                                               ' Vorhandensein steckt im Stempel, den SyncExifData schreibt -
+                                                               ' deshalb ZUERST importieren. Andersherum traege der Stempel den
+                                                               ' Zustand von davor und der Ordner gaelte beim naechsten Wechsel
+                                                               ' erneut als veraltet.
+                                                               Dim imported = ImportSidecarCatalogData(item.FilePath, xmpRating,
+                                                                                                       item.Rating, item.ColorLabel, item.Tags)
                                                                LibraryService.Instance.SyncExifData(item.FilePath, fields, catalogSummary)
-                                                               If xmpRating.HasValue Then
-                                                                   LibraryService.Instance.SetRating(item.FilePath, xmpRating.Value)
-                                                               End If
                                                                Dim width = If(fields.ImageWidth, 0)
                                                                Dim height = If(fields.ImageHeight, 0)
                                                                Dim exifTaken = ExifService.ParseExifDateTime(fields.DateTaken)
@@ -3496,7 +3578,11 @@ Namespace ViewModels
                                                                                                           If cancellationToken.IsCancellationRequested Then Return
                                                                                                           item.ImageWidth = width
                                                                                                           item.ImageHeight = height
-                                                                                                          If xmpRating.HasValue Then item.Rating = xmpRating.Value
+                                                                                                          If imported.Rating.HasValue Then item.Rating = imported.Rating.Value
+                                                                                                          If Not String.IsNullOrEmpty(imported.ColorLabel) Then item.ColorLabel = imported.ColorLabel
+                                                                                                          ' Der Tags-Setter verwirft den Suchtext-Cache selbst, die
+                                                                                                          ' importierten Stichworte sind also sofort auffindbar.
+                                                                                                          If imported.Tags IsNot Nothing Then item.Tags = imported.Tags
                                                                                                           item.ExifDateTaken = exifTaken
                                                                                                           item.ExifDateModified = exifModified
                                                                                                           item.ExifCamera = camera
@@ -3664,6 +3750,31 @@ Namespace ViewModels
         ''' <summary>Erzeugt die ImageItem-Objekte für eine Dateiliste und übernimmt die im Katalog
         ''' gespeicherten Metadaten. Trägt Elemente, deren Katalogeintrag fehlt oder veraltet ist, in
         ''' <paramref name="itemsNeedingMetaRefresh"/> ein.</summary>
+        ''' Schlägt beide Namensformen in der einmalig eingelesenen Ordnerliste nach - "foto.cr2.xmp"
+        ''' (darktable/digiKam) und "foto.xmp" (Adobe). Leer, wenn es keine Beistelldatei gibt.
+        Private Shared Function LookupSidecarStamp(stamps As Dictionary(Of String, String),
+                                                   eigeneRezepte As HashSet(Of String),
+                                                   imagePath As String) As String
+            If stamps.Count = 0 Then Return ""
+            For Each candidate In XmpSidecarService.SidecarCandidates(imagePath)
+                Dim stamp As String = Nothing
+                If stamps.TryGetValue(candidate, stamp) Then
+                    ' Muss zeichengleich zu LibraryService.SidecarStamp sein - das ist die Gegenseite
+                    ' desselben Vergleichs, und ein Auseinanderlaufen liesse den Ordner bei JEDEM
+                    ' Wechsel komplett neu einlesen, ohne dass etwas darauf hindeutet.
+                    Return stamp & If(eigeneRezepte.Contains(RawSidecarService.SidecarPathFor(imagePath)), "|fpxmp", "|-")
+                End If
+            Next
+            Return ""
+        End Function
+
+        ''' Nur der Ordner selbst, und case-insensitiv: unter Linux matcht das Suchmuster sonst
+        ''' case-sensitiv, ".XMP" käme nicht vor (kommt bei Exporten aus Windows-Programmen aber vor).
+        Private Shared ReadOnly SidecarSearchOptions As New EnumerationOptions With {
+            .RecurseSubdirectories = False,
+            .MatchCasing = MatchCasing.CaseInsensitive
+        }
+
         Private Function BuildFileItems(files As FileInfo(),
                                         folderPath As String,
                                         thumbnailToken As CancellationToken,
@@ -3671,6 +3782,28 @@ Namespace ViewModels
             If files Is Nothing OrElse files.Length = 0 Then Return New List(Of ImageItem)()
 
             Dim meta = LibraryService.Instance.GetFolderMeta(folderPath)
+
+            ''' Die XMP-Beistelldateien EINMAL für den ganzen Ordner auflisten statt je Bild zu prüfen:
+            ''' die Frische-Erkennung unten braucht das Änderungsdatum der Sidecar, und zwei zusätzliche
+            ''' Dateisystem-Zugriffe pro Bild summieren sich bei großen Ordnern und auf Netzwerkfreigaben
+            ''' spürbar. Ein Verzeichnis-Listing kostet dagegen einmalig.
+            Dim sidecarStamps As New Dictionary(Of String, String)(PathIdentity.Comparer)
+            Dim eigeneRezepte As New HashSet(Of String)(PathIdentity.Comparer)
+            Try
+                For Each sidecar In Directory.EnumerateFiles(folderPath, "*.xmp", SidecarSearchOptions)
+                    ' ".fpxmp" endet nicht auf ".xmp" und faellt hier nicht mit hinein - der Vergleich
+                    ' steht trotzdem da, weil ein Treffer den Stempel still verfaelschen wuerde.
+                    If sidecar.EndsWith(RawSidecarService.Extension, StringComparison.OrdinalIgnoreCase) Then Continue For
+                    sidecarStamps(sidecar) = File.GetLastWriteTime(sidecar).ToString("o")
+                Next
+                ' Zweites Listing fuer die eigenen Rezepte: ihr VORHANDENSEIN gehoert in den Stempel,
+                ' damit das Loeschen einer .fpxmp den Ordner neu einlesen laesst (der Nutzer will dann
+                ' die Entwicklung aus der XMP zurueckholen).
+                For Each rezept In Directory.EnumerateFiles(folderPath, "*" & RawSidecarService.Extension, SidecarSearchOptions)
+                    eigeneRezepte.Add(rezept)
+                Next
+            Catch
+            End Try
 
                 ''' Die FileInfo-Objekte kommen fertig befüllt aus DirectoryInfo.EnumerateFiles (siehe
                 ''' ImageItem.FromFileInfo) - der frühere Weg über New ImageItem(pfad) stieß je Datei einen
@@ -3694,7 +3827,9 @@ Namespace ViewModels
                             ' Nur übernehmen, wenn die Datei sich seit dem letzten EXIF-Scan nicht geändert hat -
                             ' sonst würde man dauerhaft veraltete Breite/Höhe/EXIF-Daten anzeigen (siehe IsMetaStale).
                             If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso
-                               IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified) Then
+                               IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified,
+                                                      m.ScannedSidecarModifiedAt,
+                                                      LookupSidecarStamp(sidecarStamps, eigeneRezepte, file)) Then
                                 Dim needsMetadataFlagBackfill =
                                     Not m.HasExifMetadata AndAlso
                                     Not m.HasIptcMetadata AndAlso

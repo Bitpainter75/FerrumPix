@@ -325,6 +325,14 @@
                                                                FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Grid>
                                             </Button>
+                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                    Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#FACC15" ToolTip.Tip="Gelb">
+                                                <Grid>
+                                                    <Ellipse Width="16" Height="16" Fill="#FACC15"/>
+                                                    <TextBlock Text="✓" IsVisible="{Binding IsFilterLabelYellow}" Foreground="Black"
+                                                               FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Button>
                                         </StackPanel>
 
                                         <Separator Margin="4,6"/>
@@ -1107,6 +1115,9 @@
                                                 <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnContextSetColorLabel" ToolTip.Tip="Grün">
                                                     <Ellipse Width="16" Height="16" Fill="#22C55E"/>
                                                 </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#FACC15" Click="OnContextSetColorLabel" ToolTip.Tip="Gelb">
+                                                    <Ellipse Width="16" Height="16" Fill="#FACC15"/>
+                                                </Button>
                                                 <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="" Click="OnContextSetColorLabel" ToolTip.Tip="Kein Etikett">
                                                     <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                Foreground="{DynamicResource FP.Text.Secondary}"/>
@@ -1517,6 +1528,9 @@
                                                 </Button>
                                                 <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnContextSetColorLabel" ToolTip.Tip="Grün">
                                                     <Ellipse Width="16" Height="16" Fill="#22C55E"/>
+                                                </Button>
+                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#FACC15" Click="OnContextSetColorLabel" ToolTip.Tip="Gelb">
+                                                    <Ellipse Width="16" Height="16" Fill="#FACC15"/>
                                                 </Button>
                                                 <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="" Click="OnContextSetColorLabel" ToolTip.Tip="Kein Etikett">
                                                     <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
