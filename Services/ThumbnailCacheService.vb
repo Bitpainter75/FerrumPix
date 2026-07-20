@@ -239,7 +239,7 @@ Namespace Services
             Dim folderCachePath = GetFolderCachePathById(folderId)
             Dim imageHash = HashText(NormalizePath(filePath))
             Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
-            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}_v{CacheFormatVersion}.jpg"
+            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}{SidecarRotationSuffix(filePath)}_v{CacheFormatVersion}.jpg"
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try
@@ -286,7 +286,7 @@ Namespace Services
             Dim folderCachePath = GetFolderCachePathById(folderId)
             Dim imageHash = HashText(NormalizePath(filePath))
             Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
-            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}_v{CacheFormatVersion}.jpg"
+            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}{SidecarRotationSuffix(filePath)}_v{CacheFormatVersion}.jpg"
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try
@@ -450,15 +450,19 @@ Namespace Services
                         If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
 
                         Dim corrected = ImageOrientationService.ApplyOrientation(original, codec.EncodedOrigin)
+                        ' Eine im Viewer gedrehte RAW-Datei bleibt auf der Platte unveraendert - ihre
+                        ' Drehung steht im Sidecar und muss hier oben drauf, sonst zeigt die Kachel
+                        ' weiter die ungedrehte eingebettete Vorschau.
+                        Dim oriented = ImageOrientationService.ApplyQuarterRotation(corrected, SidecarRotationFor(filePath))
                         Try
                             ' Zieldimensionen aus dem KORRIGIERTEN Bitmap berechnen, nicht aus
                             ' info.Width/Height - sonst bekommt ein gedrehtes Hochkantfoto ein
                             ' falsches (vertauschtes) Seitenverhältnis.
-                            Dim targetWidth = Math.Min(CacheWidth, corrected.Width)
-                            Dim scale = targetWidth / CDbl(corrected.Width)
-                            Dim targetHeight = Math.Max(1, CInt(Math.Round(corrected.Height * scale)))
+                            Dim targetWidth = Math.Min(CacheWidth, oriented.Width)
+                            Dim scale = targetWidth / CDbl(oriented.Width)
+                            Dim targetHeight = Math.Max(1, CInt(Math.Round(oriented.Height * scale)))
 
-                            Using resized = corrected.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
+                            Using resized = oriented.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
                                 If resized Is Nothing Then Return False
                                 Using image = SKImage.FromBitmap(resized)
                                     Using data = image.Encode(SKEncodedImageFormat.Jpeg, quality)
@@ -470,6 +474,7 @@ Namespace Services
                                 End Using
                             End Using
                         Finally
+                            If Not Object.ReferenceEquals(oriented, corrected) Then oriented.Dispose()
                             If Not Object.ReferenceEquals(corrected, original) Then corrected.Dispose()
                         End Try
                     End Using
@@ -594,9 +599,10 @@ Namespace Services
 
         ' Dekodiert per SKCodec, korrigiert die EXIF-Orientierung und skaliert auf maxWidth.
         ' Fällt bei jedem SKCodec-Fehler auf das bisherige Bitmap.DecodeToWidth zurück.
-        Private Shared Function DecodeCorrectedAndResize(stream As Stream, maxWidth As Integer) As Bitmap
+        Private Shared Function DecodeCorrectedAndResize(stream As Stream, maxWidth As Integer, Optional extraRotationDegrees As Integer = 0) As Bitmap
+            Dim rotation = ImageOrientationService.NormalizeQuarterTurn(extraRotationDegrees)
             Using codec = SKCodec.Create(stream)
-                If codec Is Nothing OrElse codec.EncodedOrigin = SKEncodedOrigin.TopLeft Then
+                If codec Is Nothing OrElse (codec.EncodedOrigin = SKEncodedOrigin.TopLeft AndAlso rotation = 0) Then
                     stream.Seek(0, SeekOrigin.Begin)
                     Return Bitmap.DecodeToWidth(stream, maxWidth)
                 End If
@@ -608,18 +614,42 @@ Namespace Services
                     End If
 
                     Dim corrected = ImageOrientationService.ApplyOrientation(original, codec.EncodedOrigin)
+                    Dim oriented = ImageOrientationService.ApplyQuarterRotation(corrected, rotation)
                     Try
-                        Dim targetWidth = Math.Min(maxWidth, corrected.Width)
-                        Dim scale = targetWidth / CDbl(corrected.Width)
-                        Dim targetHeight = Math.Max(1, CInt(Math.Round(corrected.Height * scale)))
-                        Using resized = corrected.Resize(New SKImageInfo(targetWidth, targetHeight, corrected.ColorType, corrected.AlphaType), SamplingMedium)
-                            Return ImageOrientationService.ToAvaloniaBitmapFast(If(resized, corrected))
+                        Dim targetWidth = Math.Min(maxWidth, oriented.Width)
+                        Dim scale = targetWidth / CDbl(oriented.Width)
+                        Dim targetHeight = Math.Max(1, CInt(Math.Round(oriented.Height * scale)))
+                        Using resized = oriented.Resize(New SKImageInfo(targetWidth, targetHeight, oriented.ColorType, oriented.AlphaType), SamplingMedium)
+                            Return ImageOrientationService.ToAvaloniaBitmapFast(If(resized, oriented))
                         End Using
                     Finally
+                        If Not Object.ReferenceEquals(oriented, corrected) Then oriented.Dispose()
                         If Not Object.ReferenceEquals(corrected, original) Then corrected.Dispose()
                     End Try
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Drehung aus dem RAW-Sidecar (0 fuer alle anderen Formate). Die Vorschau in der
+        ''' RAW-Datei bleibt beim Drehen im Viewer unangetastet - die Drehung liegt daneben.</summary>
+        Private Shared Function SidecarRotationFor(filePath As String) As Integer
+            If Not RawPreviewService.IsSupportedRaw(filePath) Then Return 0
+            Return RawSidecarService.ReadRotationDegrees(filePath)
+        End Function
+
+        ''' <summary>Teil des Cache-Dateinamens, der die Sidecar-Drehung abbildet ("" bei 0 Grad,
+        ''' damit die Namen aller nicht gedrehten Bilder unveraendert bleiben und kein Cache-Bestand
+        ''' entwertet wird).
+        '''
+        ''' Warum der WINKEL und nicht der Zeitstempel der Begleitdatei: eine Drehung im Viewer fasst
+        ''' die RAW-Datei nicht an, der bisherige Schluessel (mtime+Groesse) bliebe also gleich und
+        ''' die Kachel haenge fuer immer auf dem ungedrehten Stand. Ein Sidecar-Zeitstempel wuerde das
+        ''' zwar auch aufloesen, haengt aber an der Zeitaufloesung des Dateisystems - und wuerde die
+        ''' Kachel bei JEDER Rezeptaenderung neu bauen, obwohl von allen Reglern nur die Drehung
+        ''' ueberhaupt in der Vorschau sichtbar ist.</summary>
+        Private Shared Function SidecarRotationSuffix(filePath As String) As String
+            Dim rotation = SidecarRotationFor(filePath)
+            Return If(rotation = 0, "", $"_r{rotation}")
         End Function
 
         Private Shared Function DecodeDirect(filePath As String, cancellationToken As CancellationToken) As Bitmap
@@ -628,7 +658,7 @@ Namespace Services
                 If RawPreviewService.IsSupportedRaw(filePath) Then
                     Using preview = OpenRawThumbnailSource(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth)
+                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
                     End Using
                 ElseIf SvgPreviewService.IsSupportedSvg(filePath) Then
                     Using preview = SvgPreviewService.ExtractPreview(filePath, CacheWidth)

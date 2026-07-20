@@ -5398,6 +5398,16 @@ Namespace ViewModels
             If missingItems.Count > 0 Then AddPrebuiltItemsToVirtualFolder(missingItems)
         End Function
 
+        ''' <summary>Verwirft das Vorschaubild EINER Datei im Speicher - fuer Aenderungen, die die
+        ''' Datei selbst nicht anfassen und deshalb auch keinen SyncFolderItems-Durchlauf brauchen
+        ''' (Viewer-Drehung einer RAW: die landet im Sidecar, siehe RawSidecarService).</summary>
+        Public Sub RefreshThumbnailFor(path As String)
+            If String.IsNullOrWhiteSpace(path) Then Return
+            For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso PathIdentity.AreSame(i.FilePath, path))
+                item.EvictThumbnail()
+            Next
+        End Sub
+
         Private Sub RefreshAfterBatchFileRewrite(paths As IEnumerable(Of String))
             For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso paths.Contains(i.FilePath, StringComparer.OrdinalIgnoreCase))
                 item.EvictThumbnail()

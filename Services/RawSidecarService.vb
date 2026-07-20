@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Concurrent
 Imports System.IO
 Imports System.Xml
 Imports System.Xml.Linq
@@ -64,6 +65,11 @@ Namespace Services
                     doc.Save(writer)
                 End Using
                 File.Move(temp, target, overwrite:=True)
+                ' Den gemerkten Drehwinkel verwerfen, statt auf einen geaenderten Zeitstempel zu
+                ' hoffen: zwei Schreibvorgaenge kurz hintereinander koennen auf grob aufloesenden
+                ' Dateisystemen dieselbe mtime tragen.
+                Dim ignored As CachedRotation = Nothing
+                _rotationCache.TryRemove(target, ignored)
                 Return True
             Catch
                 Return False
@@ -105,6 +111,45 @@ Namespace Services
             Catch
             End Try
         End Sub
+
+        ''' <summary>Nur die Drehung aus dem Sidecar (0/90/180/270; 0 wenn keiner da ist). Der
+        ''' ANZEIGE-Weg braucht ausschliesslich diesen einen Wert: Viewer, Filmstreifen und Kacheln
+        ''' zeigen die schnelle eingebettete RAW-Vorschau, nicht die entwickelte Datei - Belichtung
+        ''' und Farbe aus dem Rezept wirken dort bewusst nicht, die Geometrie muss aber stimmen,
+        ''' sonst haette das Drehen im Viewer sichtbar keine Wirkung.
+        '''
+        ''' Ergebnisse werden je Sidecar-Zeitstempel gemerkt: der Aufruf sitzt im Thumbnail-Pfad und
+        ''' liefe sonst pro Kachel durch einen XML-Parse.</summary>
+        Public Shared Function ReadRotationDegrees(rawPath As String) As Integer
+            If String.IsNullOrWhiteSpace(rawPath) Then Return 0
+            Dim sidecar = SidecarPathFor(rawPath)
+            Dim stampTicks As Long
+            Try
+                If Not File.Exists(sidecar) Then Return 0
+                stampTicks = File.GetLastWriteTimeUtc(sidecar).Ticks
+            Catch
+                Return 0
+            End Try
+
+            Dim cached As CachedRotation = Nothing
+            If _rotationCache.TryGetValue(sidecar, cached) AndAlso cached.StampTicks = stampTicks Then Return cached.Degrees
+
+            Dim adjustments = TryRead(rawPath)
+            Dim degrees = If(adjustments Is Nothing, 0, ImageOrientationService.NormalizeQuarterTurn(adjustments.RotationDegrees))
+            _rotationCache(sidecar) = New CachedRotation(stampTicks, degrees)
+            Return degrees
+        End Function
+
+        Private NotInheritable Class CachedRotation
+            Public ReadOnly StampTicks As Long
+            Public ReadOnly Degrees As Integer
+            Public Sub New(stampTicks As Long, degrees As Integer)
+                Me.StampTicks = stampTicks
+                Me.Degrees = degrees
+            End Sub
+        End Class
+
+        Private Shared ReadOnly _rotationCache As New ConcurrentDictionary(Of String, CachedRotation)(PathIdentity.Comparer)
 
         ''' <summary>Liest das Rezept aus dem Sidecar. Nothing, wenn keiner da ist, die Version
         ''' unbekannt oder die Datei defekt ist - der Editor startet dann wie ohne Sidecar.</summary>

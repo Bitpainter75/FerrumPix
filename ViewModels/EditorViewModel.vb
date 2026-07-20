@@ -7935,7 +7935,9 @@ Namespace ViewModels
                 ' das war der PSD-Befund vom 2026-07-19 - die Render-Pipeline konnte das Format,
                 ' der Anzeigeweg nicht. Hier ist es die Gegenrichtung, aber dasselbe Risiko.
                 If CurrentImage Is Nothing Then
-                    CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath)
+                    ' applySidecarRotation:=False - der Editor wendet die Sidecar-Drehung schon als Teil des
+                    ' Rezepts in der Render-Pipeline an; hier nochmal drehen hiesse doppelt drehen.
+                    CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath, applySidecarRotation:=False)
                 End If
                 If CurrentImage Is Nothing Then
                     StatusText = If(RawPreviewService.IsSupportedRaw(RenderSourcePath),
@@ -8075,7 +8077,9 @@ Namespace ViewModels
                 ' das war der PSD-Befund vom 2026-07-19 - die Render-Pipeline konnte das Format,
                 ' der Anzeigeweg nicht. Hier ist es die Gegenrichtung, aber dasselbe Risiko.
                 If CurrentImage Is Nothing Then
-                    CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath)
+                    ' applySidecarRotation:=False - der Editor wendet die Sidecar-Drehung schon als Teil des
+                    ' Rezepts in der Render-Pipeline an; hier nochmal drehen hiesse doppelt drehen.
+                    CurrentImage = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(RenderSourcePath, applySidecarRotation:=False)
                 End If
                 If CurrentImage Is Nothing Then
                     Dim message = If(RawPreviewService.IsSupportedRaw(RenderSourcePath),

@@ -7236,8 +7236,20 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' hier fälschlich die RAW-Rohdaten JPEG-kodiert über die Original-RAW-Datei schreiben.
             ' PSD/PSB sind NUR-LESEND (die Pipeline sieht nur das zusammengesetzte Gesamtbild,
             ' Ebenen gingen beim Überschreiben verloren) - gleiches Verbot.
+            '
+            ' Verboten ist nicht nur der GLEICHE Pfad, sondern jedes Ziel mit RAW-/PSD-Endung:
+            ' die Viewer-Drehung schrieb in eine Temp-Datei MIT der Endung des Originals
+            ' (".foto.ferrumpix-rotate-1234.cr2") und kopierte sie erst danach über die Quelle -
+            ' der Pfadvergleich sah zwei verschiedene Dateien, und die Formatwahl unten machte aus
+            ' ".cr2" mangels eigenem Zweig ein JPEG. Ergebnis: die Original-RAW war unwiederbringlich
+            ' durch ihre eigene eingebettete Vorschau ersetzt (Nutzer-Befund 2026-07-20). Ein Ziel
+            ' mit RAW-/PSD-Endung ist IMMER falsch - wir können diese Formate nicht schreiben.
+            If RawPreviewService.IsSupportedRaw(targetPath) OrElse PsdPreviewService.IsSupportedPsd(targetPath) Then
+                workingFull?.Dispose()
+                Return False
+            End If
             If (RawPreviewService.IsSupportedRaw(sourcePath) OrElse PsdPreviewService.IsSupportedPsd(sourcePath)) AndAlso
-               String.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase) Then
+               PathIdentity.AreSame(sourcePath, targetPath) Then
                 workingFull?.Dispose()
                 Return False
             End If

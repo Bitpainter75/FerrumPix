@@ -1053,7 +1053,11 @@ Namespace ViewModels
         Private Shared Function DecodeViewerBitmap(path As String) As Bitmap
             If RawPreviewService.IsSupportedRaw(path) Then
                 Using preview = RawPreviewService.ExtractPreviewWithFallback(path)
-                    Return If(preview IsNot Nothing, ImageOrientationService.LoadOrientedAvaloniaBitmap(preview), Nothing)
+                    ' Gedrehte RAWs tragen ihre Drehung im Sidecar (die Datei selbst wird nie
+                    ' neu geschrieben) - beim Anzeigen also wieder drauflegen.
+                    Return If(preview IsNot Nothing,
+                              ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(path)),
+                              Nothing)
                 End Using
             End If
             If SvgPreviewService.IsSupportedSvg(path) Then
@@ -1597,9 +1601,33 @@ Namespace ViewModels
             _hasPendingRotationSave = False
         End Sub
 
+        ''' <summary>Formate, in die der Viewer eine Drehung GEBACKEN zurückschreiben darf. Bewusst
+        ''' eine Whitelist (wie GalleryViewModel.BatchImageEditWritableExtensions): die Speicherroutine
+        ''' kann nur JPEG/PNG/WebP erzeugen, und ein Ziel mit fremder Endung bekäme still ein JPEG
+        ''' untergeschoben - bei RAW/PSD/SVG/.fpx wäre das Original damit vernichtet.</summary>
+        Private Shared ReadOnly RotationBakeableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
+
+        Private Shared Function CanBakeRotation(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Return RotationBakeableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
+        End Function
+
+        ''' <summary>Kann die Drehung dieses Bildes überhaupt dauerhaft werden - gebacken oder als
+        ''' Rezept neben der Datei?</summary>
+        Private Shared Function CanPersistRotation(path As String) As Boolean
+            Return CanBakeRotation(path) OrElse RawPreviewService.IsSupportedRaw(path)
+        End Function
+
         Public Async Function ConfirmPendingRotationAsync(actionDescription As String) As Task(Of Boolean)
             If Not _hasPendingRotationSave OrElse NormalizeRotationAngle(_rotationAngle) = 0 Then Return True
             If String.IsNullOrEmpty(_currentImagePath) OrElse Not File.Exists(_currentImagePath) Then
+                ResetViewerRotation()
+                Return True
+            End If
+
+            ' Nur-lesbare Formate (PSD, SVG, ICO, Video, .fpx): gar nicht erst zum Speichern
+            ' auffordern - die Drehung bleibt reine Ansicht und wird beim Wechsel verworfen.
+            If Not CanPersistRotation(_currentImagePath) Then
                 ResetViewerRotation()
                 Return True
             End If
@@ -1629,6 +1657,13 @@ Namespace ViewModels
             End If
 
             Dim source = _currentImagePath
+
+            ' RAW wird NIE neu geschrieben - wir könnten das Format gar nicht erzeugen und würden
+            ' die Rohdaten durch ihre eigene eingebettete JPEG-Vorschau ersetzen. Die Drehung geht
+            ' stattdessen nicht-destruktiv in die Rezept-Begleitdatei (foto.cr2.fpxmp), genau wie
+            ' beim Editor. Viewer, Filmstreifen und Kacheln lesen sie beim Anzeigen wieder aus.
+            If RawPreviewService.IsSupportedRaw(source) Then Return Await SaveRotationToSidecarAsync(source, angle)
+
             Dim ext = IO.Path.GetExtension(source)
             Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-rotate-{Guid.NewGuid():N}{ext}")
             Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
@@ -1659,6 +1694,41 @@ Namespace ViewModels
             End Try
 
             Await _mainVm.ShowMessageAsync(LocalizationService.T("Drehung speichern"), If(errorMessage, LocalizationService.T("Bild konnte nicht gespeichert werden")))
+            Return False
+        End Function
+
+        ''' <summary>Legt die Drehung einer RAW-Datei im Rezept-Sidecar ab (foto.cr2.fpxmp) statt sie
+        ''' in Pixel zu backen. Ein schon vorhandenes Rezept (aus dem Editor) bleibt vollständig
+        ''' erhalten - nur RotationDegrees wird um den neuen Winkel weitergedreht.</summary>
+        Private Async Function SaveRotationToSidecarAsync(source As String, angle As Integer) As Task(Of Boolean)
+            Dim ok = False
+            Dim errorMessage As String = Nothing
+            Try
+                ok = Await Task.Run(Function()
+                                        Dim adj = If(RawSidecarService.TryRead(source), New ImageAdjustments())
+                                        adj.RotationDegrees = CInt(NormalizeRotationAngle(adj.RotationDegrees + angle))
+                                        Return RawSidecarService.TryWrite(source, adj)
+                                    End Function)
+                If ok Then
+                    ' Das Original ist unverändert - nur der Sidecar ist neu. Der Disk-Cache merkt das
+                    ' von selbst (ThumbnailCacheService zieht die Sidecar-Zeit in den Dateinamen), aber
+                    ' die bereits geladenen Bitmaps im Speicher muessen weg, sonst bleibt die Kachel
+                    ' im Filmstreifen und in der Gallery ungedreht stehen.
+                    For Each filmItem In FilmstripItems.Where(Function(i) i IsNot Nothing AndAlso PathIdentity.AreSame(i.FilePath, source))
+                        filmItem.EvictThumbnail()
+                    Next
+                    _mainVm?.Gallery?.RefreshThumbnailFor(source)
+                    LoadBitmap()
+                    ResetViewerRotation()
+                    UpdateStatus()
+                    Return True
+                End If
+                errorMessage = LocalizationService.T("Drehung konnte nicht gespeichert werden")
+            Catch ex As Exception
+                errorMessage = ex.Message
+            End Try
+
+            Await _mainVm.ShowMessageAsync(LocalizationService.T("Drehung speichern"), If(errorMessage, LocalizationService.T("Drehung konnte nicht gespeichert werden")))
             Return False
         End Function
 

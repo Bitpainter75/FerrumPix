@@ -3854,4 +3854,7 @@
   <data name="Lizenztext_ffnen_9fd765be" xml:space="preserve">
     <value>Apri il testo di licenza</value>
   </data>
+  <data name="Drehung_konnte_nicht_gespeichert_werden_d7da8820" xml:space="preserve">
+    <value>Impossibile salvare la rotazione</value>
+  </data>
 </root>

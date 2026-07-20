@@ -87,7 +87,9 @@ Namespace Services
         ' exakt wie vor der EXIF-Korrektur. Nur Bilder mit tatsächlich abweichender Orientierung
         ' nehmen den langsameren SKCodec-Pfad, und selbst der kopiert die Pixel direkt statt sie
         ' (wie in einer früheren Version) über einen PNG-Encode/Decode-Umweg zu schicken.
-        Public Shared Function LoadOrientedAvaloniaBitmap(stream As Stream) As Bitmap
+        ''' <paramref name="extraRotationDegrees"/>: zusaetzliche Viertel-Drehung NACH der
+        ''' EXIF-Korrektur - fuer RAW-Dateien, deren Drehung im Sidecar steht statt in den Pixeln.
+        Public Shared Function LoadOrientedAvaloniaBitmap(stream As Stream, Optional extraRotationDegrees As Integer = 0) As Bitmap
             ' Den Inhalt EINMAL puffern und alle Decode-Wege daraus bedienen.
             ' Grund: SKCodec.Create(Stream) uebernimmt den Strom, und manche Codecs - allen voran
             ' WebP - schliessen ihn dabei sofort. Das spaetere stream.Seek fuer den Rueckfall warf
@@ -106,7 +108,8 @@ Namespace Services
 
             Using data
                 Using codec = SKCodec.Create(data)
-                    If codec Is Nothing OrElse codec.EncodedOrigin = SKEncodedOrigin.TopLeft Then
+                    If codec Is Nothing OrElse
+                       (codec.EncodedOrigin = SKEncodedOrigin.TopLeft AndAlso NormalizeQuarterTurn(extraRotationDegrees) = 0) Then
                         Return BitmapFromData(data)
                     End If
 
@@ -120,13 +123,57 @@ Namespace Services
 
                         Dim corrected = ApplyOrientation(original, codec.EncodedOrigin)
                         Try
-                            Return ToAvaloniaBitmapFast(corrected)
+                            Dim rotated = ApplyQuarterRotation(corrected, extraRotationDegrees)
+                            Try
+                                Return ToAvaloniaBitmapFast(rotated)
+                            Finally
+                                If Not Object.ReferenceEquals(rotated, corrected) Then rotated.Dispose()
+                            End Try
                         Finally
                             If Not Object.ReferenceEquals(corrected, original) Then corrected.Dispose()
                         End Try
                     End Using
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Winkel auf 0/90/180/270 normieren - alles andere kann eine Viertel-Drehung nicht
+        ''' darstellen und gilt als "keine Drehung".</summary>
+        Public Shared Function NormalizeQuarterTurn(degrees As Integer) As Integer
+            Dim normalized = ((degrees Mod 360) + 360) Mod 360
+            Return If(normalized = 90 OrElse normalized = 180 OrElse normalized = 270, normalized, 0)
+        End Function
+
+        ''' <summary>Dreht um ein Vielfaches von 90 Grad. Bei 0 kommt DIESELBE Instanz zurueck (kein
+        ''' Alloc) - Aufrufer duerfen das Ergebnis nur disposen, wenn es eine andere Referenz ist.
+        ''' Wird fuer die Drehung aus dem RAW-Sidecar gebraucht, die beim Anzeigen ueber die
+        ''' EXIF-Korrektur gelegt wird (siehe RawSidecarService.ReadRotationDegrees).</summary>
+        Public Shared Function ApplyQuarterRotation(source As SKBitmap, degrees As Integer) As SKBitmap
+            If source Is Nothing Then Return source
+            Dim normalized = NormalizeQuarterTurn(degrees)
+            If normalized = 0 Then Return source
+
+            Dim swapped = normalized = 90 OrElse normalized = 270
+            Dim rw = If(swapped, source.Height, source.Width)
+            Dim rh = If(swapped, source.Width, source.Height)
+
+            Dim rotated = New SKBitmap(rw, rh, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(rotated)
+                canvas.Clear(SKColors.Transparent)
+                Select Case normalized
+                    Case 90
+                        canvas.Translate(rw, 0)
+                        canvas.RotateDegrees(90)
+                    Case 180
+                        canvas.Translate(rw, rh)
+                        canvas.RotateDegrees(180)
+                    Case 270
+                        canvas.Translate(0, rh)
+                        canvas.RotateDegrees(270)
+                End Select
+                canvas.DrawBitmap(source, 0, 0)
+            End Using
+            Return rotated
         End Function
 
         ''' <summary>Avalonia-Bitmap aus gepufferten Bilddaten - der Rueckfall, wenn keine
@@ -160,11 +207,17 @@ Namespace Services
         ''' ImageProcessor.OpenSourceStream (Render/Export) getrennt, beide muessen dieselben
         ''' Sonderformate kennen. Genau das fehlte fuer PSD: die Render-Pipeline konnte es,
         ''' der Editor zeigte trotzdem nichts (Nutzerbefund 2026-07-19).
-        Public Shared Function LoadOrientedAvaloniaBitmapAuto(filePath As String) As Bitmap
+        ''' <paramref name="applySidecarRotation"/>: legt bei RAW die Drehung aus dem .fpxmp-Sidecar
+        ''' oben drauf. Richtig fuer jeden Weg, der das Bild EINFACH ANZEIGT (Filmstreifen,
+        ''' Konfliktvorschau). FALSCH fuer den Editor: der laedt dasselbe Sidecar als Rezept und
+        ''' dreht in seiner Render-Pipeline - beides zusammen ergaebe eine doppelte Drehung.
+        Public Shared Function LoadOrientedAvaloniaBitmapAuto(filePath As String, Optional applySidecarRotation As Boolean = True) As Bitmap
             If RawPreviewService.IsSupportedRaw(filePath) Then
                 Using stream = RawPreviewService.ExtractPreviewWithFallback(filePath)
                     If stream Is Nothing Then Return Nothing
-                    Return LoadOrientedAvaloniaBitmap(stream)
+                    ' Eine im Viewer gedrehte RAW steckt ihre Drehung ins Sidecar, nicht in die Pixel.
+                    Dim rotation = If(applySidecarRotation, RawSidecarService.ReadRotationDegrees(filePath), 0)
+                    Return LoadOrientedAvaloniaBitmap(stream, rotation)
                 End Using
             End If
             If PsdPreviewService.IsSupportedPsd(filePath) Then
