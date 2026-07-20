@@ -199,9 +199,11 @@ And as a package in the AUR:
 
 The packages are self-contained and include the .NET runtime.
 
-`libmpv` (video playback and thumbnails) and `libraw` (RAW development) are required, not optional. The Linux packages declare them as dependencies, so the package manager installs them along with FerrumPix. The Flatpak builds both in, and Windows releases bundle them under `runtimes/win-x64/native`.
+`libmpv` (video playback and thumbnails) and `libraw` (RAW development) are required, not optional. The Linux packages declare both as dependencies, so the package manager installs them along with FerrumPix. Windows releases bundle both under `runtimes/win-x64/native`, in the setup as well as in the portable ZIP.
 
-The portable ZIPs have no package manager to pull anything in: the Windows ZIP carries both libraries, while the Linux ZIP and the AppImage expect `libmpv` and `libraw` to be present on the system. The experimental macOS builds ship without LibRaw — install it with `brew install libraw`. Wherever a library is genuinely missing, FerrumPix keeps running: video files are then unavailable and RAW files fall back to their embedded preview.
+Two cases differ. The Flatpak builds LibRaw into the sandbox but deliberately ships no `libmpv`, so it has no video support. The Linux ZIP and the AppImage have no package manager to pull anything in and expect both libraries on the system; the experimental macOS builds ship without LibRaw — install it with `brew install libraw`.
+
+Where a library is present on the system, FerrumPix uses that one in preference to a bundled copy, so it keeps getting security updates and support for newer cameras. Where one is genuinely missing, FerrumPix keeps running: video files are then unavailable and RAW files fall back to their embedded preview.
 
 ## Building From Source
 
