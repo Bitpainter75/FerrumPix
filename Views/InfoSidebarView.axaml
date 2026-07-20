@@ -42,7 +42,12 @@
                     <StackPanel Spacing="18" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
                         <StackPanel Spacing="10">
                             <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                            <!-- Dateiname ohne Beschriftung über die volle Breite: er ist die
+                                 Überschrift des Blocks, keine Wertzeile - und lange Namen haben so
+                                 die ganze Spaltenbreite zum Umbrechen statt der halben. Darunter
+                                 eine Leerzeile Abstand zu den Wertzeilen. -->
+                            <TextBlock Text="{Binding ExifInfo.FileName}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
                                 <TextBlock Text="Abmessungen" Foreground="{DynamicResource FP.Text.Muted}"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
                                     <TextBlock Text="{Binding ExifInfo.ImageWidth}"/>
@@ -55,6 +60,20 @@
                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ExifInfo.AspectRatio}" HorizontalAlignment="Right"/>
                                 <TextBlock Grid.Row="3" Text="Farbraum" Foreground="{DynamicResource FP.Text.Muted}"/>
                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ExifInfo.ColorSpace}" HorizontalAlignment="Right"/>
+                                <TextBlock Grid.Row="4" Text="Dateigröße" Foreground="{DynamicResource FP.Text.Muted}"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ExifInfo.FileSize}" HorizontalAlignment="Right"/>
+                                <!-- Dateidatum, nicht EXIF-Aufnahmedatum. Beide Zeilen blenden sich aus,
+                                     wo es keinen Zeitstempel gibt (Immich, Dateisystem ohne Geburtszeit). -->
+                                <TextBlock Grid.Row="5" Text="Erstellt" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ExifInfo.FileCreated, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
+                                <TextBlock Grid.Row="5" Grid.Column="1" HorizontalAlignment="Right"
+                                           Text="{Binding ExifInfo.FileCreated, Converter={StaticResource ExifDateConverter}}"
+                                           IsVisible="{Binding ExifInfo.FileCreated, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
+                                <TextBlock Grid.Row="6" Text="Geändert" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ExifInfo.FileModified, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
+                                <TextBlock Grid.Row="6" Grid.Column="1" HorizontalAlignment="Right"
+                                           Text="{Binding ExifInfo.FileModified, Converter={StaticResource ExifDateConverter}}"
+                                           IsVisible="{Binding ExifInfo.FileModified, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
                             </Grid>
                         </StackPanel>
 

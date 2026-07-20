@@ -187,6 +187,21 @@ Namespace Converters
         End Function
     End Class
 
+    ''' <summary>Rohdatum aus ExifData ("yyyy:MM:dd HH:mm:ss") in die Anzeigeform der aktuellen Sprache.
+    ''' Bewusst erst beim Rendern: ExifData wird zwischengespeichert, eine beim Einlesen formatierte
+    ''' Zeichenkette bliebe nach einem Sprachwechsel im alten Format stehen.</summary>
+    Public Class ExifDateConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            Return Services.ExifService.FormatExifDate(TryCast(value, String))
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Return BindingOperations.DoNothing
+        End Function
+    End Class
+
     Public Class BoolToWidthConverter
         Implements IValueConverter
 

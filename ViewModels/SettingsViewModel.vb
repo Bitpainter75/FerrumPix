@@ -546,6 +546,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property IsLanguagePortuguese As Boolean
+            Get
+                Return _languageMode = "Portuguese"
+            End Get
+        End Property
+
         Public ReadOnly Property IsStartupGalleryMode As Boolean
             Get
                 Return _startupImageMode = "Gallery"
@@ -1731,6 +1737,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsLanguageSpanish))
             Me.RaisePropertyChanged(NameOf(IsLanguageFrench))
             Me.RaisePropertyChanged(NameOf(IsLanguageItalian))
+            Me.RaisePropertyChanged(NameOf(IsLanguagePortuguese))
         End Sub
 
         Public Sub RefreshLocalization()

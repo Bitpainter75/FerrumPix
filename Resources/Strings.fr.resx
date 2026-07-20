@@ -3848,4 +3848,13 @@
   <data name="Bearbeitung_in_Begleitdatei_gespeichert_3dc10f16" xml:space="preserve">
     <value>Modification enregistrée dans le fichier annexe</value>
   </data>
+  <data name="Erstellt_98607f4d" xml:space="preserve">
+    <value>Créé</value>
+  </data>
+  <data name="Ge_ndert_01de835d" xml:space="preserve">
+    <value>Modifié</value>
+  </data>
+  <data name="Portugiesisch_7c92b2b6" xml:space="preserve">
+    <value>Portugais</value>
+  </data>
 </root>

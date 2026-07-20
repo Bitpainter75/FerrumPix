@@ -50,6 +50,7 @@ Namespace Services
                     Case "es" : Return "Spanish"
                     Case "fr" : Return "French"
                     Case "it" : Return "Italian"
+                    Case "pt" : Return "Portuguese"
                     Case Else : Return "English"
                 End Select
             End Get
@@ -57,7 +58,7 @@ Namespace Services
 
         Public Shared Function NormalizeLanguageMode(value As String) As String
             Select Case If(value, "").Trim()
-                Case "German", "English", "Spanish", "French", "Italian"
+                Case "German", "English", "Spanish", "French", "Italian", "Portuguese"
                     Return value.Trim()
                 Case Else
                     Return "System"
@@ -117,6 +118,7 @@ Namespace Services
                 Case "Spanish" : Return "es"
                 Case "French" : Return "fr"
                 Case "Italian" : Return "it"
+                Case "Portuguese" : Return "pt"
                 Case "English" : Return ""
                 Case Else
                     Return ResolveSystemCultureCode()
@@ -151,7 +153,7 @@ Namespace Services
 
         Private Shared Function IsSupportedCultureCode(code As String) As Boolean
             Select Case If(code, "").ToLowerInvariant()
-                Case "de", "es", "fr", "it"
+                Case "de", "es", "fr", "it", "pt"
                     Return True
                 Case Else
                     Return False

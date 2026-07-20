@@ -1464,6 +1464,12 @@ Namespace ViewModels
                          Dim infoWidth = If(headerSize.Width > 0, headerSize.Width, capturedWidth)
                          Dim infoHeight = If(headerSize.Height > 0, headerSize.Height, capturedHeight)
                          Dim info = BuildImageInfo(imagePath, infoWidth, infoHeight)
+                         ' In einer Immich-Sitzung sind Größe und Zeitstempel die der Temp-Kopie -
+                         ' keines davon beschreibt das Asset, das der Nutzer sieht.
+                         If _isImmichSession Then
+                             info.FileCreated = ""
+                             info.FileModified = ""
+                         End If
                          Dispatcher.UIThread.Post(Sub()
                                                        If token <> _infoPanelLoadToken Then Return
                                                        ExifInfo = info
@@ -1517,10 +1523,12 @@ Namespace ViewModels
             Try
                 Dim meta = LibraryService.Instance.GetMetaForPaths({imagePath}).Values.FirstOrDefault()
                 If meta Is Nothing Then
-                    Return New ExifData With {
+                    Dim minimal As New ExifData With {
                         .FileName = IO.Path.GetFileName(imagePath),
                         .FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant()
                     }
+                    ExifService.FillFileFacts(minimal, imagePath)
+                    Return minimal
                 End If
 
                 Dim data As New ExifData With {
@@ -1535,6 +1543,7 @@ Namespace ViewModels
                 If meta.Aperture.HasValue Then data.Aperture = "f/" & meta.Aperture.Value.ToString("0.#", Globalization.CultureInfo.InvariantCulture)
                 If meta.FocalLengthMm.HasValue Then data.FocalLength = meta.FocalLengthMm.Value.ToString("0.#", Globalization.CultureInfo.InvariantCulture) & " mm"
                 If meta.Iso.HasValue Then data.ISO = meta.Iso.Value.ToString(Globalization.CultureInfo.InvariantCulture)
+                ExifService.FillFileFacts(data, imagePath)
                 If meta.ImageWidth.GetValueOrDefault() > 0 AndAlso meta.ImageHeight.GetValueOrDefault() > 0 Then
                     Dim w = meta.ImageWidth.Value
                     Dim h = meta.ImageHeight.Value
@@ -1547,7 +1556,9 @@ Namespace ViewModels
             Catch
                 ' Auch im Fehlerfall nie Nothing (siehe Methodenkommentar - Bindings blieben sonst
                 ' auf dem Vorgängerbild stehen).
-                Return New ExifData With {.FileName = IO.Path.GetFileName(If(imagePath, ""))}
+                Return New ExifData With {
+                    .FileName = IO.Path.GetFileName(If(imagePath, ""))
+                }
             End Try
         End Function
 

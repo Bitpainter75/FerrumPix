@@ -238,6 +238,11 @@
                                         Padding="10,6"
                                         Command="{Binding SetLanguageModeCommand}"
                                         CommandParameter="Italian">Italienisch</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsLanguagePortuguese}"
+                                        Padding="10,6"
+                                        Command="{Binding SetLanguageModeCommand}"
+                                        CommandParameter="Portuguese">Portugiesisch</Button>
                             </StackPanel>
                         </Grid>
 

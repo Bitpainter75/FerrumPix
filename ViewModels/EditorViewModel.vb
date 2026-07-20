@@ -8139,6 +8139,14 @@ Namespace ViewModels
 
             If String.IsNullOrWhiteSpace(data.ColorSpace) Then data.ColorSpace = "Unbekannt"
 
+            ' Name, Größe und Datum kommen aus der Datei-IDENTITÄT, nicht aus imagePath: bei .fpx zeigt
+            ' RenderSourcePath auf das entpackte Basisbild im Temp-Ordner - das Infopanel soll aber
+            ' das Dokument nennen, das der Nutzer geöffnet hat.
+            If Not String.IsNullOrEmpty(_currentImagePath) Then
+                data.FileName = IO.Path.GetFileName(_currentImagePath)
+                ExifService.FillFileFacts(data, _currentImagePath)
+            End If
+
             ' Nebenläufig persistieren, damit das im Editor geöffnete Bild ab jetzt über EXIF
             ' durchsuchbar ist - blockiert nicht die UI.
             Dim exifForSearch = ExifService.ExtractSearchFields(data, imagePath)

@@ -59,6 +59,11 @@ Namespace Services
         Public Property FileName As String = ""
         Public Property FileType As String = ""
         Public Property FileSize As String = ""
+        ''' <summary>Erstell-/Änderungsdatum der DATEI (nicht aus EXIF), im selben Rohformat wie
+        ''' DateTaken: "yyyy:MM:dd HH:mm:ss". Roh gehalten, weil ExifData zwischengespeichert wird -
+        ''' eine hier schon fertig formatierte Zeichenkette bliebe nach einem Sprachwechsel stehen.</summary>
+        Public Property FileCreated As String = ""
+        Public Property FileModified As String = ""
         Public Property DateTaken As String = ""
         Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
@@ -145,11 +150,43 @@ Namespace Services
             End SyncLock
         End Sub
 
+        ''' <summary>Trägt Größe und Erstell-/Änderungsdatum der Datei nach - für Aufrufer, die ihre
+        ''' ExifData nicht aus der angezeigten Datei selbst gelesen haben (Katalog-Provisorium im
+        ''' Viewer, .fpx/RAW im Editor, wo der Renderpfad in den Temp-Ordner zeigt).</summary>
+        Public Shared Sub FillFileFacts(data As ExifData, imagePath As String)
+            If data Is Nothing OrElse String.IsNullOrWhiteSpace(imagePath) Then Return
+            If ImmichService.IsImmichPseudoPath(imagePath) Then Return
+            Try
+                Dim info = New System.IO.FileInfo(imagePath)
+                If Not info.Exists Then Return
+                data.FileSize = FormatFileSize(info.Length)
+                data.FileCreated = FormatFileDate(info.CreationTime)
+                data.FileModified = FormatFileDate(info.LastWriteTime)
+            Catch
+                ' Zugriffsfehler: Felder bleiben leer statt das Infopanel scheitern zu lassen.
+            End Try
+        End Sub
+
+        Private Shared Function FormatFileSize(bytes As Long) As String
+            Dim kb = bytes / 1024.0
+            Return If(kb < 1024, $"{kb:F0} KB", $"{kb / 1024:F1} MB")
+        End Function
+
+        ''' <summary>Auf Linux liefern Dateisysteme ohne Geburtszeitstempel für CreationTime die
+        ''' Unix-Epoche - so ein Scheindatum wäre schlimmer als gar keine Zeile, deshalb fällt alles
+        ''' vor 1980 raus (die Zeile blendet sich dann aus).</summary>
+        Private Shared Function FormatFileDate(value As DateTime) As String
+            If value.Year < 1980 Then Return ""
+            Return value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+        End Function
+
         Private Shared Function CloneExifData(source As ExifData) As ExifData
             Return New ExifData With {
                 .FileName = source.FileName,
                 .FileType = source.FileType,
                 .FileSize = source.FileSize,
+                .FileCreated = source.FileCreated,
+                .FileModified = source.FileModified,
                 .DateTaken = source.DateTaken,
                 .DateModifiedExif = source.DateModifiedExif,
                 .Camera = source.Camera,
@@ -181,8 +218,9 @@ Namespace Services
 
             data.FileName = System.IO.Path.GetFileName(imagePath)
             data.FileType = System.IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant()
-            Dim kb = info.Length / 1024.0
-            data.FileSize = If(kb < 1024, $"{kb:F0} KB", $"{kb / 1024:F1} MB")
+            data.FileSize = FormatFileSize(info.Length)
+            data.FileCreated = FormatFileDate(info.CreationTime)
+            data.FileModified = FormatFileDate(info.LastWriteTime)
 
             Try
                 Dim metaDirectories = ImageMetadataReader.ReadMetadata(imagePath)
@@ -386,7 +424,10 @@ Namespace Services
             Return $"{equivalent} ({LocalizationService.T("Kleinbild")}) · {actual}"
         End Function
 
-        Private Shared Function FormatExifDate(raw As String) As String
+        ''' <summary>Rohdatum ("yyyy:MM:dd HH:mm:ss") in die Anzeigeform der AKTUELLEN Sprache. Public,
+        ''' weil der ExifDateConverter das Infopanel damit versorgt - dort muss die Formatierung beim
+        ''' Rendern passieren, nicht beim Einlesen (zwischengespeicherte ExifData, Sprachwechsel).</summary>
+        Public Shared Function FormatExifDate(raw As String) As String
             Dim parsed = ParseExifDateTime(raw)
             If Not parsed.HasValue Then Return If(raw, "")
             Return parsed.Value.ToString("g", LocalizationService.EffectiveCulture)
