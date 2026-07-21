@@ -73,7 +73,15 @@ Namespace Services
             If String.IsNullOrWhiteSpace(sidecarPath) OrElse Not File.Exists(sidecarPath) Then Return Nothing
             Dim doc As XDocument
             Try
-                doc = XDocument.Parse(File.ReadAllText(sidecarPath, Text.Encoding.UTF8))
+                Dim settings As New Xml.XmlReaderSettings With {
+                    .DtdProcessing = Xml.DtdProcessing.Ignore,
+                    .XmlResolver = Nothing
+                }
+                Using stream = File.OpenRead(sidecarPath)
+                    Using reader = Xml.XmlReader.Create(stream, settings)
+                        doc = XDocument.Load(reader, LoadOptions.None)
+                    End Using
+                End Using
             Catch
                 Return Nothing
             End Try

@@ -3887,4 +3887,52 @@
   <data name="Sch_rfe_und_Weichzeichnen_zur_cksetzen_c929583d" xml:space="preserve">
     <value>Restablecer nitidez y suavizado</value>
   </data>
+  <data name="Detail_7c9a7c06" xml:space="preserve">
+    <value>Detalle</value>
+  </data>
+  <data name="Frequenz_c29a7f00" xml:space="preserve">
+    <value>Frecuencia</value>
+  </data>
+  <data name="Stil_820cfc29" xml:space="preserve">
+    <value>Estilo</value>
+  </data>
+  <data name="Farb_Priorit_t_b92d69f1" xml:space="preserve">
+    <value>Prioridad de color</value>
+  </data>
+  <data name="Lichter_Priorit_t_0a2934b9" xml:space="preserve">
+    <value>Prioridad de luces</value>
+  </data>
+  <data name="berlagerung_0bb0d92f" xml:space="preserve">
+    <value>Superposición</value>
+  </data>
+  <data name="Wirkgr_e_der_Sch_rfung_0_feine_Kanten_h_her_sch__de7a7353" xml:space="preserve">
+    <value>Escala del enfoque: 0 = bordes finos, más alto enfoca estructuras más gruesas.</value>
+  </data>
+  <data name="Hebt_die_feinen_Details_bei_der_Sch_rfung_st_rke_195d5aa8" xml:space="preserve">
+    <value>Resalta más los detalles finos al enfocar.</value>
+  </data>
+  <data name="Sch_tzt_Kanten_beim_Weichzeichnen_h_her_mehr_Det_43db4112" xml:space="preserve">
+    <value>Protege los bordes al difuminar: más alto = se conservan más detalles.</value>
+  </data>
+  <data name="Korngr_e_0_feines_Korn_h_her_gr_ber_bae6e47b" xml:space="preserve">
+    <value>Tamaño de grano: 0 = grano fino, más alto = más grueso.</value>
+  </data>
+  <data name="Mischt_eine_feine_Lage_ein_h_her_unruhigeres_Kor_d5155e92" xml:space="preserve">
+    <value>Mezcla una capa fina: más alto = grano más irregular.</value>
+  </data>
+  <data name="Wie_die_Vignette_abdunkelt_Farb_Priorit_t_h_lt_d_8eb754a8" xml:space="preserve">
+    <value>Cómo oscurece la viñeta: Prioridad de color mantiene el color, Prioridad de luces respeta las zonas claras, Superposición desatura a un degradado gris plano.</value>
+  </data>
+  <data name="Sch_rfe_zur_cksetzen_5f73cef3" xml:space="preserve">
+    <value>Restablecer enfoque</value>
+  </data>
+  <data name="Weichzeichnen_zur_cksetzen_8db0e95e" xml:space="preserve">
+    <value>Restablecer desenfoque</value>
+  </data>
+  <data name="K_rnung_zur_cksetzen_07f39e8b" xml:space="preserve">
+    <value>Restablecer grano</value>
+  </data>
+  <data name="Unregelm_igkeit_des_Korns_h_her_fleckiger_manche_d20eab69" xml:space="preserve">
+    <value>Irregularidad del grano: más alto = más irregular (unas zonas con más grano que otras).</value>
+  </data>
 </root>

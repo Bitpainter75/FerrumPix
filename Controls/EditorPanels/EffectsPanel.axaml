@@ -3,7 +3,7 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.EffectsPanel">
     <StackPanel Spacing="7">
-        <Expander Header="Vignette" IsExpanded="True">
+        <Expander Header="Vignette" icons:ExpanderState.Key="vignette">
             <Expander.HeaderTemplate>
                 <DataTemplate>
                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -80,6 +80,19 @@
                                        Value="{Binding VignetteCenterY}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding VignetteCenterY, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                    <TextBlock Text="Stil" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <ComboBox Name="VignetteStyleComboBox"
+                              Grid.Column="1"
+                              ItemsSource="{Binding VignetteStyleOptions}"
+                              SelectedItem="{Binding VignetteStyleLabel}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              Margin="6,0,0,0"
+                              HorizontalAlignment="Stretch"
+                              DropDownOpened="OnMatchWidthDropDownOpened"
+                              ToolTip.Tip="Wie die Vignette abdunkelt: Farb-Priorität hält die Farbe, Lichter-Priorität schont helle Bereiche, Überlagerung entsättigt zu einem flachen Grauverlauf." />
                 </Grid>
             </StackPanel>
         </Expander>

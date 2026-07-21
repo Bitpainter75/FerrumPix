@@ -3887,4 +3887,52 @@
   <data name="Sch_rfe_und_Weichzeichnen_zur_cksetzen_c929583d" xml:space="preserve">
     <value>Schärfe und Weichzeichnen zurücksetzen</value>
   </data>
+  <data name="Detail_7c9a7c06" xml:space="preserve">
+    <value>Detail</value>
+  </data>
+  <data name="Frequenz_c29a7f00" xml:space="preserve">
+    <value>Frequenz</value>
+  </data>
+  <data name="Stil_820cfc29" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="Farb_Priorit_t_b92d69f1" xml:space="preserve">
+    <value>Farb-Priorität</value>
+  </data>
+  <data name="Lichter_Priorit_t_0a2934b9" xml:space="preserve">
+    <value>Lichter-Priorität</value>
+  </data>
+  <data name="berlagerung_0bb0d92f" xml:space="preserve">
+    <value>Überlagerung</value>
+  </data>
+  <data name="Wirkgr_e_der_Sch_rfung_0_feine_Kanten_h_her_sch__de7a7353" xml:space="preserve">
+    <value>Wirkgröße der Schärfung: 0 = feine Kanten, höher schärft gröbere Strukturen.</value>
+  </data>
+  <data name="Hebt_die_feinen_Details_bei_der_Sch_rfung_st_rke_195d5aa8" xml:space="preserve">
+    <value>Hebt die feinen Details bei der Schärfung stärker hervor.</value>
+  </data>
+  <data name="Sch_tzt_Kanten_beim_Weichzeichnen_h_her_mehr_Det_43db4112" xml:space="preserve">
+    <value>Schützt Kanten beim Weichzeichnen: höher = mehr Details bleiben erhalten.</value>
+  </data>
+  <data name="Korngr_e_0_feines_Korn_h_her_gr_ber_bae6e47b" xml:space="preserve">
+    <value>Korngröße: 0 = feines Korn, höher = gröber.</value>
+  </data>
+  <data name="Mischt_eine_feine_Lage_ein_h_her_unruhigeres_Kor_d5155e92" xml:space="preserve">
+    <value>Mischt eine feine Lage ein: höher = unruhigeres Korn.</value>
+  </data>
+  <data name="Wie_die_Vignette_abdunkelt_Farb_Priorit_t_h_lt_d_8eb754a8" xml:space="preserve">
+    <value>Wie die Vignette abdunkelt: Farb-Priorität hält die Farbe, Lichter-Priorität schont helle Bereiche, Überlagerung entsättigt zu einem flachen Grauverlauf.</value>
+  </data>
+  <data name="Sch_rfe_zur_cksetzen_5f73cef3" xml:space="preserve">
+    <value>Schärfe zurücksetzen</value>
+  </data>
+  <data name="Weichzeichnen_zur_cksetzen_8db0e95e" xml:space="preserve">
+    <value>Weichzeichnen zurücksetzen</value>
+  </data>
+  <data name="K_rnung_zur_cksetzen_07f39e8b" xml:space="preserve">
+    <value>Körnung zurücksetzen</value>
+  </data>
+  <data name="Unregelm_igkeit_des_Korns_h_her_fleckiger_manche_d20eab69" xml:space="preserve">
+    <value>Unregelmäßigkeit des Korns: höher = fleckiger (manche Bereiche stärker gekörnt).</value>
+  </data>
 </root>

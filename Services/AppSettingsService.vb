@@ -125,6 +125,9 @@ Namespace Services
         ''' Ob das Ebenen-Panel im Editor zuletzt eingeblendet war - gemerkter Bedienzustand (wie die
         ''' Info-Leiste), kein Schalter in den Einstellungen. Standard aus: es ist ein Profi-Werkzeug.
         Public Property EditorLayersPanelExpanded As Boolean = False
+        ''' Gemerkter Auf-/Zuklapp-Zustand jeder Editor-Gruppe (Expander), Schlüssel = stabiler
+        ''' Gruppenname (siehe Controls.ExpanderState). Fehlt ein Schlüssel, gilt der XAML-Standard.
+        Public Property EditorExpanderStates As New Dictionary(Of String, Boolean)()
         ''' „Originale überschreiben" im Filter-anwenden-Dialog - bleibt über Sitzungen erhalten
         ''' (Nutzerwunsch 2026-07-17).
         Public Property BatchFilterOverwriteOriginals As Boolean = False
@@ -922,6 +925,14 @@ Namespace Services
 
         Public Shared Sub SaveEditorLayersPanelExpanded(value As Boolean)
             Update(Sub(s) s.EditorLayersPanelExpanded = value)
+        End Sub
+
+        Public Shared Sub SaveEditorExpanderState(key As String, expanded As Boolean)
+            If String.IsNullOrEmpty(key) Then Return
+            Update(Sub(s)
+                       If s.EditorExpanderStates Is Nothing Then s.EditorExpanderStates = New Dictionary(Of String, Boolean)()
+                       s.EditorExpanderStates(key) = expanded
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveEditorShowComparison(value As Boolean)

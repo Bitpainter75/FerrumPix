@@ -3,7 +3,7 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.AnnotationPropertiesPanel">
     <!-- Kopfzeile benennt das Werkzeug bzw. den Objekttyp, dessen Eigenschaften hier stehen. -->
-    <Expander Header="{Binding CurrentToolLabel}" IsExpanded="True">
+    <Expander Header="{Binding CurrentToolLabel}" icons:ExpanderState.Key="annotation-props">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">

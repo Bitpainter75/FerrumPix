@@ -97,7 +97,10 @@ Namespace ViewModels
         Private _colorGradeBlending As Double = 50
         Private _exposure As Double = 0
         Private _sharpness As Double = 0
+        Private _sharpenRadius As Double = 0
+        Private _sharpenDetail As Double = 0
         Private _noiseReduction As Double = 0
+        Private _noiseReductionDetail As Double = 0
         Private _colorNoiseReduction As Double = 0
         Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
         Private _dustScratches As Double = 0
@@ -112,7 +115,10 @@ Namespace ViewModels
         Private _vignetteFeather As Double = 70
         Private _vignetteCenterX As Double = 50
         Private _vignetteCenterY As Double = 50
+        Private _vignetteStyle As VignetteStyle = VignetteStyle.ColorPriority
         Private _grain As Double = 0
+        Private _grainSize As Double = 0
+        Private _grainFrequency As Double = 0
         Private _borderSize As Double = 0
         Private _borderColor As String = "#FFFFFFFF"
         Private _borderCornerRadius As Double = 0
@@ -2796,6 +2802,33 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property SharpenRadius As Double
+            Get
+                Return _sharpenRadius
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_sharpenRadius, Math.Max(0, Math.Min(100, value)), NameOf(SharpenRadius))
+            End Set
+        End Property
+
+        Public Property SharpenDetail As Double
+            Get
+                Return _sharpenDetail
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_sharpenDetail, Math.Max(0, Math.Min(100, value)), NameOf(SharpenDetail))
+            End Set
+        End Property
+
+        Public Property NoiseReductionDetail As Double
+            Get
+                Return _noiseReductionDetail
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_noiseReductionDetail, Math.Max(0, Math.Min(100, value)), NameOf(NoiseReductionDetail))
+            End Set
+        End Property
+
         Public ReadOnly Property NoiseReductionMethodOptions As IReadOnlyList(Of String)
             Get
                 Return New String() {"Gaussian", "Median"}
@@ -2947,12 +2980,68 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die drei Vignetten-Stile als übersetzte Anzeigenamen - Reihenfolge wie das Enum
+        ''' <see cref="Services.VignetteStyle"/>. Wie beim Rausch-Methoden-Dropdown werden schon hier
+        ''' übersetzte Strings geliefert, damit der Vergleich im Setter sprachunabhängig aufgeht.</summary>
+        Public ReadOnly Property VignetteStyleOptions As IReadOnlyList(Of String)
+            Get
+                Return New String() {LocalizationService.T("Farb-Priorität"),
+                                     LocalizationService.T("Lichter-Priorität"),
+                                     LocalizationService.T("Überlagerung")}
+            End Get
+        End Property
+
+        Public Property VignetteStyleLabel As String
+            Get
+                Select Case _vignetteStyle
+                    Case VignetteStyle.HighlightPriority
+                        Return LocalizationService.T("Lichter-Priorität")
+                    Case VignetteStyle.PaintOverlay
+                        Return LocalizationService.T("Überlagerung")
+                    Case Else
+                        Return LocalizationService.T("Farb-Priorität")
+                End Select
+            End Get
+            Set(value As String)
+                Dim style As VignetteStyle
+                If String.Equals(value, LocalizationService.T("Lichter-Priorität"), StringComparison.Ordinal) Then
+                    style = VignetteStyle.HighlightPriority
+                ElseIf String.Equals(value, LocalizationService.T("Überlagerung"), StringComparison.Ordinal) Then
+                    style = VignetteStyle.PaintOverlay
+                Else
+                    style = VignetteStyle.ColorPriority
+                End If
+                If _vignetteStyle = style Then Return
+                CaptureUndoState(NameOf(VignetteStyleLabel))
+                Me.RaiseAndSetIfChanged(_vignetteStyle, style)
+                SchedulePreviewForCurrentTarget()
+            End Set
+        End Property
+
         Public Property Grain As Double
             Get
                 Return _grain
             End Get
             Set(value As Double)
                 SetUndoableDouble(_grain, Math.Max(0, Math.Min(100, value)), NameOf(Grain))
+            End Set
+        End Property
+
+        Public Property GrainSize As Double
+            Get
+                Return _grainSize
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_grainSize, Math.Max(0, Math.Min(100, value)), NameOf(GrainSize))
+            End Set
+        End Property
+
+        Public Property GrainFrequency As Double
+            Get
+                Return _grainFrequency
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_grainFrequency, Math.Max(0, Math.Min(100, value)), NameOf(GrainFrequency))
             End Set
         End Property
 
@@ -7429,6 +7518,10 @@ Namespace ViewModels
         Public ReadOnly Property SetBrushPresetCommand As ICommand
         Public ReadOnly Property SetFilterPresetCommand As ICommand
         Public ReadOnly Property ResetSharpnessCommand As ICommand
+        Public ReadOnly Property ResetSharpenCommand As ICommand
+        Public ReadOnly Property ResetSoftenCommand As ICommand
+        Public ReadOnly Property ResetGrainCommand As ICommand
+        Public ReadOnly Property ResetDetailGroupCommand As ICommand
         Public ReadOnly Property ResetLutCommand As ICommand
         Public ReadOnly Property ResetLightroomPresetCommand As ICommand
         Public ReadOnly Property ResetFrameCommand As ICommand
@@ -7723,6 +7816,24 @@ Namespace ViewModels
                                                                PushUndo()
                                                                ResetSharpnessInternal()
                                                            End Sub)
+            ' Eigenständige Gruppen-Zurücksetzer, seit Schärfe/Weichzeichnen/Körnung je einen eigenen
+            ' Expander haben - jeder räumt NUR seine Gruppe, nicht die Nachbargruppen.
+            ResetSharpenCommand = ReactiveCommand.Create(Sub()
+                                                             PushUndo()
+                                                             ResetSharpenGroupInternal()
+                                                         End Sub)
+            ResetSoftenCommand = ReactiveCommand.Create(Sub()
+                                                            PushUndo()
+                                                            ResetSoftenGroupInternal()
+                                                        End Sub)
+            ResetGrainCommand = ReactiveCommand.Create(Sub()
+                                                           PushUndo()
+                                                           ResetGrainGroupInternal()
+                                                       End Sub)
+            ResetDetailGroupCommand = ReactiveCommand.Create(Sub()
+                                                                 PushUndo()
+                                                                 ResetDetailGroupInternal()
+                                                             End Sub)
             ResetLutCommand = ReactiveCommand.Create(Sub()
                                                          PushUndo()
                                                          ResetLutInternal()
@@ -10565,7 +10676,10 @@ Namespace ViewModels
                 .Tint = CSng(_tint),
                 .Exposure = CSng(_exposure),
                 .Sharpness = CSng(_sharpness),
+                .SharpenRadius = CSng(_sharpenRadius),
+                .SharpenDetail = CSng(_sharpenDetail),
                 .NoiseReduction = CSng(_noiseReduction),
+                .NoiseReductionDetail = CSng(_noiseReductionDetail),
                 .ColorNoiseReduction = CSng(_colorNoiseReduction),
                 .NoiseReductionMethod = _noiseReductionMethod,
                 .DustScratches = CSng(_dustScratches),
@@ -10579,7 +10693,10 @@ Namespace ViewModels
                 .VignetteFeather = CSng(_vignetteFeather),
                 .VignetteCenterX = CSng(_vignetteCenterX),
                 .VignetteCenterY = CSng(_vignetteCenterY),
+                .VignetteStyle = _vignetteStyle,
                 .Grain = CSng(_grain),
+                .GrainSize = CSng(_grainSize),
+                .GrainFrequency = CSng(_grainFrequency),
                 .BorderSize = CSng(_borderSize),
                 .BorderColor = _borderColor,
                 .BorderCornerRadius = CSng(_borderCornerRadius),
@@ -10840,10 +10957,12 @@ Namespace ViewModels
                      NameOf(AquaHue), NameOf(AquaSaturation), NameOf(BlueHue), NameOf(BlueSaturation),
                      NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(MagentaHue), NameOf(MagentaSaturation)
                     Return "Farbmischer"
-                Case NameOf(Sharpness), NameOf(NoiseReduction), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
+                Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(NoiseReduction),
+                     NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
                     Return "Details"
                 Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
-                     NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(Grain), NameOf(BorderSize), NameOf(BorderColor)
+                     NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(VignetteStyleLabel),
+                     NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency), NameOf(BorderSize), NameOf(BorderColor)
                     Return "Effekte"
                 Case NameOf(FilterPreset)
                     Return "Filter"
@@ -10942,7 +11061,10 @@ Namespace ViewModels
             _tint = adj.Tint
             _exposure = adj.Exposure
             _sharpness = adj.Sharpness
+            _sharpenRadius = adj.SharpenRadius
+            _sharpenDetail = adj.SharpenDetail
             _noiseReduction = adj.NoiseReduction
+            _noiseReductionDetail = adj.NoiseReductionDetail
             _colorNoiseReduction = adj.ColorNoiseReduction
             _noiseReductionMethod = adj.NoiseReductionMethod
             _dustScratches = adj.DustScratches
@@ -10956,7 +11078,10 @@ Namespace ViewModels
             _vignetteFeather = adj.VignetteFeather
             _vignetteCenterX = adj.VignetteCenterX
             _vignetteCenterY = adj.VignetteCenterY
+            _vignetteStyle = adj.VignetteStyle
             _grain = adj.Grain
+            _grainSize = adj.GrainSize
+            _grainFrequency = adj.GrainFrequency
             _borderSize = adj.BorderSize
             _borderColor = If(String.IsNullOrWhiteSpace(adj.BorderColor), "#FFFFFFFF", adj.BorderColor)
             _borderCornerRadius = adj.BorderCornerRadius
@@ -11240,11 +11365,17 @@ Namespace ViewModels
             _colorGradeBlending = 50
             _exposure = 0
             _sharpness = 0
+            _sharpenRadius = 0
+            _sharpenDetail = 0
             _noiseReduction = 0
+            _noiseReductionDetail = 0
             _colorNoiseReduction = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             _vignette = 0
+            _vignetteStyle = VignetteStyle.ColorPriority
             _grain = 0
+            _grainSize = 0
+            _grainFrequency = 0
             _borderSize = 0
             _borderColor = "#FFFFFFFF"
             _clarity = 0
@@ -13673,7 +13804,10 @@ Namespace ViewModels
         Private Sub ResetDetailInternal()
             _clarity = 0
             _sharpness = 0
+            _sharpenRadius = 0
+            _sharpenDetail = 0
             _noiseReduction = 0
+            _noiseReductionDetail = 0
             _colorNoiseReduction = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             _dustScratches = 0
@@ -13693,7 +13827,10 @@ Namespace ViewModels
             _vignetteFeather = 70
             _vignetteCenterX = 50
             _vignetteCenterY = 50
+            _vignetteStyle = VignetteStyle.ColorPriority
             _grain = 0
+            _grainSize = 0
+            _grainFrequency = 0
             _borderSize = 0
             _borderCornerRadius = 0
             _borderEffect = "Einfach"
@@ -13721,13 +13858,78 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Nur die Schärfe-Gruppe (Schärfe, Radius, Detail).</summary>
+        Private Sub ResetSharpenGroupInternal()
+            _sharpness = 0
+            _sharpenRadius = 0
+            _sharpenDetail = 0
+            Me.RaisePropertyChanged(NameOf(Sharpness))
+            Me.RaisePropertyChanged(NameOf(SharpenRadius))
+            Me.RaisePropertyChanged(NameOf(SharpenDetail))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Nur die Weichzeichnen-Gruppe (Weichzeichnen, Detail, Methode).</summary>
+        Private Sub ResetSoftenGroupInternal()
+            _noiseReduction = 0
+            _noiseReductionDetail = 0
+            _noiseReductionMethod = NoiseReductionMethod.Gaussian
+            Me.RaisePropertyChanged(NameOf(NoiseReduction))
+            Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
+            Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
+            Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Nur die Körnung-Gruppe (Körnung, Größe, Frequenz).</summary>
+        Private Sub ResetGrainGroupInternal()
+            _grain = 0
+            _grainSize = 0
+            _grainFrequency = 0
+            Me.RaisePropertyChanged(NameOf(Grain))
+            Me.RaisePropertyChanged(NameOf(GrainSize))
+            Me.RaisePropertyChanged(NameOf(GrainFrequency))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Nur die verbleibende Details-Gruppe (Klarheit, Staub/Kratzer, Dunst, Rauschen,
+        ''' Farbrauschen, Struktur, Glühen) - Schärfe/Weichzeichnen/Körnung haben eigene Zurücksetzer.
+        ''' Der breite <see cref="ResetDetailInternal"/> bleibt für das Ersetzen des ganzen Looks.</summary>
+        Private Sub ResetDetailGroupInternal()
+            _clarity = 0
+            _dustScratches = 0
+            _haze = 0
+            _addNoise = 0
+            _colorNoiseReduction = 0
+            _structure = 0
+            _glow = 0
+            Me.RaisePropertyChanged(NameOf(Clarity))
+            Me.RaisePropertyChanged(NameOf(DustScratches))
+            Me.RaisePropertyChanged(NameOf(Haze))
+            Me.RaisePropertyChanged(NameOf(AddNoise))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
+            Me.RaisePropertyChanged(NameOf([Structure]))
+            Me.RaisePropertyChanged(NameOf(Glow))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
         ''' <summary>Setzt nur Schärfe und Weichzeichnen zurück - die drei Regler dieser Gruppe.</summary>
         Private Sub ResetSharpnessInternal()
             _sharpness = 0
+            _sharpenRadius = 0
+            _sharpenDetail = 0
             _noiseReduction = 0
+            _noiseReductionDetail = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             Me.RaisePropertyChanged(NameOf(Sharpness))
+            Me.RaisePropertyChanged(NameOf(SharpenRadius))
+            Me.RaisePropertyChanged(NameOf(SharpenDetail))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
+            Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseResetButtonStateChanged()
@@ -13795,7 +13997,10 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(VignetteFeather))
             Me.RaisePropertyChanged(NameOf(VignetteCenterX))
             Me.RaisePropertyChanged(NameOf(VignetteCenterY))
+            Me.RaisePropertyChanged(NameOf(VignetteStyleLabel))
             Me.RaisePropertyChanged(NameOf(Grain))
+            Me.RaisePropertyChanged(NameOf(GrainSize))
+            Me.RaisePropertyChanged(NameOf(GrainFrequency))
             Me.RaisePropertyChanged(NameOf(BorderSize))
             Me.RaisePropertyChanged(NameOf(BorderCornerRadius))
             Me.RaisePropertyChanged(NameOf(BorderEffect))
@@ -13924,7 +14129,10 @@ Namespace ViewModels
         Private Sub RaiseDetailPropertiesChanged()
             Me.RaisePropertyChanged(NameOf(Clarity))
             Me.RaisePropertyChanged(NameOf(Sharpness))
+            Me.RaisePropertyChanged(NameOf(SharpenRadius))
+            Me.RaisePropertyChanged(NameOf(SharpenDetail))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
+            Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             Me.RaisePropertyChanged(NameOf(DustScratches))
@@ -14187,12 +14395,20 @@ Namespace ViewModels
             Vibrance = look.Vibrance
             Saturation = look.Saturation
             Sharpness = look.Sharpness
+            SharpenRadius = look.SharpenRadius
+            SharpenDetail = look.SharpenDetail
             NoiseReduction = look.NoiseReduction
+            NoiseReductionDetail = look.NoiseReductionDetail
             ColorNoiseReduction = look.ColorNoiseReduction
             Grain = look.Grain
+            GrainSize = look.GrainSize
+            GrainFrequency = look.GrainFrequency
             Vignette = look.Vignette
             VignetteTransition = look.VignetteTransition
             VignetteFeather = look.VignetteFeather
+            VignetteRoundness = look.VignetteRoundness
+            _vignetteStyle = look.VignetteStyle
+            Me.RaisePropertyChanged(NameOf(VignetteStyleLabel))
             Temperature = look.Temperature
             Tint = look.Tint
 

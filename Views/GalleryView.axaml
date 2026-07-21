@@ -1865,6 +1865,9 @@
                                     <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnContextSetColorLabel" ToolTip.Tip="Grün">
                                         <Ellipse Width="16" Height="16" Fill="#22C55E"/>
                                     </Button>
+                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#FACC15" Click="OnContextSetColorLabel" ToolTip.Tip="Gelb">
+                                        <Ellipse Width="16" Height="16" Fill="#FACC15"/>
+                                    </Button>
                                     <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="" Click="OnContextSetColorLabel" ToolTip.Tip="Kein Etikett">
                                         <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                    Foreground="{DynamicResource FP.Text.Secondary}"/>

@@ -4,7 +4,7 @@
              x:Class="FerrumPix.Controls.EditorPanels.ResizePanel">
     <StackPanel Spacing="7">
         <Border Classes="adjustment-group">
-            <Expander Header="Bildgröße" IsExpanded="True">
+            <Expander Header="Bildgröße" icons:ExpanderState.Key="resize-size">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -147,7 +147,7 @@
         </Border>
 
         <Border Classes="adjustment-group">
-            <Expander Header="Leinwand" IsExpanded="True">
+            <Expander Header="Leinwand" icons:ExpanderState.Key="resize-canvas">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">

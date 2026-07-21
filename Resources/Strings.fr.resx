@@ -3887,4 +3887,52 @@
   <data name="Sch_rfe_und_Weichzeichnen_zur_cksetzen_c929583d" xml:space="preserve">
     <value>Réinitialiser la netteté et le flou</value>
   </data>
+  <data name="Detail_7c9a7c06" xml:space="preserve">
+    <value>Détail</value>
+  </data>
+  <data name="Frequenz_c29a7f00" xml:space="preserve">
+    <value>Fréquence</value>
+  </data>
+  <data name="Stil_820cfc29" xml:space="preserve">
+    <value>Style</value>
+  </data>
+  <data name="Farb_Priorit_t_b92d69f1" xml:space="preserve">
+    <value>Priorité couleur</value>
+  </data>
+  <data name="Lichter_Priorit_t_0a2934b9" xml:space="preserve">
+    <value>Priorité hautes lumières</value>
+  </data>
+  <data name="berlagerung_0bb0d92f" xml:space="preserve">
+    <value>Superposition</value>
+  </data>
+  <data name="Wirkgr_e_der_Sch_rfung_0_feine_Kanten_h_her_sch__de7a7353" xml:space="preserve">
+    <value>Portée de la netteté : 0 = bords fins, plus haut accentue les structures plus grossières.</value>
+  </data>
+  <data name="Hebt_die_feinen_Details_bei_der_Sch_rfung_st_rke_195d5aa8" xml:space="preserve">
+    <value>Accentue davantage les détails fins lors de la netteté.</value>
+  </data>
+  <data name="Sch_tzt_Kanten_beim_Weichzeichnen_h_her_mehr_Det_43db4112" xml:space="preserve">
+    <value>Protège les contours lors du flou : plus haut = plus de détails conservés.</value>
+  </data>
+  <data name="Korngr_e_0_feines_Korn_h_her_gr_ber_bae6e47b" xml:space="preserve">
+    <value>Taille du grain : 0 = grain fin, plus haut = plus grossier.</value>
+  </data>
+  <data name="Mischt_eine_feine_Lage_ein_h_her_unruhigeres_Kor_d5155e92" xml:space="preserve">
+    <value>Ajoute une couche fine : plus haut = grain plus irrégulier.</value>
+  </data>
+  <data name="Wie_die_Vignette_abdunkelt_Farb_Priorit_t_h_lt_d_8eb754a8" xml:space="preserve">
+    <value>Comment le vignettage assombrit : Priorité couleur conserve la couleur, Priorité hautes lumières épargne les zones claires, Superposition désature vers un dégradé gris plat.</value>
+  </data>
+  <data name="Sch_rfe_zur_cksetzen_5f73cef3" xml:space="preserve">
+    <value>Réinitialiser la netteté</value>
+  </data>
+  <data name="Weichzeichnen_zur_cksetzen_8db0e95e" xml:space="preserve">
+    <value>Réinitialiser le flou</value>
+  </data>
+  <data name="K_rnung_zur_cksetzen_07f39e8b" xml:space="preserve">
+    <value>Réinitialiser le grain</value>
+  </data>
+  <data name="Unregelm_igkeit_des_Korns_h_her_fleckiger_manche_d20eab69" xml:space="preserve">
+    <value>Irrégularité du grain : plus haut = plus inégal (certaines zones plus granuleuses).</value>
+  </data>
 </root>

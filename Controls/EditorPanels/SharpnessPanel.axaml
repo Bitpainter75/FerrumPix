@@ -2,60 +2,121 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.SharpnessPanel">
-    <Expander Header="Schärfe und Weichzeichnen" IsExpanded="True">
-        <Expander.HeaderTemplate>
-            <DataTemplate>
-                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
-                            Width="14" Height="14" />
-                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                    </StackPanel>
-                    <Button Grid.Column="1"
-                            Classes="icon-btn group-reset"
-                            Width="28"
-                            Height="28"
-                            Padding="0"
-                            Command="{Binding DataContext.ResetSharpnessCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            ToolTip.Tip="Schärfe und Weichzeichnen zurücksetzen">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                            Width="14" Height="14" />
-                    </Button>
-                </Grid>
-            </DataTemplate>
-        </Expander.HeaderTemplate>
-        <StackPanel Spacing="2" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Schärfe" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding Sharpness}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding Sharpness, Mode=TwoWay}" Minimum="0" Maximum="100" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Weichzeichnen" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding NoiseReduction}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding NoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
-                <TextBlock Text="Methode" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <ComboBox Name="NoiseReductionMethodComboBox"
-                          Grid.Column="1"
-                          ItemsSource="{Binding NoiseReductionMethodOptions}"
-                          SelectedItem="{Binding NoiseReductionMethodLabel}"
-                          FontSize="{DynamicResource FP.Font.Small}"
-                          Margin="6,0,0,0"
-                          HorizontalAlignment="Stretch"
-                          DropDownOpened="OnMatchWidthDropDownOpened"
-                          ToolTip.Tip="Gaussian: gleichmäßiges Weichzeichnen. Median: kantenerhaltend, echte Rauschunterdrückung." />
-            </Grid>
-        </StackPanel>
-    </Expander>
+    <StackPanel Spacing="7">
+        <Border Classes="adjustment-group">
+            <Expander Header="Schärfe" icons:ExpanderState.Key="sharpen">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Command="{Binding DataContext.ResetSharpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Schärfe zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Schärfe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding Sharpness}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding Sharpness, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Wirkgröße der Schärfung: 0 = feine Kanten, höher schärft gröbere Strukturen." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding SharpenRadius}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding SharpenRadius, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Detail" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Hebt die feinen Details bei der Schärfung stärker hervor." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding SharpenDetail}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding SharpenDetail, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+        <Border Classes="adjustment-group">
+            <Expander Header="Weichzeichnen" icons:ExpanderState.Key="soften">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Command="{Binding DataContext.ResetSoftenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Weichzeichnen zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Weichzeichnen" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding NoiseReduction}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding NoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Detail" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Schützt Kanten beim Weichzeichnen: höher = mehr Details bleiben erhalten." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding NoiseReductionDetail}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding NoiseReductionDetail, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                        <TextBlock Text="Methode" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <ComboBox Name="NoiseReductionMethodComboBox"
+                                  Grid.Column="1"
+                                  ItemsSource="{Binding NoiseReductionMethodOptions}"
+                                  SelectedItem="{Binding NoiseReductionMethodLabel}"
+                                  FontSize="{DynamicResource FP.Font.Small}"
+                                  Margin="6,0,0,0"
+                                  HorizontalAlignment="Stretch"
+                                  DropDownOpened="OnMatchWidthDropDownOpened"
+                                  ToolTip.Tip="Gaussian: gleichmäßiges Weichzeichnen. Median: kantenerhaltend, echte Rauschunterdrückung." />
+                    </Grid>
+                </StackPanel>
+            </Expander>
+        </Border>
+    </StackPanel>
 </UserControl>

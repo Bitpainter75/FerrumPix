@@ -251,7 +251,8 @@ Namespace Services
                         Return New MemoryStream(payload)
                     Case 2 ' LIBRAW_IMAGE_BITMAP: rohe RGB-Pixel -> als PNG herausgeben
                         If colors <> 3 OrElse bits <> 8 Then Return Nothing
-                        If width <= 0 OrElse height <= 0 OrElse dataSize < width * height * 3 Then Return Nothing
+                        Dim pixelCount = CheckedPixelCount(width, height)
+                        If pixelCount <= 0 OrElse dataSize < pixelCount * 3L Then Return Nothing
                         Return EncodeRgbToPng(payload, width, height)
                     Case Else
                         ' JPEG-XL/H265-Vorschauen (neuere Canon) kann SkiaSharp nicht dekodieren -
@@ -268,9 +269,11 @@ Namespace Services
         End Function
 
         Private Shared Function EncodeRgbToPng(rgb As Byte(), width As Integer, height As Integer) As MemoryStream
+            Dim pixelCount = CheckedPixelCount(width, height)
+            If pixelCount <= 0 OrElse pixelCount > Integer.MaxValue \ 4 Then Return Nothing
             Using bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
-                Dim pixels(width * height * 4 - 1) As Byte
-                For i = 0 To width * height - 1
+                Dim pixels(CInt(pixelCount * 4L - 1)) As Byte
+                For i = 0 To CInt(pixelCount - 1)
                     pixels(i * 4) = rgb(i * 3 + 2)      ' B
                     pixels(i * 4 + 1) = rgb(i * 3 + 1)  ' G
                     pixels(i * 4 + 2) = rgb(i * 3)      ' R
@@ -416,15 +419,20 @@ Namespace Services
                 Dim bits = CInt(CUShort(Marshal.ReadInt16(image, 10)))
                 Dim dataSize = Marshal.ReadInt32(image, 12)
                 If imageType <> 2 OrElse colors <> 3 OrElse bits <> 8 Then Return Nothing ' 2 = Bitmap
-                If width <= 0 OrElse height <= 0 OrElse dataSize < width * height * 3 Then Return Nothing
+                Dim pixelCount = CheckedPixelCount(width, height)
+                If pixelCount <= 0 OrElse dataSize < pixelCount * 3L Then Return Nothing
 
                 Dim rgb(dataSize - 1) As Byte
                 Marshal.Copy(image + 16, rgb, 0, dataSize)
 
                 Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
                 Try
-                    Dim pixels(width * height * 4 - 1) As Byte
-                    For i = 0 To width * height - 1
+                    If pixelCount > Integer.MaxValue \ 4 Then
+                        bitmap.Dispose()
+                        Return Nothing
+                    End If
+                    Dim pixels(CInt(pixelCount * 4L - 1)) As Byte
+                    For i = 0 To CInt(pixelCount - 1)
                         pixels(i * 4) = rgb(i * 3 + 2)      ' B
                         pixels(i * 4 + 1) = rgb(i * 3 + 1)  ' G
                         pixels(i * 4 + 2) = rgb(i * 3)      ' R
@@ -443,6 +451,13 @@ Namespace Services
                 _close(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
+        End Function
+
+        Private Shared Function CheckedPixelCount(width As Integer, height As Integer) As Long
+            If width <= 0 OrElse height <= 0 Then Return 0
+            Dim pixelCount = CLng(width) * CLng(height)
+            If pixelCount > Integer.MaxValue Then Return 0
+            Return pixelCount
         End Function
 
         Private Shared Function StringToUtf8(value As String) As IntPtr

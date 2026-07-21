@@ -838,16 +838,13 @@
                                 <panels:ColorPanel />
                             </Border>
 
-                            <!-- DETAILS (ausklappbar) -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowDetailAdjustments}">
-                                <panels:DetailsPanel />
-                            </Border>
+                            <!-- DETAILS + KÖRNUNG (je eigene Karte im Panel, wie ResizePanel) -->
+                            <panels:DetailsPanel Margin="0,7,0,0"
+                                                 IsVisible="{Binding ShowDetailAdjustments}" />
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowDetailAdjustments}">
-                                <panels:SharpnessPanel />
-                            </Border>
+                            <!-- SCHÄRFE + WEICHZEICHNEN (je eigene Karte im Panel) -->
+                            <panels:SharpnessPanel Margin="0,7,0,0"
+                                                   IsVisible="{Binding ShowDetailAdjustments}" />
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowDetailAdjustments}">

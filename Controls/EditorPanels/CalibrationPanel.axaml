@@ -5,7 +5,7 @@
     <!-- Kamerakalibrierung wie in Lightroom: dreht und sättigt die drei PRIMÄRFARBEN und wirkt
          damit vor Weißabgleich und Sättigung. Sie macht einen guten Teil des charakteristischen
          Farbstichs vieler Presets aus - ohne sie kam ein importiertes Preset unvollständig an. -->
-    <Expander Header="Kalibrierung" IsExpanded="True">
+    <Expander Header="Kalibrierung" icons:ExpanderState.Key="calibration">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">

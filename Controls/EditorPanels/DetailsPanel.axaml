@@ -2,103 +2,156 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.DetailsPanel">
-        <Expander Header="Details" IsExpanded="True">
-            <Expander.HeaderTemplate>
-                <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="8"
-                                    VerticalAlignment="Center">
-                            <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
-                                Width="14" Height="14" />
-                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                        </StackPanel>
-                        <Button Grid.Column="1"
-                                Classes="icon-btn group-reset"
-                                Width="28"
-                                Height="28"
-                                Padding="0"
-                                Command="{Binding DataContext.ResetDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                ToolTip.Tip="Details zurücksetzen: Klarheit, Schärfe, Weichzeichnen, Körnung und Methode">
-                            <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                Width="14" Height="14" />
-                        </Button>
+    <StackPanel Spacing="7">
+        <Border Classes="adjustment-group">
+            <Expander Header="Details" icons:ExpanderState.Key="details">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                        VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Command="{Binding DataContext.ResetDetailGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Details zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Klarheit" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           Value="{Binding Clarity}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding Clarity, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                     </Grid>
-                </DataTemplate>
-            </Expander.HeaderTemplate>
-            <StackPanel Spacing="2" Margin="0,8,0,0">
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Klarheit" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       Value="{Binding Clarity}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Clarity, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Körnung" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding Grain}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Grain, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Staub/Kratzer" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                               ToolTip.Tip="Positiv fügt Staubkörner und Kratzer hinzu (Film-Look), negativ entfernt Störungen kantenerhaltend." />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       Value="{Binding DustScratches}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding DustScratches, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Dunst" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       Value="{Binding Haze}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Haze, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Rauschen" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
-                               ToolTip.Tip="Positiv fügt Rauschen hinzu, negativ reduziert es (gleichmäßiges Weichzeichnen)." />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       DefaultValue="0"
-                                       Value="{Binding AddNoise}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding AddNoise, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-                <!-- Direkt unter "Rauschen": alles mit Rauschen im Namen an einem Ort
-                     (Nutzerentscheidung 2026-07-19). -->
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Farbrauschen" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                               ToolTip.Tip="Glättet nur die Farbanteile (Chroma), die Helligkeit und damit Details bleiben erhalten." />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="0"
-                                       Value="{Binding ColorNoiseReduction}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding ColorNoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Struktur" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       Value="{Binding Structure}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Structure, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Glühen" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       Value="{Binding Glow}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Glow, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-            </StackPanel>
-        </Expander>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Staub/Kratzer" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                                   ToolTip.Tip="Positiv fügt Staubkörner und Kratzer hinzu (Film-Look), negativ entfernt Störungen kantenerhaltend." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           Value="{Binding DustScratches}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding DustScratches, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Dunst" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           Value="{Binding Haze}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding Haze, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Rauschen" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Positiv fügt Rauschen hinzu, negativ reduziert es (gleichmäßiges Weichzeichnen)." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           DefaultValue="0"
+                                           Value="{Binding AddNoise}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding AddNoise, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                    <!-- Direkt unter "Rauschen": alles mit Rauschen im Namen an einem Ort
+                         (Nutzerentscheidung 2026-07-19). -->
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Farbrauschen" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                                   ToolTip.Tip="Glättet nur die Farbanteile (Chroma), die Helligkeit und damit Details bleiben erhalten." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="0"
+                                           Value="{Binding ColorNoiseReduction}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding ColorNoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Struktur" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           Value="{Binding Structure}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding Structure, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Glühen" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           Value="{Binding Glow}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding Glow, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+        <Border Classes="adjustment-group">
+            <Expander Header="Körnung" icons:ExpanderState.Key="grain">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                        VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Command="{Binding DataContext.ResetGrainCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Körnung zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Körnung" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding Grain}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding Grain, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Korngröße: 0 = feines Korn, höher = gröber." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding GrainSize}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding GrainSize, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Frequenz" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Unregelmäßigkeit des Korns: höher = fleckiger (manche Bereiche stärker gekörnt)." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding GrainFrequency}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding GrainFrequency, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                </StackPanel>
+            </Expander>
+        </Border>
+    </StackPanel>
 </UserControl>

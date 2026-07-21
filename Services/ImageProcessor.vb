@@ -27,6 +27,16 @@ Namespace Services
         Median
     End Enum
 
+    ''' <summary>Wie eine dunkelnde Vignette auf die Pixel wirkt (angelehnt an Adobes
+    ''' PostCropVignetteStyle). ColorPriority = 0 ist bewusst der erste Wert: es ist das bisherige
+    ''' Verhalten (multiplikatives Abdunkeln, Farbton bleibt), damit ein fehlendes Feld in alten
+    ''' .fpx-Projekten und der Enum-Standard exakt das ergeben, was vorher gerechnet wurde.</summary>
+    Public Enum VignetteStyle
+        ColorPriority
+        HighlightPriority
+        PaintOverlay
+    End Enum
+
     Public Structure StrokePoint
         Public ReadOnly X As Single
         Public ReadOnly Y As Single
@@ -981,7 +991,18 @@ Namespace Services
         Public Property Temperature As Single = 0
         Public Property Tint As Single = 0
         Public Property Sharpness As Single = 0
+        ''' <summary>Radius der Unschärfemaske, 0-100. 0 = die bisherige feste 3×3-Maske (Radius ~1);
+        ''' höher = größerer Wirkradius, schärft gröbere Strukturen. Bei 0 UND SharpenDetail 0 rechnet
+        ''' ApplySharpness bitgenau wie zuvor.</summary>
+        Public Property SharpenRadius As Single = 0
+        ''' <summary>Detailanhebung der Unschärfemaske, 0-100. 0 = neutral; höher = die feinen
+        ''' Hochfrequenzanteile werden stärker herausgearbeitet.</summary>
+        Public Property SharpenDetail As Single = 0
         Public Property NoiseReduction As Single = 0
+        ''' <summary>Kantenerhalt der (gaußschen) Rauschreduzierung, 0-100. 0 = reines Weichzeichnen wie
+        ''' bisher; höher = an kontrastreichen Kanten wird das Original zurückgemischt, Details bleiben
+        ''' stehen. Wirkt nur bei aktiver NoiseReduction.</summary>
+        Public Property NoiseReductionDetail As Single = 0
         Public Property NoiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
         ''' Farb-Rauschreduzierung 0-100: glaettet NUR die Farbanteile (Chroma), die Helligkeit
         ''' bleibt unangetastet - Details bleiben stehen, Farbflecken verschwinden. Gerade bei der
@@ -1015,7 +1036,17 @@ Namespace Services
         Public Property VignetteFeather As Single = 70
         Public Property VignetteCenterX As Single = 50
         Public Property VignetteCenterY As Single = 50
+        ''' <summary>Stil, mit dem eine dunkelnde Vignette wirkt. Standard = ColorPriority = bisheriges
+        ''' Verhalten (siehe <see cref="Services.VignetteStyle"/>).</summary>
+        Public Property VignetteStyle As VignetteStyle = VignetteStyle.ColorPriority
         Public Property Grain As Single = 0
+        ''' <summary>Körnungsgröße, 0-100. 0 = feinstes Korn (1 px, bisheriges Verhalten); höher =
+        ''' gröberes Korn (das Rauschen wird zellenweise über größere Blöcke konstant gehalten).
+        ''' Bei 0 UND GrainFrequency 0 rechnet ApplyGrain bitgenau wie zuvor.</summary>
+        Public Property GrainSize As Single = 0
+        ''' <summary>Körnungsfrequenz/Unregelmäßigkeit, 0-100. 0 = gleichmäßiges Korn; höher = eine
+        ''' feine zweite Lage wird eingemischt, das Korn wirkt unruhiger.</summary>
+        Public Property GrainFrequency As Single = 0
         Public Property BorderSize As Single = 0
         Public Property BorderColor As String = "#FFFFFFFF"
         Public Property BorderCornerRadius As Single = 0
@@ -2471,7 +2502,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                 If adj.NoiseReductionMethod = NoiseReductionMethod.Median Then
                     processed = ReplaceBitmap(processed, ApplyMedianBlur(processed, adj.NoiseReduction / 100.0F))
                 Else
-                    processed = ReplaceBitmap(processed, ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F))
+                    processed = ReplaceBitmap(processed, ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
                 End If
             End If
             If adj.ColorNoiseReduction > 0 Then
@@ -2485,15 +2516,15 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             End If
 
             If adj.Sharpness > 0 Then
-                processed = ReplaceBitmap(processed, ApplySharpness(processed, adj.Sharpness / 100.0F))
+                processed = ReplaceBitmap(processed, ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F))
             End If
 
             If adj.Vignette <> 0 Then
-                processed = ReplaceBitmap(processed, ApplyVignette(processed, adj.Vignette / 100.0F, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY))
+                processed = ReplaceBitmap(processed, ApplyVignette(processed, adj.Vignette / 100.0F, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle))
             End If
 
             If adj.Grain > 0 Then
-                processed = ReplaceBitmap(processed, ApplyGrain(processed, adj.Grain / 100.0F))
+                processed = ReplaceBitmap(processed, ApplyGrain(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F))
             End If
             If adj.AddNoise > 0 Then
                 processed = ReplaceBitmap(processed, ApplyAddNoise(processed, adj.AddNoise / 100.0F))
@@ -7122,7 +7153,64 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         '''
         ''' Randbehandlung wie zuvor SKShaderTileMode.Clamp: ausserhalb liegende Nachbarn werden auf
         ''' den Rand geklemmt. Alpha bleibt unveraendert (entsprach convolveAlpha:=False).</summary>
-        Private Shared Function ApplySharpness(source As SKBitmap, amount As Single) As SKBitmap
+        ''' <summary>Schärfen. Ohne Radius/Detail (beide 0) die bisherige feste 3×3-Maske, bitgenau
+        ''' unverändert; sonst eine echte Unschärfemaske mit variablem Radius und Detailanhebung.</summary>
+        Private Shared Function ApplySharpness(source As SKBitmap, amount As Single, radiusAmount As Single, detailAmount As Single) As SKBitmap
+            If radiusAmount <= 0 AndAlso detailAmount <= 0 Then Return ApplySharpness3x3(source, amount)
+            Return ApplyUnsharpMask(source, amount, radiusAmount, detailAmount)
+        End Function
+
+        ''' <summary>Unschärfemaske: Bild − Gaußunschärfe ergibt die Hochfrequenzanteile, die verstärkt
+        ''' aufaddiert werden. Radius steuert das Gauß-Sigma (Wirkgröße), Detail die Verstärkung.</summary>
+        Private Shared Function ApplyUnsharpMask(source As SKBitmap, amount As Single, radiusAmount As Single, detailAmount As Single) As SKBitmap
+            Dim sigma = 0.8F + Clamp(radiusAmount, 0, 1) * 2.7F
+            Dim gain = amount * (1.0F + Clamp(detailAmount, 0, 1) * 1.5F)
+
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim blurred = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(blurred)
+                Using filter = SKImageFilter.CreateBlur(sigma, sigma)
+                    Using paint = New SKPaint With {.ImageFilter = filter}
+                        canvas.DrawBitmap(source, 0, 0, paint)
+                    End Using
+                End Using
+            End Using
+
+            Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim bStride, bri, bgi, bbi, bai As Integer
+            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) OrElse
+               Not TryBorrowRgbaLikeBuffer(blurred, blurBuf, bStride, bri, bgi, bbi, bai) Then
+                blurred.Dispose()
+                Return result
+            End If
+            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            Dim w = source.Width, h = source.Height
+
+            ForEachRow(w, h,
+                Sub(y)
+                    Dim rowOffset = y * stride
+                    Dim bRow = y * bStride
+                    For x = 0 To w - 1
+                        Dim o = rowOffset + x * 4
+                        Dim bo = bRow + x * 4
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                        Dim lr As Integer, lg As Integer, lb As Integer, la As Integer
+                        ReadUnpremultiplied(blurBuf, bo, bri, bgi, bbi, bai, lr, lg, lb, la)
+                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                            ClampToByte(cr + gain * (cr - lr)),
+                            ClampToByte(cg + gain * (cg - lg)),
+                            ClampToByte(cb + gain * (cb - lb)), a)
+                    Next
+                End Sub)
+
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            blurred.Dispose()
+            Return result
+        End Function
+
+        Private Shared Function ApplySharpness3x3(source As SKBitmap, amount As Single) As SKBitmap
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Dim srcBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
@@ -8370,16 +8458,57 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
-        Private Shared Function ApplyNoiseReduction(source As SKBitmap, amount As Single) As SKBitmap
+        Private Shared Function ApplyNoiseReduction(source As SKBitmap, amount As Single, Optional detail As Single = 0) As SKBitmap
             Dim sigma = 0.25F + Clamp(amount, 0, 1) * 2.2F
             Dim filter = SKImageFilter.CreateBlur(sigma, sigma)
             Dim paint = New SKPaint With {.ImageFilter = filter}
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using canvas = New SKCanvas(result)
+            Dim blurred = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(blurred)
                 canvas.DrawBitmap(source, 0, 0, paint)
             End Using
             filter.Dispose()
             paint.Dispose()
+
+            ' Detail 0 = reines Weichzeichnen wie bisher (bitgenau der frühere Rückgabewert).
+            Dim d = Clamp(detail, 0, 1)
+            If d <= 0 Then Return blurred
+
+            ' Kantenerhalt: wo Original und Weichzeichnung stark abweichen (= eine Kante), das Original
+            ' anteilig zurückmischen. Flache, verrauschte Flächen bleiben geglättet.
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim bStride, bri, bgi, bbi, bai As Integer
+            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) OrElse
+               Not TryBorrowRgbaLikeBuffer(blurred, blurBuf, bStride, bri, bgi, bbi, bai) Then
+                blurred.Dispose()
+                Return result
+            End If
+            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            Dim w = source.Width, h = source.Height
+
+            ForEachRow(w, h,
+                Sub(y)
+                    Dim rowOffset = y * stride
+                    Dim bRow = y * bStride
+                    For x = 0 To w - 1
+                        Dim o = rowOffset + x * 4
+                        Dim bo = bRow + x * 4
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                        Dim lr As Integer, lg As Integer, lb As Integer, la As Integer
+                        ReadUnpremultiplied(blurBuf, bo, bri, bgi, bbi, bai, lr, lg, lb, la)
+                        Dim diff = Math.Abs(cr - lr) + Math.Abs(cg - lg) + Math.Abs(cb - lb)
+                        Dim mask = Clamp(diff / 48.0F, 0, 1) * d
+                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                            ClampToByte(lr + (cr - lr) * mask),
+                            ClampToByte(lg + (cg - lg) * mask),
+                            ClampToByte(lb + (cb - lb) * mask), a)
+                    Next
+                End Sub)
+
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            blurred.Dispose()
             Return result
         End Function
 
@@ -9259,7 +9388,36 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
 
 
-        Private Shared Function ApplyVignette(source As SKBitmap, amount As Single, transition As Single, roundness As Single, feather As Single, centerXPercent As Single, centerYPercent As Single) As SKBitmap
+        ''' <summary>Wendet den gewählten Vignetten-Stil auf ein abzudunkelndes Pixel an. ColorPriority
+        ''' ist bitgenau das frühere multiplikative Abdunkeln (Farbton bleibt). HighlightPriority schont
+        ''' helle Bereiche (Lichter bleiben stehen), PaintOverlay dunkelt ab UND entsättigt zu einem
+        ''' flachen, grauen Verlauf. mix ist 0..~1 (Stärke am Pixel).</summary>
+        Private Shared Sub VignetteDarken(rr As Single, gg As Single, bb As Single, mix As Single, style As VignetteStyle,
+                                          ByRef outR As Byte, ByRef outG As Byte, ByRef outB As Byte)
+            Select Case style
+                Case VignetteStyle.HighlightPriority
+                    ' Helle Pixel weniger abdunkeln: der Schutz wächst mit dem Quadrat der Luminanz.
+                    Dim luma = (0.299F * rr + 0.587F * gg + 0.114F * bb) / 255.0F
+                    Dim factor = 1.0F - mix * (1.0F - luma * luma * 0.7F)
+                    outR = ClampToByte(rr * factor)
+                    outG = ClampToByte(gg * factor)
+                    outB = ClampToByte(bb * factor)
+                Case VignetteStyle.PaintOverlay
+                    ' Erst zur Luminanz hin entsättigen, dann flach abdunkeln - grauer Wasch-Look.
+                    Dim luma = 0.299F * rr + 0.587F * gg + 0.114F * bb
+                    Dim desat = mix * 0.5F
+                    Dim dark = 1.0F - mix
+                    outR = ClampToByte((rr + (luma - rr) * desat) * dark)
+                    outG = ClampToByte((gg + (luma - gg) * desat) * dark)
+                    outB = ClampToByte((bb + (luma - bb) * desat) * dark)
+                Case Else ' ColorPriority: bisheriges Verhalten
+                    outR = ClampToByte(rr * (1 - mix))
+                    outG = ClampToByte(gg * (1 - mix))
+                    outB = ClampToByte(bb * (1 - mix))
+            End Select
+        End Sub
+
+        Private Shared Function ApplyVignette(source As SKBitmap, amount As Single, transition As Single, roundness As Single, feather As Single, centerXPercent As Single, centerYPercent As Single, style As VignetteStyle) As SKBitmap
             ''' Obergrenze 1.5 statt 1 - der Stärke-Regler in EffectsPanel.axaml geht bis ±150, was hier
             ''' zu amount=±1.5 wird (amount/100 im Aufrufer). Bei Clamp(...,0,1) hatte das letzte Drittel
             ''' des Reglerwegs (100..150) keinerlei sichtbaren Effekt mehr (toter Reglerbereich).
@@ -9298,9 +9456,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                                 Dim rR = srcBuf(o + 2)
                                                                 Dim mix = t * edgeAlpha / 255.0F
                                                                 If darken Then
-                                                                    dstBuf(o) = ClampToByte(bB * (1 - mix))
-                                                                    dstBuf(o + 1) = ClampToByte(gG * (1 - mix))
-                                                                    dstBuf(o + 2) = ClampToByte(rR * (1 - mix))
+                                                                    VignetteDarken(rR, gG, bB, mix, style, dstBuf(o + 2), dstBuf(o + 1), dstBuf(o))
                                                                 Else
                                                                     dstBuf(o) = ClampToByte(bB + (255 - bB) * mix)
                                                                     dstBuf(o + 1) = ClampToByte(gG + (255 - gG) * mix)
@@ -9324,10 +9480,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Dim c = result.GetPixel(x, y)
                     Dim mix = t * edgeAlpha / 255.0F
                     If darken Then
-                        result.SetPixel(x, y, New SKColor(ClampToByte(c.Red * (1 - mix)),
-                                                          ClampToByte(c.Green * (1 - mix)),
-                                                          ClampToByte(c.Blue * (1 - mix)),
-                                                          c.Alpha))
+                        Dim vr As Byte, vg As Byte, vb As Byte
+                        VignetteDarken(c.Red, c.Green, c.Blue, mix, style, vr, vg, vb)
+                        result.SetPixel(x, y, New SKColor(vr, vg, vb, c.Alpha))
                     Else
                         result.SetPixel(x, y, New SKColor(ClampToByte(c.Red + (255 - c.Red) * mix),
                                                           ClampToByte(c.Green + (255 - c.Green) * mix),
@@ -9345,7 +9500,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Korn bei jedem Lauf anders fallen - die Diagnose prueft Bitgleichheit (Abschnitt C), und
         ''' ein Bild, das sich beim zweiten Rendern aendert, waere auch fuer den Nutzer falsch.
         ''' Der Gewinn kommt allein aus dem Wegfall des P/Invoke je Pixel.</summary>
-        Private Shared Function ApplyGrain(source As SKBitmap, amount As Single) As SKBitmap
+        ''' <summary>Körnung. Ohne Größe/Frequenz (beide 0) das bisherige feine 1-px-Korn, bitgenau
+        ''' unverändert; sonst zellenweise gröber (Größe) und optional mit eingemischter feiner Lage
+        ''' (Frequenz).</summary>
+        Private Shared Function ApplyGrain(source As SKBitmap, amount As Single, Optional sizeAmount As Single = 0, Optional freqAmount As Single = 0) As SKBitmap
+            If sizeAmount <= 0 AndAlso freqAmount <= 0 Then Return ApplyGrainFine(source, amount)
+            Return ApplyGrainTextured(source, amount, sizeAmount, freqAmount)
+        End Function
+
+        Private Shared Function ApplyGrainFine(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, 0, 1)
             If strength <= 0 Then Return source
 
@@ -9365,6 +9528,75 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
                     ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
                     Dim noise = (random.NextDouble() * 2.0 - 1.0) * amplitude
+                    WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                       ClampToByte(cr + noise), ClampToByte(cg + noise), ClampToByte(cb + noise), a)
+                Next
+            Next
+
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Return result
+        End Function
+
+        ''' <summary>Gröberes/unregelmäßigeres Korn. Größe = Zellkantenlänge (Pixel einer Zelle teilen
+        ''' sich denselben Rauschwert). Frequenz = UNREGELMÄSSIGKEIT: eine grobe, niederfrequente
+        ''' Amplituden-Modulation, die das Korn fleckig macht (manche Bereiche stärker, manche schwächer)
+        ''' - sichtbar bei JEDER Größe, auch 0, und unabhängig von der Korn-Skala. BEWUSST SERIELL wie
+        ''' <see cref="ApplyGrainFine"/>: erst das Zellraster, dann das grobe Modulationsraster - der
+        ''' Zufallsstrom hängt an der Reihenfolge, damit Vorschau und Backen bitgleich bleiben (Diagnose
+        ''' Abschnitt C).</summary>
+        Private Shared Function ApplyGrainTextured(source As SKBitmap, amount As Single, sizeAmount As Single, freqAmount As Single) As SKBitmap
+            Dim strength = Clamp(amount, 0, 1)
+            If strength <= 0 Then Return source
+
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim srcBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
+            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+
+            Dim w = source.Width, h = source.Height
+            Dim cell = 1 + CInt(Math.Round(Clamp(sizeAmount, 0, 1) * 5))   ' 1..6 px
+            Dim freq = Clamp(freqAmount, 0, 1)
+            Dim amplitude = 8.0 + strength * 34.0
+            Dim random = New Random(w * 397 Xor h * 151)
+
+            ' Korn-Zellraster zuerst, seriell und deterministisch.
+            Dim gridW = (w + cell - 1) \ cell
+            Dim gridH = (h + cell - 1) \ cell
+            Dim cellNoise(gridW * gridH - 1) As Double
+            For i = 0 To cellNoise.Length - 1
+                cellNoise(i) = random.NextDouble() * 2.0 - 1.0
+            Next
+
+            ' Grobes Modulationsraster (fester grober Abstand) nur bei aktiver Frequenz - danach gezogen,
+            ' damit der Korn-Strom bei freq=0 exakt gleich bleibt. Werte 0..1 = lokale Korn-Intensität.
+            Const ModCell As Integer = 16
+            Dim modW = (w + ModCell - 1) \ ModCell
+            Dim modH = (h + ModCell - 1) \ ModCell
+            Dim modNoise As Double() = Nothing
+            If freq > 0 Then
+                modNoise = New Double(Math.Max(1, modW * modH) - 1) {}
+                For i = 0 To modNoise.Length - 1
+                    modNoise(i) = random.NextDouble()
+                Next
+            End If
+
+            For y As Integer = 0 To h - 1
+                Dim rowOffset = y * stride
+                Dim gy = y \ cell
+                Dim my = y \ ModCell
+                For x As Integer = 0 To w - 1
+                    Dim o = rowOffset + x * 4
+                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                    Dim n = cellNoise(gy * gridW + (x \ cell))
+                    Dim amp = amplitude
+                    If freq > 0 Then
+                        ' 0..1 -> -1..1, mit K=0.9 skaliert: Faktor in [1-0.9*freq, 1+0.9*freq], nie <= 0.
+                        Dim m = modNoise(my * modW + (x \ ModCell)) * 2.0 - 1.0
+                        amp = amplitude * (1.0 + freq * m * 0.9)
+                    End If
+                    Dim noise = n * amp
                     WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
                                        ClampToByte(cr + noise), ClampToByte(cg + noise), ClampToByte(cb + noise), a)
                 Next

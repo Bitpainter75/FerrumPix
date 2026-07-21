@@ -59,21 +59,42 @@ Namespace Services
             If TryGetXmpDouble(values, "Vibrance", d) Then adj.Vibrance = Clamp100(d)
             If TryGetXmpDouble(values, "Saturation", d) Then adj.Saturation = Clamp100(d)
             If TryGetXmpDouble(values, "Sharpness", d) Then adj.Sharpness = Clamp(d, 0, 100)
+            ' Schärfen-Feinregler. crs:SharpenRadius ist 0.5..3.0 (Adobe-Standard 1.0 = neutral),
+            ' unser Radius 0..100: (r-1)*50, unter 1.0 auf 0 geklemmt. crs:SharpenDetail ist 0..100.
+            If TryGetXmpDouble(values, "SharpenRadius", d) Then adj.SharpenRadius = Clamp((d - 1.0) * 50.0, 0, 100)
+            If TryGetXmpDouble(values, "SharpenDetail", d) Then adj.SharpenDetail = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "LuminanceSmoothing", d) Then adj.NoiseReduction = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "LuminanceNoiseReductionDetail", d) Then adj.NoiseReductionDetail = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "ColorNoiseReduction", d) Then adj.ColorNoiseReduction = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "GrainAmount", d) Then adj.Grain = Clamp(d, 0, 100)
+            ' crs:GrainSize/GrainFrequency sind 0..100 wie unsere Regler.
+            If TryGetXmpDouble(values, "GrainSize", d) Then adj.GrainSize = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "GrainFrequency", d) Then adj.GrainFrequency = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "PostCropVignetteAmount", d) Then
                 adj.Vignette = Clamp(-d, -150, 150)
                 ' Mittelpunkt und weiche Kante sind semantisch deckungsgleich mit VignetteTransition/
                 ' VignetteFeather (beide 0-100, hoeher = weiter aussen bzw. weicher) - aber nur bei
                 ' AKTIVER Vignette uebernehmen, sonst ueberschrieben Preset-Defaults die App-Defaults.
-                ' PostCropVignetteRoundness wird bewusst NICHT uebertragen: bei Adobe steuert es die
-                ' Kreisform, bei uns die Achsen-Verzerrung des Ovals - eine Uebernahme saehe anders aus.
+                ' PostCropVignetteRoundness (-100..100) uebernehmen wir jetzt ebenfalls: Adobe steuert
+                ' damit die Kreisform, wir die Achsen-Verzerrung des Ovals. Die Skalen sind gleich, die
+                ' Wirkung ist eine ANNAEHERUNG - eine runde/eckige Adobe-Vignette wird so als weiter/enger
+                ' gestrecktes Oval nachgebildet, statt ganz zu fehlen.
                 If d <> 0 Then
                     Dim v As Double
                     If TryGetXmpDouble(values, "PostCropVignetteMidpoint", v) Then adj.VignetteTransition = Clamp(v, 0, 100)
                     If TryGetXmpDouble(values, "PostCropVignetteFeather", v) Then adj.VignetteFeather = Clamp(v, 0, 100)
+                    If TryGetXmpDouble(values, "PostCropVignetteRoundness", v) Then adj.VignetteRoundness = Clamp100(v)
                 End If
+            End If
+            ' crs:PostCropVignetteStyle: 1 = Highlight Priority, 2 = Color Priority, 3 = Paint Overlay.
+            ' Unser Standard (ColorPriority) entspricht Adobes 2; nur die abweichenden Werte umschalten.
+            Dim styleVal As Double
+            If TryGetXmpDouble(values, "PostCropVignetteStyle", styleVal) Then
+                Select Case CInt(Math.Round(styleVal))
+                    Case 1 : adj.VignetteStyle = VignetteStyle.HighlightPriority
+                    Case 3 : adj.VignetteStyle = VignetteStyle.PaintOverlay
+                    Case Else : adj.VignetteStyle = VignetteStyle.ColorPriority
+                End Select
             End If
 
             ''' Schwarzweiß. PV2012 schreibt crs:Treatment="Black &amp; White", ältere Fassungen
@@ -86,14 +107,17 @@ Namespace Services
                 adj.FilterStrength = ImageAdjustments.DefaultFilterStrength("S/W")
             End If
 
-            ''' crs:Temperature/crs:WhiteBalance sind NICHT übernehmbar: Lightroom speichert dort einen
-            ''' absoluten Kelvin-Wert (z.B. 5500) bzw. "As Shot"/"Custom", während der Temperatur-Regler
-            ''' dieser App eine relative ±100-Verschiebung ist - ohne die kamera-/aufnahmespezifische
-            ''' Referenztemperatur wäre jede Übernahme falsch. crs:IncrementalTemperature/-Tint dagegen SIND
-            ''' genau diese relative ±100-Verschiebung (Lightroom schreibt sie für Nicht-RAW-Dateien, und
-            ''' Presets liegen praktisch immer in dieser Form vor). Ohne sie ging die Farbstimmung jedes
-            ''' Presets verloren, das seinen Look über die Weißabgleich-Regler aufbaut. crs:Tint ohne Präfix
-            ''' wird weiterhin akzeptiert, ist bei RAW-Presets aber ebenfalls relativ gemeint.
+            ''' WEISSABGLEICH. crs:IncrementalTemperature/-Tint ist die relative ±100-Verschiebung, die
+            ''' unserem Temperatur-/Tönungsregler direkt entspricht (Lightroom schreibt sie für Nicht-RAW-
+            ''' Dateien, portable Presets liegen praktisch immer in dieser Form vor) - sie hat deshalb
+            ''' IMMER Vorrang. crs:Temperature dagegen ist ein ABSOLUTER Kelvin-Wert (z.B. 5500), wie ihn
+            ''' RAW-Presets schreiben. Es gibt keine aufnahmeunabhängig korrekte Umrechnung in unseren
+            ''' relativen Regler - ohne die aufnahmespezifische Referenztemperatur ist jede Übernahme eine
+            ''' NÄHERUNG. Wir rechnen sie über eine feste Tageslicht-Referenz (D65) im mired-Raum um
+            ''' (siehe KelvinToRelativeTemperature) und übernehmen sie nur als RÜCKFALL, wenn kein
+            ''' Incremental vorliegt: für ein bei Tageslicht aufgenommenes Bild trifft sie gut, für
+            ''' Kunstlicht/Nacht liegt sie systematisch daneben. crs:Tint ohne Präfix wird weiterhin
+            ''' als relative Tönung akzeptiert.
             ' KAMERAKALIBRIERUNG. Steckte in 3 von 5 untersuchten Presets und war der groesste
             ' verbliebene Import-Ausfall: sie dreht und saettigt die Primaerfarben und macht damit
             ' einen guten Teil des charakteristischen Farbstichs aus. Ohne sie kam ein Preset
@@ -108,7 +132,13 @@ Namespace Services
             If TryGetXmpDouble(values, "BlueSaturation", d) Then adj.CalibrationBlueSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "ShadowTint", d) Then adj.CalibrationShadowTint = Clamp100(d)
 
-            If TryGetXmpDouble(values, "IncrementalTemperature", d) Then adj.Temperature = Clamp100(d)
+            If TryGetXmpDouble(values, "IncrementalTemperature", d) Then
+                adj.Temperature = Clamp100(d)
+            ElseIf TryGetXmpDouble(values, "Temperature", d) AndAlso d >= 1000 Then
+                ' Absolutes Kelvin (Adobe-Bereich 2000..50000). Der >=1000-Wächter trennt es sicher von
+                ' einem versehentlich relativen Wert; crs:Temperature ist bei Adobe immer Kelvin.
+                adj.Temperature = KelvinToRelativeTemperature(d)
+            End If
             If TryGetXmpDouble(values, "IncrementalTint", d) Then
                 adj.Tint = Clamp100(d)
             ElseIf TryGetXmpDouble(values, "Tint", d) Then
@@ -186,6 +216,23 @@ Namespace Services
             If blueCurve IsNot Nothing Then adj.CurveBluePoints = blueCurve
 
             Return adj
+        End Function
+
+        ''' <summary>Feste Referenz für die Kelvin-Näherung: D65 = sRGB-Weißpunkt = neutrales Tageslicht.
+        ''' Ein Preset mit genau diesem Kelvin-Wert lässt die Temperatur unverändert (Regler 0).</summary>
+        Private Const WhiteBalanceReferenceKelvin As Double = 6500.0
+
+        ''' <summary>Näherung eines absoluten Kelvin-Weißabgleichs an unseren relativen ±100-Regler.
+        ''' Gerechnet wird im mired-Raum (1e6/K), weil eine Kelvin-Differenz dort perzeptuell viel
+        ''' gleichmäßiger wirkt als in Kelvin selbst. Adobe-Konvention: höhere Kelvin = wärmeres Bild,
+        ''' also positiver Regler - das ergibt sich hier von selbst, weil höhere Kelvin niedrigere mireds
+        ''' haben. Skala bewusst 1 mired ≈ 1 Reglerpunkt und hart auf ±100 geclampt: eine gute Näherung
+        ''' für Tageslicht, für Kunstlicht/Nacht bewusst nur annähernd (siehe Kommentar am Aufrufer).</summary>
+        Private Shared Function KelvinToRelativeTemperature(kelvin As Double) As Single
+            If kelvin <= 0 Then Return 0
+            Dim miredRef = 1000000.0 / WhiteBalanceReferenceKelvin
+            Dim miredTarget = 1000000.0 / kelvin
+            Return Clamp100(miredRef - miredTarget)
         End Function
 
         Private Shared Function Clamp(value As Double, min As Double, max As Double) As Single

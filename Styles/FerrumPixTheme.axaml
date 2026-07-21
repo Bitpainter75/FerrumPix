@@ -1568,11 +1568,24 @@
                                       HorizontalContentAlignment="Stretch"
                                       VerticalContentAlignment="Center"
                                       IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
-                            <ContentPresenter Content="{TemplateBinding Header}"
-                                              ContentTemplate="{TemplateBinding HeaderTemplate}"
-                                              VerticalAlignment="Center"
-                                              HorizontalAlignment="Stretch"
-                                              Foreground="{TemplateBinding Foreground}"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <ContentPresenter Grid.Column="0"
+                                                  Content="{TemplateBinding Header}"
+                                                  ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                                  VerticalAlignment="Center"
+                                                  HorizontalAlignment="Stretch"
+                                                  Foreground="{TemplateBinding Foreground}"/>
+                                <!-- Sichtbarer Auf-/Zuklapp-Indikator: dreht sich beim Öffnen um 180°. -->
+                                <Path Name="ExpandChevron" Grid.Column="1"
+                                      Data="M2,3 L5,6 L8,3"
+                                      Stroke="{DynamicResource FP.Text.Secondary}"
+                                      StrokeThickness="1.5"
+                                      StrokeLineCap="Round" StrokeJoin="Round"
+                                      Width="10" Height="9" Stretch="None"
+                                      VerticalAlignment="Center" HorizontalAlignment="Center"
+                                      Margin="8,0,0,0"
+                                      RenderTransformOrigin="50%,50%"/>
+                            </Grid>
                         </ToggleButton>
                         <ContentPresenter Grid.Row="1"
                                           IsVisible="{TemplateBinding IsExpanded}"
@@ -1590,7 +1603,22 @@
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Cursor" Value="Arrow"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <!-- Klapp-Chevron: zeigt zu (nach unten) im Grundzustand, dreht beim Öffnen nach oben. -->
+    <Style Selector="Expander /template/ Path#ExpandChevron">
+        <Setter Property="RenderTransform" Value="rotate(0deg)"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Expander:expanded /template/ Path#ExpandChevron">
+        <Setter Property="RenderTransform" Value="rotate(180deg)"/>
+    </Style>
+    <Style Selector="Expander:pointerover /template/ Path#ExpandChevron">
+        <Setter Property="Stroke" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="Expander:pointerover /template/ ToggleButton">
         <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>

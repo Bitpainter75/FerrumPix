@@ -246,27 +246,34 @@ Namespace Services
 
         Private Shared Function ExtractBmffPreview(filePath As String) As MemoryStream
             Dim best As MemoryStream = Nothing
-            Using fs = File.OpenRead(filePath)
-                Using br = New BinaryReader(fs)
-                    CollectBmffJpegs(fs, br, 0, fs.Length, best)
+            Try
+                Using fs = File.OpenRead(filePath)
+                    Using br = New BinaryReader(fs)
+                        CollectBmffJpegs(fs, br, 0, fs.Length, best)
+                    End Using
                 End Using
-            End Using
+            Catch
+                best?.Dispose()
+                Return Nothing
+            End Try
             Return best
         End Function
 
         Private Shared Sub CollectBmffJpegs(fs As FileStream, br As BinaryReader, rangeStart As Long, rangeEnd As Long, ByRef best As MemoryStream)
+            If rangeStart < 0 OrElse rangeEnd <= rangeStart OrElse rangeEnd > fs.Length Then Return
             fs.Seek(rangeStart, SeekOrigin.Begin)
 
             Do While fs.Position + 8 <= rangeEnd
                 Dim boxStart = fs.Position
                 Dim size32 = ReadU32BE(br)
                 Dim typBuf(3) As Byte
-                br.Read(typBuf, 0, 4)
+                If br.Read(typBuf, 0, 4) <> 4 Then Exit Do
                 Dim boxType = Text.Encoding.ASCII.GetString(typBuf)
 
                 Dim boxSize As Long
                 Dim dataStart As Long
                 If size32 = 1 Then
+                    If fs.Position + 8 > rangeEnd Then Exit Do
                     boxSize = ReadU64BE(br)
                     dataStart = boxStart + 16
                 Else
@@ -274,7 +281,7 @@ Namespace Services
                     dataStart = boxStart + 8
                 End If
                 Dim boxEnd = Math.Min(boxStart + boxSize, rangeEnd)
-                If boxEnd <= boxStart Then Exit Do
+                If boxSize < dataStart - boxStart OrElse boxEnd <= dataStart Then Exit Do
 
                 Select Case boxType
                     Case "moov", "trak", "mdia", "minf", "stbl", "CRAW"
@@ -289,8 +296,8 @@ Namespace Services
                             Dim scanLen = CInt(Math.Min(boxEnd - uuidContent, 8 * 1024 * 1024L))
                             fs.Seek(uuidContent, SeekOrigin.Begin)
                             Dim buf(scanLen - 1) As Byte
-                            br.Read(buf, 0, scanLen)
-                            TryKeepLarger(FindJpeg(buf), best)
+                            Dim n = br.Read(buf, 0, scanLen)
+                            If n > 0 Then TryKeepLarger(FindJpeg(buf, n), best)
                         End If
 
                     Case "PRVW", "THMB"
@@ -298,8 +305,8 @@ Namespace Services
                         If dataLen > 0 Then
                             fs.Seek(dataStart, SeekOrigin.Begin)
                             Dim boxData(dataLen - 1) As Byte
-                            br.Read(boxData, 0, dataLen)
-                            TryKeepLarger(FindJpeg(boxData), best)
+                            Dim n = br.Read(boxData, 0, dataLen)
+                            If n > 0 Then TryKeepLarger(FindJpeg(boxData, n), best)
                         End If
                 End Select
 
@@ -310,15 +317,19 @@ Namespace Services
         Private Shared Sub TryKeepLarger(candidate As MemoryStream, ByRef best As MemoryStream)
             If candidate Is Nothing Then Return
             If best Is Nothing OrElse candidate.Length > best.Length Then
+                best?.Dispose()
                 best = candidate
+            Else
+                candidate.Dispose()
             End If
         End Sub
 
         ''' Quick backward-scan JPEG finder used by the BMFF walker for bounded buffers.
-        Private Shared Function FindJpeg(data As Byte()) As MemoryStream
-            For i = 0 To data.Length - 4
+        Private Shared Function FindJpeg(data As Byte(), length As Integer) As MemoryStream
+            length = Math.Max(0, Math.Min(length, data.Length))
+            For i = 0 To length - 4
                 If data(i) = &HFF AndAlso data(i + 1) = &HD8 AndAlso data(i + 2) = &HFF Then
-                    For j = data.Length - 2 To i + 512 Step -1
+                    For j = length - 2 To i + 512 Step -1
                         If data(j) = &HFF AndAlso data(j + 1) = &HD9 Then
                             Dim len = j - i + 2
                             If len > 8192 Then Return New MemoryStream(data, i, len, False)
@@ -336,11 +347,13 @@ Namespace Services
         ' die Operanden müssen deshalb vor dem Shift geweitet werden.
         Private Shared Function ReadU32BE(br As BinaryReader) As UInteger
             Dim b = br.ReadBytes(4)
+            If b.Length <> 4 Then Throw New EndOfStreamException()
             Return CUInt((CLng(b(0)) << 24) Or (CLng(b(1)) << 16) Or (CLng(b(2)) << 8) Or CLng(b(3)))
         End Function
 
         Private Shared Function ReadU64BE(br As BinaryReader) As Long
             Dim b = br.ReadBytes(8)
+            If b.Length <> 8 Then Throw New EndOfStreamException()
             Return (CLng(b(0)) << 56) Or (CLng(b(1)) << 48) Or (CLng(b(2)) << 40) Or (CLng(b(3)) << 32) Or
                    (CLng(b(4)) << 24) Or (CLng(b(5)) << 16) Or (CLng(b(6)) << 8) Or CLng(b(7))
         End Function

@@ -18,7 +18,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Expander Header="Farbgradierung" IsExpanded="True">
+    <Expander Header="Farbgradierung" icons:ExpanderState.Key="color-grading">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">

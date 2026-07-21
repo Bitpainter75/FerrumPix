@@ -20,7 +20,7 @@
 
         <StackPanel Spacing="10">
             <!-- Text, Bild, QR und Wasserzeichen stehen einzeln in der Werkzeugleiste links. -->
-            <Expander Header="Formen und Symbole" IsExpanded="True"
+            <Expander Header="Formen und Symbole" icons:ExpanderState.Key="insert"
                       IsVisible="{Binding ShowShapeControls}">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
