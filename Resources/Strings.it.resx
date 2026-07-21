@@ -3935,4 +3935,28 @@
   <data name="Unregelm_igkeit_des_Korns_h_her_fleckiger_manche_d20eab69" xml:space="preserve">
     <value>Irregolarità della grana: più alto = più a chiazze (alcune aree più granulose).</value>
   </data>
+  <data name="XMP_Katalogdaten_synchronisieren_4ff54178" xml:space="preserve">
+    <value>Sincronizza i dati di catalogo su XMP</value>
+  </data>
+  <data name="Schreibt_Bewertung_Farb_Label_und_Stichworte_zus_84b9770d" xml:space="preserve">
+    <value>Scrive anche valutazione, etichetta colore e parole chiave in un sidecar XMP, così altri programmi le vedono. La modifica .fpxmp resta intatta.</value>
+  </data>
+  <data name="Fehlende_XMP_Sidecars_anlegen_d1a7dd45" xml:space="preserve">
+    <value>Crea i sidecar XMP mancanti</value>
+  </data>
+  <data name="Legt_beim_Synchronisieren_auch_neue_xmp_Dateien__7c253df3" xml:space="preserve">
+    <value>Crea anche nuovi file .xmp durante la sincronizzazione quando non ne esiste ancora uno.</value>
+  </data>
+  <data name="Bearbeitete_RAWs_als_Thumbnail_entwickeln_c2675ef8" xml:space="preserve">
+    <value>Sviluppa i RAW modificati come miniature</value>
+  </data>
+  <data name="Zeigt_in_der_Galerie_das_entwickelte_RAW_mit_dei_ff1eb3f6" xml:space="preserve">
+    <value>Mostra nella galleria il RAW sviluppato con la tua modifica, ma solo se esiste un .fpxmp. I RAW non modificati mantengono il JPG incorporato veloce.</value>
+  </data>
+  <data name="Bearbeitete_RAWs_im_Viewer_entwickeln_9f7d590b" xml:space="preserve">
+    <value>Sviluppa i RAW modificati nel visualizzatore</value>
+  </data>
+  <data name="Zeigt_auch_im_Viewer_das_entwickelte_bearbeitete_99fe4ca8" xml:space="preserve">
+    <value>Mostra anche nel visualizzatore il RAW sviluppato e modificato invece dell'anteprima incorporata, solo se esiste un .fpxmp.</value>
+  </data>
 </root>

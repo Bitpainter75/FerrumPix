@@ -6583,7 +6583,7 @@ Namespace ViewModels
                     LibraryService.Instance.SetColorLabelForMany(
                         {ImmichService.MakePseudoPath(immichAssetId, _immichSourceFileName)}, normalized)
                 ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                    LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, normalized)
+                    LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, normalized, syncToXmp:=True)
                 End If
             End Set
         End Property
@@ -7591,7 +7591,7 @@ Namespace ViewModels
                                                        If immichAssetId IsNot Nothing Then
                                                            Dim ignored = ImmichService.AddTagToAssetAsync(immichAssetId, tag)
                                                        ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                           LibraryService.Instance.SetTags(_currentImagePath, Tags)
+                                                           LibraryService.Instance.SetTags(_currentImagePath, Tags, syncToXmp:=True)
                                                        End If
                                                        RefreshTagSuggestions()
                                                    End Sub)
@@ -7602,7 +7602,7 @@ Namespace ViewModels
                                                                      If immichAssetId IsNot Nothing Then
                                                                          Dim ignored = ImmichService.RemoveTagFromAssetAsync(immichAssetId, tag)
                                                                      ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                                         LibraryService.Instance.SetTags(_currentImagePath, Tags)
+                                                                         LibraryService.Instance.SetTags(_currentImagePath, Tags, syncToXmp:=True)
                                                                      End If
                                                                  End Sub)
 

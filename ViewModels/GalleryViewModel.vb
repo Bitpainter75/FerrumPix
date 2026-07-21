@@ -1418,7 +1418,7 @@ Namespace ViewModels
             For Each t In targets
                 t.ColorLabel = target
             Next
-            LibraryService.Instance.SetColorLabelForMany(targets.Select(Function(t) t.FilePath), target)
+            LibraryService.Instance.SetColorLabelForMany(targets.Select(Function(t) t.FilePath), target, syncToXmp:=True)
             If _filterColorLabels.Count > 0 Then FilterAndSort()
         End Sub
 

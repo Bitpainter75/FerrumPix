@@ -169,6 +169,28 @@ Namespace Services
             End Select
         End Function
 
+        ''' <summary>Umkehrung von <see cref="MapLabel"/> für den Schreibweg: unser Hex-Akzent → das
+        ''' englische Lightroom-Farbwort (das andere Programme in xmp:Label erwarten). Round-Trip-sicher:
+        ''' das zurückgegebene Wort ergibt über MapLabel wieder exakt denselben Hex. Leer, wenn der Hex
+        ''' kein Palettenwert ist (dann wird kein xmp:Label geschrieben, statt zu raten). Vergleich über
+        ''' die 6 RGB-Hexstellen, groß-/kleinschreib- und Alpha-tolerant.</summary>
+        Public Shared Function LabelToXmpWord(colorHex As String) As String
+            If String.IsNullOrWhiteSpace(colorHex) Then Return ""
+            Dim hex = colorHex.Trim().TrimStart("#"c).ToUpperInvariant()
+            If hex.Length = 8 Then hex = hex.Substring(2) ' AARRGGBB → RRGGBB
+            If hex.Length <> 6 Then Return ""
+            Select Case hex
+                Case "E74C3C" : Return "Red"
+                Case "FACC15" : Return "Yellow"
+                Case "22C55E" : Return "Green"
+                Case "3B82F6" : Return "Blue"
+                Case "8B5CF6" : Return "Purple"
+                Case "F08A1A" : Return "Orange"
+                Case "F03B88" : Return "Pink"
+                Case Else : Return ""
+            End Select
+        End Function
+
     End Class
 
 End Namespace

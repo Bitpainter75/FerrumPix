@@ -68,6 +68,7 @@ Namespace Services
         ' Settings cache: avoids reading the settings file from disk for every thumbnail
         Private Shared _cachedEnabled As Boolean = True
         Private Shared _cachedQuality As Integer = 80
+        Private Shared _cachedDevelopRawThumbnails As Boolean = False
         Private Shared _settingsCacheExpiry As Long = 0   ' Environment.TickCount64
 
         ' Per-session debounce: each cache scope is registered in the root index at most once
@@ -190,11 +191,75 @@ Namespace Services
                 Dim s = AppSettingsService.Load()
                 _cachedEnabled = s.ThumbnailCacheEnabled
                 _cachedQuality = AppSettingsService.NormalizeThumbnailQuality(s.ThumbnailQuality)
+                _cachedDevelopRawThumbnails = s.DevelopRawThumbnails
                 Volatile.Write(_settingsCacheExpiry, Environment.TickCount64 + 10_000L)
             End If
             enabled = _cachedEnabled
             quality = _cachedQuality
         End Sub
+
+        ''' <summary>Ob entwickelte RAW-Thumbnails aktiv sind (gecacht wie enabled/quality).</summary>
+        Private Shared Function DevelopRawThumbnailsActive() As Boolean
+            Dim e As Boolean, q As Integer
+            GetCachedSettings(e, q)
+            Return _cachedDevelopRawThumbnails
+        End Function
+
+        ''' <summary>Teil des Cache-Dateinamens für die ENTWICKELTE RAW-Vorschau: leer, solange die Option
+        ''' aus ist oder keine .fpxmp existiert (dann gilt der eingebettete-JPG-Schlüssel unverändert).
+        ''' Sonst der Zeitstempel der .fpxmp - so baut jede Bearbeitung (die die .fpxmp neu schreibt) die
+        ''' Kachel neu, ohne alte Kacheln zu entwerten.</summary>
+        Private Shared Function DevelopedThumbnailSuffix(filePath As String) As String
+            If Not DevelopRawThumbnailsActive() Then Return ""
+            If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawSidecarService.Exists(filePath) Then Return ""
+            Try
+                Return "_dev" & File.GetLastWriteTimeUtc(RawSidecarService.SidecarPathFor(filePath)).Ticks.ToString(Globalization.CultureInfo.InvariantCulture)
+            Catch
+                Return ""
+            End Try
+        End Function
+
+        ''' <summary>Entwickelte RAW-Vorschau als PNG-Strom (LibRaw-Decode + .fpxmp-Rezept, auf Kachelbreite
+        ''' herunterskaliert). Nothing, wenn die Option aus ist, keine .fpxmp existiert oder LibRaw fehlt -
+        ''' dann gilt der eingebettete-JPG-Weg. Das Ergebnis ist bereits voll orientiert und trägt die
+        ''' Rezept-Geometrie; es darf NICHT über DecodeCorrectedAndResize erneut gedreht werden.</summary>
+        Private Shared Function TryRenderDevelopedRawSource(filePath As String) As MemoryStream
+            If Not DevelopRawThumbnailsActive() Then Return Nothing
+            If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawDecodeService.IsAvailable Then Return Nothing
+            Dim adj = RawSidecarService.TryRead(filePath)
+            If adj Is Nothing Then Return Nothing
+            Try
+                Dim d, p, e As Long
+                Return ImageProcessor.RenderPngStream(filePath, adj, CacheWidth, d, p, e)
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Schreibt einen bereits entwickelten+orientierten PNG-Strom als JPEG-Kachel - OHNE
+        ''' weitere Orientierung/Sidecar-Drehung (die steckt schon im Rezept).</summary>
+        Private Shared Function WriteDevelopedCacheFile(pngStream As MemoryStream, cachePath As String, quality As Integer, isStillWanted As Func(Of Boolean)) As Boolean
+            pngStream.Position = 0
+            Using bmp = SKBitmap.Decode(pngStream)
+                If bmp Is Nothing Then Return False
+                If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
+                Dim targetWidth = Math.Min(CacheWidth, bmp.Width)
+                Dim scale = targetWidth / CDbl(bmp.Width)
+                Dim targetHeight = Math.Max(1, CInt(Math.Round(bmp.Height * scale)))
+                Using resized = bmp.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
+                    If resized Is Nothing Then Return False
+                    Using image = SKImage.FromBitmap(resized)
+                        Using data = image.Encode(SKEncodedImageFormat.Jpeg, quality)
+                            If data Is Nothing Then Return False
+                            Using output = File.Open(cachePath, FileMode.Create, FileAccess.Write, FileShare.None)
+                                data.SaveTo(output)
+                            End Using
+                        End Using
+                    End Using
+                End Using
+            End Using
+            Return True
+        End Function
 
         Public Shared Sub InvalidateSettingsCache()
             Volatile.Write(_settingsCacheExpiry, 0L)
@@ -257,7 +322,7 @@ Namespace Services
             Dim folderCachePath = GetFolderCachePathById(folderId)
             Dim imageHash = HashText(NormalizePath(filePath))
             Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
-            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}{SidecarRotationSuffix(filePath)}_v{CacheFormatVersion}.jpg"
+            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}{SidecarRotationSuffix(filePath)}{DevelopedThumbnailSuffix(filePath)}_v{CacheFormatVersion}.jpg"
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try
@@ -304,7 +369,7 @@ Namespace Services
             Dim folderCachePath = GetFolderCachePathById(folderId)
             Dim imageHash = HashText(NormalizePath(filePath))
             Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
-            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}{SidecarRotationSuffix(filePath)}_v{CacheFormatVersion}.jpg"
+            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}{SidecarRotationSuffix(filePath)}{DevelopedThumbnailSuffix(filePath)}_v{CacheFormatVersion}.jpg"
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try
@@ -470,6 +535,15 @@ Namespace Services
         End Function
 
         Private Shared Function TryWriteCacheFile(filePath As String, cachePath As String, quality As Integer, Optional isStillWanted As Func(Of Boolean) = Nothing) As Boolean
+            ' Entwickelte RAW-Kachel (nur bei aktiver Option + vorhandener .fpxmp): bereits orientiert und
+            ' mit Rezept-Geometrie - deshalb ein eigener Schreibweg OHNE erneute Drehung.
+            Dim developed = TryRenderDevelopedRawSource(filePath)
+            If developed IsNot Nothing Then
+                Using developed
+                    Return WriteDevelopedCacheFile(developed, cachePath, quality, isStillWanted)
+                End Using
+            End If
+
             Using source = OpenThumbnailSource(filePath)
                 If source Is Nothing Then Return False
 
@@ -710,6 +784,15 @@ Namespace Services
             Try
                 cancellationToken.ThrowIfCancellationRequested()
                 If RawPreviewService.IsSupportedRaw(filePath) Then
+                    ' Entwickelte RAW-Vorschau (bereits orientiert + Rezept-Geometrie) hat Vorrang.
+                    Dim developed = TryRenderDevelopedRawSource(filePath)
+                    If developed IsNot Nothing Then
+                        Using developed
+                            cancellationToken.ThrowIfCancellationRequested()
+                            developed.Position = 0
+                            Return New Bitmap(developed)
+                        End Using
+                    End If
                     Using preview = OpenRawThumbnailSource(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath), rawContainerPath:=filePath)

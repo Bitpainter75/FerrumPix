@@ -23,6 +23,10 @@ Namespace ViewModels
         Private _thumbnailMemoryCacheCapacity As Integer = 250
         Private _jpgSaveQuality As Integer = 90
         Private _preserveMetadataOnSave As Boolean = True
+        Private _syncCatalogToXmp As Boolean = False
+        Private _createXmpSidecarIfMissing As Boolean = False
+        Private _developRawThumbnails As Boolean = False
+        Private _developRawInViewer As Boolean = False
         Private _thumbnailCacheEnabled As Boolean = True
         Private _viewerOpenFitToWindow As Boolean = True
         Private _viewerFitBehavior As String = "Always"
@@ -89,6 +93,10 @@ Namespace ViewModels
         Private _savedThumbnailMemoryCacheCapacity As Integer = 250
         Private _savedJpgSaveQuality As Integer = 90
         Private _savedPreserveMetadataOnSave As Boolean = True
+        Private _savedSyncCatalogToXmp As Boolean = False
+        Private _savedCreateXmpSidecarIfMissing As Boolean = False
+        Private _savedDevelopRawThumbnails As Boolean = False
+        Private _savedDevelopRawInViewer As Boolean = False
         Private _savedThumbnailCacheEnabled As Boolean = True
         Private _savedShowHiddenFolders As Boolean = False
         Private _savedDeleteSkipTrash As Boolean = False
@@ -270,6 +278,55 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _thumbnailCacheEnabled = value Then Return
                 Me.RaiseAndSetIfChanged(_thumbnailCacheEnabled, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>Rating/Farb-Label/Stichworte zusätzlich in ein XMP-Sidecar schreiben (Standard AUS).</summary>
+        Public Property SyncCatalogToXmp As Boolean
+            Get
+                Return _syncCatalogToXmp
+            End Get
+            Set(value As Boolean)
+                If _syncCatalogToXmp = value Then Return
+                Me.RaiseAndSetIfChanged(_syncCatalogToXmp, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>Beim XMP-Katalog-Sync auch fehlende .xmp neu anlegen (Standard AUS).</summary>
+        Public Property CreateXmpSidecarIfMissing As Boolean
+            Get
+                Return _createXmpSidecarIfMissing
+            End Get
+            Set(value As Boolean)
+                If _createXmpSidecarIfMissing = value Then Return
+                Me.RaiseAndSetIfChanged(_createXmpSidecarIfMissing, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>Entwickelte RAW-Vorschau für Galerie-Thumbnails (Standard AUS, nur bei .fpxmp).</summary>
+        Public Property DevelopRawThumbnails As Boolean
+            Get
+                Return _developRawThumbnails
+            End Get
+            Set(value As Boolean)
+                If _developRawThumbnails = value Then Return
+                Me.RaiseAndSetIfChanged(_developRawThumbnails, value)
+                SavePerformanceSettings()
+                ThumbnailCacheService.InvalidateSettingsCache()
+            End Set
+        End Property
+
+        ''' <summary>Entwickelte RAW-Vorschau im Viewer (Standard AUS, nur bei .fpxmp).</summary>
+        Public Property DevelopRawInViewer As Boolean
+            Get
+                Return _developRawInViewer
+            End Get
+            Set(value As Boolean)
+                If _developRawInViewer = value Then Return
+                Me.RaiseAndSetIfChanged(_developRawInViewer, value)
                 SavePerformanceSettings()
             End Set
         End Property
@@ -1203,6 +1260,10 @@ Namespace ViewModels
             _applicationScale = _appSettings.ApplicationScale
             _applicationScaleScreen = _appSettings.ApplicationScaleScreen
             ParseRunningApplicationScale(_runningApplicationScale, _runningApplicationScaleScreen)
+            _syncCatalogToXmp = _appSettings.SyncCatalogToXmp
+            _createXmpSidecarIfMissing = _appSettings.CreateXmpSidecarIfMissing
+            _developRawThumbnails = _appSettings.DevelopRawThumbnails
+            _developRawInViewer = _appSettings.DevelopRawInViewer
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
             _thumbnailQuality = _appSettings.ThumbnailQuality
             _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)
@@ -1368,6 +1429,10 @@ Namespace ViewModels
             _savedThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             _savedJpgSaveQuality = _jpgSaveQuality
             _savedPreserveMetadataOnSave = _preserveMetadataOnSave
+            _savedSyncCatalogToXmp = _syncCatalogToXmp
+            _savedCreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
+            _savedDevelopRawThumbnails = _developRawThumbnails
+            _savedDevelopRawInViewer = _developRawInViewer
             _savedThumbnailCacheEnabled = _thumbnailCacheEnabled
             _savedImmichEnabled = _immichEnabled
             _savedImmichServerUrl = _immichServerUrl
@@ -1415,6 +1480,10 @@ Namespace ViewModels
             ThumbnailMemoryCacheCapacity = _savedThumbnailMemoryCacheCapacity
             JpgSaveQuality = _savedJpgSaveQuality
             PreserveMetadataOnSave = _savedPreserveMetadataOnSave
+            SyncCatalogToXmp = _savedSyncCatalogToXmp
+            CreateXmpSidecarIfMissing = _savedCreateXmpSidecarIfMissing
+            DevelopRawThumbnails = _savedDevelopRawThumbnails
+            DevelopRawInViewer = _savedDevelopRawInViewer
             ThumbnailCacheEnabled = _savedThumbnailCacheEnabled
             ImmichServerUrl = _savedImmichServerUrl
             ImmichApiKey = _savedImmichApiKey
@@ -1480,6 +1549,10 @@ Namespace ViewModels
             ViewerFitBehavior = "Always"
             StartupImageMode = "Viewer"
             StartupNoImageMode = "Gallery"
+            SyncCatalogToXmp = False
+            CreateXmpSidecarIfMissing = False
+            DevelopRawThumbnails = False
+            DevelopRawInViewer = False
             ThumbnailCacheEnabled = True
             ThumbnailQuality = 82
             ThumbnailMemoryCacheCapacity = 250
@@ -1619,6 +1692,10 @@ Namespace ViewModels
             settings.GalleryThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             settings.JpgSaveQuality = _jpgSaveQuality
             settings.PreserveMetadataOnSave = _preserveMetadataOnSave
+            settings.SyncCatalogToXmp = _syncCatalogToXmp
+            settings.CreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
+            settings.DevelopRawThumbnails = _developRawThumbnails
+            settings.DevelopRawInViewer = _developRawInViewer
             AppSettingsService.Save(settings)
         End Sub
 

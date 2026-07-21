@@ -3935,4 +3935,28 @@
   <data name="Unregelm_igkeit_des_Korns_h_her_fleckiger_manche_d20eab69" xml:space="preserve">
     <value>Irregularidad del grano: más alto = más irregular (unas zonas con más grano que otras).</value>
   </data>
+  <data name="XMP_Katalogdaten_synchronisieren_4ff54178" xml:space="preserve">
+    <value>Sincronizar datos de catálogo con XMP</value>
+  </data>
+  <data name="Schreibt_Bewertung_Farb_Label_und_Stichworte_zus_84b9770d" xml:space="preserve">
+    <value>Escribe también la valoración, la etiqueta de color y las palabras clave en un sidecar XMP para que otros programas las vean. La edición .fpxmp permanece intacta.</value>
+  </data>
+  <data name="Fehlende_XMP_Sidecars_anlegen_d1a7dd45" xml:space="preserve">
+    <value>Crear sidecars XMP faltantes</value>
+  </data>
+  <data name="Legt_beim_Synchronisieren_auch_neue_xmp_Dateien__7c253df3" xml:space="preserve">
+    <value>Crea también nuevos archivos .xmp durante la sincronización cuando aún no existe ninguno.</value>
+  </data>
+  <data name="Bearbeitete_RAWs_als_Thumbnail_entwickeln_c2675ef8" xml:space="preserve">
+    <value>Revelar RAWs editados como miniaturas</value>
+  </data>
+  <data name="Zeigt_in_der_Galerie_das_entwickelte_RAW_mit_dei_ff1eb3f6" xml:space="preserve">
+    <value>Muestra en la galería el RAW revelado con tu edición, pero solo si existe un .fpxmp. Los RAW sin editar mantienen el JPG incrustado rápido.</value>
+  </data>
+  <data name="Bearbeitete_RAWs_im_Viewer_entwickeln_9f7d590b" xml:space="preserve">
+    <value>Revelar RAWs editados en el visor</value>
+  </data>
+  <data name="Zeigt_auch_im_Viewer_das_entwickelte_bearbeitete_99fe4ca8" xml:space="preserve">
+    <value>Muestra también en el visor el RAW revelado y editado en lugar de la vista previa incrustada, solo si existe un .fpxmp.</value>
+  </data>
 </root>

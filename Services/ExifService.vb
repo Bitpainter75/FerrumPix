@@ -713,6 +713,90 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Schreibt Katalogdaten (Bewertung, Farb-Label, Stichworte) in ein Adobe-XMP-Sidecar -
+        ''' die Verallgemeinerung von <see cref="WriteXmpRatingSidecar"/>. Vorhandene fremde Knoten
+        ''' bleiben erhalten (nur die betroffenen werden gesetzt/ersetzt). <paramref name="colorLabelWord"/>
+        ''' ist das englische Lightroom-Farbwort (siehe XmpSidecarService.LabelToXmpWord); leer entfernt
+        ''' xmp:Label. Leere Stichwortliste entfernt dc:subject. Legt nur bei
+        ''' <paramref name="createIfMissing"/> eine neue Datei an. Gegated wird über die Einstellung im
+        ''' Aufrufer (LibraryService), NICHT hier.</summary>
+        Public Shared Function WriteXmpCatalogSidecar(imagePath As String, rating As Integer, colorLabelWord As String,
+                                                      keywords As IEnumerable(Of String), createIfMissing As Boolean) As Boolean
+            If String.IsNullOrWhiteSpace(imagePath) Then Return False
+
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) Then
+                If Not createIfMissing Then Return False
+                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
+            End If
+
+            Dim xNamespace As XNamespace = "adobe:ns:meta/"
+            Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+            Dim xmpNamespace As XNamespace = "http://ns.adobe.com/xap/1.0/"
+            Dim dcNamespace As XNamespace = "http://purl.org/dc/elements/1.1/"
+            Dim safeRating = Math.Max(0, Math.Min(5, rating)).ToString(CultureInfo.InvariantCulture)
+
+            Try
+                Dim doc As XDocument
+                If System.IO.File.Exists(sidecarPath) Then
+                    doc = XDocument.Parse(System.IO.File.ReadAllText(sidecarPath, Encoding.UTF8), LoadOptions.PreserveWhitespace)
+                Else
+                    doc = New XDocument(
+                        New XDeclaration("1.0", "utf-8", "yes"),
+                        New XElement(xNamespace + "xmpmeta",
+                            New XAttribute(XNamespace.Xmlns + "x", xNamespace.NamespaceName),
+                            New XElement(rdfNamespace + "RDF",
+                                New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName),
+                                New XElement(rdfNamespace + "Description",
+                                    New XAttribute(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)))))
+                End If
+
+                Dim description = doc.Descendants(rdfNamespace + "Description").FirstOrDefault()
+                If description Is Nothing Then
+                    Dim rdfRoot = doc.Descendants(rdfNamespace + "RDF").FirstOrDefault()
+                    If rdfRoot Is Nothing Then
+                        Dim root = doc.Root
+                        If root Is Nothing Then Return False
+                        rdfRoot = New XElement(rdfNamespace + "RDF", New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName))
+                        root.Add(rdfRoot)
+                    End If
+                    description = New XElement(rdfNamespace + "Description")
+                    rdfRoot.Add(description)
+                End If
+
+                description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
+                description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
+
+                ' xmp:Label: bekanntes Farbwort setzen, sonst vorhandenes Attribut entfernen (nicht raten).
+                If Not String.IsNullOrEmpty(colorLabelWord) Then
+                    description.SetAttributeValue(xmpNamespace + "Label", colorLabelWord)
+                Else
+                    description.SetAttributeValue(xmpNamespace + "Label", Nothing)
+                End If
+
+                ' dc:subject als rdf:Bag neu aufbauen (vorhandenes ersetzen); leere Liste entfernt es.
+                Dim existingSubject = description.Element(dcNamespace + "subject")
+                If existingSubject IsNot Nothing Then existingSubject.Remove()
+                Dim tagList = If(keywords, Enumerable.Empty(Of String)()).
+                    Select(Function(k) If(k, "").Trim()).Where(Function(k) k.Length > 0).
+                    Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                If tagList.Count > 0 Then
+                    description.SetAttributeValue(XNamespace.Xmlns + "dc", dcNamespace.NamespaceName)
+                    Dim bag = New XElement(rdfNamespace + "Bag")
+                    For Each tag In tagList
+                        bag.Add(New XElement(rdfNamespace + "li", tag))
+                    Next
+                    description.Add(New XElement(dcNamespace + "subject", bag))
+                End If
+
+                System.IO.File.WriteAllText(sidecarPath, doc.ToString(SaveOptions.DisableFormatting), New UTF8Encoding(False))
+                Return True
+            Catch
+                Return False
+            End Try
+        End Function
+
         Private Shared Function TryGetMemberValue(item As Object, memberName As String) As Object
             If item Is Nothing Then Return Nothing
             Dim prop = item.GetType().GetProperty(memberName, BindingFlags.Public Or BindingFlags.Instance)

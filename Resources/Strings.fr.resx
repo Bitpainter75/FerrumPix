@@ -3935,4 +3935,28 @@
   <data name="Unregelm_igkeit_des_Korns_h_her_fleckiger_manche_d20eab69" xml:space="preserve">
     <value>Irrégularité du grain : plus haut = plus inégal (certaines zones plus granuleuses).</value>
   </data>
+  <data name="XMP_Katalogdaten_synchronisieren_4ff54178" xml:space="preserve">
+    <value>Synchroniser les données de catalogue vers XMP</value>
+  </data>
+  <data name="Schreibt_Bewertung_Farb_Label_und_Stichworte_zus_84b9770d" xml:space="preserve">
+    <value>Écrit aussi la note, le libellé de couleur et les mots-clés dans un fichier XMP annexe pour que d'autres logiciels les voient. La retouche .fpxmp reste intacte.</value>
+  </data>
+  <data name="Fehlende_XMP_Sidecars_anlegen_d1a7dd45" xml:space="preserve">
+    <value>Créer les fichiers XMP annexes manquants</value>
+  </data>
+  <data name="Legt_beim_Synchronisieren_auch_neue_xmp_Dateien__7c253df3" xml:space="preserve">
+    <value>Crée aussi de nouveaux fichiers .xmp lors de la synchronisation lorsqu'il n'en existe pas encore.</value>
+  </data>
+  <data name="Bearbeitete_RAWs_als_Thumbnail_entwickeln_c2675ef8" xml:space="preserve">
+    <value>Développer les RAW modifiés en miniatures</value>
+  </data>
+  <data name="Zeigt_in_der_Galerie_das_entwickelte_RAW_mit_dei_ff1eb3f6" xml:space="preserve">
+    <value>Affiche dans la galerie le RAW développé avec votre retouche, mais seulement s'il existe un .fpxmp. Les RAW non modifiés gardent le JPG intégré rapide.</value>
+  </data>
+  <data name="Bearbeitete_RAWs_im_Viewer_entwickeln_9f7d590b" xml:space="preserve">
+    <value>Développer les RAW modifiés dans la visionneuse</value>
+  </data>
+  <data name="Zeigt_auch_im_Viewer_das_entwickelte_bearbeitete_99fe4ca8" xml:space="preserve">
+    <value>Affiche aussi dans la visionneuse le RAW développé et modifié au lieu de l'aperçu intégré, uniquement si un .fpxmp existe.</value>
+  </data>
 </root>

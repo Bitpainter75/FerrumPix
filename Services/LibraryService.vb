@@ -215,11 +215,9 @@ Namespace Services
                 End Using
             End Using
 
-            ' Bewertung nur in eine BEREITS vorhandene XMP-Sidecar zurückschreiben, aber keine neue
-            ' Sidecar-Datei nur wegen einer Sternebewertung anlegen (createIfMissing:=False).
-            If syncToXmp AndAlso HasXmpMetadata(filePath) Then
-                ExifService.WriteXmpRatingSidecar(filePath, rating, createIfMissing:=False)
-            End If
+            ' Katalog (Rating/Label/Stichworte) optional zusätzlich ins XMP-Sidecar - gegated über die
+            ' Einstellung SyncCatalogToXmp (siehe SyncCatalogToXmpSidecar). .fpxmp bleibt primär.
+            If syncToXmp Then SyncCatalogToXmpSidecar(filePath)
         End Sub
 
         Public Function GetColorLabel(filePath As String) As String
@@ -286,7 +284,7 @@ Namespace Services
 
         ''' <summary>Setzt das Farbetikett für mehrere Dateien in einer Transaktion (Mehrfachauswahl).
         ''' Leerstring = Etikett entfernen.</summary>
-        Public Sub SetColorLabelForMany(filePaths As IEnumerable(Of String), colorLabel As String)
+        Public Sub SetColorLabelForMany(filePaths As IEnumerable(Of String), colorLabel As String, Optional syncToXmp As Boolean = False)
             Dim list = If(filePaths, Enumerable.Empty(Of String)()).Where(Function(p) Not String.IsNullOrWhiteSpace(p)).ToList()
             If list.Count = 0 Then Return
             Dim value = If(colorLabel, "")
@@ -310,6 +308,12 @@ Namespace Services
                     transaction.Commit()
                 End Using
             End Using
+
+            If syncToXmp Then
+                For Each path In list
+                    SyncCatalogToXmpSidecar(path)
+                Next
+            End If
         End Sub
 
         ''' <summary>Setzt die Bewertung für mehrere Dateien in einer einzigen Transaktion/Verbindung
@@ -339,13 +343,8 @@ Namespace Services
             End Using
 
             If syncToXmp Then
-                Dim metaByPath = GetMetaForPaths(list)
                 For Each path In list
-                    Dim meta As LibraryImageMeta = Nothing
-                    If metaByPath.TryGetValue(path, meta) AndAlso meta IsNot Nothing AndAlso meta.HasXmpMetadata Then
-                        ' Keine neue Sidecar nur wegen Bewertung anlegen - nur vorhandene aktualisieren.
-                        ExifService.WriteXmpRatingSidecar(path, rating, createIfMissing:=False)
-                    End If
+                    SyncCatalogToXmpSidecar(path)
                 Next
             End If
         End Sub
@@ -384,7 +383,7 @@ Namespace Services
             Return result.OrderBy(Function(t) t, StringComparer.OrdinalIgnoreCase).ToList()
         End Function
 
-        Public Sub SetTags(filePath As String, tags As IEnumerable(Of String))
+        Public Sub SetTags(filePath As String, tags As IEnumerable(Of String), Optional syncToXmp As Boolean = False)
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
@@ -396,6 +395,26 @@ Namespace Services
                     cmd.ExecuteNonQuery()
                 End Using
             End Using
+
+            If syncToXmp Then SyncCatalogToXmpSidecar(filePath)
+        End Sub
+
+        ''' <summary>Schreibt den aktuellen Katalog (Rating/Farb-Label/Stichworte) dieser Datei zusätzlich
+        ''' in ein Adobe-XMP-Sidecar - nur wenn die Einstellung <c>SyncCatalogToXmp</c> an ist. Legt nur
+        ''' bei <c>CreateXmpSidecarIfMissing</c> eine neue Datei an. .fpxmp bleibt die primäre Quelle.
+        ''' Wird ausschließlich aus BEWUSSTEN Katalog-Änderungen aufgerufen (nicht aus Kopier-/Importwegen),
+        ''' damit XMP nicht als Nebenwirkung entsteht.</summary>
+        Private Sub SyncCatalogToXmpSidecar(filePath As String)
+            If String.IsNullOrWhiteSpace(filePath) Then Return
+            Try
+                Dim settings = AppSettingsService.Load()
+                If Not settings.SyncCatalogToXmp Then Return
+                Dim labelWord = XmpSidecarService.LabelToXmpWord(GetColorLabel(filePath))
+                ExifService.WriteXmpCatalogSidecar(filePath, GetRating(filePath), labelWord, GetTags(filePath),
+                                                   settings.CreateXmpSidecarIfMissing)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.SyncCatalogToXmpSidecar", ex)
+            End Try
         End Sub
 
         ''' <summary>Speichert die durchsuchbaren EXIF-Felder für eine Datei, ohne Favorit/Bewertung/

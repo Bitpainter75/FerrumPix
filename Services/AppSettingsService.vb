@@ -121,6 +121,18 @@ Namespace Services
         Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 250
         Public Property JpgSaveQuality As Integer = 90
         Public Property PreserveMetadataOnSave As Boolean = True
+        ''' Optionaler XMP-Katalog-Sync (Standard AUS): schreibt Rating/Farb-Label/Stichworte zusätzlich
+        ''' zum .fpxmp-Rezept in ein Adobe-XMP-Sidecar, damit andere Programme sie sehen. .fpxmp bleibt
+        ''' die primäre Bearbeitungsquelle. Erst per Einstellung aktivierbar.
+        Public Property SyncCatalogToXmp As Boolean = False
+        ''' Ob der Katalog-Sync dabei auch eine FEHLENDE .xmp neu anlegen darf (Standard AUS: nur
+        ''' vorhandene Sidecars aktualisieren).
+        Public Property CreateXmpSidecarIfMissing As Boolean = False
+        ''' Entwickelte RAW-Vorschau statt eingebettetem JPG (Standard AUS). Wirkt NUR, wenn eine .fpxmp
+        ''' existiert - unbearbeitete RAWs bleiben beim schnellen eingebetteten JPG. Getrennt für
+        ''' Galerie-Thumbnails und Viewer, weil der Viewer teurer entwickelt.
+        Public Property DevelopRawThumbnails As Boolean = False
+        Public Property DevelopRawInViewer As Boolean = False
         Public Property EditorInfoSidebarExpanded As Boolean = True
         ''' Ob das Ebenen-Panel im Editor zuletzt eingeblendet war - gemerkter Bedienzustand (wie die
         ''' Info-Leiste), kein Schalter in den Einstellungen. Standard aus: es ist ein Profi-Werkzeug.

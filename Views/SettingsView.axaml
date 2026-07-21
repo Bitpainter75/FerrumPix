@@ -838,6 +838,55 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2">
+                                <TextBlock Text="XMP-Katalogdaten synchronisieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Schreibt Bewertung, Farb-Label und Stichworte zusätzlich in ein XMP-Sidecar, damit andere Programme sie sehen. Die .fpxmp-Bearbeitung bleibt unberührt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding SyncCatalogToXmp}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Fehlende XMP-Sidecars anlegen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt beim Synchronisieren auch neue .xmp-Dateien an, wenn noch keine existiert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding CreateXmpSidecarIfMissing}"
+                                          IsEnabled="{Binding SyncCatalogToXmp}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Bearbeitete RAWs als Thumbnail entwickeln" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt in der Galerie das entwickelte RAW mit deiner Bearbeitung – aber nur, wenn dafür eine .fpxmp existiert. Unbearbeitete RAWs bleiben beim schnellen eingebetteten JPG." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding DevelopRawThumbnails}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Bearbeitete RAWs im Viewer entwickeln" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt auch im Viewer das entwickelte, bearbeitete RAW statt der eingebetteten Vorschau – nur bei vorhandener .fpxmp." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding DevelopRawInViewer}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
                                 <TextBlock Text="Lineale im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Blendet die Pixel-Lineale am oberen und linken Rand der Vorschau ein." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>

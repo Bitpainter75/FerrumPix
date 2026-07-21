@@ -464,7 +464,7 @@ Namespace ViewModels
                         LibraryService.Instance.SetColorLabelForMany({meta.FilePath}, normalized)
                     End If
                 ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                    LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, normalized)
+                    LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, normalized, syncToXmp:=True)
                 End If
             End Set
         End Property
@@ -765,7 +765,7 @@ Namespace ViewModels
                                                        If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
                                                            Dim ignored = ImmichService.AddTagToAssetAsync(_currentImmichAssetId, tag)
                                                        ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                           LibraryService.Instance.SetTags(_currentImagePath, Tags)
+                                                           LibraryService.Instance.SetTags(_currentImagePath, Tags, syncToXmp:=True)
                                                        End If
                                                        RefreshTagSuggestions()
                                                    End Sub)
@@ -774,7 +774,7 @@ Namespace ViewModels
                                                                      If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
                                                                          Dim ignored = ImmichService.RemoveTagFromAssetAsync(_currentImmichAssetId, tag)
                                                                      ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                                         LibraryService.Instance.SetTags(_currentImagePath, Tags)
+                                                                         LibraryService.Instance.SetTags(_currentImagePath, Tags, syncToXmp:=True)
                                                                      End If
                                                                  End Sub)
             RotateLeftCommand = ReactiveCommand.Create(Sub() RotationAngle = RotationAngle - 90)
@@ -1059,6 +1059,19 @@ Namespace ViewModels
         ''' Reiner Decode ohne ViewModel-Zustand - laeuft im Task.Run-Worker.
         Private Shared Function DecodeViewerBitmap(path As String) As Bitmap
             If RawPreviewService.IsSupportedRaw(path) Then
+                ' Optionale entwickelte Vorschau (nur bei aktiver Einstellung + vorhandener .fpxmp +
+                ' verfügbarem LibRaw): das bearbeitete RAW wie im Editor, statt der schnellen
+                ' eingebetteten Vorschau. ApplyAdjustments liefert bereits orientiert + mit Rezept-Geometrie.
+                If AppSettingsService.Load().DevelopRawInViewer AndAlso RawDecodeService.IsAvailable AndAlso RawSidecarService.Exists(path) Then
+                    Dim adj = RawSidecarService.TryRead(path)
+                    If adj IsNot Nothing Then
+                        Try
+                            Dim developed = ImageProcessor.ApplyAdjustments(path, adj)
+                            If developed IsNot Nothing Then Return developed
+                        Catch
+                        End Try
+                    End If
+                End If
                 Using preview = RawPreviewService.ExtractPreviewWithFallback(path)
                     ' Gedrehte RAWs tragen ihre Drehung im Sidecar (die Datei selbst wird nie
                     ' neu geschrieben) - beim Anzeigen also wieder drauflegen.
