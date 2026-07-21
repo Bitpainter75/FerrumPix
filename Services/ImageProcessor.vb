@@ -3084,6 +3084,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ' Weiche Kante der Retusche-Scheibe: bis 55% des Radius voll deckend, danach linear auslaufend.
         ' Entspricht der früheren Formel edge = (radius - d) / (radius * 0.45).
         Private Shared ReadOnly RetouchFeatherStops As Single() = {0.0F, 0.55F, 1.0F}
+        Private Const HealingPatchRadius As Integer = 6
+        Private Const HealingSearchBaseMargin As Integer = 140
+        Private Const HealingSearchMargin As Integer = HealingSearchBaseMargin + HealingPatchRadius + 8
+        Private Const HealingMaxNativeExtent As Integer = 1200
 
         ''' ARBEITSBILD-Umbau Stufe E (2026-07-17): Das Rezept-Replay der Retusche ist entfernt.
         ''' Retusche wird beim Commit REGIONAL in Vollauflösung ins Arbeitsbild eingebacken
@@ -3412,7 +3416,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End If
             Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
 
-            Dim scaled As New List(Of (X As Single, Y As Single, Radius As Single, Flow As Single))()
+            Dim scaled As New List(Of (X As Single, Y As Single, Radius As Single, Flow As Single, EffectCeiling As Single))()
             Dim left = source.Width
             Dim top = source.Height
             Dim right = 0
@@ -3423,11 +3427,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Dim radius = Clamp(spot.RadiusPixels * radiusScale + 2.0F, 1, Math.Max(source.Width, source.Height))
                 Dim cx = Clamp(spot.XPixels * scaleX, 0, source.Width)
                 Dim cy = Clamp(spot.YPixels * scaleY, 0, source.Height)
-                Dim flow = Clamp(spot.FlowPercent, 0, 100) / 100.0F *
-                           Clamp(spot.OpacityPercent, 0, 100) / 100.0F *
-                           Clamp(spot.StrengthPercent, 0, 100) / 100.0F
-                If flow <= 0.001F Then Continue For
-                scaled.Add((cx, cy, radius, flow))
+                Dim flow = Clamp(spot.FlowPercent, 0, 100) / 100.0F
+                Dim effectCeiling = Clamp(spot.OpacityPercent, 0, 100) / 100.0F *
+                                    Clamp(spot.StrengthPercent, 0, 100) / 100.0F
+                If flow <= 0.001F OrElse effectCeiling <= 0.001F Then Continue For
+                scaled.Add((cx, cy, radius, flow, effectCeiling))
                 maxRadius = Math.Max(maxRadius, radius)
                 left = Math.Min(left, CInt(Math.Floor(cx - radius - 2)))
                 top = Math.Min(top, CInt(Math.Floor(cy - radius - 2)))
@@ -3444,78 +3448,135 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim height = bottom - top
             If width <= 0 OrElse height <= 0 Then Return
 
-            Using mask = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
-                Using maskCanvas = New SKCanvas(mask)
-                    maskCanvas.Clear(SKColors.Transparent)
-                    maskCanvas.Translate(-left, -top)
-                    For Each s In scaled
-                        Using shader = SKShader.CreateRadialGradient(New SKPoint(s.X, s.Y), s.Radius,
-                                                                     {SKColors.White.WithAlpha(CByte(255 * s.Flow)),
-                                                                      SKColors.White.WithAlpha(CByte(255 * s.Flow)),
-                                                                      SKColors.Transparent},
-                                                                     RetouchFeatherStops, SKShaderTileMode.Clamp)
-                            Using paint = New SKPaint With {.Shader = shader, .IsAntialias = True, .BlendMode = SKBlendMode.SrcOver}
-                                maskCanvas.DrawCircle(s.X, s.Y, s.Radius, paint)
+            ' Zwei Masken mit getrennten Aufgaben:
+            ' - defectMask beschreibt die komplette Pinselgeometrie. Sie verhindert, dass die
+            '   Quellensuche noch Pixel aus dem zu reparierenden Defekt verwendet.
+            ' - blendMask beschreibt die sichtbare Wirkung. Fluss darf sich entlang des Zugs
+            '   aufbauen, Deckkraft und Staerke deckeln danach aber den gesamten Zug.
+            Using defectMask = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using blendMask = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                    Using defectCanvas = New SKCanvas(defectMask)
+                        Using blendCanvas = New SKCanvas(blendMask)
+                            defectCanvas.Clear(SKColors.Transparent)
+                            blendCanvas.Clear(SKColors.Transparent)
+                            defectCanvas.Translate(-left, -top)
+                            blendCanvas.Translate(-left, -top)
+                            For Each s In scaled
+                                Using defectShader = SKShader.CreateRadialGradient(New SKPoint(s.X, s.Y), s.Radius,
+                                                                                   {SKColors.White, SKColors.White, SKColors.Transparent},
+                                                                                   RetouchFeatherStops, SKShaderTileMode.Clamp)
+                                    Using defectPaint = New SKPaint With {.Shader = defectShader, .IsAntialias = True, .BlendMode = SKBlendMode.SrcOver}
+                                        defectCanvas.DrawCircle(s.X, s.Y, s.Radius, defectPaint)
+                                    End Using
+                                End Using
+                                Using blendShader = SKShader.CreateRadialGradient(New SKPoint(s.X, s.Y), s.Radius,
+                                                                                  {SKColors.White.WithAlpha(CByte(255 * s.Flow)),
+                                                                                   SKColors.White.WithAlpha(CByte(255 * s.Flow)),
+                                                                                   SKColors.Transparent},
+                                                                                  RetouchFeatherStops, SKShaderTileMode.Clamp)
+                                    Using blendPaint = New SKPaint With {.Shader = blendShader, .IsAntialias = True, .BlendMode = SKBlendMode.SrcOver}
+                                        blendCanvas.DrawCircle(s.X, s.Y, s.Radius, blendPaint)
+                                    End Using
+                                End Using
+                            Next
+                            blendCanvas.ResetMatrix()
+                            Dim effectCeiling = scaled(0).EffectCeiling
+                            Using ceilingPaint = New SKPaint With {
+                                .Color = SKColors.White.WithAlpha(CByte(255 * effectCeiling)),
+                                .BlendMode = SKBlendMode.DstIn,
+                                .IsAntialias = False
+                            }
+                                blendCanvas.DrawRect(New SKRect(0, 0, width, height), ceilingPaint)
                             End Using
                         End Using
-                    Next
+                    End Using
+
+                    If DrawInpaintedHealingRegion(result, defectMask, blendMask, left, top) Then
+                        Return
+                    End If
+
+                    Dim targetAverage = AverageRegionSurroundingColor(source, defectMask, left, top, maxRadius)
+                    If Not targetAverage.HasValue Then
+                        For Each s In scaled
+                            Dim visibleFlow = s.Flow * s.EffectCeiling
+                            Dim fill = AverageSurroundingColor(source, s.X, s.Y, s.Radius)
+                            If fill.HasValue Then DrawSoftDisc(canvas, s.X, s.Y, s.Radius, fill.Value, visibleFlow)
+                        Next
+                        Return
+                    End If
+
+                    Dim sample = FindHealingRegionPatch(source, defectMask, left, top, width, height, maxRadius, targetAverage.Value)
+                    If Not sample.Found Then
+                        For Each s In scaled
+                            DrawSoftDisc(canvas, s.X, s.Y, s.Radius, targetAverage.Value, s.Flow * s.EffectCeiling)
+                        Next
+                        Return
+                    End If
+
+                    DrawAdjustedHealingRegion(result, source, blendMask, left, top, sample.Left, sample.Top,
+                                              targetAverage.Value, sample.Average)
                 End Using
-
-                If DrawInpaintedHealingRegion(result, mask, left, top) Then
-                    Return
-                End If
-
-                Dim targetAverage = AverageRegionSurroundingColor(source, mask, left, top, maxRadius)
-                If Not targetAverage.HasValue Then
-                    For Each s In scaled
-                        Dim fill = AverageSurroundingColor(source, s.X, s.Y, s.Radius)
-                        If fill.HasValue Then DrawSoftDisc(canvas, s.X, s.Y, s.Radius, fill.Value, s.Flow)
-                    Next
-                    Return
-                End If
-
-                Dim sample = FindHealingRegionPatch(source, mask, left, top, width, height, maxRadius, targetAverage.Value)
-                If Not sample.Found Then
-                    For Each s In scaled
-                        DrawSoftDisc(canvas, s.X, s.Y, s.Radius, targetAverage.Value, s.Flow)
-                    Next
-                    Return
-                End If
-
-                DrawAdjustedHealingRegion(result, source, mask, left, top, sample.Left, sample.Top,
-                                          targetAverage.Value, sample.Average)
             End Using
         End Sub
 
-        Private Shared Function DrawInpaintedHealingRegion(result As SKBitmap, mask As SKBitmap,
+        Private Shared Function DrawInpaintedHealingRegion(result As SKBitmap, defectMask As SKBitmap, blendMask As SKBitmap,
                                                            targetLeft As Integer, targetTop As Integer) As Boolean
-            If result Is Nothing OrElse mask Is Nothing OrElse mask.Width <= 0 OrElse mask.Height <= 0 Then Return False
+            If result Is Nothing OrElse defectMask Is Nothing OrElse blendMask Is Nothing OrElse
+               defectMask.Width <= 0 OrElse defectMask.Height <= 0 OrElse
+               defectMask.Width <> blendMask.Width OrElse defectMask.Height <> blendMask.Height Then Return False
 
-            Dim width = mask.Width
-            Dim height = mask.Height
+            If Math.Max(defectMask.Width, defectMask.Height) > HealingMaxNativeExtent Then
+                Return DrawScaledInpaintedHealingRegion(result, defectMask, blendMask, targetLeft, targetTop)
+            End If
+
+            Dim width = defectMask.Width
+            Dim height = defectMask.Height
             Dim count = width * height
             Dim maskAlpha(count - 1) As Byte
+            Dim blendAlpha(count - 1) As Byte
             Dim filled(count - 1) As Boolean
             Dim queued(count - 1) As Boolean
             Dim maskedCount = 0
 
-            Using work = CloneBitmap(result)
-                For maskY = 0 To height - 1
-                    Dim y = targetTop + maskY
-                    For mx = 0 To width - 1
-                        Dim index = maskY * width + mx
-                        Dim alpha = mask.GetPixel(mx, maskY).Alpha
-                        maskAlpha(index) = NormalizeHealingMaskAlpha(alpha)
-                        Dim isMasked = alpha > 8 AndAlso y >= 0 AndAlso y < result.Height AndAlso
-                                       targetLeft + mx >= 0 AndAlso targetLeft + mx < result.Width
-                        filled(index) = Not isMasked
-                        If isMasked Then maskedCount += 1
-                    Next
+            For maskY = 0 To height - 1
+                Dim y = targetTop + maskY
+                For mx = 0 To width - 1
+                    Dim index = maskY * width + mx
+                    Dim alpha = defectMask.GetPixel(mx, maskY).Alpha
+                    maskAlpha(index) = NormalizeHealingMaskAlpha(alpha)
+                    blendAlpha(index) = blendMask.GetPixel(mx, maskY).Alpha
+                    Dim isMasked = alpha > 8 AndAlso y >= 0 AndAlso y < result.Height AndAlso
+                                   targetLeft + mx >= 0 AndAlso targetLeft + mx < result.Width
+                    filled(index) = Not isMasked
+                    If isMasked Then maskedCount += 1
                 Next
+            Next
 
-                If maskedCount = 0 Then Return False
+            If maskedCount = 0 Then Return False
 
-                If DrawPatchBasedInpaintedHealingRegion(result, work, maskAlpha, targetLeft, targetTop, width, height) Then
+            ' Nur Zielregion plus Suchrand kopieren. Die fruehere CloneBitmap(result)-Kopie
+            ' allokierte bei 49 MP rund 196 MB pro Zug, obwohl nur ein kleiner Fleck veraendert wird.
+            Dim workMargin = HealingSearchMargin
+            Dim workLeft = Math.Max(0, targetLeft - workMargin)
+            Dim workTop = Math.Max(0, targetTop - workMargin)
+            Dim workRight = Math.Min(result.Width, targetLeft + width + workMargin)
+            Dim workBottom = Math.Min(result.Height, targetTop + height + workMargin)
+            Dim workWidth = workRight - workLeft
+            Dim workHeight = workBottom - workTop
+            If workWidth <= 0 OrElse workHeight <= 0 Then Return False
+
+            Using work = New SKBitmap(workWidth, workHeight, result.ColorType, result.AlphaType)
+                Using workCanvas = New SKCanvas(work)
+                    workCanvas.DrawBitmap(result,
+                                          New SKRect(workLeft, workTop, workRight, workBottom),
+                                          New SKRect(0, 0, workWidth, workHeight))
+                End Using
+                Dim localTargetLeft = targetLeft - workLeft
+                Dim localTargetTop = targetTop - workTop
+
+                If DrawPatchBasedInpaintedHealingRegion(result, work, maskAlpha, blendAlpha,
+                                                         localTargetLeft, localTargetTop, width, height,
+                                                         workLeft, workTop) Then
                     Return True
                 End If
 
@@ -3537,11 +3598,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
                     Dim mx = index Mod width
                     Dim maskY = index \ width
-                    Dim x = targetLeft + mx
-                    Dim y = targetTop + maskY
-                    Dim average = AverageUnmaskedRays(work, maskAlpha, targetLeft, targetTop, width, height, mx, maskY)
+                    Dim x = localTargetLeft + mx
+                    Dim y = localTargetTop + maskY
+                    Dim average = AverageUnmaskedRays(work, maskAlpha, localTargetLeft, localTargetTop, width, height, mx, maskY)
                     If Not average.HasValue Then
-                        average = AverageFilledNeighborhood(work, filled, targetLeft, targetTop, width, height, mx, maskY)
+                        average = AverageFilledNeighborhood(work, filled, localTargetLeft, localTargetTop, width, height, mx, maskY)
                     End If
                     If Not average.HasValue Then Continue While
 
@@ -3564,25 +3625,27 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End While
 
                 If repairedCount = 0 Then Return False
-                If ShouldSmoothInpaintedRegion(work, maskAlpha, targetLeft, targetTop, width, height) Then
-                    SmoothInpaintedRegion(work, maskAlpha, targetLeft, targetTop, width, height)
+                If ShouldSmoothInpaintedRegion(work, maskAlpha, localTargetLeft, localTargetTop, width, height) Then
+                    SmoothInpaintedRegion(work, maskAlpha, localTargetLeft, localTargetTop, width, height)
                 End If
 
                 For maskY = 0 To height - 1
-                    Dim y = targetTop + maskY
-                    If y < 0 OrElse y >= result.Height Then Continue For
+                    Dim workY = localTargetTop + maskY
+                    Dim resultY = workTop + workY
+                    If resultY < 0 OrElse resultY >= result.Height Then Continue For
                     For mx = 0 To width - 1
                         Dim index = maskY * width + mx
-                        Dim alpha = maskAlpha(index)
+                        Dim alpha = blendAlpha(index)
                         If alpha <= 8 OrElse Not filled(index) Then Continue For
-                        Dim x = targetLeft + mx
-                        If x < 0 OrElse x >= result.Width Then Continue For
+                        Dim workX = localTargetLeft + mx
+                        Dim resultX = workLeft + workX
+                        If resultX < 0 OrElse resultX >= result.Width Then Continue For
 
                         Dim localAlpha = Clamp(alpha / 255.0F, 0.0F, 1.0F)
                         If localAlpha <= 0.001F Then Continue For
-                        Dim target = result.GetPixel(x, y)
-                        Dim repaired = work.GetPixel(x, y)
-                        result.SetPixel(x, y, New SKColor(
+                        Dim target = result.GetPixel(resultX, resultY)
+                        Dim repaired = work.GetPixel(workX, workY)
+                        result.SetPixel(resultX, resultY, New SKColor(
                             BlendByte(target.Red, repaired.Red, localAlpha),
                             BlendByte(target.Green, repaired.Green, localAlpha),
                             BlendByte(target.Blue, repaired.Blue, localAlpha),
@@ -3594,11 +3657,100 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return True
         End Function
 
+        ''' <summary>Aufloesungsnormalisierter Heal-Pfad fuer sehr grosse Masken. Feste 13x13-Patches,
+        ''' 160 Durchlaeufe und das Suchbudget reichen bei einem 1200-px-Ziel gut aus, bei einer
+        ''' mehrere tausend Pixel langen 49-MP-Maske faellt die Mitte dagegen in den weichen Fallback.
+        ''' Die Struktur wird deshalb in einem begrenzten Kontext rekonstruiert und anschliessend mit
+        ''' der unveraenderten Vollaufloesungs-Deckungsmaske zurueckkomponiert.</summary>
+        Private Shared Function DrawScaledInpaintedHealingRegion(result As SKBitmap,
+                                                                 defectMask As SKBitmap,
+                                                                 blendMask As SKBitmap,
+                                                                 targetLeft As Integer,
+                                                                 targetTop As Integer) As Boolean
+            Dim scale = HealingMaxNativeExtent / CDbl(Math.Max(defectMask.Width, defectMask.Height))
+            If scale <= 0.0 OrElse scale >= 1.0 Then Return False
+
+            ' Der Suchrand soll auch NACH dem Downscale dieselben 154 Arbeits-Pixel behalten.
+            Dim contextMargin = Math.Max(HealingSearchMargin,
+                                         CInt(Math.Ceiling(HealingSearchMargin / scale)))
+            Dim contextLeft = Math.Max(0, targetLeft - contextMargin)
+            Dim contextTop = Math.Max(0, targetTop - contextMargin)
+            Dim contextRight = Math.Min(result.Width, targetLeft + defectMask.Width + contextMargin)
+            Dim contextBottom = Math.Min(result.Height, targetTop + defectMask.Height + contextMargin)
+            Dim contextWidth = contextRight - contextLeft
+            Dim contextHeight = contextBottom - contextTop
+            If contextWidth <= 0 OrElse contextHeight <= 0 Then Return False
+
+            Dim scaledContextWidth = Math.Max(1, CInt(Math.Round(contextWidth * scale)))
+            Dim scaledContextHeight = Math.Max(1, CInt(Math.Round(contextHeight * scale)))
+            Dim scaleX = scaledContextWidth / CDbl(contextWidth)
+            Dim scaleY = scaledContextHeight / CDbl(contextHeight)
+            Dim scaledTargetLeft = CInt(Math.Round((targetLeft - contextLeft) * scaleX))
+            Dim scaledTargetTop = CInt(Math.Round((targetTop - contextTop) * scaleY))
+            Dim scaledMaskWidth = Math.Max(1, CInt(Math.Round(defectMask.Width * scaleX)))
+            Dim scaledMaskHeight = Math.Max(1, CInt(Math.Round(defectMask.Height * scaleY)))
+
+            Using scaledContext = New SKBitmap(scaledContextWidth, scaledContextHeight,
+                                               result.ColorType, result.AlphaType)
+                Using scaledCanvas = New SKCanvas(scaledContext)
+                    DrawBitmapSampled(scaledCanvas, result,
+                                      New SKRect(contextLeft, contextTop, contextRight, contextBottom),
+                                      New SKRect(0, 0, scaledContextWidth, scaledContextHeight),
+                                      SamplingHigh, Nothing)
+                End Using
+
+                Using scaledDefect = New SKBitmap(scaledMaskWidth, scaledMaskHeight,
+                                                  SKColorType.Bgra8888, SKAlphaType.Premul)
+                    Using maskCanvas = New SKCanvas(scaledDefect)
+                        maskCanvas.Clear(SKColors.Transparent)
+                        DrawBitmapSampled(maskCanvas, defectMask,
+                                          New SKRect(0, 0, defectMask.Width, defectMask.Height),
+                                          New SKRect(0, 0, scaledMaskWidth, scaledMaskHeight),
+                                          SamplingHigh, Nothing)
+                    End Using
+
+                    ' Innerhalb des kleinen Arbeitsbilds voll rekonstruieren. Die sichtbare
+                    ' Staerke/Deckkraft wird erst beim Rueckweg durch blendMask angewendet.
+                    Using scaledFullBlend = New SKBitmap(scaledMaskWidth, scaledMaskHeight,
+                                                         SKColorType.Bgra8888, SKAlphaType.Premul)
+                        Using fullBlendCanvas = New SKCanvas(scaledFullBlend)
+                            fullBlendCanvas.Clear(SKColors.White)
+                        End Using
+                        If Not DrawInpaintedHealingRegion(scaledContext, scaledDefect, scaledFullBlend,
+                                                         scaledTargetLeft, scaledTargetTop) Then Return False
+
+                        Using resultCanvas = New SKCanvas(result)
+                            Dim bounds = New SKRect(targetLeft, targetTop,
+                                                    targetLeft + defectMask.Width,
+                                                    targetTop + defectMask.Height)
+                            resultCanvas.SaveLayer(bounds, Nothing)
+                            DrawBitmapSampled(resultCanvas, scaledContext,
+                                              New SKRect(scaledTargetLeft, scaledTargetTop,
+                                                         scaledTargetLeft + scaledMaskWidth,
+                                                         scaledTargetTop + scaledMaskHeight),
+                                              bounds, SamplingHigh, Nothing)
+                            Using maskPaint = New SKPaint With {
+                                .BlendMode = SKBlendMode.DstIn,
+                                .IsAntialias = False
+                            }
+                                resultCanvas.DrawBitmap(blendMask, targetLeft, targetTop, maskPaint)
+                            End Using
+                            resultCanvas.Restore()
+                        End Using
+                    End Using
+                End Using
+            End Using
+
+            Return True
+        End Function
+
         Private Shared Function DrawPatchBasedInpaintedHealingRegion(result As SKBitmap, work As SKBitmap,
-                                                                     maskAlpha As Byte(),
+                                                                     maskAlpha As Byte(), blendAlpha As Byte(),
                                                                      targetLeft As Integer, targetTop As Integer,
-                                                                     width As Integer, height As Integer) As Boolean
-            If result Is Nothing OrElse work Is Nothing OrElse maskAlpha Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return False
+                                                                     width As Integer, height As Integer,
+                                                                     resultOriginX As Integer, resultOriginY As Integer) As Boolean
+            If result Is Nothing OrElse work Is Nothing OrElse maskAlpha Is Nothing OrElse blendAlpha Is Nothing OrElse
+               maskAlpha.Length <> blendAlpha.Length OrElse width <= 0 OrElse height <= 0 Then Return False
 
             Dim known(width * height - 1) As Boolean
             Dim remaining = 0
@@ -3611,7 +3763,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim repairExtent = Math.Max(width, height)
             ' BEFUND: groessere Patches (Radius 6) tragen mehr Struktur pro Kopie und brauchen
             ' weniger Suchen - bezahlbar, seit die Kandidaten vorberechnet sind.
-            Dim patchRadius = 6
+            Dim patchRadius = HealingPatchRadius
             Dim maxPasses = Math.Min(repairExtent + patchRadius * 2, 160)
             Dim maxPatchCopiesPerPass = If(repairExtent > 360, 72, If(repairExtent > 240, 96, If(repairExtent > 120, 96, 64)))
             Dim repaired = 0
@@ -3621,7 +3773,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' sich DICHTE leisten (kleinere Schrittweite, mehr Kandidaten, Verfeinerung immer), statt
             ' angrenzende Struktur wegen GetPixel-Kosten grob zu ueberspringen. CopyHealingPatch
             ' spiegelt seine Schreibzugriffe in den Puffer, damit Scores im selben Pass frisch bleiben.
-            Dim searchMargin = 140 + patchRadius + 8
+            Dim searchMargin = HealingSearchBaseMargin + patchRadius + 8
             Dim pixels = RegionPixelBuffer.FromRegion(work, targetLeft - searchMargin, targetTop - searchMargin,
                                                       targetLeft + width - 1 + searchMargin, targetTop + height - 1 + searchMargin)
 
@@ -3687,17 +3839,20 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             BlendInpaintedBoundary(work, maskAlpha, targetLeft, targetTop, width, height)
             For maskY = 0 To height - 1
                 Dim y = targetTop + maskY
-                If y < 0 OrElse y >= result.Height Then Continue For
+                If y < 0 OrElse y >= work.Height Then Continue For
                 For mx = 0 To width - 1
                     Dim index = maskY * width + mx
-                    If maskAlpha(index) <= 8 OrElse Not known(index) Then Continue For
-                    Dim x = targetLeft + mx
-                    If x < 0 OrElse x >= result.Width Then Continue For
+                    If blendAlpha(index) <= 8 OrElse Not known(index) Then Continue For
+                    Dim workX = targetLeft + mx
+                    Dim resultX = resultOriginX + workX
+                    Dim resultY = resultOriginY + y
+                    If resultX < 0 OrElse resultX >= result.Width OrElse
+                       resultY < 0 OrElse resultY >= result.Height Then Continue For
 
-                    Dim localAlpha = Clamp(maskAlpha(index) / 255.0F, 0.0F, 1.0F)
-                    Dim target = result.GetPixel(x, y)
-                    Dim repairedColor = work.GetPixel(x, y)
-                    result.SetPixel(x, y, New SKColor(
+                    Dim localAlpha = Clamp(blendAlpha(index) / 255.0F, 0.0F, 1.0F)
+                    Dim target = result.GetPixel(resultX, resultY)
+                    Dim repairedColor = work.GetPixel(workX, y)
+                    result.SetPixel(resultX, resultY, New SKColor(
                         BlendByte(target.Red, repairedColor.Red, localAlpha),
                         BlendByte(target.Green, repairedColor.Green, localAlpha),
                         BlendByte(target.Blue, repairedColor.Blue, localAlpha),

@@ -13582,6 +13582,29 @@ Namespace ViewModels
             UpdateRetouchLivePreview(spot, captureUndo)
         End Sub
 
+        ''' <summary>Fuegt die Strecke zwischen zwei Display-Punkten mit einem vom Pinselradius
+        ''' abgeleiteten Abstand ein. Pointer-Ereignisse koennen auf grossen Bildern dutzende
+        ''' Bildpixel auseinanderliegen; einzelne Kreise liessen dann Luecken in der Heal-Maske.</summary>
+        Public Sub AddRetouchSegment(fromXPercent As Double, fromYPercent As Double,
+                                     toXPercent As Double, toYPercent As Double)
+            If Not CanUsePixelTools OrElse Not _retouchStrokeActive Then Return
+            Dim displayWidth = Math.Max(1, DisplayImageWidthPixels)
+            Dim displayHeight = Math.Max(1, DisplayImageHeightPixels)
+            Dim dxPixels = (toXPercent - fromXPercent) / 100.0 * displayWidth
+            Dim dyPixels = (toYPercent - fromYPercent) / 100.0 * displayHeight
+            Dim distance = Math.Sqrt(dxPixels * dxPixels + dyPixels * dyPixels)
+            If distance <= 0.001 Then Return
+
+            Dim spacingPixels = Math.Max(1.0, _retouchRadius * 0.35)
+            Dim steps = Math.Max(1, CInt(Math.Ceiling(distance / spacingPixels)))
+            For stepIndex = 1 To steps
+                Dim t = stepIndex / CDbl(steps)
+                AddRetouchSpot(fromXPercent + (toXPercent - fromXPercent) * t,
+                               fromYPercent + (toYPercent - fromYPercent) * t,
+                               captureUndo:=False)
+            Next
+        End Sub
+
         Private Sub UpdateRetouchLivePreview(spot As RetouchSpot, forcePublish As Boolean)
             If spot Is Nothing Then Return
             If Not _retouchStrokeActive Then

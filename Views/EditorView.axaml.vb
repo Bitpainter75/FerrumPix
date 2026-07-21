@@ -1511,8 +1511,11 @@ Namespace Views
                 Dim pos = ClampPointToRect(e.GetPosition(canvas), imageRect)
                 Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                 Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
-                If Math.Abs(_lastRetouchPoint.X - xPct) >= 0.4 OrElse Math.Abs(_lastRetouchPoint.Y - yPct) >= 0.4 Then
-                    vm.AddRetouchSpot(xPct, yPct, captureUndo:=False)
+                Dim dxPixels = (xPct - _lastRetouchPoint.X) / 100.0 * Math.Max(1, vm.DisplayImageWidthPixels)
+                Dim dyPixels = (yPct - _lastRetouchPoint.Y) / 100.0 * Math.Max(1, vm.DisplayImageHeightPixels)
+                Dim spacingPixels = Math.Max(1.0, vm.RetouchRadius * 0.35)
+                If dxPixels * dxPixels + dyPixels * dyPixels >= spacingPixels * spacingPixels Then
+                    vm.AddRetouchSegment(_lastRetouchPoint.X, _lastRetouchPoint.Y, xPct, yPct)
                     _lastRetouchPoint = New Avalonia.Point(xPct, yPct)
                 End If
                 e.Handled = True
