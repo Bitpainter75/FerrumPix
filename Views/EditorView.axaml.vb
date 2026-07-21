@@ -539,8 +539,9 @@ Namespace Views
             If Not isInsideCanvas Then Return
             If e.Delta.Y = 0 Then Return
             Dim pointerPoint = e.GetCurrentPoint(canvas)
-            Dim wantsZoom = pointerPoint.Properties.IsRightButtonPressed OrElse e.KeyModifiers.HasFlag(KeyModifiers.Control)
-            If Not wantsZoom Then Return
+            ' Das Mausrad über dem Bild zoomt jetzt IMMER (Nutzerwunsch) - vorher nur mit gedrückter
+            ' rechter Maustaste oder Strg. Die rechte Maustaste bleibt zusätzlich als Zoom-beim-Schwenken
+            ' unterstützt (siehe Pan-Neuverankerung unten).
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm IsNot Nothing Then vm.ActiveZoomPreset = ZoomPresetMode.Manual
             Dim anchor = e.GetPosition(canvas)
@@ -1047,11 +1048,26 @@ Namespace Views
             Dim top = iy + vm.RetouchLivePatchTopPercent / 100.0 * ih
             Dim width = Math.Max(1.0, vm.RetouchLivePatchWidthPercent / 100.0 * iw)
             Dim height = Math.Max(1.0, vm.RetouchLivePatchHeightPercent / 100.0 * ih)
+            Dim right = left + width
+            Dim bottom = top + height
+            Dim visibleLeft = Math.Max(ix, left)
+            Dim visibleTop = Math.Max(iy, top)
+            Dim visibleRight = Math.Min(ix + iw, right)
+            Dim visibleBottom = Math.Min(iy + ih, bottom)
+            If visibleRight <= visibleLeft OrElse visibleBottom <= visibleTop Then
+                patch.IsVisible = False
+                patch.Clip = Nothing
+                Return
+            End If
 
             Avalonia.Controls.Canvas.SetLeft(patch, left)
             Avalonia.Controls.Canvas.SetTop(patch, top)
             patch.Width = width
             patch.Height = height
+            patch.Clip = New RectangleGeometry(New Avalonia.Rect(visibleLeft - left,
+                                                                  visibleTop - top,
+                                                                  visibleRight - visibleLeft,
+                                                                  visibleBottom - visibleTop))
         End Sub
 
         Private Sub OnSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
@@ -1653,8 +1669,8 @@ Namespace Views
 
             Dim isEraser = vm.IsEraserMode
             Dim scale = 1.0
-            If vm.CurrentImage IsNot Nothing AndAlso vm.CurrentImage.PixelSize.Width > 0 AndAlso vm.CurrentImage.PixelSize.Height > 0 Then
-                scale = Math.Min(imageRect.Width / vm.CurrentImage.PixelSize.Width, imageRect.Height / vm.CurrentImage.PixelSize.Height)
+            If vm.DisplayImageWidthPixels > 0 AndAlso vm.DisplayImageHeightPixels > 0 Then
+                scale = Math.Min(imageRect.Width / vm.DisplayImageWidthPixels, imageRect.Height / vm.DisplayImageHeightPixels)
             End If
             Dim strokeThickness = Math.Max(1.0, vm.BrushSize * scale)
             line.StrokeThickness = strokeThickness
@@ -1712,8 +1728,8 @@ Namespace Views
             If vm Is Nothing Then Return 0
             If vm.CurrentTool <> EditorTool.Draw AndAlso vm.CurrentTool <> EditorTool.Retouch Then Return 0
             Dim scale = 1.0
-            If vm.CurrentImage IsNot Nothing AndAlso vm.CurrentImage.PixelSize.Width > 0 AndAlso vm.CurrentImage.PixelSize.Height > 0 Then
-                scale = Math.Min(imageRect.Width / vm.CurrentImage.PixelSize.Width, imageRect.Height / vm.CurrentImage.PixelSize.Height)
+            If vm.DisplayImageWidthPixels > 0 AndAlso vm.DisplayImageHeightPixels > 0 Then
+                scale = Math.Min(imageRect.Width / vm.DisplayImageWidthPixels, imageRect.Height / vm.DisplayImageHeightPixels)
             End If
             Return Math.Max(4.0, If(vm.CurrentTool = EditorTool.Draw, vm.BrushSize, vm.RetouchRadius * 2.0) * scale)
         End Function
@@ -1775,8 +1791,8 @@ Namespace Views
             End If
 
             Dim scale = 1.0
-            If vm.CurrentImage IsNot Nothing AndAlso vm.CurrentImage.PixelSize.Width > 0 AndAlso vm.CurrentImage.PixelSize.Height > 0 Then
-                scale = Math.Min(imageRect.Width / vm.CurrentImage.PixelSize.Width, imageRect.Height / vm.CurrentImage.PixelSize.Height)
+            If vm.DisplayImageWidthPixels > 0 AndAlso vm.DisplayImageHeightPixels > 0 Then
+                scale = Math.Min(imageRect.Width / vm.DisplayImageWidthPixels, imageRect.Height / vm.DisplayImageHeightPixels)
             End If
             Dim diameter = Math.Max(4.0, vm.RetouchRadius * 2.0 * scale)
 
@@ -1844,16 +1860,16 @@ Namespace Views
         End Sub
 
         ''' <summary>Rechnet die Canvas-Zeigerposition in eine Bildpixel-Koordinate um (für die
-        ''' Fußleisten-Anzeige) - gleiche Umrechnung wie bei der Pipette (rect-relative Position,
-        ''' skaliert auf die echte CurrentImage.PixelSize statt der ggf. verkleinerten Vorschau).</summary>
+        ''' Fußleisten-Anzeige) - gleiche Umrechnung wie bei der Pipette: rect-relative Position,
+        ''' skaliert auf den aktuell sichtbaren Bildraum.</summary>
         Private Sub UpdateMousePositionText(pointerPos As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel)
-            If vm Is Nothing OrElse vm.CurrentImage Is Nothing OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            If vm Is Nothing OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
             If Not imageRect.Contains(pointerPos) Then
                 vm.MousePositionText = ""
                 Return
             End If
-            Dim px = CInt(Math.Round((pointerPos.X - imageRect.Left) / imageRect.Width * vm.CurrentImage.PixelSize.Width))
-            Dim py = CInt(Math.Round((pointerPos.Y - imageRect.Top) / imageRect.Height * vm.CurrentImage.PixelSize.Height))
+            Dim px = CInt(Math.Round((pointerPos.X - imageRect.Left) / imageRect.Width * vm.DisplayImageWidthPixels))
+            Dim py = CInt(Math.Round((pointerPos.Y - imageRect.Top) / imageRect.Height * vm.DisplayImageHeightPixels))
             vm.MousePositionText = $"{px}, {py}"
         End Sub
 
@@ -1870,22 +1886,23 @@ Namespace Views
 
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If canvas Is Nothing OrElse vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+            If canvas Is Nothing OrElse vm Is Nothing Then Return
 
             ' Die Skala zählt echte Bildpixel - dieselbe Bezugsgröße wie die Positionsanzeige in
             ' UpdateMousePositionText, damit Lineal und Statuszeile denselben Wert nennen.
-            Dim pixelSize = vm.CurrentImage.PixelSize
-            If pixelSize.Width <= 0 OrElse pixelSize.Height <= 0 Then Return
+            Dim displayWidth = vm.DisplayImageWidthPixels
+            Dim displayHeight = vm.DisplayImageHeightPixels
+            If displayWidth <= 0 OrElse displayHeight <= 0 Then Return
             Dim imageRect = GetDisplayedImageRect(canvas, vm)
             If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
 
             topRuler.Origin = imageRect.Left
-            topRuler.PixelsPerUnit = imageRect.Width / pixelSize.Width
-            topRuler.ImageLength = pixelSize.Width
+            topRuler.PixelsPerUnit = imageRect.Width / displayWidth
+            topRuler.ImageLength = displayWidth
 
             leftRuler.Origin = imageRect.Top
-            leftRuler.PixelsPerUnit = imageRect.Height / pixelSize.Height
-            leftRuler.ImageLength = pixelSize.Height
+            leftRuler.PixelsPerUnit = imageRect.Height / displayHeight
+            leftRuler.ImageLength = displayHeight
         End Sub
 
         Private Sub UpdateGridOverlay()
@@ -1894,10 +1911,11 @@ Namespace Views
 
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If canvas Is Nothing OrElse vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+            If canvas Is Nothing OrElse vm Is Nothing Then Return
 
-            Dim pixelSize = vm.CurrentImage.PixelSize
-            If pixelSize.Width <= 0 OrElse pixelSize.Height <= 0 Then Return
+            Dim displayWidth = vm.DisplayImageWidthPixels
+            Dim displayHeight = vm.DisplayImageHeightPixels
+            If displayWidth <= 0 OrElse displayHeight <= 0 Then Return
             Dim imageRect = GetDisplayedImageRect(canvas, vm)
             If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
 
@@ -1906,8 +1924,8 @@ Namespace Views
             overlay.Width = canvas.Bounds.Width
             overlay.Height = canvas.Bounds.Height
             overlay.ImageOrigin = imageRect.TopLeft
-            overlay.PixelsPerUnit = imageRect.Width / pixelSize.Width
-            overlay.ImageSize = New Avalonia.Size(pixelSize.Width, pixelSize.Height)
+            overlay.PixelsPerUnit = imageRect.Width / displayWidth
+            overlay.ImageSize = New Avalonia.Size(displayWidth, displayHeight)
             overlay.GridSize = vm.EditorGridSize
         End Sub
 
@@ -1934,19 +1952,20 @@ Namespace Views
             If canvas Is Nothing Then Return
             layer.Width = canvas.Bounds.Width
             layer.Height = canvas.Bounds.Height
-            If Not _showRulers OrElse vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+            If Not _showRulers OrElse vm Is Nothing Then Return
 
-            Dim pixelSize = vm.CurrentImage.PixelSize
             Dim imageRect = GetDisplayedImageRect(canvas, vm)
-            If pixelSize.Width <= 0 OrElse pixelSize.Height <= 0 Then Return
+            Dim displayWidth = vm.DisplayImageWidthPixels
+            Dim displayHeight = vm.DisplayImageHeightPixels
+            If displayWidth <= 0 OrElse displayHeight <= 0 Then Return
             If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
 
             For Each guideX In _guidesX
-                Dim x = Math.Floor(imageRect.Left + guideX / pixelSize.Width * imageRect.Width) + 0.5
+                Dim x = Math.Floor(imageRect.Left + guideX / displayWidth * imageRect.Width) + 0.5
                 layer.Children.Add(CreateGuideLine(New Avalonia.Point(x, 0), New Avalonia.Point(x, layer.Height)))
             Next
             For Each guideY In _guidesY
-                Dim y = Math.Floor(imageRect.Top + guideY / pixelSize.Height * imageRect.Height) + 0.5
+                Dim y = Math.Floor(imageRect.Top + guideY / displayHeight * imageRect.Height) + 0.5
                 layer.Children.Add(CreateGuideLine(New Avalonia.Point(0, y), New Avalonia.Point(layer.Width, y)))
             Next
         End Sub
@@ -1972,22 +1991,24 @@ Namespace Views
         Private Function HitTestGuide(position As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel,
                                       ByRef isVertical As Boolean) As Integer
             isVertical = False
-            If vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return -1
+            If vm Is Nothing Then Return -1
             If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return -1
 
-            Dim pixelSize = vm.CurrentImage.PixelSize
+            Dim displayWidth = vm.DisplayImageWidthPixels
+            Dim displayHeight = vm.DisplayImageHeightPixels
+            If displayWidth <= 0 OrElse displayHeight <= 0 Then Return -1
             Dim bestIndex = -1
             Dim bestDistance = GuideHitTolerance
 
             For i = 0 To _guidesY.Count - 1
-                Dim distance = Math.Abs(position.Y - GuideToCanvas(_guidesY(i), imageRect.Top, imageRect.Height, pixelSize.Height))
+                Dim distance = Math.Abs(position.Y - GuideToCanvas(_guidesY(i), imageRect.Top, imageRect.Height, displayHeight))
                 If distance <= bestDistance Then
                     bestDistance = distance
                     bestIndex = i
                 End If
             Next
             For i = 0 To _guidesX.Count - 1
-                Dim distance = Math.Abs(position.X - GuideToCanvas(_guidesX(i), imageRect.Left, imageRect.Width, pixelSize.Width))
+                Dim distance = Math.Abs(position.X - GuideToCanvas(_guidesX(i), imageRect.Left, imageRect.Width, displayWidth))
                 If distance <= bestDistance Then
                     bestDistance = distance
                     bestIndex = i
@@ -2006,14 +2027,13 @@ Namespace Views
         Private Sub UpdateGuideDrag(canvasPosition As Avalonia.Point)
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If canvas Is Nothing OrElse vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+            If canvas Is Nothing OrElse vm Is Nothing Then Return
             Dim imageRect = GetDisplayedImageRect(canvas, vm)
             If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
 
-            Dim pixelSize = vm.CurrentImage.PixelSize
             Dim axisStart = If(_guideDragIsVertical, imageRect.Left, imageRect.Top)
             Dim axisLength = If(_guideDragIsVertical, imageRect.Width, imageRect.Height)
-            Dim imageLength = CDbl(If(_guideDragIsVertical, pixelSize.Width, pixelSize.Height))
+            Dim imageLength = CDbl(If(_guideDragIsVertical, vm.DisplayImageWidthPixels, vm.DisplayImageHeightPixels))
             If imageLength <= 0 Then Return
 
             Dim pointerOnAxis = If(_guideDragIsVertical, canvasPosition.X, canvasPosition.Y)
@@ -2697,10 +2717,6 @@ Namespace Views
             Dim left = ix + iw * rectPercent.X / 100.0
             Dim top = iy + ih * rectPercent.Y / 100.0
 
-            Dim reachableRect = ClampOverlayRectToReachable(New Avalonia.Rect(left, top, width, height), New Avalonia.Rect(ix, iy, iw, ih))
-            left = reachableRect.Left
-            top = reachableRect.Top
-
             Avalonia.Controls.Canvas.SetLeft(overlay, left)
             Avalonia.Controls.Canvas.SetTop(overlay, top)
             overlay.Width = width
@@ -2769,12 +2785,11 @@ Namespace Views
         ''' Umrechnungsfaktor von Basisbild-Pixeln (Speichereinheit der Annotationen) in Display-Pixel.
         ''' Uniform (Wurzel aus x*y), genau wie ImageProcessor.ScaleAnnotationForSource beim Backen.
         Private Shared Function ComputeBasePixelToDisplayScale(vm As EditorViewModel, iw As Double, ih As Double, fallbackScale As Double) As Double
-            Dim baseImage = vm?.CurrentImage
-            If baseImage Is Nothing Then Return fallbackScale
-            Dim baseWidth = CDbl(baseImage.PixelSize.Width)
-            Dim baseHeight = CDbl(baseImage.PixelSize.Height)
-            If baseWidth <= 0 OrElse baseHeight <= 0 OrElse iw <= 0 OrElse ih <= 0 Then Return fallbackScale
-            Return Math.Sqrt((iw / baseWidth) * (ih / baseHeight))
+            If vm Is Nothing Then Return fallbackScale
+            Dim displayWidth = CDbl(vm.DisplayImageWidthPixels)
+            Dim displayHeight = CDbl(vm.DisplayImageHeightPixels)
+            If displayWidth <= 0 OrElse displayHeight <= 0 OrElse iw <= 0 OrElse ih <= 0 Then Return fallbackScale
+            Return Math.Sqrt((iw / displayWidth) * (ih / displayHeight))
         End Function
 
         ''' Das Overlay-Bitmap ist um die Schatten-/Glow-Ränder größer als das Objekt selbst und wird per
@@ -3271,9 +3286,9 @@ Namespace Views
         Private Iterator Function GetSnapTargets(axisStart As Double, axisLength As Double, isVerticalLine As Boolean) As IEnumerable(Of Double)
             If _showRulers Then
                 Dim vm = TryCast(DataContext, EditorViewModel)
-                If vm IsNot Nothing AndAlso vm.CurrentImage IsNot Nothing Then
+                If vm IsNot Nothing Then
                     Dim guides = If(isVerticalLine, _guidesX, _guidesY)
-                    Dim imageLength = CDbl(If(isVerticalLine, vm.CurrentImage.PixelSize.Width, vm.CurrentImage.PixelSize.Height))
+                    Dim imageLength = CDbl(If(isVerticalLine, vm.DisplayImageWidthPixels, vm.DisplayImageHeightPixels))
                     If imageLength > 0 Then
                         For Each guide In guides
                             Yield GuideToCanvas(guide, axisStart, axisLength, imageLength)
@@ -3352,14 +3367,32 @@ Namespace Views
         End Sub
 
         Private Sub UpdateTextSizeBadge(rect As Avalonia.Rect, imageRect As Avalonia.Rect, vm As EditorViewModel)
+            Dim badge = Me.FindControl(Of Border)("TextSizeBadge")
             Dim badgeText = Me.FindControl(Of TextBlock)("TextSizeBadgeText")
-            If badgeText Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
-            Dim pxW = CInt(Math.Round(rect.Width / imageRect.Width * vm.CurrentImage.PixelSize.Width))
-            Dim pxH = CInt(Math.Round(rect.Height / imageRect.Height * vm.CurrentImage.PixelSize.Height))
-            Dim pxX = CInt(Math.Round((rect.Left - imageRect.Left) / imageRect.Width * vm.CurrentImage.PixelSize.Width))
-            Dim pxY = CInt(Math.Round((rect.Top - imageRect.Top) / imageRect.Height * vm.CurrentImage.PixelSize.Height))
+            If badgeText Is Nothing OrElse vm Is Nothing OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            If badge IsNot Nothing Then
+                badge.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
+                badge.RenderTransform = New RotateTransform(-vm.AnnotationRotation)
+            End If
+            Dim visualBounds = RotatedBoundsSize(rect.Width, rect.Height, vm.AnnotationRotation)
+            Dim visualRect = New Avalonia.Rect(rect.Center.X - visualBounds.Width / 2.0,
+                                               rect.Center.Y - visualBounds.Height / 2.0,
+                                               visualBounds.Width,
+                                               visualBounds.Height)
+            Dim pxW = CInt(Math.Round(visualBounds.Width / imageRect.Width * vm.DisplayImageWidthPixels))
+            Dim pxH = CInt(Math.Round(visualBounds.Height / imageRect.Height * vm.DisplayImageHeightPixels))
+            Dim pxX = CInt(Math.Round((visualRect.Left - imageRect.Left) / imageRect.Width * vm.DisplayImageWidthPixels))
+            Dim pxY = CInt(Math.Round((visualRect.Top - imageRect.Top) / imageRect.Height * vm.DisplayImageHeightPixels))
             badgeText.Text = $"{pxW} × {pxH} px  ·  X {pxX}, Y {pxY}"
         End Sub
+
+        Private Shared Function RotatedBoundsSize(width As Double, height As Double, rotationDegrees As Double) As Avalonia.Size
+            Dim radians = rotationDegrees * Math.PI / 180.0
+            Dim cosA = Math.Abs(Math.Cos(radians))
+            Dim sinA = Math.Abs(Math.Sin(radians))
+            Return New Avalonia.Size(width * cosA + height * sinA,
+                                     width * sinA + height * cosA)
+        End Function
 
         Private Sub HideTextSizeBadge()
             Dim badge = Me.FindControl(Of Border)("TextSizeBadge")
@@ -3420,21 +3453,18 @@ Namespace Views
         End Function
 
         Private Sub UpdateTextPixels(textRect As Avalonia.Rect, imageRect As Avalonia.Rect, vm As EditorViewModel)
-            If vm Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
-            Dim baseWidth = vm.CurrentImage.PixelSize.Width
-            Dim baseHeight = vm.CurrentImage.PixelSize.Height
-            If baseWidth <= 0 OrElse baseHeight <= 0 OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            If vm Is Nothing OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
 
             ' Beim Textobjekt zuerst die Schrift skalieren: das Rechteck ist bei ihm kein freier Rahmen,
             ' sondern der gemessene Textkasten - das ViewModel setzt es aus der Schrift neu. Beim
             ' Verschieben bleibt die Schrift unangetastet (siehe ScaleSelectedTextFontFromDrag).
             If IsSelectedAnnotationTextLayer(vm) Then ScaleSelectedTextFontFromDrag(textRect, vm)
 
-            vm.SetSelectedAnnotationRectPixels(
-                (textRect.Left - imageRect.Left) / imageRect.Width * baseWidth,
-                (textRect.Top - imageRect.Top) / imageRect.Height * baseHeight,
-                textRect.Width / imageRect.Width * baseWidth,
-                textRect.Height / imageRect.Height * baseHeight)
+            vm.SetSelectedAnnotationRect(
+                (textRect.Left - imageRect.Left) / imageRect.Width * 100.0,
+                (textRect.Top - imageRect.Top) / imageRect.Height * 100.0,
+                textRect.Width / imageRect.Width * 100.0,
+                textRect.Height / imageRect.Height * 100.0)
         End Sub
 
         ''' <summary>Skaliert den Schriftgrad eines Textobjekts aus dem gezogenen Griff - gleichmäßig aus

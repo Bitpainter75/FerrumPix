@@ -98,21 +98,6 @@
                     </StackPanel>
                 </Button>
             </Grid>
-            <Button Classes="accent"
-                    HorizontalAlignment="Stretch"
-                    Height="36"
-                    Padding="8,6"
-                    Command="{Binding ApplyTransformCommand}"
-                    IsEnabled="{Binding HasTransformChanges}"
-                    ToolTip.Tip="Drehung auf die Vorschau anwenden">
-                <StackPanel Orientation="Horizontal" Spacing="6"
-                            HorizontalAlignment="Center">
-                    <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
-                        Width="16" Height="16" />
-                    <TextBlock Text="Drehung annehmen" />
-                </StackPanel>
-            </Button>
         </StackPanel>
     </Expander>
 </UserControl>

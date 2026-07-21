@@ -623,6 +623,8 @@ Namespace ViewModels
         Private _retouchLivePatchRect As SKRectI = SKRectI.Empty
         Private _retouchLiveMaskBitmapWidth As Integer = 0
         Private _retouchLiveMaskBitmapHeight As Integer = 0
+        Private _retouchLivePatchBitmapWidth As Integer = 0
+        Private _retouchLivePatchBitmapHeight As Integer = 0
         Private _clearRetouchLivePatchAfterPreview As Boolean = False
         Private _retouchLivePatchLeftPercent As Double = 0
         Private _retouchLivePatchTopPercent As Double = 0
@@ -883,53 +885,53 @@ Namespace ViewModels
 
         Public ReadOnly Property AnnotationXSliderMinimum As Double
             Get
-                If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseWidth() * GetAnnotationPositionMinimumPercent(_annotationWidthPercent) / 100.0)
-                Return Math.Round(GetBaseWidth() * -AnnotationOffsetLimitPercent / 100.0)
+                If Not ShowWatermarkAnchorControls Then Return Math.Round(DisplayImageWidthPixels * GetAnnotationPositionMinimumPercent(_annotationWidthPercent) / 100.0)
+                Return Math.Round(DisplayImageWidthPixels * -AnnotationOffsetLimitPercent / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationXSliderMaximum As Double
             Get
-                If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseWidth() * (100.0 - AnnotationMinVisiblePercent) / 100.0)
-                Return Math.Round(GetBaseWidth() * AnnotationOffsetLimitPercent / 100.0)
+                If Not ShowWatermarkAnchorControls Then Return Math.Round(DisplayImageWidthPixels * (100.0 - AnnotationMinVisiblePercent) / 100.0)
+                Return Math.Round(DisplayImageWidthPixels * AnnotationOffsetLimitPercent / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationYSliderMinimum As Double
             Get
-                If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseHeight() * GetAnnotationPositionMinimumPercent(_annotationHeightPercent) / 100.0)
-                Return Math.Round(GetBaseHeight() * -AnnotationOffsetLimitPercent / 100.0)
+                If Not ShowWatermarkAnchorControls Then Return Math.Round(DisplayImageHeightPixels * GetAnnotationPositionMinimumPercent(_annotationHeightPercent) / 100.0)
+                Return Math.Round(DisplayImageHeightPixels * -AnnotationOffsetLimitPercent / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationYSliderMaximum As Double
             Get
-                If Not ShowWatermarkAnchorControls Then Return Math.Round(GetBaseHeight() * (100.0 - AnnotationMinVisiblePercent) / 100.0)
-                Return Math.Round(GetBaseHeight() * AnnotationOffsetLimitPercent / 100.0)
+                If Not ShowWatermarkAnchorControls Then Return Math.Round(DisplayImageHeightPixels * (100.0 - AnnotationMinVisiblePercent) / 100.0)
+                Return Math.Round(DisplayImageHeightPixels * AnnotationOffsetLimitPercent / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationWidthSliderMinimum As Double
             Get
-                Return Math.Round(GetBaseWidth() * 5.0 / 100.0)
+                Return Math.Round(DisplayImageWidthPixels * 5.0 / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationWidthSliderMaximum As Double
             Get
-                Return Math.Round(GetBaseWidth() * 90.0 / 100.0)
+                Return Math.Round(DisplayImageWidthPixels * 90.0 / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationHeightSliderMinimum As Double
             Get
-                Return Math.Round(GetBaseHeight() * 4.0 / 100.0)
+                Return Math.Round(DisplayImageHeightPixels * 4.0 / 100.0)
             End Get
         End Property
 
         Public ReadOnly Property AnnotationHeightSliderMaximum As Double
             Get
-                Return Math.Round(GetBaseHeight() * 90.0 / 100.0)
+                Return Math.Round(DisplayImageHeightPixels * 90.0 / 100.0)
             End Get
         End Property
 
@@ -1529,8 +1531,9 @@ Namespace ViewModels
         ''' Reine Rechnung ohne Nebenwirkung, damit derselbe Zielwert vor dem Zuweisen mit dem
         ''' Istzustand verglichen werden kann.
         Private Function ComputeCircleTextBoxPercent(textBreitePercent As Double) As (Breite As Double, Hoehe As Double)
-            Dim baseW = GetBaseWidth()
-            Dim baseH = GetBaseHeight()
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Dim baseW = displaySize.Width
+            Dim baseH = displaySize.Height
             If baseW <= 0 OrElse baseH <= 0 Then Return (0, 0)
 
             Dim textBreite = textBreitePercent / 100.0 * baseW
@@ -2353,7 +2356,7 @@ Namespace ViewModels
                 ' schon beim Werkzeugwechsel asynchron vorwaermen - erst beim ersten Spot gebaut,
                 ' war ein kurzer Zug vorbei, bevor sie landeten (Aenderung erst nach dem Commit
                 ' sichtbar).
-                If value = EditorTool.Retouch AndAlso previousTool <> EditorTool.Retouch Then
+                If value = EditorTool.Retouch AndAlso previousTool <> EditorTool.Retouch AndAlso Not IsRepairMode Then
                     BeginRetouchLiveBuffersAsync()
                 End If
             End Set
@@ -3547,7 +3550,7 @@ Namespace ViewModels
                 Return _retouchRadius
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_retouchRadius, Math.Max(1, Math.Min(2000, value)))
+                Me.RaiseAndSetIfChanged(_retouchRadius, Math.Max(1, Math.Min(500, value)))
                 RaiseResetButtonStateChanged()
                 ' KEIN SchedulePreviewUpdate (Log 23:16): Der Radius ist ein
                 ' WERKZEUG-Parameter fuer KUENFTIGE Punkte - am Bild aendert er nichts. Der
@@ -3617,7 +3620,7 @@ Namespace ViewModels
                 Return _brushSize
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_brushSize, Math.Max(1, Math.Min(2000, value)))
+                Me.RaiseAndSetIfChanged(_brushSize, Math.Max(1, Math.Min(500, value)))
                 SyncSelectedAnnotationIfStroke()
                 RaiseResetButtonStateChanged()
             End Set
@@ -4555,12 +4558,11 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 If EffectiveAnnotationKind = "QR" Then
-                    Dim baseWidth = GetBaseWidth()
-                    Dim baseHeight = GetBaseHeight()
-                    If baseWidth > 0 AndAlso baseHeight > 0 Then
-                        Dim sizePixels = Math.Max(1.0, baseWidth * Math.Max(5, Math.Min(90, value)) / 100.0)
-                        _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / baseWidth * 100.0))
-                        _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / baseHeight * 100.0))
+                    Dim displaySize = GetAnnotationDisplayPixelSize()
+                    If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
+                        Dim sizePixels = Math.Max(1.0, displaySize.Width * Math.Max(5, Math.Min(90, value)) / 100.0)
+                        _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / displaySize.Width * 100.0))
+                        _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / displaySize.Height * 100.0))
                         RaiseAnnotationSizeChanged()
                         SyncSelectedAnnotation()
                         Return
@@ -4583,12 +4585,11 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 If EffectiveAnnotationKind = "QR" Then
-                    Dim baseWidth = GetBaseWidth()
-                    Dim baseHeight = GetBaseHeight()
-                    If baseWidth > 0 AndAlso baseHeight > 0 Then
-                        Dim sizePixels = Math.Max(1.0, baseHeight * Math.Max(4, Math.Min(90, value)) / 100.0)
-                        _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / baseWidth * 100.0))
-                        _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / baseHeight * 100.0))
+                    Dim displaySize = GetAnnotationDisplayPixelSize()
+                    If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
+                        Dim sizePixels = Math.Max(1.0, displaySize.Height * Math.Max(4, Math.Min(90, value)) / 100.0)
+                        _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / displaySize.Width * 100.0))
+                        _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / displaySize.Height * 100.0))
                         RaiseAnnotationSizeChanged()
                         SyncSelectedAnnotation()
                         Return
@@ -5261,8 +5262,9 @@ Namespace ViewModels
 
         Public Function IsPointInsideSelectionPercent(xPercent As Double, yPercent As Double) As Boolean
             If Not _hasActiveSelection Then Return False
-            Dim bw = GetBaseWidth()
-            Dim bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width
+            Dim bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return False
 
             Dim imageX = CInt(Math.Round(bw * xPercent / 100.0))
@@ -5418,9 +5420,12 @@ Namespace ViewModels
             End Select
         End Function
 
-        ' Auswahlrechteck aus Prozentwerten in Bildpixel umrechnen (für Maskenerzeugung/-extraktion).
+        ' Auswahlrechteck aus Display-Prozentwerten in Pixel des gerenderten Bildraums umrechnen
+        ' (für Maskenerzeugung/-extraktion). ProcessBitmap/Zauberstab/Kopieren arbeiten nach der
+        ' Bildgeometrie, also in genau diesem Raum.
         Private Function SelectionRectPixels() As SKRectI
-            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
             Dim left = CInt(Math.Round(bw * _selectionXPercent / 100.0))
             Dim top = CInt(Math.Round(bh * _selectionYPercent / 100.0))
             Dim right = CInt(Math.Round(bw * (_selectionXPercent + _selectionWidthPercent) / 100.0))
@@ -5434,7 +5439,8 @@ Namespace ViewModels
         ''' Lasso-Auswahlen das Rechteck größer gemacht als die Maske - die Ameisenlinie säße dann daneben
         ''' und ein kopierter Ausschnitt käme verzerrt heraus. Die Aufrufer verwerfen leere Rechtecke selbst.</summary>
         Private Sub SetSelectionBoundsFromPixels(rectPx As SKRectI)
-            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
             _selectionXPercent = Math.Max(0, rectPx.Left * 100.0 / bw)
             _selectionYPercent = Math.Max(0, rectPx.Top * 100.0 / bh)
@@ -5460,7 +5466,8 @@ Namespace ViewModels
         ''' Wird von EditorView beim Loslassen der Maus nach dem Aufziehen eines Auswahlrechtecks aufgerufen.
         Public Sub SetSelectionRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double,
                                     Optional captureUndo As Boolean = True)
-            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
             Dim rectPx = New SKRectI(
                 Math.Max(0, CInt(Math.Round(bw * xPercent / 100.0))),
@@ -5486,7 +5493,8 @@ Namespace ViewModels
         ''' Ellipse-Auswahl: Rechteck wie beim Rechteck-Modus, zusätzlich eine eingepasste Ellipsen-Maske.
         Public Sub SetSelectionEllipse(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double,
                                        Optional captureUndo As Boolean = True)
-            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
             Dim rawLeft = CInt(Math.Round(bw * xPercent / 100.0))
             Dim rawTop = CInt(Math.Round(bh * yPercent / 100.0))
@@ -5515,7 +5523,8 @@ Namespace ViewModels
             Dim minX = xsPercent.Min(), maxX = xsPercent.Max()
             Dim minY = ysPercent.Min(), maxY = ysPercent.Max()
             If (maxX - minX) < 0.5 OrElse (maxY - minY) < 0.5 Then Return
-            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
             Dim rectPx = New SKRectI(
                 Math.Max(0, CInt(Math.Round(bw * minX / 100.0))),
@@ -5538,7 +5547,8 @@ Namespace ViewModels
         ''' Zauberstab: wählt die zusammenhängende Farbfläche am Klickpunkt (Prozentkoordinaten).
         Public Sub SetSelectionMagicWand(xPercent As Double, yPercent As Double)
             If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
-            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
             Dim seedX = CInt(Math.Round(bw * xPercent / 100.0))
             Dim seedY = CInt(Math.Round(bh * yPercent / 100.0))
@@ -5548,7 +5558,11 @@ Namespace ViewModels
             Using mask = ImageProcessor.BuildMagicWandMaskFromFile(RenderSourcePath, GetCurrentAdjustments(),
                                                                    seedX, seedY, CSng(_selectionTolerance / 100.0), bounds,
                                                                    workingFull:=CloneWorkingFullForRender())
-                If mask Is Nothing OrElse bounds.Width <= 0 OrElse bounds.Height <= 0 Then Return
+                If mask Is Nothing OrElse bounds.Width <= 0 OrElse bounds.Height <= 0 Then
+                    DiagnosticLogService.LogAlways("Editor.MagicWand",
+                        $"noSelection seed={seedX},{seedY} display={bw}x{bh} pct={xPercent:0.###},{yPercent:0.###} tol={_selectionTolerance:0.###}")
+                    Return
+                End If
                 PushUndo()
                 ' Kein Polygonzug: für maskenbasierte Auswahlen zeichnet das Overlay die Ameisenlinie aus den
                 ' Maskenrändern und die Treffererkennung fragt die Maske selbst (siehe HasSelectionMask).
@@ -5560,7 +5574,8 @@ Namespace ViewModels
         ''' pixelgenaue und zugleich billigste Darstellung einer Voll-Auswahl; „Umkehren" macht daraus bei
         ''' Bedarf eine echte Maske.</summary>
         Public Sub SelectAll()
-            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
             PushUndo()
             ClearSelectionMask()
@@ -5587,8 +5602,9 @@ Namespace ViewModels
 
         Public Sub InvertSelection()
             If Not _hasActiveSelection Then Return
-            Dim bw = GetBaseWidth()
-            Dim bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width
+            Dim bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
 
             Using existingMask = BuildCurrentSelectionMask()
@@ -5862,8 +5878,9 @@ Namespace ViewModels
             End If
 
             If Not _selectionMaskRect.IsEmpty Then
-                Dim bw = GetBaseWidth()
-                Dim bh = GetBaseHeight()
+                Dim selectionSize = GetAnnotationDisplayPixelSize()
+                Dim bw = selectionSize.Width
+                Dim bh = selectionSize.Height
                 If bw > 0 AndAlso bh > 0 Then
                     ' Die neue Maskenposition AUS DER absoluten Prozentposition ableiten, nicht die gerundete
                     ' Einzelverschiebung aufaddieren: beim langsamen Ziehen sind die Schritte Bruchteile eines
@@ -5895,8 +5912,9 @@ Namespace ViewModels
         ''' dafür mitbringen, sonst wäre die weiche Kante an der Auswahlgrenze abgeschnitten.</param>
         Private Function CropSelectionToTempFile(ByRef placementPx As SKRectI) As String
             If Not _hasActiveSelection OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return Nothing
-            Dim baseWidth = GetBaseWidth()
-            Dim baseHeight = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim baseWidth = selectionSize.Width
+            Dim baseHeight = selectionSize.Height
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return Nothing
 
             Dim left = CInt(Math.Round(baseWidth * _selectionXPercent / 100.0))
@@ -5959,7 +5977,8 @@ Namespace ViewModels
 
         Private Function ClampOutputMaskToImage(mask As SKBitmap, expandedRect As SKRectI, ByRef clampedRect As SKRectI) As SKBitmap
             clampedRect = expandedRect
-            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
             If mask Is Nothing OrElse bw <= 0 OrElse bh <= 0 Then Return mask
 
             Dim left = Math.Max(0, expandedRect.Left)
@@ -5989,7 +6008,8 @@ Namespace ViewModels
         End Function
 
         Private Function PixelRectToPercent(rectPx As SKRectI) As (X As Double, Y As Double, W As Double, H As Double)
-            Dim bw = GetBaseWidth(), bh = GetBaseHeight()
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return (0, 0, 0, 0)
             Return (rectPx.Left * 100.0 / bw, rectPx.Top * 100.0 / bh,
                     rectPx.Width * 100.0 / bw, rectPx.Height * 100.0 / bh)
@@ -6013,14 +6033,15 @@ Namespace ViewModels
         Private Sub AddSelectionImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
             PushUndo()
+            Dim stored = DisplayAnnotationRectToStoredPercent("SelectionImage", xPercent, yPercent, widthPercent, heightPercent)
             Dim annotation = New ImageAnnotation With {
                 .Kind = "SelectionImage",
                 .Text = NextSelectionObjectLabel(),
                 .ImagePath = imagePath,
-                .XPixels = CSng(PercentXToPixels(xPercent)),
-                .YPixels = CSng(PercentYToPixels(yPercent)),
-                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(widthPercent))),
-                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(heightPercent))),
+                .XPixels = CSng(PercentXToPixels(stored.X)),
+                .YPixels = CSng(PercentYToPixels(stored.Y)),
+                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(stored.Width))),
+                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(stored.Height))),
                 .FillColor = "#00FFFFFF",
                 .StrokeColor = _annotationStrokeColor,
                 .StrokeWidth = CSng(_annotationStrokeWidth),
@@ -6028,7 +6049,9 @@ Namespace ViewModels
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
-                .RotationDegrees = CSng(_annotationRotation),
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionImage", 0)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(False),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored(False),
                 .IsVisible = _annotationIsVisible
             }
             HardenAnnotationBuffersForNewObject()
@@ -6235,14 +6258,15 @@ Namespace ViewModels
             End If
 
             PushUndo()
+            Dim stored = DisplayAnnotationRectToStoredPercent("SelectionFill", _selectionXPercent, _selectionYPercent, _selectionWidthPercent, _selectionHeightPercent)
             Dim annotation = New ImageAnnotation With {
                 .Kind = "SelectionFill",
                 .Text = NextSelectionObjectLabel(),
                 .ImagePath = "",
-                .XPixels = CSng(PercentXToPixels(_selectionXPercent)),
-                .YPixels = CSng(PercentYToPixels(_selectionYPercent)),
-                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(_selectionWidthPercent))),
-                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(_selectionHeightPercent))),
+                .XPixels = CSng(PercentXToPixels(stored.X)),
+                .YPixels = CSng(PercentYToPixels(stored.Y)),
+                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(stored.Width))),
+                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(stored.Height))),
                 .FillColor = _annotationFillColor,
                 .FillKind = _annotationFillKind,
                 .FillColor2 = _annotationFillColor2,
@@ -6252,6 +6276,9 @@ Namespace ViewModels
                 .StrokeWidth = 0,
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionFill", 0)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(False),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored(False),
                 .IsVisible = True
             }
             HardenAnnotationBuffersForNewObject()
@@ -6280,14 +6307,13 @@ Namespace ViewModels
             _annotationWidthPercent = Math.Max(minWidth, Math.Min(90, widthPercent))
             _annotationHeightPercent = Math.Max(minHeight, Math.Min(90, heightPercent))
             If EffectiveAnnotationKind = "QR" Then
-                Dim baseWidth = GetBaseWidth()
-                Dim baseHeight = GetBaseHeight()
-                If baseWidth > 0 AndAlso baseHeight > 0 Then
-                    Dim widthPixels = baseWidth * _annotationWidthPercent / 100.0
-                    Dim heightPixels = baseHeight * _annotationHeightPercent / 100.0
+                Dim displaySize = GetAnnotationDisplayPixelSize()
+                If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
+                    Dim widthPixels = displaySize.Width * _annotationWidthPercent / 100.0
+                    Dim heightPixels = displaySize.Height * _annotationHeightPercent / 100.0
                     Dim sizePixels = Math.Max(1.0, Math.Min(widthPixels, heightPixels))
-                    _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / baseWidth * 100.0))
-                    _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / baseHeight * 100.0))
+                    _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / displaySize.Width * 100.0))
+                    _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / displaySize.Height * 100.0))
                 End If
             End If
             ' Ein Textobjekt hat keine freie Box: sie ist immer der gemessene Textkasten. Der Griff ändert
@@ -6337,13 +6363,14 @@ Namespace ViewModels
         End Sub
 
         Public Sub SetSelectedAnnotationRectPixels(xPixels As Double, yPixels As Double, widthPixels As Double, heightPixels As Double)
-            Dim baseWidth = Math.Max(1, GetBaseWidth())
-            Dim baseHeight = Math.Max(1, GetBaseHeight())
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Dim displayWidth = Math.Max(1, displaySize.Width)
+            Dim displayHeight = Math.Max(1, displaySize.Height)
             SetSelectedAnnotationRect(
-                xPixels / baseWidth * 100.0,
-                yPixels / baseHeight * 100.0,
-                widthPixels / baseWidth * 100.0,
-                heightPixels / baseHeight * 100.0)
+                xPixels / displayWidth * 100.0,
+                yPixels / displayHeight * 100.0,
+                widthPixels / displayWidth * 100.0,
+                heightPixels / displayHeight * 100.0)
         End Sub
 
         Public Function GetSelectedAnnotationDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
@@ -6357,49 +6384,149 @@ Namespace ViewModels
         ''' nicht den gespeicherten XPixels.</summary>
         Public Function GetAnnotationSnapRectsPercent() As List(Of Avalonia.Rect)
             Dim result As New List(Of Avalonia.Rect)()
-            Dim baseW = GetBaseWidth()
-            Dim baseH = GetBaseHeight()
-            If baseW <= 0 OrElse baseH <= 0 Then Return result
             For i = 0 To _annotations.Count - 1
                 If i = _selectedAnnotationIndex Then Continue For
                 Dim a = _annotations(i)
                 If a Is Nothing OrElse Not a.IsVisible Then Continue For
                 If Not String.IsNullOrEmpty(a.Anchor) Then Continue For
-                Dim w = a.WidthPixels / CDbl(baseW) * 100.0
-                Dim h = a.HeightPixels / CDbl(baseH) * 100.0
-                If w <= 0 OrElse h <= 0 Then Continue For
-                result.Add(New Avalonia.Rect(a.XPixels / CDbl(baseW) * 100.0,
-                                             a.YPixels / CDbl(baseH) * 100.0, w, h))
+                Dim rect = StoredAnnotationRectToDisplayPercent(a)
+                If rect.Width <= 0 OrElse rect.Height <= 0 Then Continue For
+                result.Add(New Avalonia.Rect(rect.X, rect.Y, rect.Width, rect.Height))
             Next
             Return result
         End Function
 
         Private Function AnnotationStoredXToPercent(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0
-            Dim baseWidth = GetBaseWidth()
-            If baseWidth <= 0 Then Return 0
-            Return annotation.XPixels / CDbl(baseWidth) * 100.0
+            Return StoredAnnotationRectToDisplayPercent(annotation).X
         End Function
 
         Private Function AnnotationStoredYToPercent(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0
-            Dim baseHeight = GetBaseHeight()
-            If baseHeight <= 0 Then Return 0
-            Return annotation.YPixels / CDbl(baseHeight) * 100.0
+            Return StoredAnnotationRectToDisplayPercent(annotation).Y
         End Function
 
         Private Function AnnotationStoredWidthToPercent(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0
-            Dim baseWidth = GetBaseWidth()
-            If baseWidth <= 0 Then Return 0
-            Return annotation.WidthPixels / CDbl(baseWidth) * 100.0
+            Return StoredAnnotationRectToDisplayPercent(annotation).Width
         End Function
 
         Private Function AnnotationStoredHeightToPercent(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0
+            Return StoredAnnotationRectToDisplayPercent(annotation).Height
+        End Function
+
+        Private Function StoredAnnotationRectToDisplayPercent(annotation As ImageAnnotation) As (X As Double, Y As Double, Width As Double, Height As Double)
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If annotation Is Nothing OrElse displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (0, 0, 0, 0)
+            Dim renderAnnotation = TransformAnnotationToDisplayGeometry(annotation, displaySize.Width, displaySize.Height)
+            If renderAnnotation Is Nothing Then Return (0, 0, 0, 0)
+            Return (renderAnnotation.XPixels / CDbl(displaySize.Width) * 100.0,
+                    renderAnnotation.YPixels / CDbl(displaySize.Height) * 100.0,
+                    renderAnnotation.WidthPixels / CDbl(displaySize.Width) * 100.0,
+                    renderAnnotation.HeightPixels / CDbl(displaySize.Height) * 100.0)
+        End Function
+
+        Private Function TransformAnnotationToDisplayGeometry(annotation As ImageAnnotation,
+                                                              displayWidth As Integer,
+                                                              displayHeight As Integer) As ImageAnnotation
+            Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
-            If baseHeight <= 0 Then Return 0
-            Return annotation.HeightPixels / CDbl(baseHeight) * 100.0
+            If annotation Is Nothing OrElse baseWidth <= 0 OrElse baseHeight <= 0 OrElse displayWidth <= 0 OrElse displayHeight <= 0 Then Return Nothing
+            Dim adj As New ImageAdjustments With {
+                .SourceWidthPixels = baseWidth,
+                .SourceHeightPixels = baseHeight,
+                .RotationDegrees = _appliedRotationDegrees,
+                .FlipHorizontal = _appliedFlipH,
+                .FlipVertical = _appliedFlipV
+            }
+            Return ImageProcessor.TransformAnnotationForGeometry(annotation, adj, displayWidth, displayHeight)
+        End Function
+
+        Private Function DisplayAnnotationRectToStoredPercent(kind As String, x As Double, y As Double, width As Double, height As Double) As (X As Double, Y As Double, Width As Double, Height As Double)
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If baseWidth <= 0 OrElse baseHeight <= 0 OrElse displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (x, y, width, height)
+            Dim dx = x / 100.0 * displaySize.Width
+            Dim dy = y / 100.0 * displaySize.Height
+            Dim dw = width / 100.0 * displaySize.Width
+            Dim dh = height / 100.0 * displaySize.Height
+            Dim sourceGeometry = ImageGeometryMapper.DisplayObjectToSource(
+                New SkiaSharp.SKRect(CSng(dx), CSng(dy), CSng(dx + dw), CSng(dy + dh)),
+                baseWidth, baseHeight, displaySize.Width, displaySize.Height,
+                _appliedRotationDegrees, _appliedFlipH, _appliedFlipV, 0)
+            Return (sourceGeometry.Rect.Left / baseWidth * 100.0,
+                    sourceGeometry.Rect.Top / baseHeight * 100.0,
+                    sourceGeometry.Rect.Width / baseWidth * 100.0,
+                    sourceGeometry.Rect.Height / baseHeight * 100.0)
+        End Function
+
+        Private Function GetAnnotationDisplayPixelSize() As (Width As Integer, Height As Integer)
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (0, 0)
+            Select Case ((_appliedRotationDegrees Mod 360) + 360) Mod 360
+                Case 90, 270
+                    Return (baseHeight, baseWidth)
+                Case Else
+                    Return (baseWidth, baseHeight)
+            End Select
+        End Function
+
+        Private Function GetAnnotationDisplayPixelRect(annotation As ImageAnnotation) As (X As Double, Y As Double, Width As Double, Height As Double)
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If annotation Is Nothing OrElse displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (0, 0, 0, 0)
+            Dim rect = StoredAnnotationRectToDisplayPercent(annotation)
+            Return (rect.X / 100.0 * displaySize.Width,
+                    rect.Y / 100.0 * displaySize.Height,
+                    rect.Width / 100.0 * displaySize.Width,
+                    rect.Height / 100.0 * displaySize.Height)
+        End Function
+
+        Public ReadOnly Property DisplayImageWidthPixels As Integer
+            Get
+                Return GetAnnotationDisplayPixelSize().Width
+            End Get
+        End Property
+
+        Public ReadOnly Property DisplayImageHeightPixels As Integer
+            Get
+                Return GetAnnotationDisplayPixelSize().Height
+            End Get
+        End Property
+
+        Private Sub RaiseDisplayImageGeometryProperties()
+            Me.RaisePropertyChanged(NameOf(DisplayImageWidthPixels))
+            Me.RaisePropertyChanged(NameOf(DisplayImageHeightPixels))
+            RaiseAnnotationPositionControlProperties()
+        End Sub
+
+        Private Function StoredAnnotationRotationToDisplay(annotation As ImageAnnotation) As Double
+            If annotation Is Nothing Then Return 0.0
+            Return ImageGeometryMapper.SourceObjectRotationToDisplay(annotation.RotationDegrees,
+                                                                     _appliedRotationDegrees,
+                                                                     _appliedFlipH,
+                                                                     _appliedFlipV)
+        End Function
+
+        Private Function DisplayAnnotationRotationToStored(kind As String, degrees As Double) As Double
+            Return ImageGeometryMapper.DisplayObjectRotationToSource(degrees,
+                                                                     _appliedRotationDegrees,
+                                                                     _appliedFlipH,
+                                                                     _appliedFlipV)
+        End Function
+
+        Private Function DisplayAnnotationFlipHorizontalToStored(displayFlip As Boolean) As Boolean
+            Return displayFlip Xor _appliedFlipH
+        End Function
+
+        Private Function DisplayAnnotationFlipVerticalToStored(displayFlip As Boolean) As Boolean
+            Return displayFlip Xor _appliedFlipV
+        End Function
+
+        Private Shared Function NormalizeAnnotationRotation(degrees As Double) As Double
+            Return ImageGeometryMapper.NormalizeRotation(degrees)
         End Function
 
         Private Function PercentXToPixels(value As Double) As Double
@@ -6410,47 +6537,57 @@ Namespace ViewModels
             Return GetBaseHeight() * value / 100.0
         End Function
 
+        Private Function DisplayPercentXToPixels(value As Double) As Double
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Return displaySize.Width * value / 100.0
+        End Function
+
+        Private Function DisplayPercentYToPixels(value As Double) As Double
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Return displaySize.Height * value / 100.0
+        End Function
+
         Public Property AnnotationXPixels As Integer
             Get
-                Return CInt(Math.Round(GetBaseWidth() * _annotationXPercent / 100.0))
+                Return CInt(Math.Round(DisplayPercentXToPixels(_annotationXPercent)))
             End Get
             Set(value As Integer)
-                Dim baseWidth = GetBaseWidth()
-                If baseWidth <= 0 Then Return
-                AnnotationXPercent = value / CDbl(baseWidth) * 100.0
+                Dim displaySize = GetAnnotationDisplayPixelSize()
+                If displaySize.Width <= 0 Then Return
+                AnnotationXPercent = value / CDbl(displaySize.Width) * 100.0
             End Set
         End Property
 
         Public Property AnnotationYPixels As Integer
             Get
-                Return CInt(Math.Round(GetBaseHeight() * _annotationYPercent / 100.0))
+                Return CInt(Math.Round(DisplayPercentYToPixels(_annotationYPercent)))
             End Get
             Set(value As Integer)
-                Dim baseHeight = GetBaseHeight()
-                If baseHeight <= 0 Then Return
-                AnnotationYPercent = value / CDbl(baseHeight) * 100.0
+                Dim displaySize = GetAnnotationDisplayPixelSize()
+                If displaySize.Height <= 0 Then Return
+                AnnotationYPercent = value / CDbl(displaySize.Height) * 100.0
             End Set
         End Property
 
         Public Property AnnotationWidthPixels As Integer
             Get
-                Return CInt(Math.Round(GetBaseWidth() * _annotationWidthPercent / 100.0))
+                Return CInt(Math.Round(DisplayPercentXToPixels(_annotationWidthPercent)))
             End Get
             Set(value As Integer)
-                Dim baseWidth = GetBaseWidth()
-                If baseWidth <= 0 Then Return
-                AnnotationWidthPercent = value / CDbl(baseWidth) * 100.0
+                Dim displaySize = GetAnnotationDisplayPixelSize()
+                If displaySize.Width <= 0 Then Return
+                AnnotationWidthPercent = value / CDbl(displaySize.Width) * 100.0
             End Set
         End Property
 
         Public Property AnnotationHeightPixels As Integer
             Get
-                Return CInt(Math.Round(GetBaseHeight() * _annotationHeightPercent / 100.0))
+                Return CInt(Math.Round(DisplayPercentYToPixels(_annotationHeightPercent)))
             End Get
             Set(value As Integer)
-                Dim baseHeight = GetBaseHeight()
-                If baseHeight <= 0 Then Return
-                AnnotationHeightPercent = value / CDbl(baseHeight) * 100.0
+                Dim displaySize = GetAnnotationDisplayPixelSize()
+                If displaySize.Height <= 0 Then Return
+                AnnotationHeightPercent = value / CDbl(displaySize.Height) * 100.0
             End Set
         End Property
 
@@ -6473,9 +6610,11 @@ Namespace ViewModels
                 ' Nur 1 Nachkommastelle - siehe AnnotationRotation.
                 Dim clamped = Math.Round(Math.Max(-180, Math.Min(180, value)), 1)
                 If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
+                CaptureUndoState(NameOf(StraightenDegrees))
                 Me.RaiseAndSetIfChanged(_straightenDegrees, clamped)
+                _appliedStraightenDegrees = clamped
                 RaiseResetButtonStateChanged()
-                ScheduleToolPreviewUpdate()
+                SchedulePreviewUpdate()
             End Set
         End Property
 
@@ -6485,9 +6624,11 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 If _straightenExpandCanvas = value Then Return
+                CaptureUndoState(NameOf(StraightenExpandCanvas))
                 Me.RaiseAndSetIfChanged(_straightenExpandCanvas, value)
+                _appliedStraightenExpandCanvas = value
                 RaiseResetButtonStateChanged()
-                ScheduleToolPreviewUpdate()
+                SchedulePreviewUpdate()
             End Set
         End Property
 
@@ -7671,10 +7812,18 @@ Namespace ViewModels
             RedoCommand = ReactiveCommand.Create(Sub() RedoAction())
             ApplyPreviewCommand = ReactiveCommand.Create(Sub() UpdatePreview())
 
-            RotateLeftCommand = ReactiveCommand.Create(Sub() DoRotate(-90))
-            RotateRightCommand = ReactiveCommand.Create(Sub() DoRotate(90))
-            FlipHorizontalCommand = ReactiveCommand.Create(Sub() DoFlipH())
-            FlipVerticalCommand = ReactiveCommand.Create(Sub() DoFlipV())
+            RotateLeftCommand = ReactiveCommand.Create(Async Function() As Task
+                                                            Await DoRotateAsync(-90)
+                                                        End Function)
+            RotateRightCommand = ReactiveCommand.Create(Async Function() As Task
+                                                             Await DoRotateAsync(90)
+                                                         End Function)
+            FlipHorizontalCommand = ReactiveCommand.Create(Async Function() As Task
+                                                               Await DoFlipHAsync()
+                                                           End Function)
+            FlipVerticalCommand = ReactiveCommand.Create(Async Function() As Task
+                                                             Await DoFlipVAsync()
+                                                         End Function)
             ApplyCropCommand = ReactiveCommand.Create(Async Function() As Task
                                                           Await ApplyCropAsync()
                                                       End Function)
@@ -8628,10 +8777,24 @@ Namespace ViewModels
         ''' <summary>Preview-Raum-Dirty-Rect eines Objekts (inkl. Effektraender) - fuer regionsbezogene
         ''' Struktur-Updates.</summary>
         Private Function ComputeSceneDirtyRectFor(annotation As ImageAnnotation) As SKRectI
+            Dim size = GetCurrentScenePixelSize()
+            If size.Width <= 0 OrElse size.Height <= 0 OrElse annotation Is Nothing Then Return SKRectI.Empty
+            Return ImageProcessor.ComputeAnnotationDirtyRect(size.Width, size.Height, annotation, GetCurrentAdjustments(forPreview:=True))
+        End Function
+
+        Private Function GetCurrentScenePixelSize() As (Width As Integer, Height As Integer)
+            If _sceneSk IsNot Nothing AndAlso _sceneSk.Width > 0 AndAlso _sceneSk.Height > 0 Then
+                Return (_sceneSk.Width, _sceneSk.Height)
+            End If
+
             Dim previewSource = GetPreviewSource()
-            If previewSource Is Nothing OrElse annotation Is Nothing Then Return SKRectI.Empty
-            Return ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width, previewSource.Height, annotation,
-                                                             GetBaseWidth(), GetBaseHeight())
+            If previewSource Is Nothing OrElse previewSource.Width <= 0 OrElse previewSource.Height <= 0 Then Return (0, 0)
+            Select Case ((_rotationDegrees Mod 360) + 360) Mod 360
+                Case 90, 270
+                    Return (previewSource.Height, previewSource.Width)
+                Case Else
+                    Return (previewSource.Width, previewSource.Height)
+            End Select
         End Function
 
         ''' <summary>Ob (und wo) die Szene einen Blend-Composite braucht - unabhaengig davon, ob er gerade
@@ -9372,8 +9535,9 @@ Namespace ViewModels
 
             Dim rect = _annotationDirtyRect
             If rect.IsEmpty AndAlso _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
-                rect = ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width, previewSource.Height, _annotations(_selectedAnnotationIndex),
-                                                                 GetBaseWidth(), GetBaseHeight())
+                Dim size = GetCurrentScenePixelSize()
+                rect = ImageProcessor.ComputeAnnotationDirtyRect(size.Width, size.Height, _annotations(_selectedAnnotationIndex),
+                                                                 GetCurrentAdjustments(forPreview:=True))
             End If
             If rect.IsEmpty Then Return False
             If _sceneSk Is Nothing Then Return False
@@ -9410,9 +9574,10 @@ Namespace ViewModels
                 Dim rect = _annotationDirtyRect
                 If rect.IsEmpty AndAlso previewSourceForRect IsNot Nothing AndAlso
                    _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
-                    rect = ImageProcessor.ComputeAnnotationDirtyRect(previewSourceForRect.Width, previewSourceForRect.Height,
+                    Dim size = GetCurrentScenePixelSize()
+                    rect = ImageProcessor.ComputeAnnotationDirtyRect(size.Width, size.Height,
                                                                      _annotations(_selectedAnnotationIndex),
-                                                                     GetBaseWidth(), GetBaseHeight())
+                                                                     GetCurrentAdjustments(forPreview:=True))
                 End If
                 _annotationDirtyRect = SKRectI.Empty
                 RequestSceneRegionRender(rect)
@@ -9464,10 +9629,11 @@ Namespace ViewModels
             ' Live-Darstellung waehrend des Ziehens uebernimmt der Ghost (Selektions-Overlay).
             Dim previewSource = GetPreviewSource()
             If previewSource IsNot Nothing Then
-                _annotationPlacementStartDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width,
-                                                                                              previewSource.Height,
+                Dim size = GetCurrentScenePixelSize()
+                _annotationPlacementStartDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(size.Width,
+                                                                                              size.Height,
                                                                                               _annotations(_selectedAnnotationIndex),
-                                                                                              GetBaseWidth(), GetBaseHeight())
+                                                                                              GetCurrentAdjustments(forPreview:=True))
                 ' _annotationDirtyRect bleibt gesetzt, damit der Commit alte+neue Bounds vereint.
                 _annotationDirtyRect = _annotationPlacementStartDirtyRect
             End If
@@ -9491,8 +9657,10 @@ Namespace ViewModels
             End If
 
             Dim clone = annotation.Clone()
-            Dim pixelWidth = Math.Max(48, CInt(Math.Round(annotation.WidthPixels)))
-            Dim pixelHeight = Math.Max(48, CInt(Math.Round(annotation.HeightPixels)))
+            ApplyDisplayFlipParityToOverlayClone(clone)
+            Dim displayRect = GetAnnotationDisplayPixelRect(annotation)
+            Dim pixelWidth = Math.Max(48, CInt(Math.Round(displayRect.Width)))
+            Dim pixelHeight = Math.Max(48, CInt(Math.Round(displayRect.Height)))
             Dim seq = Threading.Interlocked.Increment(_ghostRenderSeq)
             Dim render As ImageProcessor.AnnotationOverlayRender = Nothing
             Try
@@ -10091,6 +10259,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(EffectiveImageWidthPixels))
             Me.RaisePropertyChanged(NameOf(EffectiveImageHeightPixels))
             RaiseCropPropertiesChanged()
+            RaiseDisplayImageGeometryProperties()
 
             _hasChanges = True
             RaiseResetButtonStateChanged()
@@ -10109,6 +10278,7 @@ Namespace ViewModels
             _appliedResizeHeight = _resizeHeight
             _hasChanges = True
             RaiseResetButtonStateChanged()
+            RaiseDisplayImageGeometryProperties()
             Await UpdatePreviewAsync()
         End Function
 
@@ -10120,6 +10290,7 @@ Namespace ViewModels
             _appliedCanvasHeight = _canvasHeight
             _hasChanges = True
             RaiseResetButtonStateChanged()
+            RaiseDisplayImageGeometryProperties()
             Await UpdatePreviewAsync()
         End Function
 
@@ -10134,6 +10305,7 @@ Namespace ViewModels
             _appliedFlipV = _flipV
             _hasChanges = True
             RaiseResetButtonStateChanged()
+            RaiseDisplayImageGeometryProperties()
             Await UpdatePreviewAsync()
         End Function
 
@@ -11241,6 +11413,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundColor))
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundColorValue))
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundBrush))
+            RaiseDisplayImageGeometryProperties()
             Me.RaisePropertyChanged(NameOf(FilterPreset))
             Me.RaisePropertyChanged(NameOf(FilterStrength))
             Me.RaisePropertyChanged(NameOf(LutPath))
@@ -11290,7 +11463,7 @@ Namespace ViewModels
         ''' Form, eine aus der Auswahl kopierte Fläche, alles gleichermaßen. Die Anfasser am Objekt können
         ''' nur frei drehen und skalieren; exakte 90°-Schritte und Spiegeln gibt es nur hier. Ohne markiertes
         ''' Objekt bleibt es beim bisherigen Verhalten: das ganze Bild dreht/spiegelt sich.</summary>
-        Private Sub DoRotate(degrees As Integer)
+        Private Async Function DoRotateAsync(degrees As Integer) As Task
             If HasSelectedAnnotation Then
                 PushUndo()
                 ' Objektdrehung läuft in [-180, 180]; nach 180 kippt sie auf -180 (identische Lage).
@@ -11300,11 +11473,10 @@ Namespace ViewModels
                 Return
             End If
             _rotationDegrees = ((_rotationDegrees + degrees) Mod 360 + 360) Mod 360
-            RaiseResetButtonStateChanged()
-            UpdatePreview()
-        End Sub
+            Await ApplyTransformAsync()
+        End Function
 
-        Private Sub DoFlipH()
+        Private Async Function DoFlipHAsync() As Task
             If HasSelectedAnnotation Then
                 PushUndo()
                 AnnotationFlipHorizontal = Not _annotationFlipH
@@ -11312,11 +11484,10 @@ Namespace ViewModels
                 Return
             End If
             _flipH = Not _flipH
-            RaiseResetButtonStateChanged()
-            UpdatePreview()
-        End Sub
+            Await ApplyTransformAsync()
+        End Function
 
-        Private Sub DoFlipV()
+        Private Async Function DoFlipVAsync() As Task
             If HasSelectedAnnotation Then
                 PushUndo()
                 AnnotationFlipVertical = Not _annotationFlipV
@@ -11324,9 +11495,8 @@ Namespace ViewModels
                 Return
             End If
             _flipV = Not _flipV
-            RaiseResetButtonStateChanged()
-            UpdatePreview()
-        End Sub
+            Await ApplyTransformAsync()
+        End Function
 
         Private Sub ResetAdjustmentsInternal(Optional resetEditorUi As Boolean = False)
             ' ARBEITSBILD (Stufe D): Zurücksetzen entfernt auch gebackene Striche/Retusche -
@@ -11719,8 +11889,9 @@ Namespace ViewModels
         End Function
 
         Private Function EstimateTextAnnotationSizePercent(text As String, fontSizePixels As Double, fontFamily As String) As (WidthPercent As Double, HeightPercent As Double)
-            Dim baseWidth = GetBaseWidth()
-            Dim baseHeight = GetBaseHeight()
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Dim baseWidth = displaySize.Width
+            Dim baseHeight = displaySize.Height
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (_annotationWidthPercent, _annotationHeightPercent)
 
             Dim content = If(text, "").Trim()
@@ -11995,12 +12166,11 @@ Namespace ViewModels
             Dim width = defaultSize.WidthPercent
             Dim height = defaultSize.HeightPercent
             If normalizedKind = "QR" Then
-                Dim baseWidth = GetBaseWidth()
-                Dim baseHeight = GetBaseHeight()
-                If baseWidth > 0 AndAlso baseHeight > 0 Then
-                    Dim sizePixels = Math.Max(1.0, Math.Min(PercentXToPixels(width), PercentYToPixels(height)))
-                    width = sizePixels / baseWidth * 100.0
-                    height = sizePixels / baseHeight * 100.0
+                Dim displaySize = GetAnnotationDisplayPixelSize()
+                If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
+                    Dim sizePixels = Math.Max(1.0, Math.Min(width / 100.0 * displaySize.Width, height / 100.0 * displaySize.Height))
+                    width = sizePixels / displaySize.Width * 100.0
+                    height = sizePixels / displaySize.Height * 100.0
                 End If
             End If
             If normalizedKind = "Watermark" Then
@@ -12018,10 +12188,11 @@ Namespace ViewModels
             Dim y = If(normalizedKind = "Watermark",
                        ClampAnnotationOffsetPercent(_annotationYPercent),
                        Math.Max(-height + 1, Math.Min(100 - 1, yPercent)))
-            Dim storedX = PercentXToPixels(x)
-            Dim storedY = PercentYToPixels(y)
-            Dim storedWidth = Math.Max(1.0, PercentXToPixels(width))
-            Dim storedHeight = Math.Max(1.0, PercentYToPixels(height))
+            Dim storedRect = DisplayAnnotationRectToStoredPercent(normalizedKind, x, y, width, height)
+            Dim storedX = PercentXToPixels(storedRect.X)
+            Dim storedY = PercentYToPixels(storedRect.Y)
+            Dim storedWidth = Math.Max(1.0, PercentXToPixels(storedRect.Width))
+            Dim storedHeight = Math.Max(1.0, PercentYToPixels(storedRect.Height))
             Dim text = If(normalizedKind = "Image" OrElse normalizedKind = "Brush" OrElse normalizedKind = "Eraser",
                           "",
                           If(String.IsNullOrWhiteSpace(_annotationText), GetDefaultAnnotationText(normalizedKind, kind), _annotationText))
@@ -12046,7 +12217,9 @@ Namespace ViewModels
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
-                .RotationDegrees = CSng(_annotationRotation),
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, _annotationRotation)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(_annotationFlipH),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored(_annotationFlipV),
                 .Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), ""),
                 .IsVisible = _annotationIsVisible,
                 .FillKind = _annotationFillKind,
@@ -12083,17 +12256,35 @@ Namespace ViewModels
                 Case "Line", "Arrow"
                     Return (30.0, 16.0)
                 Case "QR", "Image", "Symbol", "Rectangle", "RoundedRectangle", "Ellipse", "Square", "Triangle", "Cone", "Pyramid", "Trapezoid", "Diamond", "Polygon", "Star", "DoubleStar", "Spiral", "Droplet", "SpeechBubble", "EllipseSpeechBubble", "RectSpeechBubble", "Heart", "Cloud"
-                    Return (22.0, 22.0)
+                    Return GetSquareDisplaySizePercent(22.0)
                 Case "Svg"
                     Dim aspect = ImageProcessor.TryGetSvgAspectRatio(ExtractSvgIconPath(rawKind))
                     Dim baseSize = 22.0
                     If aspect >= 1.0 Then
-                        Return (baseSize, Math.Max(5.0, baseSize / aspect))
+                        Return GetDisplaySizePercentForAspect(baseSize, baseSize / aspect)
                     End If
-                    Return (Math.Max(5.0, baseSize * aspect), baseSize)
+                    Return GetDisplaySizePercentForAspect(baseSize * aspect, baseSize)
                 Case Else
                     Return (_annotationWidthPercent, _annotationHeightPercent)
             End Select
+        End Function
+
+        Private Function GetSquareDisplaySizePercent(sizePercentOfShortSide As Double) As (WidthPercent As Double, HeightPercent As Double)
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (sizePercentOfShortSide, sizePercentOfShortSide)
+            Dim sizePixels = Math.Max(1.0, Math.Min(displaySize.Width, displaySize.Height) * sizePercentOfShortSide / 100.0)
+            Return (sizePixels / displaySize.Width * 100.0,
+                    sizePixels / displaySize.Height * 100.0)
+        End Function
+
+        Private Function GetDisplaySizePercentForAspect(widthPercentOfShortSide As Double, heightPercentOfShortSide As Double) As (WidthPercent As Double, HeightPercent As Double)
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (Math.Max(5.0, widthPercentOfShortSide), Math.Max(5.0, heightPercentOfShortSide))
+            Dim shortSide = Math.Min(displaySize.Width, displaySize.Height)
+            Dim widthPixels = Math.Max(1.0, shortSide * Math.Max(5.0, widthPercentOfShortSide) / 100.0)
+            Dim heightPixels = Math.Max(1.0, shortSide * Math.Max(5.0, heightPercentOfShortSide) / 100.0)
+            Return (Math.Max(1.0, widthPixels / displaySize.Width * 100.0),
+                    Math.Max(1.0, heightPixels / displaySize.Height * 100.0))
         End Function
 
         ''' Für den Weg über den Knopf im Eigenschaften-Panel: platziert das Bild an der zuletzt
@@ -12110,14 +12301,15 @@ Namespace ViewModels
             Dim height = size.HeightPercent
             Dim x = Math.Max(-width + 1, Math.Min(100 - 1, xPercent))
             Dim y = Math.Max(-height + 1, Math.Min(100 - 1, yPercent))
+            Dim storedRect = DisplayAnnotationRectToStoredPercent("Image", x, y, width, height)
             Dim annotation = New ImageAnnotation With {
                 .Kind = "Image",
                 .Text = "",
                 .ImagePath = imagePath,
-                .XPixels = CSng(PercentXToPixels(x)),
-                .YPixels = CSng(PercentYToPixels(y)),
-                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(width))),
-                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(height))),
+                .XPixels = CSng(PercentXToPixels(storedRect.X)),
+                .YPixels = CSng(PercentYToPixels(storedRect.Y)),
+                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(storedRect.Width))),
+                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(storedRect.Height))),
                 .FillColor = "#00FFFFFF",
                 .StrokeColor = _annotationStrokeColor,
                 .StrokeWidth = CSng(_annotationStrokeWidth),
@@ -12125,7 +12317,9 @@ Namespace ViewModels
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
-                .RotationDegrees = CSng(_annotationRotation),
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("Image", _annotationRotation)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(_annotationFlipH),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored(_annotationFlipV),
                 .IsVisible = _annotationIsVisible
             }
             HardenAnnotationBuffersForNewObject()
@@ -12138,19 +12332,18 @@ Namespace ViewModels
         End Sub
 
         Private Function GetInitialImageAnnotationSize(imagePath As String) As (WidthPercent As Double, HeightPercent As Double)
-            Dim baseWidth = GetBaseWidth()
-            Dim baseHeight = GetBaseHeight()
-            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (30.0, 30.0)
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (30.0, 30.0)
 
             Try
                 Using bitmap = SKBitmap.Decode(imagePath)
                     If bitmap Is Nothing OrElse bitmap.Width <= 0 OrElse bitmap.Height <= 0 Then Return (30.0, 30.0)
 
-                    Dim maxWidth = baseWidth * 0.6
-                    Dim maxHeight = baseHeight * 0.6
+                    Dim maxWidth = displaySize.Width * 0.6
+                    Dim maxHeight = displaySize.Height * 0.6
                     Dim scale = Math.Min(1.0, Math.Min(maxWidth / bitmap.Width, maxHeight / bitmap.Height))
-                    Dim widthPercent = bitmap.Width * scale / baseWidth * 100.0
-                    Dim heightPercent = bitmap.Height * scale / baseHeight * 100.0
+                    Dim widthPercent = bitmap.Width * scale / displaySize.Width * 100.0
+                    Dim heightPercent = bitmap.Height * scale / displaySize.Height * 100.0
 
                     If widthPercent < 5.0 Then
                         Dim factor = 5.0 / Math.Max(0.0001, widthPercent)
@@ -12181,7 +12374,7 @@ Namespace ViewModels
                 Case "Symbol", "Svg"
                     Return EditorTool.Insert
                 Case "Brush", "Eraser" : Return EditorTool.Draw
-                Case "SelectionFill", "SelectionImage" : Return EditorTool.Selection
+                Case "SelectionFill", "SelectionImage" : Return EditorTool.Move
                 Case Else : Return EditorTool.Insert
             End Select
         End Function
@@ -12298,7 +12491,12 @@ Namespace ViewModels
 
             Dim baseW = GetBaseWidth()
             Dim baseH = GetBaseHeight()
-            Dim pixelPoints = normalized.Select(Function(p) New Avalonia.Point(PercentXToPixels(p.X), PercentYToPixels(p.Y))).ToList()
+            ' Die Punkte liegen im gedrehten Anzeigebild - vor dem Backen ins Arbeitsbild rück-rotieren
+            ' (0° = unverändert), sonst sitzt der Strich beim Anzeigen gedreht.
+            Dim pixelPoints = normalized.Select(Function(p)
+                                                    Dim w = DisplayPercentToWorkingImagePercent(p.X, p.Y)
+                                                    Return New Avalonia.Point(PercentXToPixels(w.X), PercentYToPixels(w.Y))
+                                                End Function).ToList()
             Dim dirtyFull As SKRectI
             Dim stroke = PixelEditLayer.CreateTransientStroke(pixelPoints, BuildPixelPaintOptions(isEraser), baseW, baseH, dirtyFull)
             If stroke Is Nothing OrElse dirtyFull.Width <= 0 OrElse dirtyFull.Height <= 0 Then Return
@@ -12357,6 +12555,11 @@ Namespace ViewModels
         Private Sub DrawStrokeBridgeIntoScene(renderAnn As ImageAnnotation, dirtyFull As SKRectI,
                                               baseW As Integer, baseH As Integer)
             If _sceneSk Is Nothing OrElse baseW <= 0 OrElse baseH <= 0 Then Return
+            ' Die Sofort-Brücke zeichnet den Strich in ARBEITSBILD-Koordinaten direkt in die ANZEIGE-
+            ' Szene, die aber per Rezept gedreht ist - bei 90/180/270 säße der Strich für den Sekunden-
+            ' bruchteil bis zum Voll-Render an der falschen Stelle (Nutzerbefund). Deshalb bei Drehung die
+            ' Brücke überspringen: der Strich erscheint dann minimal später, aber sofort korrekt platziert.
+            If (((_appliedRotationDegrees Mod 360) + 360) Mod 360) <> 0 Then Return
             Dim previewRect = ImageProcessor.ScaleRectBetweenSpaces(dirtyFull, baseW, baseH, _sceneSk.Width, _sceneSk.Height)
             If previewRect.Width <= 0 OrElse previewRect.Height <= 0 Then Return
             Try
@@ -12679,17 +12882,36 @@ Namespace ViewModels
                 ' Ausgeblendete Ebenen sind auf der Leinwand nicht zu sehen; ein Klick auf ihre alte
                 ' Stelle darf sie nicht selektieren (und damit ins zugehörige Werkzeug springen).
                 If Not a.IsVisible Then Continue For
-                Dim ax = AnnotationStoredXToPercent(a)
-                Dim ay = AnnotationStoredYToPercent(a)
-                Dim aw = AnnotationStoredWidthToPercent(a)
-                Dim ah = AnnotationStoredHeightToPercent(a)
-                Dim origin = ComputeAnnotationOriginPercent(a.Kind, ax, ay, aw, ah, a.Anchor)
-                If xPercent >= origin.X - hitSlopXPercent AndAlso xPercent <= origin.X + aw + hitSlopXPercent AndAlso
-                   yPercent >= origin.Y - hitSlopYPercent AndAlso yPercent <= origin.Y + ah + hitSlopYPercent Then
+                Dim rect = StoredAnnotationRectToDisplayPercent(a)
+                If PointHitsDisplayAnnotationRect(xPercent, yPercent, rect.X, rect.Y, rect.Width, rect.Height,
+                                                  StoredAnnotationRotationToDisplay(a),
+                                                  hitSlopXPercent, hitSlopYPercent) Then
                     Return i
                 End If
             Next
             Return -1
+        End Function
+
+        Private Shared Function PointHitsDisplayAnnotationRect(xPercent As Double, yPercent As Double,
+                                                               rectX As Double, rectY As Double,
+                                                               rectWidth As Double, rectHeight As Double,
+                                                               rotationDegrees As Double,
+                                                               hitSlopXPercent As Double,
+                                                               hitSlopYPercent As Double) As Boolean
+            If rectWidth <= 0 OrElse rectHeight <= 0 Then Return False
+            Dim cx = rectX + rectWidth / 2.0
+            Dim cy = rectY + rectHeight / 2.0
+            Dim localX = xPercent
+            Dim localY = yPercent
+            If Math.Abs(rotationDegrees) > 0.001 Then
+                Dim radians = -rotationDegrees * Math.PI / 180.0
+                Dim dx = xPercent - cx
+                Dim dy = yPercent - cy
+                localX = cx + dx * Math.Cos(radians) - dy * Math.Sin(radians)
+                localY = cy + dx * Math.Sin(radians) + dy * Math.Cos(radians)
+            End If
+            Return localX >= rectX - hitSlopXPercent AndAlso localX <= rectX + rectWidth + hitSlopXPercent AndAlso
+                   localY >= rectY - hitSlopYPercent AndAlso localY <= rectY + rectHeight + hitSlopYPercent
         End Function
 
         ''' Ebenen, deren Inhalt in <see cref="ImageAnnotation.Strokes"/> steckt statt in Geometrie/Text.
@@ -12854,16 +13076,17 @@ Namespace ViewModels
                     AnnotationFontFamily = a.FontFamily
                     AnnotationOpacity = a.Opacity
                     AnnotationBlendMode = a.BlendMode
-                    AnnotationRotation = a.RotationDegrees
+                    AnnotationRotation = StoredAnnotationRotationToDisplay(a)
                     AnnotationFlipHorizontal = a.FlipHorizontal
                     AnnotationFlipVertical = a.FlipVertical
                     AnnotationLockAspect = a.LockAspect
                     _annotationAnchor = NormalizeAnnotationAnchor(a.Anchor)
                     AnnotationIsVisible = a.IsVisible
-                    AnnotationXPercent = AnnotationStoredXToPercent(a)
-                    AnnotationYPercent = AnnotationStoredYToPercent(a)
-                    AnnotationWidthPercent = AnnotationStoredWidthToPercent(a)
-                    AnnotationHeightPercent = AnnotationStoredHeightToPercent(a)
+                    Dim displayRect = StoredAnnotationRectToDisplayPercent(a)
+                    _annotationXPercent = displayRect.X
+                    _annotationYPercent = displayRect.Y
+                    _annotationWidthPercent = displayRect.Width
+                    _annotationHeightPercent = displayRect.Height
                     AnnotationFillKind = a.FillKind
                     AnnotationTextPathKind = a.TextPathKind
                     AnnotationTextPathBend = a.TextPathBend
@@ -12909,6 +13132,15 @@ Namespace ViewModels
                         Me.RaisePropertyChanged(NameOf(EraserFillColorValue))
                         Me.RaisePropertyChanged(NameOf(EraserFillBrush))
                     End If
+                    Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
+                    Me.RaisePropertyChanged(NameOf(AnnotationYPercent))
+                    Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
+                    Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
+                    Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
+                    Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
+                    Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+                    Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+                    RaiseAnnotationPositionControlProperties()
                     Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
                     RaiseWatermarkUiChanged()
                 End If
@@ -12929,9 +13161,11 @@ Namespace ViewModels
             CaptureUndoState("TextAnnotation")
             Dim a = _annotations(_selectedAnnotationIndex)
             Dim previewSource = GetPreviewSource()
-            Dim oldDirtyRect = If(previewSource Is Nothing, SKRectI.Empty,
-                                  ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width, previewSource.Height, a,
-                                                                            GetBaseWidth(), GetBaseHeight()))
+            Dim sceneSize = GetCurrentScenePixelSize()
+            Dim oldDirtyRect = If(previewSource Is Nothing OrElse sceneSize.Width <= 0 OrElse sceneSize.Height <= 0,
+                                  SKRectI.Empty,
+                                  ImageProcessor.ComputeAnnotationDirtyRect(sceneSize.Width, sceneSize.Height, a,
+                                                                            GetCurrentAdjustments(forPreview:=True)))
             ' Pinsel- und Radiergummi-Ebenen haben keinen Text: ihre Züge liegen in a.Strokes. Das
             ' Text-Feld bleibt bei ihnen leer, damit nicht der Textpuffer des Editors hineinläuft.
             Dim normalizedKind = NormalizeAnnotationKind(a.Kind)
@@ -12957,16 +13191,18 @@ Namespace ViewModels
                 a.EraserFillColor = _eraserFillColor
             End If
             a.BlendMode = _annotationBlendMode
-            a.RotationDegrees = CSng(_annotationRotation)
+            a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, _annotationRotation))
             a.FlipHorizontal = _annotationFlipH
             a.FlipVertical = _annotationFlipV
             a.LockAspect = _annotationLockAspect
             a.Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             a.IsVisible = _annotationIsVisible
-            a.XPixels = CSng(AnnotationXPixels)
-            a.YPixels = CSng(AnnotationYPixels)
-            a.WidthPixels = CSng(Math.Max(1, AnnotationWidthPixels))
-            a.HeightPixels = CSng(Math.Max(1, AnnotationHeightPixels))
+            Dim storedRect = DisplayAnnotationRectToStoredPercent(normalizedKind, _annotationXPercent, _annotationYPercent,
+                                                                  _annotationWidthPercent, _annotationHeightPercent)
+            a.XPixels = CSng(PercentXToPixels(storedRect.X))
+            a.YPixels = CSng(PercentYToPixels(storedRect.Y))
+            a.WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(storedRect.Width)))
+            a.HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(storedRect.Height)))
             a.FillKind = _annotationFillKind
             a.TextPathKind = _annotationTextPathKind
             a.TextPathBend = CSng(_annotationTextPathBend)
@@ -12991,8 +13227,9 @@ Namespace ViewModels
             a.GlowStrength = CSng(_annotationGlowStrength)
             a.GlowColor = _annotationGlowColor
             If previewSource IsNot Nothing Then
-                Dim newDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(previewSource.Width, previewSource.Height, a,
-                                                                             GetBaseWidth(), GetBaseHeight())
+                sceneSize = GetCurrentScenePixelSize()
+                Dim newDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(sceneSize.Width, sceneSize.Height, a,
+                                                                             GetCurrentAdjustments(forPreview:=True))
                 If _annotationPlacementEditActive Then
                     _annotationDirtyRect = ImageProcessor.UnionRects(_annotationPlacementStartDirtyRect, newDirtyRect)
                 Else
@@ -13057,11 +13294,23 @@ Namespace ViewModels
             Dim pixelWidth = 256
             Dim pixelHeight = 256
             If previewSource IsNot Nothing Then
-                pixelWidth = Math.Max(48, CInt(Math.Round(annotation.WidthPixels)))
-                pixelHeight = Math.Max(48, CInt(Math.Round(annotation.HeightPixels)))
+                Dim displayRect = GetAnnotationDisplayPixelRect(annotation)
+                pixelWidth = Math.Max(48, CInt(Math.Round(displayRect.Width)))
+                pixelHeight = Math.Max(48, CInt(Math.Round(displayRect.Height)))
             End If
 
-            SetSelectedAnnotationOverlay(ImageProcessor.RenderAnnotationOverlay(annotation.Clone(), pixelWidth, pixelHeight))
+            Dim overlayAnnotation = annotation.Clone()
+            ApplyDisplayFlipParityToOverlayClone(overlayAnnotation)
+            SetSelectedAnnotationOverlay(ImageProcessor.RenderAnnotationOverlay(overlayAnnotation, pixelWidth, pixelHeight))
+        End Sub
+
+        Private Sub ApplyDisplayFlipParityToOverlayClone(annotation As ImageAnnotation)
+            If annotation Is Nothing Then Return
+            ' Der Overlay-Renderer zeichnet im bereits sichtbaren Display-Rechteck; Rotation kommt
+            ' aus der View-Transform. Die Bildspiegelung wird beim Bake aber in die Annotation-
+            ' Flipflags eingerechnet, deshalb muss der Ghost dieselbe Parität bekommen.
+            If _appliedFlipH Then annotation.FlipHorizontal = Not annotation.FlipHorizontal
+            If _appliedFlipV Then annotation.FlipVertical = Not annotation.FlipVertical
         End Sub
 
         Private Shared Function ParseAvaloniaColorOrDefault(value As String, fallback As Avalonia.Media.Color) As Avalonia.Media.Color
@@ -13189,8 +13438,61 @@ Namespace ViewModels
 
         ''' captureUndo=True markiert den Beginn eines Zuges (Mausklick), False die Zwischenpunkte
         ''' beim Ziehen.
+        ''' <summary>Rechnet eine Klick-Position (Prozent, im ANGEZEIGTEN = per Rezept gedrehten Bild) in
+        ''' die Prozente des UNGEDREHTEN Arbeitsbilds um. Nötig für alles, was ins Arbeitsbild GEBACKEN
+        ''' wird (Pinsel, Retusche): das Arbeitsbild wird beim Rendern erst DANACH gedreht, also müssen die
+        ''' Koordinaten die Drehung vorher herausrechnen, sonst landet der gebackene Strich beim Anzeigen
+        ''' gedreht (bei 180° gespiegelt, bei 90°/270° zusätzlich durch den Breite/Höhe-Tausch versetzt).
+        ''' Uhrzeigersinn wie ImageProcessor.ApplyGeometryTransforms. Bei 0° (Normalfall) unverändert.</summary>
+        Private Function DisplayPercentToWorkingImagePercent(xPercent As Double, yPercent As Double) As (X As Double, Y As Double)
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If baseWidth <= 0 OrElse baseHeight <= 0 OrElse displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (xPercent, yPercent)
+            Dim displayX = xPercent / 100.0 * displaySize.Width
+            Dim displayY = yPercent / 100.0 * displaySize.Height
+            Dim source = ImageGeometryMapper.DisplayPointToSource(displayX, displayY,
+                                                                  baseWidth, baseHeight,
+                                                                  _appliedRotationDegrees,
+                                                                  _appliedFlipH, _appliedFlipV)
+            Return (source.X / baseWidth * 100.0, source.Y / baseHeight * 100.0)
+        End Function
+
+        Private Function TransformRetouchSpotToDisplayGeometry(spot As RetouchSpot) As RetouchSpot
+            If spot Is Nothing Then Return Nothing
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If baseWidth <= 0 OrElse baseHeight <= 0 OrElse displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return spot
+
+            Dim result = spot.Clone()
+            Dim p = TransformWorkingPixelToDisplayPixel(spot.XPixels, spot.YPixels, baseWidth, baseHeight, displaySize.Width, displaySize.Height)
+            result.XPixels = CSng(p.X)
+            result.YPixels = CSng(p.Y)
+            If spot.HasCloneSource Then
+                Dim s = TransformWorkingPixelToDisplayPixel(spot.SourceXPixels, spot.SourceYPixels, baseWidth, baseHeight, displaySize.Width, displaySize.Height)
+                result.SourceXPixels = CSng(s.X)
+                result.SourceYPixels = CSng(s.Y)
+            End If
+            Return result
+        End Function
+
+        Private Function TransformWorkingPixelToDisplayPixel(x As Double, y As Double,
+                                                             baseWidth As Integer, baseHeight As Integer,
+                                                             displayWidth As Integer, displayHeight As Integer) As (X As Double, Y As Double)
+            Dim display = ImageGeometryMapper.SourcePointToDisplay(x, y,
+                                                                   baseWidth, baseHeight,
+                                                                   _appliedRotationDegrees,
+                                                                   _appliedFlipH, _appliedFlipV)
+            Return (display.X, display.Y)
+        End Function
+
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
             If Not CanUsePixelTools Then Return
+            ' Klick liegt im gedrehten Anzeigebild - ins ungedrehte Arbeitsbild umrechnen (0° = unverändert).
+            Dim wip = DisplayPercentToWorkingImagePercent(xPercent, yPercent)
+            xPercent = wip.X
+            yPercent = wip.Y
             ' Der Stempel braucht eine Quelle. Ohne sie würde er stillschweigend zur Retusche -
             ' der Nutzer soll stattdessen erst Alt+Klick machen (siehe RetouchHintText).
             If IsCloneMode AndAlso Not HasCloneSource Then Return
@@ -13248,8 +13550,11 @@ Namespace ViewModels
                 ' Der Versatz entsteht beim ersten Punkt nach dem Setzen der Quelle und bleibt dann
                 ' stehen - so wandert beim Ziehen ein zusammenhängender Ausschnitt mit.
                 If Not _hasCloneOffset Then
-                    _cloneOffsetXPixels = targetX - PercentXToPixels(_cloneSourceXPercent)
-                    _cloneOffsetYPixels = targetY - PercentYToPixels(_cloneSourceYPercent)
+                    ' Die Klonquelle liegt (wie der Klick) im gedrehten Anzeigebild - für den Bake in
+                    ' die Arbeitsbild-Koordinaten umrechnen, damit der Versatz stimmt.
+                    Dim cloneWip = DisplayPercentToWorkingImagePercent(_cloneSourceXPercent, _cloneSourceYPercent)
+                    _cloneOffsetXPixels = targetX - PercentXToPixels(cloneWip.X)
+                    _cloneOffsetYPixels = targetY - PercentYToPixels(cloneWip.Y)
                     _hasCloneOffset = True
                 End If
 
@@ -13289,7 +13594,8 @@ Namespace ViewModels
                     ScheduleRetouchPreviewUpdate(forcePublish)
                     Return
                 End If
-                ExpandRetouchMaskPatchRect(spot)
+                Dim maskSpot = TransformRetouchSpotToDisplayGeometry(spot)
+                ExpandRetouchMaskPatchRect(maskSpot)
                 PublishRetouchMaskPreview(forcePublish)
                 Return
             End If
@@ -13306,7 +13612,8 @@ Namespace ViewModels
                 ' ("es passiert nichts") ist schlimmer. Die orangene Masken-Vorschau zeigt den
                 ' bearbeiteten Bereich; der Commit backt das Ergebnis.
                 If EnsureRetouchMaskPreviewSize() Then
-                    ExpandRetouchMaskPatchRect(spot)
+                    Dim maskSpot = TransformRetouchSpotToDisplayGeometry(spot)
+                    ExpandRetouchMaskPatchRect(maskSpot)
                     PublishRetouchMaskPreview(forcePublish)
                 End If
                 Return
@@ -13319,14 +13626,20 @@ Namespace ViewModels
                 ' zieht der Init-Abschluss alle aufgelaufenen Zug-Punkte nach.
                 BeginRetouchLiveBuffersAsync()
                 If EnsureRetouchMaskPreviewSize() Then
-                    ExpandRetouchMaskPatchRect(spot)
+                    Dim maskSpot = TransformRetouchSpotToDisplayGeometry(spot)
+                    ExpandRetouchMaskPatchRect(maskSpot)
                     PublishRetouchMaskPreview(forcePublish)
                 End If
                 Return
             End If
 
-            ImageProcessor.ApplyRetouchSpotInPlace(_retouchLiveBitmap, _retouchLiveSampleBitmap, spot, GetBaseWidth(), GetBaseHeight())
-            ExpandRetouchLivePatchRect(spot)
+            ResetRetouchLivePatchForBitmap(_retouchLiveBitmap)
+            Dim liveSpot = TransformRetouchSpotToLiveGeometry(spot)
+            Dim liveSize = GetRetouchLiveGeometrySize()
+            ImageProcessor.ApplyRetouchSpotInPlace(_retouchLiveBitmap, _retouchLiveSampleBitmap, liveSpot,
+                                                   liveSize.Width,
+                                                   liveSize.Height)
+            ExpandRetouchLivePatchRect(liveSpot, liveSize.Width, liveSize.Height)
             PublishRetouchLivePreview(forcePublish)
         End Sub
 
@@ -13406,15 +13719,19 @@ Namespace ViewModels
                 _retouchLiveBitmap = target
                 _retouchLiveSampleBitmap = sample
                 _retouchBuffersKey = ImageProcessor.ComputeBaseKey(targetAdj)
+                ResetRetouchLivePatchForBitmap(_retouchLiveBitmap)
 
                 ' Aufgelaufene Punkte des aktiven Zugs nachziehen und die echte Vorschau uebernehmen.
                 If _retouchStrokeActive Then
                     Dim pendingSpots = _retouchSpots.Skip(strokeStart).Where(Function(s) s IsNot Nothing).ToList()
                     If pendingSpots.Count > 0 Then
-                        ImageProcessor.ApplyRetouchSpotsInPlace(_retouchLiveBitmap, _retouchLiveSampleBitmap, pendingSpots,
-                                                                GetBaseWidth(), GetBaseHeight())
-                        For Each s In pendingSpots
-                            ExpandRetouchLivePatchRect(s)
+                        Dim liveSpots = pendingSpots.Select(Function(s) TransformRetouchSpotToLiveGeometry(s)).ToList()
+                        Dim liveSize = GetRetouchLiveGeometrySize()
+                        ImageProcessor.ApplyRetouchSpotsInPlace(_retouchLiveBitmap, _retouchLiveSampleBitmap, liveSpots,
+                                                                liveSize.Width,
+                                                                liveSize.Height)
+                        For Each s In liveSpots
+                            ExpandRetouchLivePatchRect(s, liveSize.Width, liveSize.Height)
                         Next
                         PublishRetouchLivePreview(True)
                     End If
@@ -13429,8 +13746,13 @@ Namespace ViewModels
             Dim now = DateTime.UtcNow
             If force OrElse (now - _lastRetouchLivePreviewUtc).TotalMilliseconds >= 24.0 Then
                 _lastRetouchLivePreviewUtc = now
-                Dim patch = ImageProcessor.RenderBitmapPatch(_retouchLiveBitmap, _retouchLivePatchRect)
+                Dim patch = ImageProcessor.RenderChangedBitmapPatch(_retouchLiveBitmap,
+                                                                    _retouchLiveSampleBitmap,
+                                                                    _retouchLivePatchRect)
+                If patch Is Nothing Then patch = ImageProcessor.RenderBitmapPatch(_retouchLiveBitmap, _retouchLivePatchRect)
                 If patch IsNot Nothing Then
+                    _retouchLivePatchBitmapWidth = _retouchLiveBitmap.Width
+                    _retouchLivePatchBitmapHeight = _retouchLiveBitmap.Height
                     RetouchLivePatchImage = patch
                     UpdateRetouchLivePatchPercentages()
                 End If
@@ -13439,12 +13761,23 @@ Namespace ViewModels
             End If
         End Sub
 
+        Private Sub ResetRetouchLivePatchForBitmap(bitmap As SKBitmap)
+            If bitmap Is Nothing Then Return
+            If _retouchLivePatchBitmapWidth = bitmap.Width AndAlso
+               _retouchLivePatchBitmapHeight = bitmap.Height Then Return
+
+            _retouchLivePatchRect = SKRectI.Empty
+            _retouchLivePatchBitmapWidth = bitmap.Width
+            _retouchLivePatchBitmapHeight = bitmap.Height
+        End Sub
+
         Private Function EnsureRetouchMaskPreviewSize() As Boolean
-            If _retouchLiveMaskBitmapWidth > 0 AndAlso _retouchLiveMaskBitmapHeight > 0 Then Return True
-            Dim previewSource = GetPreviewSource()
-            If previewSource Is Nothing OrElse previewSource.Width <= 0 OrElse previewSource.Height <= 0 Then Return False
-            _retouchLiveMaskBitmapWidth = previewSource.Width
-            _retouchLiveMaskBitmapHeight = previewSource.Height
+            Dim displayWidth = DisplayImageWidthPixels
+            Dim displayHeight = DisplayImageHeightPixels
+            If displayWidth <= 0 OrElse displayHeight <= 0 Then Return False
+            If _retouchLiveMaskBitmapWidth = displayWidth AndAlso _retouchLiveMaskBitmapHeight = displayHeight Then Return True
+            _retouchLiveMaskBitmapWidth = displayWidth
+            _retouchLiveMaskBitmapHeight = displayHeight
             Return True
         End Function
 
@@ -13455,32 +13788,53 @@ Namespace ViewModels
                 _lastRetouchLivePreviewUtc = now
                 Dim strokeSpots = _retouchSpots.
                     Skip(Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count))).
-                    Where(Function(s) s IsNot Nothing AndAlso String.Equals(s.Mode, "Heal", StringComparison.OrdinalIgnoreCase)).
-                    Select(Function(s) s.Clone()).
+                    Where(Function(s) s IsNot Nothing).
+                    Select(Function(s) TransformRetouchSpotToDisplayGeometry(s)).
+                    Where(Function(s) s IsNot Nothing).
                     ToList()
                 Dim patch = ImageProcessor.RenderRetouchMaskPatch(strokeSpots,
                                                                   _retouchLivePatchRect,
                                                                   _retouchLiveMaskBitmapWidth,
                                                                   _retouchLiveMaskBitmapHeight,
-                                                                  GetBaseWidth(),
-                                                                  GetBaseHeight())
+                                                                  Math.Max(1, DisplayImageWidthPixels),
+                                                                  Math.Max(1, DisplayImageHeightPixels))
                 If patch IsNot Nothing Then
+                    _retouchLivePatchBitmapWidth = _retouchLiveMaskBitmapWidth
+                    _retouchLivePatchBitmapHeight = _retouchLiveMaskBitmapHeight
                     RetouchLivePatchImage = patch
                     UpdateRetouchLivePatchPercentages()
                 End If
             End If
         End Sub
 
-        Private Sub ExpandRetouchLivePatchRect(spot As RetouchSpot)
+        Private Function RetouchLiveBufferUsesDisplayGeometry() As Boolean
+            ' Die Live-Puffer entstehen aus RenderPreviewSkBitmap/TryCloneBaseCachedBitmap mit
+            ' targetAdj. Sie sind damit bereits im gerenderten Bildraum. Bei grossen Bildern sind
+            ' sie oft nur preview-skaliert; die Geometrie bleibt trotzdem Display-Geometrie und darf
+            ' nicht anhand der absoluten Bitmap-Masse als Source-Geometrie fehlklassifiziert werden.
+            Return _retouchLiveBitmap IsNot Nothing
+        End Function
+
+        Private Function TransformRetouchSpotToLiveGeometry(spot As RetouchSpot) As RetouchSpot
+            If RetouchLiveBufferUsesDisplayGeometry() Then Return TransformRetouchSpotToDisplayGeometry(spot)
+            Return spot?.Clone()
+        End Function
+
+        Private Function GetRetouchLiveGeometrySize() As (Width As Integer, Height As Integer)
+            If RetouchLiveBufferUsesDisplayGeometry() Then
+                Return (Math.Max(1, DisplayImageWidthPixels), Math.Max(1, DisplayImageHeightPixels))
+            End If
+            Return (Math.Max(1, GetBaseWidth()), Math.Max(1, GetBaseHeight()))
+        End Function
+
+        Private Sub ExpandRetouchLivePatchRect(spot As RetouchSpot, sourceWidthPixels As Integer, sourceHeightPixels As Integer)
             If spot Is Nothing OrElse _retouchLiveBitmap Is Nothing Then Return
 
             Dim scaleX As Single = 1.0F
             Dim scaleY As Single = 1.0F
-            Dim baseWidth = GetBaseWidth()
-            Dim baseHeight = GetBaseHeight()
-            If baseWidth > 0 AndAlso baseHeight > 0 Then
-                scaleX = _retouchLiveBitmap.Width / CSng(baseWidth)
-                scaleY = _retouchLiveBitmap.Height / CSng(baseHeight)
+            If sourceWidthPixels > 0 AndAlso sourceHeightPixels > 0 Then
+                scaleX = _retouchLiveBitmap.Width / CSng(sourceWidthPixels)
+                scaleY = _retouchLiveBitmap.Height / CSng(sourceHeightPixels)
             End If
 
             Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
@@ -13508,11 +13862,11 @@ Namespace ViewModels
 
             Dim scaleX As Single = 1.0F
             Dim scaleY As Single = 1.0F
-            Dim baseWidth = GetBaseWidth()
-            Dim baseHeight = GetBaseHeight()
-            If baseWidth > 0 AndAlso baseHeight > 0 Then
-                scaleX = _retouchLiveMaskBitmapWidth / CSng(baseWidth)
-                scaleY = _retouchLiveMaskBitmapHeight / CSng(baseHeight)
+            Dim displayWidth = DisplayImageWidthPixels
+            Dim displayHeight = DisplayImageHeightPixels
+            If displayWidth > 0 AndAlso displayHeight > 0 Then
+                scaleX = _retouchLiveMaskBitmapWidth / CSng(displayWidth)
+                scaleY = _retouchLiveMaskBitmapHeight / CSng(displayHeight)
             End If
 
             Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
@@ -13536,14 +13890,18 @@ Namespace ViewModels
         End Sub
 
         Private Sub UpdateRetouchLivePatchPercentages()
-            Dim bitmapWidth = If(_retouchLiveBitmap IsNot Nothing, _retouchLiveBitmap.Width, _retouchLiveMaskBitmapWidth)
-            Dim bitmapHeight = If(_retouchLiveBitmap IsNot Nothing, _retouchLiveBitmap.Height, _retouchLiveMaskBitmapHeight)
+            Dim bitmapWidth = _retouchLivePatchBitmapWidth
+            Dim bitmapHeight = _retouchLivePatchBitmapHeight
             If _retouchLivePatchRect.IsEmpty OrElse bitmapWidth <= 0 OrElse bitmapHeight <= 0 Then Return
 
-            _retouchLivePatchLeftPercent = _retouchLivePatchRect.Left / CDbl(bitmapWidth) * 100.0
-            _retouchLivePatchTopPercent = _retouchLivePatchRect.Top / CDbl(bitmapHeight) * 100.0
-            _retouchLivePatchWidthPercent = _retouchLivePatchRect.Width / CDbl(bitmapWidth) * 100.0
-            _retouchLivePatchHeightPercent = _retouchLivePatchRect.Height / CDbl(bitmapHeight) * 100.0
+            Dim l = _retouchLivePatchRect.Left / CDbl(bitmapWidth) * 100.0
+            Dim t = _retouchLivePatchRect.Top / CDbl(bitmapHeight) * 100.0
+            Dim w = _retouchLivePatchRect.Width / CDbl(bitmapWidth) * 100.0
+            Dim h = _retouchLivePatchRect.Height / CDbl(bitmapHeight) * 100.0
+            _retouchLivePatchLeftPercent = l
+            _retouchLivePatchTopPercent = t
+            _retouchLivePatchWidthPercent = w
+            _retouchLivePatchHeightPercent = h
             Me.RaisePropertyChanged(NameOf(RetouchLivePatchLeftPercent))
             Me.RaisePropertyChanged(NameOf(RetouchLivePatchTopPercent))
             Me.RaisePropertyChanged(NameOf(RetouchLivePatchWidthPercent))
@@ -13557,6 +13915,8 @@ Namespace ViewModels
             _retouchLivePatchTopPercent = 0
             _retouchLivePatchWidthPercent = 0
             _retouchLivePatchHeightPercent = 0
+            _retouchLivePatchBitmapWidth = 0
+            _retouchLivePatchBitmapHeight = 0
             _retouchLiveMaskBitmapWidth = 0
             _retouchLiveMaskBitmapHeight = 0
             Me.RaisePropertyChanged(NameOf(RetouchLivePatchLeftPercent))
@@ -14232,6 +14592,10 @@ Namespace ViewModels
                 If Not String.Equals(previousPaintMode, SelectedPaintMode, StringComparison.Ordinal) Then
                     StorePaintToolState(previousPaintMode)
                     ApplyPaintToolState(SelectedPaintMode)
+                    If IsRetouchPaintMode(previousPaintMode) OrElse IsRetouchPaintMode(SelectedPaintMode) Then
+                        ResetRetouchLivePreviewStateForModeSwitch()
+                        If CurrentTool = EditorTool.Retouch AndAlso Not IsRepairMode Then BeginRetouchLiveBuffersAsync()
+                    End If
                 End If
             Finally
                 _overlayNotifySuppressDepth -= 1
@@ -14244,6 +14608,24 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
             Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
             RaiseCloneSourceProperties()
+        End Sub
+
+        Private Shared Function IsRetouchPaintMode(mode As String) As Boolean
+            Select Case If(mode, "").Trim()
+                Case "Blur", "Repair", "Clone"
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
+
+        Private Sub ResetRetouchLivePreviewStateForModeSwitch()
+            If _retouchStrokeActive Then CommitRetouchStroke()
+            _clearRetouchLivePatchAfterPreview = False
+            _lastRetouchLivePreviewUtc = DateTime.MinValue
+            _hasCloneOffset = False
+            ClearRetouchLivePatch()
+            DisposeRetouchLiveBuffers()
         End Sub
 
         ''' Sichert die Regler des Werkzeugs, das gerade verlassen wird. Für ein Nicht-Malwerkzeug

@@ -980,6 +980,7 @@ Namespace Services
 
         Public Property SourceWidthPixels As Integer = 0
         Public Property SourceHeightPixels As Integer = 0
+        Public Property RecipeCoordinateVersion As Integer = 2
         Public Property Exposure As Single = 0
         Public Property Brightness As Single = 0
         Public Property Contrast As Single = 0
@@ -1784,7 +1785,11 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             Return CloneBitmap(source)
         End Function
 
-        Public Shared Function RenderBitmapPatch(source As SKBitmap, rect As SKRectI) As Bitmap
+        ''' <summary>Schneidet ein Rechteck aus <paramref name="source"/> als Avalonia-Bitmap aus.
+        ''' <paramref name="rotationDegrees"/> (0/90/180/270) dreht den AUSGESCHNITTENEN Inhalt zusätzlich -
+        ''' nötig für das Retusche-Live-Overlay: dessen Bitmap liegt im ungedrehten Arbeitsbild, das Overlay
+        ''' aber über dem per Rezept gedrehten Anzeigebild.</summary>
+        Public Shared Function RenderBitmapPatch(source As SKBitmap, rect As SKRectI, Optional rotationDegrees As Integer = 0) As Bitmap
             If source Is Nothing Then Return Nothing
 
             Dim clipped = New SKRectI(Math.Max(0, rect.Left),
@@ -1800,8 +1805,105 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                                       New SKRect(clipped.Left, clipped.Top, clipped.Right, clipped.Bottom),
                                       New SKRect(0, 0, clipped.Width, clipped.Height))
                 End Using
+                Dim q = (((rotationDegrees \ 90) Mod 4) + 4) Mod 4
+                If q = 0 Then Return ToAvaloniaBitmap(patch)
+                Using rotated = RotateBitmapQuarter(patch, q)
+                    Return ToAvaloniaBitmap(If(rotated, patch))
+                End Using
+            End Using
+        End Function
+
+        Public Shared Function RenderChangedBitmapPatch(source As SKBitmap,
+                                                        baseline As SKBitmap,
+                                                        rect As SKRectI,
+                                                        Optional tolerance As Integer = 1) As Bitmap
+            If source Is Nothing Then Return Nothing
+
+            Dim clipped = New SKRectI(Math.Max(0, rect.Left),
+                                      Math.Max(0, rect.Top),
+                                      Math.Min(source.Width, rect.Right),
+                                      Math.Min(source.Height, rect.Bottom))
+            If clipped.Width <= 0 OrElse clipped.Height <= 0 Then Return Nothing
+
+            Using patch = New SKBitmap(clipped.Width, clipped.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(patch)
+                    canvas.Clear(SKColors.Transparent)
+                    canvas.DrawBitmap(source,
+                                      New SKRect(clipped.Left, clipped.Top, clipped.Right, clipped.Bottom),
+                                      New SKRect(0, 0, clipped.Width, clipped.Height))
+                End Using
+
+                If baseline IsNot Nothing AndAlso baseline.Width = source.Width AndAlso baseline.Height = source.Height Then
+                    Using baselinePatch = New SKBitmap(clipped.Width, clipped.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                        Using canvas = New SKCanvas(baselinePatch)
+                            canvas.Clear(SKColors.Transparent)
+                            canvas.DrawBitmap(baseline,
+                                              New SKRect(clipped.Left, clipped.Top, clipped.Right, clipped.Bottom),
+                                              New SKRect(0, 0, clipped.Width, clipped.Height))
+                        End Using
+
+                        Dim byteCount = patch.RowBytes * patch.Height
+                        Dim patchBytes(byteCount - 1) As Byte
+                        Dim baselineBytes(byteCount - 1) As Byte
+                        Marshal.Copy(patch.GetPixels(), patchBytes, 0, patchBytes.Length)
+                        Marshal.Copy(baselinePatch.GetPixels(), baselineBytes, 0, baselineBytes.Length)
+
+                        Dim tol = Math.Max(0, tolerance)
+                        Dim rowBytes = patch.RowBytes
+                        Dim activeBytes = clipped.Width * 4
+                        For y = 0 To clipped.Height - 1
+                            Dim row = y * rowBytes
+                            For offset = 0 To activeBytes - 4 Step 4
+                                Dim i = row + offset
+                                Dim delta = Math.Abs(CInt(patchBytes(i)) - CInt(baselineBytes(i))) +
+                                            Math.Abs(CInt(patchBytes(i + 1)) - CInt(baselineBytes(i + 1))) +
+                                            Math.Abs(CInt(patchBytes(i + 2)) - CInt(baselineBytes(i + 2))) +
+                                            Math.Abs(CInt(patchBytes(i + 3)) - CInt(baselineBytes(i + 3)))
+                                If delta <= tol Then
+                                    patchBytes(i) = 0
+                                    patchBytes(i + 1) = 0
+                                    patchBytes(i + 2) = 0
+                                    patchBytes(i + 3) = 0
+                                End If
+                            Next
+                        Next
+
+                        Marshal.Copy(patchBytes, 0, patch.GetPixels(), patchBytes.Length)
+                    End Using
+                End If
+
                 Return ToAvaloniaBitmap(patch)
             End Using
+        End Function
+
+        ''' <summary>90°-Schritt-Drehung eines SKBitmap im Uhrzeigersinn (gleiche Transform wie
+        ''' ApplyGeometryTransforms). q: 1=90°, 2=180°, 3=270°. Nothing bei Fehler.</summary>
+        Friend Shared Function RotateBitmapQuarter(src As SKBitmap, q As Integer) As SKBitmap
+            Dim n = ((q Mod 4) + 4) Mod 4
+            If n = 0 OrElse src Is Nothing Then Return Nothing
+            Dim swap = (n = 1 OrElse n = 3)
+            Dim rw = If(swap, src.Height, src.Width)
+            Dim rh = If(swap, src.Width, src.Height)
+            Dim rotated As SKBitmap = Nothing
+            Try
+                rotated = New SKBitmap(New SKImageInfo(rw, rh, src.ColorType, src.AlphaType))
+                Using canvas = New SKCanvas(rotated)
+                    canvas.Clear(SKColors.Transparent)
+                    Select Case n
+                        Case 1
+                            canvas.Translate(rw, 0) : canvas.RotateDegrees(90)
+                        Case 2
+                            canvas.Translate(rw, rh) : canvas.RotateDegrees(180)
+                        Case 3
+                            canvas.Translate(0, rh) : canvas.RotateDegrees(270)
+                    End Select
+                    canvas.DrawBitmap(src, 0, 0)
+                End Using
+                Return rotated
+            Catch
+                rotated?.Dispose()
+                Return Nothing
+            End Try
         End Function
 
         Public Shared Function RenderRetouchMaskPatch(spots As IEnumerable(Of RetouchSpot),
@@ -1809,7 +1911,8 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                                                       bitmapWidth As Integer,
                                                       bitmapHeight As Integer,
                                                       sourceWidthPixels As Integer,
-                                                      sourceHeightPixels As Integer) As Bitmap
+                                                      sourceHeightPixels As Integer,
+                                                      Optional rotationDegrees As Integer = 0) As Bitmap
             If spots Is Nothing OrElse bitmapWidth <= 0 OrElse bitmapHeight <= 0 Then Return Nothing
 
             Dim clipped = New SKRectI(Math.Max(0, rect.Left),
@@ -1844,7 +1947,11 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                         Next
                     End Using
                 End Using
-                Return ToAvaloniaBitmap(patch)
+                Dim q = (((rotationDegrees \ 90) Mod 4) + 4) Mod 4
+                If q = 0 Then Return ToAvaloniaBitmap(patch)
+                Using rotated = RotateBitmapQuarter(patch, q)
+                    Return ToAvaloniaBitmap(If(rotated, patch))
+                End Using
             End Using
         End Function
 
@@ -1949,7 +2056,18 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             If baseWidth > 0 AndAlso baseHeight > 0 AndAlso (baseWidth <> sourceWidth OrElse baseHeight <> sourceHeight) Then
                 annotation = ScaleAnnotationForSource(annotation, sourceWidth / CSng(baseWidth), sourceHeight / CSng(baseHeight))
             End If
+            Return ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, annotation)
+        End Function
 
+        Public Shared Function ComputeAnnotationDirtyRect(sourceWidth As Integer, sourceHeight As Integer, annotation As ImageAnnotation,
+                                                          adj As ImageAdjustments) As SKRectI
+            If annotation Is Nothing OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return SKRectI.Empty
+            annotation = TransformAnnotationForGeometry(annotation, adj, sourceWidth, sourceHeight)
+            Return ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, annotation)
+        End Function
+
+        Private Shared Function ComputeAnnotationDirtyRectCore(sourceWidth As Integer, sourceHeight As Integer, annotation As ImageAnnotation) As SKRectI
+            If annotation Is Nothing OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return SKRectI.Empty
             Dim kind = If(annotation.Kind, "Text").Trim().ToLowerInvariant()
             If IsPaintKind(kind) Then
                 Dim bounds As SKRect? = Nothing
@@ -4914,6 +5032,77 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return scaled
         End Function
 
+        Friend Shared Function TransformAnnotationForGeometry(annotation As ImageAnnotation, adj As ImageAdjustments,
+                                                              outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
+            If annotation Is Nothing Then Return Nothing
+            If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return annotation
+
+            Dim rotation = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
+            Dim q = rotation \ 90
+            Dim preWidth = If(rotation = 90 OrElse rotation = 270, outputHeight, outputWidth)
+            Dim preHeight = If(rotation = 90 OrElse rotation = 270, outputWidth, outputHeight)
+            If preWidth <= 0 OrElse preHeight <= 0 Then Return annotation
+
+            Dim renderAnnotation = ScaleAnnotationForSource(annotation,
+                                                            preWidth / CSng(adj.SourceWidthPixels),
+                                                            preHeight / CSng(adj.SourceHeightPixels))
+            If renderAnnotation Is Nothing Then Return Nothing
+            If q = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical Then Return renderAnnotation
+
+            Dim transformed = renderAnnotation.Clone()
+            Dim objectGeometry = ImageGeometryMapper.SourceObjectToDisplay(
+                New SKRect(transformed.XPixels, transformed.YPixels,
+                           transformed.XPixels + transformed.WidthPixels,
+                           transformed.YPixels + transformed.HeightPixels),
+                preWidth, preHeight, outputWidth, outputHeight,
+                rotation, adj.FlipHorizontal, adj.FlipVertical,
+                transformed.RotationDegrees)
+            transformed.XPixels = objectGeometry.Rect.Left
+            transformed.YPixels = objectGeometry.Rect.Top
+            transformed.WidthPixels = objectGeometry.Rect.Width
+            transformed.HeightPixels = objectGeometry.Rect.Height
+            transformed.RotationDegrees = objectGeometry.RotationDegrees
+            If adj.FlipHorizontal Then transformed.FlipHorizontal = Not transformed.FlipHorizontal
+            If adj.FlipVertical Then transformed.FlipVertical = Not transformed.FlipVertical
+
+            If IsPaintKind(transformed.Kind) AndAlso transformed.Strokes IsNot Nothing Then
+                transformed.Strokes = transformed.Strokes.Select(
+                    Function(stroke) TransformStrokeForGeometry(stroke, q, preWidth, preHeight, outputWidth, outputHeight, adj.FlipHorizontal, adj.FlipVertical)).
+                    Where(Function(stroke) stroke IsNot Nothing).
+                    ToList()
+            End If
+            Return transformed
+        End Function
+
+        Private Shared Function TransformStrokeForGeometry(stroke As BrushStroke, q As Integer,
+                                                           preWidth As Integer, preHeight As Integer,
+                                                           outputWidth As Integer, outputHeight As Integer,
+                                                           flipH As Boolean, flipV As Boolean) As BrushStroke
+            If stroke Is Nothing OrElse stroke.Points Is Nothing Then Return Nothing
+            Dim points As New List(Of StrokePoint)(stroke.Points.Count)
+            For Each p In stroke.Points
+                Dim x = p.X
+                Dim y = p.Y
+                Select Case q
+                    Case 1
+                        Dim nx = preHeight - y
+                        y = x
+                        x = nx
+                    Case 2
+                        x = preWidth - x
+                        y = preHeight - y
+                    Case 3
+                        Dim nx = y
+                        y = preWidth - x
+                        x = nx
+                End Select
+                If flipH Then x = outputWidth - x
+                If flipV Then y = outputHeight - y
+                points.Add(New StrokePoint(x, y))
+            Next
+            Return New BrushStroke(points)
+        End Function
+
         ''' <summary>Trägt das Objekt eigene Pixel-Anpassungen? Nur dann lohnt die eigene Ebene.</summary>
         Private Shared Function HasObjectAdjustments(annotation As ImageAnnotation) As Boolean
             Return annotation IsNot Nothing AndAlso annotation.Adjustments IsNot Nothing AndAlso annotation.Adjustments.HasPixelAdjustments()
@@ -4993,16 +5182,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If annotations Is Nothing OrElse annotations.Count = 0 Then Return
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse layerWidth <= 0 OrElse layerHeight <= 0 Then Return
 
-            Dim scaleX As Single = 1.0F
-            Dim scaleY As Single = 1.0F
-            If adj.SourceWidthPixels > 0 AndAlso adj.SourceHeightPixels > 0 Then
-                scaleX = sourceWidth / CSng(adj.SourceWidthPixels)
-                scaleY = sourceHeight / CSng(adj.SourceHeightPixels)
-            End If
-
             For Each annotation In annotations
                 If annotation Is Nothing OrElse Not annotation.IsVisible Then Continue For
-                Dim renderAnnotation = ScaleAnnotationForSource(annotation, scaleX, scaleY)
+                Dim renderAnnotation = TransformAnnotationForGeometry(annotation, adj, sourceWidth, sourceHeight)
+                If renderAnnotation Is Nothing Then Continue For
                 Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
 
                 If IsPaintKind(kind) Then
