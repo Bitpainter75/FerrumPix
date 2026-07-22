@@ -174,6 +174,7 @@ Namespace Services
                     cmd.ExecuteNonQuery()
                 End Using
             End Using
+            SyncCatalogToFpxmp(filePath)
         End Sub
 
         Public Function GetRating(filePath As String) As Integer
@@ -217,6 +218,7 @@ Namespace Services
 
             ' Katalog (Rating/Label/Stichworte) optional zusätzlich ins XMP-Sidecar - gegated über die
             ' Einstellung SyncCatalogToXmp (siehe SyncCatalogToXmpSidecar). .fpxmp bleibt primär.
+            SyncCatalogToFpxmp(filePath)
             If syncToXmp Then SyncCatalogToXmpSidecar(filePath)
         End Sub
 
@@ -309,6 +311,9 @@ Namespace Services
                 End Using
             End Using
 
+            For Each path In list
+                SyncCatalogToFpxmp(path)
+            Next
             If syncToXmp Then
                 For Each path In list
                     SyncCatalogToXmpSidecar(path)
@@ -342,6 +347,9 @@ Namespace Services
                 End Using
             End Using
 
+            For Each path In list
+                SyncCatalogToFpxmp(path)
+            Next
             If syncToXmp Then
                 For Each path In list
                     SyncCatalogToXmpSidecar(path)
@@ -396,7 +404,68 @@ Namespace Services
                 End Using
             End Using
 
+            SyncCatalogToFpxmp(filePath)
             If syncToXmp Then SyncCatalogToXmpSidecar(filePath)
+        End Sub
+
+        ''' <summary>Importiert den Katalogblock einer vorhandenen .fpxmp exakt in SQLite. Die
+        ''' Sidecar ist fuer RAW/PSD die portable Quelle; fehlende Felder alter Zwischenversionen
+        ''' lassen den jeweiligen Katalogwert unangetastet. Es wird absichtlich direkt geschrieben,
+        ''' damit der Import nicht dieselbe Sidecar erneut speichert und ihren Frische-Stempel bewegt.</summary>
+        Public Function ImportFpxmpCatalogData(filePath As String) As RawSidecarService.RawSidecarCatalogData
+            If String.IsNullOrWhiteSpace(filePath) OrElse Not RawSidecarService.IsSidecarFormat(filePath) Then Return Nothing
+            Dim data = RawSidecarService.TryReadCatalog(filePath)
+            If data Is Nothing Then Return Nothing
+
+            Try
+                Dim currentRating = GetRating(filePath)
+                Dim currentFavorite = GetFavorite(filePath)
+                Dim currentColorLabel = GetColorLabel(filePath)
+                Dim currentTags = GetTags(filePath)
+                Dim rating = If(data.Rating, currentRating)
+                Dim favorite = If(data.IsFavorite, currentFavorite)
+                Dim colorLabel = If(data.ColorLabel Is Nothing, currentColorLabel, data.ColorLabel)
+                Dim tags = If(data.HasKeywords, data.Keywords, currentTags)
+                Dim tagsMatch = currentTags.Count = tags.Count AndAlso
+                                currentTags.All(Function(value) tags.Any(Function(other) String.Equals(value, other, StringComparison.OrdinalIgnoreCase)))
+                If currentRating = rating AndAlso currentFavorite = favorite AndAlso
+                   String.Equals(currentColorLabel, colorLabel, StringComparison.OrdinalIgnoreCase) AndAlso tagsMatch Then
+                    Return data
+                End If
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText =
+                            "INSERT INTO ImageMeta(FilePath,Rating,IsFavorite,ColorLabel,Tags) VALUES($p,$r,$f,$c,$t) " &
+                            "ON CONFLICT(FilePath) DO UPDATE SET Rating=$r,IsFavorite=$f,ColorLabel=$c,Tags=$t"
+                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$r", Math.Max(0, Math.Min(5, rating)))
+                        cmd.Parameters.AddWithValue("$f", If(favorite, 1, 0))
+                        cmd.Parameters.AddWithValue("$c", If(colorLabel, ""))
+                        cmd.Parameters.AddWithValue("$t", String.Join(",", If(tags, New List(Of String)())))
+                        cmd.ExecuteNonQuery()
+                    End Using
+                End Using
+                Return data
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.ImportFpxmpCatalogData", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Jede bewusste lokale Katalogaenderung an RAW/PSD wird ohne Einstellungs-Gate in
+        ''' die primaere .fpxmp gespiegelt. Ein vorhandenes Entwicklungsrezept bleibt dabei erhalten.</summary>
+        Private Sub SyncCatalogToFpxmp(filePath As String)
+            If String.IsNullOrWhiteSpace(filePath) OrElse Not RawSidecarService.IsSidecarFormat(filePath) Then Return
+            Try
+                RawSidecarService.TryWriteCatalog(filePath,
+                                                  GetRating(filePath),
+                                                  GetFavorite(filePath),
+                                                  GetColorLabel(filePath),
+                                                  GetTags(filePath))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.SyncCatalogToFpxmp", ex)
+            End Try
         End Sub
 
         ''' <summary>Schreibt den aktuellen Katalog (Rating/Farb-Label/Stichworte) dieser Datei zusätzlich
@@ -478,19 +547,20 @@ Namespace Services
         ''' <summary>Zustand der Begleitdateien als eine Zeichenkette: Änderungsdatum der XMP-Beistelldatei
         ''' plus ein Merker, ob daneben schon ein eigenes Rezept (.fpxmp) liegt.
         '''
-        ''' Der Merker gehört dazu, damit das LÖSCHEN der .fpxmp bemerkt wird. Wer sie wegwirft, will
-        ''' die Entwicklung aus der XMP neu übernehmen - ohne diesen Teil ändert das Löschen aber weder
-        ''' die Bilddatei noch die XMP, der Schnappschuss bliebe „frisch", der Hintergrundscan
-        ''' überspränge die Datei und die .fpxmp entstünde nie wieder.
+        ''' Änderungszeit und Vorhandensein der .fpxmp gehören dazu, damit sowohl externe Änderungen
+        ''' an Rezept/Katalogblock als auch das LÖSCHEN bemerkt werden. Ohne diesen Teil ändert sich
+        ''' weder die Bilddatei noch eine XMP; der Hintergrundscan würde die Datei überspringen.
         '''
         ''' EINE Quelle für Schreiben (SetExifData) und Prüfen (SyncExifData, GalleryViewModel) - zwei
         ''' Fassungen davon liefen garantiert auseinander und der Schnappschuss wäre nie mehr frisch.</summary>
         Public Shared Function SidecarStamp(filePath As String) As String
             Try
                 Dim sidecar = XmpSidecarService.FindSidecar(filePath)
-                If String.IsNullOrEmpty(sidecar) Then Return ""
-                Dim rezept = If(RawSidecarService.Exists(filePath), "|fpxmp", "|-")
-                Return File.GetLastWriteTime(sidecar).ToString("o") & rezept
+                Dim xmpStamp = If(String.IsNullOrEmpty(sidecar), "", File.GetLastWriteTime(sidecar).ToString("o"))
+                Dim fpxmpPath = RawSidecarService.SidecarPathFor(filePath)
+                Dim fpxmpStamp = If(File.Exists(fpxmpPath), File.GetLastWriteTime(fpxmpPath).ToString("o"), "")
+                If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) Then Return ""
+                Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp)
             Catch
                 Return ""
             End Try

@@ -8915,18 +8915,31 @@ Namespace ViewModels
         End Function
 
         Private Function BuildImageInfo(imagePath As String) As ExifData
-            Dim data = ExifService.ReadExif(imagePath)
+            ' Bei FPX liefert ExifService den gewuenschten Hybrid direkt aus dem Buendel:
+            ' technische Daten aus composite.png, EXIF/IPTC/XMP/ICC aus base.*.
+            Dim metadataPath = If(FpxService.IsFpx(_currentImagePath), _currentImagePath, imagePath)
+            Dim data = ExifService.ReadExif(metadataPath)
 
-            If CurrentImage IsNot Nothing Then
-                Dim width = CurrentImage.PixelSize.Width
-                Dim height = CurrentImage.PixelSize.Height
+            If CurrentImage IsNot Nothing OrElse FpxService.IsFpx(metadataPath) Then
+                Dim width As Integer
+                Dim height As Integer
+                If FpxService.IsFpx(metadataPath) Then
+                    Dim compositeDimensions = ExifService.ExtractSearchFields(data)
+                    width = compositeDimensions.ImageWidth.GetValueOrDefault()
+                    height = compositeDimensions.ImageHeight.GetValueOrDefault()
+                Else
+                    width = CurrentImage.PixelSize.Width
+                    height = CurrentImage.PixelSize.Height
+                End If
 
-                If String.IsNullOrWhiteSpace(data.ImageWidth) Then data.ImageWidth = width.ToString()
-                If String.IsNullOrWhiteSpace(data.ImageHeight) Then data.ImageHeight = height.ToString()
+                If width > 0 AndAlso height > 0 Then
+                    If String.IsNullOrWhiteSpace(data.ImageWidth) Then data.ImageWidth = width.ToString()
+                    If String.IsNullOrWhiteSpace(data.ImageHeight) Then data.ImageHeight = height.ToString()
 
-                Dim mp = width * height / 1_000_000.0
-                data.Megapixels = $"{mp:F1} MP"
-                data.AspectRatio = FormatAspectRatio(width, height)
+                    Dim mp = width * height / 1_000_000.0
+                    data.Megapixels = $"{mp:F1} MP"
+                    data.AspectRatio = FormatAspectRatio(width, height)
+                End If
             End If
 
             If String.IsNullOrWhiteSpace(data.FileType) Then
@@ -8945,9 +8958,13 @@ Namespace ViewModels
 
             ' Nebenläufig persistieren, damit das im Editor geöffnete Bild ab jetzt über EXIF
             ' durchsuchbar ist - blockiert nicht die UI.
-            Dim exifForSearch = ExifService.ExtractSearchFields(data, imagePath)
+            Dim exifForSearch = ExifService.ExtractSearchFields(data, metadataPath)
             Dim catalogSummary = ExifService.BuildCatalogSummary(data, exifForSearch)
-            Task.Run(Sub() LibraryService.Instance.SyncExifData(imagePath, exifForSearch, catalogSummary))
+            ' Bei FPX ist imagePath das temporaer entpackte base.*. Katalog-Identitaet ist aber die
+            ' dauerhaft vorhandene Projektdatei; sonst verschwanden die Daten unter einem Temp-Pfad,
+            ' den Galerie und Suche nie wieder abfragen.
+            Dim catalogPath = If(Not String.IsNullOrEmpty(_currentImagePath), _currentImagePath, imagePath)
+            Task.Run(Sub() LibraryService.Instance.SyncExifData(catalogPath, exifForSearch, catalogSummary))
 
             Return data
         End Function
@@ -8973,6 +8990,9 @@ Namespace ViewModels
         End Function
 
         Private Sub LoadLibraryMeta(imagePath As String)
+            ' Auch beim direkten Oeffnen ohne Galerie-Scan zuerst den portablen .fpxmp-Katalog
+            ' einlesen; die folgenden Properties spiegeln danach denselben Stand wie die Sidecar.
+            LibraryService.Instance.ImportFpxmpCatalogData(imagePath)
             _rating = LibraryService.Instance.GetRating(imagePath)
             Me.RaisePropertyChanged(NameOf(Rating))
             _isFavorite = LibraryService.Instance.GetFavorite(imagePath)
@@ -15949,6 +15969,14 @@ Namespace ViewModels
         Private Sub RefreshHistogram()
             If String.IsNullOrEmpty(_currentImagePath) Then
                 ClearHistogramData()
+                Return
+            End If
+            If FpxService.IsFpx(_currentImagePath) Then
+                ' Eine geoeffnete FPX zeigt im Infopanel den gespeicherten Projektstand, nicht das
+                ' unveraenderte base.* und auch keinen spaeter neu berechneten Zwischen-Preview.
+                HistogramImage = ImageProcessor.BuildHistogramImage(_currentImagePath, 240, 120)
+                _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(_currentImagePath)
+                Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
                 Return
             End If
             Dim previewSource = GetPreviewSource()

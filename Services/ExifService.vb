@@ -4,6 +4,7 @@ Imports System.Collections
 Imports System.Globalization
 Imports System.Linq
 Imports System.Reflection
+Imports System.IO.Compression
 Imports System.Text.RegularExpressions
 Imports System.Text
 Imports System.Xml.Linq
@@ -223,61 +224,58 @@ Namespace Services
             data.FileModified = FormatFileDate(info.LastWriteTime)
 
             Try
-                Dim metaDirectories = ImageMetadataReader.ReadMetadata(imagePath)
+                ' FPX ist ein Hybrid: allgemeine/technische Bilddaten beschreiben das gespeicherte
+                ' composite.png; saemtliche Metadaten-Kategorien EXIF/IPTC/XMP/ICC werden aus base.*
+                ' (Ursprungsbild) uebernommen. Bei normalen Bildern sind beide Quellen dieselbe Datei.
+                Dim isFpx = FpxService.IsFpx(imagePath)
+                Dim metaDirectories = If(isFpx,
+                                         ReadFpxCompositeMetadata(imagePath),
+                                         ImageMetadataReader.ReadMetadata(imagePath))
+                Dim captureDirectories = If(isFpx, ReadFpxBaseMetadata(imagePath), metaDirectories)
 
-                For Each metaDir As MetadataExtractor.Directory In metaDirectories
-                    Dim dirType = metaDir.GetType().FullName
+                If isFpx Then
+                    CollectMetadataTags(captureDirectories, data, includeExif:=True, includeIptc:=True,
+                                        includeXmp:=True, includeIcc:=True)
+                Else
+                    CollectMetadataTags(metaDirectories, data, includeExif:=True, includeIptc:=True,
+                                        includeXmp:=True, includeIcc:=True)
+                End If
 
-                    ' ICC-Farbprofil erkennen (eigenes Badge). Die ICC-Tags landen zusätzlich wie bisher
-                    ' im EXIF-Tag-Baum (Else-Zweig unten) - das Flag ist rein additiv.
-                    If String.Equals(dirType, "MetadataExtractor.Formats.Icc.IccDirectory", StringComparison.Ordinal) Then
-                        data.HasIccProfile = True
-                        For Each metaTag In metaDir.Tags
-                            If Not String.IsNullOrWhiteSpace(metaTag.Description) Then
-                                data.IccTags.Add(New ExifTag(metaTag.Name, CleanIccDescription(metaTag.Description)))
-                            End If
-                        Next
-                    End If
-
-                    If String.Equals(dirType, "MetadataExtractor.Formats.Iptc.IptcDirectory", StringComparison.Ordinal) Then
-                        For Each metaTag In metaDir.Tags
-                            If Not String.IsNullOrWhiteSpace(metaTag.Description) Then
-                                data.IptcTags.Add(New ExifTag(metaTag.Name, metaTag.Description))
-                            End If
-                        Next
-                    ElseIf String.Equals(dirType, "MetadataExtractor.Formats.Xmp.XmpDirectory", StringComparison.Ordinal) Then
-                        CollectXmpTags(metaDir, data)
-                    Else
-                        For Each metaTag In metaDir.Tags
-                            If Not String.IsNullOrWhiteSpace(metaTag.Description) Then
-                                data.ExifTags.Add(New ExifTag(metaDir.Name & " › " & metaTag.Name, metaTag.Description))
-                            End If
-                        Next
-                    End If
-                Next
-
-                data.DateTaken = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagDateTimeOriginal)
-                data.FocalLength = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagFocalLength)
-                data.FocalLength35mm = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.Tag35MMFilmEquivFocalLength)
-                data.Aperture = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagFNumber)
-                data.ShutterSpeed = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExposureTime)
-                data.ISO = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagIsoEquivalent)
+                data.DateTaken = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagDateTimeOriginal)
+                data.FocalLength = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagFocalLength)
+                data.FocalLength35mm = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.Tag35MMFilmEquivFocalLength)
+                data.Aperture = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagFNumber)
+                data.ShutterSpeed = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagExposureTime)
+                data.ISO = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagIsoEquivalent)
+                ' Abmessungen und Farbraum gehoeren zum Composite, nicht zum Ursprungsbild.
                 data.ImageWidth = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExifImageWidth)
                 data.ImageHeight = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExifImageHeight)
+                ' PNG/WebP und manche RAW-Container haben keine EXIF-Pixeldimensionen, melden ihre
+                ' Groesse aber in einem formatspezifischen Verzeichnis. Das groesste passende Paar
+                ' ist das Hauptbild (nicht ein eingebettetes Thumbnail) und gehoert ebenfalls in
+                ' den Katalog.
+                If String.IsNullOrWhiteSpace(data.ImageWidth) Then
+                    Dim width = GetLargestImageDimension(metaDirectories, "Width")
+                    If width.HasValue Then data.ImageWidth = width.Value.ToString(CultureInfo.InvariantCulture)
+                End If
+                If String.IsNullOrWhiteSpace(data.ImageHeight) Then
+                    Dim height = GetLargestImageDimension(metaDirectories, "Height")
+                    If height.HasValue Then data.ImageHeight = height.Value.ToString(CultureInfo.InvariantCulture)
+                End If
                 data.ColorSpace = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagColorSpace)
-                data.Lens = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagLensModel)
+                data.Lens = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagLensModel)
 
-                Dim make = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagMake)
-                Dim model = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagModel)
+                Dim make = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagMake)
+                Dim model = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagModel)
                 data.Camera = (make & " " & model).Trim()
-                data.Software = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagSoftware)
-                data.Copyright = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagCopyright)
-                data.DateModifiedExif = GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifIfd0Directory.TagDateTime)
+                data.Software = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagSoftware)
+                data.Copyright = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagCopyright)
+                data.DateModifiedExif = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagDateTime)
                 If String.IsNullOrEmpty(data.DateTaken) Then
                     data.DateTaken = data.DateModifiedExif
                 End If
 
-                For Each gpsDir In metaDirectories.OfType(Of GpsDirectory)()
+                For Each gpsDir In captureDirectories.OfType(Of GpsDirectory)()
                     Dim geoLoc = gpsDir.GetGeoLocation()
                     If geoLoc IsNot Nothing Then
                         data.GPS = $"{geoLoc.Latitude:F5}°, {geoLoc.Longitude:F5}°"
@@ -290,6 +288,100 @@ Namespace Services
             End Try
 
             Return data
+        End Function
+
+        ''' <summary>Liest die Metadaten direkt aus base.* im FPX-Buendel. Der Eintrag wird nur
+        ''' gestreamt und nicht in einen weiteren Temp-Ordner entpackt; dadurch funktioniert derselbe
+        ''' Weg auch beim Hintergrundscan der Galerie und bei bereits vorhandenen FPX-Dateien.</summary>
+        Private Shared Function ReadFpxBaseMetadata(fpxPath As String) As IReadOnlyList(Of MetadataExtractor.Directory)
+            Return ReadFpxEntryMetadata(fpxPath,
+                Function(entry) entry.FullName.IndexOf("/"c) < 0 AndAlso
+                                entry.Name.StartsWith("base.", StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        Private Shared Function ReadFpxCompositeMetadata(fpxPath As String) As IReadOnlyList(Of MetadataExtractor.Directory)
+            Return ReadFpxEntryMetadata(fpxPath,
+                Function(entry) String.Equals(entry.FullName, "composite.png", StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        Private Shared Function ReadFpxEntryMetadata(
+                fpxPath As String,
+                predicate As Func(Of ZipArchiveEntry, Boolean)) As IReadOnlyList(Of MetadataExtractor.Directory)
+            Using zip = ZipFile.OpenRead(fpxPath)
+                Dim imageEntry = zip.Entries.FirstOrDefault(
+                    Function(entry) Not String.IsNullOrEmpty(entry.Name) AndAlso predicate(entry))
+                If imageEntry Is Nothing Then Return Array.Empty(Of MetadataExtractor.Directory)()
+                Using source = imageEntry.Open()
+                    Return ImageMetadataReader.ReadMetadata(source)
+                End Using
+            End Using
+        End Function
+
+        Private Shared Sub CollectMetadataTags(metaDirectories As IEnumerable(Of MetadataExtractor.Directory),
+                                               data As ExifData,
+                                               includeExif As Boolean,
+                                               includeIptc As Boolean,
+                                               includeXmp As Boolean,
+                                               includeIcc As Boolean)
+            For Each metaDir In If(metaDirectories, Enumerable.Empty(Of MetadataExtractor.Directory)())
+                Dim dirType = metaDir.GetType().FullName
+                Dim isIcc = String.Equals(dirType, "MetadataExtractor.Formats.Icc.IccDirectory", StringComparison.Ordinal)
+                Dim isIptc = String.Equals(dirType, "MetadataExtractor.Formats.Iptc.IptcDirectory", StringComparison.Ordinal)
+                Dim isXmp = String.Equals(dirType, "MetadataExtractor.Formats.Xmp.XmpDirectory", StringComparison.Ordinal)
+
+                If isIcc Then
+                    If includeIcc Then
+                        data.HasIccProfile = True
+                        For Each metaTag In metaDir.Tags
+                            If Not String.IsNullOrWhiteSpace(metaTag.Description) Then
+                                data.IccTags.Add(New ExifTag(metaTag.Name, CleanIccDescription(metaTag.Description)))
+                            End If
+                        Next
+                    End If
+                    ' ICC bleibt wie bisher zusaetzlich im technischen EXIF-Baum sichtbar.
+                    If Not (includeExif AndAlso includeIcc) Then Continue For
+                ElseIf isIptc Then
+                    If includeIptc Then
+                        For Each metaTag In metaDir.Tags
+                            If Not String.IsNullOrWhiteSpace(metaTag.Description) Then
+                                data.IptcTags.Add(New ExifTag(metaTag.Name, metaTag.Description))
+                            End If
+                        Next
+                    End If
+                    Continue For
+                ElseIf isXmp Then
+                    If includeXmp Then CollectXmpTags(metaDir, data)
+                    Continue For
+                End If
+
+                If includeExif Then
+                    For Each metaTag In metaDir.Tags
+                        If Not String.IsNullOrWhiteSpace(metaTag.Description) Then
+                            data.ExifTags.Add(New ExifTag(metaDir.Name & " › " & metaTag.Name, metaTag.Description))
+                        End If
+                    Next
+                End If
+            Next
+        End Sub
+
+        ''' <summary>Fallback fuer Container ohne EXIF-Pixeldimensionen. Es werden nur Tags wie
+        ''' "Image Width"/"Raw Image Full Width" akzeptiert; Aufloesungs-, Crop- und Offsetwerte
+        ''' geraten dadurch nicht versehentlich in die Katalogspalten.</summary>
+        Private Shared Function GetLargestImageDimension(metaDirectories As IEnumerable(Of MetadataExtractor.Directory),
+                                                         dimensionName As String) As Integer?
+            Dim largest As Integer? = Nothing
+            For Each metaDir In If(metaDirectories, Enumerable.Empty(Of MetadataExtractor.Directory)())
+                For Each metaTag In metaDir.Tags
+                    Dim name = If(metaTag.Name, "").Trim()
+                    If Not name.EndsWith("Image " & dimensionName, StringComparison.OrdinalIgnoreCase) Then Continue For
+                    Dim value = ParseLeadingInt(metaTag.Description)
+                    If value.HasValue AndAlso value.Value > 0 AndAlso
+                       (Not largest.HasValue OrElse value.Value > largest.Value) Then
+                        largest = value
+                    End If
+                Next
+            Next
+            Return largest
         End Function
 
         ' Leitet durchsuchbare typisierte Felder aus den bereits geparsten Anzeige-Strings ab.
@@ -334,7 +426,9 @@ Namespace Services
         ''' (siehe CurrentSummaryFormat): Katalogeinträge aus einer älteren App-Version oder aus einer
         ''' anderen Sprache werden daran erkannt und einmalig neu erzeugt - sonst blieben die alten
         ''' Texte kleben, weil unveränderte Dateien nie erneut eingelesen werden.</summary>
-        Public Const SummaryFormatVersion As Integer = 2
+        ' Version 3 invalidiert auch bereits als "leer" gecachte FPX-Eintraege: seit dieser Version
+        ' kommen ihre technischen Daten aus composite.png und EXIF/IPTC/XMP/ICC aus base.*.
+        Public Const SummaryFormatVersion As Integer = 3
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get

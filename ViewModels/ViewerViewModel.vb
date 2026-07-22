@@ -1439,13 +1439,24 @@ Namespace ViewModels
         Private Shared Function BuildImageInfo(imagePath As String, imageWidth As Integer, imageHeight As Integer) As ExifData
             Dim data = ExifService.ReadExif(imagePath)
 
-            If imageWidth > 0 AndAlso imageHeight > 0 Then
-                If String.IsNullOrWhiteSpace(data.ImageWidth) Then data.ImageWidth = imageWidth.ToString()
-                If String.IsNullOrWhiteSpace(data.ImageHeight) Then data.ImageHeight = imageHeight.ToString()
+            Dim effectiveWidth = imageWidth
+            Dim effectiveHeight = imageHeight
+            If effectiveWidth <= 0 OrElse effectiveHeight <= 0 Then
+                ' Beim asynchronen FPX-Wechsel ist die Composite-Vorschau unter Umstaenden noch nicht
+                ' publiziert. Dann die soeben aus composite.png gelesenen Masse verwenden, statt MP
+                ' und Seitenverhaeltnis im Infopanel leer zu lassen.
+                Dim sourceDimensions = ExifService.ExtractSearchFields(data)
+                effectiveWidth = sourceDimensions.ImageWidth.GetValueOrDefault()
+                effectiveHeight = sourceDimensions.ImageHeight.GetValueOrDefault()
+            End If
 
-                Dim mp = imageWidth * imageHeight / 1_000_000.0
+            If effectiveWidth > 0 AndAlso effectiveHeight > 0 Then
+                If String.IsNullOrWhiteSpace(data.ImageWidth) Then data.ImageWidth = effectiveWidth.ToString()
+                If String.IsNullOrWhiteSpace(data.ImageHeight) Then data.ImageHeight = effectiveHeight.ToString()
+
+                Dim mp = effectiveWidth * effectiveHeight / 1_000_000.0
                 data.Megapixels = $"{mp:F1} MP"
-                data.AspectRatio = FormatAspectRatio(imageWidth, imageHeight)
+                data.AspectRatio = FormatAspectRatio(effectiveWidth, effectiveHeight)
             End If
 
             If String.IsNullOrWhiteSpace(data.FileType) Then
@@ -1505,6 +1516,11 @@ Namespace ViewModels
             Dim capturedWidth = _imageWidth
             Dim capturedHeight = _imageHeight
             Dim loadHistogram = IsInfoSidebarVisible
+
+            ' Eine vorhandene .fpxmp ist fuer RAW/PSD die portable Katalogquelle. Vor dem Laden der
+            ' UI-Felder importieren, damit auch ein direkt im Viewer geoeffnetes Bild (ohne vorherigen
+            ' Galerie-Scan) sofort Bewertung, Favorit, Etikett und Stichwoerter zeigt.
+            If Not _isImmichSession Then LibraryService.Instance.ImportFpxmpCatalogData(imagePath)
 
             If Not preserveExistingTags Then
                 Tags.Clear()

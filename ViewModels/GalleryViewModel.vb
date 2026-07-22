@@ -2806,9 +2806,24 @@ Namespace ViewModels
                                                         currentRating As Integer,
                                                         currentColorLabel As String,
                                                         currentTags As List(Of String)) _
-                                                        As (Rating As Integer?, ColorLabel As String, Tags As List(Of String))
-            Dim result As (Rating As Integer?, ColorLabel As String, Tags As List(Of String)) = (Nothing, "", Nothing)
+                                                        As (Rating As Integer?, Favorite As Boolean?, ColorLabel As String, HasColorLabel As Boolean, Tags As List(Of String))
+            Dim result As (Rating As Integer?, Favorite As Boolean?, ColorLabel As String, HasColorLabel As Boolean, Tags As List(Of String)) =
+                (Nothing, Nothing, "", False, Nothing)
             Try
+                ' .fpxmp ist fuer RAW/PSD die primaere portable Katalogquelle. Vor dem XMP-Fallback
+                ' exakt nach SQLite uebernehmen; explizite Leerwerte (0/False/keine Tags/kein Label)
+                ' duerfen dabei nicht wieder von einer aelteren XMP-Sidecar aufgefuellt werden.
+                Dim fpxmpCatalog = LibraryService.Instance.ImportFpxmpCatalogData(filePath)
+                If fpxmpCatalog IsNot Nothing Then
+                    If fpxmpCatalog.Rating.HasValue Then result.Rating = fpxmpCatalog.Rating
+                    If fpxmpCatalog.IsFavorite.HasValue Then result.Favorite = fpxmpCatalog.IsFavorite
+                    If fpxmpCatalog.ColorLabel IsNot Nothing Then
+                        result.ColorLabel = fpxmpCatalog.ColorLabel
+                        result.HasColorLabel = True
+                    End If
+                    If fpxmpCatalog.HasKeywords Then result.Tags = New List(Of String)(fpxmpCatalog.Keywords)
+                End If
+
                 Dim sidecar As XmpSidecarService.XmpSidecarData = Nothing
                 Dim sidecarPath = XmpSidecarService.FindSidecar(filePath)
                 If Not String.IsNullOrEmpty(sidecarPath) Then sidecar = XmpSidecarService.ReadSidecar(sidecarPath)
@@ -2819,19 +2834,21 @@ Namespace ViewModels
                 RawSidecarService.TryImportFromXmpSidecar(filePath)
 
                 ' Die Beistelldatei ist die speziellere Quelle und schlägt eingebettetes XMP.
-                Dim ratingSource = If(sidecar?.Rating, embeddedRating)
+                Dim ratingSource = If(fpxmpCatalog?.Rating.HasValue, CType(Nothing, Integer?), If(sidecar?.Rating, embeddedRating))
                 If ratingSource.HasValue AndAlso ratingSource.Value > 0 AndAlso currentRating = 0 Then
                     LibraryService.Instance.SetRating(filePath, ratingSource.Value)
                     result.Rating = ratingSource.Value
                 End If
 
                 If sidecar IsNot Nothing Then
-                    If Not String.IsNullOrEmpty(sidecar.ColorLabel) AndAlso String.IsNullOrEmpty(currentColorLabel) Then
+                    If (fpxmpCatalog Is Nothing OrElse fpxmpCatalog.ColorLabel Is Nothing) AndAlso
+                       Not String.IsNullOrEmpty(sidecar.ColorLabel) AndAlso String.IsNullOrEmpty(currentColorLabel) Then
                         LibraryService.Instance.SetColorLabelForMany({filePath}, sidecar.ColorLabel)
                         result.ColorLabel = sidecar.ColorLabel
+                        result.HasColorLabel = True
                     End If
 
-                    If sidecar.Keywords.Count > 0 Then
+                    If (fpxmpCatalog Is Nothing OrElse Not fpxmpCatalog.HasKeywords) AndAlso sidecar.Keywords.Count > 0 Then
                         Dim merged As New List(Of String)(If(currentTags, New List(Of String)()))
                         Dim added = False
                         For Each keyword In sidecar.Keywords
@@ -2861,7 +2878,8 @@ Namespace ViewModels
                 Dim imported = ImportSidecarCatalogData(meta.FilePath, xmpRating, meta.Rating, meta.ColorLabel, meta.Tags)
                 LibraryService.Instance.SyncExifData(meta.FilePath, fields, catalogSummary)
                 If imported.Rating.HasValue Then meta.Rating = imported.Rating.Value
-                If Not String.IsNullOrEmpty(imported.ColorLabel) Then meta.ColorLabel = imported.ColorLabel
+                If imported.Favorite.HasValue Then meta.IsFavorite = imported.Favorite.Value
+                If imported.HasColorLabel Then meta.ColorLabel = imported.ColorLabel
                 If imported.Tags IsNot Nothing Then meta.Tags = imported.Tags
                 meta.DateTaken = fields.DateTaken
                 meta.DateModifiedExif = fields.DateModifiedExif
@@ -3579,7 +3597,8 @@ Namespace ViewModels
                                                                                                           item.ImageWidth = width
                                                                                                           item.ImageHeight = height
                                                                                                           If imported.Rating.HasValue Then item.Rating = imported.Rating.Value
-                                                                                                          If Not String.IsNullOrEmpty(imported.ColorLabel) Then item.ColorLabel = imported.ColorLabel
+                                                                                                          If imported.Favorite.HasValue Then item.IsFavorite = imported.Favorite.Value
+                                                                                                          If imported.HasColorLabel Then item.ColorLabel = imported.ColorLabel
                                                                                                           ' Der Tags-Setter verwirft den Suchtext-Cache selbst, die
                                                                                                           ' importierten Stichworte sind also sofort auffindbar.
                                                                                                           If imported.Tags IsNot Nothing Then item.Tags = imported.Tags
@@ -3753,19 +3772,23 @@ Namespace ViewModels
         ''' Schlägt beide Namensformen in der einmalig eingelesenen Ordnerliste nach - "foto.cr2.xmp"
         ''' (darktable/digiKam) und "foto.xmp" (Adobe). Leer, wenn es keine Beistelldatei gibt.
         Private Shared Function LookupSidecarStamp(stamps As Dictionary(Of String, String),
-                                                   eigeneRezepte As HashSet(Of String),
+                                                   eigeneRezepte As Dictionary(Of String, String),
                                                    imagePath As String) As String
-            If stamps.Count = 0 Then Return ""
+            Dim xmpStamp = ""
             For Each candidate In XmpSidecarService.SidecarCandidates(imagePath)
                 Dim stamp As String = Nothing
                 If stamps.TryGetValue(candidate, stamp) Then
-                    ' Muss zeichengleich zu LibraryService.SidecarStamp sein - das ist die Gegenseite
-                    ' desselben Vergleichs, und ein Auseinanderlaufen liesse den Ordner bei JEDEM
-                    ' Wechsel komplett neu einlesen, ohne dass etwas darauf hindeutet.
-                    Return stamp & If(eigeneRezepte.Contains(RawSidecarService.SidecarPathFor(imagePath)), "|fpxmp", "|-")
+                    xmpStamp = stamp
+                    Exit For
                 End If
             Next
-            Return ""
+            Dim fpxmpStamp = ""
+            eigeneRezepte.TryGetValue(RawSidecarService.SidecarPathFor(imagePath), fpxmpStamp)
+            If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) Then Return ""
+            ' Muss zeichengleich zu LibraryService.SidecarStamp sein - das ist die Gegenseite
+            ' desselben Vergleichs, und ein Auseinanderlaufen liesse den Ordner bei JEDEM
+            ' Wechsel komplett neu einlesen, ohne dass etwas darauf hindeutet.
+            Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp)
         End Function
 
         ''' Nur der Ordner selbst, und case-insensitiv: unter Linux matcht das Suchmuster sonst
@@ -3788,7 +3811,7 @@ Namespace ViewModels
             ''' Dateisystem-Zugriffe pro Bild summieren sich bei großen Ordnern und auf Netzwerkfreigaben
             ''' spürbar. Ein Verzeichnis-Listing kostet dagegen einmalig.
             Dim sidecarStamps As New Dictionary(Of String, String)(PathIdentity.Comparer)
-            Dim eigeneRezepte As New HashSet(Of String)(PathIdentity.Comparer)
+            Dim eigeneRezepte As New Dictionary(Of String, String)(PathIdentity.Comparer)
             Try
                 For Each sidecar In Directory.EnumerateFiles(folderPath, "*.xmp", SidecarSearchOptions)
                     ' ".fpxmp" endet nicht auf ".xmp" und faellt hier nicht mit hinein - der Vergleich
@@ -3796,11 +3819,11 @@ Namespace ViewModels
                     If sidecar.EndsWith(RawSidecarService.Extension, StringComparison.OrdinalIgnoreCase) Then Continue For
                     sidecarStamps(sidecar) = File.GetLastWriteTime(sidecar).ToString("o")
                 Next
-                ' Zweites Listing fuer die eigenen Rezepte: ihr VORHANDENSEIN gehoert in den Stempel,
-                ' damit das Loeschen einer .fpxmp den Ordner neu einlesen laesst (der Nutzer will dann
-                ' die Entwicklung aus der XMP zurueckholen).
+                ' Zweites Listing fuer die eigenen Rezepte: Vorhandensein UND Aenderungszeit gehoeren
+                ' in den Stempel. So werden extern geaenderte Katalogwerte aus .fpxmp ebenso erkannt
+                ' wie das Loeschen einer Sidecar.
                 For Each rezept In Directory.EnumerateFiles(folderPath, "*" & RawSidecarService.Extension, SidecarSearchOptions)
-                    eigeneRezepte.Add(rezept)
+                    eigeneRezepte(rezept) = File.GetLastWriteTime(rezept).ToString("o")
                 Next
             Catch
             End Try

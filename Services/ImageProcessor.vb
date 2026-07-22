@@ -2548,7 +2548,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
 
         Public Shared Function BuildHistogramImage(sourcePath As String, width As Integer, height As Integer) As Bitmap
             Try
-                Using original = DecodeOriented(sourcePath)
+                Using original = DecodeHistogramSource(sourcePath)
                     If original Is Nothing Then Return Nothing
                     Using histogram = RenderHistogram(original, width, height)
                         Return ToAvaloniaBitmap(histogram)
@@ -2557,6 +2557,19 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             Catch
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Histogramme einer FPX beschreiben das gespeicherte Ergebnis und werden deshalb
+        ''' direkt aus composite.png gebildet. Die normale Decode-Pipeline kann den FPX-ZIP-Container
+        ''' selbst nicht dekodieren und lieferte hier bisher ein leeres Histogramm.</summary>
+        Private Shared Function DecodeHistogramSource(sourcePath As String) As SKBitmap
+            If FpxService.IsFpx(sourcePath) Then
+                Using composite = FpxService.ExtractComposite(sourcePath)
+                    If composite Is Nothing Then Return Nothing
+                    Return SKBitmap.Decode(composite)
+                End Using
+            End If
+            Return DecodeOriented(sourcePath)
         End Function
 
         Public Shared Function BuildHistogramImage(source As SKBitmap, width As Integer, height As Integer) As Bitmap
@@ -10082,7 +10095,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         Public Shared Function BuildChannelHistogramCounts(sourcePath As String) As (R As Integer(), G As Integer(), B As Integer(), L As Integer())
             Try
-                Using original = DecodeOriented(sourcePath)
+                Using original = DecodeHistogramSource(sourcePath)
                     Return BuildChannelHistogramCounts(original)
                 End Using
             Catch
