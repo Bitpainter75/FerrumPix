@@ -11487,7 +11487,13 @@ Namespace ViewModels
                 Return
             End If
             _rotationDegrees = ((_rotationDegrees + degrees) Mod 360 + 360) Mod 360
+            ' Ein Vierteldreh vertauscht Breite und Höhe des sichtbaren Bildes. Ein manueller
+            ' Zoom würde dadurch denselben Maßstab/Ausschnitt auf die neue Geometrie übertragen
+            ' und das Bild häufig abschneiden. Nach einer Ganzbild-Drehung deshalb bewusst wieder
+            ' vollständig in die verfügbare Editorfläche einpassen.
+            ActiveZoomPreset = ZoomPresetMode.Fit
             Await ApplyTransformAsync()
+            RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
         End Function
 
         Private Async Function DoFlipHAsync() As Task

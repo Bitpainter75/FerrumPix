@@ -1181,9 +1181,24 @@ Namespace Views
                 data.Add(DataTransferItem.Create(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
             End If
 
+            If Not _isAttached OrElse TopLevel.GetTopLevel(Me) Is Nothing Then Return
+
+            ' RoutedEventArgs.Source ist nach dem Ende der PointerPressed-Route nicht garantiert
+            ' erhalten. Der X11-Drag-Backend ermittelt daraus aber unmittelbar das Quellfenster und
+            ' wirft bei Nothing/einem inzwischen virtualisierten Thumbnail "Invalid drag source".
+            ' Die weiterhin sichtbare GalleryView ist derselben TopLevel zugeordnet und damit die
+            ' stabile, plattformuebergreifende Quelle fuer die bereits validierte Press-Geste.
+            pressedArgs.Source = Me
+
             _isDragging = True
             Try
                 Await DragDrop.DoDragDropAsync(pressedArgs, data, DragDropEffects.Move Or DragDropEffects.Copy)
+            Catch ex As ArgumentOutOfRangeException When String.Equals(ex.ParamName, "triggerEvent", StringComparison.Ordinal)
+                ' Ein gleichzeitig stattfindender View-/Fensterwechsel darf eine asynchrone
+                ' Drag-Geste abbrechen, aber niemals als Async-Sub-Ausnahme die App beenden.
+                DiagnosticLogService.LogException("Gallery.DragDrop.InvalidSource", ex)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.DragDrop", ex)
             Finally
                 _isDragging = False
             End Try
