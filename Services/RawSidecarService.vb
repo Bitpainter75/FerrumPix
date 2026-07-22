@@ -19,9 +19,10 @@ Namespace Services
     ''' und beide Formate koennen so nie auseinanderdriften.
     '''
     ''' Grenzen (bewusst): gebackene Pixel-Bearbeitungen (Pinsel/Radierer/Retusche/gerasterte
-    ''' Ebenen) stecken im ARBEITSBILD, nicht im Rezept - dafuer bleibt die .fpx zustaendig; der
-    ''' Editor schreibt den Sidecar nur, solange nichts gebacken wurde. Bild-Objekte referenzieren
-    ''' ihre Dateien mit absolutem Pfad (keine Einbettung wie im .fpx-Buendel).
+    ''' Ebenen) stecken im ARBEITSBILD, nicht im Rezept. Auch Objekte gehoeren in eine .fpx:
+    ''' externe Bild-Assets wuerden im Sidecar nur ueber absolute Pfade referenziert und nicht wie
+    ''' im .fpx-Buendel eingebettet. Der Editor bietet den Sidecar-Speicherweg deshalb nur fuer
+    ''' reine Entwicklungseinstellungen an.
     '''
     ''' Der Sidecar ist NICHT abschaltbar (die Einstellung dafuer ist am 2026-07-20 entfallen): fuer
     ''' RAW und PSD ist er der EINZIGE Weg, eine Bearbeitung zu behalten, ohne die Quelldatei zu

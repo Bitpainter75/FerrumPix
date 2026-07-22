@@ -448,6 +448,7 @@ Namespace ViewModels
 
         Private Sub EnqueueWorkingCommit(work As Func(Of WorkingImagePatch), onDoneUi As Action(Of WorkingImagePatch))
             _pendingWorkingCommits += 1
+            RaiseSaveAvailabilityChanged()
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
             ' Identität des Arbeitsbilds beim Einreihen merken: kommt der Commit erst NACH einem
@@ -479,8 +480,7 @@ Namespace ViewModels
                             Finally
                                 ' Ein Commit kann der erste GEBACKENE Inhalt sein - dann kippt bei
                                 ' RAW-Quellen der Speichern-Weg von Sidecar auf "Speichern unter".
-                                Me.RaisePropertyChanged(NameOf(CanSaveSidecar))
-                                Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
+                                RaiseSaveAvailabilityChanged()
                                 Me.RaisePropertyChanged(NameOf(CanUndo))
                                 Me.RaisePropertyChanged(NameOf(CanRedo))
                             End Try
@@ -10738,9 +10738,11 @@ Namespace ViewModels
             If gallery IsNot Nothing Then Await gallery.RefreshImmichViewAsync()
         End Function
 
-        ''' <summary>Ob "Speichern" (in-place) bei der aktuellen RAW-Quelle den Rezept-Sidecar
-        ''' schreiben kann: Einstellung an, kein offenes .fpx, nichts ins Arbeitsbild gebacken
-        ''' (Pinsel/Retusche/Rastern stecken NICHT im Rezept - dafuer bleibt die .fpx zustaendig).
+        ''' <summary>Ob "Speichern" (in-place) bei der aktuellen RAW-/PSD-Quelle den Rezept-Sidecar
+        ''' schreiben kann: kein offenes .fpx und ausschliesslich Entwicklungseinstellungen.
+        ''' Pinsel, Retusche und gerasterte Ebenen stecken im Arbeitsbild; Objekte waeren im Sidecar
+        ''' nicht als selbstaendiges Projekt mit eingebetteten Assets gesichert. In all diesen Faellen
+        ''' bleibt deshalb nur "Speichern unter" (vorzugsweise .fpx oder ein gebackenes Ausgabeformat).
         ''' Geschrieben wird AUSSCHLIESSLICH ueber die Speichern-Funktion, nie nebenbei beim
         ''' Verlassen (Nutzerentscheidung 2026-07-19: Dateien entstehen nur durch bewusstes
         ''' Speichern).</summary>
@@ -10748,7 +10750,10 @@ Namespace ViewModels
             Get
                 Return RawSidecarService.IsSidecarFormat(RenderSourcePath) AndAlso
                        String.IsNullOrEmpty(_currentFpxPath) AndAlso
-                       Not _workingImage.HasBakedContent
+                       Not _workingImage.HasBakedContent AndAlso
+                       _annotations.Count = 0 AndAlso
+                       Not _retouchStrokeActive AndAlso
+                       _pendingWorkingCommits = 0
             End Get
         End Property
 
@@ -11039,6 +11044,15 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasHslChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
             Me.RaisePropertyChanged(NameOf(HasAnnotationChanges))
+            ' Objekte machen ein RAW-/PSD-Sidecar genauso unzureichend wie gebackene
+            ' Pixelbearbeitungen. Die Toolbar muss deshalb unmittelbar beim Hinzufuegen,
+            ' Loeschen sowie bei Undo/Redo zwischen Speichern und Speichern-unter umschalten.
+            RaiseSaveAvailabilityChanged()
+        End Sub
+
+        Private Sub RaiseSaveAvailabilityChanged()
+            Me.RaisePropertyChanged(NameOf(CanSaveSidecar))
+            Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
         End Sub
 
         ''' Wird beim Verlassen eines Werkzeugs mit "Anwenden"-Bestätigung aufgerufen. Noch nicht
@@ -13499,6 +13513,7 @@ Namespace ViewModels
             If captureUndo Then
                 PushUndo()
                 _retouchStrokeActive = True
+                RaiseSaveAvailabilityChanged()
                 _retouchStrokeStartSpotIndex = _retouchSpots.Count
                 _activeRetouchStrokeId = _nextRetouchStrokeId
                 _nextRetouchStrokeId += 1
@@ -13965,6 +13980,7 @@ Namespace ViewModels
         Public Sub CommitRetouchStroke()
             If Not _retouchStrokeActive Then Return
             _retouchStrokeActive = False
+            RaiseSaveAvailabilityChanged()
             Dim strokeStart = Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count))
             Dim strokeSpots = _retouchSpots.Skip(strokeStart).
                 Where(Function(s) s IsNot Nothing).
