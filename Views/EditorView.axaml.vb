@@ -1256,6 +1256,18 @@ Namespace Views
                         Return
                     ElseIf vm.HasSelectedAnnotation Then
                         vm.SelectedAnnotationIndex = -1
+                    ElseIf Not vm.HasActiveSelection Then
+                        ' Im Auswahlwerkzeug bedeutet "Verschieben" ohne Objekt/Auswahl einen
+                        ' Bühnen-Pan. Der Klick bleibt dabei rein visuell; es wird keine Auswahl
+                        ' erzeugt und kein Layer selektiert.
+                        _panStartX = rawPos.X
+                        _panStartY = rawPos.Y
+                        _panStartOffsetX = _panX
+                        _panStartOffsetY = _panY
+                        _isPanDragging = True
+                        e.Pointer.Capture(canvas)
+                        e.Handled = True
+                        Return
                     End If
                 End If
                 Dim clickedInsideSelection = vm.HasActiveSelection AndAlso vm.SelectionMode <> "MagicWand" AndAlso IsPointInsideSelection(rawPos, imageRect, vm)
