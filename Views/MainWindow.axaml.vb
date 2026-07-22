@@ -22,6 +22,7 @@ Namespace Views
         ''' statt immer auf Normalgroesse zu fallen.
         Private _stateBeforeFullscreen As WindowState = WindowState.Normal
         Private _allowWindowClose As Boolean = False
+        Private _closeButtonRequestActive As Boolean = False
 
         ''' <summary>Wer den Tastaturfokus hatte, bevor ein Overlay-Dialog ihn an sich gezogen hat.</summary>
         Private _focusBeforeDialog As Control = Nothing
@@ -428,8 +429,31 @@ Namespace Views
                 WindowState = WindowState.Maximized OrElse WindowState = WindowState.FullScreen)
         End Sub
 
-        Private Sub OnCloseClick(sender As Object, e As RoutedEventArgs)
-            Close()
+        Private Async Sub OnCloseClick(sender As Object, e As RoutedEventArgs)
+            If _closeButtonRequestActive Then Return
+            _closeButtonRequestActive = True
+            Try
+                Dim vm = TryCast(DataContext, MainWindowViewModel)
+
+                ' Das eigene Fenster-X ruft Close() programmgesteuert auf. Avalonia meldet dafür
+                ' je nach Plattform nicht zwingend WindowCloseReason.WindowClosing; der allgemeine
+                ' Closing-Handler konnte die Rückfrage deshalb komplett überspringen. Beim X die
+                ' Freigabe ausdrücklich VOR Close() einholen. Abbrechen lässt _allowWindowClose
+                ' unverändert und beendet nur diesen Klick.
+                If Not _allowWindowClose AndAlso vm IsNot Nothing Then
+                    If vm.CurrentMode = AppMode.Editor AndAlso
+                       vm.Editor IsNot Nothing AndAlso vm.Editor.HasUnsavedChanges Then
+                        If Not Await vm.Editor.ConfirmSaveBeforeLeavingAsync("die Anwendung schließt") Then Return
+                    ElseIf vm.CurrentMode = AppMode.Viewer AndAlso vm.Viewer IsNot Nothing Then
+                        If Not Await vm.Viewer.ConfirmPendingRotationAsync("die Anwendung schließt") Then Return
+                    End If
+                End If
+
+                _allowWindowClose = True
+                Close()
+            Finally
+                _closeButtonRequestActive = False
+            End Try
         End Sub
 
         Private Sub ApplyFullscreenState()

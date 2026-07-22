@@ -9385,12 +9385,16 @@ Namespace ViewModels
                     Dim excludedPlacementIndex = If(_annotationPlacementEditActive, _selectedAnnotationIndex, -1)
                     Dim sw = Diagnostics.Stopwatch.StartNew()
                     Dim clamped As SKRectI = SKRectI.Empty
+                    Dim cacheState = ImageProcessor.AnnotationPatchCacheState.Unknown
                     Dim patch As SKBitmap = Nothing
                     Try
                         patch = Await Task.Run(Function()
                                                    Dim localClamped As SKRectI
-                                                   Dim p = ImageProcessor.TryRenderAnnotationsPatchSkOnCachedBase(previewSource, adj, rect, localClamped)
+                                                   Dim localCacheState = ImageProcessor.AnnotationPatchCacheState.Unknown
+                                                   Dim p = ImageProcessor.TryRenderAnnotationsPatchSkOnCachedBase(previewSource, adj, rect,
+                                                                                                                  localClamped, localCacheState)
                                                    clamped = localClamped
+                                                   cacheState = localCacheState
                                                    Return p
                                                End Function)
                     Catch ex As Exception
@@ -9399,11 +9403,28 @@ Namespace ViewModels
                     End Try
 
                     If patch Is Nothing Then
-                        ' Base-Cache kalt/gesperrt: kurz debounced nachziehen (Timer-Pfad rendert dann).
-                        DiagnosticLogService.LogAlways("Editor.SceneRegion",
-                                                       $"fallback=true reason=cacheMissOrBusy async=1 rect={rect.Left},{rect.Top},{rect.Width}x{rect.Height}")
                         _annotationDirtyRect = ImageProcessor.UnionRects(_annotationDirtyRect, rect)
-                        ScheduleAnnotationCompositePreviewUpdate(60.0)
+                        If cacheState = ImageProcessor.AnnotationPatchCacheState.Stale Then
+                            ' Eine aktive Zauberstab-/Lasso-Auswahl ist reiner UI-Zustand und gehört
+                            ' nicht in den Base-Key (siehe ComputeBaseKey). Ein echter Stale-Fall bleibt
+                            ' trotzdem möglich, z.B. wenn direkt nach einer lokalen Korrektur ein Objekt
+                            ' platziert wird: RefreshOverlayAfterAnnotationChange stoppt den noch
+                            ' ausstehenden Vollrender zugunsten des schnellen Patches. Ein Patch kann
+                            ' einen veralteten Basisstand aber niemals selbst erneuern - statt endlos
+                            ' cacheMiss zu wiederholen jetzt EINEN Vollrender der aktuellen Szene planen.
+                            _annotationCompositePreviewPending = False
+                            _annotationCompositePreviewRetries = 0
+                            DiagnosticLogService.LogAlways("Editor.SceneRegion",
+                                                           $"fallback=true reason=cacheStale action=fullRender async=1 rect={rect.Left},{rect.Top},{rect.Width}x{rect.Height}")
+                            SchedulePreviewUpdate()
+                        Else
+                            ' Cache ist nur kurz durch einen parallelen Vollrender gesperrt: nachziehen,
+                            ' sobald dieser fertig ist. Dessen Base ist danach auch für das Objekt-Patch
+                            ' nutzbar; das Patch stellt den aktuellen Objektstapel wieder her.
+                            DiagnosticLogService.LogAlways("Editor.SceneRegion",
+                                                           $"fallback=true reason=cacheBusy async=1 rect={rect.Left},{rect.Top},{rect.Width}x{rect.Height}")
+                            ScheduleAnnotationCompositePreviewUpdate(60.0)
+                        End If
                         Return
                     End If
 
@@ -9894,6 +9915,17 @@ Namespace ViewModels
 
         Public Sub CommitSelectedAnnotationPlacementEdit()
             If Not HasSelectedAnnotation Then Return
+            ' Während des Ziehens beendet SyncSelectedAnnotation absichtlich vor
+            ' RefreshSelectedAnnotationPreviewImmediatelyIfNeeded: der Ghost übernimmt die
+            ' Live-Darstellung und ein Szenen-Patch folgt erst hier beim Loslassen. Damit wurde
+            ' aber auch die sonst in SchedulePreviewUpdate sitzende Änderungsmarkierung umgangen:
+            ' Position/Größe/Drehung waren geändert, HasUnsavedChanges blieb False und beim
+            ' Schließen erschien keine Speicherabfrage. Begin/Commit wird von der View erst nach
+            ' einer echten Zeigerbewegung (> 3 px) aufgerufen, ein reiner Auswahlklick landet nicht hier.
+            If Not _suppressPreviewDirty Then
+                _hasChanges = True
+                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            End If
             _previewTimer.Stop()
             _previewPending = False
             UpdateSelectedAnnotationOverlayPreview()
@@ -11116,12 +11148,10 @@ Namespace ViewModels
                     LocalizationService.T(actionDescription))
             End If
 
-            Dim save = Await _mainVm.ShowConfirmAsync(
-                LocalizationService.T("Änderungen speichern"),
-                message,
-                LocalizationService.T("Speichern"),
-                LocalizationService.T("Nicht speichern"))
-            If Not save Then
+            Dim choice = Await _mainVm.ShowSaveChangesAsync(
+                LocalizationService.T("Änderungen speichern"), message)
+            If choice = SaveChangesDialogResult.Cancelled Then Return False
+            If choice = SaveChangesDialogResult.Discard Then
                 ' Nutzer hat "Nicht speichern" gewählt - alle nicht gespeicherten/nicht angewendeten
                 ' Änderungen verwerfen. Ohne dies bliebe _hasChanges fälschlich True, und ein späteres
                 ' Öffnen eines ANDEREN Bildes würde diesen bereits abgelehnten Speichern-Dialog ein

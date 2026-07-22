@@ -1565,6 +1565,16 @@ Namespace Services
         Private Shared _baseCacheSourceRef As SKBitmap = Nothing
         Private Shared _baseCacheBitmap As SKBitmap = Nothing
 
+        ''' <summary>Warum ein Objekt-Region-Render kein Patch liefern konnte. Busy darf kurz
+        ''' wiederholt werden; Stale braucht zwingend einen neuen Vollrender, weil nur dieser den
+        ''' Basis-Cache mit den aktuellen Bildanpassungen aufbauen kann.</summary>
+        Public Enum AnnotationPatchCacheState
+            Unknown = 0
+            Current = 1
+            Busy = 2
+            Stale = 3
+        End Enum
+
         ' Zweiter Cache neben dem Base-Cache: das Basisbild MIT allen Raster-Strichen (Pinsel/Radierer),
         ' in Preview-Auflösung. Damit muss beim Malen nur das NEUE Strichsegment nachgezeichnet werden,
         ' statt alle Striche pro Maus-Batch neu zu rendern. Der Zustand + die Zeichenlogik liegen in
@@ -2080,17 +2090,33 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
         ''' gesperrtem Base-Cache.</summary>
         Public Shared Function TryRenderAnnotationsPatchSkOnCachedBase(source As SKBitmap, adj As ImageAdjustments, dirtyRect As SKRectI,
                                                                        ByRef clampedRect As SKRectI) As SKBitmap
-            clampedRect = SKRectI.Empty
-            If source Is Nothing OrElse dirtyRect.IsEmpty Then Return Nothing
+            Dim ignored = AnnotationPatchCacheState.Unknown
+            Return TryRenderAnnotationsPatchSkOnCachedBase(source, adj, dirtyRect, clampedRect, ignored)
+        End Function
 
-            If Not Monitor.TryEnter(_baseCacheLock, 12) Then Return Nothing
+        Public Shared Function TryRenderAnnotationsPatchSkOnCachedBase(source As SKBitmap, adj As ImageAdjustments, dirtyRect As SKRectI,
+                                                                       ByRef clampedRect As SKRectI,
+                                                                       ByRef cacheState As AnnotationPatchCacheState) As SKBitmap
+            clampedRect = SKRectI.Empty
+            cacheState = AnnotationPatchCacheState.Unknown
+            If source Is Nothing OrElse dirtyRect.IsEmpty Then
+                cacheState = AnnotationPatchCacheState.Stale
+                Return Nothing
+            End If
+
+            If Not Monitor.TryEnter(_baseCacheLock, 12) Then
+                cacheState = AnnotationPatchCacheState.Busy
+                Return Nothing
+            End If
             Try
                 Dim key = ComputeBaseKey(adj)
                 If Not Object.ReferenceEquals(_baseCacheSourceRef, source) OrElse
                    Not String.Equals(_baseCacheKey, key, StringComparison.Ordinal) OrElse
                    _baseCacheBitmap Is Nothing Then
+                    cacheState = AnnotationPatchCacheState.Stale
                     Return Nothing
                 End If
+                cacheState = AnnotationPatchCacheState.Current
 
                 Dim rect = ClampRectToBitmap(dirtyRect, _baseCacheBitmap.Width, _baseCacheBitmap.Height)
                 If rect.IsEmpty OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
@@ -3325,6 +3351,20 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
         End Function
 
         Friend Shared Function ComputeBaseKey(adj As ImageAdjustments) As String
+            ' HasActiveSelection und ihre editierbare Display-Maske sind reine UI-Zustände. Seit
+            ' Auswahlkorrekturen als persistente MaskedAdjustmentLayers gespeichert werden, wirken
+            ' sie nur noch dann direkt auf die globale Pixelpipeline, wenn der explizite Legacy-
+            ' SelectionScopeEnabled gesetzt ist. Die UI-Auswahl trotzdem in den Base-Key aufzunehmen
+            ' machte den Cache unmittelbar nach jedem Zauberstab-/Lasso-Klick scheinbar veraltet,
+            ' obwohl sich kein Bildpixel geändert hatte. Ein danach platziertes Objekt konnte deshalb
+            ' nie als Region gerendert werden und war nur im Selektions-Ghost zu sehen.
+            Dim selectionScopeKey = If(adj.SelectionScopeEnabled,
+                String.Join(",", New Object() {
+                    adj.SelectionXPercent, adj.SelectionYPercent,
+                    adj.SelectionWidthPercent, adj.SelectionHeightPercent, adj.SelectionShapeMode,
+                    adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
+                    SelectionMaskFingerprint(adj.SelectionMaskPngBase64), adj.SelectionFeatherPixels
+                }.Select(AddressOf KeyPart)), "")
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.NoiseReduction, adj.NoiseReductionMethod, adj.ColorNoiseReduction,
@@ -3351,11 +3391,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeInterpolation,
                 adj.CanvasWidth, adj.CanvasHeight, adj.LockCanvasAspect, adj.CanvasAnchor, adj.CanvasBackgroundColor,
                 adj.FilterPreset, adj.FilterStrength, adj.LutPath, adj.LutStrength,
-                adj.SelectionScopeEnabled, adj.HasActiveSelection, adj.SelectionXPercent, adj.SelectionYPercent,
-                adj.SelectionWidthPercent, adj.SelectionHeightPercent, adj.SelectionShapeMode,
-                adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
-                SelectionMaskFingerprint(adj.SelectionMaskPngBase64),
-                adj.SelectionFeatherPixels,
+                adj.SelectionScopeEnabled, selectionScopeKey,
                 adj.GlobalAdjustmentsHidden,
                 PersistentMasksFingerprint(adj),
                 adj.WorkingImageVersion

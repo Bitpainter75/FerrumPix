@@ -14,6 +14,12 @@ Imports FerrumPix.Services
 
 Namespace ViewModels
 
+    Public Enum SaveChangesDialogResult
+        Save
+        Discard
+        Cancelled
+    End Enum
+
     Public Class MainWindowViewModel
         Inherits ViewModelBase
 
@@ -27,6 +33,7 @@ Namespace ViewModels
         Private _dialogInputText As String = ""
         Private _dialogConfirmText As String = "OK"
         Private _dialogCancelText As String = "Abbrechen"
+        Private _dialogSecondaryText As String = ""
         Private _dialogConflictRenameText As String = ""
         Private _dialogKind As AppDialogKind = AppDialogKind.Message
         Private _dialogCompletion As TaskCompletionSource(Of String)
@@ -200,6 +207,7 @@ Namespace ViewModels
 
         Public ReadOnly Property DialogConfirmCommand As ICommand
         Public ReadOnly Property DialogCancelCommand As ICommand
+        Public ReadOnly Property DialogSecondaryCommand As ICommand
         Public ReadOnly Property DialogSkipCommand As ICommand
         Public ReadOnly Property DialogRenameCommand As ICommand
         Public ReadOnly Property DialogSkipAllCommand As ICommand
@@ -213,6 +221,7 @@ Namespace ViewModels
 
             DialogConfirmCommand = ReactiveCommand.Create(Sub() ConfirmDialog())
             DialogCancelCommand = ReactiveCommand.Create(Sub() CancelDialog())
+            DialogSecondaryCommand = ReactiveCommand.Create(Sub() CompleteDialog("Secondary"))
             DialogSkipCommand = ReactiveCommand.Create(Sub() SkipDialog())
             DialogRenameCommand = ReactiveCommand.Create(Sub() RenameConflictDialog())
             DialogSkipAllCommand = ReactiveCommand.Create(Sub() CompleteDialog("SkipAll"))
@@ -856,6 +865,16 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_dialogCancelText, value)
                 Me.RaisePropertyChanged(NameOf(IsDialogCancelVisible))
+            End Set
+        End Property
+
+        Public Property DialogSecondaryText As String
+            Get
+                Return _dialogSecondaryText
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogSecondaryText, value)
+                Me.RaisePropertyChanged(NameOf(IsDialogSecondaryVisible))
             End Set
         End Property
 
@@ -1605,6 +1624,15 @@ Namespace ViewModels
             Return result IsNot Nothing
         End Function
 
+        Public Async Function ShowSaveChangesAsync(titleText As String, messageText As String) As Task(Of SaveChangesDialogResult)
+            Dim result = Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "",
+                                               LocalizationService.T("Speichern"), LocalizationService.T("Abbrechen"),
+                                               LocalizationService.T("Nicht speichern"))
+            If result Is Nothing Then Return SaveChangesDialogResult.Cancelled
+            If String.Equals(result, "Secondary", StringComparison.Ordinal) Then Return SaveChangesDialogResult.Discard
+            Return SaveChangesDialogResult.Save
+        End Function
+
         Public Function ShowInputAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of String)
             Return ShowDialogAsync(kind, titleText, messageText, initialText,
                                    LocalizationService.T(confirmText), LocalizationService.T(cancelText))
@@ -1989,7 +2017,7 @@ Namespace ViewModels
             AppSettingsService.SaveLastSaveAsTargetFolder(folder)
         End Sub
 
-        Private Function ShowDialogAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, confirmText As String, cancelText As String) As Task(Of String)
+        Private Function ShowDialogAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, confirmText As String, cancelText As String, Optional secondaryText As String = "") As Task(Of String)
             If _dialogCompletion IsNot Nothing Then
                 _dialogCompletion.TrySetResult(Nothing)
             End If
@@ -2001,9 +2029,11 @@ Namespace ViewModels
             DialogInputText = initialText
             DialogConfirmText = LocalizationService.T(confirmText)
             DialogCancelText = LocalizationService.T(cancelText)
+            DialogSecondaryText = LocalizationService.T(secondaryText)
             Me.RaisePropertyChanged(NameOf(IsDialogOpen))
             Me.RaisePropertyChanged(NameOf(IsAppContentHitTestVisible))
             Me.RaisePropertyChanged(NameOf(IsDialogCancelVisible))
+            Me.RaisePropertyChanged(NameOf(IsDialogSecondaryVisible))
             Return _dialogCompletion.Task
         End Function
 
@@ -2095,12 +2125,19 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsDialogOpen))
             Me.RaisePropertyChanged(NameOf(IsAppContentHitTestVisible))
             Me.RaisePropertyChanged(NameOf(IsDialogCancelVisible))
+            Me.RaisePropertyChanged(NameOf(IsDialogSecondaryVisible))
             completion.TrySetResult(result)
         End Sub
 
         Public ReadOnly Property IsDialogCancelVisible As Boolean
             Get
                 Return Not String.IsNullOrEmpty(_dialogCancelText)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogSecondaryVisible As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_dialogSecondaryText)
             End Get
         End Property
 

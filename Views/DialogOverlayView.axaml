@@ -232,6 +232,11 @@
                             IsVisible="{Binding IsDialogCancelVisible}">
                         <TextBlock Text="{Binding DialogCancelText}"/>
                     </Button>
+                    <Button Classes="ghost"
+                            Command="{Binding DialogSecondaryCommand}"
+                            IsVisible="{Binding IsDialogSecondaryVisible}">
+                        <TextBlock Text="{Binding DialogSecondaryText}"/>
+                    </Button>
                     <Button Classes="accent"
                             Command="{Binding DialogConfirmCommand}">
                         <TextBlock Text="{Binding DialogConfirmText}"/>
