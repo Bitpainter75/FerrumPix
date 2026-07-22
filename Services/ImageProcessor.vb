@@ -2603,10 +2603,21 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                     If cached.Width > 0 Then Return cached
                 End If
                 Dim data As SKData
-                Using stream = OpenSourceStream(path)
-                    If stream Is Nothing Then Return (0, 0)
-                    data = SKData.Create(stream)
-                End Using
+                If FpxService.IsFpx(path) Then
+                    ' Eine FPX ist ein ZIP-Container und kann nicht selbst an SKCodec gehen. Fuer
+                    ' Viewer/Infopanel sind die gespeicherten Composite-Masse die richtige schnelle
+                    ' Header-Antwort. Ohne diesen Sonderweg fiel der asynchrone Viewer auf seine
+                    ' zuvor angezeigten Bildmasse zurueck.
+                    Using stream = FpxService.ExtractComposite(path)
+                        If stream Is Nothing Then Return (0, 0)
+                        data = SKData.Create(stream)
+                    End Using
+                Else
+                    Using stream = OpenSourceStream(path)
+                        If stream Is Nothing Then Return (0, 0)
+                        data = SKData.Create(stream)
+                    End Using
+                End If
                 If data Is Nothing Then Return (0, 0)
                 Using data
                     Using codec = SKCodec.Create(data)

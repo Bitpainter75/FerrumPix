@@ -4,6 +4,7 @@ Imports System.Collections
 Imports System.Globalization
 Imports System.Linq
 Imports System.Reflection
+Imports System.IO
 Imports System.IO.Compression
 Imports System.Text.RegularExpressions
 Imports System.Text
@@ -290,9 +291,9 @@ Namespace Services
             Return data
         End Function
 
-        ''' <summary>Liest die Metadaten direkt aus base.* im FPX-Buendel. Der Eintrag wird nur
-        ''' gestreamt und nicht in einen weiteren Temp-Ordner entpackt; dadurch funktioniert derselbe
-        ''' Weg auch beim Hintergrundscan der Galerie und bei bereits vorhandenen FPX-Dateien.</summary>
+        ''' <summary>Liest die Metadaten direkt aus base.* im FPX-Buendel. Der Eintrag wird nicht in
+        ''' einen weiteren Temp-Ordner entpackt; dadurch funktioniert derselbe Weg auch beim
+        ''' Hintergrundscan der Galerie und bei bereits vorhandenen FPX-Dateien.</summary>
         Private Shared Function ReadFpxBaseMetadata(fpxPath As String) As IReadOnlyList(Of MetadataExtractor.Directory)
             Return ReadFpxEntryMetadata(fpxPath,
                 Function(entry) entry.FullName.IndexOf("/"c) < 0 AndAlso
@@ -307,14 +308,31 @@ Namespace Services
         Private Shared Function ReadFpxEntryMetadata(
                 fpxPath As String,
                 predicate As Func(Of ZipArchiveEntry, Boolean)) As IReadOnlyList(Of MetadataExtractor.Directory)
-            Using zip = ZipFile.OpenRead(fpxPath)
-                Dim imageEntry = zip.Entries.FirstOrDefault(
-                    Function(entry) Not String.IsNullOrEmpty(entry.Name) AndAlso predicate(entry))
-                If imageEntry Is Nothing Then Return Array.Empty(Of MetadataExtractor.Directory)()
-                Using source = imageEntry.Open()
-                    Return ImageMetadataReader.ReadMetadata(source)
+            Try
+                Using zip = ZipFile.OpenRead(fpxPath)
+                    Dim imageEntry = zip.Entries.FirstOrDefault(
+                        Function(entry) Not String.IsNullOrEmpty(entry.Name) AndAlso predicate(entry))
+                    If imageEntry Is Nothing Then Return Array.Empty(Of MetadataExtractor.Directory)()
+
+                    ' ZipArchiveEntry.Open() liefert auch fuer unkomprimierte Eintraege einen
+                    ' NICHT seekbaren Stream. MetadataExtractor startet mit FileTypeDetector,
+                    ' der nach dem Lesen der Signatur zum Anfang zurueckspringt und deshalb sonst
+                    ' ArgumentException wirft. ReadExifCore fing diese Ausnahme fuer den gesamten
+                    ' FPX-Zweig ab: Composite-Masse UND EXIF/IPTC/XMP/ICC blieben gemeinsam leer.
+                    ' Die Speicher-Kopie ist seekbar und wird nach dem Parsen sofort freigegeben.
+                    Using source = imageEntry.Open()
+                        Using seekable As New MemoryStream()
+                            source.CopyTo(seekable)
+                            seekable.Position = 0
+                            Return ImageMetadataReader.ReadMetadata(seekable)
+                        End Using
+                    End Using
                 End Using
-            End Using
+            Catch
+                ' Composite und Basis werden getrennt gelesen. Ein fehlender oder defekter Eintrag
+                ' darf daher nur seine eigene Datenquelle leeren, nicht das komplette Infopanel.
+                Return Array.Empty(Of MetadataExtractor.Directory)()
+            End Try
         End Function
 
         Private Shared Sub CollectMetadataTags(metaDirectories As IEnumerable(Of MetadataExtractor.Directory),
