@@ -1,4 +1,5 @@
 Imports System
+Imports System.Buffers
 Imports System.Collections.Generic
 Imports System.ComponentModel
 Imports System.IO
@@ -1842,33 +1843,40 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                                               New SKRect(0, 0, clipped.Width, clipped.Height))
                         End Using
 
-                        Dim byteCount = patch.RowBytes * patch.Height
-                        Dim patchBytes(byteCount - 1) As Byte
-                        Dim baselineBytes(byteCount - 1) As Byte
-                        Marshal.Copy(patch.GetPixels(), patchBytes, 0, patchBytes.Length)
-                        Marshal.Copy(baselinePatch.GetPixels(), baselineBytes, 0, baselineBytes.Length)
-
                         Dim tol = Math.Max(0, tolerance)
                         Dim rowBytes = patch.RowBytes
                         Dim activeBytes = clipped.Width * 4
-                        For y = 0 To clipped.Height - 1
-                            Dim row = y * rowBytes
-                            For offset = 0 To activeBytes - 4 Step 4
-                                Dim i = row + offset
-                                Dim delta = Math.Abs(CInt(patchBytes(i)) - CInt(baselineBytes(i))) +
-                                            Math.Abs(CInt(patchBytes(i + 1)) - CInt(baselineBytes(i + 1))) +
-                                            Math.Abs(CInt(patchBytes(i + 2)) - CInt(baselineBytes(i + 2))) +
-                                            Math.Abs(CInt(patchBytes(i + 3)) - CInt(baselineBytes(i + 3)))
-                                If delta <= tol Then
-                                    patchBytes(i) = 0
-                                    patchBytes(i + 1) = 0
-                                    patchBytes(i + 2) = 0
-                                    patchBytes(i + 3) = 0
-                                End If
+                        Dim patchRow = ArrayPool(Of Byte).Shared.Rent(rowBytes)
+                        Dim baselineRow = ArrayPool(Of Byte).Shared.Rent(rowBytes)
+                        Try
+                            ' Nur je eine Zeile statt zwei kompletter Patch-Kopien puffern. Dieser
+                            ' Pfad laeuft waehrend Verwischen und Stempeln bis zu etwa 40-mal/s und
+                            ' das Patch-Rechteck waechst ueber den ganzen Zug; flaechenbreite Byte-
+                            ' Arrays verursachten deshalb vermeidbare LOH-/GC-Spitzen.
+                            Dim patchPixels = patch.GetPixels()
+                            Dim baselinePixels = baselinePatch.GetPixels()
+                            For y = 0 To clipped.Height - 1
+                                Dim nativeOffset = y * rowBytes
+                                Marshal.Copy(IntPtr.Add(patchPixels, nativeOffset), patchRow, 0, rowBytes)
+                                Marshal.Copy(IntPtr.Add(baselinePixels, nativeOffset), baselineRow, 0, rowBytes)
+                                For offset = 0 To activeBytes - 4 Step 4
+                                    Dim delta = Math.Abs(CInt(patchRow(offset)) - CInt(baselineRow(offset))) +
+                                                Math.Abs(CInt(patchRow(offset + 1)) - CInt(baselineRow(offset + 1))) +
+                                                Math.Abs(CInt(patchRow(offset + 2)) - CInt(baselineRow(offset + 2))) +
+                                                Math.Abs(CInt(patchRow(offset + 3)) - CInt(baselineRow(offset + 3)))
+                                    If delta <= tol Then
+                                        patchRow(offset) = 0
+                                        patchRow(offset + 1) = 0
+                                        patchRow(offset + 2) = 0
+                                        patchRow(offset + 3) = 0
+                                    End If
+                                Next
+                                Marshal.Copy(patchRow, 0, IntPtr.Add(patchPixels, nativeOffset), rowBytes)
                             Next
-                        Next
-
-                        Marshal.Copy(patchBytes, 0, patch.GetPixels(), patchBytes.Length)
+                        Finally
+                            ArrayPool(Of Byte).Shared.Return(patchRow)
+                            ArrayPool(Of Byte).Shared.Return(baselineRow)
+                        End Try
                     End Using
                 End If
 
@@ -3228,179 +3236,164 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim height = bottom - top
             If width <= 0 OrElse height <= 0 Then Return
 
-            Using patch = New SKBitmap(width, height, result.ColorType, result.AlphaType)
-                Using patchCanvas = New SKCanvas(patch)
-                    patchCanvas.Clear(SKColors.Transparent)
-                    patchCanvas.DrawBitmap(result,
-                                           New SKRect(left, top, right, bottom),
-                                           New SKRect(0, 0, width, height))
-                End Using
-
-                Using blurred = FastBoxBlur(patch, Math.Max(1, CInt(Math.Round(sigma * 1.35F))))
-                    Dim bounds = New SKRect(left, top, right, bottom)
-                    canvas.SaveLayer(bounds, Nothing)
-                    canvas.DrawBitmap(blurred, left, top)
-                    Using mask = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
-                                                               {SKColors.White.WithAlpha(CByte(255 * flow)),
-                                                                SKColors.White.WithAlpha(CByte(255 * flow)),
-                                                                SKColors.Transparent},
-                                                               RetouchFeatherStops, SKShaderTileMode.Clamp)
-                        Using maskPaint = New SKPaint With {.Shader = mask, .IsAntialias = True, .BlendMode = SKBlendMode.DstIn}
-                            ' BEFUND (der 4x-Schmier): DstIn wirkt nur, wo auch GEZEICHNET
-                            ' wird. DrawCircle liess den Layer AUSSERHALB des Kreises unangetastet -
-                            ' die Blur-Kopie des gesamten Pads (2,35r je Seite) wurde beim Restore
-                            ' voll einkomposittiert. Das volle Rechteck zeichnen: der Radial-Verlauf
-                            ' ist ausserhalb r transparent und nullt den Layer dort.
-                            canvas.DrawRect(bounds, maskPaint)
-                        End Using
+            ' Die Region direkt aus dem Arbeitsbild lesen. Eine zusaetzliche Patch-Bitmap samt
+            ' SKCanvas-Kopie pro Spot verdoppelte zuvor den nativen Speicherverkehr, obwohl der
+            ' Box-Blur die Pixel danach ohnehin in verwaltete Puffer uebernahm.
+            Using blurred = FastBoxBlurRegion(result, left, top, width, height,
+                                              Math.Max(1, CInt(Math.Round(sigma * 1.35F))))
+                Dim bounds = New SKRect(left, top, right, bottom)
+                canvas.SaveLayer(bounds, Nothing)
+                canvas.DrawBitmap(blurred, left, top)
+                Using mask = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
+                                                           {SKColors.White.WithAlpha(CByte(255 * flow)),
+                                                            SKColors.White.WithAlpha(CByte(255 * flow)),
+                                                            SKColors.Transparent},
+                                                           RetouchFeatherStops, SKShaderTileMode.Clamp)
+                    Using maskPaint = New SKPaint With {.Shader = mask, .IsAntialias = True, .BlendMode = SKBlendMode.DstIn}
+                        ' BEFUND (der 4x-Schmier): DstIn wirkt nur, wo auch GEZEICHNET
+                        ' wird. DrawCircle liess den Layer AUSSERHALB des Kreises unangetastet -
+                        ' die Blur-Kopie des gesamten Pads (2,35r je Seite) wurde beim Restore
+                        ' voll einkomposittiert. Das volle Rechteck zeichnen: der Radial-Verlauf
+                        ' ist ausserhalb r transparent und nullt den Layer dort.
+                        canvas.DrawRect(bounds, maskPaint)
                     End Using
-                    canvas.Restore()
                 End Using
+                canvas.Restore()
             End Using
         End Sub
 
-        Private Shared Function FastBoxBlur(source As SKBitmap, radius As Integer) As SKBitmap
+        Private Shared Function FastBoxBlurRegion(source As SKBitmap,
+                                                  left As Integer, top As Integer,
+                                                  width As Integer, height As Integer,
+                                                  radius As Integer) As SKBitmap
             If source Is Nothing Then Return Nothing
-            radius = Math.Max(1, Math.Min(radius, Math.Max(source.Width, source.Height)))
-            Dim width = source.Width
-            Dim height = source.Height
+            If width <= 0 OrElse height <= 0 Then Return Nothing
+            radius = Math.Max(1, Math.Min(radius, Math.Max(width, height)))
             Dim count = width * height
-            If count <= 0 Then Return CloneBitmap(source)
+            If count <= 0 OrElse count > Integer.MaxValue \ 4 Then Return Nothing
+            Dim byteCount = count * 4
+            Dim rowByteCount = width * 4
+            Dim src = ArrayPool(Of Byte).Shared.Rent(byteCount)
+            Dim tmp = ArrayPool(Of Byte).Shared.Rent(byteCount)
+            Dim output = ArrayPool(Of Byte).Shared.Rent(byteCount)
+            Dim result As SKBitmap = Nothing
 
-            Dim srcR(count - 1) As Integer
-            Dim srcG(count - 1) As Integer
-            Dim srcB(count - 1) As Integer
-            Dim srcA(count - 1) As Integer
-            Dim tmpR(count - 1) As Integer
-            Dim tmpG(count - 1) As Integer
-            Dim tmpB(count - 1) As Integer
-            Dim tmpA(count - 1) As Integer
-
-            ' BEFUND: Roh-Bytes zeilenweise kopieren statt GetPixel/SetPixel - die
-            ' Interop-Aufrufe ueber (4,7r)^2 Pixel pro Spot (zweimal!) waren der verbliebene
-            ' CPU-Fresser beim Verwischen. Die Kanal-REIHENFOLGE ist fuer den Blur egal (jeder
-            ' Kanal wird unabhaengig gemittelt, "R" ist einfach Byte-Index 0); premultiplizierte
-            ' Werte zu mitteln ist fuers Kompositieren korrekt. Fremdformate (nicht 4 Byte/Pixel)
-            ' fallen auf den langsamen GetPixel-Pfad zurueck.
+            ' Drei gepoolte Byte-Puffer ersetzen zwoelf Integer-Arrays. Der Algorithmus bleibt
+            ' derselbe zweistufige Box-Blur inklusive seiner Randbehandlung; pro Patch-Pixel
+            ' sinkt der verwaltete Arbeitsbereich damit von 48 auf 12 Byte und wird zwischen
+            ' den Spots wiederverwendet, statt den GC bei jedem Mauspunkt zu belasten.
             Dim rawSupported = source.BytesPerPixel = 4 AndAlso source.GetPixels() <> IntPtr.Zero
-            If rawSupported Then
-                Dim rowBuffer(width * 4 - 1) As Byte
-                Dim basePtr = source.GetPixels()
-                Dim srcStride = source.RowBytes
-                For y = 0 To height - 1
-                    Runtime.InteropServices.Marshal.Copy(IntPtr.Add(basePtr, y * srcStride), rowBuffer, 0, width * 4)
-                    Dim row = y * width
-                    For x = 0 To width - 1
-                        Dim i = row + x
-                        Dim o = x * 4
-                        srcR(i) = rowBuffer(o)
-                        srcG(i) = rowBuffer(o + 1)
-                        srcB(i) = rowBuffer(o + 2)
-                        srcA(i) = rowBuffer(o + 3)
+            Try
+                If rawSupported Then
+                    Dim basePtr = source.GetPixels()
+                    Dim srcStride = source.RowBytes
+                    For y = 0 To height - 1
+                        Marshal.Copy(IntPtr.Add(basePtr, (top + y) * srcStride + left * 4),
+                                     src, y * rowByteCount, rowByteCount)
                     Next
-                Next
-            Else
-                For y = 0 To height - 1
-                    Dim row = y * width
-                    For x = 0 To width - 1
-                        Dim c = source.GetPixel(x, y)
-                        Dim i = row + x
-                        srcR(i) = c.Red
-                        srcG(i) = c.Green
-                        srcB(i) = c.Blue
-                        srcA(i) = c.Alpha
+                Else
+                    For y = 0 To height - 1
+                        Dim row = y * rowByteCount
+                        For x = 0 To width - 1
+                            Dim c = source.GetPixel(left + x, top + y)
+                            Dim o = row + x * 4
+                            src(o) = c.Red
+                            src(o + 1) = c.Green
+                            src(o + 2) = c.Blue
+                            src(o + 3) = c.Alpha
+                        Next
                     Next
-                Next
-            End If
+                End If
 
-            For y = 0 To height - 1
-                Dim row = y * width
-                Dim sumR As Integer = 0, sumG As Integer = 0, sumB As Integer = 0, sumA As Integer = 0
-                Dim samples As Integer = 0
-                For x = 0 To Math.Min(width - 1, radius)
-                    Dim i = row + x
-                    sumR += srcR(i) : sumG += srcG(i) : sumB += srcB(i) : sumA += srcA(i)
-                    samples += 1
+                For y = 0 To height - 1
+                    Dim row = y * rowByteCount
+                    Dim sum0 As Integer = 0, sum1 As Integer = 0, sum2 As Integer = 0, sum3 As Integer = 0
+                    Dim samples As Integer = 0
+                    For x = 0 To Math.Min(width - 1, radius)
+                        Dim o = row + x * 4
+                        sum0 += src(o) : sum1 += src(o + 1) : sum2 += src(o + 2) : sum3 += src(o + 3)
+                        samples += 1
+                    Next
+                    For x = 0 To width - 1
+                        Dim o = x * 4
+                        If x - radius - 1 >= 0 Then
+                            Dim removeOffset = row + (x - radius - 1) * 4
+                            sum0 -= src(removeOffset) : sum1 -= src(removeOffset + 1)
+                            sum2 -= src(removeOffset + 2) : sum3 -= src(removeOffset + 3)
+                            samples -= 1
+                        End If
+                        If x + radius < width AndAlso x > 0 Then
+                            Dim addOffset = row + (x + radius) * 4
+                            sum0 += src(addOffset) : sum1 += src(addOffset + 1)
+                            sum2 += src(addOffset + 2) : sum3 += src(addOffset + 3)
+                            samples += 1
+                        End If
+                        Dim outOffset = row + o
+                        tmp(outOffset) = CByte(sum0 \ samples)
+                        tmp(outOffset + 1) = CByte(sum1 \ samples)
+                        tmp(outOffset + 2) = CByte(sum2 \ samples)
+                        tmp(outOffset + 3) = CByte(sum3 \ samples)
+                    Next
                 Next
+
                 For x = 0 To width - 1
-                    If x - radius - 1 >= 0 Then
-                        Dim removeIndex = row + x - radius - 1
-                        sumR -= srcR(removeIndex) : sumG -= srcG(removeIndex) : sumB -= srcB(removeIndex) : sumA -= srcA(removeIndex)
-                        samples -= 1
-                    End If
-                    If x + radius < width AndAlso x > 0 Then
-                        Dim addIndex = row + x + radius
-                        sumR += srcR(addIndex) : sumG += srcG(addIndex) : sumB += srcB(addIndex) : sumA += srcA(addIndex)
+                    Dim columnOffset = x * 4
+                    Dim sum0 As Integer = 0, sum1 As Integer = 0, sum2 As Integer = 0, sum3 As Integer = 0
+                    Dim samples As Integer = 0
+                    For y = 0 To Math.Min(height - 1, radius)
+                        Dim o = y * rowByteCount + columnOffset
+                        sum0 += tmp(o) : sum1 += tmp(o + 1) : sum2 += tmp(o + 2) : sum3 += tmp(o + 3)
                         samples += 1
-                    End If
-                    Dim outIndex = row + x
-                    tmpR(outIndex) = sumR \ samples
-                    tmpG(outIndex) = sumG \ samples
-                    tmpB(outIndex) = sumB \ samples
-                    tmpA(outIndex) = sumA \ samples
-                Next
-            Next
-
-            Dim result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
-            Dim outR(count - 1) As Integer
-            Dim outG(count - 1) As Integer
-            Dim outB(count - 1) As Integer
-            Dim outA(count - 1) As Integer
-            For x = 0 To width - 1
-                Dim sumR As Integer = 0, sumG As Integer = 0, sumB As Integer = 0, sumA As Integer = 0
-                Dim samples As Integer = 0
-                For y = 0 To Math.Min(height - 1, radius)
-                    Dim i = y * width + x
-                    sumR += tmpR(i) : sumG += tmpG(i) : sumB += tmpB(i) : sumA += tmpA(i)
-                    samples += 1
-                Next
-                For y = 0 To height - 1
-                    If y - radius - 1 >= 0 Then
-                        Dim removeIndex = (y - radius - 1) * width + x
-                        sumR -= tmpR(removeIndex) : sumG -= tmpG(removeIndex) : sumB -= tmpB(removeIndex) : sumA -= tmpA(removeIndex)
-                        samples -= 1
-                    End If
-                    If y + radius < height AndAlso y > 0 Then
-                        Dim addIndex = (y + radius) * width + x
-                        sumR += tmpR(addIndex) : sumG += tmpG(addIndex) : sumB += tmpB(addIndex) : sumA += tmpA(addIndex)
-                        samples += 1
-                    End If
-                    Dim outIndex = y * width + x
-                    outR(outIndex) = sumR \ samples
-                    outG(outIndex) = sumG \ samples
-                    outB(outIndex) = sumB \ samples
-                    outA(outIndex) = sumA \ samples
-                Next
-            Next
-
-            Dim resultRaw = result.BytesPerPixel = 4 AndAlso result.GetPixels() <> IntPtr.Zero
-            If rawSupported AndAlso resultRaw Then
-                Dim rowBuffer(width * 4 - 1) As Byte
-                Dim basePtr = result.GetPixels()
-                Dim dstStride = result.RowBytes
-                For y = 0 To height - 1
-                    Dim row = y * width
-                    For x = 0 To width - 1
-                        Dim i = row + x
-                        Dim o = x * 4
-                        rowBuffer(o) = CByte(outR(i))
-                        rowBuffer(o + 1) = CByte(outG(i))
-                        rowBuffer(o + 2) = CByte(outB(i))
-                        rowBuffer(o + 3) = CByte(outA(i))
                     Next
-                    Runtime.InteropServices.Marshal.Copy(rowBuffer, 0, IntPtr.Add(basePtr, y * dstStride), width * 4)
-                Next
-            Else
-                For y = 0 To height - 1
-                    Dim row = y * width
-                    For x = 0 To width - 1
-                        Dim i = row + x
-                        result.SetPixel(x, y, New SKColor(CByte(outR(i)), CByte(outG(i)), CByte(outB(i)), CByte(outA(i))))
+                    For y = 0 To height - 1
+                        If y - radius - 1 >= 0 Then
+                            Dim removeOffset = (y - radius - 1) * rowByteCount + columnOffset
+                            sum0 -= tmp(removeOffset) : sum1 -= tmp(removeOffset + 1)
+                            sum2 -= tmp(removeOffset + 2) : sum3 -= tmp(removeOffset + 3)
+                            samples -= 1
+                        End If
+                        If y + radius < height AndAlso y > 0 Then
+                            Dim addOffset = (y + radius) * rowByteCount + columnOffset
+                            sum0 += tmp(addOffset) : sum1 += tmp(addOffset + 1)
+                            sum2 += tmp(addOffset + 2) : sum3 += tmp(addOffset + 3)
+                            samples += 1
+                        End If
+                        Dim outOffset = y * rowByteCount + columnOffset
+                        output(outOffset) = CByte(sum0 \ samples)
+                        output(outOffset + 1) = CByte(sum1 \ samples)
+                        output(outOffset + 2) = CByte(sum2 \ samples)
+                        output(outOffset + 3) = CByte(sum3 \ samples)
                     Next
                 Next
-            End If
 
-            Return result
+                result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
+                Dim resultRaw = result.BytesPerPixel = 4 AndAlso result.GetPixels() <> IntPtr.Zero
+                If rawSupported AndAlso resultRaw Then
+                    Dim basePtr = result.GetPixels()
+                    Dim dstStride = result.RowBytes
+                    For y = 0 To height - 1
+                        Marshal.Copy(output, y * rowByteCount,
+                                     IntPtr.Add(basePtr, y * dstStride), rowByteCount)
+                    Next
+                Else
+                    For y = 0 To height - 1
+                        Dim row = y * rowByteCount
+                        For x = 0 To width - 1
+                            Dim o = row + x * 4
+                            result.SetPixel(x, y, New SKColor(output(o), output(o + 1), output(o + 2), output(o + 3)))
+                        Next
+                    Next
+                End If
+
+                Return result
+            Catch
+                result?.Dispose()
+                Throw
+            Finally
+                ArrayPool(Of Byte).Shared.Return(src)
+                ArrayPool(Of Byte).Shared.Return(tmp)
+                ArrayPool(Of Byte).Shared.Return(output)
+            End Try
         End Function
 
         Private Shared Sub DrawHealingRegion(result As SKBitmap, canvas As SKCanvas, source As SKBitmap,
