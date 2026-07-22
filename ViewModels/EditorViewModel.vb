@@ -6696,13 +6696,12 @@ Namespace ViewModels
             Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
             If annotation Is Nothing OrElse baseWidth <= 0 OrElse baseHeight <= 0 OrElse displayWidth <= 0 OrElse displayHeight <= 0 Then Return Nothing
-            Dim adj As New ImageAdjustments With {
-                .SourceWidthPixels = baseWidth,
-                .SourceHeightPixels = baseHeight,
-                .RotationDegrees = _appliedRotationDegrees,
-                .FlipHorizontal = _appliedFlipH,
-                .FlipVertical = _appliedFlipV
-            }
+            ' UI-Overlay und gebackene Szene muessen dasselbe Geometrie-Rezept sehen. Insbesondere
+            ' darf hier der angewendete Crop nicht fehlen, sonst ist zwar der Export korrekt, der
+            ' Auswahlrahmen springt aber weiterhin an die alte Position.
+            Dim adj = BuildAppliedGeometryAdjustments()
+            adj.SourceWidthPixels = baseWidth
+            adj.SourceHeightPixels = baseHeight
             Return ImageProcessor.TransformAnnotationForGeometry(annotation, adj, displayWidth, displayHeight)
         End Function
 
@@ -6715,12 +6714,21 @@ Namespace ViewModels
             Dim dy = y / 100.0 * displaySize.Height
             Dim dw = width / 100.0 * displaySize.Width
             Dim dh = height / 100.0 * displaySize.Height
+            ' Die sichtbare Objektposition bezieht sich auf den bereits beschnittenen Ausschnitt.
+            ' Zurueckgespeichert wird weiterhin im stabilen Pixelraum des Originalbilds: erst die
+            ' Anzeigeabbildung gegen die Crop-Groesse aufloesen, dann den Crop-Ursprung addieren.
+            Dim geometry = BuildAppliedGeometryAdjustments()
+            Dim crop = ImageProcessor.ComputeGeometryCropRect(baseWidth, baseHeight, geometry)
             Dim sourceGeometry = ImageGeometryMapper.DisplayObjectToSource(
                 New SkiaSharp.SKRect(CSng(dx), CSng(dy), CSng(dx + dw), CSng(dy + dh)),
-                baseWidth, baseHeight, displaySize.Width, displaySize.Height,
+                crop.Width, crop.Height, displaySize.Width, displaySize.Height,
                 _appliedRotationDegrees, _appliedFlipH, _appliedFlipV, 0)
-            Return (sourceGeometry.Rect.Left / baseWidth * 100.0,
-                    sourceGeometry.Rect.Top / baseHeight * 100.0,
+            Dim normalizedKind = If(kind, "").Trim().ToLowerInvariant()
+            Dim isAnchoredWatermark = normalizedKind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(_annotationAnchor)
+            Dim sourceX = sourceGeometry.Rect.Left + If(isAnchoredWatermark, 0, crop.Left)
+            Dim sourceY = sourceGeometry.Rect.Top + If(isAnchoredWatermark, 0, crop.Top)
+            Return (sourceX / baseWidth * 100.0,
+                    sourceY / baseHeight * 100.0,
                     sourceGeometry.Rect.Width / baseWidth * 100.0,
                     sourceGeometry.Rect.Height / baseHeight * 100.0)
         End Function

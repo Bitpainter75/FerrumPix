@@ -2984,8 +2984,8 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             Return New SKSizeI(Math.Max(1, w), Math.Max(1, h))
         End Function
 
-        Private Shared Function ComputeGeometryCropRect(sourceWidth As Integer, sourceHeight As Integer,
-                                                         adj As ImageAdjustments) As SKRectI
+        Friend Shared Function ComputeGeometryCropRect(sourceWidth As Integer, sourceHeight As Integer,
+                                                        adj As ImageAdjustments) As SKRectI
             Dim left = Math.Max(0, Math.Min(CInt(Math.Round(sourceWidth * Clamp(adj.CropLeftPercent, 0, 100) / 100.0F)), sourceWidth - 1))
             Dim top = Math.Max(0, Math.Min(CInt(Math.Round(sourceHeight * Clamp(adj.CropTopPercent, 0, 100) / 100.0F)), sourceHeight - 1))
             Dim right = Math.Max(left + 1, Math.Min(sourceWidth - CInt(Math.Round(sourceWidth * Clamp(adj.CropRightPercent, 0, 100) / 100.0F)), sourceWidth))
@@ -5805,9 +5805,29 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim preHeight = If(rotation = 90 OrElse rotation = 270, outputWidth, outputHeight)
             If preWidth <= 0 OrElse preHeight <= 0 Then Return annotation
 
-            Dim renderAnnotation = ScaleAnnotationForSource(annotation,
-                                                            preWidth / CSng(adj.SourceWidthPixels),
-                                                            preHeight / CSng(adj.SourceHeightPixels))
+            ' Annotationen leben im Pixelraum des unbeschnittenen Basisbilds. Nach ApplyCrop beginnt
+            ' der Renderraum jedoch an der linken/oberen Crop-Kante. Nur auf die Restgroesse zu
+            ' skalieren (das fruehere Verhalten) verschob deshalb jedes Objekt: x=500 wurde bei einem
+            ' 10-%-Crop zu 450 statt zu 400. Erst den Crop-Ursprung abziehen, danach eine eventuelle
+            ' Preview-/Resize-Skalierung auf die beschnittene Groesse anwenden.
+            Dim crop = ComputeGeometryCropRect(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
+            Dim croppedAnnotation = annotation.Clone()
+            Dim kind = If(croppedAnnotation.Kind, "").Trim().ToLowerInvariant()
+            Dim isAnchoredWatermark = kind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(croppedAnnotation.Anchor)
+            If Not isAnchoredWatermark Then
+                croppedAnnotation.XPixels -= crop.Left
+                croppedAnnotation.YPixels -= crop.Top
+            End If
+            If IsPaintKind(kind) AndAlso croppedAnnotation.Strokes IsNot Nothing AndAlso
+               (crop.Left <> 0 OrElse crop.Top <> 0) Then
+                croppedAnnotation.Strokes = croppedAnnotation.Strokes.Where(Function(stroke) stroke IsNot Nothing).Select(
+                    Function(stroke) New BrushStroke(stroke.Points.Select(
+                        Function(p) New StrokePoint(p.X - crop.Left, p.Y - crop.Top)).ToList())).ToList()
+            End If
+
+            Dim renderAnnotation = ScaleAnnotationForSource(croppedAnnotation,
+                                                            preWidth / CSng(crop.Width),
+                                                            preHeight / CSng(crop.Height))
             If renderAnnotation Is Nothing Then Return Nothing
             If q = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical Then Return renderAnnotation
 
