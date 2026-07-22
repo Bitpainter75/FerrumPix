@@ -2187,7 +2187,20 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                     Next
                 End If
                 If Not bounds.HasValue Then Return SKRectI.Empty
-                Dim paintPad = Math.Max(4.0F, annotation.StrokeWidth * 2.0F)
+                ' Muss die RENDER-Reichweite von DrawBrushStrokeWithEffects spiegeln (Audit 2026-07-22):
+                ' dort pad = strokeWidth + |shadowDx| + |shadowDy| + 3*max(shadowSigma, glowSigma) + 4.
+                ' Der alte Pauschalwert Max(4, strokeWidth*2) war kleiner als die Glow-Reichweite
+                ' (glowSigma bis 0,8*strokeWidth => 3 Sigma = 2,4*strokeWidth ZUSAETZLICH zum Strich) -
+                ' beim Patch-Render blieben abgeschnittene/veraltete Glow-Saeume am Patchrand stehen.
+                ' Formen/Text rechnen ihre Effektraender unten laengst ein, nur Paint-Kinds nicht.
+                Dim paintObjSize = Math.Max(1.0F, annotation.StrokeWidth)
+                Dim paintShadowDx = If(annotation.ShadowEnabled, Clamp(annotation.ShadowOffsetXPercent, -100, 100) / 100.0F * paintObjSize, 0.0F)
+                Dim paintShadowDy = If(annotation.ShadowEnabled, Clamp(annotation.ShadowOffsetYPercent, -100, 100) / 100.0F * paintObjSize, 0.0F)
+                Dim paintShadowSigma = If(annotation.ShadowEnabled, Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * paintObjSize * ShadowBlurSigmaFactor, 0.0F)
+                Dim paintGlowSigma = If(annotation.GlowEnabled, Clamp(annotation.GlowBlur, 0, 100) / 100.0F * paintObjSize * 0.8F, 0.0F)
+                Dim paintPad = Math.Max(Math.Max(4.0F, annotation.StrokeWidth * 2.0F),
+                                        paintObjSize + Math.Abs(paintShadowDx) + Math.Abs(paintShadowDy) +
+                                        Math.Max(paintShadowSigma, paintGlowSigma) * 3.0F + 4.0F)
                 Return ClampRectToBitmap(InflateToRectI(bounds.Value, paintPad), sourceWidth, sourceHeight)
             End If
 
@@ -2981,10 +2994,13 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
         End Function
 
         ''' <summary>Bildet einen Punkt des unbeschnittenen SourceSpace durch dieselbe Geometriekette
-        ''' wie der Renderer ab. False bedeutet: Der Punkt wurde vom Crop entfernt.</summary>
-        Private Shared Function TrySourcePointToGeometryOutput(sourceX As Double, sourceY As Double,
-                                                               sourceWidth As Integer, sourceHeight As Integer,
-                                                               adj As ImageAdjustments, ByRef output As SKPoint) As Boolean
+        ''' wie der Renderer ab. False bedeutet: Der Punkt wurde vom Crop entfernt.
+        ''' Public seit Audit 2026-07-22: der Editor braucht dieselbe VOLLSTÄNDIGE Abbildung für
+        ''' Pinsel-/Retusche-Overlays - die Mapper-Kurzform (nur Drehung/Flip) saß nach
+        ''' angewendetem Crop/Resize/Canvas daneben.</summary>
+        Public Shared Function TrySourcePointToGeometryOutput(sourceX As Double, sourceY As Double,
+                                                              sourceWidth As Integer, sourceHeight As Integer,
+                                                              adj As ImageAdjustments, ByRef output As SKPoint) As Boolean
             Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
             If sourceX < crop.Left OrElse sourceY < crop.Top OrElse sourceX >= crop.Right OrElse sourceY >= crop.Bottom Then Return False
             Dim x = sourceX - crop.Left, y = sourceY - crop.Top
@@ -3044,6 +3060,112 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                 x += offsetX : y += offsetY
             End If
             output = New SKPoint(CSng(x), CSng(y))
+            Return True
+        End Function
+
+        ''' <summary>EXAKTE Inverse von <see cref="TrySourcePointToGeometryOutput"/> (Audit 2026-07-22):
+        ''' bildet einen Punkt des AUSGABE-Raums (Anzeigebild nach Crop/Vierteldrehung/Begradigung/
+        ''' Resize/Canvas) zurück auf den unbeschnittenen SourceSpace. Jede Stufe wird in umgekehrter
+        ''' Reihenfolge mit den IDENTISCHEN Maß-Formeln (inkl. Rundungen) abgelöst, damit Hin- und
+        ''' Rückweg dieselben Zwischengrößen sehen. False bedeutet: der Punkt liegt außerhalb des
+        ''' Bildinhalts (Canvas-Rand, leere Begradigungs-Ecke) oder des Crop-Ausschnitts - dort gibt
+        ''' es keinen Source-Pixel, ein Backen (Pinsel/Retusche) muss den Punkt überspringen.
+        ''' Randtoleranz: bis 0,5 px außerhalb wird auf die Kante geklemmt (Rundungsrauschen der
+        ''' Anzeige), erst darüber hinaus ist der Punkt wirklich "neben dem Bild".</summary>
+        Public Shared Function TryGeometryOutputToSourcePoint(outputX As Double, outputY As Double,
+                                                              sourceWidth As Integer, sourceHeight As Integer,
+                                                              adj As ImageAdjustments, ByRef source As SKPoint) As Boolean
+            If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse adj Is Nothing Then Return False
+            Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
+            Dim w As Double = crop.Width, h As Double = crop.Height
+
+            ' Maße der Kette VORWÄRTS nachvollziehen (gleiche Formeln wie oben), um sie rückwärts
+            ' Stufe für Stufe abzulösen.
+            Dim q = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
+            Dim rotW = If(q = 90 OrElse q = 270, h, w)
+            Dim rotH = If(q = 90 OrElse q = 270, w, h)
+
+            Dim hasStraighten = Math.Abs(adj.StraightenDegrees) >= 0.01F
+            Dim outW = rotW, outH = rotH, scale = 1.0
+            If hasStraighten Then
+                Dim absRadians = Math.Abs(adj.StraightenDegrees) * Math.PI / 180.0
+                If adj.StraightenExpandCanvas Then
+                    outW = Math.Max(1, Math.Ceiling(rotW * Math.Cos(absRadians) + rotH * Math.Sin(absRadians)))
+                    outH = Math.Max(1, Math.Ceiling(rotW * Math.Sin(absRadians) + rotH * Math.Cos(absRadians)))
+                Else
+                    scale = Math.Max(rotW / (rotW * Math.Cos(absRadians) + rotH * Math.Sin(absRadians)),
+                                     rotH / (rotW * Math.Sin(absRadians) + rotH * Math.Cos(absRadians)))
+                    scale = Math.Max(1.0, scale)
+                End If
+            End If
+
+            Dim resizeW = adj.ResizeWidth, resizeH = adj.ResizeHeight
+            If resizeW > 0 OrElse resizeH > 0 Then
+                If resizeW <= 0 Then resizeW = CInt(Math.Round(outW * (resizeH / outH)))
+                If resizeH <= 0 Then resizeH = CInt(Math.Round(outH * (resizeW / outW)))
+                resizeW = Math.Max(1, resizeW) : resizeH = Math.Max(1, resizeH)
+            Else
+                resizeW = 0 : resizeH = 0
+            End If
+            Dim afterResizeW = If(resizeW > 0, CDbl(resizeW), outW)
+            Dim afterResizeH = If(resizeH > 0, CDbl(resizeH), outH)
+
+            Dim x = outputX, y = outputY
+
+            ' --- Canvas-Offset zurück ---
+            Dim canvasW = If(adj.CanvasWidth > 0, adj.CanvasWidth, CInt(Math.Round(afterResizeW)))
+            Dim canvasH = If(adj.CanvasHeight > 0, adj.CanvasHeight, CInt(Math.Round(afterResizeH)))
+            If canvasW <> CInt(Math.Round(afterResizeW)) OrElse canvasH <> CInt(Math.Round(afterResizeH)) Then
+                Dim offsetX As Double, offsetY As Double
+                Select Case If(adj.CanvasAnchor, "Center").Trim().ToLowerInvariant()
+                    Case "top-left", "left-top" : offsetX = 0 : offsetY = 0
+                    Case "top", "top-center" : offsetX = (canvasW - afterResizeW) / 2.0 : offsetY = 0
+                    Case "top-right", "right-top" : offsetX = canvasW - afterResizeW : offsetY = 0
+                    Case "left", "middle-left" : offsetX = 0 : offsetY = (canvasH - afterResizeH) / 2.0
+                    Case "right", "middle-right" : offsetX = canvasW - afterResizeW : offsetY = (canvasH - afterResizeH) / 2.0
+                    Case "bottom-left", "left-bottom" : offsetX = 0 : offsetY = canvasH - afterResizeH
+                    Case "bottom", "bottom-center" : offsetX = (canvasW - afterResizeW) / 2.0 : offsetY = canvasH - afterResizeH
+                    Case "bottom-right", "right-bottom" : offsetX = canvasW - afterResizeW : offsetY = canvasH - afterResizeH
+                    Case Else : offsetX = (canvasW - afterResizeW) / 2.0 : offsetY = (canvasH - afterResizeH) / 2.0
+                End Select
+                x -= offsetX : y -= offsetY
+            End If
+            If Not TryClampToRange(x, afterResizeW) OrElse Not TryClampToRange(y, afterResizeH) Then Return False
+
+            ' --- Resize zurück ---
+            If resizeW > 0 Then
+                x *= outW / afterResizeW
+                y *= outH / afterResizeH
+            End If
+
+            ' --- Begradigung zurück (invers: erst ent-drehen, dann ent-skalieren) ---
+            If hasStraighten Then
+                Dim radians = adj.StraightenDegrees * Math.PI / 180.0
+                Dim cosA = Math.Cos(radians), sinA = Math.Sin(radians)
+                Dim dx = x - outW / 2.0, dy = y - outH / 2.0
+                Dim ux = (cosA * dx + sinA * dy) / scale
+                Dim uy = (-sinA * dx + cosA * dy) / scale
+                x = rotW / 2.0 + ux
+                y = rotH / 2.0 + uy
+                If Not TryClampToRange(x, rotW) OrElse Not TryClampToRange(y, rotH) Then Return False
+            End If
+
+            ' --- Vierteldrehung/Flip zurück (auf den beschnittenen Ausschnitt bezogen) ---
+            Dim p = ImageGeometryMapper.DisplayPointToSource(x, y, w, h, adj.RotationDegrees,
+                                                             adj.FlipHorizontal, adj.FlipVertical)
+            Dim sx As Double = p.X, sy As Double = p.Y
+            If Not TryClampToRange(sx, w) OrElse Not TryClampToRange(sy, h) Then Return False
+
+            source = New SKPoint(CSng(sx + crop.Left), CSng(sy + crop.Top))
+            Return True
+        End Function
+
+        ''' Klemmt einen Wert in [0, size): bis 0,5 px außerhalb ist Rundungsrauschen und wird auf
+        ''' die Kante gelegt, darüber hinaus liegt der Punkt echt außerhalb (False).
+        Private Shared Function TryClampToRange(ByRef value As Double, size As Double) As Boolean
+            If value < -0.5 OrElse value > size + 0.5 Then Return False
+            If value < 0 Then value = 0
+            If value >= size Then value = Math.Max(0.0, size - 0.001)
             Return True
         End Function
 
@@ -3266,13 +3388,21 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
 
         ''' <summary>Mischt <paramref name="adjusted"/> (angepasst) über <paramref name="baseline"/> (unverändert)
         ''' anhand der Alpha8-<paramref name="mask"/>: out = baseline·(255−m) + adjusted·m. Alle drei müssen
-        ''' dieselben Maße haben. Fällt bei ungeeignetem Farbformat auf eine Kopie von adjusted zurück.</summary>
+        ''' dieselben Maße haben. Fällt bei ungeeignetem Farbformat auf eine Kopie der BASELINE zurück.</summary>
         Private Shared Function CompositeSelectionScoped(baseline As SKBitmap, adjusted As SKBitmap, mask As SKBitmap) As SKBitmap
             Dim w = adjusted.Width, h = adjusted.Height
             Dim aStride As Integer, bStride As Integer
             Dim aBuf As Byte() = Nothing, bBuf As Byte() = Nothing
             If Not TryBorrowBgraBuffer(adjusted, aBuf, aStride) OrElse Not TryBorrowBgraBuffer(baseline, bBuf, bStride) Then
-                Return CloneBitmap(adjusted)
+                ' Fallback-Richtung BASELINE, nicht adjusted (Audit 2026-07-22): eine Kopie von
+                ' adjusted machte die auswahl-skopierte Anpassung still GLOBAL - exakt der Bruch
+                ' der Garantie aus ProcessBitmapBase ("darf niemals still auf eine globale
+                ' Anpassung zurueckfallen"; der Masken-Decode-Fehlerfall dort nimmt ebenfalls die
+                ' Baseline). Loggen statt schweigen - stiller Farbtyp-Rueckfall ist eine bekannte
+                ' Fallenklasse dieses Projekts.
+                DiagnosticLogService.LogAlways("ImageProcessor.SelectionScope",
+                    $"composite skipped: non-BGRA pipeline bitmap adjusted={adjusted.ColorType} baseline={baseline.ColorType} - returning baseline")
+                Return CloneBitmap(baseline)
             End If
             Dim mStride = mask.RowBytes
             Dim mBuf = New Byte(mStride * mask.Height - 1) {}
@@ -3365,15 +3495,22 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                     adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
                     SelectionMaskFingerprint(adj.SelectionMaskPngBase64), adj.SelectionFeatherPixels
                 }.Select(AddressOf KeyPart)), "")
+            ' JEDES Feld, das ProcessBitmapBase liest, MUSS hier stehen (Audit 2026-07-22): die
+            ' Untergruppen-Regler SharpenRadius/SharpenDetail, NoiseReductionDetail, GrainSize/
+            ' GrainFrequency und VignetteStyle fehlten - wer NUR so einen Regler bewegte, bekam
+            ' das gecachte alte Bild zurueck ("Regler macht nix"), und Patch-Renderer
+            ' komponierten auf veralteter Basis.
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
-                adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.NoiseReduction, adj.NoiseReductionMethod, adj.ColorNoiseReduction,
+                adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
+                adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.ColorNoiseReduction,
                 adj.DustScratches, adj.Haze, adj.AddNoise, adj.[Structure], adj.Glow,
 adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.CalibrationGreenHue, adj.CalibrationGreenSaturation,
                 adj.CalibrationBlueHue, adj.CalibrationBlueSaturation, adj.CalibrationShadowTint,
                                 adj.Vibrance, adj.Vignette, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather,
-                adj.VignetteCenterX, adj.VignetteCenterY, adj.Grain, adj.BorderSize, adj.BorderColor,
+                adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle,
+                adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.BorderSize, adj.BorderColor,
                 adj.BorderCornerRadius, adj.BorderEffect, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
@@ -5108,7 +5245,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                     Math.Min(source.Height, targetTop + height + CInt(Math.Ceiling(radius))))
 
             For Each distance In distances
-                For i = 0 To 31
+                ' 24 Winkel pro Ring - der Teiler unten. "0 To 31" wiederholte die Winkel von
+                ' i=0..7 exakt (i Mod 24) und rechnete pro Ring 8 von 32 Kandidaten samt
+                ' Statistik/Randbewertung doppelt: ~33 % verschenkte Suchzeit ohne jede Wirkung
+                ' aufs Ergebnis, ein Duplikat gewinnt nie gegen sich selbst (Audit 2026-07-22).
+                For i = 0 To 23
                     Dim angle = (Math.PI * 2.0 * i) / 24.0
                     Dim sampleCenterX = cx + CSng(Math.Cos(angle) * distance)
                     Dim sampleCenterY = cy + CSng(Math.Sin(angle) * distance)
@@ -8070,7 +8211,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim rw = If(normalized = 90 OrElse normalized = 270, sh, sw)
             Dim rh = If(normalized = 90 OrElse normalized = 270, sw, sh)
 
-            Dim rotated = New SKBitmap(rw, rh)
+            ' Farbtyp/Alpha der Quelle DURCHREICHEN (Audit 2026-07-22): das war die einzige Stufe der
+            ' Geometriekette ohne (Crop, Straighten, Resize, Canvas tun es alle) - nach Drehung/Flip
+            ' lief die Pipeline im Plattform-Default-Format. Auf Plattformen, deren N32 nicht
+            ' Bgra8888 ist, fielen danach alle Bgra-only-Pfade still um (Auswahl-Composite,
+            ' Filmnegativ-Messung, Vignette-Pufferpfad).
+            Dim rotated = New SKBitmap(rw, rh, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(rotated)
                 canvas.Clear(SKColors.Transparent)
                 Select Case normalized
@@ -8091,7 +8237,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
             Dim w = rotated.Width
             Dim h = rotated.Height
-            Dim result = New SKBitmap(w, h)
+            Dim result = New SKBitmap(w, h, rotated.ColorType, rotated.AlphaType)
             Using canvas = New SKCanvas(result)
                 Dim matrix = SKMatrix.Identity
                 If adj.FlipHorizontal Then
@@ -8147,6 +8293,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
+        ''' <summary>True, wenn SaveImage das Ziel-FORMAT dieser Endung tatsächlich erzeugen kann
+        ''' (JPEG/PNG/WEBP/PDF). Alles andere lehnt SaveImage ab, statt still JPEG-Bytes unter
+        ''' fremder Endung zu schreiben (Audit 2026-07-22) - Aufrufer nutzen die Funktion, um
+        ''' in-place-Speichern/Umschreiben vorab auszuschließen und auf "Speichern unter" zu lenken.</summary>
+        Public Shared Function CanEncodeToTargetExtension(path As String) As Boolean
+            Select Case IO.Path.GetExtension(If(path, "")).ToLowerInvariant()
+                Case ".jpg", ".jpeg", ".png", ".webp", ".pdf"
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
+
         ''' <paramref name="workingFull"/>: voll aufgelöstes ARBEITSBILD des Editors (Umbau Stufe C) -
         ''' wenn gesetzt, ersetzt es den Datei-Decode als Pipeline-Eingang (Besitz wechselt hierher,
         ''' wird disposed). Aufrufer übergeben einen Klon (WorkingImageService.CloneFull).
@@ -8172,6 +8331,17 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End If
             If (RawPreviewService.IsSupportedRaw(sourcePath) OrElse PsdPreviewService.IsSupportedPsd(sourcePath)) AndAlso
                PathIdentity.AreSame(sourcePath, targetPath) Then
+                workingFull?.Dispose()
+                Return False
+            End If
+            ' Dieselbe Fehlerklasse eine Formatstufe weiter (Audit 2026-07-22): die Formatwahl unten
+            ' kennt nur PNG/WEBP/PDF und faellt sonst auf JPEG zurueck. Ein Ziel ".tiff"/".bmp"/
+            ' ".gif"/".heic"/... bekam damit still JPEG-Bytes unter fremder Endung - beim
+            ' in-place-Speichern wurde das Original verlustbehaftet konvertiert UND falsch
+            ' etikettiert. Verboten wird am Ziel-FORMAT, nicht am Pfad (siehe RAW-Lehre oben).
+            If Not CanEncodeToTargetExtension(targetPath) Then
+                DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                    $"refused: target extension not encodable target={IO.Path.GetFileName(targetPath)}")
                 workingFull?.Dispose()
                 Return False
             End If
@@ -10173,29 +10343,42 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function LoadCubeLutUnlocked(path As String) As Lut3DData
             Dim size As Integer = 0
             Dim values As New List(Of Single)()
-            For Each rawLine In File.ReadLines(path)
-                Dim line = rawLine.Trim()
-                If line.Length = 0 OrElse line.StartsWith("#") Then Continue For
-                If line.StartsWith("LUT_3D_SIZE", StringComparison.OrdinalIgnoreCase) Then
-                    Dim parts = line.Split({" "c, ControlChars.Tab}, StringSplitOptions.RemoveEmptyEntries)
-                    If parts.Length >= 2 Then Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, size)
-                    Continue For
-                End If
-                If Not Char.IsDigit(line(0)) AndAlso line(0) <> "-"c AndAlso line(0) <> "+"c AndAlso line(0) <> "."c Then Continue For
+            Try
+                For Each rawLine In File.ReadLines(path)
+                    Dim line = rawLine.Trim()
+                    If line.Length = 0 OrElse line.StartsWith("#") Then Continue For
+                    If line.StartsWith("LUT_3D_SIZE", StringComparison.OrdinalIgnoreCase) Then
+                        Dim parts = line.Split({" "c, ControlChars.Tab}, StringSplitOptions.RemoveEmptyEntries)
+                        If parts.Length >= 2 Then Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, size)
+                        Continue For
+                    End If
+                    If Not Char.IsDigit(line(0)) AndAlso line(0) <> "-"c AndAlso line(0) <> "+"c AndAlso line(0) <> "."c Then Continue For
 
-                Dim comps = line.Split({" "c, ControlChars.Tab}, StringSplitOptions.RemoveEmptyEntries)
-                If comps.Length < 3 Then Continue For
-                Dim r, g, b As Single
-                If Single.TryParse(comps(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, r) AndAlso
-                   Single.TryParse(comps(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, g) AndAlso
-                   Single.TryParse(comps(2), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, b) Then
-                    values.Add(r)
-                    values.Add(g)
-                    values.Add(b)
-                End If
-            Next
+                    Dim comps = line.Split({" "c, ControlChars.Tab}, StringSplitOptions.RemoveEmptyEntries)
+                    If comps.Length < 3 Then Continue For
+                    Dim r, g, b As Single
+                    If Single.TryParse(comps(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, r) AndAlso
+                       Single.TryParse(comps(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, g) AndAlso
+                       Single.TryParse(comps(2), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, b) Then
+                        values.Add(r)
+                        values.Add(g)
+                        values.Add(b)
+                    End If
+                Next
+            Catch
+                ' Unlesbare Datei: wie ein Parse-Fehler behandeln (negativ cachen, s.u.).
+                size = 0
+            End Try
 
-            If size < 2 OrElse values.Count <> size * size * size * 3 Then Return Nothing
+            If size < 2 OrElse values.Count <> size * size * size * 3 Then
+                ' Fehlschlag NEGATIV cachen (Audit 2026-07-22): ohne Eintrag wurde eine defekte
+                ' .cube-Datei beim Ziehen am LUT-Stärke-Regler mit JEDEM Vorschau-Frame neu
+                ' geparst. TryGetValue liefert für den Nothing-Eintrag True -> Aufrufer sehen
+                ' weiterhin "keine LUT". Gilt (wie der Positiv-Cache) bis zum Programmende -
+                ' eine extern reparierte Datei braucht einen Neustart bzw. Neu-Auswahl.
+                _cubeLutCache(path) = Nothing
+                Return Nothing
+            End If
 
             Dim data = New Lut3DData With {.Size = size, .Table = values.ToArray()}
             _cubeLutCache(path) = data
@@ -10297,9 +10480,17 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                                 If darken Then
                                                                     VignetteDarken(rR, gG, bB, mix, style, dstBuf(o + 2), dstBuf(o + 1), dstBuf(o))
                                                                 Else
-                                                                    dstBuf(o) = ClampToByte(bB + (255 - bB) * mix)
-                                                                    dstBuf(o + 1) = ClampToByte(gG + (255 - gG) * mix)
-                                                                    dstBuf(o + 2) = ClampToByte(rR + (255 - rR) * mix)
+                                                                    ' Aufhellen "v + (255-v)*mix" gilt fuer STRAIGHT-Werte. Auf den
+                                                                    ' PREMUL-Bytes gerechnet entstand bei Teiltransparenz (Radierer-
+                                                                    ' Loecher) Farbe > Alpha - ungueltiges Premul, zu starke
+                                                                    ' Aufhellung, und der GetPixel-Fallback unten rechnete anders
+                                                                    ' (Audit 2026-07-22). Der Zielweiss-Wert im Premul-Raum ist
+                                                                    ' schlicht das Alpha selbst: v + (a-v)*mix. Bei a=255 bitgleich
+                                                                    ' zur alten Formel; Abdunkeln (Multiplikation) ist premul-korrekt.
+                                                                    Dim aA = CSng(srcBuf(o + 3))
+                                                                    dstBuf(o) = ClampToByte(bB + (aA - bB) * mix)
+                                                                    dstBuf(o + 1) = ClampToByte(gG + (aA - gG) * mix)
+                                                                    dstBuf(o + 2) = ClampToByte(rR + (aA - rR) * mix)
                                                                 End If
                                                             Next
                                                         End Sub)

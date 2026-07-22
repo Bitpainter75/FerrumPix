@@ -309,7 +309,22 @@ Namespace Services
                 Dim before = ExtractRegionLocked(clamped)
                 If before Is Nothing Then Return Nothing
 
-                draw(_full)
+                Try
+                    draw(_full)
+                Catch
+                    ' Wirft der Callback (Audit 2026-07-22), war das Arbeitsbild vorher TEILWEISE
+                    ' beschrieben, ohne dass Version/Vorschau nachzogen - Anzeige und Arbeitsbild
+                    ' liefen still auseinander, und der Vorher-Patch leckte. Deshalb: Region aus
+                    ' dem Vorher-Ausschnitt exakt zurücksetzen (Src-Blend inkl. Alpha), Patch
+                    ' freigeben und den Fehler WEITERREICHEN - die Commit-Queue loggt ihn.
+                    Using canvas = New SKCanvas(_full)
+                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                            canvas.DrawBitmap(before, clamped.Left, clamped.Top, paint)
+                        End Using
+                    End Using
+                    before.Dispose()
+                    Throw
+                End Try
 
                 UpdatePreviewRegionLocked(clamped)
                 _version += 1

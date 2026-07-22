@@ -21,6 +21,11 @@ Namespace Services
         ' Dateien, die sich nur darin unterscheiden, teilten sich sonst das Transparenz-Ergebnis.
         Private Shared ReadOnly _alphaCache As New Dictionary(Of String, Boolean)(PathIdentity.Comparer)
         Private Shared ReadOnly _alphaPending As New HashSet(Of String)(PathIdentity.Comparer)
+        ''' Callbacks von Aufrufern, die auf eine BEREITS LAUFENDE Berechnung desselben Schlüssels
+        ''' warten (Audit 2026-07-22): der zweite Aufrufer (z.B. Editor, während der Viewer dieselbe
+        ''' Datei rechnet) bekam vorher weder Wert noch Benachrichtigung - sein Binding blieb auf
+        ''' dem Default stehen, bis irgendein Zufalls-Re-Read kam.
+        Private Shared ReadOnly _alphaWaiters As New Dictionary(Of String, List(Of Action))(PathIdentity.Comparer)
         Private Shared ReadOnly _alphaLock As New Object()
         ' Grober Deckel gegen unbegrenztes Wachstum über lange Sitzungen; bei Überlauf wird komplett
         ' geleert (die Berechnung ist nach dem Roh-Puffer-Umbau billig genug für Wiederholung).
@@ -77,19 +82,40 @@ Namespace Services
                     hasTransparency = cached
                     Return True
                 End If
-                If _alphaPending.Contains(key) Then Return False
+                If _alphaPending.Contains(key) Then
+                    ' Berechnung läuft schon - den Callback DIESES Aufrufers registrieren, damit
+                    ' auch er nach Abschluss sein PropertyChanged bekommt (statt ihn zu verlieren).
+                    If onComputed IsNot Nothing Then
+                        Dim waiters As List(Of Action) = Nothing
+                        If Not _alphaWaiters.TryGetValue(key, waiters) Then
+                            waiters = New List(Of Action)()
+                            _alphaWaiters(key) = waiters
+                        End If
+                        waiters.Add(onComputed)
+                    End If
+                    Return False
+                End If
                 _alphaPending.Add(key)
             End SyncLock
 
             System.Threading.Tasks.Task.Run(Sub()
                                          Dim value = ComputeHasTransparency(filePath)
+                                         Dim pendingWaiters As List(Of Action) = Nothing
                                          SyncLock _alphaLock
                                              If _alphaCache.Count >= AlphaCacheLimit Then _alphaCache.Clear()
                                              _alphaCache(key) = value
                                              _alphaPending.Remove(key)
+                                             If _alphaWaiters.TryGetValue(key, pendingWaiters) Then _alphaWaiters.Remove(key)
                                          End SyncLock
-                                         If onComputed IsNot Nothing Then
-                                             Avalonia.Threading.Dispatcher.UIThread.Post(Sub() onComputed())
+                                         If onComputed IsNot Nothing OrElse (pendingWaiters IsNot Nothing AndAlso pendingWaiters.Count > 0) Then
+                                             Avalonia.Threading.Dispatcher.UIThread.Post(Sub()
+                                                                                             onComputed?.Invoke()
+                                                                                             If pendingWaiters IsNot Nothing Then
+                                                                                                 For Each waiter In pendingWaiters
+                                                                                                     waiter()
+                                                                                                 Next
+                                                                                             End If
+                                                                                         End Sub)
                                          End If
                                      End Sub)
             Return False

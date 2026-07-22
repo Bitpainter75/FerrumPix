@@ -838,6 +838,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>True, wenn die globalen Regler das Bild und nicht eine Objekt- oder lokale
+        ''' Korrekturebene bedienen. Die globale Anpassungszeile ist kein ListBox-Eintrag, daher
+        ''' wird ihr aktiver Zustand separat vom Ebenenpanel dargestellt.</summary>
+        Public ReadOnly Property IsGlobalAdjustmentsSelected As Boolean
+            Get
+                Return Not HasSelectedPanelLayer AndAlso Not HasSelectedAnnotation
+            End Get
+        End Property
+
         Public Property SelectedLayerOpacity As Double
             Get
                 If _selectedLayerRow?.AdjustmentLayer IsNot Nothing Then
@@ -893,6 +902,20 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasSelectedPanelLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAdjustmentLayer))
             Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
+            Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsSelected))
+        End Sub
+
+        ''' <summary>Wählt die feste globale Einstellungsebene im Ebenenpanel als Reglerziel.
+        ''' Eine lokale Korrektur bleibt dabei im Dokument erhalten, wird aber nicht länger als
+        ''' aktives Ziel für Anpassen/Farbe/Details/Filter verwendet.</summary>
+        Public Sub SelectGlobalAdjustmentsTarget()
+            CommitSelectionAdjustModeToModel()
+            CommitObjectAdjustModeToModel()
+            _selectedMaskedAdjustmentLayerId = ""
+            _selectedLayerRow = Nothing
+            SelectedAnnotationIndex = -1
+            RaiseLayerPanelSelectionChanged()
+            RefreshSelectionAdjustMode()
         End Sub
 
         Private ReadOnly _allShapeIcons As New List(Of ShapeIconEntry)()
@@ -2449,7 +2472,9 @@ Namespace ViewModels
                 ' Das Vergleichsbild wird nur berechnet, während ShowBeforeImage sichtbar ist (siehe
                 ' UpdatePreviewAsync) - beim Einschalten deshalb einmalig frisch nachrendern, damit
                 ' nicht kurz ein veralteter Stand (oder gar kein Bild) zu sehen ist.
-                If value AndAlso Not wasShowing Then SchedulePreviewUpdate()
+                ' markDirty:=False: Umschalten ist reine Anzeige, keine Bearbeitung - sonst fragte
+                ' der Verlassen-Dialog nach ungespeicherten Änderungen, die es nicht gibt.
+                If value AndAlso Not wasShowing Then SchedulePreviewUpdate(markDirty:=False)
                 ' Beim Ausschalten die „Vorher"-Originalquelle freigeben (~40 MB Vorschau-Bitmap).
                 If wasShowing AndAlso Not value Then
                     ReleaseComparisonOriginalSource()
@@ -6700,11 +6725,13 @@ Namespace ViewModels
                     sourceGeometry.Rect.Height / baseHeight * 100.0)
         End Function
 
-        Private Function GetAnnotationDisplayPixelSize() As (Width As Integer, Height As Integer)
-            Dim baseWidth = GetBaseWidth()
-            Dim baseHeight = GetBaseHeight()
-            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (0, 0)
-            Dim geometry = New ImageAdjustments With {
+        ''' <summary>Das ANGEWENDETE Geometrie-Rezept als eigenständiges Objekt - eine Quelle für
+        ''' Ausgabemaße (ComputeGeometryOutputSize) und die vollständige Punktabbildung
+        ''' (TrySourcePointToGeometryOutput / TryGeometryOutputToSourcePoint). Vorher baute jede
+        ''' Stelle ihr eigenes Teil-Rezept, und die Pinsel-/Retusche-Abbildung ließ Crop/Resize/
+        ''' Canvas schlicht weg (Audit 2026-07-22).</summary>
+        Private Function BuildAppliedGeometryAdjustments() As ImageAdjustments
+            Return New ImageAdjustments With {
                 .CropLeftPercent = CSng(_appliedCropLeft), .CropTopPercent = CSng(_appliedCropTop),
                 .CropRightPercent = CSng(_appliedCropRight), .CropBottomPercent = CSng(_appliedCropBottom),
                 .RotationDegrees = _appliedRotationDegrees,
@@ -6715,7 +6742,13 @@ Namespace ViewModels
                 .CanvasWidth = _appliedCanvasWidth, .CanvasHeight = _appliedCanvasHeight,
                 .CanvasAnchor = _canvasAnchor
             }
-            Dim size = ImageProcessor.ComputeGeometryOutputSize(baseWidth, baseHeight, geometry)
+        End Function
+
+        Private Function GetAnnotationDisplayPixelSize() As (Width As Integer, Height As Integer)
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (0, 0)
+            Dim size = ImageProcessor.ComputeGeometryOutputSize(baseWidth, baseHeight, BuildAppliedGeometryAdjustments())
             Return (size.Width, size.Height)
         End Function
 
@@ -7747,8 +7780,24 @@ Namespace ViewModels
         ''' sinnvoll, wenn es das Quell-Asset ersetzen darf - siehe SavesBackToImmich.
         Public ReadOnly Property CanSaveInPlace As Boolean
             Get
+                ' Immich-RAW/PSD (Audit 2026-07-22): das Server-Original zu ERSETZEN hieße, die RAW
+                ' durch einen Render zu zerstören, und eine .fpxmp neben der Temp-Kopie ginge mit
+                ' ihr verloren - für diese Kombination bleibt nur "Speichern unter" (neues Asset).
+                ' Vorher lief der Pfad in SaveImage gegen den RAW-Ziel-Guard und scheiterte immer
+                ' kommentarlos mit "Speichern fehlgeschlagen".
+                If SavesBackToImmich AndAlso IsCurrentImageSidecarFormat Then Return False
+                ' Formate, die SaveImage nicht erzeugen kann (.tiff/.bmp/.gif/.heic/...), bekamen
+                ' beim in-place-Speichern still JPEG-Bytes unter der alten Endung (Audit 2026-07-22).
+                ' SaveImage lehnt das jetzt zentral ab; hier lenkt der deaktivierte Knopf auf
+                ' "Speichern unter" (SaveImageAsync(Not CanSaveInPlace) macht das automatisch).
+                ' Ausnahmen: Sidecar-Formate (Rezept-Weg), .fpx-Projekte (FpxService) und
+                ' Immich-Ersetzen (rendert seit dem Audit immer in eine schreibbare Endung).
+                Dim formatWritableInPlace = IsCurrentImageSidecarFormat OrElse SavesBackToImmich OrElse
+                    Not String.IsNullOrEmpty(_currentFpxPath) OrElse FpxService.IsFpx(_currentImagePath) OrElse
+                    ImageProcessor.CanEncodeToTargetExtension(_currentImagePath)
                 Return (Not IsCurrentImageSidecarFormat OrElse CanSaveSidecar) AndAlso
-                       (Not _forceSaveAsOnly OrElse SavesBackToImmich OrElse Not String.IsNullOrEmpty(_currentFpxPath))
+                       (Not _forceSaveAsOnly OrElse SavesBackToImmich OrElse Not String.IsNullOrEmpty(_currentFpxPath)) AndAlso
+                       formatWritableInPlace
             End Get
         End Property
 
@@ -8603,6 +8652,14 @@ Namespace ViewModels
             _forceSaveAsOnly = newForceSaveAsOnly
             _workingImageOverridePath = newWorkingOverridePath
             _workingImageOverrideHasAlpha = newWorkingOverrideHasAlpha
+            ' Immich-Kontext gehoert zum ALTEN Bild (Audit 2026-07-22): der SERVER-Dateiname des
+            ' vorherigen Assets darf nie am naechsten Bild kleben (SaveBackToImmich haette unter
+            ' fremdem Namen hochgeladen). Die Album-Zuordnung bleibt nur, solange die Navigation
+            ' innerhalb von Immich-Temp-Kopien bleibt (Filmstreifen eines Albums); beim Wechsel
+            ' auf eine lokale Datei waere "Speichern unter -> Immich" sonst ins Album des frueher
+            ' geoeffneten Bildes einsortiert worden.
+            _immichSourceFileName = Nothing
+            If Not ImmichService.IsImmichTempPath(path) Then _immichSourceAlbumId = Nothing
             CurrentImagePath = path
             _currentImagePath = path
             SelectedInfoTab = InfoSidebarTab.General
@@ -8638,6 +8695,14 @@ Namespace ViewModels
                 Await UpdatePreviewAsync()
             End If
             LoadLibraryMeta(path)
+            ' Filmstreifen-Navigation auf eine Immich-Temp-Kopie (Audit 2026-07-22): Server-Metadaten
+            ' nachladen - insbesondere den ECHTEN Original-Dateinamen, den SaveBackToImmich beim
+            ' Asset-Ersetzen braucht. OpenImageAsync tat das schon, dieser Pfad nicht: der Name des
+            ' VORHERIGEN Bildes blieb stehen (oben deshalb auf Nothing zurückgesetzt).
+            If ImmichService.IsImmichTempPath(path) Then
+                Dim assetStem = IO.Path.GetFileNameWithoutExtension(path)
+                If Not String.IsNullOrEmpty(assetStem) Then Await LoadImmichMetaAsync(assetStem)
+            End If
             Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
             Me.RaisePropertyChanged(NameOf(PositionText))
             MarkCurrentFilmstripItem()
@@ -9014,8 +9079,12 @@ Namespace ViewModels
                    PsdPreviewService.IsSupportedPsd(path) OrElse FpxService.IsFpx(path)
         End Function
 
-        Private Sub SchedulePreviewUpdate()
-            If Not _suppressPreviewDirty Then
+        ''' <paramref name="markDirty"/>: False für reine ANZEIGE-Auslöser (Vorher/Nachher-Vergleich
+        ''' einschalten, auch implizit beim Werkzeugwechsel mit aktivem Auto-Vergleich). Die setzten
+        ''' bisher _hasChanges - wer nur umschaltete, bekam beim Verlassen den "Ungespeichert?"-Dialog,
+        ''' und "Speichern" re-kodierte dann ein unbearbeitetes JPEG in-place (Audit 2026-07-22).
+        Private Sub SchedulePreviewUpdate(Optional markDirty As Boolean = True)
+            If markDirty AndAlso Not _suppressPreviewDirty Then
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             End If
@@ -11032,8 +11101,15 @@ Namespace ViewModels
             Dim fileName = If(String.IsNullOrWhiteSpace(_immichSourceFileName), IO.Path.GetFileName(sourcePath), _immichSourceFileName)
             Dim uploadDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichUpload")
             IO.Directory.CreateDirectory(uploadDir)
-            ' Denselben Dateinamen behalten: Immich zeigt ihn als Originalnamen des Assets an.
-            Dim renderPath = IO.Path.Combine(uploadDir, IO.Path.GetFileNameWithoutExtension(fileName) & IO.Path.GetExtension(sourcePath))
+            ' Den Dateinamens-STAMM behalten: Immich zeigt ihn als Originalnamen des Assets an.
+            ' Die ENDUNG bleibt nur, wenn SaveImage das Format wirklich erzeugen kann - ein
+            ' .heic/.tiff/.gif-Asset wurde sonst durch JPEG-Bytes unter fremder Endung ersetzt
+            ' (Audit 2026-07-22; SaveImage lehnt solche Ziele inzwischen zentral ab). Der Ersatz
+            ' ist dann ehrlich als .jpg etikettiert.
+            Dim renderExt = If(ImageProcessor.CanEncodeToTargetExtension(sourcePath),
+                               IO.Path.GetExtension(sourcePath), ".jpg")
+            Dim resultFileName = IO.Path.GetFileNameWithoutExtension(fileName) & renderExt
+            Dim renderPath = IO.Path.Combine(uploadDir, resultFileName)
 
             Dim errorMessage As String = Nothing
             Try
@@ -11057,7 +11133,8 @@ Namespace ViewModels
 
                 _hasChanges = False
                 ClearPreviewSource()
-                Await SwitchToReplacedImmichAssetAsync(newAssetId, fileName)
+                ' Mit dem Namen des ERGEBNISSES weiterarbeiten (kann die Endung gewechselt haben).
+                Await SwitchToReplacedImmichAssetAsync(newAssetId, resultFileName)
                 StatusText = LocalizationService.T("Immich-Asset aktualisiert")
                 Return True
             Catch ex As Exception
@@ -11960,6 +12037,46 @@ Namespace ViewModels
             _borderSize = 0
             _borderColor = "#FFFFFFFF"
             _clarity = 0
+            ' VOLLSTAENDIGKEIT (Audit 2026-07-22): diese Felder fehlten hier und ueberlebten damit
+            ' den Bildwechsel - Bild B erbte Dunst/Staub/Kalibrierung/Vignettenform/Weissabgleich
+            ' von Bild A, bei _hasChanges=False also ohne jede Warnung. Beide Oeffnen-Pfade
+            ' (OpenImageAsync/LoadImageContent) laufen NUR ueber diese Funktion; ApplyAdjustments
+            ' (das einige davon setzt) laeuft nur fuer .fpx/.fpxmp. Defaults identisch zu den
+            ' Gruppen-Zuruecksetzern (ResetDetailGroupInternal/ResetEffectsInternal/
+            ' ResetColorInternal/ResetCalibrationCommand/ResetFrameInternal).
+            _dustScratches = 0
+            _haze = 0
+            _addNoise = 0
+            _structure = 0
+            _glow = 0
+            _whiteBalance = "Wie Aufnahme"
+            _calibrationRedHue = 0
+            _calibrationRedSaturation = 0
+            _calibrationGreenHue = 0
+            _calibrationGreenSaturation = 0
+            _calibrationBlueHue = 0
+            _calibrationBlueSaturation = 0
+            _calibrationShadowTint = 0
+            _vignetteTransition = 55
+            _vignetteRoundness = 0
+            _vignetteFeather = 70
+            _vignetteCenterX = 50
+            _vignetteCenterY = 50
+            _borderCornerRadius = 0
+            _borderEffect = "Einfach"
+            _selectionFeather = 0
+            ' Persistente Masken/Einstellungsebenen gehoeren zum ALTEN Bild - ohne Clear standen
+            ' die Ebenen von A im Panel von B und gingen dort in GetCurrentAdjustments (und damit
+            ' beim Speichern ins Bild). Gleicher Clear+Rebuild wie in ApplyAdjustments.
+            _imageMasks.Clear()
+            _maskedAdjustmentLayers.Clear()
+            RebuildLayerRows()
+            ' Geparkte Objekt-/Auswahl-Anpassungszustaende (CommitObjectAdjustModeToModel wuerde
+            ' sonst die geparkten Werte von A in B zurueckschreiben).
+            _objectAdjustIndex = -1
+            _imagePixelAdjustments = Nothing
+            _selectionAdjustLayerId = ""
+            _selectionImagePixelAdjustments = Nothing
             _negativeEnabled = False
             _negativeMonochrome = False
             _negativeBaseColor = ""
@@ -12029,6 +12146,18 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
+            ' Raises fuer die oben ergaenzten Felder (Details/Weissabgleich/Kalibrierung/Auswahl) -
+            ' RaiseEffectsPropertiesChanged deckt Vignette-/Rahmen-Zusatzregler bereits ab.
+            RaiseDetailPropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(WhiteBalance))
+            Me.RaisePropertyChanged(NameOf(CalibrationRedHue))
+            Me.RaisePropertyChanged(NameOf(CalibrationRedSaturation))
+            Me.RaisePropertyChanged(NameOf(CalibrationGreenHue))
+            Me.RaisePropertyChanged(NameOf(CalibrationGreenSaturation))
+            Me.RaisePropertyChanged(NameOf(CalibrationBlueHue))
+            Me.RaisePropertyChanged(NameOf(CalibrationBlueSaturation))
+            Me.RaisePropertyChanged(NameOf(CalibrationShadowTint))
+            Me.RaisePropertyChanged(NameOf(SelectionFeather))
             Me.RaisePropertyChanged(NameOf(CropLeft))
             Me.RaisePropertyChanged(NameOf(CropTop))
             Me.RaisePropertyChanged(NameOf(CropRight))
@@ -12523,6 +12652,13 @@ Namespace ViewModels
             Dim height = EffectiveImageHeightPixels
             If width <= 0 OrElse height <= 0 OrElse targetAspect <= 0 Then Return
 
+            ' Die Vorgabe ("16:9") meint das ANGEZEIGTE Seitenverhältnis. Gerechnet wird hier aber im
+            ' Source-Raster, dessen Achsen bei 90°/270° vertauscht sind - dort mit dem Kehrwert
+            ' rechnen, sonst ergab "16:9" auf gedrehten Bildern 9:16 am Bildschirm (Audit 2026-07-22).
+            ' Mittig bleibt mittig: die zentrierten Ränder überstehen jede Dreh-/Spiegel-Permutation.
+            Dim q = ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+            If q = 90 OrElse q = 270 Then targetAspect = 1.0 / targetAspect
+
             Dim targetWidth = width
             Dim targetHeight = height
             If width / CDbl(height) > targetAspect Then
@@ -12904,12 +13040,16 @@ Namespace ViewModels
 
             Dim baseW = GetBaseWidth()
             Dim baseH = GetBaseHeight()
-            ' Die Punkte liegen im gedrehten Anzeigebild - vor dem Backen ins Arbeitsbild rück-rotieren
-            ' (0° = unverändert), sonst sitzt der Strich beim Anzeigen gedreht.
+            ' Die Punkte liegen im Anzeigebild (nach Crop/Drehung/Resize/Canvas) - vor dem Backen ins
+            ' Arbeitsbild vollständig zurückrechnen (0°/keine Geometrie = unverändert). NaN-Punkte
+            ' liegen außerhalb des Bildinhalts (Canvas-Rand) und werden übersprungen - dort gibt es
+            ' keinen Source-Pixel, in den sich backen ließe.
             Dim pixelPoints = normalized.Select(Function(p)
                                                     Dim w = DisplayPercentToWorkingImagePercent(p.X, p.Y)
                                                     Return New Avalonia.Point(PercentXToPixels(w.X), PercentYToPixels(w.Y))
-                                                End Function).ToList()
+                                                End Function).
+                                         Where(Function(p) Not (Double.IsNaN(p.X) OrElse Double.IsNaN(p.Y))).ToList()
+            If pixelPoints.Count < 2 Then Return
             Dim dirtyFull As SKRectI
             Dim stroke = PixelEditLayer.CreateTransientStroke(pixelPoints, BuildPixelPaintOptions(isEraser), baseW, baseH, dirtyFull)
             If stroke Is Nothing OrElse dirtyFull.Width <= 0 OrElse dirtyFull.Height <= 0 Then Return
@@ -12954,6 +13094,17 @@ Namespace ViewModels
                 End Sub)
         End Sub
 
+        ''' True, wenn neben Drehung/Flip weitere ANGEWENDETE Geometrie aktiv ist (Crop, freie
+        ''' Begradigung, Resize, Canvas) - dann ist die Anzeige-Szene nicht mehr die skalierte
+        ''' Basis, und Abkürzungen wie die Strich-Sofortbrücke müssen aussetzen (Audit 2026-07-22).
+        Private Function HasAppliedNonRotationGeometry() As Boolean
+            Return _appliedCropLeft > 0 OrElse _appliedCropTop > 0 OrElse
+                   _appliedCropRight > 0 OrElse _appliedCropBottom > 0 OrElse
+                   Math.Abs(_appliedStraightenDegrees) >= 0.01 OrElse
+                   _appliedResizeWidth > 0 OrElse _appliedResizeHeight > 0 OrElse
+                   _appliedCanvasWidth > 0 OrElse _appliedCanvasHeight > 0
+        End Function
+
         ''' True, wenn die Radierer-Füllfarbe DECKT (Alpha > 0) - dann malt der Radierer diese
         ''' Farbe, statt Transparenz zu stanzen (siehe DrawBrushStroke).
         Private Function EraserFillColorHasInk() As Boolean
@@ -12972,7 +13123,11 @@ Namespace ViewModels
             ' Szene, die aber per Rezept gedreht ist - bei 90/180/270 säße der Strich für den Sekunden-
             ' bruchteil bis zum Voll-Render an der falschen Stelle (Nutzerbefund). Deshalb bei Drehung die
             ' Brücke überspringen: der Strich erscheint dann minimal später, aber sofort korrekt platziert.
-            If (((_appliedRotationDegrees Mod 360) + 360) Mod 360) <> 0 Then Return
+            ' Gleiches gilt für Flip UND jede angewendete Crop-/Begradigungs-/Resize-/Canvas-Geometrie
+            ' (Audit 2026-07-22): ScaleRectBetweenSpaces setzt "Szene = skalierte Basis" voraus, was
+            ' dann nicht mehr stimmt - der Strich erschiene gespiegelt/versetzt.
+            If (((_appliedRotationDegrees Mod 360) + 360) Mod 360) <> 0 OrElse
+               _appliedFlipH OrElse _appliedFlipV OrElse HasAppliedNonRotationGeometry() Then Return
             Dim previewRect = ImageProcessor.ScaleRectBetweenSpaces(dirtyFull, baseW, baseH, _sceneSk.Width, _sceneSk.Height)
             If previewRect.Width <= 0 OrElse previewRect.Height <= 0 Then Return
             Try
@@ -14127,6 +14282,77 @@ Namespace ViewModels
             RaiseResetButtonStateChanged()
         End Sub
 
+        ''' <summary>Offene Beschnitt-Ränder vom ANZEIGE-Raum (per Rezept gedrehtes/gespiegeltes Bild)
+        ''' in den SOURCE-Raum umrechnen, in dem die Pipeline den Crop anwendet (ApplyCrop läuft VOR
+        ''' ApplyGeometryTransforms). Reihenfolge wie der Renderer: erst Vierteldrehung, dann Flips -
+        ''' rückwärts also erst die Flips ablösen, dann die Rand-Permutation der Drehung.
+        ''' Prozent-Ränder überstehen den Achsentausch verlustfrei (Anzeige-Breite = Source-Höhe bei
+        ''' 90°/270°). OHNE diese Umrechnung entfernte der Beschnitt auf gedrehten Bildern die
+        ''' falsche Bildregion (Audit 2026-07-22: Anzeige-links = Source-unten bei 90° im UZS).</summary>
+        Private Function DisplayCropMarginsToSource(left As Double, top As Double,
+                                                    right As Double, bottom As Double) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
+            If _appliedFlipH Then
+                Dim swapH = left : left = right : right = swapH
+            End If
+            If _appliedFlipV Then
+                Dim swapV = top : top = bottom : bottom = swapV
+            End If
+            Select Case ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+                Case 90 : Return (top, right, bottom, left)
+                Case 180 : Return (right, bottom, left, top)
+                Case 270 : Return (bottom, left, top, right)
+                Case Else : Return (left, top, right, bottom)
+            End Select
+        End Function
+
+        ''' <summary>Umkehrung von <see cref="DisplayCropMarginsToSource"/>: Source-Ränder für die
+        ''' Anzeige (Overlay-Rechteck) permutieren - erst Drehung vorwärts, dann Flips.</summary>
+        Private Function SourceCropMarginsToDisplay(left As Double, top As Double,
+                                                    right As Double, bottom As Double) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
+            Dim l = left, t = top, r = right, b = bottom
+            Select Case ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+                Case 90 : l = bottom : t = left : r = top : b = right
+                Case 180 : l = right : t = bottom : r = left : b = top
+                Case 270 : l = top : t = right : r = bottom : b = left
+            End Select
+            If _appliedFlipH Then
+                Dim swapH = l : l = r : r = swapH
+            End If
+            If _appliedFlipV Then
+                Dim swapV = t : t = b : b = swapV
+            End If
+            Return (l, t, r, b)
+        End Function
+
+        ''' <summary>Einstieg für die View: der gezogene Crop-Rahmen liegt in Prozent des ANGEZEIGTEN
+        ''' Bildes und wird hier in den Source-Raum übersetzt, bevor er gespeichert wird.</summary>
+        Public Sub SetCropPercentagesFromDisplay(left As Double, top As Double, right As Double, bottom As Double)
+            Dim m = DisplayCropMarginsToSource(left, top, right, bottom)
+            SetCropPercentages(m.Left, m.Top, m.Right, m.Bottom)
+        End Sub
+
+        ''' <summary>Der offene Beschnitt (Source-Raum) als Anzeige-Ränder - daraus zeichnet die View
+        ''' das Overlay-Rechteck auf dem gedrehten/gespiegelten Bild.</summary>
+        Public Function GetPendingCropDisplayMargins() As (Left As Double, Top As Double, Right As Double, Bottom As Double)
+            Return SourceCropMarginsToDisplay(_cropLeft, _cropTop, _cropRight, _cropBottom)
+        End Function
+
+        ''' <summary>Effektive Maße entlang der ANZEIGE-Achsen (bei 90°/270° getauscht) - Bezugsgröße
+        ''' für die Größen-Plakette des Crop-Overlays, die am Bildschirm-Rechteck misst.</summary>
+        Public ReadOnly Property EffectiveDisplayImageWidthPixels As Integer
+            Get
+                Dim q = ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+                Return If(q = 90 OrElse q = 270, EffectiveImageHeightPixels, EffectiveImageWidthPixels)
+            End Get
+        End Property
+
+        Public ReadOnly Property EffectiveDisplayImageHeightPixels As Integer
+            Get
+                Dim q = ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+                Return If(q = 90 OrElse q = 270, EffectiveImageWidthPixels, EffectiveImageHeightPixels)
+            End Get
+        End Property
+
         ''' <summary>Beschnitt aus dem gezogenen Rahmen im Bild. Die Werte rasten auf ganze Bildpixel ein:
         ''' geschnitten werden ohnehin nur ganze Pixel, und der Rahmen wird aus genau diesen Prozentwerten
         ''' gezeichnet - ohne Einrasten stünde er bei hohem Zoom neben der Kante, die tatsächlich fällt.</summary>
@@ -14163,10 +14389,17 @@ Namespace ViewModels
             If baseWidth <= 0 OrElse baseHeight <= 0 OrElse displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (xPercent, yPercent)
             Dim displayX = xPercent / 100.0 * displaySize.Width
             Dim displayY = yPercent / 100.0 * displaySize.Height
-            Dim source = ImageGeometryMapper.DisplayPointToSource(displayX, displayY,
-                                                                  baseWidth, baseHeight,
-                                                                  _appliedRotationDegrees,
-                                                                  _appliedFlipH, _appliedFlipV)
+            ' VOLLSTÄNDIGE Rückabbildung (Audit 2026-07-22): die frühere Mapper-Kurzform kannte nur
+            ' Drehung/Flip - nach angewendetem Crop/Resize/Canvas wurde die Anzeige-Koordinate als
+            ' Source-Koordinate interpretiert und der Strich saß verschoben/falsch skaliert im
+            ' Arbeitsbild (destruktiv!). NaN = Punkt liegt außerhalb des Bildinhalts (Canvas-Rand,
+            ' leere Begradigungs-Ecke) - Aufrufer müssen den Punkt überspringen.
+            Dim source As SKPoint
+            If Not ImageProcessor.TryGeometryOutputToSourcePoint(displayX, displayY,
+                                                                 baseWidth, baseHeight,
+                                                                 BuildAppliedGeometryAdjustments(), source) Then
+                Return (Double.NaN, Double.NaN)
+            End If
             Return (source.X / baseWidth * 100.0, source.Y / baseHeight * 100.0)
         End Function
 
@@ -14192,17 +14425,26 @@ Namespace ViewModels
         Private Function TransformWorkingPixelToDisplayPixel(x As Double, y As Double,
                                                              baseWidth As Integer, baseHeight As Integer,
                                                              displayWidth As Integer, displayHeight As Integer) As (X As Double, Y As Double)
-            Dim display = ImageGeometryMapper.SourcePointToDisplay(x, y,
-                                                                   baseWidth, baseHeight,
-                                                                   _appliedRotationDegrees,
-                                                                   _appliedFlipH, _appliedFlipV)
-            Return (display.X, display.Y)
+            ' VOLLSTÄNDIGE Vorwärtsabbildung (Audit 2026-07-22, Gegenstück zu
+            ' DisplayPercentToWorkingImagePercent): mit der Mapper-Kurzform stand das Overlay
+            ' eines Retusche-Punkts nach angewendetem Crop/Resize/Canvas neben der gebackenen
+            ' Stelle. Vom Crop entfernte Punkte wandern weit nach außen - das Overlay zeigt sie
+            ' dann schlicht nicht.
+            Dim output As SKPoint
+            If ImageProcessor.TrySourcePointToGeometryOutput(x, y, baseWidth, baseHeight,
+                                                             BuildAppliedGeometryAdjustments(), output) Then
+                Return (output.X, output.Y)
+            End If
+            Return (-100000.0, -100000.0)
         End Function
 
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
             If Not CanUsePixelTools Then Return
-            ' Klick liegt im gedrehten Anzeigebild - ins ungedrehte Arbeitsbild umrechnen (0° = unverändert).
+            ' Klick liegt im Anzeigebild (nach Crop/Drehung/Resize/Canvas) - vollständig ins
+            ' Arbeitsbild zurückrechnen. NaN = außerhalb des Bildinhalts (Canvas-Rand): dort gibt
+            ' es keinen Source-Pixel, der Punkt wird verworfen.
             Dim wip = DisplayPercentToWorkingImagePercent(xPercent, yPercent)
+            If Double.IsNaN(wip.X) OrElse Double.IsNaN(wip.Y) Then Return
             xPercent = wip.X
             yPercent = wip.Y
             ' Der Stempel braucht eine Quelle. Ohne sie würde er stillschweigend zur Retusche -
@@ -14263,9 +14505,11 @@ Namespace ViewModels
                 ' Der Versatz entsteht beim ersten Punkt nach dem Setzen der Quelle und bleibt dann
                 ' stehen - so wandert beim Ziehen ein zusammenhängender Ausschnitt mit.
                 If Not _hasCloneOffset Then
-                    ' Die Klonquelle liegt (wie der Klick) im gedrehten Anzeigebild - für den Bake in
-                    ' die Arbeitsbild-Koordinaten umrechnen, damit der Versatz stimmt.
+                    ' Die Klonquelle liegt (wie der Klick) im Anzeigebild - für den Bake vollständig
+                    ' in die Arbeitsbild-Koordinaten umrechnen, damit der Versatz stimmt. NaN =
+                    ' Quelle außerhalb des Bildinhalts, damit ist kein gültiger Versatz bestimmbar.
                     Dim cloneWip = DisplayPercentToWorkingImagePercent(_cloneSourceXPercent, _cloneSourceYPercent)
+                    If Double.IsNaN(cloneWip.X) OrElse Double.IsNaN(cloneWip.Y) Then Return
                     _cloneOffsetXPixels = targetX - PercentXToPixels(cloneWip.X)
                     _cloneOffsetYPixels = targetY - PercentYToPixels(cloneWip.Y)
                     _hasCloneOffset = True

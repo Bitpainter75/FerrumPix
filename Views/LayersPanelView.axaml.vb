@@ -46,6 +46,36 @@ Namespace Views
             BeginRename(row, TryCast(label.Parent, Panel)?.Children.OfType(Of TextBox)().FirstOrDefault())
         End Sub
 
+        Private Sub OnGlobalAdjustmentsPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
+            ' Das Auge bleibt eine reine Sichtbarkeitsaktion und darf beim Auf-/Zuklappen nicht
+            ' zusätzlich das Reglerziel wechseln.
+            Dim source = TryCast(e.Source, Visual)
+            If source IsNot Nothing AndAlso source.FindAncestorOfType(Of ToggleButton)() IsNot Nothing Then Return
+            TryCast(DataContext, EditorViewModel)?.SelectGlobalAdjustmentsTarget()
+            e.Handled = True
+        End Sub
+
+        Private Sub OnFixedLayerPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
+            ' Das Auge blendet die feste Ebene nur ein/aus; ein Klick auf den übrigen Bereich
+            ' hebt dagegen die lokale Ebenenauswahl auf und setzt das Bild als Reglerziel.
+            Dim source = TryCast(e.Source, Visual)
+            If source IsNot Nothing AndAlso source.FindAncestorOfType(Of ToggleButton)() IsNot Nothing Then Return
+            TryCast(DataContext, EditorViewModel)?.SelectGlobalAdjustmentsTarget()
+            e.Handled = True
+        End Sub
+
+        Private Sub OnLayerListAreaPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
+            ' Klicks auf echte ListBox-Zeilen werden von der ListBox selbst verarbeitet. Nur der
+            ' freie Bereich (auch bei leerem Stapel) ist der bequeme Weg zurück zum Bildziel.
+            Dim source = TryCast(e.Source, Visual)
+            If source IsNot Nothing AndAlso source.FindAncestorOfType(Of ListBoxItem)() IsNot Nothing Then Return
+            TryCast(DataContext, EditorViewModel)?.SelectGlobalAdjustmentsTarget()
+            e.Handled = True
+        End Sub
+
         ' Tastaturbedienung auf der markierten Ebene: F2 umbenennen, Entf löschen, Strg+D duplizieren.
         Private Sub OnLayerListKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.F2 Then

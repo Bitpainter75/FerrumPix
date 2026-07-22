@@ -41,7 +41,8 @@
             </Border>
 
             <!-- Ebenenstapel: oberster Eintrag = vorderste Ebene, Hintergrund liegt fest darunter. -->
-            <Grid Grid.Row="1" x:Name="LayerListArea">
+            <Grid Grid.Row="1" x:Name="LayerListArea"
+                  PointerPressed="OnLayerListAreaPointerPressed">
             <ListBox x:Name="LayerListBox"
                      Classes="layers-panel-list"
                      ItemsSource="{Binding LayerRows}"
@@ -120,6 +121,9 @@
                  Effekte und Filter. Fest über dem Arbeitsbild, weil genau dort die Renderpipeline sie
                  anwendet; lokale maskierte Korrekturen stehen als freie Zeilen darüber. -->
             <Border Grid.Row="2" Padding="8,5" MinHeight="42"
+                    Classes="global-adjustments-row"
+                    Classes.active="{Binding IsGlobalAdjustmentsSelected}"
+                    PointerPressed="OnGlobalAdjustmentsPointerPressed"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">
@@ -131,7 +135,7 @@
                                        Width="16" Height="16"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Grid.Column="1" Text="Bildanpassungen"
+                    <TextBlock Grid.Column="1" Classes="layer-name" Text="Bildanpassungen"
                                FontSize="{DynamicResource FP.Font.Small}"
                                Margin="9,0,6,0" TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
@@ -157,6 +161,7 @@
                  Arbeitsbild (siehe WorkingImageService) und lassen sich deshalb nur gemeinsam ausblenden.
                  Solange sie aus ist, sind die Mal- und Retuschewerkzeuge gesperrt (CanUsePixelTools). -->
             <Border Grid.Row="3" Padding="8,5" MinHeight="42"
+                    PointerPressed="OnFixedLayerPointerPressed"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">
@@ -193,6 +198,7 @@
             <!-- Hintergrund-Ebene: das Basisbild, fest am Boden, gesperrt (nicht umsortier-/löschbar). Nur das
                  Auge blendet es aus (transparenter Grund, siehe ImageProcessor.ApplyAnnotations). -->
             <Border Grid.Row="4" Padding="8,5" MinHeight="42"
+                    PointerPressed="OnFixedLayerPointerPressed"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">

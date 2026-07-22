@@ -7,11 +7,8 @@
 /Homepage/
 /Diagnostics/
 /publish/
+/Audits/
 
 # Interne Planungsunterlagen, nicht Teil der Veröffentlichung
-/ROADMAP.md
 /CHANGELOG.md
-/Avalonia12.md
-TEST_TODO.md
-TODO.md
-EDITOR_RENDERING_NOTES.md
+

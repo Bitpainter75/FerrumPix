@@ -815,11 +815,18 @@ Namespace Services
                             If hslAdj IsNot Nothing Then
                                 Dim hueShift As Single = 0, satShift As Single = 0, lumShift As Single = 0
                                 GetHslBandAdjustments(h, hslAdj, hueShift, satShift, lumShift)
-                                h = (h + hueShift + 360.0) Mod 360.0
-                                sat = Math.Max(0.0, Math.Min(1.0, sat * (1.0 + satShift / 100.0)))
-                                ' Luminanz multiplikativ wie die Saettigung; graue Pixel haben keinen
-                                ' Farbton und bleiben unberuehrt.
-                                lum = Math.Max(0.0, Math.Min(1.0, lum * (1.0 + lumShift / 100.0)))
+                                ' Bandwirkung mit der Chroma GEWICHTEN (Audit 2026-07-22): ein neutrales
+                                ' Grau hat keinen Farbton, bekam aber ueber h=0 die volle LUMINANZ des
+                                ' Rot-Bands ab (nur satShift war durch sat*x=0 automatisch neutral) -
+                                ' der Regler "Rot -> Luminanz" verschob damit alle Grauflaechen, und bei
+                                ' fast-neutralen Pixeln entschied das Rauschen, welches Band greift
+                                ' (fleckige Flaechen). Ab 10 % Saettigung volle Wirkung; Smoothstep,
+                                ' damit die Schwelle keine sichtbare Kante zieht.
+                                Dim chromaW = Math.Min(1.0, sat / 0.1)
+                                chromaW = chromaW * chromaW * (3.0 - 2.0 * chromaW)
+                                h = (h + hueShift * chromaW + 360.0) Mod 360.0
+                                sat = Math.Max(0.0, Math.Min(1.0, sat * (1.0 + satShift * chromaW / 100.0)))
+                                lum = Math.Max(0.0, Math.Min(1.0, lum * (1.0 + lumShift * chromaW / 100.0)))
                             End If
 
                             ' --- Farbgradierung: Zonengewichte ---

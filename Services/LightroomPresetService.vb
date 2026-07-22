@@ -145,28 +145,36 @@ Namespace Services
                 adj.Tint = Clamp100(d)
             End If
 
-            If TryGetXmpDouble(values, "HueAdjustmentRed", d) Then adj.RedHue = Clamp100(d)
+            ' HUE-Skalierung (Audit 2026-07-22): Adobes HueAdjustment* ±100 verschiebt den Farbton
+            ' nur etwa bis zum NACHBARBAND (Bandabstand 30°, also ~±30°). Unsere Engine wendet den
+            ' Bandwert dagegen direkt als Grad-Rotation an (±100 => ±100°) - 1:1 uebernommen drehte
+            ' ein importiertes Preset Farbtoene rund dreimal so weit wie im Original (Rot wurde
+            ' Gelbgruen statt Orange). Nur die Hue-Werte skalieren; Saettigung/Luminanz sind
+            ' Prozent-Faktoren mit vergleichbarer Semantik. Kein Rueckweg betroffen: HueAdjustment*
+            ' wird nirgends exportiert (nur gelesen).
+            Const HueImportScale As Double = 0.3
+            If TryGetXmpDouble(values, "HueAdjustmentRed", d) Then adj.RedHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentRed", d) Then adj.RedSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentRed", d) Then adj.RedLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentOrange", d) Then adj.OrangeHue = Clamp100(d)
+            If TryGetXmpDouble(values, "HueAdjustmentOrange", d) Then adj.OrangeHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentOrange", d) Then adj.OrangeSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentOrange", d) Then adj.OrangeLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentYellow", d) Then adj.YellowHue = Clamp100(d)
+            If TryGetXmpDouble(values, "HueAdjustmentYellow", d) Then adj.YellowHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentYellow", d) Then adj.YellowSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentYellow", d) Then adj.YellowLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentGreen", d) Then adj.GreenHue = Clamp100(d)
+            If TryGetXmpDouble(values, "HueAdjustmentGreen", d) Then adj.GreenHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentGreen", d) Then adj.GreenSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentGreen", d) Then adj.GreenLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentAqua", d) Then adj.AquaHue = Clamp100(d)
+            If TryGetXmpDouble(values, "HueAdjustmentAqua", d) Then adj.AquaHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentAqua", d) Then adj.AquaSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentAqua", d) Then adj.AquaLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentBlue", d) Then adj.BlueHue = Clamp100(d)
+            If TryGetXmpDouble(values, "HueAdjustmentBlue", d) Then adj.BlueHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentBlue", d) Then adj.BlueSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentBlue", d) Then adj.BlueLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentPurple", d) Then adj.PurpleHue = Clamp100(d)
+            If TryGetXmpDouble(values, "HueAdjustmentPurple", d) Then adj.PurpleHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentPurple", d) Then adj.PurpleSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentPurple", d) Then adj.PurpleLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentMagenta", d) Then adj.MagentaHue = Clamp100(d)
+            If TryGetXmpDouble(values, "HueAdjustmentMagenta", d) Then adj.MagentaHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentMagenta", d) Then adj.MagentaSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentMagenta", d) Then adj.MagentaLuminance = Clamp100(d)
 

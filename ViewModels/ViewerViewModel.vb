@@ -1009,8 +1009,9 @@ Namespace ViewModels
         ''' <summary>Startet das Laden des aktuellen Bildes. Der DECODE laeuft im HINTERGRUND
         ''' (Analyse 2026-07-16: vorher synchron auf dem UI-Thread - jeder Bildwechsel fror den
         ''' Viewer fuer die Dekodier-Dauer ein, bei grossen JPEGs/RAWs deutlich spuerbar). Das
-        ''' bisherige Bild bleibt sichtbar, bis das neue fertig ist; ueberholte Ergebnisse
-        ''' verwirft der Lade-Token (schnelles Blaettern startet mehrere Loads, nur der juengste
+        ''' bisherige Bild wird beim Start des neuen Loads entfernt, damit waehrend des
+        ''' Dekodierens/Renderns nicht kurz der vorherige Inhalt als aktuelles Bild erscheint;
+        ''' ueberholte Ergebnisse verwirft der Lade-Token (schnelles Blaettern startet mehrere Loads, nur der juengste
         ''' gewinnt). Nach der Uebernahme werden Fit-Zoom und Statuszeile NACHGEZOGEN - die
         ''' Aufrufer haben sie direkt nach LoadBitmap() nur fuer das noch angezeigte alte Bild
         ''' aktualisiert.</summary>
@@ -1030,6 +1031,12 @@ Namespace ViewModels
             Dim token = System.Threading.Interlocked.Increment(_bitmapLoadToken)
             Dim path = _currentImagePath
             SetBitmapLoading(True)
+            ' Bildwechsel atomar anzeigen: das alte Bitmap darf nicht waehrend des neuen
+            ' Decode-/Render-Vorgangs als scheinbar aktuelles Bild stehen bleiben. Der Ladezustand
+            ' wird erst sichtbar, wenn CurrentImage Nothing ist (ShowBitmapLoading).
+            CurrentImage = Nothing
+            ImageWidth = 0
+            ImageHeight = 0
             RunBitmapLoad(path, token, FpxService.IsFpx(path))
         End Sub
 

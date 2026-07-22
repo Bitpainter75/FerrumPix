@@ -876,6 +876,12 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
     </Style>
+    <Style Selector="Border.global-adjustments-row.active">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Border.global-adjustments-row.active TextBlock.layer-name">
+        <Setter Property="Foreground" Value="#FFFFFFFF"/>
+    </Style>
     <Style Selector="ListBox.layers-panel-list ListBoxItem:pointerover Border.layers-panel-row">
         <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
     </Style>

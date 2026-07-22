@@ -2638,10 +2638,14 @@ Namespace Views
             Dim overlay = Me.FindControl(Of Border)("CropOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If overlay Is Nothing OrElse vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Crop Then Return
-            Dim left = ix + iw * vm.CropLeft / 100.0
-            Dim top = iy + ih * vm.CropTop / 100.0
-            Dim right = ix + iw * (1.0 - vm.CropRight / 100.0)
-            Dim bottom = iy + ih * (1.0 - vm.CropBottom / 100.0)
+            ' Gegenstück zu SetCropPercentagesFromDisplay: die gespeicherten Source-Ränder für das
+            ' gedrehte/gespiegelte Anzeigebild permutieren, sonst zeigt das Overlay-Rechteck eine
+            ' andere Region, als tatsächlich fällt (Audit 2026-07-22).
+            Dim margins = vm.GetPendingCropDisplayMargins()
+            Dim left = ix + iw * margins.Left / 100.0
+            Dim top = iy + ih * margins.Top / 100.0
+            Dim right = ix + iw * (1.0 - margins.Right / 100.0)
+            Dim bottom = iy + ih * (1.0 - margins.Bottom / 100.0)
             overlay.IsVisible = True
             Avalonia.Controls.Canvas.SetLeft(overlay, left)
             Avalonia.Controls.Canvas.SetTop(overlay, top)
@@ -2661,9 +2665,10 @@ Namespace Views
             End If
 
             ' Bezugsgröße ist das angezeigte, also bereits beschnittene Bild - nicht das Original,
-            ' sonst zeigte die Plakette nach einem Beschnitt zu große Maße an.
-            Dim width = CInt(Math.Round(Math.Max(1, cropRect.Width / imageRect.Width * vm.EffectiveImageWidthPixels)))
-            Dim height = CInt(Math.Round(Math.Max(1, cropRect.Height / imageRect.Height * vm.EffectiveImageHeightPixels)))
+            ' sonst zeigte die Plakette nach einem Beschnitt zu große Maße an. Entlang der ANZEIGE-
+            ' Achsen (bei 90°/270° getauscht), weil das Rechteck am Bildschirm gemessen wird.
+            Dim width = CInt(Math.Round(Math.Max(1, cropRect.Width / imageRect.Width * vm.EffectiveDisplayImageWidthPixels)))
+            Dim height = CInt(Math.Round(Math.Max(1, cropRect.Height / imageRect.Height * vm.EffectiveDisplayImageHeightPixels)))
             badge.Text = $"{width} × {height} px"
         End Sub
 
@@ -2762,7 +2767,10 @@ Namespace Views
             Dim top = (topPx - rect.Top) / rect.Height * 100.0
             Dim right = (rect.Right - rightPx) / rect.Width * 100.0
             Dim bottom = (rect.Bottom - bottomPx) / rect.Height * 100.0
-            vm.SetCropPercentages(left, top, right, bottom)
+            ' Der Rahmen liegt im ANZEIGE-Raum (per Rezept gedreht/gespiegelt) - das VM übersetzt in
+            ' den Source-Raum der Pipeline. Vorher gingen die Anzeige-Prozente ungemappt in die
+            ' Source-Ränder, und auf gedrehten Bildern fiel die falsche Region (Audit 2026-07-22).
+            vm.SetCropPercentagesFromDisplay(left, top, right, bottom)
         End Sub
 
         Private Sub FocusTextOverlayEditor()
