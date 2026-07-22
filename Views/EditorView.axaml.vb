@@ -79,8 +79,12 @@ Namespace Views
         Private _isSelectionMoveDragging As Boolean = False
         Private _selectionMoveLastPoint As Avalonia.Point
         Private _selectionDragReplacesExisting As Boolean = False
+        Private _selectionClickOutsideActiveSelection As Boolean = False
+        Private _selectionGestureStart As Avalonia.Point
+        Private _selectionGestureMoved As Boolean = False
         Private _isLassoDrawing As Boolean = False
         Private ReadOnly _lassoPoints As New List(Of Avalonia.Point)()
+        Private _lassoMinimumPointDistance As Double = 1.25
 
         ' Lineale und Hilfslinien. Die Hilfslinien werden in Bildpixeln gespeichert, nicht in
         ' Canvas-Koordinaten - so bleiben sie beim Zoomen und Schwenken an derselben Stelle im Bild.
@@ -1198,6 +1202,9 @@ Namespace Views
                     Dim hitSlopYPercent = hitSlopPixels / imageRect.Height * 100.0
                     Dim hitIndex = vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent)
                     If hitIndex >= 0 Then
+                        If vm.HasActiveSelection AndAlso Not vm.IsPointInsideSelectionPercent(xPct, yPct) Then
+                            vm.ClearSelection()
+                        End If
                         vm.SelectedAnnotationIndex = hitIndex
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
                         ' Auswahl + Ziehen in EINER Geste (siehe gleicher Block im allgemeinen Pfad).
@@ -1256,6 +1263,7 @@ Namespace Views
                     If vm.SelectionMode = "Move" OrElse vm.SelectionCombineMode = "New" Then
                         _isSelectionMoveDragging = True
                         _selectionMoveLastPoint = pos
+                        vm.BeginSelectionMoveTransaction()
                         e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
@@ -1263,6 +1271,11 @@ Namespace Views
                     ' Add/Subtract/Intersect starten auch innerhalb der bestehenden Auswahl eine neue
                     ' Kandidatenform; nur "Neu" nutzt den Treffer zum Verschieben der Auswahl.
                 End If
+                _selectionClickOutsideActiveSelection = vm.HasActiveSelection AndAlso
+                                                        vm.SelectionMode <> "MagicWand" AndAlso
+                                                        Not clickedInsideSelection
+                _selectionGestureStart = rawPos
+                _selectionGestureMoved = False
                 _selectionDragReplacesExisting = vm.HasActiveSelection AndAlso
                                                  vm.SelectionMode <> "MagicWand" AndAlso
                                                  vm.SelectionMode <> "Move" AndAlso
@@ -1272,15 +1285,22 @@ Namespace Views
                 Select Case vm.SelectionMode
                     Case "Move"
                         ' Verschieben ist der Default im Auswahlpanel: außerhalb einer bestehenden Auswahl
-                        ' wird keine neue Auswahl gestartet.
+                        ' wird keine neue Auswahl gestartet. Da hier auch keine Ziehgeste möglich ist,
+                        ' kann der Klick die Auswahl unmittelbar aufheben.
+                        If _selectionClickOutsideActiveSelection Then
+                            vm.ClearSelection()
+                            _selectionClickOutsideActiveSelection = False
+                            UpdateSelectionOverlayVisibility()
+                        End If
                     Case "MagicWand"
                         ' Einzelklick: zusammenhängende Farbfläche wählen (kein Ziehen).
                         Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                         Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
-                        vm.SetSelectionMagicWand(xPct, yPct)
+                        Dim ignored = vm.SetSelectionMagicWand(xPct, yPct)
                     Case "Lasso"
                         _lassoPoints.Clear()
                         _lassoPoints.Add(rawPos)
+                        _lassoMinimumPointDistance = 1.25
                         _isLassoDrawing = True
                         e.Pointer.Capture(canvas)
                     Case Else   ' Rectangle, Ellipse - Rechteck aufziehen
@@ -1541,7 +1561,27 @@ Namespace Views
                 If canvas Is Nothing OrElse vm Is Nothing Then Return
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-                _lassoPoints.Add(e.GetPosition(canvas))
+                Dim point = ClampPointToRect(e.GetPosition(canvas), imageRect)
+                TrackSelectionGestureMovement(point)
+                If _lassoPoints.Count > 0 Then
+                    Dim previous = _lassoPoints(_lassoPoints.Count - 1)
+                    Dim dx = point.X - previous.X
+                    Dim dy = point.Y - previous.Y
+                    If dx * dx + dy * dy < _lassoMinimumPointDistance * _lassoMinimumPointDistance Then
+                        e.Handled = True
+                        Return
+                    End If
+                End If
+                _lassoPoints.Add(point)
+                ' Extrem lange Zeichenbewegungen bleiben vollständig repräsentiert, ohne unbegrenzt
+                ' Punkte und ein entsprechend teures Polygon anzusammeln. Bei Erreichen der Grenze
+                ' wird die bisherige Spur gleichmäßig halbiert und danach gröber weiter abgetastet.
+                If _lassoPoints.Count >= 12000 Then
+                    For i = _lassoPoints.Count - 2 To 1 Step -2
+                        _lassoPoints.RemoveAt(i)
+                    Next
+                    _lassoMinimumPointDistance *= 2.0
+                End If
                 UpdateLassoOverlayFromPoints()
                 e.Handled = True
                 Return
@@ -1553,6 +1593,7 @@ Namespace Views
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
                 _selectionEnd = e.GetPosition(canvas)
+                TrackSelectionGestureMovement(_selectionEnd)
                 UpdateSelectionOverlayFromDrag()
                 e.Handled = True
                 Return
@@ -1576,15 +1617,30 @@ Namespace Views
             Dim wasCropDragging = _isCropDragging
             Dim wasSelectionDragging = _isSelectionDragging
             Dim wasLassoDrawing = _isLassoDrawing
+            Dim clearSelectionFromOutsideClick = _selectionClickOutsideActiveSelection AndAlso
+                                                 Not _selectionGestureMoved
             If _isCropDragging Then
                 CommitCropDrag()
             End If
             If _isSelectionDragging Then
-                CommitSelectionDrag()
+                If clearSelectionFromOutsideClick Then
+                    TryCast(DataContext, EditorViewModel)?.ClearSelection()
+                    HideSelectionDragOverlay()
+                Else
+                    CommitSelectionDrag()
+                End If
             End If
             If _isLassoDrawing Then
-                CommitLassoSelection()
+                If clearSelectionFromOutsideClick Then
+                    TryCast(DataContext, EditorViewModel)?.ClearSelection()
+                    HideSelectionDragOverlay()
+                Else
+                    CommitLassoSelection()
+                End If
                 _lassoPoints.Clear()
+            End If
+            If _isSelectionMoveDragging Then
+                TryCast(DataContext, EditorViewModel)?.CommitSelectionMoveTransaction()
             End If
             _isDraggingSlider = False
             _isPanDragging = False
@@ -1592,6 +1648,8 @@ Namespace Views
             _isSelectionDragging = False
             _isSelectionMoveDragging = False
             _selectionDragReplacesExisting = False
+            _selectionClickOutsideActiveSelection = False
+            _selectionGestureMoved = False
             _isLassoDrawing = False
             If wasSelectionDragging OrElse wasLassoDrawing Then UpdateSelectionOverlayVisibility()
             If _isBrushDrawing Then
@@ -2354,14 +2412,28 @@ Namespace Views
             overlay.Height = 0
         End Sub
 
+        ''' <summary>Trennt einen einzelnen Klick von einer beabsichtigten neuen Auswahlgeste.
+        ''' Kleine Pointer-Unruhe bis vier Bildschirmpixel zählt weiterhin als Klick.</summary>
+        Private Sub TrackSelectionGestureMovement(point As Avalonia.Point)
+            If _selectionGestureMoved Then Return
+            Dim dx = point.X - _selectionGestureStart.X
+            Dim dy = point.Y - _selectionGestureStart.Y
+            If dx * dx + dy * dy >= 16.0 Then _selectionGestureMoved = True
+        End Sub
+
         ''' <summary>Bricht ein laufendes Aufziehen/Lasso/Verschieben ab (Esc), ohne es zu übernehmen: die
         ''' Kandidatenform wird verworfen und die bestehende Auswahl steht wieder da, wie sie war. Ein
         ''' Verschieben ist zu diesem Zeitpunkt schon im ViewModel angekommen - dafür ist Rückgängig da.</summary>
         Private Sub CancelSelectionDrag()
+            If _isSelectionMoveDragging Then
+                TryCast(DataContext, EditorViewModel)?.CancelSelectionMoveTransaction()
+            End If
             _isSelectionDragging = False
             _isLassoDrawing = False
             _isSelectionMoveDragging = False
             _selectionDragReplacesExisting = False
+            _selectionClickOutsideActiveSelection = False
+            _selectionGestureMoved = False
             _lassoPoints.Clear()
             HideSelectionDragOverlay()
             UpdateSelectionOverlayVisibility()
@@ -3654,7 +3726,7 @@ Namespace Views
                     Case Key.D
                         ' Belegt bleibt „Objekt duplizieren", solange eines markiert ist; sonst hebt Strg+D
                         ' die Auswahl auf (wie in den üblichen Bildbearbeitungen).
-                        If vm.HasSelectedAnnotation Then
+                        If vm.HasSelectedPanelLayer Then
                             vm.DuplicateSelectedAnnotationCommand.Execute(Nothing)
                             e.Handled = True
                         ElseIf Not isTextInputFocused AndAlso vm.HasActiveSelection Then
@@ -3728,8 +3800,13 @@ Namespace Views
                             e.Handled = True
                         End If
                     Case Key.Delete
-                        If vm.HasSelectedAnnotation Then
+                        If vm.HasSelectedPanelLayer Then
                             vm.DeleteSelectedAnnotationCommand.Execute(Nothing)
+                        ElseIf vm.HasActiveSelection Then
+                            ' Eine aktive Pixelauswahl ist ein Bildbearbeitungskontext. Entf darf hier
+                            ' niemals als Fallback die aktuelle Bilddatei löschen; bis ein eigener
+                            ' maskierter Pixel-Erase-Commit existiert, hebt es sicher die Auswahl auf.
+                            vm.ClearSelection()
                         Else
                             vm.DeleteCurrentCommand.Execute(Nothing)
                         End If
@@ -3741,8 +3818,8 @@ Namespace Views
                             ' Ein laufendes Aufziehen/Ziehen abbrechen, ohne es zu übernehmen - vorher
                             ' verließ Esc mitten im Zug den Editor.
                             CancelSelectionDrag()
-                        ElseIf vm.HasSelectedAnnotation OrElse Not String.IsNullOrEmpty(vm.PendingInsertKind) Then
-                            vm.SelectedAnnotationIndex = -1
+                        ElseIf vm.HasSelectedPanelLayer OrElse Not String.IsNullOrEmpty(vm.PendingInsertKind) Then
+                            vm.SelectedLayerRow = Nothing
                             vm.PendingInsertKind = ""
                         ElseIf IsSelectionScopeTool(vm.CurrentTool) AndAlso vm.HasActiveSelection Then
                             vm.ClearSelection()

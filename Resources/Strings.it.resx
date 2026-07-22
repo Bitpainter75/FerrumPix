@@ -3959,4 +3959,37 @@
   <data name="Zeigt_auch_im_Viewer_das_entwickelte_bearbeitete_99fe4ca8" xml:space="preserve">
     <value>Mostra anche nel visualizzatore il RAW sviluppato e modificato invece dell'anteprima incorporata, solo se esiste un .fpxmp.</value>
   </data>
+  <data name="Bild_und_Bearbeitungen_werden_geladen_dce06d0e" xml:space="preserve">
+    <value>Caricamento dell’immagine e delle modifiche…</value>
+  </data>
+  <data name="Bild_wird_geladen_und_gerendert_3d07ffa2" xml:space="preserve">
+    <value>Caricamento e rendering dell’immagine…</value>
+  </data>
+  <data name="Bildanpassungen_9590cfac" xml:space="preserve">
+    <value>Regolazioni immagine</value>
+  </data>
+  <data name="Anpassen_Farbe_Details_Effekte_und_Filter_ein_au_e5ba6acb" xml:space="preserve">
+    <value>Mostra/nascondi Regolazioni, Colore, Dettagli, Effetti e Filtri</value>
+  </data>
+  <data name="Neue_Korrektur_mit_derselben_Maske_cc5e705b" xml:space="preserve">
+    <value>Nuova regolazione con la stessa maschera</value>
+  </data>
+  <data name="Migrierte_Auswahlmaske_131c0495" xml:space="preserve">
+    <value>Maschera di selezione migrata</value>
+  </data>
+  <data name="Migrierte_lokale_Korrektur_c9ec9edd" xml:space="preserve">
+    <value>Regolazione locale migrata</value>
+  </data>
+  <data name="Auswahlmaske_df2f84eb" xml:space="preserve">
+    <value>Maschera di selezione</value>
+  </data>
+  <data name="Lokale_Korrektur_f2db77b0" xml:space="preserve">
+    <value>Regolazione locale</value>
+  </data>
+  <data name="Kopie_6fa37490" xml:space="preserve">
+    <value>Copia</value>
+  </data>
+  <data name="Auswahl_verschoben_0d991d0a" xml:space="preserve">
+    <value>Selezione spostata</value>
+  </data>
 </root>

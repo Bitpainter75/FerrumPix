@@ -417,8 +417,16 @@
 
         <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource FP.Bg.Root}" Padding="2">
             <Grid>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
+                            IsVisible="{Binding IsDocumentLoading}">
+                    <ProgressBar Width="220" Height="4" IsIndeterminate="True" />
+                    <TextBlock Text="Bild und Bearbeitungen werden geladen…"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
-                            IsVisible="{Binding CurrentImage, Converter={x:Static ObjectConverters.IsNull}}">
+                            IsVisible="{Binding ShowNoImagePlaceholder}">
                     <TextBlock Text="Kein Bild zum Bearbeiten" Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center" />
                     <TextBlock Text="Öffne ein Bild aus dem Betrachter" Foreground="{DynamicResource FP.Text.Muted}"
@@ -426,7 +434,7 @@
                 </StackPanel>
 
                 <Grid RowDefinitions="*,Auto"
-                      IsVisible="{Binding CurrentImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                      IsVisible="{Binding ShowEditorDocument}">
                     <!-- Die Lineale teilen sich Spalte bzw. Zeile mit dem Vorschau-Canvas; ihre lokalen
                          Koordinaten entlang der Skala sind damit identisch mit denen des Canvas. Sind sie
                          ausgeblendet, kollabieren die Auto-Spur und der Canvas nutzt die volle Fläche. -->
@@ -932,7 +940,7 @@
              darüber. -->
         <Border Grid.Row="1" Grid.ColumnSpan="5"
                 Background="{DynamicResource FP.Bg.Root}"
-                IsVisible="{Binding !HasDocument}">
+                IsVisible="{Binding ShowEditorEmptyState}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="420">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
                                Width="56" Height="56"

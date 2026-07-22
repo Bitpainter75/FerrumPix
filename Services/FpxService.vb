@@ -80,7 +80,36 @@ Namespace Services
 
         Friend Shared Function DeserializeAdjustments(json As String) As ImageAdjustments
             If String.IsNullOrWhiteSpace(json) Then Return Nothing
-            Return JsonSerializer.Deserialize(Of ImageAdjustments)(json, JsonOptions)
+            Return NormalizeLoadedAdjustments(JsonSerializer.Deserialize(Of ImageAdjustments)(json, JsonOptions))
+        End Function
+
+        ''' <summary>Migration alter Rezepte: Früher bedeutete HasActiveSelection zugleich Render-Skopus.
+        ''' Heute ist es reiner UI-Zustand und wird nie aus einem Dokument wiederhergestellt.</summary>
+        Private Shared Function NormalizeLoadedAdjustments(adj As ImageAdjustments) As ImageAdjustments
+            If adj Is Nothing Then Return Nothing
+            Dim hadLegacyScope = adj.SelectionScopeEnabled OrElse adj.HasActiveSelection
+            If hadLegacyScope AndAlso (adj.MaskedAdjustmentLayers Is Nothing OrElse adj.MaskedAdjustmentLayers.Count = 0) Then
+                ' Alte Ein-Auswahl-Rezepte direkt in das neue Modell überführen. Dabei sind exakt die
+                ' damals maskierten Pixelwerte lokal; die globale Ebene wird neutral. Scheitert die
+                ' Maskendekodierung, bleibt der alte explizite Skopus als verlustfreier Fallback erhalten.
+                Dim mask = ImageProcessor.CreateSourceMaskFromSelection(adj, LocalizationService.T("Migrierte Auswahlmaske"))
+                If mask IsNot Nothing Then
+                    If adj.Masks Is Nothing Then adj.Masks = New List(Of ImageMask)()
+                    If adj.MaskedAdjustmentLayers Is Nothing Then adj.MaskedAdjustmentLayers = New List(Of MaskedAdjustmentLayer)()
+                    adj.Masks.Add(mask)
+                    adj.MaskedAdjustmentLayers.Add(New MaskedAdjustmentLayer With {
+                        .Name = LocalizationService.T("Migrierte lokale Korrektur"),
+                        .MaskId = mask.Id,
+                        .Adjustments = adj.ExtractPixelAdjustments()
+                    })
+                    adj.CopyPixelAdjustmentsFrom(New ImageAdjustments())
+                    adj.SelectionScopeEnabled = False
+                Else
+                    adj.SelectionScopeEnabled = True
+                End If
+            End If
+            adj.HasActiveSelection = False
+            Return adj
         End Function
 
         ' ── Speichern ───────────────────────────────────────────────────────────
@@ -97,6 +126,10 @@ Namespace Services
             ' Auf einer Kopie arbeiten: die Objekt-Bildpfade werden auf bündel-relative Namen umgeschrieben,
             ' ohne die im Editor lebende Bearbeitung anzufassen.
             Dim recipeAdj = adjustments.Clone()
+            ' Persistente lokale Korrekturen liegen in Masks + MaskedAdjustmentLayers. Ob daneben gerade
+            ' die Ameisenlinie sichtbar war, ist nur UI-Zustand und darf beim Wiederladen weder die Auswahl
+            ' reaktivieren noch globale Regler nachträglich auf diese Auswahl begrenzen.
+            recipeAdj.HasActiveSelection = False
             Dim assetMap As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
             If recipeAdj.Annotations IsNot Nothing Then
                 For Each ann In recipeAdj.Annotations
@@ -207,6 +240,7 @@ Namespace Services
                         recipe = JsonSerializer.Deserialize(Of FpxRecipe)(es, JsonOptions)
                     End Using
                     If recipe?.Adjustments Is Nothing Then Return Nothing
+                    recipe.Adjustments = NormalizeLoadedAdjustments(recipe.Adjustments)
 
                     ' Objekt-Bildpfade von bündel-relativ auf die entpackten Temp-Dateien umschreiben.
                     If recipe.Adjustments.Annotations IsNot Nothing Then

@@ -3959,4 +3959,37 @@
   <data name="Zeigt_auch_im_Viewer_das_entwickelte_bearbeitete_99fe4ca8" xml:space="preserve">
     <value>Muestra también en el visor el RAW revelado y editado en lugar de la vista previa incrustada, solo si existe un .fpxmp.</value>
   </data>
+  <data name="Bild_und_Bearbeitungen_werden_geladen_dce06d0e" xml:space="preserve">
+    <value>Se están cargando la imagen y las ediciones…</value>
+  </data>
+  <data name="Bild_wird_geladen_und_gerendert_3d07ffa2" xml:space="preserve">
+    <value>La imagen se está cargando y renderizando…</value>
+  </data>
+  <data name="Bildanpassungen_9590cfac" xml:space="preserve">
+    <value>Ajustes de imagen</value>
+  </data>
+  <data name="Anpassen_Farbe_Details_Effekte_und_Filter_ein_au_e5ba6acb" xml:space="preserve">
+    <value>Mostrar/ocultar Ajustes, Color, Detalles, Efectos y Filtros</value>
+  </data>
+  <data name="Neue_Korrektur_mit_derselben_Maske_cc5e705b" xml:space="preserve">
+    <value>Nueva corrección con la misma máscara</value>
+  </data>
+  <data name="Migrierte_Auswahlmaske_131c0495" xml:space="preserve">
+    <value>Máscara de selección migrada</value>
+  </data>
+  <data name="Migrierte_lokale_Korrektur_c9ec9edd" xml:space="preserve">
+    <value>Corrección local migrada</value>
+  </data>
+  <data name="Auswahlmaske_df2f84eb" xml:space="preserve">
+    <value>Máscara de selección</value>
+  </data>
+  <data name="Lokale_Korrektur_f2db77b0" xml:space="preserve">
+    <value>Corrección local</value>
+  </data>
+  <data name="Kopie_6fa37490" xml:space="preserve">
+    <value>Copia</value>
+  </data>
+  <data name="Auswahl_verschoben_0d991d0a" xml:space="preserve">
+    <value>Selección movida</value>
+  </data>
 </root>

@@ -959,6 +959,49 @@ Namespace Services
         End Sub
     End Class
 
+    ''' <summary>Persistente, wiederverwendbare Alpha-Maske im ungedrehten Quellbildraum.
+    ''' Eine aktive Auswahl ist nur UI-Zustand; lokale Korrekturen verweisen über MaskId auf diese Daten.</summary>
+    Public Class ImageMask
+        Public Property Id As String = Guid.NewGuid().ToString("N")
+        Public Property Name As String = LocalizationService.T("Auswahlmaske")
+        Public Property SourceWidthPixels As Integer
+        Public Property SourceHeightPixels As Integer
+        Public Property Left As Integer
+        Public Property Top As Integer
+        Public Property Right As Integer
+        Public Property Bottom As Integer
+        Public Property PngBase64 As String = ""
+        Public Property FeatherPixels As Single
+        Public Property Inverted As Boolean
+
+        Public Function Clone() As ImageMask
+            Return New ImageMask With {
+                .Id = Id, .Name = Name,
+                .SourceWidthPixels = SourceWidthPixels, .SourceHeightPixels = SourceHeightPixels,
+                .Left = Left, .Top = Top, .Right = Right, .Bottom = Bottom,
+                .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted
+            }
+        End Function
+    End Class
+
+    ''' <summary>Nicht-destruktive Pixelkorrektur, die über MaskId auf eine ImageMask begrenzt wird.</summary>
+    Public Class MaskedAdjustmentLayer
+        Public Property Id As String = Guid.NewGuid().ToString("N")
+        Public Property Name As String = LocalizationService.T("Lokale Korrektur")
+        Public Property MaskId As String = ""
+        Public Property IsVisible As Boolean = True
+        Public Property Opacity As Single = 1.0F
+        Public Property Adjustments As ImageAdjustments = New ImageAdjustments()
+
+        Public Function Clone() As MaskedAdjustmentLayer
+            Return New MaskedAdjustmentLayer With {
+                .Id = Id, .Name = Name, .MaskId = MaskId,
+                .IsVisible = IsVisible, .Opacity = Opacity,
+                .Adjustments = If(Adjustments Is Nothing, New ImageAdjustments(), Adjustments.Clone())
+            }
+        End Function
+    End Class
+
     Public Class ImageAdjustments
 
         ''' <summary>Die eingebauten Filter, in der Reihenfolge, in der sie im Editor stehen. "Keine" ist
@@ -1147,6 +1190,9 @@ Namespace Services
         Public Property RetouchSpots As New System.Collections.Generic.List(Of RetouchSpot)()
         Public Property Annotations As New System.Collections.Generic.List(Of ImageAnnotation)()
         Public Property RasterPaintStrokes As New System.Collections.Generic.List(Of PixelPaintStroke)()
+        ''' <summary>Masken werden einmal gespeichert und können von mehreren lokalen Korrekturen benutzt werden.</summary>
+        Public Property Masks As New System.Collections.Generic.List(Of ImageMask)()
+        Public Property MaskedAdjustmentLayers As New System.Collections.Generic.List(Of MaskedAdjustmentLayer)()
         ''' <summary>Versionszähler des ARBEITSBILDS (Umbau 2026-07-17): geht in den Base-Cache-Key
         ''' ein und verwirft Pipeline-Caches nach jedem eingebackenen Commit. Kein Bestandteil des
         ''' Rezepts im inhaltlichen Sinn (reiner Cache-Stempel), schadet aber serialisiert nicht.</summary>
@@ -1155,6 +1201,11 @@ Namespace Services
         ''' Arbeitsbild gestanzt hat - im .fpx-Rezept persistiert, damit Schachbrett und
         ''' Transparenz-Verhalten das Wiederöffnen überleben.</summary>
         Public Property WorkingImageHasTransparency As Boolean = False
+        ''' <summary>Persistenter Render-Skopus der gespeicherten Auswahlmaske. Im Gegensatz zu
+        ''' HasActiveSelection ist dies Bildrezept und kein transient markierter UI-Zustand.</summary>
+        Public Property SelectionScopeEnabled As Boolean = False
+        ''' <summary>True nur solange die Auswahl im Editor aktiv bearbeitet wird. FPX speichert
+        ''' diesen transienten UI-Zustand bewusst als False.</summary>
         Public Property HasActiveSelection As Boolean = False
         Public Property SelectionXPercent As Double = 0
         Public Property SelectionYPercent As Double = 0
@@ -1173,6 +1224,11 @@ Namespace Services
         ''' pixelgenau - weich wird die Kante erst bei der Verwendung (Anpassungs-Skopus, Kopieren, Füllen).
         ''' So lässt sich der Wert jederzeit ändern, ohne die Auswahl neu zu ziehen.</summary>
         Public Property SelectionFeatherPixels As Single = 0
+
+        ''' <summary>True = die gemeinsame globale Anpassungsebene (Anpassen, Farbe, Details,
+        ''' Effekte und Filter) wird beim Rendern übersprungen. Geometrie, lokale maskierte
+        ''' Korrekturen, Retusche und Objekte bleiben davon unberührt.</summary>
+        Public Property GlobalAdjustmentsHidden As Boolean = False
 
         ''' <summary>True = die Hintergrund-Ebene (das Basisbild) wird beim Zusammensetzen ausgeblendet; es
         ''' bleiben nur die Objekt-Ebenen auf transparentem Grund. Strukturell, keine Pixel-Anpassung, und
@@ -1210,17 +1266,18 @@ Namespace Services
         ''' wäre etwas anderes und gibt es noch nicht - er bliebe sonst als Rahmen ums ganze Bild stehen,
         ''' während man ein Objekt bearbeitet.</summary>
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
-            "SourceWidthPixels", "SourceHeightPixels",
+            "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
+            "WorkingImageVersion", "WorkingImageHasTransparency",
             "RotationDegrees", "StraightenDegrees", "StraightenExpandCanvas", "FlipHorizontal", "FlipVertical",
             "CropLeftPercent", "CropTopPercent", "CropRightPercent", "CropBottomPercent",
             "ResizeWidth", "ResizeHeight", "LockResizeAspect", "ResizeInterpolation",
             "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
             "BorderSize", "BorderColor", "BorderCornerRadius", "BorderEffect",
-            "RetouchSpots", "Annotations", "RasterPaintStrokes",
-            "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
+            "RetouchSpots", "Annotations", "RasterPaintStrokes", "Masks", "MaskedAdjustmentLayers",
+            "SelectionScopeEnabled", "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
-            "SelectionMaskPngBase64", "SelectionFeatherPixels", "BackgroundHidden", "PixelLayerHidden"
+            "SelectionMaskPngBase64", "SelectionFeatherPixels", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"
         }
 
         Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing
@@ -1266,10 +1323,11 @@ Namespace Services
         End Function
 
         Public Function Clone() As ImageAdjustments
-            Return New ImageAdjustments With {
+            Dim result = New ImageAdjustments With {
                 .Exposure = Exposure,
                 .SourceWidthPixels = SourceWidthPixels,
                 .SourceHeightPixels = SourceHeightPixels,
+                .RecipeCoordinateVersion = RecipeCoordinateVersion,
                 .WorkingImageVersion = WorkingImageVersion,
                 .WorkingImageHasTransparency = WorkingImageHasTransparency,
                 .Brightness = Brightness,
@@ -1383,6 +1441,9 @@ Namespace Services
                 .RetouchSpots = RetouchSpots.Select(Function(s) s.Clone()).ToList(),
                 .Annotations = Annotations.Select(Function(a) a.Clone()).ToList(),
                 .RasterPaintStrokes = RasterPaintStrokes.Select(Function(s) s.Clone()).ToList(),
+                .Masks = If(Masks, New List(Of ImageMask)()).Where(Function(m) m IsNot Nothing).Select(Function(m) m.Clone()).ToList(),
+                .MaskedAdjustmentLayers = If(MaskedAdjustmentLayers, New List(Of MaskedAdjustmentLayer)()).Where(Function(l) l IsNot Nothing).Select(Function(l) l.Clone()).ToList(),
+                .SelectionScopeEnabled = SelectionScopeEnabled,
                 .HasActiveSelection = HasActiveSelection,
                 .SelectionXPercent = SelectionXPercent,
                 .SelectionYPercent = SelectionYPercent,
@@ -1397,9 +1458,14 @@ Namespace Services
                 .SelectionMaskBottom = SelectionMaskBottom,
                 .SelectionMaskPngBase64 = SelectionMaskPngBase64,
                 .SelectionFeatherPixels = SelectionFeatherPixels,
+                .GlobalAdjustmentsHidden = GlobalAdjustmentsHidden,
                 .BackgroundHidden = BackgroundHidden,
                 .PixelLayerHidden = PixelLayerHidden
             }
+            ' Die explizite Liste oben hält die strukturellen/deep-copy-Felder lesbar. Pixelwerte werden
+            ' zusätzlich zentral kopiert, damit ein neu ergänzter Regler nicht in Undo/FPX/Layern fehlt.
+            result.CopyPixelAdjustmentsFrom(Me)
+            Return result
         End Function
     End Class
 
@@ -2596,6 +2662,43 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
             processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+
+            ' Eine Auswahl wird im bereits gerenderten Display-Raum angelegt. Deshalb muss auch der
+            ' unveraenderte Vergleichsstand fuer selektive Farb-/Detailanpassungen NACH der Geometrie
+            ' aufgenommen werden. `source` ist hier noch SourceSpace und passt nach Rotation/Flip weder
+            ' in den Abmessungen noch in der Pixelanordnung zur sichtbaren Auswahl.
+            If adj IsNot Nothing AndAlso Not adj.GlobalAdjustmentsHidden Then
+                Dim selectionBaseline As SKBitmap = Nothing
+                If SelectionScopeIsEnabled(adj) Then selectionBaseline = CloneBitmap(processed)
+
+                processed = ReplaceBitmap(processed, ApplyPixelAdjustmentStages(processed, adj))
+
+                ' Auswahl-Skopus: Anpassungen nur INNERHALB der aktiven Auswahl wirken lassen. Maske,
+                ' Vergleichsstand und angepasstes Bild liegen hier gemeinsam im gerenderten Display-Raum.
+                If selectionBaseline IsNot Nothing Then
+                    Dim scopeMask = BuildSelectionScopeMask(adj, processed.Width, processed.Height)
+                    If scopeMask IsNot Nothing Then
+                        Using scopeMask
+                            processed = ReplaceBitmap(processed, CompositeSelectionScoped(selectionBaseline, processed, scopeMask))
+                        End Using
+                    Else
+                        ' Eine aktive, aber unlesbare/leer gewordene Maske darf niemals still auf eine
+                        ' globale Anpassung zurueckfallen. Im Fehlerfall bleibt das Bild unveraendert.
+                        processed = ReplaceBitmap(processed, CloneBitmap(selectionBaseline))
+                    End If
+                    selectionBaseline.Dispose()
+                End If
+            End If
+
+            processed = ReplaceBitmap(processed, ApplyMaskedAdjustmentLayers(processed, adj, source.Width, source.Height))
+            Return processed
+        End Function
+
+        ''' <summary>Die wiederverwendbare Pixelkette ohne Geometrie, Objekte und Auswahl-Compositing.
+        ''' Sie dient sowohl der globalen Bearbeitung als auch jeder lokalen Einstellungsebene.</summary>
+        Private Shared Function ApplyPixelAdjustmentStages(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            Dim processed = CloneBitmap(source)
+
             ' Alle Farb-Punktoperationen laufen in EINER verschmolzenen Gleitkomma-Stufe
             ' (ImageProcessorPointOps.vb): Filmnegativ, Farbmatrix, Tonwertkurve, Lichter/Tiefen/
             ' Weiß/Schwarz, RGB- und Kanalkurven, Luminanzkurve, HSL-Bänder, Split-Toning,
@@ -2664,38 +2767,337 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                 processed = ReplaceBitmap(processed, ApplyBorder(processed, adj.BorderSize / 100.0F, adj.BorderColor, adj.BorderCornerRadius / 100.0F, adj.BorderEffect))
             End If
 
-            ' Auswahl-Skopus: Anpassungen nur INNERHALB der aktiven Auswahl wirken lassen. `source` ist die
-            ' unveränderte Eingabe (= "vorher"); nur wenn keine Geometrie aktiv ist, entspricht der Bildraum
-            ' 1:1 dem Basisbild-Raum (evtl. für die Vorschau herunterskaliert), in dem die Maske gespeichert
-            ' ist - sonst würde sie nicht zum verarbeiteten Bild passen (siehe SelectionGeometryIsNeutral).
-            If adj.HasActiveSelection AndAlso SelectionGeometryIsNeutral(adj) Then
-                Dim scopeMask = BuildSelectionScopeMask(adj, processed.Width, processed.Height)
-                If scopeMask IsNot Nothing Then
-                    Using scopeMask
-                        processed = ReplaceBitmap(processed, CompositeSelectionScoped(source, processed, scopeMask))
-                    End Using
-                End If
-            End If
-
             Return processed
         End Function
 
-        ''' <summary>Auswahl-Skopus ist nur sicher, solange keine Geometrie aktiv ist: die Maske liegt im
-        ''' Basisbild-Raum, Crop/Resize/Rotate/Flip/Straighten/Canvas würden den Bildraum verschieben und die
-        ''' Maske fehlausrichten. Der Editor löscht die Auswahl beim Anwenden von Geometrie; dieser Guard ist
-        ''' die zusätzliche Absicherung (fällt sonst auf globale Anpassung zurück).</summary>
-        Private Shared Function SelectionGeometryIsNeutral(adj As ImageAdjustments) As Boolean
-            Return adj.RotationDegrees = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical AndAlso
-                   Math.Abs(adj.StraightenDegrees) < 0.01F AndAlso
-                   adj.CropLeftPercent = 0 AndAlso adj.CropTopPercent = 0 AndAlso
-                   adj.CropRightPercent = 0 AndAlso adj.CropBottomPercent = 0 AndAlso
-                   adj.ResizeWidth <= 0 AndAlso adj.ResizeHeight <= 0 AndAlso
-                   adj.CanvasWidth <= 0 AndAlso adj.CanvasHeight <= 0
+        ''' <summary>Wendet lokale Korrekturen in Ebenenreihenfolge an. Eine fehlende oder beschädigte
+        ''' Maske bewirkt absichtlich gar nichts; sie darf nie zu einer globalen Korrektur werden.</summary>
+        Private Shared Function ApplyMaskedAdjustmentLayers(source As SKBitmap, adj As ImageAdjustments,
+                                                             pipelineInputWidth As Integer,
+                                                             pipelineInputHeight As Integer) As SKBitmap
+            Dim processed = CloneBitmap(source)
+            If adj Is Nothing OrElse adj.MaskedAdjustmentLayers Is Nothing OrElse adj.Masks Is Nothing Then Return processed
+
+            Dim masksById = adj.Masks.Where(Function(m) m IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(m.Id)).
+                                     GroupBy(Function(m) m.Id, StringComparer.Ordinal).
+                                     ToDictionary(Function(g) g.Key, Function(g) g.First(), StringComparer.Ordinal)
+            For Each layer In adj.MaskedAdjustmentLayers
+                If layer Is Nothing OrElse Not layer.IsVisible OrElse layer.Adjustments Is Nothing OrElse
+                   Not layer.Adjustments.HasPixelAdjustments() Then Continue For
+                Dim maskData As ImageMask = Nothing
+                If Not masksById.TryGetValue(If(layer.MaskId, ""), maskData) Then Continue For
+
+                Using mask = BuildPersistentMaskForOutput(maskData, adj, pipelineInputWidth, pipelineInputHeight,
+                                                          processed.Width, processed.Height, layer.Opacity)
+                    If mask Is Nothing Then Continue For
+                    Using adjusted = ApplyPixelAdjustmentStages(processed, layer.Adjustments.ExtractPixelAdjustments())
+                        processed = ReplaceBitmap(processed, CompositeSelectionScoped(processed, adjusted, mask))
+                    End Using
+                End Using
+            Next
+            Return processed
+        End Function
+
+        ''' <summary>Projiziert eine SourceSpace-Maske durch exakt dieselbe Geometriekette wie das Bild:
+        ''' Preview-Skalierung, Crop, Quarter-Turn/Flip, Begradigung, Resize und Canvas-Offset.</summary>
+        Private Shared Function BuildPersistentMaskForOutput(maskData As ImageMask, geometry As ImageAdjustments,
+                                                              pipelineInputWidth As Integer, pipelineInputHeight As Integer,
+                                                              targetW As Integer, targetH As Integer,
+                                                              layerOpacity As Single) As SKBitmap
+            If maskData Is Nothing OrElse pipelineInputWidth <= 0 OrElse pipelineInputHeight <= 0 OrElse
+               targetW <= 0 OrElse targetH <= 0 OrElse
+               maskData.SourceWidthPixels <= 0 OrElse maskData.SourceHeightPixels <= 0 OrElse
+               maskData.Right <= maskData.Left OrElse maskData.Bottom <= maskData.Top OrElse
+               String.IsNullOrWhiteSpace(maskData.PngBase64) Then Return Nothing
+            Try
+                Dim raw = Convert.FromBase64String(maskData.PngBase64)
+                Using decoded = SKBitmap.Decode(raw)
+                    If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return Nothing
+                    Dim dStride = decoded.RowBytes
+                    Dim dBuf = New Byte(dStride * decoded.Height - 1) {}
+                    Marshal.Copy(decoded.GetPixels(), dBuf, 0, dBuf.Length)
+
+                    ' Zunächst in die tatsächliche Pipeline-Eingangsgröße (Vollbild oder Preview)
+                    ' rasterisieren. Dadurch benutzt die anschließende Geometrie exakt dieselben
+                    ' Pixelrundungen wie das Bild und braucht keine zweite, leicht abweichende Matrix.
+                    Dim inputMask = New SKBitmap(pipelineInputWidth, pipelineInputHeight, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Dim iStride = inputMask.RowBytes
+                    Dim iBuf = New Byte(iStride * pipelineInputHeight - 1) {}
+                    For y = 0 To pipelineInputHeight - 1
+                        Dim sy = CInt(Math.Floor((y + 0.5) * maskData.SourceHeightPixels / pipelineInputHeight)) - maskData.Top
+                        Dim iRow = y * iStride
+                        For x = 0 To pipelineInputWidth - 1
+                            Dim sx = CInt(Math.Floor((x + 0.5) * maskData.SourceWidthPixels / pipelineInputWidth)) - maskData.Left
+                            Dim alpha = 0
+                            If sx >= 0 AndAlso sy >= 0 AndAlso sx < decoded.Width AndAlso sy < decoded.Height Then
+                                alpha = dBuf(sy * dStride + sx)
+                            End If
+                            If maskData.Inverted Then alpha = 255 - alpha
+                            iBuf(iRow + x) = CByte(alpha)
+                        Next
+                    Next
+                    Marshal.Copy(iBuf, 0, inputMask.GetPixels(), iBuf.Length)
+
+                    If maskData.FeatherPixels > 0.05F Then
+                        Dim initialScale = (pipelineInputWidth / CSng(maskData.SourceWidthPixels) +
+                                            pipelineInputHeight / CSng(maskData.SourceHeightPixels)) / 2.0F
+                        Dim blurred = BlurAlphaMask(inputMask, maskData.FeatherPixels * initialScale)
+                        If blurred IsNot Nothing Then inputMask = ReplaceBitmap(inputMask, blurred)
+                    End If
+
+                    Dim maskPixels = New SKBitmap(pipelineInputWidth, pipelineInputHeight, SKColorType.Bgra8888, SKAlphaType.Premul)
+                    Dim pStride = maskPixels.RowBytes
+                    Dim pBuf = New Byte(pStride * pipelineInputHeight - 1) {}
+                    Dim alphaBuf = New Byte(inputMask.RowBytes * inputMask.Height - 1) {}
+                    Marshal.Copy(inputMask.GetPixels(), alphaBuf, 0, alphaBuf.Length)
+                    For y = 0 To pipelineInputHeight - 1
+                        Dim aRow = y * inputMask.RowBytes, pRow = y * pStride
+                        For x = 0 To pipelineInputWidth - 1
+                            Dim a = alphaBuf(aRow + x), o = pRow + x * 4
+                            pBuf(o) = a : pBuf(o + 1) = a : pBuf(o + 2) = a : pBuf(o + 3) = a
+                        Next
+                    Next
+                    Marshal.Copy(pBuf, 0, maskPixels.GetPixels(), pBuf.Length)
+                    inputMask.Dispose()
+
+                    Dim maskGeometry = New ImageAdjustments With {
+                        .CropLeftPercent = geometry.CropLeftPercent, .CropTopPercent = geometry.CropTopPercent,
+                        .CropRightPercent = geometry.CropRightPercent, .CropBottomPercent = geometry.CropBottomPercent,
+                        .RotationDegrees = geometry.RotationDegrees,
+                        .FlipHorizontal = geometry.FlipHorizontal, .FlipVertical = geometry.FlipVertical,
+                        .StraightenDegrees = geometry.StraightenDegrees,
+                        .StraightenExpandCanvas = geometry.StraightenExpandCanvas,
+                        .ResizeWidth = geometry.ResizeWidth, .ResizeHeight = geometry.ResizeHeight,
+                        .ResizeInterpolation = geometry.ResizeInterpolation,
+                        .CanvasWidth = geometry.CanvasWidth, .CanvasHeight = geometry.CanvasHeight,
+                        .CanvasAnchor = geometry.CanvasAnchor,
+                        .CanvasBackgroundColor = "#00000000"
+                    }
+                    maskPixels = ReplaceBitmap(maskPixels, ApplyCrop(maskPixels, maskGeometry))
+                    maskPixels = ReplaceBitmap(maskPixels, ApplyGeometryTransforms(maskPixels, maskGeometry))
+                    maskPixels = ReplaceBitmap(maskPixels, ApplyStraighten(maskPixels, maskGeometry))
+                    maskPixels = ReplaceBitmap(maskPixels, ApplyResize(maskPixels, maskGeometry))
+                    maskPixels = ReplaceBitmap(maskPixels, ApplyCanvasResize(maskPixels, maskGeometry))
+
+                    ' Derselbe Pfad sollte dieselbe Größe liefern. Der Fallback schützt dennoch vor
+                    ' alten/inkonsistenten Rezeptmaßen, ohne die Korrektur global werden zu lassen.
+                    If maskPixels.Width <> targetW OrElse maskPixels.Height <> targetH Then
+                        Dim scaled = New SKBitmap(targetW, targetH, SKColorType.Bgra8888, SKAlphaType.Premul)
+                        Using canvas = New SKCanvas(scaled)
+                            canvas.Clear(SKColors.Transparent)
+                            Using paint = New SKPaint With {.IsAntialias = True}
+                                DrawBitmapSampled(canvas, maskPixels, New SKRect(0, 0, maskPixels.Width, maskPixels.Height),
+                                                  New SKRect(0, 0, targetW, targetH),
+                                                  New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), paint)
+                            End Using
+                        End Using
+                        maskPixels = ReplaceBitmap(maskPixels, scaled)
+                    End If
+
+                    Dim transformed As Byte() = Nothing, transformedStride As Integer = 0
+                    If Not TryBorrowBgraBuffer(maskPixels, transformed, transformedStride) Then
+                        maskPixels.Dispose()
+                        Return Nothing
+                    End If
+                    Dim opacity = Clamp(layerOpacity, 0, 1)
+                    Dim result = New SKBitmap(targetW, targetH, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Dim rStride = result.RowBytes
+                    Dim rBuf = New Byte(rStride * targetH - 1) {}
+                    For y = 0 To targetH - 1
+                        Dim pRow = y * transformedStride, rRow = y * rStride
+                        For x = 0 To targetW - 1
+                            rBuf(rRow + x) = CByte(Math.Round(transformed(pRow + x * 4 + 3) * opacity))
+                        Next
+                    Next
+                    Marshal.Copy(rBuf, 0, result.GetPixels(), rBuf.Length)
+                    maskPixels.Dispose()
+                    Return result
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Exakte Ausgabemaße der Geometriekette ohne Pixelanpassungen/Objekte.</summary>
+        Public Shared Function ComputeGeometryOutputSize(sourceWidth As Integer, sourceHeight As Integer,
+                                                         adj As ImageAdjustments) As SKSizeI
+            If sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return New SKSizeI(0, 0)
+            Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
+            Dim w = crop.Width, h = crop.Height
+            Dim q = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
+            If q = 90 OrElse q = 270 Then
+                Dim swap = w : w = h : h = swap
+            End If
+            If Math.Abs(adj.StraightenDegrees) >= 0.01F AndAlso adj.StraightenExpandCanvas Then
+                Dim radians = Math.Abs(adj.StraightenDegrees) * Math.PI / 180.0
+                Dim oldW = w, oldH = h
+                w = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Cos(radians) + oldH * Math.Sin(radians))))
+                h = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Sin(radians) + oldH * Math.Cos(radians))))
+            End If
+            Dim resizeW = adj.ResizeWidth, resizeH = adj.ResizeHeight
+            If resizeW > 0 OrElse resizeH > 0 Then
+                If resizeW <= 0 Then resizeW = CInt(Math.Round(w * (resizeH / CDbl(h))))
+                If resizeH <= 0 Then resizeH = CInt(Math.Round(h * (resizeW / CDbl(w))))
+                w = Math.Max(1, resizeW) : h = Math.Max(1, resizeH)
+            End If
+            If adj.CanvasWidth > 0 Then w = adj.CanvasWidth
+            If adj.CanvasHeight > 0 Then h = adj.CanvasHeight
+            Return New SKSizeI(Math.Max(1, w), Math.Max(1, h))
+        End Function
+
+        Private Shared Function ComputeGeometryCropRect(sourceWidth As Integer, sourceHeight As Integer,
+                                                         adj As ImageAdjustments) As SKRectI
+            Dim left = Math.Max(0, Math.Min(CInt(Math.Round(sourceWidth * Clamp(adj.CropLeftPercent, 0, 100) / 100.0F)), sourceWidth - 1))
+            Dim top = Math.Max(0, Math.Min(CInt(Math.Round(sourceHeight * Clamp(adj.CropTopPercent, 0, 100) / 100.0F)), sourceHeight - 1))
+            Dim right = Math.Max(left + 1, Math.Min(sourceWidth - CInt(Math.Round(sourceWidth * Clamp(adj.CropRightPercent, 0, 100) / 100.0F)), sourceWidth))
+            Dim bottom = Math.Max(top + 1, Math.Min(sourceHeight - CInt(Math.Round(sourceHeight * Clamp(adj.CropBottomPercent, 0, 100) / 100.0F)), sourceHeight))
+            Return New SKRectI(left, top, right, bottom)
+        End Function
+
+        ''' <summary>Bildet einen Punkt des unbeschnittenen SourceSpace durch dieselbe Geometriekette
+        ''' wie der Renderer ab. False bedeutet: Der Punkt wurde vom Crop entfernt.</summary>
+        Private Shared Function TrySourcePointToGeometryOutput(sourceX As Double, sourceY As Double,
+                                                               sourceWidth As Integer, sourceHeight As Integer,
+                                                               adj As ImageAdjustments, ByRef output As SKPoint) As Boolean
+            Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
+            If sourceX < crop.Left OrElse sourceY < crop.Top OrElse sourceX >= crop.Right OrElse sourceY >= crop.Bottom Then Return False
+            Dim x = sourceX - crop.Left, y = sourceY - crop.Top
+            Dim w As Double = crop.Width, h As Double = crop.Height
+
+            Dim p = ImageGeometryMapper.SourcePointToDisplay(x, y, w, h, adj.RotationDegrees,
+                                                              adj.FlipHorizontal, adj.FlipVertical)
+            x = p.X : y = p.Y
+            Dim q = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
+            If q = 90 OrElse q = 270 Then
+                Dim swap = w : w = h : h = swap
+            End If
+
+            If Math.Abs(adj.StraightenDegrees) >= 0.01F Then
+                Dim radians = adj.StraightenDegrees * Math.PI / 180.0
+                Dim absRadians = Math.Abs(adj.StraightenDegrees) * Math.PI / 180.0
+                Dim outW = w, outH = h, scale = 1.0
+                If adj.StraightenExpandCanvas Then
+                    outW = Math.Max(1, Math.Ceiling(w * Math.Cos(absRadians) + h * Math.Sin(absRadians)))
+                    outH = Math.Max(1, Math.Ceiling(w * Math.Sin(absRadians) + h * Math.Cos(absRadians)))
+                Else
+                    scale = Math.Max(w / (w * Math.Cos(absRadians) + h * Math.Sin(absRadians)),
+                                     h / (w * Math.Sin(absRadians) + h * Math.Cos(absRadians)))
+                    scale = Math.Max(1.0, scale)
+                End If
+                Dim dx = x - w / 2.0, dy = y - h / 2.0
+                Dim cosA = Math.Cos(radians), sinA = Math.Sin(radians)
+                x = outW / 2.0 + scale * (cosA * dx - sinA * dy)
+                y = outH / 2.0 + scale * (sinA * dx + cosA * dy)
+                w = outW : h = outH
+            End If
+
+            Dim resizeW = adj.ResizeWidth, resizeH = adj.ResizeHeight
+            If resizeW > 0 OrElse resizeH > 0 Then
+                If resizeW <= 0 Then resizeW = CInt(Math.Round(w * (resizeH / h)))
+                If resizeH <= 0 Then resizeH = CInt(Math.Round(h * (resizeW / w)))
+                resizeW = Math.Max(1, resizeW) : resizeH = Math.Max(1, resizeH)
+                x *= resizeW / w : y *= resizeH / h
+                w = resizeW : h = resizeH
+            End If
+
+            Dim canvasW = If(adj.CanvasWidth > 0, adj.CanvasWidth, CInt(Math.Round(w)))
+            Dim canvasH = If(adj.CanvasHeight > 0, adj.CanvasHeight, CInt(Math.Round(h)))
+            If canvasW <> CInt(Math.Round(w)) OrElse canvasH <> CInt(Math.Round(h)) Then
+                Dim offsetX As Double, offsetY As Double
+                Select Case If(adj.CanvasAnchor, "Center").Trim().ToLowerInvariant()
+                    Case "top-left", "left-top" : offsetX = 0 : offsetY = 0
+                    Case "top", "top-center" : offsetX = (canvasW - w) / 2.0 : offsetY = 0
+                    Case "top-right", "right-top" : offsetX = canvasW - w : offsetY = 0
+                    Case "left", "middle-left" : offsetX = 0 : offsetY = (canvasH - h) / 2.0
+                    Case "right", "middle-right" : offsetX = canvasW - w : offsetY = (canvasH - h) / 2.0
+                    Case "bottom-left", "left-bottom" : offsetX = 0 : offsetY = canvasH - h
+                    Case "bottom", "bottom-center" : offsetX = (canvasW - w) / 2.0 : offsetY = canvasH - h
+                    Case "bottom-right", "right-bottom" : offsetX = canvasW - w : offsetY = canvasH - h
+                    Case Else : offsetX = (canvasW - w) / 2.0 : offsetY = (canvasH - h) / 2.0
+                End Select
+                x += offsetX : y += offsetY
+            End If
+            output = New SKPoint(CSng(x), CSng(y))
+            Return True
+        End Function
+
+        ''' <summary>Friert die momentan aktive OutputSpace-Auswahl als persistente SourceSpace-Maske ein.</summary>
+        Public Shared Function CreateSourceMaskFromSelection(adj As ImageAdjustments,
+                                                             Optional name As String = "Auswahlmaske") As ImageMask
+            If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return Nothing
+            Dim displaySize = ComputeGeometryOutputSize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
+            Dim decoded As SKBitmap = Nothing
+            Try
+                If Not String.IsNullOrWhiteSpace(adj.SelectionMaskPngBase64) Then
+                    decoded = SKBitmap.Decode(Convert.FromBase64String(adj.SelectionMaskPngBase64))
+                    If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return Nothing
+                End If
+                Dim dStride = If(decoded Is Nothing, 0, decoded.RowBytes)
+                Dim dBuf As Byte() = Nothing
+                If decoded IsNot Nothing Then
+                    dBuf = New Byte(dStride * decoded.Height - 1) {}
+                    Marshal.Copy(decoded.GetPixels(), dBuf, 0, dBuf.Length)
+                End If
+                Dim sourceW = adj.SourceWidthPixels, sourceH = adj.SourceHeightPixels
+                Dim full = New Byte(sourceW * sourceH - 1) {}
+                Dim left = sourceW, top = sourceH, right = 0, bottom = 0
+                For sy = 0 To sourceH - 1
+                    For sx = 0 To sourceW - 1
+                        Dim dp As SKPoint
+                        If Not TrySourcePointToGeometryOutput(sx + 0.5, sy + 0.5, sourceW, sourceH, adj, dp) Then Continue For
+                        Dim dx = CInt(Math.Floor(dp.X)), dy = CInt(Math.Floor(dp.Y))
+                        If dx < 0 OrElse dy < 0 OrElse dx >= displaySize.Width OrElse dy >= displaySize.Height Then Continue For
+                        Dim alpha As Byte
+                        If decoded IsNot Nothing Then
+                            Dim lx = dx - adj.SelectionMaskLeft, ly = dy - adj.SelectionMaskTop
+                            If lx < 0 OrElse ly < 0 OrElse lx >= decoded.Width OrElse ly >= decoded.Height Then Continue For
+                            alpha = dBuf(ly * dStride + lx)
+                        Else
+                            Dim inside = dx >= displaySize.Width * adj.SelectionXPercent / 100.0 AndAlso
+                                         dy >= displaySize.Height * adj.SelectionYPercent / 100.0 AndAlso
+                                         dx < displaySize.Width * (adj.SelectionXPercent + adj.SelectionWidthPercent) / 100.0 AndAlso
+                                         dy < displaySize.Height * (adj.SelectionYPercent + adj.SelectionHeightPercent) / 100.0
+                            If Not inside Then Continue For
+                            alpha = 255
+                        End If
+                        full(sy * sourceW + sx) = alpha
+                        If alpha > 0 Then
+                            left = Math.Min(left, sx) : top = Math.Min(top, sy)
+                            right = Math.Max(right, sx + 1) : bottom = Math.Max(bottom, sy + 1)
+                        End If
+                    Next
+                Next
+                If right <= left OrElse bottom <= top Then Return Nothing
+
+                Using cropped = New SKBitmap(right - left, bottom - top, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Dim cStride = cropped.RowBytes
+                    Dim cBuf = New Byte(cStride * cropped.Height - 1) {}
+                    For y = 0 To cropped.Height - 1
+                        Buffer.BlockCopy(full, (top + y) * sourceW + left, cBuf, y * cStride, cropped.Width)
+                    Next
+                    Marshal.Copy(cBuf, 0, cropped.GetPixels(), cBuf.Length)
+                    Using image = SKImage.FromBitmap(cropped)
+                        Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
+                            Return New ImageMask With {
+                                .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Auswahlmaske"), name),
+                                .SourceWidthPixels = sourceW, .SourceHeightPixels = sourceH,
+                                .Left = left, .Top = top, .Right = right, .Bottom = bottom,
+                                .PngBase64 = Convert.ToBase64String(data.ToArray()),
+                                .FeatherPixels = adj.SelectionFeatherPixels
+                            }
+                        End Using
+                    End Using
+                End Using
+            Catch
+                Return Nothing
+            Finally
+                decoded?.Dispose()
+            End Try
         End Function
 
         ''' <summary>Baut aus der aktiven Auswahl eine Alpha8-Maske in der Größe des verarbeiteten Bildes
         ''' (<paramref name="targetW"/>×<paramref name="targetH"/>). Unregelmäßige Auswahlen kommen aus der
-        ''' gespeicherten Alpha8-Maske (Basisbild-Pixel, per Nearest-Sampling auf die Zielgröße gebracht),
+        ''' gespeicherten Alpha8-Maske (Display-Pixel, per Nearest-Sampling auf die Zielgröße gebracht),
         ''' Rechtecke direkt aus den Prozentwerten. Liefert Nothing, wenn keine nutzbare Auswahl vorliegt.</summary>
         ''' <summary>Weiche Kante: zeichnet die Alpha8-Maske mit Weichzeichner in eine neue Maske gleicher
         ''' Größe. Skias Sigma entspricht etwa dem halben Radius. Nothing, wenn nichts zu tun ist.</summary>
@@ -2746,7 +3148,10 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             Dim mask = BuildSelectionScopeMaskCore(adj, targetW, targetH)
             If mask Is Nothing OrElse adj.SelectionFeatherPixels <= 0.05F Then Return mask
 
-            Dim scale = If(adj.SourceWidthPixels > 0, targetW / CSng(adj.SourceWidthPixels), 1.0F)
+            Dim referenceSize = ImageGeometryMapper.DisplaySize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj.RotationDegrees)
+            Dim scaleX = If(referenceSize.Width > 0, targetW / CSng(referenceSize.Width), 1.0F)
+            Dim scaleY = If(referenceSize.Height > 0, targetH / CSng(referenceSize.Height), 1.0F)
+            Dim scale = (scaleX + scaleY) / 2.0F
             Dim blurred = BlurAlphaMask(mask, adj.SelectionFeatherPixels * scale)
             If blurred Is Nothing Then Return mask
             mask.Dispose()
@@ -2755,8 +3160,12 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
 
         Private Shared Function BuildSelectionScopeMaskCore(adj As ImageAdjustments, targetW As Integer, targetH As Integer) As SKBitmap
             If targetW <= 0 OrElse targetH <= 0 Then Return Nothing
-            Dim baseW = adj.SourceWidthPixels
-            Dim scale = If(baseW > 0, targetW / CDbl(baseW), 1.0)
+            ' Maskenpixel und Masken-Rechteck werden vom Editor im sichtbaren Display-Raum gespeichert.
+            ' Bei 90/270 Grad ist dessen Breite die Source-Hoehe; eine Skalierung ueber SourceWidth
+            ' verschob bzw. leerte Lasso-/Zauberstabmasken in der Vorschau.
+            Dim referenceSize = ImageGeometryMapper.DisplaySize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj.RotationDegrees)
+            Dim scaleX = If(referenceSize.Width > 0, targetW / CDbl(referenceSize.Width), 1.0)
+            Dim scaleY = If(referenceSize.Height > 0, targetH / CDbl(referenceSize.Height), 1.0)
 
             If Not String.IsNullOrEmpty(adj.SelectionMaskPngBase64) Then
                 Dim boundsW = adj.SelectionMaskRight - adj.SelectionMaskLeft
@@ -2776,12 +3185,12 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                         Dim mStride = mask.RowBytes
                         Dim mBuf = New Byte(mStride * targetH - 1) {}
                         For ty = 0 To targetH - 1
-                            Dim baseY = If(scale > 0, CInt(ty / scale), ty)
+                            Dim baseY = If(scaleY > 0, CInt(ty / scaleY), ty)
                             Dim ly = baseY - adj.SelectionMaskTop
                             If ly < 0 OrElse ly >= dH Then Continue For
                             Dim mRow = ty * mStride, dRow = ly * dStride
                             For tx = 0 To targetW - 1
-                                Dim baseX = If(scale > 0, CInt(tx / scale), tx)
+                                Dim baseX = If(scaleX > 0, CInt(tx / scaleX), tx)
                                 Dim lx = baseX - adj.SelectionMaskLeft
                                 If lx < 0 OrElse lx >= dW Then Continue For
                                 mBuf(mRow + tx) = dBuf(dRow + lx)
@@ -2795,7 +3204,9 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                 End Try
             End If
 
-            If adj.HasActiveSelection Then
+            ' Rechteckdaten können entweder für den expliziten Legacy-Skopus ODER zum Einfrieren der
+            ' momentan aktiven UI-Auswahl angefordert werden.
+            If SelectionScopeIsEnabled(adj) OrElse adj.HasActiveSelection Then
                 Dim left = Clamp3(CInt(Math.Round(targetW * adj.SelectionXPercent / 100.0)), 0, targetW)
                 Dim top = Clamp3(CInt(Math.Round(targetH * adj.SelectionYPercent / 100.0)), 0, targetH)
                 Dim right = Clamp3(CInt(Math.Round(targetW * (adj.SelectionXPercent + adj.SelectionWidthPercent) / 100.0)), 0, targetW)
@@ -2815,6 +3226,12 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             End If
 
             Return Nothing
+        End Function
+
+        ''' <summary>Nur der explizite Rezeptzustand begrenzt globale Anpassungen. HasActiveSelection
+        ''' steuert ausschließlich die Editor-Überlagerung und darf das Rendering nie verändern.</summary>
+        Private Shared Function SelectionScopeIsEnabled(adj As ImageAdjustments) As Boolean
+            Return adj IsNot Nothing AndAlso adj.SelectionScopeEnabled
         End Function
 
         Private Shared Function Clamp3(value As Integer, lo As Integer, hi As Integer) As Integer
@@ -2934,13 +3351,33 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeInterpolation,
                 adj.CanvasWidth, adj.CanvasHeight, adj.LockCanvasAspect, adj.CanvasAnchor, adj.CanvasBackgroundColor,
                 adj.FilterPreset, adj.FilterStrength, adj.LutPath, adj.LutStrength,
-                adj.HasActiveSelection, adj.SelectionXPercent, adj.SelectionYPercent,
+                adj.SelectionScopeEnabled, adj.HasActiveSelection, adj.SelectionXPercent, adj.SelectionYPercent,
                 adj.SelectionWidthPercent, adj.SelectionHeightPercent, adj.SelectionShapeMode,
                 adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
                 SelectionMaskFingerprint(adj.SelectionMaskPngBase64),
                 adj.SelectionFeatherPixels,
+                adj.GlobalAdjustmentsHidden,
+                PersistentMasksFingerprint(adj),
                 adj.WorkingImageVersion
             }.Select(AddressOf KeyPart))
+        End Function
+
+        Private Shared Function PersistentMasksFingerprint(adj As ImageAdjustments) As String
+            Dim masks = If(adj.Masks, New List(Of ImageMask)()).
+                Where(Function(m) m IsNot Nothing).
+                Select(Function(m) String.Join(":", m.Id, m.SourceWidthPixels, m.SourceHeightPixels,
+                                               m.Left, m.Top, m.Right, m.Bottom, m.FeatherPixels,
+                                               m.Inverted, SelectionMaskFingerprint(m.PngBase64)))
+            Dim layers = If(adj.MaskedAdjustmentLayers, New List(Of MaskedAdjustmentLayer)()).
+                Where(Function(l) l IsNot Nothing).
+                Select(Function(l)
+                           Dim values = If(l.Adjustments, New ImageAdjustments())
+                           Dim pixelValues = ImageAdjustments.PixelAdjustmentProperties().
+                               Select(Function(p) KeyPart(p.GetValue(values)))
+                           Return String.Join(":", l.Id, l.MaskId, l.IsVisible, l.Opacity,
+                                              String.Join(",", pixelValues))
+                       End Function)
+            Return String.Join(";", masks) & "|" & String.Join(";", layers)
         End Function
 
         ''' <summary>Stabiler Fingerabdruck der Auswahlmaske für den Basis-Cache-Schlüssel.
@@ -8445,35 +8882,70 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim w = image.Width, h = image.Height
             If seedX < 0 OrElse seedY < 0 OrElse seedX >= w OrElse seedY >= h Then Return Nothing
 
-            Dim buf As Byte() = Nothing, stride As Integer = 0
-            If Not TryBorrowBgraBuffer(image, buf, stride) Then Return Nothing
+            ' ProcessBitmap bleibt ohne Objekt-Overlays meist Bgra8888, ApplyAnnotations liefert
+            ' dagegen bewusst Rgba8888. Der Zauberstab muss beide Szenenformate lesen können; die
+            ' frühere Bindung an TryBorrowBgraBuffer ließ ihn bei Bildern mit Objekten still mit
+            ' Nothing aussteigen.
+            Dim rIdx, gIdx, bIdx As Integer
+            Select Case image.ColorType
+                Case SKColorType.Bgra8888
+                    bIdx = 0 : gIdx = 1 : rIdx = 2
+                Case SKColorType.Rgba8888
+                    rIdx = 0 : gIdx = 1 : bIdx = 2
+                Case Else
+                    Return Nothing
+            End Select
+            Dim stride = image.RowBytes
+            Dim length = stride * h
+            If length <= 0 OrElse image.GetPixels() = IntPtr.Zero Then Return Nothing
+            Dim buf(length - 1) As Byte
+            Marshal.Copy(image.GetPixels(), buf, 0, length)
 
             Dim tol = CInt(Math.Round(Clamp(tolerance, 0, 1) * 255))
             Dim seedO = seedY * stride + seedX * 4
-            Dim sb = CInt(buf(seedO)), sg = CInt(buf(seedO + 1)), sr = CInt(buf(seedO + 2))
+            Dim sr = CInt(buf(seedO + rIdx)), sg = CInt(buf(seedO + gIdx)), sb = CInt(buf(seedO + bIdx))
 
-            Dim inside = New Boolean(w * h - 1) {}
+            ' 0 = unbekannt, 1 = bereits eingereiht, 2 = verworfen, 3 = ausgewählt. Die frühere
+            ' Boolean-Maske markierte nur Treffer; dasselbe noch ungeprüfte oder abgelehnte Pixel
+            ' konnte deshalb von mehreren Nachbarn immer wieder auf den Stack gelangen.
+            Dim state = New Byte(w * h - 1) {}
             Dim stack As New Stack(Of Integer)()
-            stack.Push(seedY * w + seedX)
+            Dim seedIndex = seedY * w + seedX
+            stack.Push(seedIndex)
+            state(seedIndex) = 1
             Dim minX = w, minY = h, maxX = -1, maxY = -1
 
             While stack.Count > 0
                 Dim idx = stack.Pop()
-                If inside(idx) Then Continue While
                 Dim x = idx Mod w, y = idx \ w
                 Dim o = y * stride + x * 4
-                If Math.Abs(CInt(buf(o)) - sb) > tol OrElse
-                   Math.Abs(CInt(buf(o + 1)) - sg) > tol OrElse
-                   Math.Abs(CInt(buf(o + 2)) - sr) > tol Then Continue While
-                inside(idx) = True
+                If Math.Abs(CInt(buf(o + rIdx)) - sr) > tol OrElse
+                   Math.Abs(CInt(buf(o + gIdx)) - sg) > tol OrElse
+                   Math.Abs(CInt(buf(o + bIdx)) - sb) > tol Then
+                    state(idx) = 2
+                    Continue While
+                End If
+                state(idx) = 3
                 If x < minX Then minX = x
                 If x > maxX Then maxX = x
                 If y < minY Then minY = y
                 If y > maxY Then maxY = y
-                If x > 0 Then stack.Push(idx - 1)
-                If x < w - 1 Then stack.Push(idx + 1)
-                If y > 0 Then stack.Push(idx - w)
-                If y < h - 1 Then stack.Push(idx + w)
+                If x > 0 AndAlso state(idx - 1) = 0 Then
+                    state(idx - 1) = 1
+                    stack.Push(idx - 1)
+                End If
+                If x < w - 1 AndAlso state(idx + 1) = 0 Then
+                    state(idx + 1) = 1
+                    stack.Push(idx + 1)
+                End If
+                If y > 0 AndAlso state(idx - w) = 0 Then
+                    state(idx - w) = 1
+                    stack.Push(idx - w)
+                End If
+                If y < h - 1 AndAlso state(idx + w) = 0 Then
+                    state(idx + w) = 1
+                    stack.Push(idx + w)
+                End If
             End While
 
             If maxX < minX Then Return Nothing
@@ -8485,7 +8957,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim mbuf = New Byte(mstride * bh - 1) {}
             For y = 0 To bh - 1
                 For x = 0 To bw - 1
-                    If inside((minY + y) * w + (minX + x)) Then mbuf(y * mstride + x) = 255
+                    If state((minY + y) * w + (minX + x)) = 3 Then mbuf(y * mstride + x) = 255
                 Next
             Next
             Marshal.Copy(mbuf, 0, mask.GetPixels(), mbuf.Length)

@@ -121,6 +121,15 @@
                         <TextBlock Text="Wähle ein Bild aus der Galerie" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                     </StackPanel>
 
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
+                                IsVisible="{Binding ShowBitmapLoading}">
+                        <ProgressBar Width="220" Height="4" IsIndeterminate="True" />
+                        <TextBlock Text="Bild wird geladen und gerendert…"
+                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                   FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                                 IsVisible="{Binding ShowVideoUnavailableNotice}">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>

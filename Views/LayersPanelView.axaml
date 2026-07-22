@@ -9,24 +9,25 @@
          Icon-Werkzeugleiste. Bindet ans EditorViewModel; alle Aktionen nutzen bestehende Kommandos. -->
     <Border x:Name="LayersPanelBorder" Classes="panel-right" Padding="0"
             IsVisible="{Binding IsLayersPanelVisible}">
-        <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
+        <Grid RowDefinitions="Auto,*,Auto,Auto,Auto,Auto">
 
             <!-- Kopfleiste: Deckkraft (Slider) über dem Mischmodus der markierten Ebene. -->
             <Border Grid.Row="0" Padding="10,10,10,8"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,0,0,1">
-                <StackPanel Spacing="8" IsEnabled="{Binding HasSelectedAnnotation}">
+                <StackPanel Spacing="8" IsEnabled="{Binding HasSelectedPanelLayer}">
                     <Grid ColumnDefinitions="70,*,44" VerticalAlignment="Center">
                         <TextBlock Grid.Column="0" Text="Deckkraft"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                            DefaultValue="100"
-                                           Value="{Binding AnnotationOpacity}" Margin="0,0" />
+                                           Value="{Binding SelectedLayerOpacity}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding AnnotationOpacity, Mode=TwoWay}"
+                                                 Value="{Binding SelectedLayerOpacity, Mode=TwoWay}"
                                                  Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
                     </Grid>
-                    <Grid ColumnDefinitions="70,*" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="70,*" VerticalAlignment="Center"
+                          IsEnabled="{Binding HasSelectedAnnotation}">
                         <TextBlock Grid.Column="0" Text="Mischen"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -44,7 +45,7 @@
             <ListBox x:Name="LayerListBox"
                      Classes="layers-panel-list"
                      ItemsSource="{Binding LayerRows}"
-                     SelectedItem="{Binding SelectedLayer, Mode=TwoWay}"
+                     SelectedItem="{Binding SelectedLayerRow, Mode=TwoWay}"
                      Background="Transparent" BorderThickness="0" Padding="0"
                      VerticalAlignment="Stretch"
                      KeyDown="OnLayerListKeyDown"
@@ -115,10 +116,47 @@
                     IsVisible="False" IsHitTestVisible="False" />
             </Grid>
 
+            <!-- Globale Einstellungsebene: alle nicht maskierten Regler aus Anpassen, Farbe, Details,
+                 Effekte und Filter. Fest über dem Arbeitsbild, weil genau dort die Renderpipeline sie
+                 anwendet; lokale maskierte Korrekturen stehen als freie Zeilen darüber. -->
+            <Border Grid.Row="2" Padding="8,5" MinHeight="42"
+                    BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
+                    Background="{DynamicResource FP.Bg.Dark}">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                    <Border Grid.Column="0" Width="30" Height="30" CornerRadius="3"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                            Background="{DynamicResource FP.Bg.Input}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
+                                       Width="16" Height="16"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Grid.Column="1" Text="Bildanpassungen"
+                               FontSize="{DynamicResource FP.Font.Small}"
+                               Margin="9,0,6,0" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                    <icons:SvgIcon Grid.Column="2"
+                                   Source="avares://FerrumPix/Assets/Icons/outline/lock.svg"
+                                   Width="13" Height="13" Margin="0,0,8,0"
+                                   IconBrush="{DynamicResource FP.Text.Muted}"
+                                   VerticalAlignment="Center" />
+                    <ToggleButton Grid.Column="3"
+                                  Classes="ghost layer-eye"
+                                  Width="24" Height="24" Padding="0"
+                                  IsChecked="{Binding IsGlobalAdjustmentsVisible, Mode=OneWay}"
+                                  Command="{Binding ToggleGlobalAdjustmentsVisibilityCommand}"
+                                  ToolTip.Tip="Anpassen, Farbe, Details, Effekte und Filter ein-/ausblenden">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                            Width="15" Height="15" />
+                    </ToggleButton>
+                </Grid>
+            </Border>
+
             <!-- Pixel-Ebene: Retusche, Pinsel-/Radiererstriche und gerasterte Ebenen liegen alle in EINEM
                  Arbeitsbild (siehe WorkingImageService) und lassen sich deshalb nur gemeinsam ausblenden.
                  Solange sie aus ist, sind die Mal- und Retuschewerkzeuge gesperrt (CanUsePixelTools). -->
-            <Border Grid.Row="2" Padding="8,5" MinHeight="42"
+            <Border Grid.Row="3" Padding="8,5" MinHeight="42"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">
@@ -154,7 +192,7 @@
 
             <!-- Hintergrund-Ebene: das Basisbild, fest am Boden, gesperrt (nicht umsortier-/löschbar). Nur das
                  Auge blendet es aus (transparenter Grund, siehe ImageProcessor.ApplyAnnotations). -->
-            <Border Grid.Row="3" Padding="8,5" MinHeight="42"
+            <Border Grid.Row="4" Padding="8,5" MinHeight="42"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">
@@ -190,28 +228,36 @@
 
             <!-- Untere Werkzeugleiste: Aktionen auf der markierten Ebene (wie die Icon-Reihe unten in
                  üblichen Ebenen-Panels). Nur die tatsächlich unterstützten Aktionen, keine Attrappen. -->
-            <Border Grid.Row="4" Padding="8,6"
+            <Border Grid.Row="5" Padding="8,6"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0">
                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding MoveSelectedAnnotationUpCommand}"
-                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            IsEnabled="{Binding HasSelectedPanelLayer}"
                             ToolTip.Tip="Ebene nach vorne">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-up.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding MoveSelectedAnnotationDownCommand}"
-                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            IsEnabled="{Binding HasSelectedPanelLayer}"
                             ToolTip.Tip="Ebene nach hinten">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-down.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DuplicateSelectedAnnotationCommand}"
-                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            IsEnabled="{Binding HasSelectedPanelLayer}"
                             ToolTip.Tip="Ebene duplizieren (Strg+D)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding AddAdjustmentWithSameMaskCommand}"
+                            IsVisible="{Binding HasSelectedAdjustmentLayer}"
+                            IsEnabled="{Binding HasSelectedAdjustmentLayer}"
+                            ToolTip.Tip="Neue Korrektur mit derselben Maske">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
@@ -223,14 +269,14 @@
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Click="OnRenameSelectedClick"
-                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            IsEnabled="{Binding HasSelectedPanelLayer}"
                             ToolTip.Tip="Ebene umbenennen (F2)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/edit.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DeleteSelectedAnnotationCommand}"
-                            IsEnabled="{Binding HasSelectedAnnotation}"
+                            IsEnabled="{Binding HasSelectedPanelLayer}"
                             ToolTip.Tip="Ebene löschen (Entf)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
                                        Width="16" Height="16" />

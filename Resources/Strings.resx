@@ -3960,4 +3960,37 @@
   <data name="Zeigt_auch_im_Viewer_das_entwickelte_bearbeitete_99fe4ca8" xml:space="preserve">
     <value>Also shows the developed, edited RAW in the viewer instead of the embedded preview – only when a .fpxmp exists.</value>
   </data>
+  <data name="Bild_und_Bearbeitungen_werden_geladen_dce06d0e" xml:space="preserve">
+    <value>Image and edits are loading…</value>
+  </data>
+  <data name="Bild_wird_geladen_und_gerendert_3d07ffa2" xml:space="preserve">
+    <value>Image is loading and rendering…</value>
+  </data>
+  <data name="Bildanpassungen_9590cfac" xml:space="preserve">
+    <value>Image adjustments</value>
+  </data>
+  <data name="Anpassen_Farbe_Details_Effekte_und_Filter_ein_au_e5ba6acb" xml:space="preserve">
+    <value>Show/hide Adjust, Color, Details, Effects and Filters</value>
+  </data>
+  <data name="Neue_Korrektur_mit_derselben_Maske_cc5e705b" xml:space="preserve">
+    <value>New adjustment with the same mask</value>
+  </data>
+  <data name="Migrierte_Auswahlmaske_131c0495" xml:space="preserve">
+    <value>Migrated selection mask</value>
+  </data>
+  <data name="Migrierte_lokale_Korrektur_c9ec9edd" xml:space="preserve">
+    <value>Migrated local adjustment</value>
+  </data>
+  <data name="Auswahlmaske_df2f84eb" xml:space="preserve">
+    <value>Selection mask</value>
+  </data>
+  <data name="Lokale_Korrektur_f2db77b0" xml:space="preserve">
+    <value>Local adjustment</value>
+  </data>
+  <data name="Kopie_6fa37490" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Auswahl_verschoben_0d991d0a" xml:space="preserve">
+    <value>Selection moved</value>
+  </data>
 </root>

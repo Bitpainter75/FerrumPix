@@ -44,6 +44,11 @@ Namespace ViewModels
         ' Formatvorschlag, damit der Dialog den Projektnamen statt "base" vorschlägt.
         Private _currentFpxPath As String = ""
         Private _currentFpxTempDir As String = ""
+        ' Aus Lasso/Zauberstab erzeugte Bildobjekte (Kopieren, Einfügen, maskierte Füllung) dürfen
+        ' nicht als lose Dateien direkt im System-Temp liegen: Annotationen sowie Undo/Redo halten
+        ' ihre Pfade noch bis zum Ende der aktuellen Dokument-Sitzung. Ein eigener Ordner pro
+        ' Dokument hält diese Lebensdauer zusammen und kann beim Dokumentwechsel atomar weg.
+        Private _selectionAssetTempDir As String = ""
         ' Neu angelegtes, noch nie gespeichertes Dokument. Die leere Fläche liegt als PNG in einem
         ' Temp-Ordner (siehe CreateNewDocumentAsync) - genau wie das entpackte Basisbild eines .fpx.
         ' Dadurch bleiben alle File.Exists-/FileInfo-/Exif-Invarianten der Ladekette gültig; das Flag
@@ -68,6 +73,7 @@ Namespace ViewModels
         Private _currentImage As Bitmap
         Private _previewImage As Bitmap
         Private _comparisonImage As Bitmap
+        Private _isDocumentLoading As Boolean = False
         Private _selectedAnnotationOverlayImage As Bitmap
         Private _retouchLivePatchImage As Bitmap
         Private _selectedAnnotationOverlayMetrics As ImageProcessor.AnnotationOverlayRender
@@ -342,6 +348,7 @@ Namespace ViewModels
         ' Compositing (siehe ImageProcessor.ApplyAnnotations), nicht als Pixel-Anpassung.
         Private _backgroundHidden As Boolean = False
         Private _pixelLayerHidden As Boolean = False
+        Private _globalAdjustmentsHidden As Boolean = False
 
         ''' True, solange die eingebettete RAW-Vorschau angezeigt wird und die echte Entwicklung noch
         ''' laeuft. In diesem Fenster gibt es noch KEIN Arbeitsbild - Pinsel und Retusche muessen
@@ -395,6 +402,9 @@ Namespace ViewModels
         Private _annotationGlowColor As String = "#FFFFFF00"
         Private _watermarkImagePath As String = ""
         Private _hasActiveSelection As Boolean = False
+        ' Persistenter Render-Skopus ist von der sichtbaren/editierbaren Auswahl getrennt. Eine FPX darf
+        ' die lokale Maskenwirkung wiederherstellen, ohne beim Oeffnen die Ameisenlinie zu reaktivieren.
+        Private _selectionScopeEnabled As Boolean = False
         Private _selectionXPercent As Double = 0
         Private _selectionYPercent As Double = 0
         Private _selectionWidthPercent As Double = 0
@@ -419,6 +429,18 @@ Namespace ViewModels
         Private _selectionShapePointsY As Double() = Nothing
         Private _selectionMaskEdgePointsX As Double() = Nothing
         Private _selectionMaskEdgePointsY As Double() = Nothing
+        Private ReadOnly _magicWandGate As New SemaphoreSlim(1, 1)
+        Private _magicWandGeneration As Integer = 0
+        Private _selectionMoveUndoSnapshot As ImageAdjustments = Nothing
+        Private _selectionMoveStartXPercent As Double
+        Private _selectionMoveStartYPercent As Double
+        ' Es gibt weiterhin höchstens EINE aktive Auswahl. Bereits abgeschlossene lokale Korrekturen
+        ' behalten ihre eigenen SourceSpace-Masken jedoch im Dokument und bleiben dadurch stapelbar.
+        Private ReadOnly _imageMasks As New List(Of ImageMask)()
+        Private ReadOnly _maskedAdjustmentLayers As New List(Of MaskedAdjustmentLayer)()
+        Private _selectionAdjustLayerId As String = ""
+        Private _selectionImagePixelAdjustments As ImageAdjustments = Nothing
+        Private _selectionAdjustSwapInProgress As Boolean = False
         Private ReadOnly _annotations As New ObservableCollection(Of ImageAnnotation)()
         ' Raster-Paint-Werkzeuge (Pinsel/Radierer) sind keine Overlay-Objekte und erscheinen nicht im
         ' Ebenenstapel. Der Renderer wandelt diese Daten nur intern in seine bestehende Zeichenroutine um.
@@ -560,8 +582,10 @@ Namespace ViewModels
         ' unten, wie in üblichen Bildbearbeitungen). Wird bei jeder Stapeländerung synchron neu aufgebaut;
         ' die Auswahl läuft objektbasiert über SelectedLayer, damit Umsortieren/Neuaufbau die Markierung
         ' nicht verliert. _annotations bleibt die Wahrheit (Index 0 = zuerst gezeichnet = hinten).
-        Private ReadOnly _layerRows As New ObservableCollection(Of ImageAnnotation)()
+        Private ReadOnly _layerRows As New ObservableCollection(Of LayerPanelRow)()
         Private _suppressLayerRowSelectionSync As Boolean = False
+        Private _selectedLayerRow As LayerPanelRow = Nothing
+        Private _selectedMaskedAdjustmentLayerId As String = ""
         Private _selectedAnnotationIndex As Integer = -1
         ' Verfolgt den Raster-Paint-Eintrag, an den die aktuell laufende Pinsel-/Radiergummi-"Sitzung"
         ' noch weitere Striche anhängt, statt für jeden einzelnen Strich einen neuen Eintrag anzulegen (siehe
@@ -743,7 +767,7 @@ Namespace ViewModels
 
         ''' <summary>Objektstapel in ANZEIGE-Reihenfolge fürs Ebenen-Panel: _annotations umgekehrt (vorderste
         ''' Ebene zuerst/oben). Wird von RebuildLayerRows synchron gehalten.</summary>
-        Public ReadOnly Property LayerRows As ObservableCollection(Of ImageAnnotation)
+        Public ReadOnly Property LayerRows As ObservableCollection(Of LayerPanelRow)
             Get
                 Return _layerRows
             End Get
@@ -768,17 +792,107 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Auswahl des gemeinsamen Panel-Stapels. Objektzeilen übersetzen weiter auf den
+        ''' bestehenden SelectedAnnotationIndex; Korrekturzeilen bleiben ein eigenes Renderziel.</summary>
+        Public Property SelectedLayerRow As LayerPanelRow
+            Get
+                Return _selectedLayerRow
+            End Get
+            Set(value As LayerPanelRow)
+                If _suppressLayerRowSelectionSync OrElse Object.ReferenceEquals(value, _selectedLayerRow) Then Return
+                Dim annotationIndex = If(value?.Annotation Is Nothing, -1, _annotations.IndexOf(value.Annotation))
+                Dim adjustmentId = If(value?.AdjustmentLayer Is Nothing, "", value.AdjustmentLayer.Id)
+                If IsSelectionAdjustModeActive() AndAlso adjustmentId <> _selectionAdjustLayerId Then
+                    ' Zielwechsel immer aus einem kanonischen globalen Reglerstand beginnen. Ein
+                    ' Objekt darf nicht versehentlich die gerade sichtbaren Werte der lokalen
+                    ' Korrektur als seine Bildwerte parken.
+                    CommitSelectionAdjustModeToModel()
+                End If
+                If annotationIndex >= 0 AndAlso annotationIndex < _annotations.Count Then
+                    _selectedMaskedAdjustmentLayerId = ""
+                    SelectedAnnotationIndex = annotationIndex
+                    _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) Object.ReferenceEquals(r.Annotation, _annotations(annotationIndex)))
+                ElseIf Not String.IsNullOrWhiteSpace(adjustmentId) Then
+                    _selectedMaskedAdjustmentLayerId = adjustmentId
+                    SelectedAnnotationIndex = -1
+                    _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) r.AdjustmentLayer IsNot Nothing AndAlso r.AdjustmentLayer.Id = adjustmentId)
+                Else
+                    _selectedMaskedAdjustmentLayerId = ""
+                    SelectedAnnotationIndex = -1
+                    _selectedLayerRow = Nothing
+                End If
+                RaiseLayerPanelSelectionChanged()
+                RefreshSelectionAdjustMode()
+            End Set
+        End Property
+
+        Public ReadOnly Property HasSelectedPanelLayer As Boolean
+            Get
+                Return _selectedLayerRow IsNot Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property HasSelectedAdjustmentLayer As Boolean
+            Get
+                Return _selectedLayerRow?.AdjustmentLayer IsNot Nothing
+            End Get
+        End Property
+
+        Public Property SelectedLayerOpacity As Double
+            Get
+                If _selectedLayerRow?.AdjustmentLayer IsNot Nothing Then
+                    Return Math.Round(Math.Max(0, Math.Min(1, _selectedLayerRow.AdjustmentLayer.Opacity)) * 100.0, 2)
+                End If
+                Return AnnotationOpacity
+            End Get
+            Set(value As Double)
+                Dim clamped = Math.Max(0, Math.Min(100, value))
+                If _selectedLayerRow?.AdjustmentLayer IsNot Nothing Then
+                    Dim nextOpacity = CSng(clamped / 100.0)
+                    If Math.Abs(_selectedLayerRow.AdjustmentLayer.Opacity - nextOpacity) < 0.0001F Then Return
+                    CaptureUndoState("AdjustmentLayerOpacity")
+                    _selectedLayerRow.AdjustmentLayer.Opacity = nextOpacity
+                    _selectedLayerRow.Refresh()
+                    _hasChanges = True
+                    RaiseResetButtonStateChanged()
+                    SchedulePreviewUpdate()
+                Else
+                    AnnotationOpacity = clamped
+                End If
+                Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
+            End Set
+        End Property
+
         Private Sub RebuildLayerRows()
+            Dim selectedAnnotation = SelectedLayer
+            Dim selectedAdjustmentId = _selectedMaskedAdjustmentLayerId
             _suppressLayerRowSelectionSync = True
             Try
                 _layerRows.Clear()
                 For i = _annotations.Count - 1 To 0 Step -1
-                    _layerRows.Add(_annotations(i))
+                    _layerRows.Add(New LayerPanelRow(_annotations(i)))
                 Next
+                For i = _maskedAdjustmentLayers.Count - 1 To 0 Step -1
+                    _layerRows.Add(New LayerPanelRow(_maskedAdjustmentLayers(i)))
+                Next
+                _selectedLayerRow = _layerRows.FirstOrDefault(Function(r)
+                    Return (selectedAnnotation IsNot Nothing AndAlso Object.ReferenceEquals(r.Annotation, selectedAnnotation)) OrElse
+                           (Not String.IsNullOrWhiteSpace(selectedAdjustmentId) AndAlso
+                            r.AdjustmentLayer IsNot Nothing AndAlso r.AdjustmentLayer.Id = selectedAdjustmentId)
+                End Function)
+                If _selectedLayerRow Is Nothing AndAlso selectedAnnotation Is Nothing Then _selectedMaskedAdjustmentLayerId = ""
             Finally
                 _suppressLayerRowSelectionSync = False
             End Try
             Me.RaisePropertyChanged(NameOf(SelectedLayer))
+            RaiseLayerPanelSelectionChanged()
+        End Sub
+
+        Private Sub RaiseLayerPanelSelectionChanged()
+            Me.RaisePropertyChanged(NameOf(SelectedLayerRow))
+            Me.RaisePropertyChanged(NameOf(HasSelectedPanelLayer))
+            Me.RaisePropertyChanged(NameOf(HasSelectedAdjustmentLayer))
+            Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
         End Sub
 
         Private ReadOnly _allShapeIcons As New List(Of ShapeIconEntry)()
@@ -1562,6 +1676,12 @@ Namespace ViewModels
                 _pixelEditLayer.ResetActiveStroke()
                 _selectedAnnotationIndex = clamped
                 If clamped >= 0 Then
+                    _selectedMaskedAdjustmentLayerId = ""
+                    _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) Object.ReferenceEquals(r.Annotation, _annotations(clamped)))
+                ElseIf String.IsNullOrWhiteSpace(_selectedMaskedAdjustmentLayerId) Then
+                    _selectedLayerRow = Nothing
+                End If
+                If clamped >= 0 Then
                     ' Im Drehen-Werkzeug wird KEIN Platzierungstyp scharfgestellt: dort will man ein Objekt
                     ' drehen, nicht ein weiteres anlegen - der nächste Klick auf freie Fläche würde sonst
                     ' eines setzen.
@@ -1594,6 +1714,7 @@ Namespace ViewModels
                 LoadSelectedAnnotationIntoEditor()
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
                 Me.RaisePropertyChanged(NameOf(SelectedLayer))
+                RaiseLayerPanelSelectionChanged()
                 Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationKind))
@@ -2089,6 +2210,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
                 Me.RaisePropertyChanged(NameOf(HasDocument))
+                Me.RaisePropertyChanged(NameOf(ShowEditorEmptyState))
             End Set
         End Property
 
@@ -2131,6 +2253,8 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_currentImage, value)
                 Me.RaisePropertyChanged(NameOf(DisplayImage))
                 Me.RaisePropertyChanged(NameOf(BeforeDisplayImage))
+                Me.RaisePropertyChanged(NameOf(ShowEditorDocument))
+                Me.RaisePropertyChanged(NameOf(ShowNoImagePlaceholder))
                 RaiseImageGeometryDependentProperties()
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
@@ -2226,15 +2350,57 @@ Namespace ViewModels
 
         Public ReadOnly Property DisplayImage As Bitmap
             Get
+                If _isDocumentLoading Then Return Nothing
                 Return If(_previewImage, _currentImage)
             End Get
         End Property
 
         Public ReadOnly Property BeforeDisplayImage As Bitmap
             Get
+                If _isDocumentLoading Then Return Nothing
                 Return If(_comparisonImage, _currentImage)
             End Get
         End Property
+
+        ''' <summary>RAW/FPXMP/FPX werden atomar veröffentlicht: Arbeitsbild und Rezept dürfen intern
+        ''' schon aufgebaut sein, die View erhält aber erst nach dem finalen Szenenrender ein Bild.</summary>
+        Public ReadOnly Property IsDocumentLoading As Boolean
+            Get
+                Return _isDocumentLoading
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowEditorDocument As Boolean
+            Get
+                Return Not _isDocumentLoading AndAlso _currentImage IsNot Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowNoImagePlaceholder As Boolean
+            Get
+                Return Not _isDocumentLoading AndAlso _currentImage Is Nothing
+            End Get
+        End Property
+
+        ''' <summary>Leerzustand fuer die gesamte Editor-Arbeitszeile. Waehrend eines atomaren
+        ''' RAW-/FPX-/FPXMP-Aufbaus existiert der Dokumentpfad gegebenenfalls noch nicht, trotzdem
+        ''' darf dort nicht „Kein Bild“ erscheinen: der zentrale Ladezustand bleibt sichtbar.</summary>
+        Public ReadOnly Property ShowEditorEmptyState As Boolean
+            Get
+                Return Not _isDocumentLoading AndAlso Not HasDocument
+            End Get
+        End Property
+
+        Private Sub SetDocumentLoading(value As Boolean)
+            If _isDocumentLoading = value Then Return
+            _isDocumentLoading = value
+            Me.RaisePropertyChanged(NameOf(IsDocumentLoading))
+            Me.RaisePropertyChanged(NameOf(ShowEditorDocument))
+            Me.RaisePropertyChanged(NameOf(ShowNoImagePlaceholder))
+            Me.RaisePropertyChanged(NameOf(ShowEditorEmptyState))
+            Me.RaisePropertyChanged(NameOf(DisplayImage))
+            Me.RaisePropertyChanged(NameOf(BeforeDisplayImage))
+        End Sub
 
         ''' Hintergrund hinter transparenten Bildbereichen (Schachbrettmuster oder Volltonfarbe je
         ''' nach Einstellung) - wird bei Änderung in den Settings über
@@ -2351,6 +2517,7 @@ Namespace ViewModels
                 RaiseToolContextProperties()
                 ' Werkzeugwechsel kann das Ziel der Regler umschalten (Objekt <-> Bild).
                 RefreshObjectAdjustMode()
+                RefreshSelectionAdjustMode()
                 RequestOverlayStateNotify()
                 ' STEMPEL-LIVE: Live-Puffer (Ziel + Sample, 2 Pipeline-Renders)
                 ' schon beim Werkzeugwechsel asynchron vorwaermen - erst beim ersten Spot gebaut,
@@ -4350,6 +4517,14 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Sichtbarkeit der gemeinsamen globalen Anpassungsebene für Anpassen, Farbe,
+        ''' Details, Effekte und Filter. Lokale Maskenkorrekturen besitzen eigene Sichtbarkeit.</summary>
+        Public ReadOnly Property IsGlobalAdjustmentsVisible As Boolean
+            Get
+                Return Not _globalAdjustmentsHidden
+            End Get
+        End Property
+
         ''' <summary>Sichtbarkeit der Pixel-Ebene "Retusche und Pinsel". Retusche, Striche und gerasterte
         ''' Ebenen liegen alle in EINEM Arbeitsbild (siehe WorkingImageService) und lassen sich deshalb nur
         ''' gemeinsam ein-/ausblenden. True = sichtbar.</summary>
@@ -5306,6 +5481,12 @@ Namespace ViewModels
                 If Math.Abs(_selectionFeather - clamped) < 0.0001 Then Return
                 CaptureUndoState("SelectionFeather")
                 Me.RaiseAndSetIfChanged(_selectionFeather, clamped)
+                If IsSelectionAdjustModeActive() Then
+                    Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectionAdjustLayerId)
+                    Dim mask = If(layer Is Nothing, Nothing,
+                        _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId))
+                    If mask IsNot Nothing Then mask.FeatherPixels = CSng(clamped)
+                End If
                 SchedulePreviewUpdate()
             End Set
         End Property
@@ -5354,12 +5535,19 @@ Namespace ViewModels
                 Return
             End If
 
-            ' Randpixel einsammeln (die MASKE bleibt davon unberührt - das hier ist nur die Ameisenlinie).
+            ' Randpixel sampeln (die MASKE bleibt davon unberührt - das hier ist nur die Ameisenlinie).
+            ' Früher landete zunächst jeder einzelne Randpixel in zwei Double-Listen und wurde erst
+            ' anschließend ausgedünnt. Bei großen/zerklüfteten Masken kostete allein diese Anzeige
+            ' mehrere zig MB. Deterministisches Reservoir-Sampling hält Speicher UND Durchlaufzahl
+            ' konstant begrenzt und verteilt die Anzeigepunkte gleichmäßig über den gesamten Rand.
             Dim w = _selectionMask.Width, h = _selectionMask.Height
             Dim stride = _selectionMaskBytesStride
             Dim bytes = _selectionMaskBytes
-            Dim edgeXs As New List(Of Double)()
-            Dim edgeYs As New List(Of Double)()
+            Const MaxEdgePoints As Integer = 4000
+            Dim edgeXs As New List(Of Double)(MaxEdgePoints)
+            Dim edgeYs As New List(Of Double)(MaxEdgePoints)
+            Dim edgeCount As Integer = 0
+            Dim sampler As New Random(872341)
 
             For y = 0 To h - 1
                 Dim row = y * stride
@@ -5372,29 +5560,20 @@ Namespace ViewModels
                                  bytes(row + x + 1) = 0 OrElse
                                  bytes(up + x) = 0 OrElse
                                  bytes(down + x) = 0
-                    If isEdge Then
+                    If Not isEdge Then Continue For
+                    edgeCount += 1
+                    If edgeCount <= MaxEdgePoints Then
                         edgeXs.Add((x + 0.5) * 100.0 / w)
                         edgeYs.Add((y + 0.5) * 100.0 / h)
+                    Else
+                        Dim replaceIndex = sampler.Next(edgeCount)
+                        If replaceIndex < MaxEdgePoints Then
+                            edgeXs(replaceIndex) = (x + 0.5) * 100.0 / w
+                            edgeYs(replaceIndex) = (y + 0.5) * 100.0 / h
+                        End If
                     End If
                 Next
             Next
-
-            ' Ausdünnen erst NACH dem Einsammeln, und gleichmäßig entlang des Randes. Die alte Regel
-            ' „(x+y) Mod Schritt = 0" ließ ganze Diagonalstreifen der Kontur weg - die Ameisenlinie sah
-            ' dadurch löchrig aus, obwohl die Maske exakt war. Die Obergrenze hält das Zeichnen flüssig:
-            ' das Overlay malt je Punkt ein Kästchen und frischt zwölfmal pro Sekunde auf.
-            Const MaxEdgePoints As Integer = 4000
-            If edgeXs.Count > MaxEdgePoints Then
-                Dim step_ = CInt(Math.Ceiling(edgeXs.Count / CDbl(MaxEdgePoints)))
-                Dim thinnedX As New List(Of Double)(MaxEdgePoints + 1)
-                Dim thinnedY As New List(Of Double)(MaxEdgePoints + 1)
-                For i = 0 To edgeXs.Count - 1 Step step_
-                    thinnedX.Add(edgeXs(i))
-                    thinnedY.Add(edgeYs(i))
-                Next
-                edgeXs = thinnedX
-                edgeYs = thinnedY
-            End If
 
             _selectionMaskEdgePointsX = edgeXs.ToArray()
             _selectionMaskEdgePointsY = edgeYs.ToArray()
@@ -5545,30 +5724,60 @@ Namespace ViewModels
         End Sub
 
         ''' Zauberstab: wählt die zusammenhängende Farbfläche am Klickpunkt (Prozentkoordinaten).
-        Public Sub SetSelectionMagicWand(xPercent As Double, yPercent As Double)
+        Public Async Function SetSelectionMagicWand(xPercent As Double, yPercent As Double) As Task
             If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
-            Dim selectionSize = GetAnnotationDisplayPixelSize()
-            Dim bw = selectionSize.Width, bh = selectionSize.Height
-            If bw <= 0 OrElse bh <= 0 Then Return
-            Dim seedX = CInt(Math.Round(bw * xPercent / 100.0))
-            Dim seedY = CInt(Math.Round(bh * yPercent / 100.0))
-            seedX = Math.Max(0, Math.Min(bw - 1, seedX))
-            seedY = Math.Max(0, Math.Min(bh - 1, seedY))
-            Dim bounds As SKRectI
-            Using mask = ImageProcessor.BuildMagicWandMaskFromFile(RenderSourcePath, GetCurrentAdjustments(),
-                                                                   seedX, seedY, CSng(_selectionTolerance / 100.0), bounds,
-                                                                   workingFull:=CloneWorkingFullForRender())
-                If mask Is Nothing OrElse bounds.Width <= 0 OrElse bounds.Height <= 0 Then
-                    DiagnosticLogService.LogAlways("Editor.MagicWand",
-                        $"noSelection seed={seedX},{seedY} display={bw}x{bh} pct={xPercent:0.###},{yPercent:0.###} tol={_selectionTolerance:0.###}")
+            Dim generation = Interlocked.Increment(_magicWandGeneration)
+            Dim requestedDocument = _currentImagePath
+
+            Await _magicWandGate.WaitAsync()
+            Try
+                ' Während ein vorheriger Klick noch gerechnet hat, zählt nur der jüngste Auftrag.
+                If generation <> Volatile.Read(_magicWandGeneration) OrElse
+                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
+
+                Dim selectionSize = GetAnnotationDisplayPixelSize()
+                Dim bw = selectionSize.Width, bh = selectionSize.Height
+                If bw <= 0 OrElse bh <= 0 Then Return
+                Dim seedX = CInt(Math.Round(bw * xPercent / 100.0))
+                Dim seedY = CInt(Math.Round(bh * yPercent / 100.0))
+                seedX = Math.Max(0, Math.Min(bw - 1, seedX))
+                seedY = Math.Max(0, Math.Min(bh - 1, seedY))
+
+                ' Alle VM-Daten und das Arbeitsbild auf dem UI-Thread einfrieren. Nur der teure
+                ' Datei-/Bitmap-Render und Flood-Fill laufen danach im Worker.
+                Dim sourcePath = RenderSourcePath
+                Dim adjustments = GetCurrentAdjustments()
+                Dim workingFull = CloneWorkingFullForRender()
+                Dim tolerance = CSng(_selectionTolerance / 100.0)
+                Dim result = Await Task.Run(Function()
+                                                Dim workerBounds As SKRectI
+                                                Dim workerMask = ImageProcessor.BuildMagicWandMaskFromFile(
+                                                    sourcePath, adjustments, seedX, seedY, tolerance, workerBounds,
+                                                    workingFull:=workingFull)
+                                                Return (Mask:=workerMask, Bounds:=workerBounds)
+                                            End Function)
+
+                If generation <> Volatile.Read(_magicWandGeneration) OrElse
+                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
+                    result.Mask?.Dispose()
                     Return
                 End If
-                PushUndo()
-                ' Kein Polygonzug: für maskenbasierte Auswahlen zeichnet das Overlay die Ameisenlinie aus den
-                ' Maskenrändern und die Treffererkennung fragt die Maske selbst (siehe HasSelectionMask).
-                ApplySelectionCandidate(mask, bounds, "MagicWand", Nothing, Nothing)
-            End Using
-        End Sub
+
+                Using mask = result.Mask
+                    If mask Is Nothing OrElse result.Bounds.Width <= 0 OrElse result.Bounds.Height <= 0 Then
+                        DiagnosticLogService.LogAlways("Editor.MagicWand",
+                            $"noSelection seed={seedX},{seedY} display={bw}x{bh} pct={xPercent:0.###},{yPercent:0.###} tol={_selectionTolerance:0.###}")
+                        Return
+                    End If
+                    PushUndo()
+                    ' Kein Polygonzug: für maskenbasierte Auswahlen zeichnet das Overlay die Ameisenlinie aus den
+                    ' Maskenrändern und die Treffererkennung fragt die Maske selbst (siehe HasSelectionMask).
+                    ApplySelectionCandidate(mask, result.Bounds, "MagicWand", Nothing, Nothing)
+                End Using
+            Finally
+                _magicWandGate.Release()
+            End Try
+        End Function
 
         ''' <summary>Wählt das ganze Bild aus (Strg+A). Als reines Rechteck ohne Maske - das ist die
         ''' pixelgenaue und zugleich billigste Darstellung einer Voll-Auswahl; „Umkehren" macht daraus bei
@@ -5586,8 +5795,10 @@ Namespace ViewModels
 
         Public Sub ClearSelection(Optional captureUndo As Boolean = True)
             If captureUndo AndAlso _hasActiveSelection Then PushUndo()
+            CommitSelectionAdjustModeToModel()
             ClearSelectionMask()
             SetSelectionShape("Rectangle", Nothing, Nothing)
+            _selectionScopeEnabled = False
             HasActiveSelection = False
         End Sub
 
@@ -5865,8 +6076,6 @@ Namespace ViewModels
             Dim actualDx = newX - _selectionXPercent
             Dim actualDy = newY - _selectionYPercent
             If Math.Abs(actualDx) < 0.0001 AndAlso Math.Abs(actualDy) < 0.0001 Then Return
-            CaptureUndoState("Auswahl")
-
             SelectionXPercent = newX
             SelectionYPercent = newY
 
@@ -5894,6 +6103,35 @@ Namespace ViewModels
                                                      top + _selectionMaskRect.Height)
                 End If
             End If
+        End Sub
+
+        Public Sub BeginSelectionMoveTransaction()
+            If Not _hasActiveSelection OrElse _selectionMoveUndoSnapshot IsNot Nothing Then Return
+            _selectionMoveUndoSnapshot = GetCurrentAdjustments()
+            _selectionMoveStartXPercent = _selectionXPercent
+            _selectionMoveStartYPercent = _selectionYPercent
+        End Sub
+
+        Public Sub CommitSelectionMoveTransaction()
+            If _selectionMoveUndoSnapshot Is Nothing Then Return
+            Dim changed = Math.Abs(_selectionXPercent - _selectionMoveStartXPercent) > 0.0001 OrElse
+                          Math.Abs(_selectionYPercent - _selectionMoveStartYPercent) > 0.0001
+            If changed Then
+                _undoStack.Push(New UndoEntry With {.Adjustments = _selectionMoveUndoSnapshot})
+                _lastPushedUndoEntry = Nothing
+                ClearRedoStack()
+                AddHistoryEntry(LocalizationService.T("Auswahl verschoben"))
+                Me.RaisePropertyChanged(NameOf(CanUndo))
+                Me.RaisePropertyChanged(NameOf(CanRedo))
+            End If
+            _selectionMoveUndoSnapshot = Nothing
+        End Sub
+
+        Public Sub CancelSelectionMoveTransaction()
+            If _selectionMoveUndoSnapshot Is Nothing Then Return
+            MoveSelection(_selectionMoveStartXPercent - _selectionXPercent,
+                          _selectionMoveStartYPercent - _selectionYPercent)
+            _selectionMoveUndoSnapshot = Nothing
         End Sub
 
         ''' Schneidet den aktuell verarbeiteten Bildinhalt (alle Anpassungen/Objekte gebacken) auf
@@ -5924,7 +6162,7 @@ Namespace ViewModels
             If width <= 0 OrElse height <= 0 Then Return Nothing
             placementPx = New SKRectI(left, top, left + width, top + height)
 
-            Dim tempPath = IO.Path.Combine(IO.Path.GetTempPath(), $"ferrumpix_selection_{Guid.NewGuid():N}.png")
+            Dim tempPath = CreateSelectionAssetTempPath("selection")
             Dim adj = GetCurrentAdjustments()
             If _selectionMask IsNot Nothing OrElse _selectionFeather > 0.05 Then
                 ' Maskierte Auswahl: unregelmäßige Auswahl immer, Rechtecke sobald eine weiche Kante aktiv ist.
@@ -6238,7 +6476,7 @@ Namespace ViewModels
 
             ' Maskierte Auswahl: unregelmäßige Auswahl immer, Rechtecke sobald eine weiche Kante aktiv ist.
             If _selectionMask IsNot Nothing OrElse _selectionFeather > 0.05 Then
-                Dim tempPath = IO.Path.Combine(IO.Path.GetTempPath(), $"ferrumpix_fill_{Guid.NewGuid():N}.png")
+                Dim tempPath = CreateSelectionAssetTempPath("fill")
                 Dim ownsMask As Boolean
                 Dim maskRect As SKRectI
                 Dim mask = GetSelectionMaskForOutput(maskRect, ownsMask)
@@ -6466,12 +6704,19 @@ Namespace ViewModels
             Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (0, 0)
-            Select Case ((_appliedRotationDegrees Mod 360) + 360) Mod 360
-                Case 90, 270
-                    Return (baseHeight, baseWidth)
-                Case Else
-                    Return (baseWidth, baseHeight)
-            End Select
+            Dim geometry = New ImageAdjustments With {
+                .CropLeftPercent = CSng(_appliedCropLeft), .CropTopPercent = CSng(_appliedCropTop),
+                .CropRightPercent = CSng(_appliedCropRight), .CropBottomPercent = CSng(_appliedCropBottom),
+                .RotationDegrees = _appliedRotationDegrees,
+                .FlipHorizontal = _appliedFlipH, .FlipVertical = _appliedFlipV,
+                .StraightenDegrees = CSng(_appliedStraightenDegrees),
+                .StraightenExpandCanvas = _appliedStraightenExpandCanvas,
+                .ResizeWidth = _appliedResizeWidth, .ResizeHeight = _appliedResizeHeight,
+                .CanvasWidth = _appliedCanvasWidth, .CanvasHeight = _appliedCanvasHeight,
+                .CanvasAnchor = _canvasAnchor
+            }
+            Dim size = ImageProcessor.ComputeGeometryOutputSize(baseWidth, baseHeight, geometry)
+            Return (size.Width, size.Height)
         End Function
 
         Private Function GetAnnotationDisplayPixelRect(annotation As ImageAnnotation) As (X As Double, Y As Double, Width As Double, Height As Double)
@@ -7635,11 +7880,13 @@ Namespace ViewModels
         Public ReadOnly Property DeleteAnnotationCommand As ICommand
         Public ReadOnly Property ToggleAnnotationVisibilityCommand As ICommand
         Public ReadOnly Property DuplicateSelectedAnnotationCommand As ICommand
+        Public ReadOnly Property AddAdjustmentWithSameMaskCommand As ICommand
         Public ReadOnly Property RasterizeSelectedAnnotationCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationUpCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationDownCommand As ICommand
         Public ReadOnly Property TogglePixelLayerVisibilityCommand As ICommand
         Public ReadOnly Property ToggleBackgroundVisibilityCommand As ICommand
+        Public ReadOnly Property ToggleGlobalAdjustmentsVisibilityCommand As ICommand
         Public ReadOnly Property ResetCurrentToolCommand As ICommand
         Public ReadOnly Property ResetLightCommand As ICommand
         Public ReadOnly Property ResetColorCommand As ICommand
@@ -7875,12 +8122,15 @@ Namespace ViewModels
             DeleteAnnotationCommand = ReactiveCommand.Create(Of ImageAnnotation)(Sub(annotation)
                                                                                       DeleteAnnotation(annotation)
                                                                                   End Sub)
-            ToggleAnnotationVisibilityCommand = ReactiveCommand.Create(Of ImageAnnotation)(Sub(annotation)
-                                                                                                ToggleAnnotationVisibility(annotation)
-                                                                                            End Sub)
+            ToggleAnnotationVisibilityCommand = ReactiveCommand.Create(Of LayerPanelRow)(Sub(row)
+                                                                                               ToggleLayerVisibility(row)
+                                                                                           End Sub)
             DuplicateSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                             DuplicateSelectedAnnotation()
                                                                         End Sub)
+            AddAdjustmentWithSameMaskCommand = ReactiveCommand.Create(Sub()
+                                                                          AddAdjustmentWithSameMask()
+                                                                      End Sub)
             RasterizeSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                             RasterizeSelectedAnnotation()
                                                                         End Sub)
@@ -7891,6 +8141,7 @@ Namespace ViewModels
                                                                            MoveSelectedAnnotation(-1)
                                                                        End Sub)
             ToggleBackgroundVisibilityCommand = ReactiveCommand.Create(Sub() ToggleBackgroundVisibility())
+            ToggleGlobalAdjustmentsVisibilityCommand = ReactiveCommand.Create(Sub() ToggleGlobalAdjustmentsVisibility())
             TogglePixelLayerVisibilityCommand = ReactiveCommand.Create(Sub() TogglePixelLayerVisibility())
             ResetCurrentToolCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo()
@@ -8149,6 +8400,7 @@ Namespace ViewModels
                 ClearPreviewSource()
                 CleanupCurrentFpxTempDir()
                 CleanupCurrentNewDocTempDir()
+                CleanupCurrentSelectionAssetTempDir()
             End If
         End Sub
 
@@ -8297,6 +8549,7 @@ Namespace ViewModels
                     _currentFpxPath = ""
                     CleanupCurrentFpxTempDir()
                     CleanupCurrentNewDocTempDir()
+                    CleanupCurrentSelectionAssetTempDir()
                     StatusText = ""
                     Return
                 End If
@@ -8306,6 +8559,9 @@ Namespace ViewModels
                 Return
             End If
 
+            Dim publishAtomically = FpxService.IsFpx(path) OrElse RawSidecarService.IsSidecarFormat(path)
+            If publishAtomically Then SetDocumentLoading(True)
+            Try
             ' .fpx-Projekt im Filmstreifen: Bündel entpacken, Basisbild wird zur Render-Quelle, gespeicherter
             ' Zustand wird wiederhergestellt. Identität (path) bleibt der .fpx-Pfad.
             Dim newFpxPath = ""
@@ -8340,6 +8596,7 @@ Namespace ViewModels
             CleanupCurrentFpxTempDir()
             ' Filmstreifen-Navigation verlässt ein neues Dokument endgültig - Temp-Ordner weg.
             CleanupCurrentNewDocTempDir()
+            CleanupCurrentSelectionAssetTempDir()
             _currentFpxPath = newFpxPath
             _renderSourcePathOverride = newRenderSourcePathOverride
             _currentFpxTempDir = newFpxTempDir
@@ -8362,7 +8619,9 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
                 ExifInfo = Nothing
                 ClearHistogramData()
-                Await PreparePreviewSourceAsync(RenderSourcePath)
+                Await PreparePreviewSourceAsync(RenderSourcePath,
+                                                scheduleInitialRender:=Not publishAtomically,
+                                                showRawQuickPreview:=Not publishAtomically)
                 If fpxAdjustments IsNot Nothing Then
                     ApplyAdjustments(fpxAdjustments)
                     _hasChanges = False
@@ -8371,6 +8630,13 @@ Namespace ViewModels
             Finally
                 _suppressPreviewDirty = previousSuppressPreviewDirty
             End Try
+            If publishAtomically Then
+                ' ApplyAdjustments/ShowBeforeImage dürfen Timer vormerken, aber kein Zwischenbild
+                ' veröffentlichen. Genau ein expliziter Render übernimmt den vollständigen Zustand.
+                _previewTimer.Stop()
+                _previewPending = False
+                Await UpdatePreviewAsync()
+            End If
             LoadLibraryMeta(path)
             Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
             Me.RaisePropertyChanged(NameOf(PositionText))
@@ -8409,7 +8675,10 @@ Namespace ViewModels
             Catch
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
-            If fpxAdjustments IsNot Nothing Then ScheduleToolPreviewUpdate()
+            If fpxAdjustments IsNot Nothing AndAlso Not publishAtomically Then ScheduleToolPreviewUpdate()
+            Finally
+                If publishAtomically Then SetDocumentLoading(False)
+            End Try
         End Function
 
         Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing)
@@ -8422,6 +8691,9 @@ Namespace ViewModels
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
             End If
 
+            Dim publishAtomically = FpxService.IsFpx(imagePath) OrElse RawSidecarService.IsSidecarFormat(imagePath)
+            If publishAtomically Then SetDocumentLoading(True)
+            Try
             ' .fpx-Projektdatei: Bündel entpacken; ab hier ist das entpackte Basisbild die Arbeitsquelle, und
             ' der gespeicherte Bearbeitungszustand wird unten (nach PreparePreviewSource) wiederhergestellt.
             Dim newFpxPath = ""
@@ -8462,6 +8734,7 @@ Namespace ViewModels
             _pendingNewDocTempDir = ""
             _pendingNewDocTransparent = False
             CleanupCurrentNewDocTempDir()
+            CleanupCurrentSelectionAssetTempDir()
             _currentNewDocTempDir = incomingNewDocTempDir
             _isNewDocument = Not String.IsNullOrEmpty(incomingNewDocTempDir)
             _newDocTransparentBackground = _isNewDocument AndAlso incomingNewDocTransparent
@@ -8492,18 +8765,26 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
                 ExifInfo = Nothing
                 ClearHistogramData()
-                Await PreparePreviewSourceAsync(RenderSourcePath)
+                Await PreparePreviewSourceAsync(RenderSourcePath,
+                                                scheduleInitialRender:=Not publishAtomically,
+                                                showRawQuickPreview:=Not publishAtomically)
                 ' Gespeicherten Bearbeitungszustand aus der .fpx wiederherstellen (Regler, Ebenenstapel, Auswahl …)
                 ' und als "keine ungespeicherten Änderungen" markieren - es ist ja gerade der gespeicherte Stand.
                 If fpxAdjustments IsNot Nothing Then
                     ApplyAdjustments(fpxAdjustments)
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
-                    ScheduleToolPreviewUpdate()
                 End If
             Finally
                 _suppressPreviewDirty = previousSuppressPreviewDirty
             End Try
+            If publishAtomically Then
+                _previewTimer.Stop()
+                _previewPending = False
+                Await UpdatePreviewAsync()
+            ElseIf fpxAdjustments IsNot Nothing Then
+                ScheduleToolPreviewUpdate()
+            End If
             ' Scope nur bei expliziter Pfadliste (z.B. Suchliste) wirksam, sonst normaler Ordner-Cache.
             _thumbCacheScopeId = If(allPaths IsNot Nothing, cacheScopeId, Nothing)
             _thumbCacheScopeName = If(allPaths IsNot Nothing, cacheScopeName, Nothing)
@@ -8555,6 +8836,9 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
             Return True
+            Finally
+                If publishAtomically Then SetDocumentLoading(False)
+            End Try
         End Function
 
         Private Function BuildImageInfo(imagePath As String) As ExifData
@@ -9164,13 +9448,16 @@ Namespace ViewModels
         ''' Teardown disposed die Anzeige-Bitmap, waehrend eine Region-Worker-Fortsetzung noch
         ''' aussteht - EnsureSceneDisplay griff dann auf die disposte Instanz. Hier wird NICHTS
         ''' disposed (in-flight-Renders koennten noch lesen), nur Referenzen gekappt und die
-        ''' Version gebumpt, damit jede Fortsetzung ihr Ergebnis verwirft.</summary>
+        ''' Version gebumpt, damit jede Fortsetzung ihr Ergebnis verwirft. Dokumenteigene Auswahl-
+        ''' Assets werden dagegen ausdrücklich entfernt; nach dem Fensterende kann sie kein Undo-/Redo-
+        ''' Eintrag mehr erreichen.</summary>
         Public Sub ShutdownSceneWork()
             _sceneContentVersion += 1
             _sceneRegionPendingRect = SKRectI.Empty
             _sceneDisplay = Nothing
             _sceneSk = Nothing
             ResetZoomDetail()
+            CleanupCurrentSelectionAssetTempDir()
         End Sub
 
         ' ===================== STUFE 3: Zoom-Detail =====================
@@ -9858,7 +10145,8 @@ Namespace ViewModels
         ''' beim Öffnen nicht mehr ein. Blättert der Nutzer währenddessen weiter, verwirft
         ''' CompletePreviewSourceSwap das Ergebnis anhand der Marke.</summary>
         Private Async Function PreparePreviewSourceAsync(imagePath As String,
-                                                         Optional scheduleInitialRender As Boolean = True) As Task
+                                                         Optional scheduleInitialRender As Boolean = True,
+                                                         Optional showRawQuickPreview As Boolean = True) As Task
             Dim token = BeginPreviewSourceSwap(imagePath)
             If token < 0 Then Return
 
@@ -9867,7 +10155,7 @@ Namespace ViewModels
             ' dritte Stufe entwickelt die Datei selbst und würde genau die Blockade zurückholen,
             ' die dieser Umbau beseitigt. Findet der Scanner nichts (etwa bei Leica-RAWs), bleibt
             ' es beim bisherigen Verhalten: kurz leer, bis die Entwicklung steht.
-            If RawPreviewService.IsSupportedRaw(imagePath) Then
+            If showRawQuickPreview AndAlso RawPreviewService.IsSupportedRaw(imagePath) Then
                 Try
                     Using vorschau = RawPreviewService.ExtractPreview(imagePath)
                         If vorschau IsNot Nothing AndAlso vorschau.Length > 0 Then
@@ -9877,9 +10165,10 @@ Namespace ViewModels
                 Catch ex As Exception
                     DiagnosticLogService.LogException("Editor.RawQuickPreview", ex)
                 End Try
-                ' Auch ohne Vorschau sperren: entscheidend ist, dass es noch KEIN Arbeitsbild gibt.
-                SetWorkingImagePending(True)
             End If
+            ' Auch ohne/unterdrückte Schnellvorschau sperren: entscheidend ist, dass es noch KEIN
+            ' Arbeitsbild gibt. Beim atomaren Öffnen bleibt die Bildfläche bis zum Finalrender verdeckt.
+            If RawPreviewService.IsSupportedRaw(imagePath) Then SetWorkingImagePending(True)
 
             ' Feld VOR dem Wechsel in den Hintergrund lesen - es gehört dem UI-Thread.
             Dim overridePath = _workingImageOverridePath
@@ -9929,6 +10218,45 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Legt ein vom aktuellen Editor-Dokument besessenes Auswahl-Asset an. Der Pfad
+        ''' bleibt dadurch für Annotationen und deren Undo-/Redo-Snapshots bis zum Dokumentwechsel
+        ''' gültig; beim FPX-Speichern wird das Asset wie jedes andere Bildobjekt eingebettet.</summary>
+        Private Function CreateSelectionAssetTempPath(kind As String) As String
+            If String.IsNullOrWhiteSpace(_selectionAssetTempDir) Then
+                Dim root = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "SelectionAssets")
+                _selectionAssetTempDir = IO.Path.Combine(root, Guid.NewGuid().ToString("N"))
+                IO.Directory.CreateDirectory(_selectionAssetTempDir)
+            End If
+
+            Dim safeKind = If(String.IsNullOrWhiteSpace(kind), "asset", kind.Trim().ToLowerInvariant())
+            Return IO.Path.Combine(_selectionAssetTempDir, $"{safeKind}_{Guid.NewGuid():N}.png")
+        End Function
+
+        ''' <summary>Gibt ausschließlich den von dieser Editor-Sitzung angelegten Auswahl-Ordner
+        ''' frei. Einzeldateien werden absichtlich nicht früher entfernt, weil Undo/Redo oder die
+        ''' interne Auswahl-Zwischenablage sie noch referenzieren können.</summary>
+        Private Sub CleanupCurrentSelectionAssetTempDir()
+            ' Noch laufende Zauberstab-Arbeit gehört ebenfalls zum alten Dokument. Der Worker darf
+            ' fertiglaufen, sein Resultat wird anhand dieser Generation aber nicht mehr übernommen.
+            Interlocked.Increment(_magicWandGeneration)
+            Dim tempDir = _selectionAssetTempDir
+            _selectionAssetTempDir = ""
+            _selectionClipboardPath = Nothing
+            _selectionClipboardPasteCount = 0
+            If String.IsNullOrWhiteSpace(tempDir) Then Return
+
+            Try
+                Dim root = IO.Path.GetFullPath(IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "SelectionAssets"))
+                Dim candidate = IO.Path.GetFullPath(tempDir)
+                Dim prefix = root.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar) & IO.Path.DirectorySeparatorChar
+                If candidate.StartsWith(prefix, StringComparison.Ordinal) AndAlso IO.Directory.Exists(candidate) Then
+                    IO.Directory.Delete(candidate, True)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.SelectionAssetTempCleanup", ex)
+            End Try
+        End Sub
+
         ''' <summary>Meldet alles, was am Zustand „neues Bild" hängt. An JEDER Stelle aufzurufen, die
         ''' _isNewDocument ändert - sonst bliebe etwa der Filmstreifen in seinem alten Zustand.</summary>
         Private Sub RaiseNewDocumentStateChanged()
@@ -9963,6 +10291,7 @@ Namespace ViewModels
             ClearPreviewSource()
             CleanupCurrentNewDocTempDir()
             CleanupCurrentFpxTempDir()
+            CleanupCurrentSelectionAssetTempDir()
             CurrentImagePath = ""
             _currentImagePath = ""
             _renderSourcePathOverride = ""
@@ -10821,13 +11150,21 @@ Namespace ViewModels
         Private Function GetCurrentAdjustments(Optional forPreview As Boolean = False,
                                                Optional includeEditorOverlayAnnotations As Boolean = False) As ImageAdjustments
             Dim adj = BuildAdjustmentsFromFields(forPreview, includeEditorOverlayAnnotations)
-            If Not IsObjectAdjustModeActive() Then Return adj
-
-            Dim objectValues = adj.ExtractPixelAdjustments()
-            If _objectAdjustIndex >= 0 AndAlso _objectAdjustIndex < adj.Annotations.Count Then
-                adj.Annotations(_objectAdjustIndex).Adjustments = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
+            If IsObjectAdjustModeActive() Then
+                Dim objectValues = adj.ExtractPixelAdjustments()
+                If _objectAdjustIndex >= 0 AndAlso _objectAdjustIndex < adj.Annotations.Count Then
+                    adj.Annotations(_objectAdjustIndex).Adjustments = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
+                End If
+                adj.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
+                Return adj
             End If
-            adj.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
+
+            If IsSelectionAdjustModeActive() Then
+                Dim localValues = adj.ExtractPixelAdjustments()
+                Dim layer = adj.MaskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectionAdjustLayerId)
+                If layer IsNot Nothing Then layer.Adjustments = localValues
+                adj.CopyPixelAdjustmentsFrom(_selectionImagePixelAdjustments)
+            End If
             Return adj
         End Function
 
@@ -10954,8 +11291,12 @@ Namespace ViewModels
                 .LutPath = _lutPath,
                 .LutStrength = CSng(_lutStrength),
                 .Annotations = _annotations.Select(Function(a) a.Clone()).ToList(),
+                .Masks = _imageMasks.Select(Function(m) m.Clone()).ToList(),
+                .MaskedAdjustmentLayers = _maskedAdjustmentLayers.Select(Function(l) l.Clone()).ToList(),
+                .GlobalAdjustmentsHidden = _globalAdjustmentsHidden,
                 .BackgroundHidden = _backgroundHidden,
                 .PixelLayerHidden = _pixelLayerHidden,
+                .SelectionScopeEnabled = _selectionScopeEnabled,
                 .HasActiveSelection = _hasActiveSelection,
                 .SelectionXPercent = _selectionXPercent,
                 .SelectionYPercent = _selectionYPercent,
@@ -11180,6 +11521,7 @@ Namespace ViewModels
         Private Sub UndoAction()
             ' Auch Tastatur-Pfade (Strg+Z) respektieren die Commit-Sperre - siehe CanUndo.
             If _undoStack.Count = 0 OrElse _pendingWorkingCommits > 0 Then Return
+            CommitSelectionAdjustModeToModel()
             ResetUndoCapture()
             _lastPushedUndoEntry = Nothing
             Dim entry = _undoStack.Pop()
@@ -11192,6 +11534,7 @@ Namespace ViewModels
             Finally
                 _suppressUndoCapture = False
             End Try
+            RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.RevertPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
             End If
@@ -11202,6 +11545,7 @@ Namespace ViewModels
 
         Private Sub RedoAction()
             If _redoStack.Count = 0 OrElse _pendingWorkingCommits > 0 Then Return
+            CommitSelectionAdjustModeToModel()
             ResetUndoCapture()
             _lastPushedUndoEntry = Nothing
             Dim entry = _redoStack.Pop()
@@ -11212,6 +11556,7 @@ Namespace ViewModels
             Finally
                 _suppressUndoCapture = False
             End Try
+            RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.ReapplyPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
             End If
@@ -11369,8 +11714,24 @@ Namespace ViewModels
                     _annotations.Add(annotation.Clone())
                 Next
             End If
+            _imageMasks.Clear()
+            If adj.Masks IsNot Nothing Then
+                For Each mask In adj.Masks
+                    If mask IsNot Nothing Then _imageMasks.Add(mask.Clone())
+                Next
+            End If
+            _maskedAdjustmentLayers.Clear()
+            If adj.MaskedAdjustmentLayers IsNot Nothing Then
+                For Each layer In adj.MaskedAdjustmentLayers
+                    If layer IsNot Nothing Then _maskedAdjustmentLayers.Add(layer.Clone())
+                Next
+            End If
+            RebuildLayerRows()
             ClearSelectionMask()
+            _selectionScopeEnabled = adj.SelectionScopeEnabled
             _hasActiveSelection = adj.HasActiveSelection
+            _globalAdjustmentsHidden = adj.GlobalAdjustmentsHidden
+            Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsVisible))
             _backgroundHidden = adj.BackgroundHidden
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
             _pixelLayerHidden = adj.PixelLayerHidden
@@ -11735,6 +12096,7 @@ Namespace ViewModels
             _annotationGlowColor = "#FFFFFF00"
 
             ClearSelection(captureUndo:=False)
+            _globalAdjustmentsHidden = False
             _backgroundHidden = False
             _pixelLayerHidden = False
             _selectionXPercent = 0
@@ -11773,6 +12135,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsToolTabSelected))
             Me.RaisePropertyChanged(NameOf(IsLayersTabSelected))
             Me.RaisePropertyChanged(NameOf(IsHistoryTabSelected))
+            Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsVisible))
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
             RaisePixelLayerVisibilityChanged()
             Me.RaisePropertyChanged(NameOf(ShapeIconSearchText))
@@ -12624,7 +12987,34 @@ Namespace ViewModels
         End Function
 
         Private Sub DeleteSelectedAnnotation()
+            If HasSelectedAdjustmentLayer Then
+                DeleteSelectedAdjustmentLayer()
+                Return
+            End If
             DeleteAnnotationAt(_selectedAnnotationIndex)
+        End Sub
+
+        Private Sub DeleteSelectedAdjustmentLayer()
+            Dim layerId = _selectedMaskedAdjustmentLayerId
+            If String.IsNullOrWhiteSpace(layerId) Then Return
+            Dim wasActiveSelectionTarget = IsSelectionAdjustModeActive() AndAlso _selectionAdjustLayerId = layerId
+            CommitSelectionAdjustModeToModel()
+            Dim index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = layerId)
+            If index < 0 Then Return
+            PushUndo()
+            Dim maskId = _maskedAdjustmentLayers(index).MaskId
+            _maskedAdjustmentLayers.RemoveAt(index)
+            If Not _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.MaskId = maskId) Then
+                _imageMasks.RemoveAll(Function(m) m IsNot Nothing AndAlso m.Id = maskId)
+            End If
+            _selectedMaskedAdjustmentLayerId = ""
+            _selectedLayerRow = Nothing
+            If wasActiveSelectionTarget Then ClearSelection(captureUndo:=False)
+            RebuildLayerRows()
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            RefreshSelectionAdjustMode()
+            SchedulePreviewUpdate()
         End Sub
 
         Private Sub DeleteAnnotation(annotation As ImageAnnotation)
@@ -12638,6 +13028,16 @@ Namespace ViewModels
             CaptureUndoState("BackgroundVisibility")
             _backgroundHidden = Not _backgroundHidden
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Blendet nur den globalen Pixel-Reglersatz aus. Die Werte bleiben erhalten und
+        ''' werden beim erneuten Einschalten unverändert wieder wirksam.</summary>
+        Private Sub ToggleGlobalAdjustmentsVisibility()
+            CaptureUndoState("GlobalAdjustmentsVisibility")
+            _globalAdjustmentsHidden = Not _globalAdjustmentsHidden
+            Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsVisible))
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -12689,11 +13089,23 @@ Namespace ViewModels
             Next
         End Sub
 
+        Public Sub BeginLayerRename(row As LayerPanelRow)
+            If row Is Nothing Then Return
+            PushUndo()
+            If String.IsNullOrWhiteSpace(row.EditableName) Then row.EditableName = row.LayerLabel
+            For Each item In _layerRows
+                item.IsRenaming = Object.ReferenceEquals(item, row)
+            Next
+        End Sub
+
         ''' <summary>Beendet das Inline-Umbenennen (Enter/Verlassen des Feldes). Der Name selbst steht durch
         ''' die Live-Bindung bereits im Objekt; hier wird nur der Bearbeitungszustand aufgehoben.</summary>
         Public Sub EndLayerRename()
             For Each a In _annotations
                 a.IsRenaming = False
+            Next
+            For Each row In _layerRows
+                row.IsRenaming = False
             Next
         End Sub
 
@@ -12752,6 +13164,46 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Panel-Drag für beide Zeilentypen. Objekt- und Einstellungsebenen bilden derzeit
+        ''' getrennte Rendergruppen (Objekte liegen über Korrekturen), daher wird nur innerhalb derselben
+        ''' Gruppe umsortiert.</summary>
+        Public Sub ReorderLayerRelative(dragged As LayerPanelRow, targetRow As LayerPanelRow, below As Boolean)
+            If dragged Is Nothing OrElse targetRow Is Nothing Then Return
+            If dragged.Annotation IsNot Nothing AndAlso targetRow.Annotation IsNot Nothing Then
+                Dim displayIndex = _layerRows.Where(Function(r) r.Annotation IsNot Nothing).ToList().IndexOf(targetRow)
+                If displayIndex >= 0 Then ReorderLayerToDisplayGap(dragged.Annotation, displayIndex + If(below, 1, 0))
+                Return
+            End If
+            If dragged.AdjustmentLayer Is Nothing OrElse targetRow.AdjustmentLayer Is Nothing Then Return
+
+            Dim draggedId = dragged.AdjustmentLayer.Id
+            Dim targetId = targetRow.AdjustmentLayer.Id
+            CommitSelectionAdjustModeToModel()
+            If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+            Dim display = _maskedAdjustmentLayers.AsEnumerable().Reverse().ToList()
+            Dim moving = display.FirstOrDefault(Function(l) l.Id = draggedId)
+            Dim target = display.FirstOrDefault(Function(l) l.Id = targetId)
+            If moving Is Nothing OrElse target Is Nothing Then Return
+            Dim from = display.IndexOf(moving)
+            Dim insert = display.IndexOf(target) + If(below, 1, 0)
+            display.RemoveAt(from)
+            If insert > from Then insert -= 1
+            insert = Math.Max(0, Math.Min(insert, display.Count))
+            display.Insert(insert, moving)
+            Dim reordered = display.AsEnumerable().Reverse().ToList()
+            Dim unchanged = reordered.Count = _maskedAdjustmentLayers.Count AndAlso
+                            reordered.Select(Function(l) l.Id).SequenceEqual(_maskedAdjustmentLayers.Select(Function(l) l.Id))
+            If unchanged Then Return
+            PushUndo()
+            _maskedAdjustmentLayers.Clear()
+            _maskedAdjustmentLayers.AddRange(reordered)
+            _selectedMaskedAdjustmentLayerId = draggedId
+            RebuildLayerRows()
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
         Private Sub ToggleAnnotationVisibility(annotation As ImageAnnotation)
             If annotation Is Nothing Then Return
             CaptureUndoState("LayerVisibility")
@@ -12761,6 +13213,21 @@ Namespace ViewModels
             End If
             RaiseResetButtonStateChanged()
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(annotation))
+        End Sub
+
+        Private Sub ToggleLayerVisibility(row As LayerPanelRow)
+            If row Is Nothing Then Return
+            If row.AdjustmentLayer Is Nothing Then
+                ToggleAnnotationVisibility(row.Annotation)
+                row.Refresh()
+                Return
+            End If
+            CaptureUndoState("AdjustmentLayerVisibility")
+            row.AdjustmentLayer.IsVisible = Not row.AdjustmentLayer.IsVisible
+            row.Refresh()
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
         End Sub
 
         Private Sub DeleteAnnotationAt(index As Integer)
@@ -12854,6 +13321,10 @@ Namespace ViewModels
         End Sub
 
         Private Sub DuplicateSelectedAnnotation()
+            If HasSelectedAdjustmentLayer Then
+                DuplicateSelectedAdjustmentLayer()
+                Return
+            End If
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             CommitObjectAdjustModeToModel()
             PushUndo()
@@ -12866,7 +13337,62 @@ Namespace ViewModels
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(copy))
         End Sub
 
+        Private Sub DuplicateSelectedAdjustmentLayer()
+            Dim index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+            If index < 0 Then Return
+            CommitSelectionAdjustModeToModel()
+            If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+            index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+            If index < 0 Then Return
+            PushUndo()
+            Dim copy = _maskedAdjustmentLayers(index).Clone()
+            copy.Id = Guid.NewGuid().ToString("N")
+            copy.Name = If(String.IsNullOrWhiteSpace(copy.Name), LocalizationService.T("Lokale Korrektur"), copy.Name) &
+                        " " & LocalizationService.T("Kopie")
+            _maskedAdjustmentLayers.Insert(index + 1, copy)
+            _selectedMaskedAdjustmentLayerId = copy.Id
+            RebuildLayerRows()
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Legt über der markierten lokalen Korrektur einen neutralen weiteren Schritt an,
+        ''' der dieselbe persistente Maske referenziert. Anders als „Duplizieren" werden die Reglerwerte
+        ''' nicht kopiert: Mehrere Bearbeitungen derselben Stelle teilen so genau eine Maske, bleiben aber
+        ''' in Reihenfolge, Sichtbarkeit, Deckkraft und Undo/Redo vollständig unabhängig.</summary>
+        Private Sub AddAdjustmentWithSameMask()
+            If Not HasSelectedAdjustmentLayer Then Return
+            Dim selectedId = _selectedMaskedAdjustmentLayerId
+            CommitSelectionAdjustModeToModel()
+            If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+
+            Dim index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = selectedId)
+            If index < 0 Then Return
+            Dim source = _maskedAdjustmentLayers(index)
+            If String.IsNullOrWhiteSpace(source.MaskId) OrElse
+               Not _imageMasks.Any(Function(m) m IsNot Nothing AndAlso m.Id = source.MaskId) Then Return
+
+            PushUndo()
+            Dim layer = New MaskedAdjustmentLayer With {
+                .Name = LocalizationService.T("Lokale Korrektur") & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                .MaskId = source.MaskId,
+                .Adjustments = New ImageAdjustments()
+            }
+            _maskedAdjustmentLayers.Insert(index + 1, layer)
+            _selectedMaskedAdjustmentLayerId = layer.Id
+            RebuildLayerRows()
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            RefreshSelectionAdjustMode()
+            SchedulePreviewUpdate()
+        End Sub
+
         Private Sub MoveSelectedAnnotation(direction As Integer)
+            If HasSelectedAdjustmentLayer Then
+                MoveSelectedAdjustmentLayer(direction)
+                Return
+            End If
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             CommitObjectAdjustModeToModel()
             Dim target = _selectedAnnotationIndex + If(direction >= 0, 1, -1)
@@ -12879,6 +13405,26 @@ Namespace ViewModels
             ' Z-Order-Wechsel wirkt nur dort, wo sich Objekte ueberlappen - das eigene Rect genuegt
             ' (Blend-Abhaengigkeiten erweitert der Region-Renderer automatisch).
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(item))
+        End Sub
+
+        Private Sub MoveSelectedAdjustmentLayer(direction As Integer)
+            Dim index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+            If index < 0 Then Return
+            Dim target = index + If(direction >= 0, 1, -1)
+            If target < 0 OrElse target >= _maskedAdjustmentLayers.Count Then Return
+            CommitSelectionAdjustModeToModel()
+            If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+            index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+            target = index + If(direction >= 0, 1, -1)
+            If index < 0 OrElse target < 0 OrElse target >= _maskedAdjustmentLayers.Count Then Return
+            PushUndo()
+            Dim item = _maskedAdjustmentLayers(index)
+            _maskedAdjustmentLayers.RemoveAt(index)
+            _maskedAdjustmentLayers.Insert(target, item)
+            RebuildLayerRows()
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
         End Sub
 
         Public Sub NudgeSelectedAnnotation(dx As Double, dy As Double)
@@ -13000,6 +13546,122 @@ Namespace ViewModels
         Private Function IsObjectAdjustModeActive() As Boolean
             Return _objectAdjustIndex >= 0 AndAlso _imagePixelAdjustments IsNot Nothing
         End Function
+
+        Private Function IsSelectionAdjustModeActive() As Boolean
+            Return Not String.IsNullOrWhiteSpace(_selectionAdjustLayerId) AndAlso
+                   _selectionImagePixelAdjustments IsNot Nothing
+        End Function
+
+        ''' <summary>Schließt die lokale Korrektur ab, lässt Maske und Einstellungsebene aber im
+        ''' Dokument bestehen. Nur die sichtbare aktive Auswahl darf anschließend verschwinden.</summary>
+        Private Sub CommitSelectionAdjustModeToModel()
+            If Not IsSelectionAdjustModeActive() Then Return
+            _selectionAdjustSwapInProgress = True
+            Try
+                Dim localValues = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
+                Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectionAdjustLayerId)
+                If layer IsNot Nothing Then layer.Adjustments = localValues
+
+                Dim restored = BuildAdjustmentsFromFields()
+                restored.CopyPixelAdjustmentsFrom(_selectionImagePixelAdjustments)
+                _selectionImagePixelAdjustments = Nothing
+                _selectionAdjustLayerId = ""
+                ApplyAdjustments(restored)
+            Finally
+                _selectionAdjustSwapInProgress = False
+            End Try
+            Me.RaisePropertyChanged(NameOf(IsAdjustingSelection))
+        End Sub
+
+        ''' <summary>Wechselt die Regler zwischen globalem Bild und der einzigen aktiven Auswahl.
+        ''' Beim ersten Wechsel in Anpassen/Farbe/Effekte/Filter wird die Auswahl als SourceSpace-Maske
+        ''' eingefroren und eine nicht-destruktive lokale Einstellungsebene angelegt.</summary>
+        Private Sub RefreshSelectionAdjustMode()
+            If _selectionAdjustSwapInProgress Then Return
+            Dim selectedExisting = If(_hasActiveSelection, Nothing,
+                _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId))
+            Dim shouldBeActive = Not HasSelectedAnnotation AndAlso Not IsObjectAdjustModeActive() AndAlso
+                                 IsObjectAdjustTool(_currentTool) AndAlso
+                                 (_hasActiveSelection OrElse selectedExisting IsNot Nothing)
+            If shouldBeActive AndAlso IsSelectionAdjustModeActive() AndAlso
+               (selectedExisting Is Nothing OrElse selectedExisting.Id = _selectionAdjustLayerId) Then Return
+            If Not shouldBeActive AndAlso Not IsSelectionAdjustModeActive() Then Return
+
+            If IsSelectionAdjustModeActive() Then
+                CommitSelectionAdjustModeToModel()
+                If Not shouldBeActive Then
+                    SchedulePreviewUpdate()
+                    Return
+                End If
+                selectedExisting = If(_hasActiveSelection, Nothing,
+                    _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId))
+            End If
+
+            If Not shouldBeActive Then
+                SchedulePreviewUpdate()
+                Return
+            End If
+
+            _selectionAdjustSwapInProgress = True
+            Try
+                Dim snapshot = BuildAdjustmentsFromFields()
+                If selectedExisting IsNot Nothing Then
+                    _selectionImagePixelAdjustments = snapshot.ExtractPixelAdjustments()
+                    _selectionAdjustLayerId = selectedExisting.Id
+                    _selectionScopeEnabled = False
+                    Dim existingTarget = BuildAdjustmentsFromFields()
+                    existingTarget.CopyPixelAdjustmentsFrom(If(selectedExisting.Adjustments, New ImageAdjustments()))
+                    ApplyAdjustments(existingTarget)
+                    RebuildLayerRows()
+                    Return
+                End If
+
+                Dim mask = ImageProcessor.CreateSourceMaskFromSelection(snapshot,
+                    LocalizationService.T("Auswahlmaske") & " " & (_imageMasks.Count + 1).ToString())
+                If mask Is Nothing Then Return
+
+                _selectionImagePixelAdjustments = snapshot.ExtractPixelAdjustments()
+                ' Undo/Redo oder ein erneutes Öffnen derselben noch aktiven Auswahl darf keine
+                ' Duplikate erzeugen. Bei pixelidentischer SourceSpace-Maske die letzte Korrektur
+                ' dieser Maske weiter bedienen; eine tatsächlich neue Auswahl erhält neue Daten.
+                Dim existingMask = _imageMasks.LastOrDefault(Function(m) m IsNot Nothing AndAlso
+                    m.SourceWidthPixels = mask.SourceWidthPixels AndAlso m.SourceHeightPixels = mask.SourceHeightPixels AndAlso
+                    m.Left = mask.Left AndAlso m.Top = mask.Top AndAlso m.Right = mask.Right AndAlso m.Bottom = mask.Bottom AndAlso
+                    m.PngBase64 = mask.PngBase64)
+                Dim layer As MaskedAdjustmentLayer = Nothing
+                If existingMask IsNot Nothing Then
+                    layer = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = existingMask.Id)
+                End If
+                If layer Is Nothing Then
+                    _imageMasks.Add(mask)
+                    layer = New MaskedAdjustmentLayer With {
+                        .Name = LocalizationService.T("Lokale Korrektur") & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                        .MaskId = mask.Id,
+                        .Adjustments = New ImageAdjustments()
+                    }
+                    _maskedAdjustmentLayers.Add(layer)
+                End If
+                _selectionAdjustLayerId = layer.Id
+                _selectedMaskedAdjustmentLayerId = layer.Id
+                ' Der alte Ein-Masken-Skopus darf parallel nicht noch einmal die globalen Werte maskieren.
+                _selectionScopeEnabled = False
+
+                Dim target = BuildAdjustmentsFromFields()
+                target.CopyPixelAdjustmentsFrom(If(layer.Adjustments, New ImageAdjustments()))
+                ApplyAdjustments(target)
+                RebuildLayerRows()
+            Finally
+                _selectionAdjustSwapInProgress = False
+            End Try
+            Me.RaisePropertyChanged(NameOf(IsAdjustingSelection))
+            SchedulePreviewUpdate()
+        End Sub
+
+        Public ReadOnly Property IsAdjustingSelection As Boolean
+            Get
+                Return IsSelectionAdjustModeActive()
+            End Get
+        End Property
 
         ''' <summary>Hält den Bearbeitungs-Zielwechsel in Gang: Sobald ein Objekt markiert ist UND ein
         ''' objektfähiges Werkzeug aktiv ist, beschreiben die Regler das Objekt - sonst das Bild. Beim

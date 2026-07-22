@@ -28,6 +28,7 @@ Namespace ViewModels
         Private ReadOnly _mainVm As MainWindowViewModel
         Private _currentImagePath As String = ""
         Private _bitmapLoadToken As Integer = 0
+        Private _isBitmapLoading As Boolean = False
         ' Immich-Sitzung: _folderPaths enthält dann die Immich-Pseudo-Pfade (immich://{assetId}/{name})
         ' für Filmstreifen/Zähler, während _currentImagePath weiterhin der reale (heruntergeladene)
         ' Temp-Pfad des aktuell angezeigten Bildes ist - so bleibt der ganze Datei-/Anzeigecode gleich.
@@ -162,6 +163,7 @@ Namespace ViewModels
                 Dim previous = _currentImage
                 Me.RaiseAndSetIfChanged(_currentImage, value)
                 Me.RaisePropertyChanged(NameOf(HasNoMedia))
+                Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
@@ -171,9 +173,25 @@ Namespace ViewModels
         ''' obwohl CurrentImage dort bewusst Nothing bleibt).
         Public ReadOnly Property HasNoMedia As Boolean
             Get
-                Return _currentImage Is Nothing AndAlso Not IsVideoFile
+                Return _currentImage Is Nothing AndAlso Not IsVideoFile AndAlso Not _isBitmapLoading
             End Get
         End Property
+
+        ''' <summary>Zeigt den korrekten Zwischenzustand, solange ein Bild erstmals dekodiert oder
+        ''' ein RAW-/FPX-Ergebnis gerendert wird. Ein bereits sichtbares altes Vorschaubild bleibt
+        ''' beim Blaettern wie bisher stehen und braucht keinen zusaetzlichen Platzhalter.</summary>
+        Public ReadOnly Property ShowBitmapLoading As Boolean
+            Get
+                Return _isBitmapLoading AndAlso _currentImage Is Nothing AndAlso Not IsVideoFile
+            End Get
+        End Property
+
+        Private Sub SetBitmapLoading(value As Boolean)
+            If _isBitmapLoading = value Then Return
+            _isBitmapLoading = value
+            Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
+            Me.RaisePropertyChanged(NameOf(HasNoMedia))
+        End Sub
 
         Public Property ZoomLevel As Double
             Get
@@ -1011,6 +1029,7 @@ Namespace ViewModels
             StopVideoPlayback()
             Dim token = System.Threading.Interlocked.Increment(_bitmapLoadToken)
             Dim path = _currentImagePath
+            SetBitmapLoading(True)
             RunBitmapLoad(path, token, FpxService.IsFpx(path))
         End Sub
 
@@ -1019,6 +1038,7 @@ Namespace ViewModels
         ''' bewusst geleertes CurrentImage wieder "auferstehen" lassen.
         Private Sub InvalidatePendingBitmapLoad()
             System.Threading.Interlocked.Increment(_bitmapLoadToken)
+            SetBitmapLoading(False)
         End Sub
 
         Private Async Sub RunBitmapLoad(path As String, token As Integer, isFpx As Boolean)
@@ -1030,6 +1050,7 @@ Namespace ViewModels
             End Try
 
             If Not ApplyLoadedBitmap(token, bmp) Then Return
+            SetBitmapLoading(False)
             ' FPX: das schnelle Komposit steht - die Vollaufloesung zieht mit demselben Token nach.
             If isFpx AndAlso bmp IsNot Nothing Then LoadFpxFullResolutionBitmapAsync(path, token)
         End Sub

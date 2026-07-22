@@ -16,17 +16,17 @@ Namespace Views
         Inherits UserControl
 
         ' Ebene, die gerade inline umbenannt wird, plus ihr Name vor der Bearbeitung (für Esc = verwerfen).
-        Private _renameAnnotation As ImageAnnotation
+        Private _renameRow As LayerPanelRow
         Private _renameOriginal As String = ""
         Private _suppressNextRenameLostFocus As Boolean = False
 
         ' Drag & Drop zum Umsortieren: Kandidat ab Mausdruck, echter Zug erst nach Bewegungsschwelle.
-        Private _dragCandidate As ImageAnnotation
+        Private _dragCandidate As LayerPanelRow
         Private _dragStartPoint As Point
         Private _dragPressArgs As PointerPressedEventArgs
-        Private _draggedLayer As ImageAnnotation
+        Private _draggedLayer As LayerPanelRow
         ' Zuletzt überfahrene Ziel-Ebene beim Ziehen und ob unter ihrer Mitte (= Einfügen darunter).
-        Private _dropTarget As ImageAnnotation
+        Private _dropTarget As LayerPanelRow
         Private _dropBelow As Boolean
         Private Const DragThreshold As Double = 4.0
         Private Shared ReadOnly LayerDragFormat As DataFormat(Of String) =
@@ -41,9 +41,9 @@ Namespace Views
         ' Doppelklick auf die Beschriftung: Bearbeitung starten und das Eingabefeld direkt fokussieren.
         Private Sub OnLayerNameDoubleTapped(sender As Object, e As TappedEventArgs)
             Dim label = TryCast(sender, Control)
-            Dim ann = TryCast(label?.DataContext, ImageAnnotation)
-            If ann Is Nothing Then Return
-            BeginRename(ann, TryCast(label.Parent, Panel)?.Children.OfType(Of TextBox)().FirstOrDefault())
+            Dim row = TryCast(label?.DataContext, LayerPanelRow)
+            If row Is Nothing Then Return
+            BeginRename(row, TryCast(label.Parent, Panel)?.Children.OfType(Of TextBox)().FirstOrDefault())
         End Sub
 
         ' Tastaturbedienung auf der markierten Ebene: F2 umbenennen, Entf löschen, Strg+D duplizieren.
@@ -68,21 +68,21 @@ Namespace Views
         ' Startet das Umbenennen der aktuell markierten Ebene und fokussiert ihr Eingabefeld.
         Private Sub StartRenameSelectedLayer()
             Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim ann = vm?.SelectedLayer
-            If ann Is Nothing OrElse ann.IsRenaming Then Return
+            Dim row = vm?.SelectedLayerRow
+            If row Is Nothing OrElse row.IsRenaming Then Return
             Dim list = Me.FindControl(Of ListBox)("LayerListBox")
             Dim container = If(list IsNot Nothing AndAlso list.SelectedIndex >= 0,
                                TryCast(list.ContainerFromIndex(list.SelectedIndex), Control), Nothing)
             Dim box = container?.GetVisualDescendants().OfType(Of TextBox)().FirstOrDefault()
-            BeginRename(ann, box)
+            BeginRename(row, box)
         End Sub
 
-        Private Sub BeginRename(ann As ImageAnnotation, box As TextBox)
+        Private Sub BeginRename(row As LayerPanelRow, box As TextBox)
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If ann Is Nothing OrElse vm Is Nothing Then Return
-            _renameAnnotation = ann
-            _renameOriginal = ann.CustomName
-            vm.BeginLayerRename(ann)
+            If row Is Nothing OrElse vm Is Nothing Then Return
+            _renameRow = row
+            _renameOriginal = row.EditableName
+            vm.BeginLayerRename(row)
             If box IsNot Nothing Then
                 Dispatcher.UIThread.Post(Sub()
                                              box.Focus()
@@ -111,24 +111,24 @@ Namespace Views
 
         ' Übernahme: Leerraum trimmen (nur Leerzeichen => automatische Beschriftung) und Bearbeitung beenden.
         Private Sub CommitRename(sender As Object)
-            Dim ann = TryCast(TryCast(sender, TextBox)?.DataContext, ImageAnnotation)
+            Dim row = TryCast(TryCast(sender, TextBox)?.DataContext, LayerPanelRow)
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If ann IsNot Nothing Then
+            If row IsNot Nothing Then
                 Dim oldName = If(_renameOriginal, "")
-                Dim newName = If(ann.CustomName, "").Trim()
-                ann.CustomName = newName
+                Dim newName = If(row.EditableName, "").Trim()
+                row.EditableName = newName
                 If Not String.Equals(oldName, newName, StringComparison.Ordinal) Then vm?.MarkLayerMetadataChanged()
             End If
             vm?.EndLayerRename()
-            _renameAnnotation = Nothing
+            _renameRow = Nothing
         End Sub
 
         ' Verwerfen: den Namen von vor der Bearbeitung wiederherstellen und Bearbeitung beenden.
         Private Sub CancelRename()
             _suppressNextRenameLostFocus = True
-            If _renameAnnotation IsNot Nothing Then _renameAnnotation.CustomName = _renameOriginal
+            If _renameRow IsNot Nothing Then _renameRow.EditableName = _renameOriginal
             TryCast(DataContext, EditorViewModel)?.EndLayerRename()
-            _renameAnnotation = Nothing
+            _renameRow = Nothing
         End Sub
 
         ' ── Umsortieren per Drag & Drop ─────────────────────────────────────────
@@ -140,7 +140,7 @@ Namespace Views
             If src IsNot Nothing AndAlso (src.FindAncestorOfType(Of Button)() IsNot Nothing OrElse
                                           src.FindAncestorOfType(Of ToggleButton)() IsNot Nothing OrElse
                                           src.FindAncestorOfType(Of TextBox)() IsNot Nothing) Then Return
-            _dragCandidate = TryCast(TryCast(sender, Control)?.DataContext, ImageAnnotation)
+            _dragCandidate = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
             _dragStartPoint = e.GetPosition(Me)
             _dragPressArgs = e
         End Sub
@@ -177,9 +177,16 @@ Namespace Views
             e.Handled = True
             If _draggedLayer Is Nothing Then Return
             Dim row = TryCast(sender, Control)
-            Dim ann = TryCast(row?.DataContext, ImageAnnotation)
-            If row Is Nothing OrElse ann Is Nothing Then Return
-            _dropTarget = ann
+            Dim layerRow = TryCast(row?.DataContext, LayerPanelRow)
+            If row Is Nothing OrElse layerRow Is Nothing Then Return
+            ' Objekt- und Korrekturebenen liegen in getrennten Rendergruppen und können nicht
+            ' gruppenübergreifend verschoben werden.
+            If _draggedLayer.IsAdjustmentLayer <> layerRow.IsAdjustmentLayer Then
+                e.DragEffects = DragDropEffects.None
+                HideDropIndicator()
+                Return
+            End If
+            _dropTarget = layerRow
             _dropBelow = e.GetPosition(row).Y > row.Bounds.Height / 2
             ShowDropIndicator(row, _dropBelow)
         End Sub
@@ -208,8 +215,7 @@ Namespace Views
         Private Sub PerformLayerDrop()
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm IsNot Nothing AndAlso _draggedLayer IsNot Nothing AndAlso _dropTarget IsNot Nothing Then
-                Dim idx = vm.LayerRows.IndexOf(_dropTarget)
-                If idx >= 0 Then vm.ReorderLayerToDisplayGap(_draggedLayer, idx + If(_dropBelow, 1, 0))
+                vm.ReorderLayerRelative(_draggedLayer, _dropTarget, _dropBelow)
             End If
             _draggedLayer = Nothing
             _dropTarget = Nothing
