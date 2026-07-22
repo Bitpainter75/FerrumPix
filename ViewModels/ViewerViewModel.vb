@@ -115,6 +115,10 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_currentImagePath, value)
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
+                ' Der Ladehinweis hängt auch vom Dateityp ab. Beim Wechsel darf der alte
+                ' Zustand nicht kurz für eine XMP/FPXMP-Begleitdatei weitergelten.
+                Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
+                Me.RaisePropertyChanged(NameOf(HasNoMedia))
             End Set
         End Property
 
@@ -182,9 +186,32 @@ Namespace ViewModels
         ''' beim Blaettern wie bisher stehen und braucht keinen zusaetzlichen Platzhalter.</summary>
         Public ReadOnly Property ShowBitmapLoading As Boolean
             Get
-                Return _isBitmapLoading AndAlso _currentImage Is Nothing AndAlso Not IsVideoFile
+                Return _isBitmapLoading AndAlso _currentImage Is Nothing AndAlso
+                       IsRenderableImagePath(_currentImagePath) AndAlso Not IsVideoFile
             End Get
         End Property
+
+        ''' <summary>Der Render-Ladezustand ist nur bei Formaten sichtbar, deren Anzeige wirklich
+        ''' rendern/entwickeln kann (RAW, PSD, FPX), sowie bei Bildern mit einem Sidecar. Normale
+        ''' JPG/PNG/GIF-Bilder erscheinen direkt und sollen beim Blättern nicht flackern.</summary>
+        Private Shared Function IsRenderableImagePath(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Dim extension = IO.Path.GetExtension(path)
+            If String.Equals(extension, ".xmp", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(extension, RawSidecarService.Extension, StringComparison.OrdinalIgnoreCase) Then
+                Return False
+            End If
+
+            If RawPreviewService.IsSupportedRaw(path) OrElse
+               PsdPreviewService.IsSupportedPsd(path) OrElse
+               FpxService.IsFpx(path) Then
+                Return True
+            End If
+
+            ' XMP wird in beiden verbreiteten Namensformen gesucht (foto.xmp und foto.jpg.xmp).
+            Return XmpSidecarService.FindSidecar(path) IsNot Nothing OrElse
+                   RawSidecarService.Exists(path)
+        End Function
 
         Private Sub SetBitmapLoading(value As Boolean)
             If _isBitmapLoading = value Then Return
