@@ -708,6 +708,11 @@ Namespace ViewModels
         ' 200 px - ein kurzes Wort in 48 px Schrift bekäme so einen doppelt zu breiten Auswahlrahmen.
         Private Const MinTextAnnotationWidthPercent As Double = 1.0
         Private Const MinTextAnnotationHeightPercent As Double = 1.0
+        ' Objekte dürfen über den Bildrand hinausragen (z.B. ein Rahmen, der größer ist als das Foto).
+        ' Harte Obergrenze je Kante in Bildpixeln, damit ein Tippfehler im Zahlenfeld keine
+        ' Gigapixel-Overlays anfordert; bei Bildern mit noch größerer Kante bleibt mindestens die
+        ' volle Bildkante (100%) erlaubt.
+        Private Const MaxAnnotationEdgePixels As Double = 10000.0
         Private _suppressUndoCapture As Boolean
         Private _lastUndoProperty As String = ""
         Private _lastUndoCapturedAt As DateTime = DateTime.MinValue
@@ -1056,7 +1061,8 @@ Namespace ViewModels
 
         Public ReadOnly Property AnnotationWidthSliderMaximum As Double
             Get
-                Return Math.Round(DisplayImageWidthPixels * 90.0 / 100.0)
+                ' Objekte dürfen über den Bildrand hinauswachsen - siehe MaxAnnotationEdgePixels.
+                Return Math.Round(DisplayImageWidthPixels * MaxAnnotationWidthPercentValue() / 100.0)
             End Get
         End Property
 
@@ -1068,7 +1074,7 @@ Namespace ViewModels
 
         Public ReadOnly Property AnnotationHeightSliderMaximum As Double
             Get
-                Return Math.Round(DisplayImageHeightPixels * 90.0 / 100.0)
+                Return Math.Round(DisplayImageHeightPixels * MaxAnnotationHeightPercentValue() / 100.0)
             End Get
         End Property
 
@@ -2215,6 +2221,28 @@ Namespace ViewModels
         Public ReadOnly Property IsLayersPanelVisible As Boolean
             Get
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorLayersPanelExpanded
+            End Get
+        End Property
+
+        ''' <summary>Linke Werkzeugleiste eingeklappt: nur Symbole, keine Beschriftungen. Gemerkt in
+        ''' den Einstellungen (EditorToolSidebarCollapsed), umgeschaltet über den Knopf in der Leiste.</summary>
+        Public ReadOnly Property IsToolSidebarCollapsed As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorToolSidebarCollapsed
+            End Get
+        End Property
+
+        Public ReadOnly Property AreToolSidebarLabelsVisible As Boolean
+            Get
+                Return Not IsToolSidebarCollapsed
+            End Get
+        End Property
+
+        ''' <summary>Breite der linken Werkzeugleiste: eingeklappt bleibt genau Platz für die Symbole
+        ''' samt Knopf-Innenabstand (Leisten-Padding 8+8, Knopf-Padding 10, Symbol 18).</summary>
+        Public ReadOnly Property ToolSidebarWidth As Double
+            Get
+                Return If(IsToolSidebarCollapsed, 54.0, 190.0)
             End Get
         End Property
 
@@ -4704,6 +4732,20 @@ Namespace ViewModels
             Return -Math.Max(0.0, Math.Max(0.0, sizePercent) - AnnotationMinVisiblePercent)
         End Function
 
+        ''' Obergrenze der Objektbreite in Prozent der Bildbreite: mindestens das ganze Bild (100%),
+        ''' bei kleineren Bildern bis hinauf zur MaxAnnotationEdgePixels-Kante.
+        Private Function MaxAnnotationWidthPercentValue() As Double
+            Dim width = DisplayImageWidthPixels
+            If width <= 0 Then Return 100.0
+            Return Math.Max(100.0, MaxAnnotationEdgePixels / width * 100.0)
+        End Function
+
+        Private Function MaxAnnotationHeightPercentValue() As Double
+            Dim height = DisplayImageHeightPixels
+            If height <= 0 Then Return 100.0
+            Return Math.Max(100.0, MaxAnnotationEdgePixels / height * 100.0)
+        End Function
+
         Public Property AnnotationXPercent As Double
             Get
                 Return _annotationXPercent
@@ -4760,9 +4802,9 @@ Namespace ViewModels
                 If EffectiveAnnotationKind = "QR" Then
                     Dim displaySize = GetAnnotationDisplayPixelSize()
                     If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
-                        Dim sizePixels = Math.Max(1.0, displaySize.Width * Math.Max(5, Math.Min(90, value)) / 100.0)
-                        _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / displaySize.Width * 100.0))
-                        _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / displaySize.Height * 100.0))
+                        Dim sizePixels = Math.Max(1.0, displaySize.Width * Math.Max(5, Math.Min(MaxAnnotationWidthPercentValue(), value)) / 100.0)
+                        _annotationWidthPercent = Math.Max(5, Math.Min(MaxAnnotationWidthPercentValue(), sizePixels / displaySize.Width * 100.0))
+                        _annotationHeightPercent = Math.Max(4, Math.Min(MaxAnnotationHeightPercentValue(), sizePixels / displaySize.Height * 100.0))
                         RaiseAnnotationSizeChanged()
                         SyncSelectedAnnotation()
                         Return
@@ -4770,7 +4812,7 @@ Namespace ViewModels
                 End If
                 Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
                 Dim minWidth = If(isTextual, MinTextAnnotationWidthPercent, 5.0)
-                Me.RaiseAndSetIfChanged(_annotationWidthPercent, Math.Max(minWidth, Math.Min(90, value)))
+                Me.RaiseAndSetIfChanged(_annotationWidthPercent, Math.Max(minWidth, Math.Min(MaxAnnotationWidthPercentValue(), value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMinimum))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMaximum))
@@ -4787,9 +4829,9 @@ Namespace ViewModels
                 If EffectiveAnnotationKind = "QR" Then
                     Dim displaySize = GetAnnotationDisplayPixelSize()
                     If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
-                        Dim sizePixels = Math.Max(1.0, displaySize.Height * Math.Max(4, Math.Min(90, value)) / 100.0)
-                        _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / displaySize.Width * 100.0))
-                        _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / displaySize.Height * 100.0))
+                        Dim sizePixels = Math.Max(1.0, displaySize.Height * Math.Max(4, Math.Min(MaxAnnotationHeightPercentValue(), value)) / 100.0)
+                        _annotationWidthPercent = Math.Max(5, Math.Min(MaxAnnotationWidthPercentValue(), sizePixels / displaySize.Width * 100.0))
+                        _annotationHeightPercent = Math.Max(4, Math.Min(MaxAnnotationHeightPercentValue(), sizePixels / displaySize.Height * 100.0))
                         RaiseAnnotationSizeChanged()
                         SyncSelectedAnnotation()
                         Return
@@ -4797,7 +4839,7 @@ Namespace ViewModels
                 End If
                 Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
                 Dim minHeight = If(isTextual, MinTextAnnotationHeightPercent, 4.0)
-                Me.RaiseAndSetIfChanged(_annotationHeightPercent, Math.Max(minHeight, Math.Min(90, value)))
+                Me.RaiseAndSetIfChanged(_annotationHeightPercent, Math.Max(minHeight, Math.Min(MaxAnnotationHeightPercentValue(), value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMinimum))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMaximum))
@@ -6567,16 +6609,16 @@ Namespace ViewModels
             Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
             Dim minWidth = If(isTextual, MinTextAnnotationWidthPercent, 5.0)
             Dim minHeight = If(isTextual, MinTextAnnotationHeightPercent, 4.0)
-            _annotationWidthPercent = Math.Max(minWidth, Math.Min(90, widthPercent))
-            _annotationHeightPercent = Math.Max(minHeight, Math.Min(90, heightPercent))
+            _annotationWidthPercent = Math.Max(minWidth, Math.Min(MaxAnnotationWidthPercentValue(), widthPercent))
+            _annotationHeightPercent = Math.Max(minHeight, Math.Min(MaxAnnotationHeightPercentValue(), heightPercent))
             If EffectiveAnnotationKind = "QR" Then
                 Dim displaySize = GetAnnotationDisplayPixelSize()
                 If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
                     Dim widthPixels = displaySize.Width * _annotationWidthPercent / 100.0
                     Dim heightPixels = displaySize.Height * _annotationHeightPercent / 100.0
                     Dim sizePixels = Math.Max(1.0, Math.Min(widthPixels, heightPixels))
-                    _annotationWidthPercent = Math.Max(5, Math.Min(90, sizePixels / displaySize.Width * 100.0))
-                    _annotationHeightPercent = Math.Max(4, Math.Min(90, sizePixels / displaySize.Height * 100.0))
+                    _annotationWidthPercent = Math.Max(5, Math.Min(MaxAnnotationWidthPercentValue(), sizePixels / displaySize.Width * 100.0))
+                    _annotationHeightPercent = Math.Max(4, Math.Min(MaxAnnotationHeightPercentValue(), sizePixels / displaySize.Height * 100.0))
                 End If
             End If
             ' Ein Textobjekt hat keine freie Box: sie ist immer der gemessene Textkasten. Der Griff ändert
@@ -7981,6 +8023,7 @@ Namespace ViewModels
         Public ReadOnly Property ResetNegativeCommand As ICommand
         Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
         Public ReadOnly Property ToggleLayersPanelCommand As ICommand
+        Public ReadOnly Property ToggleToolSidebarCommand As ICommand
         Public ReadOnly Property SetInfoTabCommand As ICommand
         Public ReadOnly Property SetLayersPanelTabCommand As ICommand
         Public ReadOnly Property BackToViewerCommand As ICommand
@@ -8345,6 +8388,13 @@ Namespace ViewModels
                                                                    _mainVm.Settings.EditorLayersPanelExpanded = Not _mainVm.Settings.EditorLayersPanelExpanded
                                                                    Me.RaisePropertyChanged(NameOf(IsLayersPanelVisible))
                                                                End Sub)
+            ToggleToolSidebarCommand = ReactiveCommand.Create(Sub()
+                                                                  If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+                                                                  _mainVm.Settings.EditorToolSidebarCollapsed = Not _mainVm.Settings.EditorToolSidebarCollapsed
+                                                                  Me.RaisePropertyChanged(NameOf(IsToolSidebarCollapsed))
+                                                                  Me.RaisePropertyChanged(NameOf(AreToolSidebarLabelsVisible))
+                                                                  Me.RaisePropertyChanged(NameOf(ToolSidebarWidth))
+                                                              End Sub)
             SetInfoTabCommand = ReactiveCommand.Create(Of String)(Sub(tabName) SetInfoTab(tabName))
             SetLayersPanelTabCommand = ReactiveCommand.Create(Of String)(Sub(tabName)
                                                                               If String.Equals(tabName, "History", StringComparison.OrdinalIgnoreCase) Then

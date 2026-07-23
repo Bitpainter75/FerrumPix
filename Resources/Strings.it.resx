@@ -3992,4 +3992,7 @@
   <data name="Auswahl_verschoben_0d991d0a" xml:space="preserve">
     <value>Selezione spostata</value>
   </data>
+  <data name="Werkzeugleiste_ein_oder_ausklappen_42072b18" xml:space="preserve">
+    <value>Comprimi o espandi la barra degli strumenti</value>
+  </data>
 </root>

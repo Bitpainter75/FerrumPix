@@ -206,6 +206,7 @@ Namespace Services
         Private _kind As String = "Text"
         Private _text As String = ""
         Private _imagePath As String = ""
+        Private _sourceFileName As String = ""
         Private _xPixels As Single = 0
         Private _yPixels As Single = 0
         Private _widthPixels As Single = 480
@@ -307,6 +308,19 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Ursprünglicher Dateiname der eingefügten Bild-/SVG-Datei (nur für die Beschriftung).
+        ''' Beim .fpx-Speichern wird ImagePath auf den bündel-internen Asset-Namen (assets/aN.ext)
+        ''' umgeschrieben - ohne diesen Merker hießen alle Bild-Ebenen nach dem Wiederöffnen „Bild: a0.png".</summary>
+        Public Property SourceFileName As String
+            Get
+                Return _sourceFileName
+            End Get
+            Set(value As String)
+                SetField(_sourceFileName, If(value, ""))
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(LayerLabel)))
+            End Set
+        End Property
+
         ''' <summary>Vom Nutzer vergebener Ebenenname; leer = automatische Beschriftung. Ändert LayerLabel.</summary>
         Public Property CustomName As String
             Get
@@ -371,10 +385,10 @@ Namespace Services
                     Return $"{baseLabel}: {preview}"
                 End If
                 If _kind IsNot Nothing AndAlso _kind.Equals("Image", StringComparison.OrdinalIgnoreCase) AndAlso Not String.IsNullOrWhiteSpace(_imagePath) Then
-                    Return $"{baseLabel}: {IO.Path.GetFileName(_imagePath)}"
+                    Return $"{baseLabel}: {If(String.IsNullOrWhiteSpace(_sourceFileName), IO.Path.GetFileName(_imagePath), _sourceFileName)}"
                 End If
                 If _kind IsNot Nothing AndAlso _kind.Equals("Svg", StringComparison.OrdinalIgnoreCase) AndAlso Not String.IsNullOrWhiteSpace(_imagePath) Then
-                    Return GetSvgLayerLabel(_imagePath)
+                    Return GetSvgLayerLabel(If(String.IsNullOrWhiteSpace(_sourceFileName), _imagePath, _sourceFileName))
                 End If
                 Return baseLabel
             End Get
@@ -903,6 +917,7 @@ Namespace Services
                 .CustomName = CustomName,
                 .WatermarkPresetName = WatermarkPresetName,
                 .ImagePath = ImagePath,
+                .SourceFileName = SourceFileName,
                 .XPixels = XPixels,
                 .YPixels = YPixels,
                 .WidthPixels = WidthPixels,

@@ -3991,4 +3991,7 @@
   <data name="Auswahl_verschoben_0d991d0a" xml:space="preserve">
     <value>Seleção movida</value>
   </data>
+  <data name="Werkzeugleiste_ein_oder_ausklappen_42072b18" xml:space="preserve">
+    <value>Recolher ou expandir a barra de ferramentas</value>
+  </data>
 </root>

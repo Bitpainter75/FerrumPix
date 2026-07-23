@@ -3993,4 +3993,7 @@
   <data name="Auswahl_verschoben_0d991d0a" xml:space="preserve">
     <value>Selection moved</value>
   </data>
+  <data name="Werkzeugleiste_ein_oder_ausklappen_42072b18" xml:space="preserve">
+    <value>Collapse or expand the tool bar</value>
+  </data>
 </root>

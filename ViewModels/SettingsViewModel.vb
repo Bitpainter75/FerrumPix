@@ -47,6 +47,7 @@ Namespace ViewModels
         Private _editorShowGrid As Boolean = False
         Private _editorInfoSidebarExpanded As Boolean = True
         Private _editorLayersPanelExpanded As Boolean = False
+        Private _editorToolSidebarCollapsed As Boolean = False
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _startupImageMode As String = "Viewer"
         Private _startupNoImageMode As String = "Gallery"
@@ -953,6 +954,20 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Linke Werkzeugleiste des Editors eingeklappt (nur Symbole). Gemerkter
+        ''' Bedienzustand wie Info-Leiste/Ebenen-Panel, kein Schalter auf der Einstellungsseite.</summary>
+        Public Property EditorToolSidebarCollapsed As Boolean
+            Get
+                Return _editorToolSidebarCollapsed
+            End Get
+            Set(value As Boolean)
+                If _editorToolSidebarCollapsed = value Then Return
+                Me.RaiseAndSetIfChanged(_editorToolSidebarCollapsed, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
         Private _editorSnapMarginPercent As Integer = 4
 
         ''' Abstand der Einrast-Linien (Sicherheitsabstand) zu den Bildrändern (0 = deaktiviert).
@@ -1289,6 +1304,7 @@ Namespace ViewModels
             _editorShowGrid = _appSettings.EditorShowGrid
             _editorInfoSidebarExpanded = _appSettings.EditorInfoSidebarExpanded
             _editorLayersPanelExpanded = _appSettings.EditorLayersPanelExpanded
+            _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
             _editorSnapMarginPercent = Math.Max(0, Math.Min(20, _appSettings.EditorSnapMarginPercent))
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
@@ -1681,6 +1697,7 @@ Namespace ViewModels
             settings.EditorShowGrid = _editorShowGrid
             settings.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             settings.EditorLayersPanelExpanded = _editorLayersPanelExpanded
+            settings.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
             settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             AppSettingsService.Save(settings)
         End Sub

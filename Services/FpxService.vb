@@ -136,6 +136,15 @@ Namespace Services
                     If ann Is Nothing OrElse String.IsNullOrWhiteSpace(ann.ImagePath) Then Continue For
                     ' Nur echte Dateien einbetten (avares://-Symbole bleiben als Referenz erhalten).
                     If Not File.Exists(ann.ImagePath) Then Continue For
+                    ' Anzeigenamen retten, BEVOR ImagePath auf assets/aN.ext umgeschrieben wird: die
+                    ' Ebenen-Beschriftung fällt sonst nach dem Wiederöffnen auf „a0.png" zurück. Nur für
+                    ' Arten, deren Beschriftung aus dem Dateinamen kommt - bei ausgeschnittenen
+                    ' Auswahl-Ebenen ist der Pfad ein bedeutungsloser Temp-Name.
+                    Dim labelFromFileName = ann.Kind IsNot Nothing AndAlso
+                        (ann.Kind.Equals("Image", StringComparison.OrdinalIgnoreCase) OrElse ann.Kind.Equals("Svg", StringComparison.OrdinalIgnoreCase))
+                    If labelFromFileName AndAlso String.IsNullOrWhiteSpace(ann.SourceFileName) Then
+                        ann.SourceFileName = Path.GetFileName(ann.ImagePath)
+                    End If
                     Dim assetName As String = Nothing
                     If Not assetMap.TryGetValue(ann.ImagePath, assetName) Then
                         assetName = AssetsDir & "a" & assetMap.Count.ToString() & Path.GetExtension(ann.ImagePath)

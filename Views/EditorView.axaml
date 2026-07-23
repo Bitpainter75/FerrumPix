@@ -16,7 +16,9 @@
              KeyUp="OnKeyUp"
              PointerReleased="OnGlobalPointerReleased">
 
-    <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="190,*,330,320,300">
+    <!-- Erste Spalte Auto statt fest 190: die Breite kommt aus ToolSidebarWidth, damit die
+         Werkzeugleiste auf Symbolbreite einklappen kann (Zustand in den Einstellungen). -->
+    <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="Auto,*,330,320,300">
 
         <Border Grid.Row="0" Grid.ColumnSpan="5" Classes="toolbar" Height="60" Padding="24,0">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
@@ -192,11 +194,24 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8">
+        <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8" Width="{Binding ToolSidebarWidth}">
             <ScrollViewer VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
                 <StackPanel Spacing="2">
+                    <!-- Linksbuendig mit 4 px Einzug: so steht das 18-px-Symbol im 30-px-Knopf genau
+                         unter den Werkzeug-Symbolen (deren Knopf-Padding ist 10, hier 4+6 Zentrierung). -->
+                    <Button Classes="icon-btn" Width="30" Height="30"
+                            HorizontalAlignment="Left" Margin="4,0,0,2"
+                            Command="{Binding ToggleToolSidebarCommand}"
+                            ToolTip.Tip="Werkzeugleiste ein- oder ausklappen">
+                        <Panel>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-sidebar-left-collapse.svg"
+                                           Width="18" Height="18" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-sidebar-left-expand.svg"
+                                           Width="18" Height="18" IsVisible="{Binding IsToolSidebarCollapsed}" />
+                        </Panel>
+                    </Button>
                     <TextBlock Text="TRANSFORMIEREN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,0,0,4" />
+                               FontWeight="SemiBold" Margin="10,0,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Zuschneiden"
                             Command="{Binding SetToolCommand}"
@@ -205,7 +220,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/crop.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Zuschneiden" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Zuschneiden" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -216,7 +231,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Bildgröße" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Bildgröße" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -227,12 +242,12 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Drehen" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Drehen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
                     <TextBlock Text="ANPASSUNGEN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,10,0,4" />
+                               FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Anpassen"
                             Command="{Binding SetToolCommand}"
@@ -241,7 +256,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Anpassen" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Anpassen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -252,7 +267,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-filter.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Farbe" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Farbe" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
@@ -264,7 +279,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Details und Effekte" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Details und Effekte" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -275,14 +290,14 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/palette.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Filter" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Filter" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <!-- Die Werkzeuge stehen hier einzeln, statt hinter den Sammelknöpfen "Text und Bild"
                          und "Malen" zu liegen: ein Klick wählt direkt das Werkzeug, mit dem gearbeitet
                          wird. Die zugehörigen Panels rechts zeigen nur noch dessen Einstellungen. -->
                     <TextBlock Text="WERKZEUGE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,10,0,4" />
+                               FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Auswahl"
                             Command="{Binding SetToolCommand}"
@@ -292,7 +307,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pointer.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Auswahl" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Auswahl" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
@@ -304,7 +319,7 @@
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/text-size.svg" Width="18" Height="18" />
-                            <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -315,7 +330,7 @@
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg" Width="18" Height="18" />
-                            <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -326,7 +341,7 @@
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/qrcode.svg" Width="18" Height="18" />
-                            <TextBlock Text="QR-Code" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="QR-Code" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -337,7 +352,7 @@
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copyright.svg" Width="18" Height="18" />
-                            <TextBlock Text="Wasserzeichen" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Wasserzeichen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
@@ -350,7 +365,7 @@
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg" Width="18" Height="18" />
-                            <TextBlock Text="Pinsel" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Pinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -362,7 +377,7 @@
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg" Width="18" Height="18" />
-                            <TextBlock Text="Radiergummi" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Radiergummi" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -373,7 +388,7 @@
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Blur}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/blur.svg" Width="18" Height="18" />
-                            <TextBlock Text="Verwischen" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Verwischen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -384,7 +399,7 @@
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Repair}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/bandage.svg" Width="18" Height="18" />
-                            <TextBlock Text="Reparaturpinsel" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Reparaturpinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -395,7 +410,7 @@
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Clone}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rubber-stamp.svg" Width="18" Height="18" />
-                            <TextBlock Text="Stempel" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Stempel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
@@ -408,7 +423,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/shape.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Formen und Symbole" FontSize="{DynamicResource FP.Font.Body}" />
+                            <TextBlock Text="Formen und Symbole" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                 </StackPanel>

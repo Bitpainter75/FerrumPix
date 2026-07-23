@@ -137,6 +137,9 @@ Namespace Services
         ''' Ob das Ebenen-Panel im Editor zuletzt eingeblendet war - gemerkter Bedienzustand (wie die
         ''' Info-Leiste), kein Schalter in den Einstellungen. Standard aus: es ist ein Profi-Werkzeug.
         Public Property EditorLayersPanelExpanded As Boolean = False
+        ''' Linke Werkzeugleiste des Editors eingeklappt (nur Symbole, keine Beschriftungen) -
+        ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Leiste selbst.
+        Public Property EditorToolSidebarCollapsed As Boolean = False
         ''' Gemerkter Auf-/Zuklapp-Zustand jeder Editor-Gruppe (Expander), Schlüssel = stabiler
         ''' Gruppenname (siehe Controls.ExpanderState). Fehlt ein Schlüssel, gilt der XAML-Standard.
         Public Property EditorExpanderStates As New Dictionary(Of String, Boolean)()
