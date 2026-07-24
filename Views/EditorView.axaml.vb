@@ -1137,9 +1137,19 @@ Namespace Views
                             End If
                         End If
                     End If
-                    ClearEditorSelections(vm)
-                    e.Handled = True
-                    Return
+                    ' Im Auswahlwerkzeug darf eine ZIEH-Auswahl (Rechteck/Ellipse/Lasso/Masken-Pinsel)
+                    ' AUSSERHALB des Bildes ansetzen und ins Bild hineingezogen werden - SetSelectionRect
+                    ' schneidet das Ergebnis ohnehin sauber auf das Bild zu. Dieser Klick darf deshalb hier
+                    ' NICHT verschluckt werden: sonst löschte er nur die Auswahl und es entstanden nie
+                    ' Laufameisen bzw. gar keine Auswahl (Nutzer-Befund 2026-07-24). "Verschieben" und
+                    ' "Zauberstab" haben außerhalb des Bildes keine Zieh-Geste und räumen weiterhin auf.
+                    Dim startsSelectionDragOutside = vm.CurrentTool = EditorTool.Selection AndAlso
+                                                     vm.SelectionMode <> "Move" AndAlso vm.SelectionMode <> "MagicWand"
+                    If Not startsSelectionDragOutside Then
+                        ClearEditorSelections(vm)
+                        e.Handled = True
+                        Return
+                    End If
                 End If
             End If
 

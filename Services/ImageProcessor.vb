@@ -3925,7 +3925,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                            Dim values = If(l.Adjustments, New ImageAdjustments())
                            Dim pixelValues = ImageAdjustments.PixelAdjustmentProperties().
                                Select(Function(p) KeyPart(p.GetValue(values)))
+                           ' IsMaskLayer und die DEKLARATIVE Füllung MÜSSEN mit in den Schlüssel: beide
+                           ' liest ApplyMaskedAdjustmentLayers (Art der Füll-Wirkung bzw. Farbe/Verlauf).
+                           ' Ohne sie lieferte der Basis-Cache nach einem erneuten Füllen dasselbe Bild
+                           ' zurück - die ERSTE Füllung blieb sichtbar und liess sich nie ersetzen
+                           ' (Nutzer-Befund 2026-07-24; exakt die im Kopf von ComputeBaseKey beschriebene
+                           ' Fehlerklasse "Regler macht nix").
                            Return String.Join(":", l.Id, l.MaskId, l.IsVisible, l.Opacity,
+                                              l.IsMaskLayer, l.FillKind, l.FillColor, l.FillColor2,
+                                              KeyPart(l.FillAngle), l.FillInverted,
                                               String.Join(",", pixelValues))
                        End Function)
             Return String.Join(";", masks) & "|" & String.Join(";", layers)
@@ -9683,8 +9691,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Dim fRow = y * fillStride, lRow = y * w
                     For x = 0 To w - 1
                         Dim o = fRow + x * 4
-                        ' Bgra8888: 0=B, 1=G, 2=R. Luminanz (Rec.601) der Füllung.
-                        lum(lRow + x) = CByte(Math.Round(fillBuf(o + 2) * 0.299 + fillBuf(o + 1) * 0.587 + fillBuf(o) * 0.114))
+                        ' Bgra8888 (Unpremul): 0=B, 1=G, 2=R, 3=A. Deckung = Luminanz (Rec.601) × EIGEN-ALPHA.
+                        ' Der Alpha-Anteil MUSS mitzählen: die Standard-Füllfarbe ist "#00FFFFFF" (transparentes
+                        ' WEISS). Ohne Alpha ergäbe sie Luminanz 255 = überall volle Deckung, ein Verlauf von
+                        ' "transparent" nach Weiß wäre also flach und stufte gar nichts ab (Nutzer-Befund
+                        ' 2026-07-24: "auf der Maske wirkt die Füllung nicht als Deckungsverlauf").
+                        Dim l = fillBuf(o + 2) * 0.299 + fillBuf(o + 1) * 0.587 + fillBuf(o) * 0.114
+                        lum(lRow + x) = CByte(Math.Round(l * fillBuf(o + 3) / 255.0))
                     Next
                 Next
                 Return lum

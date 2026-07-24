@@ -431,6 +431,14 @@ Namespace ViewModels
         ' Dann malt der Pinsel die harte Form; die weiche Kante steuert mask.FeatherPixels (Render-Feather),
         ' und jeder Strich wird in die Ebenen-Maske zurückgeschrieben. Rein transient (nicht persistiert).
         Private _editingLayerMaskId As String = ""
+        ' <> "" wenn die AKTUELLE, UNVERÄNDERTE Auswahl bereits zu dieser Korrekturebene promotet wurde
+        ' (Füllen bzw. "Neue Korrekturebene"). Deterministische Verknüpfung Auswahl→Ebene: erneutes Füllen
+        ' und eine anschließende Anpassung treffen damit GARANTIERT dieselbe Ebene (statt sich auf eine
+        ' inhaltsbasierte PngBase64-Deduplizierung zu verlassen, die schon minimal abweichende Masken nicht
+        ' mehr zusammenführt - dann entstand eine zweite Ebene und die Füllung schien "nicht angewendet").
+        ' Wird bei JEDER Auswahländerung ungültig (siehe InvalidateSelectionLayerLink), damit eine NEUE
+        ' Auswahl/Maske eine eigene Ebene bekommt und nicht die vorige mitfüllt.
+        Private _selectionPromotedLayerId As String = ""
         ' Art der aktuell aktiven Auswahl: False = AUSWAHL (Laufameisen), True = MASKE (rotes Overlay).
         ' Bestimmt die Overlay-Darstellung UNABHÄNGIG vom Werkzeug (Nutzerwunsch: Auswahl vs. Maske getrennt).
         Private _activeSelectionIsMask As Boolean = False
@@ -5754,6 +5762,7 @@ Namespace ViewModels
         ''' Wird von EditorView beim Loslassen der Maus nach dem Aufziehen eines Auswahlrechtecks aufgerufen.
         Public Sub SetSelectionRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double,
                                     Optional captureUndo As Boolean = True)
+            InvalidateSelectionLayerLink()   ' neue Auswahl → eigene Ebene (siehe PromoteActiveSelectionToLayer)
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
@@ -5766,10 +5775,14 @@ Namespace ViewModels
             If captureUndo Then PushUndo()
 
             If _selectionCombineMode = "New" OrElse Not _hasActiveSelection Then
+                _editingLayerMaskId = ""   ' neue Auswahl ersetzt eine evtl. geladene Ebenen-Maske
                 ClearSelectionMask()
                 SetSelectionBoundsFromPixels(rectPx)
                 SetSelectionShape("Rectangle", Nothing, Nothing)
                 HasActiveSelection = True
+                ' Ein gezogenes Rechteck ist eine AUSWAHL, keine Maske. Ohne dieses Zurücksetzen behielt
+                ' es nach einer Masken-Bearbeitung die Art "Maske" und wurde als Masken-Ebene promotet.
+                SetActiveSelectionIsMask(False)
                 Return
             End If
 
@@ -5781,6 +5794,7 @@ Namespace ViewModels
         ''' Ellipse-Auswahl: Rechteck wie beim Rechteck-Modus, zusätzlich eine eingepasste Ellipsen-Maske.
         Public Sub SetSelectionEllipse(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double,
                                        Optional captureUndo As Boolean = True)
+            InvalidateSelectionLayerLink()   ' neue Auswahl → eigene Ebene (siehe PromoteActiveSelectionToLayer)
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
@@ -5864,21 +5878,42 @@ Namespace ViewModels
             Dim oh = Math.Max(1, CInt(Math.Round(bh * ovScale)))
             Dim redColor = New SKColor(255, 0, 0, 128)
 
+            ' Trägt die Ebene dieser Auswahl eine Füllung, zeigt das rote Overlay die tatsächliche
+            ' DECKUNG (Maske × Füll-Luminanz) statt nur der Maskenform - so sieht man den Deckungsverlauf,
+            ' mit dem die Anpassung abgestuft wird (Nutzerwunsch 2026-07-24).
+            Dim fillLayer = ActiveFillLayerForSelection()
+            Dim maskForOverlay = _selectionMask
+            Dim ownsMaskForOverlay = False
+            If _selectionMask IsNot Nothing AndAlso fillLayer IsNot Nothing Then
+                Dim graded = ImageProcessor.RenderMaskFilledWithGradient(_selectionMask, fillLayer.FillColor,
+                    fillLayer.FillKind, fillLayer.FillColor2, CSng(fillLayer.FillAngle), fillLayer.FillInverted)
+                If graded IsNot Nothing Then
+                    maskForOverlay = graded
+                    ownsMaskForOverlay = True
+                End If
+            End If
+
+            Try
             Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
                 Using canvas = New SKCanvas(overlay)
                     canvas.Clear(SKColors.Transparent)
                     ' Committete Maske rot einfärben: erst Rot in der Maskenregion auslegen, dann per DstIn
                     ' auf die Maskendeckung beschränken. Rein alphabasiert - unabhängig davon, wie eine
                     ' Alpha8-Quelle beim direkten Zeichnen eingefärbt würde.
-                    If _selectionMask IsNot Nothing Then
-                        Dim src = New SKRect(0, 0, _selectionMask.Width, _selectionMask.Height)
+                    If maskForOverlay IsNot Nothing Then
+                        Dim src = New SKRect(0, 0, maskForOverlay.Width, maskForOverlay.Height)
                         Dim dst = New SKRect(CSng(_selectionMaskRect.Left * ovScale), CSng(_selectionMaskRect.Top * ovScale),
                                              CSng(_selectionMaskRect.Right * ovScale), CSng(_selectionMaskRect.Bottom * ovScale))
                         Using redPaint = New SKPaint With {.Color = redColor, .Style = SKPaintStyle.Fill}
                             canvas.DrawRect(dst, redPaint)
                         End Using
-                        Using maskPaint = New SKPaint With {.BlendMode = SKBlendMode.DstIn, .IsAntialias = True}
-                            ImageProcessor.DrawBitmapSampled(canvas, _selectionMask, src, dst, ImageProcessor.SamplingHigh, maskPaint)
+                        ' KEINE Kantenglättung: das rote Rechteck oben wird ohne AA gerastert. Zeichnete man
+                        ' die DstIn-Maske MIT AA, deckten beide nicht exakt dieselben Pixel ab - am Rand des
+                        ' Maskenrechtecks blieb eine dünne Reihe voll roter Pixel stehen ("ganz feiner roter
+                        ' Rahmen", Nutzer-Befund 2026-07-24). Die weiche Kante der Maske kommt ohnehin aus
+                        ' ihren Alpha-Werten (plus SamplingHigh), nicht aus der Kantenglättung des Rechtecks.
+                        Using maskPaint = New SKPaint With {.BlendMode = SKBlendMode.DstIn, .IsAntialias = False}
+                            ImageProcessor.DrawBitmapSampled(canvas, maskForOverlay, src, dst, ImageProcessor.SamplingHigh, maskPaint)
                         End Using
                     End If
                     ' Laufender Strich (Live): auf Overlay-Auflösung skaliert.
@@ -5894,6 +5929,21 @@ Namespace ViewModels
                 End Using
                 Return ImageProcessor.ToAvaloniaBitmap(overlay)
             End Using
+            Finally
+                If ownsMaskForOverlay Then maskForOverlay.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Die Korrekturebene dieser Auswahl, sofern sie eine deklarative Füllung trägt - sonst
+        ''' Nothing. Quelle für die Deckungs-Darstellung im roten Overlay.</summary>
+        Private Function ActiveFillLayerForSelection() As MaskedAdjustmentLayer
+            Dim l As MaskedAdjustmentLayer = Nothing
+            If _selectionPromotedLayerId <> "" Then
+                l = _maskedAdjustmentLayers.FirstOrDefault(Function(x) x IsNot Nothing AndAlso x.Id = _selectionPromotedLayerId)
+            End If
+            If l Is Nothing Then l = LayerForEditedMask()
+            If l IsNot Nothing AndAlso l.HasFill() Then Return l
+            Return Nothing
         End Function
 
         ''' Rotes Overlay aus der committeten Maske neu bauen und veröffentlichen (nach jedem Strich-Commit).
@@ -5993,6 +6043,7 @@ Namespace ViewModels
         ''' die harte Form dieser Ebenen-Maske; die "Weiche Kante" steuert mask.FeatherPixels.</summary>
         Private Sub LoadLayerMaskIntoSelection(layer As MaskedAdjustmentLayer)
             _editingLayerMaskId = ""
+            InvalidateSelectionLayerLink()
             If layer Is Nothing Then Return
             Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
             If mask Is Nothing Then Return
@@ -6012,6 +6063,10 @@ Namespace ViewModels
             ' Overlay nach EBENEN-ART: Masken-Ebene → rotes Overlay, Auswahl-Ebene → Laufameisen. Kein
             ' Werkzeugwechsel; die Maske bleibt mit dem Masken-Pinsel editierbar (Auswahl-Werkzeug + Pinsel).
             SetActiveSelectionIsMask(layer.IsMaskLayer)
+            ' SetActiveSelectionIsMask baut das Overlay NUR bei einem Artwechsel neu. Beim Wechsel von einer
+            ' Masken-Ebene zur nächsten (beide True) bliebe sonst das ROT DER VORIGEN Maske stehen - es sähe
+            ' aus, als färbe die neue Maske fremde Bereiche/Ebenen rot. Deshalb hier immer neu aufbauen.
+            If layer.IsMaskLayer Then PublishSelectionRedOverlay()
         End Sub
 
         ''' <summary>Schreibt die aktuelle _selectionMask (harte Form) in die bearbeitete Ebenen-Maske
@@ -6051,11 +6106,34 @@ Namespace ViewModels
         ''' zurück - OHNE Undo/Rebuild/Preview (der Aufrufer steuert das). Dedup gegen den Auto-Promote-Pfad,
         ''' also legt eine spätere Anpassung KEINE zweite Ebene an. Setzt _editingLayerMaskId, damit
         ''' Füllung/Anpassung anschließend auf DIESER Ebene landen.</summary>
+        ''' <summary>Löst die Verknüpfung "diese Auswahl gehört bereits zu Ebene X". MUSS bei jeder
+        ''' Auswahl-/Maskenänderung laufen, damit eine NEUE Auswahl eine eigene Ebene bekommt.</summary>
+        Private Sub InvalidateSelectionLayerLink()
+            _selectionPromotedLayerId = ""
+        End Sub
+
+        ''' <summary>Die Ebene, deren Maske gerade als Auswahl bearbeitet wird - oder Nothing.
+        ''' WICHTIG: Eine Maske kann von MEHREREN Ebenen geteilt werden ("Neue Korrektur mit derselben
+        ''' Maske"). Dann entscheidet die im Panel GEWÄHLTE Ebene; ein blindes LastOrDefault über die
+        ''' MaskId träfe sonst die zuletzt angelegte Ebene und schriebe Füllung/Maske auf die FALSCHE.</summary>
+        Private Function LayerForEditedMask() As MaskedAdjustmentLayer
+            If _editingLayerMaskId = "" Then Return Nothing
+            Dim picked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso
+                            l.Id = _selectedMaskedAdjustmentLayerId AndAlso l.MaskId = _editingLayerMaskId)
+            If picked IsNot Nothing Then Return picked
+            Return _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = _editingLayerMaskId)
+        End Function
+
         Private Function PromoteActiveSelectionToLayer() As MaskedAdjustmentLayer
             If Not _hasActiveSelection Then Return Nothing
-            If _editingLayerMaskId <> "" Then
-                Dim existing = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = _editingLayerMaskId)
-                If existing IsNot Nothing Then Return existing
+            ' 1. Bewusst im Panel gewählte Ebene (deren Maske gerade bearbeitet wird).
+            Dim edited = LayerForEditedMask()
+            If edited IsNot Nothing Then Return edited
+            ' 2. Diese (unveränderte) Auswahl wurde bereits promotet → GARANTIERT dieselbe Ebene weiterbenutzen,
+            '    damit erneutes Füllen die vorhandene Füllung ersetzt statt eine zweite Ebene anzulegen.
+            If _selectionPromotedLayerId <> "" Then
+                Dim linked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectionPromotedLayerId)
+                If linked IsNot Nothing Then Return linked
             End If
             Dim snapshot = BuildAdjustmentsFromFields()
             Dim mask = ImageProcessor.CreateSourceMaskFromSelection(snapshot,
@@ -6088,6 +6166,7 @@ Namespace ViewModels
             ' _editingLayerMaskId wird NUR noch von LoadLayerMaskIntoSelection gesetzt (bewusstes Auswählen
             ' einer Ebene im Panel), sodass Füllung/Anpassung dann gezielt DIESE Ebene treffen.
             _selectedMaskedAdjustmentLayerId = layer.Id
+            _selectionPromotedLayerId = layer.Id
             Return layer
         End Function
 
@@ -6157,6 +6236,7 @@ Namespace ViewModels
         ''' pixelgenaue und zugleich billigste Darstellung einer Voll-Auswahl; „Umkehren" macht daraus bei
         ''' Bedarf eine echte Maske.</summary>
         Public Sub SelectAll()
+            InvalidateSelectionLayerLink()   ' geänderte Auswahl ist nicht mehr die promotete
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
@@ -6169,6 +6249,7 @@ Namespace ViewModels
 
         Public Sub ClearSelection(Optional captureUndo As Boolean = True)
             If captureUndo AndAlso _hasActiveSelection Then PushUndo()
+            InvalidateSelectionLayerLink()
             CommitSelectionAdjustModeToModel()
             ClearSelectionMask()
             SetSelectionShape("Rectangle", Nothing, Nothing)
@@ -6190,6 +6271,7 @@ Namespace ViewModels
 
         Public Sub InvertSelection()
             If Not _hasActiveSelection Then Return
+            InvalidateSelectionLayerLink()   ' geänderte Auswahl ist nicht mehr die promotete
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width
             Dim bh = selectionSize.Height
@@ -6225,7 +6307,31 @@ Namespace ViewModels
                                             candidateYsPercent As Double(),
                                             Optional isMask As Boolean = False)
             If candidateMask Is Nothing OrElse candidateRect.Width <= 0 OrElse candidateRect.Height <= 0 Then Return
+            ' Die Auswahl/Maske ändert sich → sie ist nicht mehr die bereits promotete: eine NEUE Auswahl
+            ' bekommt eine EIGENE Ebene, statt die zuvor erzeugte mitzufüllen.
+            InvalidateSelectionLayerLink()
             Dim combineMode = If(_hasActiveSelection, _selectionCombineMode, "New")
+            ' AUSWAHL und MASKE strikt trennen (Nutzerwunsch 2026-07-24): wechselt die ART des Kandidaten
+            ' gegenüber der aktiven Auswahl (Laufameisen ↔ gemalte Maske), wird NICHT kombiniert, sondern
+            ' eine NEUE Auswahl begonnen. Sonst verrechnete Add/Subtract eine Geometrie-Auswahl mit einem
+            ' Pinselstrich zu EINER Mischauswahl - und die daraus erzeugte Ebene wäre weder sauber
+            ' Auswahl- noch Masken-Ebene. Gleiche Art kombiniert weiterhin normal.
+            If _hasActiveSelection AndAlso isMask <> _activeSelectionIsMask Then combineMode = "New"
+            ' Eine bereits zu einer Ebene PROMOTETE Auswahl ist abgeschlossen: der nächste Strich / die
+            ' nächste Form beginnt eine NEUE Auswahl, statt sich mit ihr zu vereinigen. Ohne das blieb der
+            ' (beim Masken-Pinsel automatisch vorbelegte) "Hinzufügen"-Modus hängen, die zweite Maske war
+            ' "alte ∪ neuer Strich" und deckte damit auch die Fläche der ERSTEN Ebene ab - deren Füllung
+            ' bzw. das rote Overlay erschien dort mit (Nutzer-Befund: "die erste Auswahl-Ebene wird auch
+            ' gefüllt" / "vorhandene Auswahl-Ebenen werden rot"). Der gewählte Kombinationsmodus bleibt
+            ' unangetastet; er gilt weiter innerhalb EINER noch nicht promoteten Auswahl.
+            ' AUSNAHME: eine bewusst im Panel gewählte Ebenen-Maske wird weiter bearbeitet (Add/Subtract).
+            If _selectionPromotedLayerId <> "" AndAlso _editingLayerMaskId = "" Then combineMode = "New"
+            ' "Neu" ersetzt die Auswahl vollständig → sie ist NICHT mehr die editierbare Kopie einer
+            ' Ebenen-Maske. Ohne dieses Lösen blieb die Bindung an die zuletzt im Panel gewählte Ebene
+            ' bestehen und JEDE weitere Füllung landete wieder dort - verschiedene Auswahl-/Masken-Ebenen
+            ' liessen sich nicht unterschiedlich füllen (Nutzer-Befund 2026-07-24). Bei Hinzufügen/
+            ' Abziehen bleibt die Bindung erhalten, damit der Masken-Pinsel weiter in die Ebene schreibt.
+            If combineMode = "New" Then _editingLayerMaskId = ""
 
             If combineMode = "New" Then
                 ClearSelectionMask()
@@ -6450,6 +6556,7 @@ Namespace ViewModels
 
         Public Sub MoveSelection(deltaXPercent As Double, deltaYPercent As Double)
             If Not _hasActiveSelection Then Return
+            InvalidateSelectionLayerLink()   ' geänderte Auswahl ist nicht mehr die promotete
             Dim maxX = Math.Max(0, 100.0 - _selectionWidthPercent)
             Dim maxY = Math.Max(0, 100.0 - _selectionHeightPercent)
             Dim newX = Math.Max(0, Math.Min(maxX, _selectionXPercent + deltaXPercent))
@@ -6871,6 +6978,9 @@ Namespace ViewModels
             layer.FillInverted = _annotationGradientInverted
             _selectedMaskedAdjustmentLayerId = layer.Id
             RebuildLayerRows()
+            ' Rotes Overlay neu bauen: es zeigt jetzt die DECKUNG (Maske × Füll-Luminanz), also den
+            ' Verlauf, mit dem die Anpassung dieser Ebene abgestuft wird.
+            If _activeSelectionIsMask Then PublishSelectionRedOverlay()
             AddHistoryEntry(If(layer.IsMaskLayer, "Maske gefüllt", "Auswahl gefüllt"))
             SchedulePreviewUpdate()
         End Sub
@@ -9020,7 +9130,7 @@ Namespace ViewModels
                                                 scheduleInitialRender:=Not publishAtomically,
                                                 showRawQuickPreview:=Not publishAtomically)
                 If fpxAdjustments IsNot Nothing Then
-                    ApplyAdjustments(fpxAdjustments)
+                    ApplyAdjustments(fpxAdjustments, resetTransientSelectionBinding:=True)
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
                 End If
@@ -9176,7 +9286,7 @@ Namespace ViewModels
                 ' Gespeicherten Bearbeitungszustand aus der .fpx wiederherstellen (Regler, Ebenenstapel, Auswahl …)
                 ' und als "keine ungespeicherten Änderungen" markieren - es ist ja gerade der gespeicherte Stand.
                 If fpxAdjustments IsNot Nothing Then
-                    ApplyAdjustments(fpxAdjustments)
+                    ApplyAdjustments(fpxAdjustments, resetTransientSelectionBinding:=True)
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
                 End If
@@ -11998,7 +12108,7 @@ Namespace ViewModels
             _redoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch})
             _suppressUndoCapture = True
             Try
-                ApplyAdjustments(entry.Adjustments)
+                ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
             Finally
                 _suppressUndoCapture = False
             End Try
@@ -12020,7 +12130,7 @@ Namespace ViewModels
             _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch})
             _suppressUndoCapture = True
             Try
-                ApplyAdjustments(entry.Adjustments)
+                ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
             Finally
                 _suppressUndoCapture = False
             End Try
@@ -12040,7 +12150,13 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        Private Sub ApplyAdjustments(adj As ImageAdjustments)
+        ''' <param name="resetTransientSelectionBinding">Nur beim ECHTEN Wiederherstellen eines Zustands
+        ''' (Undo/Redo, Dokument laden) True. Die Regler-Ziel-Wechsel in RefreshSelectionAdjustMode/
+        ''' CommitSelectionAdjustModeToModel rufen dieselbe Methode - würden sie die transienten
+        ''' Auswahl-Bindungen mitlöschen, verlöre JEDER Werkzeug- oder Zeilenwechsel die Information
+        ''' "die aktive Auswahl ist eine MASKE" und die strikte Trennung Auswahl/Maske griffe nie.</param>
+        Private Sub ApplyAdjustments(adj As ImageAdjustments,
+                                     Optional resetTransientSelectionBinding As Boolean = False)
             _brightness = adj.Brightness
             _contrast = adj.Contrast
             _saturation = adj.Saturation
@@ -12201,10 +12317,13 @@ Namespace ViewModels
             ' Zurücksetzen dinglet _editingLayerMaskId auf eine gerade entfernte Ebenen-Maske (weiche
             ' Kante geht verloren, spätere Pinsel-Edits landen ins Leere) und die rote/Ameisen-Darstellung
             ' desynchronisiert.
-            _editingLayerMaskId = ""
-            If _activeSelectionIsMask Then
-                _activeSelectionIsMask = False
-                Me.RaisePropertyChanged(NameOf(ActiveSelectionIsMask))
+            If resetTransientSelectionBinding Then
+                _editingLayerMaskId = ""
+                InvalidateSelectionLayerLink()
+                If _activeSelectionIsMask Then
+                    _activeSelectionIsMask = False
+                    Me.RaisePropertyChanged(NameOf(ActiveSelectionIsMask))
+                End If
             End If
             _selectionScopeEnabled = adj.SelectionScopeEnabled
             _hasActiveSelection = adj.HasActiveSelection
@@ -13937,10 +14056,15 @@ Namespace ViewModels
                Not _imageMasks.Any(Function(m) m IsNot Nothing AndAlso m.Id = source.MaskId) Then Return
 
             PushUndo()
+            ' Die ART der Quelle mitnehmen: eine zweite Korrektur auf DERSELBEN Maske ist wieder eine
+            ' Masken- bzw. Auswahl-Ebene. Ohne das entstand neben einer Masken-Ebene eine Auswahl-Ebene
+            ' auf derselben Maske - also genau die unerwünschte Mischung auf einer Maske.
             Dim layer = New MaskedAdjustmentLayer With {
-                .Name = LocalizationService.T("Auswahl-Korrektur") & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                .Name = If(source.IsMaskLayer, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) &
+                        " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
                 .MaskId = source.MaskId,
-                .Adjustments = New ImageAdjustments()
+                .Adjustments = New ImageAdjustments(),
+                .IsMaskLayer = source.IsMaskLayer
             }
             _maskedAdjustmentLayers.Insert(index + 1, layer)
             _selectedMaskedAdjustmentLayerId = layer.Id
@@ -14148,8 +14272,16 @@ Namespace ViewModels
             ' Beim Bearbeiten einer Ebenen-Maske (_editingLayerMaskId gesetzt) ist _hasActiveSelection zwar
             ' True (die editierbare Maskenkopie), meint aber KEINE frei-promotebare Auswahl - dann trotzdem
             ' die gewählte Ebene auflösen, sonst liefe es in den Promote-Zweig (neue Maske).
-            Dim selectedExisting = If(_hasActiveSelection AndAlso _editingLayerMaskId = "", Nothing,
-                _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId))
+            ' Wurde DIESE Auswahl bereits promotet (z. B. durch Füllen), MUSS die Anpassung genau auf jener
+            ' Ebene landen - sonst entstünde eine zweite Ebene OHNE die Füllung, und die Füllung könnte die
+            ' Anpassung nicht abstufen (Nutzer-Befund: "auf der Maske wirkt die Füllung nicht als
+            ' Deckungsverlauf"). Die Verknüpfung wird bei jeder Auswahländerung ungültig.
+            Dim linkedExisting As MaskedAdjustmentLayer = Nothing
+            If _selectionPromotedLayerId <> "" Then
+                linkedExisting = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectionPromotedLayerId)
+            End If
+            Dim selectedExisting = If(linkedExisting, If(_hasActiveSelection AndAlso _editingLayerMaskId = "", Nothing,
+                _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)))
             Dim shouldBeActive = Not HasSelectedAnnotation AndAlso Not IsObjectAdjustModeActive() AndAlso
                                  IsObjectAdjustTool(_currentTool) AndAlso
                                  (_hasActiveSelection OrElse selectedExisting IsNot Nothing)
