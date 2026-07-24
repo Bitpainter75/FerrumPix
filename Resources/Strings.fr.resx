@@ -3995,4 +3995,28 @@
   <data name="Werkzeugleiste_ein_oder_ausklappen_42072b18" xml:space="preserve">
     <value>Réduire ou développer la barre d'outils</value>
   </data>
+  <data name="Pinselgr_e_0fd49283" xml:space="preserve">
+    <value>Taille du pinceau</value>
+  </data>
+  <data name="Masken_Pinsel_Maske_malen_weiche_Kante_Hinzuf_ge_49a30454" xml:space="preserve">
+    <value>Pinceau de masque : peindre un masque (bord doux, ajouter/soustraire) — en superposition rouge</value>
+  </data>
+  <data name="Bewertungssterne_immer_anzeigen_a4803ddc" xml:space="preserve">
+    <value>Toujours afficher les étoiles de notation</value>
+  </data>
+  <data name="Zeigt_die_Sterne_auf_der_Kachel_dauerhaft_an_sta_c8f5548f" xml:space="preserve">
+    <value>Affiche les étoiles sur la vignette en permanence au lieu de seulement au survol de la souris.</value>
+  </data>
+  <data name="Favoriten_Herz_immer_anzeigen_e964c9bc" xml:space="preserve">
+    <value>Toujours afficher le cœur des favoris</value>
+  </data>
+  <data name="Zeigt_das_Favoriten_Herz_auf_der_Kachel_dauerhaf_6879f048" xml:space="preserve">
+    <value>Affiche le cœur des favoris sur la vignette en permanence au lieu de seulement au survol de la souris.</value>
+  </data>
+  <data name="Metadaten_Symbole_immer_anzeigen_40270b2b" xml:space="preserve">
+    <value>Toujours afficher les icônes de métadonnées</value>
+  </data>
+  <data name="Zeigt_die_Metadaten_Symbole_EXIF_IPTC_XMP_ICC_au_b5e647fb" xml:space="preserve">
+    <value>Affiche les icônes de métadonnées (EXIF, IPTC, XMP, ICC) sur la vignette en permanence au lieu de seulement au survol de la souris.</value>
+  </data>
 </root>

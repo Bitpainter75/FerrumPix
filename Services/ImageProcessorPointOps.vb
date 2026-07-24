@@ -54,9 +54,17 @@ Namespace Services
             Public ScalarG As Single()
             Public ScalarB As Single()
 
-            ''' Farbmatrix (Temperatur/Toenung/Saettigung/Dynamik), 20 Eintraege wie bei Skia.
-            ''' Die Offset-Spalte liegt hier bereits in 0..1 vor.
+            ''' Farbmatrix (Temperatur/Toenung/Saettigung), 20 Eintraege wie bei Skia.
+            ''' Die Offset-Spalte liegt hier bereits in 0..1 vor. Dynamik liegt NICHT mehr hier -
+            ''' sie ist chroma-abhaengig und damit keine lineare Matrix (siehe Vibrance).
             Public ColorMatrix As Single()
+
+            ''' Dynamik (Vibrance) als -1..1. Echte, chroma-gewichtete Saettigung: schwach saturierte
+            ''' Pixel werden staerker angehoben als bereits kraeftige, ein neutrales Grau (sat=0) bleibt
+            ''' neutral. Deshalb per-Pixel im HSL-Raum statt in der Farbmatrix - eine lineare Matrix
+            ''' koennte die Chroma-Abhaengigkeit nicht abbilden und wuerde nur wie eine zweite
+            ''' Saettigung wirken (und liesse sich von der Saettigung nicht mehr auf Grau ziehen).
+            Public Vibrance As Single
 
             ''' Filmnegativ - laeuft als ERSTE Stufe, noch vor der Farbmatrix. Eigene Tabellen statt
             ''' der verschmolzenen, weil im S/W-Fall die Graumatrix DAZWISCHEN liegt.
@@ -131,9 +139,10 @@ Namespace Services
                 chain.IsIdentity = False
             End If
 
-            ' --- Farbmatrix: exakt die Bedingung aus ApplyColorAdjustments ---
+            ' --- Farbmatrix: exakt die Bedingung aus ApplyColorAdjustments, nur OHNE Dynamik ---
+            ' Dynamik ist keine Matrixstufe mehr (chroma-abhaengig, siehe unten), also nicht mehr hier.
             Dim wantsColor = adj.Exposure <> 0 OrElse adj.Temperature <> 0 OrElse adj.Tint <> 0 OrElse
-                             adj.Saturation <> 0 OrElse adj.Vibrance <> 0 OrElse adj.Contrast <> 0 OrElse
+                             adj.Saturation <> 0 OrElse adj.Contrast <> 0 OrElse
                              adj.Brightness <> 0
             ' Kalibrierung wirkt auf die Primaerfarben und gehoert damit VOR Weissabgleich und
             ' Saettigung - dieselbe Reihenfolge wie in Lightroom. Beide Matrizen werden zu EINER
@@ -142,6 +151,15 @@ Namespace Services
             If wantsColor OrElse kalibrierung IsNot Nothing Then
                 Dim wb = If(wantsColor, BuildPointOpColorMatrix(adj), Nothing)
                 chain.ColorMatrix = ComposeColorMatrix(wb, kalibrierung)
+                chain.IsIdentity = False
+            End If
+
+            ' --- Dynamik (Vibrance): eigene, chroma-gewichtete Stufe im HSL-Raum ---
+            ' Laeuft NACH der Saettigungsmatrix: eine per Saettigung=-100 auf Grau gezogene Flaeche hat
+            ' dann sat=0 und bleibt grau, egal wie hoch die Dynamik steht - genau das Verhalten, das
+            ' die flache Alt-Fusion (Dynamik einfach zu sat addiert) verhinderte.
+            If adj.Vibrance <> 0 Then
+                chain.Vibrance = CSng(Math.Max(-1.0, Math.Min(1.0, adj.Vibrance / 100.0)))
                 chain.IsIdentity = False
             End If
 
@@ -379,7 +397,11 @@ Namespace Services
             Const lumR As Single = 0.299F
             Const lumG As Single = 0.587F
             Const lumB As Single = 0.114F
-            Dim sat = 1.0F + adj.Saturation / 100.0F + adj.Vibrance / 200.0F
+            ' Dynamik NICHT mehr hier addieren - sie ist eine eigene, chroma-gewichtete Stufe im
+            ' Pixeldurchlauf (chain.Vibrance). Frueher war sat = 1 + Saett/100 + Dynamik/200, wodurch
+            ' Dynamik nur eine halb so starke, flache Saettigung war und sich von der Saettigung nicht
+            ' auf Grau zurueckziehen liess.
+            Dim sat = 1.0F + adj.Saturation / 100.0F
             Dim invSat = 1.0F - sat
 
             Return New Single() {
@@ -388,6 +410,26 @@ Namespace Services
                 lumR * invSat * tempB, lumG * invSat * tempB, (lumB * invSat + sat) * tempB, 0, 0,
                 0, 0, 0, 1, 0
             }
+        End Function
+
+        ''' <summary>Glatter Endzonen-Abfall (smoothstep), geklemmt auf [0,1]. Fuer Schwarz/Weiss:
+        ''' volle Wirkung am jeweiligen Ende, glatt zur Mitte aus - im Gegensatz zur alten
+        ''' linearen Rampe entsteht kein Plateau, weil die Verstaerkung klein genug bleibt.</summary>
+        Private Shared Function ToneSmoothFade(t As Double) As Double
+            If t <= 0.0 Then Return 0.0
+            If t >= 1.0 Then Return 1.0
+            Return t * t * (3.0 - 2.0 * t)
+        End Function
+
+        ''' <summary>Breiter Kosinus-Bauch: 1 in der Mitte, glatt (cos^2) auf 0 bei
+        ''' |d-center|=halfWidth. Fuer Tiefen/Lichter - deckt bis an die Bildenden, sodass sich auch
+        ''' die tiefsten Schatten bzw. hellsten Lichter mitbewegen (die alten Dreiecke liessen sie
+        ''' stehen).</summary>
+        Private Shared Function ToneCosBump(d As Double, center As Double, halfWidth As Double) As Double
+            Dim t = Math.Abs(d - center) / halfWidth
+            If t >= 1.0 Then Return 0.0
+            Dim c = Math.Cos(t * Math.PI / 2.0)
+            Return c * c
         End Function
 
         ''' <summary>Die verschmolzene per-Kanal-Skalarkette als STETIGE Tabelle: erst die
@@ -425,16 +467,25 @@ Namespace Services
                 End If
 
                 If includeTonal Then
-                    ' Wortgleich zu ApplyTonalLUT - nur ohne die Byte-Quantisierung am Ende.
-                    Dim d = CDbl(v)
-                    Dim bw = Math.Max(0.0, 1.0 - d * 2.5)
-                    d += (adj.Blacks / 100.0) * bw * 0.4
-                    Dim sw = Math.Max(0.0, 1.0 - Math.Abs(d - 0.25) * 6.0)
-                    d += (adj.ShadowsLevel / 100.0) * sw * 0.35
-                    Dim ww = Math.Max(0.0, 1.0 - (1.0 - d) * 2.5)
-                    d += (adj.Whites / 100.0) * ww * 0.4
-                    Dim hw = Math.Max(0.0, 1.0 - Math.Abs(d - 0.75) * 6.0)
-                    d += (adj.Highlights / 100.0) * hw * 0.35
+                    ' Grundton-Kaskade an Adobe PV2012 angenaehert (2026-07-24). ALT war fehlerhaft:
+                    ' Lichter/Tiefen waren schmale Dreiecke um 0.75/0.25 -> die Extreme (reine Lichter,
+                    ' tiefe Schatten) blieben UNBERUEHRT, die Wirkung staute sich auf den 1/4-/3/4-Ton
+                    ' (Lichter=-100 zog 192->104, sichtbare Mitten-Delle). Schwarz/Weiss waren Rampen*0.4
+                    ' -> bei starkem Ausschlag ein PLATEAU (Schwarz=+100: alles <=96 auf 102, Weiss=-100:
+                    ' alles >=160 auf 153, Detailverlust). NEU: breite, ueberlappende, GLATTE Zonen aus
+                    ' dem Eingangston d0 (keine Kaskaden-Kopplung mehr), Verstaerkungen klein genug, dass
+                    ' die Kennlinie monoton bleibt (kein Plateau, keine Delle) und die Enden mitlaufen.
+                    ' Gemessen mit FERRUMPIX_DUMP_CURVES; Staerken sind bewusst moderat und nachjustierbar.
+                    Dim d0 = CDbl(v)
+                    Dim wBlacks = ToneSmoothFade(1.0 - d0 / 0.5)      ' 1 bei Schwarz, glatt 0 ab d=0.5
+                    Dim wWhites = ToneSmoothFade((d0 - 0.5) / 0.5)    ' 0 bis d=0.5, 1 bei Weiss
+                    Dim wShadows = ToneCosBump(d0, 0.28, 0.5)         ' breiter Bauch, deckt 0..0.78
+                    Dim wHighlights = ToneCosBump(d0, 0.72, 0.5)      ' breiter Bauch, deckt 0.22..1
+                    Dim d = d0 _
+                        + (adj.Blacks / 100.0) * wBlacks * 0.28 _
+                        + (adj.ShadowsLevel / 100.0) * wShadows * 0.2 _
+                        + (adj.Whites / 100.0) * wWhites * 0.28 _
+                        + (adj.Highlights / 100.0) * wHighlights * 0.2
                     v = Clamp(CSng(d), 0.0F, 1.0F)
                 End If
 
@@ -719,6 +770,7 @@ Namespace Services
             Dim negB = chain.NegB
             Dim negMono = chain.NegMonochrome
             Dim lumCurve = chain.LuminanceCurve
+            Dim vibrance = chain.Vibrance
             Dim hslAdj = chain.Hsl
             Dim schattenToenung = chain.ShadowTint
             Dim splitAdj = chain.SplitToning
@@ -804,12 +856,21 @@ Namespace Services
                         ' Alle drei brauchen HSL. Der Roundtrip wird deshalb EINMAL gemacht statt
                         ' dreimal - in der alten Pipeline lief er pro Stufe erneut, jedes Mal ueber
                         ' Bytes und mit eigener Rundung.
-                        If lumCurve IsNot Nothing OrElse hslAdj IsNot Nothing OrElse splitAdj IsNot Nothing Then
+                        If lumCurve IsNot Nothing OrElse hslAdj IsNot Nothing OrElse splitAdj IsNot Nothing OrElse vibrance <> 0.0F Then
                             Dim h As Double, sat As Double, lum As Double
                             RgbToHslF(rr, gg, bb, h, sat, lum)
 
                             If lumCurve IsNot Nothing Then
                                 lum = SampleTable(lumCurve, Clamp(CSng(lum), 0.0F, 1.0F))
+                            End If
+
+                            ' --- Dynamik: chroma-gewichtete Saettigung ---
+                            ' Faktor (1 + v*(1-sat)) haengt an der vorhandenen Saettigung: schwach
+                            ' saturierte Pixel werden am staerksten angehoben, ein bereits kraeftiges
+                            ' (sat=1) bleibt unangetastet, ein neutrales Grau (sat=0) bleibt neutral.
+                            ' Damit kann Dynamik keine Farbe erfinden, die die Saettigung entfernt hat.
+                            If vibrance <> 0.0F Then
+                                sat = Math.Max(0.0, Math.Min(1.0, sat * (1.0 + vibrance * (1.0 - sat))))
                             End If
 
                             If hslAdj IsNot Nothing Then

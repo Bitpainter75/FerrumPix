@@ -85,6 +85,10 @@ Namespace Views
         Private _isLassoDrawing As Boolean = False
         Private ReadOnly _lassoPoints As New List(Of Avalonia.Point)()
         Private _lassoMinimumPointDistance As Double = 1.25
+        ' Masken-Pinsel: Strichpunkte in DISPLAY-PROZENT (X%, Y%), wie sie CommitMaskBrushStroke erwartet.
+        Private _isMaskBrushDrawing As Boolean = False
+        Private ReadOnly _maskBrushPoints As New List(Of Avalonia.Point)()
+        Private _maskBrushLastScreenPoint As Avalonia.Point
 
         ' Lineale und Hilfslinien. Die Hilfslinien werden in Bildpixeln gespeichert, nicht in
         ' Canvas-Koordinaten - so bleiben sie beim Zoomen und Schwenken an derselben Stelle im Bild.
@@ -1315,6 +1319,15 @@ Namespace Views
                         _lassoMinimumPointDistance = 1.25
                         _isLassoDrawing = True
                         e.Pointer.Capture(canvas)
+                    Case "Brush"
+                        ' Masken-Pinsel: Strich in Display-Prozent sammeln, Live-Rot zeigen, auf Release committen.
+                        _maskBrushPoints.Clear()
+                        _maskBrushPoints.Add(New Avalonia.Point((pos.X - imageRect.Left) / imageRect.Width * 100.0,
+                                                                (pos.Y - imageRect.Top) / imageRect.Height * 100.0))
+                        _maskBrushLastScreenPoint = pos
+                        _isMaskBrushDrawing = True
+                        e.Pointer.Capture(canvas)
+                        RefreshMaskBrushLive(vm)
                     Case Else   ' Rectangle, Ellipse - Rechteck aufziehen
                         _selectionStart = rawPos
                         _selectionEnd = rawPos
@@ -1567,6 +1580,34 @@ Namespace Views
                 e.Handled = True
                 Return
             End If
+            If _isMaskBrushDrawing Then
+                Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If canvas Is Nothing OrElse vm Is Nothing Then Return
+                Dim imageRect = GetDisplayedImageRect(canvas, vm)
+                If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+                Dim point = ClampPointToRect(e.GetPosition(canvas), imageRect)
+                UpdateBrushCursorPreview(e.GetPosition(canvas), imageRect, vm)
+                ' Abstands-Gate: Punkte erst ab ~1/4 Pinseldurchmesser auf dem Schirm sammeln (wie Retusche).
+                Dim spacing = Math.Max(2.0, BrushDiameterOnScreen(imageRect, vm) * 0.25)
+                Dim dxb = point.X - _maskBrushLastScreenPoint.X
+                Dim dyb = point.Y - _maskBrushLastScreenPoint.Y
+                If dxb * dxb + dyb * dyb < spacing * spacing Then
+                    e.Handled = True
+                    Return
+                End If
+                _maskBrushLastScreenPoint = point
+                _maskBrushPoints.Add(New Avalonia.Point((point.X - imageRect.Left) / imageRect.Width * 100.0,
+                                                        (point.Y - imageRect.Top) / imageRect.Height * 100.0))
+                If _maskBrushPoints.Count >= 12000 Then
+                    For i = _maskBrushPoints.Count - 2 To 1 Step -2
+                        _maskBrushPoints.RemoveAt(i)
+                    Next
+                End If
+                RefreshMaskBrushLive(vm)
+                e.Handled = True
+                Return
+            End If
             If _isLassoDrawing Then
                 Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 Dim vm = TryCast(DataContext, EditorViewModel)
@@ -1629,6 +1670,7 @@ Namespace Views
             Dim wasCropDragging = _isCropDragging
             Dim wasSelectionDragging = _isSelectionDragging
             Dim wasLassoDrawing = _isLassoDrawing
+            Dim wasMaskBrushDrawing = _isMaskBrushDrawing
             Dim clearSelectionFromOutsideClick = _selectionClickOutsideActiveSelection AndAlso
                                                  Not _selectionGestureMoved
             If _isCropDragging Then
@@ -1651,6 +1693,10 @@ Namespace Views
                 End If
                 _lassoPoints.Clear()
             End If
+            If _isMaskBrushDrawing Then
+                CommitMaskBrushStroke()
+                _maskBrushPoints.Clear()
+            End If
             If _isSelectionMoveDragging Then
                 TryCast(DataContext, EditorViewModel)?.CommitSelectionMoveTransaction()
             End If
@@ -1663,7 +1709,8 @@ Namespace Views
             _selectionClickOutsideActiveSelection = False
             _selectionGestureMoved = False
             _isLassoDrawing = False
-            If wasSelectionDragging OrElse wasLassoDrawing Then UpdateSelectionOverlayVisibility()
+            _isMaskBrushDrawing = False
+            If wasSelectionDragging OrElse wasLassoDrawing OrElse wasMaskBrushDrawing Then UpdateSelectionOverlayVisibility()
             If _isBrushDrawing Then
                 Dim vm = TryCast(DataContext, EditorViewModel)
                 Dim shouldWaitForBakedPreview = vm IsNot Nothing AndAlso _brushPoints.Count >= 2
@@ -1797,14 +1844,20 @@ Namespace Views
         ''' <summary>Durchmesser des Pinsel-/Retuschekreises in BILDSCHIRM-Pixeln - dieselbe Rechnung,
         ''' die auch den angezeigten Cursorring bemisst, damit Ring und Wirkung nie auseinanderlaufen.
         ''' 0, wenn gerade kein Pixelwerkzeug aktiv ist.</summary>
+        Private Function IsMaskBrushActive(vm As EditorViewModel) As Boolean
+            Return vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Selection AndAlso vm.IsBrushSelectionMode
+        End Function
+
         Private Function BrushDiameterOnScreen(imageRect As Avalonia.Rect, vm As EditorViewModel) As Double
             If vm Is Nothing Then Return 0
-            If vm.CurrentTool <> EditorTool.Draw AndAlso vm.CurrentTool <> EditorTool.Retouch Then Return 0
+            If vm.CurrentTool <> EditorTool.Draw AndAlso vm.CurrentTool <> EditorTool.Retouch AndAlso Not IsMaskBrushActive(vm) Then Return 0
             Dim scale = 1.0
             If vm.DisplayImageWidthPixels > 0 AndAlso vm.DisplayImageHeightPixels > 0 Then
                 scale = Math.Min(imageRect.Width / vm.DisplayImageWidthPixels, imageRect.Height / vm.DisplayImageHeightPixels)
             End If
-            Return Math.Max(4.0, If(vm.CurrentTool = EditorTool.Draw, vm.BrushSize, vm.RetouchRadius * 2.0) * scale)
+            ' Retusche misst über RetouchRadius; Zeichnen UND Masken-Pinsel über BrushSize.
+            Dim sizePx = If(vm.CurrentTool = EditorTool.Retouch, vm.RetouchRadius * 2.0, vm.BrushSize)
+            Return Math.Max(4.0, sizePx * scale)
         End Function
 
         ''' <summary>Ragt der Pinselkreis noch ins Bild, obwohl der Zeiger daneben steht?
@@ -1829,7 +1882,7 @@ Namespace Views
             If cursor Is Nothing Then Return
 
             Dim showCursor = imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso
-                              (vm.CurrentTool = EditorTool.Draw OrElse vm.CurrentTool = EditorTool.Retouch)
+                              (vm.CurrentTool = EditorTool.Draw OrElse vm.CurrentTool = EditorTool.Retouch OrElse IsMaskBrushActive(vm))
             cursor.IsVisible = showCursor
             If Not showCursor Then Return
 
@@ -1840,6 +1893,31 @@ Namespace Views
             Canvas.SetTop(cursor, position.Y - diameter / 2.0)
 
             UpdateCloneSourceMarker(position, imageRect, vm)
+        End Sub
+
+        ' Masken-Pinsel: die gesammelten Display-Prozent-Punkte an die VM reichen (Live bzw. Commit).
+        Private Sub MaskBrushPercentArrays(ByRef xs As Double(), ByRef ys As Double())
+            xs = New Double(_maskBrushPoints.Count - 1) {}
+            ys = New Double(_maskBrushPoints.Count - 1) {}
+            For i = 0 To _maskBrushPoints.Count - 1
+                xs(i) = _maskBrushPoints(i).X
+                ys(i) = _maskBrushPoints(i).Y
+            Next
+        End Sub
+
+        Private Sub RefreshMaskBrushLive(vm As EditorViewModel)
+            If vm Is Nothing OrElse _maskBrushPoints.Count = 0 Then Return
+            Dim xs As Double() = Nothing, ys As Double() = Nothing
+            MaskBrushPercentArrays(xs, ys)
+            vm.RefreshMaskBrushLivePreview(xs, ys)
+        End Sub
+
+        Private Sub CommitMaskBrushStroke()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing OrElse _maskBrushPoints.Count = 0 Then Return
+            Dim xs As Double() = Nothing, ys As Double() = Nothing
+            MaskBrushPercentArrays(xs, ys)
+            vm.CommitMaskBrushStroke(xs, ys)
         End Sub
 
         ''' Zeichnet den gestrichelten Ring an der Stelle, aus der gerade kopiert wird. Vor dem ersten
@@ -2337,6 +2415,20 @@ Namespace Views
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
+            ' Masken-Pinsel: rotes Quick-Mask-Overlay über das ganze Bild (deckungsgleich zum After-Bild),
+            ' KEINE Laufameisen. Das rote Bild deckt den ganzen Anzeigebereich ab (siehe
+            ' BuildSelectionRedOverlayBitmap) und wird per Stretch=Fill auf das Bildrechteck gestreckt.
+            If vm IsNot Nothing AndAlso IsMaskBrushActive(vm) AndAlso vm.SelectionMaskPreviewImage IsNot Nothing Then
+                If overlay IsNot Nothing Then overlay.IsVisible = False
+                If maskOverlay IsNot Nothing Then
+                    maskOverlay.IsVisible = True
+                    Avalonia.Controls.Canvas.SetLeft(maskOverlay, ix)
+                    Avalonia.Controls.Canvas.SetTop(maskOverlay, iy)
+                    maskOverlay.Width = iw
+                    maskOverlay.Height = ih
+                End If
+                Return
+            End If
             If vm Is Nothing OrElse Not IsSelectionScopeTool(vm.CurrentTool) OrElse Not vm.HasActiveSelection Then
                 HideCurrentSelectionOverlay()
                 Return
@@ -2978,6 +3070,21 @@ Namespace Views
             Dim vm = TryCast(DataContext, EditorViewModel)
             If overlay Is Nothing OrElse canvas Is Nothing OrElse vm Is Nothing Then Return
             Dim pos = e.GetPosition(canvas)
+
+            ' Beim Vergleich liegt der TextOverlay-Border (transparent, hit-test-sichtbar) in der
+            ' Z-Ordnung ÜBER dem Regler-Griff. Ein Druck auf den Regler landet daher hier statt im
+            ' Canvas-Zweig (OnSliderPointerPressed, Regler-Vorrang bei ShowBeforeImage) und würde das
+            ' Objekt verschieben. Denselben Vorrang deshalb hier spiegeln: trifft der Zeiger die
+            ' Greifzone des Reglers, den Regler ziehen statt des Objekts. Die e.Source-Prüfung greift
+            ' hier nicht, weil die Quelle der oben liegende TextOverlay ist - deshalb geometrisch.
+            If vm.ShowBeforeImage AndAlso PointHitsComparisonSlider(pos, canvas, vm) Then
+                _isDraggingSlider = True
+                e.Pointer.Capture(canvas)
+                MoveSlider(pos.X, canvas)
+                e.Handled = True
+                Return
+            End If
+
             Dim rect = GetTextOverlayRect()
             Dim mode = GetTextDragMode(pos, rect, vm.AnnotationRotation)
             If mode = TextDragMode.None Then Return
@@ -3605,6 +3712,35 @@ Namespace Views
                 current = TryCast(current.Parent, Control)
             End While
             Return False
+        End Function
+
+        ''' <summary>True, wenn ein Canvas-Punkt die Greifzone des Vergleichsreglers trifft (breite
+        ''' Trennlinien-Zone über die ganze Bildhöhe ODER der runde Griff). Geometrischer Ersatz für
+        ''' IsWithinComparisonSlider, wenn ein darüberliegender, hit-test-sichtbarer Border (TextOverlay)
+        ''' den Griff in der Z-Ordnung verdeckt und so das e.Source-basierte Erkennen aushebelt. Die
+        ''' Maße spiegeln UpdateSliderLayout: Trennlinien-Zone 14 px breit (±7), Griff 36 px (±18).</summary>
+        Private Function PointHitsComparisonSlider(point As Avalonia.Point, canvas As Canvas, vm As EditorViewModel) As Boolean
+            If canvas Is Nothing OrElse vm Is Nothing Then Return False
+            Dim cw = canvas.Bounds.Width
+            Dim ch = canvas.Bounds.Height
+            If cw <= 0 OrElse ch <= 0 Then Return False
+
+            Dim effectiveSize = GetEffectiveDisplaySize(vm)
+            Dim scale = SliderToZoom(_zoomSliderValue) / 100.0
+            Dim iw = Math.Round(effectiveSize.Width * scale, MidpointRounding.AwayFromZero)
+            Dim ih = Math.Round(effectiveSize.Height * scale, MidpointRounding.AwayFromZero)
+            If iw <= 0 OrElse ih <= 0 Then Return False
+
+            Dim ix = Math.Round((cw - iw) / 2.0 + _panX, MidpointRounding.AwayFromZero)
+            Dim iy = Math.Round((ch - ih) / 2.0 + _panY, MidpointRounding.AwayFromZero)
+            Dim sliderX = ix + iw * _sliderPosition
+
+            ' Trennlinien-Griffzone (14 px breit) über die volle Bildhöhe.
+            If Math.Abs(point.X - sliderX) <= 7.0 AndAlso point.Y >= iy AndAlso point.Y <= iy + ih Then Return True
+
+            ' Runder Griff, zentriert auf der Bildmitte (36 px Kasten, ±18).
+            Dim handleCenterY = iy + ih / 2.0
+            Return Math.Abs(point.X - sliderX) <= 18.0 AndAlso Math.Abs(point.Y - handleCenterY) <= 18.0
         End Function
 
         Private Sub MoveSlider(mouseX As Double, canvas As Canvas)

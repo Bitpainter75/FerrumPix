@@ -86,6 +86,11 @@ Namespace Services
         Public Property GallerySortAscending As Boolean = True
         Public Property GalleryShowFolders As Boolean = True
         Public Property GalleryShowParentFolder As Boolean = True
+        ' Galerie-Kachel-Badges: True = immer sichtbar, False = erst beim Mouseover. Standard spiegelt
+        ' das bisherige Verhalten (Sterne nur beim Überfahren, Favorit/Metadaten immer).
+        Public Property GalleryRatingBadgesAlwaysVisible As Boolean = False
+        Public Property GalleryFavoriteBadgeAlwaysVisible As Boolean = True
+        Public Property GalleryMetadataBadgesAlwaysVisible As Boolean = True
         Public Property GalleryFilterFavorite As String = "All"
         Public Property GalleryFilterRatings As New List(Of Integer)()
         Public Property GalleryFilterFileType As String = "All"

@@ -1240,6 +1240,13 @@ Namespace Services
         ''' So lässt sich der Wert jederzeit ändern, ohne die Auswahl neu zu ziehen.</summary>
         Public Property SelectionFeatherPixels As Single = 0
 
+        ''' <summary>True = die Auswahlmaske wurde mit dem Masken-Pinsel gemalt und trägt ihre weiche
+        ''' Kante bereits IN den Maskenwerten (weiche Alpha8-Stempel). Dann darf der lazy globale
+        ''' Feather (SelectionFeatherPixels) NICHT erneut weichzeichnen, sonst wäre die Kante doppelt
+        ''' weich. Für harte geometrische Auswahlen (Rechteck/Ellipse/Lasso/Zauberstab) bleibt es False,
+        ''' dort wirkt der globale Feather wie bisher.</summary>
+        Public Property SelectionMaskSoftBaked As Boolean = False
+
         ''' <summary>True = die gemeinsame globale Anpassungsebene (Anpassen, Farbe, Details,
         ''' Effekte und Filter) wird beim Rendern übersprungen. Geometrie, lokale maskierte
         ''' Korrekturen, Retusche und Objekte bleiben davon unberührt.</summary>
@@ -1292,7 +1299,7 @@ Namespace Services
             "SelectionScopeEnabled", "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
-            "SelectionMaskPngBase64", "SelectionFeatherPixels", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"
+            "SelectionMaskPngBase64", "SelectionFeatherPixels", "SelectionMaskSoftBaked", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"
         }
 
         Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing
@@ -1473,6 +1480,7 @@ Namespace Services
                 .SelectionMaskBottom = SelectionMaskBottom,
                 .SelectionMaskPngBase64 = SelectionMaskPngBase64,
                 .SelectionFeatherPixels = SelectionFeatherPixels,
+                .SelectionMaskSoftBaked = SelectionMaskSoftBaked,
                 .GlobalAdjustmentsHidden = GlobalAdjustmentsHidden,
                 .BackgroundHidden = BackgroundHidden,
                 .PixelLayerHidden = PixelLayerHidden
@@ -2706,9 +2714,35 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
 
 
         Private Shared Function ToneTransfer(x As Single, exposureGain As Single, contrast As Single, brightness As Single) As Single
-            Dim y = x * exposureGain
+            ' Belichtung in LINEARLICHT (2026-07-24): frueher x*exposureGain im Gamma-Raum - das
+            ' staucht die Lichter brutal (gemessen: +50 zog 64->218). Belichtung ist physikalisch ein
+            ' linearer Faktor: sRGB dekodieren, multiplizieren, wieder kodieren. Ergebnis darf >1 sein
+            ' (Ueberstrahlung), die weiche Schulter (SoftShoulder/rolloff) faengt es danach ab.
+            ' Kontrast/Helligkeit bleiben bewusst im Gamma-Raum um 0.5 - dort ist ihre Schulter definiert.
+            Dim y As Single
+            If exposureGain = 1.0F Then
+                y = x
+            Else
+                y = LinearToSrgb(SrgbToLinear(x) * exposureGain)
+            End If
             y = (y - 0.5F) * contrast + 0.5F
             Return y + brightness
+        End Function
+
+        ''' <summary>sRGB-Gamma -> Linearlicht (Standard-sRGB-EOTF). Nur fuer die Belichtung; der Rest
+        ''' der Kette rechnet weiter im Gamma-Raum.</summary>
+        Private Shared Function SrgbToLinear(c As Single) As Single
+            If c <= 0.0F Then Return 0.0F
+            If c <= 0.04045F Then Return c / 12.92F
+            Return CSng(Math.Pow((c + 0.055) / 1.055, 2.4))
+        End Function
+
+        ''' <summary>Linearlicht -> sRGB-Gamma. Werte >1 bleiben >1 (Ueberstrahlung), damit die
+        ''' Schulter-Logik sie wie bisher abrollen kann.</summary>
+        Private Shared Function LinearToSrgb(c As Single) As Single
+            If c <= 0.0F Then Return 0.0F
+            If c <= 0.0031308F Then Return c * 12.92F
+            Return CSng(1.055 * Math.Pow(c, 1.0 / 2.4) - 0.055)
         End Function
 
         ''' Identisch im mittleren Bereich, exponentiell auslaufend zu Schwarz und Weiß - erreicht die
@@ -3333,7 +3367,9 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
         ''' breiter als im gespeicherten Bild.</summary>
         Private Shared Function BuildSelectionScopeMask(adj As ImageAdjustments, targetW As Integer, targetH As Integer) As SKBitmap
             Dim mask = BuildSelectionScopeMaskCore(adj, targetW, targetH)
-            If mask Is Nothing OrElse adj.SelectionFeatherPixels <= 0.05F Then Return mask
+            ' Masken-Pinsel trägt seine weiche Kante bereits in den Alpha-Werten (siehe
+            ' SelectionMaskSoftBaked) - dann NICHT erneut weichzeichnen, sonst doppelt weiche Kante.
+            If mask Is Nothing OrElse adj.SelectionMaskSoftBaked OrElse adj.SelectionFeatherPixels <= 0.05F Then Return mask
 
             Dim referenceSize = ImageGeometryMapper.DisplaySize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj.RotationDegrees)
             Dim scaleX = If(referenceSize.Width > 0, targetW / CSng(referenceSize.Width), 1.0F)
@@ -9444,6 +9480,59 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Using
         End Function
 
+        ''' <summary>Zeichnet einen weichen runden Pinselstrich (Masken-Pinsel). <paramref name="pts"/>
+        ''' sind die Strich-Stützpunkte im Zielraum des Canvas; <paramref name="radius"/> der Pinselradius,
+        ''' <paramref name="softnessPx"/> die Randweichheit in Pixeln (Gauß-Sigma = softness/2), gemeinsam
+        ''' genutzt für den weißen Masken-Stempel UND die rote Live-Vorschau (Farbe frei). Ein einzelner
+        ''' Punkt (Klick) wird als gefüllte Scheibe gezeichnet. <paramref name="erase"/> = True stanzt statt
+        ''' zu malen (DstOut) - für Subtrahieren in der Live-Vorschau. MaskFilter wirkt hier (DrawPath/
+        ''' DrawCircle, NICHT DrawBitmap - dort wäre er wirkungslos).</summary>
+        Public Shared Sub DrawSoftMaskStroke(canvas As SKCanvas, pts As IReadOnlyList(Of SKPoint),
+                                             radius As Single, softnessPx As Single, color As SKColor,
+                                             Optional eraseMode As Boolean = False)
+            If canvas Is Nothing OrElse pts Is Nothing OrElse pts.Count = 0 OrElse radius <= 0 Then Return
+            Dim blend = If(eraseMode, SKBlendMode.DstOut, SKBlendMode.SrcOver)
+            Dim sigma = If(softnessPx > 0.05F, softnessPx * 0.5F, 0.0F)
+            If pts.Count = 1 Then
+                Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Fill, .IsAntialias = True, .BlendMode = blend}
+                    If sigma > 0.0F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma)
+                    canvas.DrawCircle(pts(0).X, pts(0).Y, radius, paint)
+                End Using
+                Return
+            End If
+            Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeCap = SKStrokeCap.Round,
+                                            .StrokeJoin = SKStrokeJoin.Round, .StrokeWidth = radius * 2.0F, .IsAntialias = True, .BlendMode = blend}
+                If sigma > 0.0F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma)
+                Using path = New SKPath()
+                    path.MoveTo(pts(0).X, pts(0).Y)
+                    For i = 1 To pts.Count - 1
+                        path.LineTo(pts(i).X, pts(i).Y)
+                    Next
+                    canvas.DrawPath(path, paint)
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Weicher Pinselstrich als Alpha8-Maske in der Größe von <paramref name="rect"/>
+        ''' (Display-Bildraum). Die Strichpunkte liegen im Display-Bildraum; sie werden um rect.Left/Top
+        ''' in die Stempel-lokalen Koordinaten verschoben. Für den Commit eines Strichs, danach über
+        ''' ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnet.</summary>
+        Public Shared Function BuildSoftBrushStampMask(pts As IReadOnlyList(Of SKPoint), radius As Single,
+                                                       softnessPx As Single, rect As SKRectI) As SKBitmap
+            If pts Is Nothing OrElse pts.Count = 0 OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+            Dim local As New List(Of SKPoint)(pts.Count)
+            For Each p In pts
+                local.Add(New SKPoint(p.X - rect.Left, p.Y - rect.Top))
+            Next
+            Using rgba = New SKBitmap(rect.Width, rect.Height, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                Using canvas = New SKCanvas(rgba)
+                    canvas.Clear(SKColors.Transparent)
+                    DrawSoftMaskStroke(canvas, local, radius, softnessPx, SKColors.White)
+                End Using
+                Return AlphaMaskFrom(rgba)
+            End Using
+        End Function
+
         ''' <summary>Dekodiert und verarbeitet das Bild (alle Anpassungen/Objekte gebacken) und liefert die
         ''' Zauberstab-Maske am Saatpunkt in Bildpixeln. <paramref name="bounds"/> ist das umschließende
         ''' Rechteck in Bildpixeln.</summary>
@@ -10033,7 +10122,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
 
         ' Parst "x1,y1;x2,y2;..." zu sortierten, X-eindeutigen Stützpunkten (0..255) für die Tonwertkurve.
-        Private Shared Function ParseCurvePoints(pointsCsv As String) As List(Of (X As Double, Y As Double))
+        ' Friend, damit die Preset-Faltung (LightroomPresetService.ApplyParametricCurve) die Punktkurve
+        ' mit demselben Spline auswertet wie die Engine - frueher lief die Faltung ueber eine eigene
+        ' LINEARE Naeherung, die die Kurvenkruemmung verwarf.
+        Friend Shared Function ParseCurvePoints(pointsCsv As String) As List(Of (X As Double, Y As Double))
             Dim result As New List(Of (X As Double, Y As Double))()
             If Not String.IsNullOrWhiteSpace(pointsCsv) Then
                 For Each pair In pointsCsv.Split(";"c)
@@ -10065,7 +10157,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         End Function
 
 
-        Private Shared Function EvaluateCurveSpline(points As List(Of (X As Double, Y As Double)), x As Double) As Double
+        Friend Shared Function EvaluateCurveSpline(points As List(Of (X As Double, Y As Double)), x As Double) As Double
             Dim n = points.Count
             If n = 0 Then Return x
             If x <= points(0).X Then Return points(0).Y
@@ -10131,16 +10223,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
 
 
-        ''' Obergrenzen der acht Farbbänder. Grenze k trennt Band k von Band k+1; Rot läuft über 345
-        ''' zurück auf 15 (deshalb wird ein Farbton ab 345 unten auf negativ verschoben).
-        Private Shared ReadOnly HslBandBounds As Double() = {15.0, 45.0, 75.0, 165.0, 195.0, 255.0, 285.0, 345.0}
-
-        ''' <summary>Übergangsbreite an einer Bandgrenze, in Grad Farbton. Auf halber Strecke (also
-        ''' genau auf der Grenze) mischen beide Bänder je zur Hälfte.
-        ''' Die SCHMALSTEN Bänder sind 30 Grad breit (Orange, Gelb, Aqua, Lila) - mehr als 15 wäre
-        ''' hier also falsch, weil sich die Übergänge zweier Grenzen sonst überlappen und ein
-        ''' schmales Band nie mehr rein wirkt. 10 lässt jedem Band einen ungemischten Kern.</summary>
-        Private Const HslBandBlendDegrees As Double = 10.0
+        ''' <summary>ANKER-Farbtöne der acht HSL-Bänder (Grad), Reihenfolge Rot..Magenta. Adobes
+        ''' HSL-Modell interpoliert die Regler GLATT zwischen diesen Ankern: ein Pixel genau auf einem
+        ''' Anker bekommt den vollen Bandwert, dazwischen eine weiche Mischung der beiden Nachbaranker.
+        ''' Frueher lagen hier Band-GRENZEN mit flachem Kern + 10 Grad Rand-Blending - das ueberdehnte
+        ''' jedes Band (voller Wert ueber den ganzen Kern), waehrend Adobe schon ab dem Anker abfaellt.
+        ''' Rot ueberlaeuft den Nullpunkt: nach Magenta (315) folgt Rot (0 bzw. 360).</summary>
+        Private Shared ReadOnly HslBandCenters As Double() = {0.0, 30.0, 60.0, 120.0, 180.0, 225.0, 270.0, 315.0}
 
         Private Shared Sub GetHslBandValues(index As Integer, adj As ImageAdjustments,
                                             ByRef hueShift As Single, ByRef satShift As Single, ByRef lumShift As Single)
@@ -10173,51 +10262,33 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Sub GetHslBandAdjustments(hue As Double, adj As ImageAdjustments, ByRef hueShift As Single, ByRef satShift As Single, ByRef lumShift As Single)
             Dim h = ((hue Mod 360.0) + 360.0) Mod 360.0
 
-            Dim index = 0
+            ' Anker-Paar finden, zwischen dem der Farbton liegt (Kreis: nach Magenta 315 folgt Rot 360).
+            Dim lo = 7
             For k = 0 To 7
-                If h < HslBandBounds(k) Then
-                    index = k
+                If h < HslBandCenters(k) Then
+                    lo = (k + 7) Mod 8          ' voriger Anker
                     Exit For
                 End If
-                If k = 7 Then index = 0        ' ab 345 Grad wieder Rot
             Next
+            Dim hi = (lo + 1) Mod 8
 
-            ' Untere/obere Grenze des getroffenen Bands. Rot ist der Sonderfall: es läuft über den
-            ' Nullpunkt, deshalb wird der Farbton dort auf [-15, 15) gelegt.
-            Dim lower, upper As Double
-            If index = 0 Then
-                If h >= HslBandBounds(7) Then h -= 360.0
-                lower = HslBandBounds(7) - 360.0
-                upper = HslBandBounds(0)
-            Else
-                lower = HslBandBounds(index - 1)
-                upper = HslBandBounds(index)
-            End If
+            ' Kreis-Distanz vom unteren Anker und Spannweite zum oberen (beide ueber 360 gewickelt).
+            Dim span = HslBandCenters(hi) - HslBandCenters(lo)
+            If span <= 0.0 Then span += 360.0
+            Dim pos = h - HslBandCenters(lo)
+            If pos < 0.0 Then pos += 360.0
 
-            GetHslBandValues(index, adj, hueShift, satShift, lumShift)
+            ' Glatte Interpolation (smoothstep) zwischen den beiden Ankerwerten - Ableitung an beiden
+            ' Ankern null, also keine Kante an einer Bandgrenze und kein flacher Kern mehr.
+            Dim t = If(span > 0.0, pos / span, 0.0)
+            Dim w = CSng(t * t * (3.0 - 2.0 * t))
 
-            ' Nur in Grenznähe wird gemischt - im Kern des Bands bleibt es exakt beim eigenen Regler.
-            Dim neighbour As Integer
-            Dim toEdge As Double
-            If h - lower < HslBandBlendDegrees Then
-                neighbour = (index + 7) Mod 8
-                toEdge = h - lower
-            ElseIf upper - h < HslBandBlendDegrees Then
-                neighbour = (index + 1) Mod 8
-                toEdge = upper - h
-            Else
-                Return
-            End If
-
-            ' 0 am Rand -> t=0,5 (halbe/halbe), volle Übergangsbreite -> t=1 (reines eigenes Band).
-            Dim t = 0.5 + 0.5 * (toEdge / HslBandBlendDegrees)
-            Dim eigen = CSng(t * t * (3.0 - 2.0 * t))
-
-            Dim nh, ns, nl As Single
-            GetHslBandValues(neighbour, adj, nh, ns, nl)
-            hueShift = nh + (hueShift - nh) * eigen
-            satShift = ns + (satShift - ns) * eigen
-            lumShift = nl + (lumShift - nl) * eigen
+            Dim h0, s0, l0, h1, s1, l1 As Single
+            GetHslBandValues(lo, adj, h0, s0, l0)
+            GetHslBandValues(hi, adj, h1, s1, l1)
+            hueShift = h0 + (h1 - h0) * w
+            satShift = s0 + (s1 - s0) * w
+            lumShift = l0 + (l1 - l0) * w
         End Sub
 
 

@@ -1216,7 +1216,8 @@
                                                                        IconBrush="White"/>
                                                     </Button>
                                                 </StackPanel>
-                                                <StackPanel Classes="gallery-rating-actions"
+                                                <StackPanel Classes="gallery-rating-actions gallery-toggle-badge"
+                                                            Classes.badge-always="{Binding DataContext.RatingBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             Orientation="Horizontal"
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Bottom"
@@ -1267,7 +1268,8 @@
                                                 <StackPanel Orientation="Horizontal"
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Bottom">
-                                                    <StackPanel Classes="gallery-meta-badges"
+                                                    <StackPanel Classes="gallery-meta-badges gallery-toggle-badge"
+                                                            Classes.badge-always="{Binding DataContext.MetadataBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             Orientation="Horizontal"
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Bottom"
@@ -1366,7 +1368,8 @@
                                                             </icons:SvgIcon>
                                                         </Border>
                                                     </StackPanel>
-                                                    <Button Classes="favorite-btn image-favorite-btn"
+                                                    <Button Classes="favorite-btn image-favorite-btn gallery-toggle-badge"
+                                                        Classes.badge-always="{Binding DataContext.FavoriteBadgeAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         Width="26"
                                                         Height="26"
                                                         Padding="0"
@@ -1589,7 +1592,8 @@
                                                                    Classes="badge-glyph"
                                                                    IsVisible="{Binding IsSelected}"/>
                                                 </Button>
-                                                <StackPanel Classes="gallery-rating-actions compact"
+                                                <StackPanel Classes="gallery-rating-actions compact gallery-toggle-badge"
+                                                            Classes.badge-always="{Binding DataContext.RatingBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             Orientation="Horizontal"
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Bottom"
@@ -1652,6 +1656,8 @@
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis"/>
                                                 <StackPanel Grid.Column="2"
+                                                            Classes="gallery-toggle-badge"
+                                                            Classes.badge-always="{Binding DataContext.MetadataBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             Orientation="Horizontal"
                                                             Spacing="4"
                                                             VerticalAlignment="Center"
@@ -1735,7 +1741,8 @@
                                                    VerticalAlignment="Center"
                                                    Margin="0,0,14,0"/>
                                         <Button Grid.Column="5"
-                                                Classes="favorite-btn"
+                                                Classes="favorite-btn gallery-toggle-badge"
+                                                Classes.badge-always="{Binding DataContext.FavoriteBadgeAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 Background="Transparent"
                                                 BorderThickness="0"
                                                 Padding="0,2,0,0"

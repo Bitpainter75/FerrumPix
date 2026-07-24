@@ -3995,4 +3995,28 @@
   <data name="Werkzeugleiste_ein_oder_ausklappen_42072b18" xml:space="preserve">
     <value>Comprimi o espandi la barra degli strumenti</value>
   </data>
+  <data name="Pinselgr_e_0fd49283" xml:space="preserve">
+    <value>Dimensione pennello</value>
+  </data>
+  <data name="Masken_Pinsel_Maske_malen_weiche_Kante_Hinzuf_ge_49a30454" xml:space="preserve">
+    <value>Pennello maschera: dipingi una maschera (bordo morbido, aggiungi/sottrai) — come overlay rosso</value>
+  </data>
+  <data name="Bewertungssterne_immer_anzeigen_a4803ddc" xml:space="preserve">
+    <value>Mostra sempre le stelle di valutazione</value>
+  </data>
+  <data name="Zeigt_die_Sterne_auf_der_Kachel_dauerhaft_an_sta_c8f5548f" xml:space="preserve">
+    <value>Mostra le stelle sulla miniatura in modo permanente invece che solo al passaggio del mouse.</value>
+  </data>
+  <data name="Favoriten_Herz_immer_anzeigen_e964c9bc" xml:space="preserve">
+    <value>Mostra sempre il cuore dei preferiti</value>
+  </data>
+  <data name="Zeigt_das_Favoriten_Herz_auf_der_Kachel_dauerhaf_6879f048" xml:space="preserve">
+    <value>Mostra il cuore dei preferiti sulla miniatura in modo permanente invece che solo al passaggio del mouse.</value>
+  </data>
+  <data name="Metadaten_Symbole_immer_anzeigen_40270b2b" xml:space="preserve">
+    <value>Mostra sempre le icone dei metadati</value>
+  </data>
+  <data name="Zeigt_die_Metadaten_Symbole_EXIF_IPTC_XMP_ICC_au_b5e647fb" xml:space="preserve">
+    <value>Mostra le icone dei metadati (EXIF, IPTC, XMP, ICC) sulla miniatura in modo permanente invece che solo al passaggio del mouse.</value>
+  </data>
 </root>

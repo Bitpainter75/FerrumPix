@@ -3994,4 +3994,28 @@
   <data name="Werkzeugleiste_ein_oder_ausklappen_42072b18" xml:space="preserve">
     <value>Recolher ou expandir a barra de ferramentas</value>
   </data>
+  <data name="Pinselgr_e_0fd49283" xml:space="preserve">
+    <value>Tamanho do pincel</value>
+  </data>
+  <data name="Masken_Pinsel_Maske_malen_weiche_Kante_Hinzuf_ge_49a30454" xml:space="preserve">
+    <value>Pincel de máscara: pinte uma máscara (borda suave, adicionar/subtrair) — como sobreposição vermelha</value>
+  </data>
+  <data name="Bewertungssterne_immer_anzeigen_a4803ddc" xml:space="preserve">
+    <value>Mostrar sempre as estrelas de avaliação</value>
+  </data>
+  <data name="Zeigt_die_Sterne_auf_der_Kachel_dauerhaft_an_sta_c8f5548f" xml:space="preserve">
+    <value>Mostra as estrelas no bloco permanentemente em vez de apenas ao passar o rato.</value>
+  </data>
+  <data name="Favoriten_Herz_immer_anzeigen_e964c9bc" xml:space="preserve">
+    <value>Mostrar sempre o coração de favorito</value>
+  </data>
+  <data name="Zeigt_das_Favoriten_Herz_auf_der_Kachel_dauerhaf_6879f048" xml:space="preserve">
+    <value>Mostra o coração de favorito no bloco permanentemente em vez de apenas ao passar o rato.</value>
+  </data>
+  <data name="Metadaten_Symbole_immer_anzeigen_40270b2b" xml:space="preserve">
+    <value>Mostrar sempre os ícones de metadados</value>
+  </data>
+  <data name="Zeigt_die_Metadaten_Symbole_EXIF_IPTC_XMP_ICC_au_b5e647fb" xml:space="preserve">
+    <value>Mostra os ícones de metadados (EXIF, IPTC, XMP, ICC) no bloco permanentemente em vez de apenas ao passar o rato.</value>
+  </data>
 </root>

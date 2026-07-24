@@ -119,10 +119,25 @@ Namespace Controls
                                 Center, Radius, Radius)
         End Sub
 
-        Private Sub DrawMarker(context As DrawingContext)
+        ''' <summary>Mittelpunkt des Selektionskreises (Marker) für aktuelle Hue/Saturation. Bei
+        ''' Sättigung 0 liegt er genau im Zentrum. Von DrawMarker UND dem Doppelklick-Reset genutzt.</summary>
+        Private Function MarkerPoint() As Point
             Dim sat = Math.Max(0.0, Math.Min(1.0, Saturation / 100.0))
             Dim rad = Hue * Math.PI / 180.0
-            Dim p = New Point(Center.X + Radius * sat * Math.Cos(rad), Center.Y + Radius * sat * Math.Sin(rad))
+            Return New Point(Center.X + Radius * sat * Math.Cos(rad), Center.Y + Radius * sat * Math.Sin(rad))
+        End Function
+
+        ' Trefferradius des Selektionskreises (5-px-Ring, für den Doppelklick etwas großzügiger).
+        Private Const MarkerHitRadius As Double = 10.0
+
+        Private Function IsOnMarker(p As Point) As Boolean
+            Dim m = MarkerPoint()
+            Dim dx = p.X - m.X, dy = p.Y - m.Y
+            Return dx * dx + dy * dy <= MarkerHitRadius * MarkerHitRadius
+        End Function
+
+        Private Sub DrawMarker(context As DrawingContext)
+            Dim p = MarkerPoint()
             context.DrawEllipse(Nothing, New Pen(New SolidColorBrush(Colors.Black), 3), p, 5, 5)
             context.DrawEllipse(Nothing, New Pen(New SolidColorBrush(Colors.White), 1.6), p, 5, 5)
         End Sub
@@ -148,9 +163,26 @@ Namespace Controls
         Protected Overrides Sub OnPointerPressed(e As PointerPressedEventArgs)
             MyBase.OnPointerPressed(e)
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
+            Dim pos = e.GetPosition(Me)
+            Dim onMarker = IsOnMarker(pos)
+
+            ' Doppelklick auf den Selektionskreis setzt genau DIESES Farbrad zurück (Hue/Sat = 0). Weil
+            ' die Bindungen TwoWay auf die Zonen-Property zeigen, landet der Reset in der richtigen Zone
+            ' und ist über deren SetUndoableDouble sogar rückgängig machbar.
+            If e.ClickCount >= 2 AndAlso onMarker Then
+                Hue = 0
+                Saturation = 0
+                InvalidateVisual()
+                e.Handled = True
+                Return
+            End If
+
             _dragging = True
             e.Pointer.Capture(Me)
-            ApplyPoint(e.GetPosition(Me), e.KeyModifiers)
+            ' Ein einfacher Klick auf den Marker zieht ihn NICHT weg (sonst wäre der Doppelklick-Reset
+            ' unmöglich, weil der erste Klick den Kreis unter den Zeiger holte). Ziehen wirkt trotzdem:
+            ' OnPointerMoved wendet den Punkt an, sobald sich der Zeiger bewegt.
+            If Not onMarker Then ApplyPoint(pos, e.KeyModifiers)
             e.Handled = True
         End Sub
 

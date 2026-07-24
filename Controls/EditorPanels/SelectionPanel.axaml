@@ -48,6 +48,12 @@
                     ToolTip.Tip="Zauberstab: zusammenhängende Farbfläche wählen">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/wand.svg" Width="16" Height="16" />
             </Button>
+            <Button Classes="ghost" Padding="8,6"
+                    Command="{Binding SetSelectionModeCommand}" CommandParameter="Brush"
+                    Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}"
+                    ToolTip.Tip="Masken-Pinsel: Maske malen (weiche Kante, Hinzufügen/Abziehen) - als rotes Overlay">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/mask.svg" Width="16" Height="16" />
+            </Button>
         </StackPanel>
 
         <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -112,8 +118,23 @@
                                      Minimum="0" Maximum="100" Increment="1"
                                      FormatString="F0" />
         </Grid>
+        <!-- Pinselgröße (nur im Masken-Pinsel-Modus). Teilt sich das Feld mit dem Zeichnen-Pinsel. -->
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+              IsVisible="{Binding ShowMaskBrushControls}">
+            <TextBlock Text="Pinselgröße" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+            <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="500"
+                               DefaultValue="24"
+                               Value="{Binding BrushSize}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding BrushSize, Mode=TwoWay}"
+                                     Minimum="1" Maximum="500" Increment="1"
+                                     FormatString="F0" />
+        </Grid>
         <!-- Weiche Kante: wirkt auf Anpassungen in der Auswahl, auf Kopieren und auf Füllen. Die Maske
-             selbst bleibt hart gespeichert, der Wert ist deshalb jederzeit nachträglich änderbar. -->
+             selbst bleibt hart gespeichert, der Wert ist deshalb jederzeit nachträglich änderbar.
+             Im Masken-Pinsel-Modus steuert derselbe Wert die Randweichheit des Pinsels (in die Stempel
+             gebacken, siehe SelectionMaskSoftBaked). -->
         <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
             <TextBlock Text="Weiche Kante" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"

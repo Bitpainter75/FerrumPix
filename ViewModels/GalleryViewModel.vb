@@ -37,6 +37,9 @@ Namespace ViewModels
         Private _sortAscending As Boolean = True
         Private _showFolders As Boolean = True
         Private _showParentFolder As Boolean = True
+        Private _ratingBadgesAlwaysVisible As Boolean = False
+        Private _favoriteBadgeAlwaysVisible As Boolean = True
+        Private _metadataBadgesAlwaysVisible As Boolean = True
         Private _viewMode As String = "Grid"
         Private _isLoading As Boolean
         Private _storageFreeText As String = ""
@@ -921,6 +924,41 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Galerie-Kachel-Badges: True = immer sichtbar, False = erst beim Mouseover. Von den
+        ''' Kachel-Vorlagen per RelativeSource gelesen (Classes.badge-always).</summary>
+        Public Property RatingBadgesAlwaysVisible As Boolean
+            Get
+                Return _ratingBadgesAlwaysVisible
+            End Get
+            Set(value As Boolean)
+                If _ratingBadgesAlwaysVisible = value Then Return
+                Me.RaiseAndSetIfChanged(_ratingBadgesAlwaysVisible, value)
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        Public Property FavoriteBadgeAlwaysVisible As Boolean
+            Get
+                Return _favoriteBadgeAlwaysVisible
+            End Get
+            Set(value As Boolean)
+                If _favoriteBadgeAlwaysVisible = value Then Return
+                Me.RaiseAndSetIfChanged(_favoriteBadgeAlwaysVisible, value)
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        Public Property MetadataBadgesAlwaysVisible As Boolean
+            Get
+                Return _metadataBadgesAlwaysVisible
+            End Get
+            Set(value As Boolean)
+                If _metadataBadgesAlwaysVisible = value Then Return
+                Me.RaiseAndSetIfChanged(_metadataBadgesAlwaysVisible, value)
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
         Public Property ShowParentFolder As Boolean
             Get
                 Return _showParentFolder
@@ -1180,6 +1218,9 @@ Namespace ViewModels
             _sortAscending = settings.GallerySortAscending
             _showFolders = settings.GalleryShowFolders
             _showParentFolder = settings.GalleryShowParentFolder
+            _ratingBadgesAlwaysVisible = settings.GalleryRatingBadgesAlwaysVisible
+            _favoriteBadgeAlwaysVisible = settings.GalleryFavoriteBadgeAlwaysVisible
+            _metadataBadgesAlwaysVisible = settings.GalleryMetadataBadgesAlwaysVisible
             _filterFavorite = settings.GalleryFilterFavorite
             _filterRatings.UnionWith(settings.GalleryFilterRatings)
             _filterFileType = settings.GalleryFilterFileType
@@ -5699,6 +5740,9 @@ Namespace ViewModels
             Dim settings = AppSettingsService.Load()
             settings.GalleryShowFolders = _showFolders
             settings.GalleryShowParentFolder = _showParentFolder
+            settings.GalleryRatingBadgesAlwaysVisible = _ratingBadgesAlwaysVisible
+            settings.GalleryFavoriteBadgeAlwaysVisible = _favoriteBadgeAlwaysVisible
+            settings.GalleryMetadataBadgesAlwaysVisible = _metadataBadgesAlwaysVisible
             AppSettingsService.Save(settings)
         End Sub
 

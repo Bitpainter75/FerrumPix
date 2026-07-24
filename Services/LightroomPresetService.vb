@@ -272,12 +272,22 @@ Namespace Services
             Dim nodesY = {0.0, shadowsAmount / 100.0 * MaxParametricShift, darksAmount / 100.0 * MaxParametricShift,
                           lightsAmount / 100.0 * MaxParametricShift, highlightsAmount / 100.0 * MaxParametricShift, 0.0}
 
-            Dim basePoints = ParseCurvePointString(pointCurve)
+            ' Adobe fuehrt Parametrik UND Punktkurve als EINE Tonwertkurve - wir falten sie ebenfalls
+            ' zusammen, jetzt aber verlustarm: (1) die Punktkurve mit dem ECHTEN Engine-Spline auswerten
+            ' statt linear (Kruemmung bleibt erhalten), (2) die Parametrik GLATT statt kantig (siehe
+            ' InterpolateNodes), (3) DICHT abtasten (alle 8 Stufen statt 9 Punkte), damit beim erneuten
+            ' Splinen der Engine praktisch nichts liegen bleibt - faktisch wie eine eigene Parametrik-
+            ' Stufe, aber ohne neue Adjustments-Felder/Serialisierung, und die kombinierte Kurve bleibt
+            ' im Kurven-Editor sichtbar (genau wie Adobes Tonwertkurve).
+            Dim basePoints = ImageProcessor.ParseCurvePoints(pointCurve)
             Dim result As New List(Of String)()
-            For Each x In {0, 32, 64, 96, 128, 160, 192, 224, 255}
-                Dim y = InterpolatePoints(basePoints, x) + InterpolateNodes(nodesX, nodesY, x)
+            Dim x = 0
+            Do
+                Dim y = ImageProcessor.EvaluateCurveSpline(basePoints, x) + InterpolateNodes(nodesX, nodesY, x)
                 result.Add($"{x},{CInt(Math.Max(0, Math.Min(255, Math.Round(y))))}")
-            Next
+                If x = 255 Then Exit Do
+                x = Math.Min(255, x + 8)
+            Loop
             Return String.Join(";", result)
         End Function
 
@@ -287,48 +297,18 @@ Namespace Services
             Return fallback
         End Function
 
-        ''' Zerlegt "x,y;x,y;..." wieder in Punkte. Leer/Nothing ergibt die Identität (0,0)-(255,255).
-        Private Shared Function ParseCurvePointString(text As String) As List(Of (X As Double, Y As Double))
-            Dim points As New List(Of (X As Double, Y As Double))()
-            If Not String.IsNullOrWhiteSpace(text) Then
-                For Each part In text.Split(";"c)
-                    Dim xy = part.Split(","c)
-                    If xy.Length <> 2 Then Continue For
-                    Dim px, py As Double
-                    If Double.TryParse(xy(0).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, px) AndAlso
-                       Double.TryParse(xy(1).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, py) Then
-                        points.Add((px, py))
-                    End If
-                Next
-            End If
-            If points.Count < 2 Then
-                points.Clear()
-                points.Add((0, 0))
-                points.Add((255, 255))
-            End If
-            Return points
-        End Function
-
-        Private Shared Function InterpolatePoints(points As List(Of (X As Double, Y As Double)), x As Double) As Double
-            If x <= points(0).X Then Return points(0).Y
-            For i = 1 To points.Count - 1
-                If x <= points(i).X Then
-                    Dim span = points(i).X - points(i - 1).X
-                    If span <= 0 Then Return points(i).Y
-                    Dim t = (x - points(i - 1).X) / span
-                    Return points(i - 1).Y + (points(i).Y - points(i - 1).Y) * t
-                End If
-            Next
-            Return points(points.Count - 1).Y
-        End Function
-
+        ''' <summary>Parametrik-Zonenkurve: glatte (smoothstep) Interpolation zwischen den fuenf
+        ''' Zonenknoten. Frueher linear - das setzte an jeden Knoten einen Knick und ergab eine
+        ''' kantige Tonwertkurve. Smoothstep hat an den Knoten Ableitung null, die Zonen gehen also
+        ''' weich ineinander ueber (naeher an Adobes parametrischer Kurve).</summary>
         Private Shared Function InterpolateNodes(nodesX As Double(), nodesY As Double(), x As Double) As Double
             For i = 1 To nodesX.Length - 1
                 If x <= nodesX(i) Then
                     Dim span = nodesX(i) - nodesX(i - 1)
                     If span <= 0 Then Return nodesY(i)
                     Dim t = (x - nodesX(i - 1)) / span
-                    Return nodesY(i - 1) + (nodesY(i) - nodesY(i - 1)) * t
+                    Dim w = t * t * (3.0 - 2.0 * t)
+                    Return nodesY(i - 1) + (nodesY(i) - nodesY(i - 1)) * w
                 End If
             Next
             Return nodesY(nodesY.Length - 1)

@@ -1092,7 +1092,21 @@
     </Style>
     <Style Selector="StackPanel.gallery-meta-badges">
         <Setter Property="Panel.ZIndex" Value="3"/>
+    </Style>
+    <!-- Umschaltbare Kachel-Badges (Sterne/Favorit/Metadaten): versteckt, beim Überfahren der Kachel
+         sichtbar - ODER dauerhaft sichtbar, wenn die Klasse badge-always gesetzt ist (an die
+         Galerie-Einstellung gebunden). Ein Regler pro Badge, siehe SettingsView/GalleryViewModel. -->
+    <Style Selector=":is(Control).gallery-toggle-badge">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="Border.thumb-card:pointerover :is(Control).gallery-toggle-badge">
         <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+    <Style Selector=":is(Control).gallery-toggle-badge.badge-always">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
     </Style>
     <Style Selector="Border.gallery-metadata-overlay">
         <Setter Property="Panel.ZIndex" Value="4"/>
@@ -1112,14 +1126,11 @@
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="IsHitTestVisible" Value="True"/>
     </Style>
+    <!-- Sichtbarkeit der Sterne kommt jetzt aus gallery-toggle-badge (versteckt/hover/immer). Hier bleibt
+         nur die Stapelordnung; die alten Opacity-/Hover-Regeln würden sonst gallery-toggle-badge.badge-always
+         überschreiben (spätere Stile gewinnen in Avalonia) und die "immer sichtbar"-Einstellung aushebeln. -->
     <Style Selector="StackPanel.gallery-rating-actions">
-        <Setter Property="Opacity" Value="0"/>
-        <Setter Property="IsHitTestVisible" Value="False"/>
         <Setter Property="Panel.ZIndex" Value="3"/>
-    </Style>
-    <Style Selector="Border.thumb-card:pointerover StackPanel.gallery-rating-actions">
-        <Setter Property="Opacity" Value="1"/>
-        <Setter Property="IsHitTestVisible" Value="True"/>
     </Style>
     <Style Selector="StackPanel.gallery-rating-actions.compact">
         <Setter Property="Spacing" Value="0"/>

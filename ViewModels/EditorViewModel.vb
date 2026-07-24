@@ -424,6 +424,9 @@ Namespace ViewModels
         ' Gecachte PNG/Base64-Kodierung von _selectionMask (siehe EncodeSelectionMaskBase64).
         Private _selectionMaskBase64 As String = ""
         Private _selectionMaskPreviewImage As Bitmap = Nothing
+        ' True, sobald die Auswahlmaske Masken-Pinsel-Striche enthält: die weiche Kante steckt dann in den
+        ' Alpha-Werten, der globale Feather darf NICHT erneut weichzeichnen (siehe SelectionMaskSoftBaked).
+        Private _selectionMaskSoftBaked As Boolean = False
         Private _selectionShapeMode As String = "Rectangle"
         Private _selectionShapePointsX As Double() = Nothing
         Private _selectionShapePointsY As Double() = Nothing
@@ -5372,11 +5375,23 @@ Namespace ViewModels
                 If _selectionMode = v Then Return
                 Me.RaiseAndSetIfChanged(_selectionMode, v)
                 Me.RaisePropertyChanged(NameOf(ShowMagicWandControls))
+                Me.RaisePropertyChanged(NameOf(ShowMaskBrushControls))
                 Me.RaisePropertyChanged(NameOf(IsMoveSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsRectangleSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsEllipseSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsLassoSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsMagicWandSelectionMode))
+                Me.RaisePropertyChanged(NameOf(IsBrushSelectionMode))
+                If v = "Brush" Then
+                    ' Beim Wechsel in den Masken-Pinsel sinnvoll auf "Hinzufügen" vorbelegen (der erste
+                    ' Strich ohne aktive Auswahl läuft über ApplySelectionCandidate ohnehin als "New").
+                    If _selectionCombineMode = "New" Then SelectionCombineMode = "Add"
+                    ' Bestehende Maske sofort als rotes Overlay zeigen.
+                    PublishSelectionRedOverlay()
+                Else
+                    ' Zurück auf Laufameisen: das rote Overlay-Bild verwerfen.
+                    SetSelectionMaskPreviewImage(Nothing)
+                End If
             End Set
         End Property
 
@@ -5454,9 +5469,23 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property IsBrushSelectionMode As Boolean
+            Get
+                Return _selectionMode = "Brush"
+            End Get
+        End Property
+
         Public ReadOnly Property ShowMagicWandControls As Boolean
             Get
                 Return _selectionMode = "MagicWand"
+            End Get
+        End Property
+
+        ''' <summary>True im Masken-Pinsel-Modus: blendet Pinselgröße ein und schaltet die Anzeige auf
+        ''' das rote Overlay statt Laufameisen.</summary>
+        Public ReadOnly Property ShowMaskBrushControls As Boolean
+            Get
+                Return _selectionMode = "Brush"
             End Get
         End Property
 
@@ -5577,6 +5606,8 @@ Namespace ViewModels
             _selectionMaskBytes = Nothing
             _selectionMaskBytesStride = 0
             _selectionMaskBase64 = ""
+            ' Zurück auf harte Kante: der Masken-Pinsel-Commit setzt das Flag danach wieder, wenn nötig.
+            _selectionMaskSoftBaked = False
             _selectionMaskEdgePointsX = Nothing
             _selectionMaskEdgePointsY = Nothing
             Me.RaisePropertyChanged(NameOf(SelectionMaskEdgePointsX))
@@ -5788,6 +5819,132 @@ Namespace ViewModels
             Using mask = ImageProcessor.BuildPolygonMask(localX, localY, rectPx.Width, rectPx.Height)
                 If mask IsNot Nothing Then ApplySelectionCandidate(mask, rectPx, "Lasso", xsPercent.ToArray(), ysPercent.ToArray())
             End Using
+        End Sub
+
+        ' ── Masken-Pinsel ────────────────────────────────────────────────────────
+        ' Malt eine weiche Maske ins Auswahl-System (rotes Quick-Mask-Overlay statt Laufameisen). Radius
+        ' und Randweichheit liegen im DISPLAY-Bildraum (= Maskenraum), genau wie BrushSize/SelectionFeather.
+        Private Const MaskBrushOverlayMaxEdge As Integer = 1600
+
+        Private Function MaskBrushRadiusDisplay() As Double
+            Return Math.Max(0.5, BrushSize / 2.0)
+        End Function
+
+        Private Function MaskBrushDisplayPoints(xsPercent As Double(), ysPercent As Double(), bw As Integer, bh As Integer) As List(Of SKPoint)
+            Dim pts As New List(Of SKPoint)(xsPercent.Length)
+            For i = 0 To xsPercent.Length - 1
+                pts.Add(New SKPoint(CSng(bw * xsPercent(i) / 100.0), CSng(bh * ysPercent(i) / 100.0)))
+            Next
+            Return pts
+        End Function
+
+        ''' <summary>Baut das rote Quick-Mask-Overlay: die aktuelle Auswahlmaske rot getönt (Alpha ∝ Deckung)
+        ''' auf eine gedeckelte Overlay-Auflösung heruntergerechnet, plus optional den laufenden Strich als
+        ''' Live-Vorschau (Subtrahieren stanzt via DstOut). Rückgabe deckt das ganze Anzeigebild ab und wird
+        ''' vom View auf das Bildrechteck gestreckt. Nothing, wenn nichts zu zeigen ist.</summary>
+        Private Function BuildSelectionRedOverlayBitmap(livePts As List(Of SKPoint), eraseMode As Boolean) As Bitmap
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
+            If bw <= 0 OrElse bh <= 0 Then Return Nothing
+            If _selectionMask Is Nothing AndAlso (livePts Is Nothing OrElse livePts.Count = 0) Then Return Nothing
+
+            Dim ovScale = Math.Min(1.0, MaskBrushOverlayMaxEdge / CDbl(Math.Max(bw, bh)))
+            Dim ow = Math.Max(1, CInt(Math.Round(bw * ovScale)))
+            Dim oh = Math.Max(1, CInt(Math.Round(bh * ovScale)))
+            Dim redColor = New SKColor(255, 0, 0, 128)
+
+            Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(overlay)
+                    canvas.Clear(SKColors.Transparent)
+                    ' Committete Maske rot einfärben: erst Rot in der Maskenregion auslegen, dann per DstIn
+                    ' auf die Maskendeckung beschränken. Rein alphabasiert - unabhängig davon, wie eine
+                    ' Alpha8-Quelle beim direkten Zeichnen eingefärbt würde.
+                    If _selectionMask IsNot Nothing Then
+                        Dim src = New SKRect(0, 0, _selectionMask.Width, _selectionMask.Height)
+                        Dim dst = New SKRect(CSng(_selectionMaskRect.Left * ovScale), CSng(_selectionMaskRect.Top * ovScale),
+                                             CSng(_selectionMaskRect.Right * ovScale), CSng(_selectionMaskRect.Bottom * ovScale))
+                        Using redPaint = New SKPaint With {.Color = redColor, .Style = SKPaintStyle.Fill}
+                            canvas.DrawRect(dst, redPaint)
+                        End Using
+                        Using maskPaint = New SKPaint With {.BlendMode = SKBlendMode.DstIn, .IsAntialias = True}
+                            ImageProcessor.DrawBitmapSampled(canvas, _selectionMask, src, dst, ImageProcessor.SamplingHigh, maskPaint)
+                        End Using
+                    End If
+                    ' Laufender Strich (Live): auf Overlay-Auflösung skaliert.
+                    If livePts IsNot Nothing AndAlso livePts.Count > 0 Then
+                        Dim scaled As New List(Of SKPoint)(livePts.Count)
+                        For Each p In livePts
+                            scaled.Add(New SKPoint(CSng(p.X * ovScale), CSng(p.Y * ovScale)))
+                        Next
+                        Dim r = CSng(Math.Max(0.5, MaskBrushRadiusDisplay() * ovScale))
+                        Dim soft = CSng(Math.Max(0.0, _selectionFeather * ovScale))
+                        ImageProcessor.DrawSoftMaskStroke(canvas, scaled, r, soft, redColor, eraseMode)
+                    End If
+                End Using
+                Return ImageProcessor.ToAvaloniaBitmap(overlay)
+            End Using
+        End Function
+
+        ''' Rotes Overlay aus der committeten Maske neu bauen und veröffentlichen (nach jedem Strich-Commit).
+        Private Sub PublishSelectionRedOverlay()
+            SetSelectionMaskPreviewImage(BuildSelectionRedOverlayBitmap(Nothing, False))
+        End Sub
+
+        ''' Live-Vorschau während des Strichs: committete Maske + laufender Strich in Rot.
+        Public Sub RefreshMaskBrushLivePreview(xsPercent As Double(), ysPercent As Double())
+            If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length = 0 OrElse xsPercent.Length <> ysPercent.Length Then
+                PublishSelectionRedOverlay()
+                Return
+            End If
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
+            If bw <= 0 OrElse bh <= 0 Then Return
+            Dim eraseMode = _hasActiveSelection AndAlso _selectionCombineMode = "Subtract"
+            SetSelectionMaskPreviewImage(BuildSelectionRedOverlayBitmap(MaskBrushDisplayPoints(xsPercent, ysPercent, bw, bh), eraseMode))
+        End Sub
+
+        ''' Live-Vorschau verwerfen (Strich abgebrochen): zurück auf die committete Maske.
+        Public Sub CancelMaskBrushStroke()
+            PublishSelectionRedOverlay()
+        End Sub
+
+        ''' <summary>Commit eines Masken-Pinselstrichs: aus den Strichpunkten (Display-Prozent) einen weichen
+        ''' Alpha8-Stempel bauen und über ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnen
+        ''' (erster Strich ohne aktive Auswahl = "New"). Danach ist die Maske weich-gebacken.</summary>
+        Public Sub CommitMaskBrushStroke(xsPercent As Double(), ysPercent As Double())
+            If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length = 0 OrElse xsPercent.Length <> ysPercent.Length Then
+                PublishSelectionRedOverlay()
+                Return
+            End If
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
+            If bw <= 0 OrElse bh <= 0 Then Return
+            Dim radius = CSng(MaskBrushRadiusDisplay())
+            Dim softness = CSng(Math.Max(0.0, _selectionFeather))
+            Dim pts = MaskBrushDisplayPoints(xsPercent, ysPercent, bw, bh)
+
+            Dim margin = CInt(Math.Ceiling(radius + softness + 2))
+            Dim minX = Integer.MaxValue, minY = Integer.MaxValue, maxX = Integer.MinValue, maxY = Integer.MinValue
+            For Each p In pts
+                minX = Math.Min(minX, CInt(Math.Floor(p.X))) : maxX = Math.Max(maxX, CInt(Math.Ceiling(p.X)))
+                minY = Math.Min(minY, CInt(Math.Floor(p.Y))) : maxY = Math.Max(maxY, CInt(Math.Ceiling(p.Y)))
+            Next
+            Dim rectPx = New SKRectI(Math.Max(0, minX - margin), Math.Max(0, minY - margin),
+                                     Math.Min(bw, maxX + margin), Math.Min(bh, maxY + margin))
+            If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then
+                PublishSelectionRedOverlay()
+                Return
+            End If
+
+            PushUndo()
+            Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx)
+                If stamp IsNot Nothing Then
+                    ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing)
+                    _selectionMaskSoftBaked = True
+                End If
+            End Using
+            PublishSelectionRedOverlay()
+            SchedulePreviewUpdate()
         End Sub
 
         ''' Zauberstab: wählt die zusammenhängende Farbfläche am Klickpunkt (Prozentkoordinaten).
@@ -6259,7 +6416,8 @@ Namespace ViewModels
             ownsMask = False
             If _selectionMask IsNot Nothing Then
                 rectPx = _selectionMaskRect
-                If _selectionFeather <= 0.05 Then Return _selectionMask
+                ' Masken-Pinsel: weiche Kante steckt schon in den Alpha-Werten - nicht erneut weichzeichnen.
+                If _selectionMaskSoftBaked OrElse _selectionFeather <= 0.05 Then Return _selectionMask
 
                 Dim expanded As SKRectI
                 Dim feathered = ImageProcessor.BuildFeatheredMask(_selectionMask, _selectionMaskRect, CSng(_selectionFeather), expanded)
@@ -11495,7 +11653,8 @@ Namespace ViewModels
                 .SelectionMaskRight = _selectionMaskRect.Right,
                 .SelectionMaskBottom = _selectionMaskRect.Bottom,
                 .SelectionMaskPngBase64 = EncodeSelectionMaskBase64(),
-                .SelectionFeatherPixels = CSng(_selectionFeather)
+                .SelectionFeatherPixels = CSng(_selectionFeather),
+                .SelectionMaskSoftBaked = _selectionMaskSoftBaked
             }
 
             ' Editor-Arbeitsmodus: Objekt-Layer werden als UI-Overlays gezeichnet und bleiben aus dem
@@ -11922,6 +12081,7 @@ Namespace ViewModels
             _pixelLayerHidden = adj.PixelLayerHidden
             RaisePixelLayerVisibilityChanged()
             _selectionFeather = adj.SelectionFeatherPixels
+            _selectionMaskSoftBaked = adj.SelectionMaskSoftBaked
             Me.RaisePropertyChanged(NameOf(SelectionFeather))
             _selectionXPercent = adj.SelectionXPercent
             _selectionYPercent = adj.SelectionYPercent
@@ -12197,6 +12357,12 @@ Namespace ViewModels
             _filterStrength = 100
             _lutPath = ""
             _lutStrength = 100
+            ' Auch die "zuletzt angewandt"-Marker loeschen. Ohne das blieben nach einem Bildwechsel
+            ' die Panel-Hervorhebungen des VORIGEN Bildes stehen: FilterPanel haengt an
+            ' LastAppliedFilterPresetName, LightroomPreset-/LutPresetPanel an IsLastApplied (aus
+            ' _lastAppliedLightroomPresetPath/_lastAppliedLutPresetPath) - die Pixelwerte oben wurden
+            ' zwar neutralisiert, die Auswahl-Markierung folgte aber nicht (Nutzer-Befund 2026-07-24).
+            ClearLastAppliedLook()
             _retouchSpots.Clear()
             _annotations.Clear()
             _pixelEditLayer.Clear()
