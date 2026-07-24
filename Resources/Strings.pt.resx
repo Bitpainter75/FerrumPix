@@ -4057,4 +4057,22 @@
   <data name="Das_Bild_konnte_nicht_analysiert_werden_bc3f2a3f" xml:space="preserve">
     <value>Não foi possível analisar a imagem</value>
   </data>
+  <data name="Datei_nicht_gefunden_3cc1ce35" xml:space="preserve">
+    <value>Arquivo não encontrado</value>
+  </data>
+  <data name="Die_Datei_ist_nicht_mehr_vorhanden_0_Soll_der_Ei_e639d762" xml:space="preserve">
+    <value>O arquivo não existe mais: {0}. Deseja remover a entrada da lista?</value>
+  </data>
+  <data name="Behalten_99f6d4d3" xml:space="preserve">
+    <value>Manter</value>
+  </data>
+  <data name="Eintrag_aus_der_Liste_entfernt_85b7bc11" xml:space="preserve">
+    <value>Entrada removida da lista</value>
+  </data>
+  <data name="Maskierung_964c3806" xml:space="preserve">
+    <value>Mascaramento</value>
+  </data>
+  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
+    <value>Limita a nitidez às bordas: 0 aplica nitidez em toda a superfície, valores maiores deixam áreas lisas como céu e pele em paz.</value>
+  </data>
 </root>

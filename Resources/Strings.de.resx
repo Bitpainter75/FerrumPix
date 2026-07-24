@@ -4058,4 +4058,22 @@
   <data name="Das_Bild_konnte_nicht_analysiert_werden_bc3f2a3f" xml:space="preserve">
     <value>Das Bild konnte nicht analysiert werden</value>
   </data>
+  <data name="Datei_nicht_gefunden_3cc1ce35" xml:space="preserve">
+    <value>Datei nicht gefunden</value>
+  </data>
+  <data name="Die_Datei_ist_nicht_mehr_vorhanden_0_Soll_der_Ei_e639d762" xml:space="preserve">
+    <value>Die Datei ist nicht mehr vorhanden: {0}. Soll der Eintrag aus der Liste entfernt werden?</value>
+  </data>
+  <data name="Behalten_99f6d4d3" xml:space="preserve">
+    <value>Behalten</value>
+  </data>
+  <data name="Eintrag_aus_der_Liste_entfernt_85b7bc11" xml:space="preserve">
+    <value>Eintrag aus der Liste entfernt</value>
+  </data>
+  <data name="Maskierung_964c3806" xml:space="preserve">
+    <value>Maskierung</value>
+  </data>
+  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
+    <value>Beschränkt die Schärfung auf Kanten: 0 schärft die ganze Fläche, höher lässt glatte Flächen wie Himmel und Haut ruhig.</value>
+  </data>
 </root>

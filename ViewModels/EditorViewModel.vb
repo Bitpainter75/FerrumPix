@@ -105,6 +105,7 @@ Namespace ViewModels
         Private _sharpness As Double = 0
         Private _sharpenRadius As Double = 0
         Private _sharpenDetail As Double = 0
+        Private _sharpenMasking As Double = 0
         Private _noiseReduction As Double = 0
         Private _noiseReductionDetail As Double = 0
         Private _colorNoiseReduction As Double = 0
@@ -3185,6 +3186,15 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 SetUndoableDouble(_sharpenDetail, Math.Max(0, Math.Min(100, value)), NameOf(SharpenDetail))
+            End Set
+        End Property
+
+        Public Property SharpenMasking As Double
+            Get
+                Return _sharpenMasking
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_sharpenMasking, Math.Max(0, Math.Min(100, value)), NameOf(SharpenMasking))
             End Set
         End Property
 
@@ -11889,6 +11899,7 @@ Namespace ViewModels
                 .Sharpness = CSng(_sharpness),
                 .SharpenRadius = CSng(_sharpenRadius),
                 .SharpenDetail = CSng(_sharpenDetail),
+                .SharpenMasking = CSng(_sharpenMasking),
                 .NoiseReduction = CSng(_noiseReduction),
                 .NoiseReductionDetail = CSng(_noiseReductionDetail),
                 .ColorNoiseReduction = CSng(_colorNoiseReduction),
@@ -12182,7 +12193,7 @@ Namespace ViewModels
                      NameOf(AquaHue), NameOf(AquaSaturation), NameOf(BlueHue), NameOf(BlueSaturation),
                      NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(MagentaHue), NameOf(MagentaSaturation)
                     Return "Farbmischer"
-                Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(NoiseReduction),
+                Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(NoiseReduction),
                      NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
                     Return "Details"
                 Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
@@ -12298,6 +12309,7 @@ Namespace ViewModels
             _sharpness = adj.Sharpness
             _sharpenRadius = adj.SharpenRadius
             _sharpenDetail = adj.SharpenDetail
+            _sharpenMasking = adj.SharpenMasking
             _noiseReduction = adj.NoiseReduction
             _noiseReductionDetail = adj.NoiseReductionDetail
             _colorNoiseReduction = adj.ColorNoiseReduction
@@ -12637,6 +12649,7 @@ Namespace ViewModels
             _sharpness = 0
             _sharpenRadius = 0
             _sharpenDetail = 0
+            _sharpenMasking = 0
             _noiseReduction = 0
             _noiseReductionDetail = 0
             _colorNoiseReduction = 0
@@ -15812,6 +15825,7 @@ Namespace ViewModels
             _sharpness = 0
             _sharpenRadius = 0
             _sharpenDetail = 0
+            _sharpenMasking = 0
             _noiseReduction = 0
             _noiseReductionDetail = 0
             _colorNoiseReduction = 0
@@ -15868,14 +15882,16 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Nur die Schärfe-Gruppe (Schärfe, Radius, Detail).</summary>
+        ''' <summary>Nur die Schärfe-Gruppe (Schärfe, Radius, Detail, Maskierung).</summary>
         Private Sub ResetSharpenGroupInternal()
             _sharpness = 0
             _sharpenRadius = 0
             _sharpenDetail = 0
+            _sharpenMasking = 0
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(SharpenRadius))
             Me.RaisePropertyChanged(NameOf(SharpenDetail))
+            Me.RaisePropertyChanged(NameOf(SharpenMasking))
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -15927,17 +15943,19 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Setzt nur Schärfe und Weichzeichnen zurück - die drei Regler dieser Gruppe.</summary>
+        ''' <summary>Setzt nur Schärfe und Weichzeichnen zurück - die Regler dieser Gruppe.</summary>
         Private Sub ResetSharpnessInternal()
             _sharpness = 0
             _sharpenRadius = 0
             _sharpenDetail = 0
+            _sharpenMasking = 0
             _noiseReduction = 0
             _noiseReductionDetail = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(SharpenRadius))
             Me.RaisePropertyChanged(NameOf(SharpenDetail))
+            Me.RaisePropertyChanged(NameOf(SharpenMasking))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
@@ -16151,6 +16169,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(SharpenRadius))
             Me.RaisePropertyChanged(NameOf(SharpenDetail))
+            Me.RaisePropertyChanged(NameOf(SharpenMasking))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
@@ -16512,6 +16531,7 @@ Namespace ViewModels
             Sharpness = look.Sharpness
             SharpenRadius = look.SharpenRadius
             SharpenDetail = look.SharpenDetail
+            SharpenMasking = look.SharpenMasking
             NoiseReduction = look.NoiseReduction
             NoiseReductionDetail = look.NoiseReductionDetail
             ColorNoiseReduction = look.ColorNoiseReduction
@@ -16664,6 +16684,53 @@ Namespace ViewModels
             PersistSavedLutPresets()
             SyncLastAppliedLutPreset()
         End Sub
+
+        ''' <summary>Der Weg, den die gespeicherten Preset-Kacheln nehmen. Die Liste steht in den
+        ''' Einstellungen, die Dateien liegen irgendwo beim Nutzer - verschiebt oder löscht er eine, zeigt
+        ''' die Kachel auf ins Leere. Vorher fiel ein Klick darauf STUMM aus (ApplyLightroomPreset/
+        ''' ApplyLutPreset steigen bei fehlender Datei einfach aus), und die tote Kachel blieb für immer
+        ''' stehen: der Nutzer konnte sie nur über das ×-Symbol loswerden, ohne zu wissen, dass sie kaputt
+        ''' ist. Jetzt sagt es das und bietet an, den Eintrag zu entfernen.
+        '''
+        ''' Bewusst NEBEN ApplyLightroomPreset/ApplyLutPreset statt darin: diese beiden werden auch ohne
+        ''' Hauptfenster gerufen (Stapelverarbeitung, Diagnose) und dürfen dort nicht auf einen Dialog
+        ''' warten. Der Dialog gehört an die Kachel, weil nur dort ein Listeneintrag dahintersteht.</summary>
+        Public Async Function ApplySavedLightroomPresetAsync(xmpPath As String) As Task
+            If Await ConfirmMissingPresetFileAsync(xmpPath, isLut:=False) Then Return
+            ApplyLightroomPreset(xmpPath)
+        End Function
+
+        Public Async Function ApplySavedLutPresetAsync(cubePath As String) As Task
+            If Await ConfirmMissingPresetFileAsync(cubePath, isLut:=True) Then Return
+            ApplyLutPreset(cubePath)
+        End Function
+
+        ''' <summary>True = die Datei fehlt, es wurde NICHTS angewendet (und der Listeneintrag auf Wunsch
+        ''' entfernt). False = alles in Ordnung, der Aufrufer macht weiter.</summary>
+        Private Async Function ConfirmMissingPresetFileAsync(path As String, isLut As Boolean) As Task(Of Boolean)
+            If Not String.IsNullOrWhiteSpace(path) AndAlso File.Exists(path) Then Return False
+            ' Ohne Hauptfenster gibt es keinen Dialog (Tests/Diagnose) - dann der stille Rückzug wie bisher.
+            If _mainVm Is Nothing Then Return True
+
+            ' Der GANZE Pfad, nicht nur der Dateiname: bei gleichnamigen Presets aus verschiedenen Ordnern
+            ' wäre sonst nicht erkennbar, welcher Eintrag gemeint ist. Typografische Anführungszeichen
+            ' stehen bewusst NICHT im Text - VB.NET nimmt “ und ” als Zeichenkettenbegrenzer an.
+            Dim message = String.Format(
+                LocalizationService.T("Die Datei ist nicht mehr vorhanden: {0}. Soll der Eintrag aus der Liste entfernt werden?"),
+                If(String.IsNullOrWhiteSpace(path), "", path.Trim()))
+            ' "Entfernen" ist die Bestätigung, "Behalten" das Abbrechen - so steht auf beiden Knöpfen, was
+            ' passiert, statt eines nackten OK/Abbrechen.
+            Dim remove = Await _mainVm.ShowConfirmAsync("Datei nicht gefunden", message, "Entfernen", "Behalten")
+            If remove Then
+                If isLut Then
+                    RemoveLutPresetFromSettings(path)
+                Else
+                    RemoveLightroomPresetFromSettings(path)
+                End If
+                StatusText = LocalizationService.T("Eintrag aus der Liste entfernt")
+            End If
+            Return True
+        End Function
 
         Public Sub ImportLutPresetsFromFolder(folderPath As String)
             If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return

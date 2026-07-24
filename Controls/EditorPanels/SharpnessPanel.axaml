@@ -55,6 +55,15 @@
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding SharpenDetail, Mode=TwoWay}" Minimum="0" Maximum="100" />
                     </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Maskierung" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Beschränkt die Schärfung auf Kanten: 0 schärft die ganze Fläche, höher lässt glatte Flächen wie Himmel und Haut ruhig." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding SharpenMasking}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding SharpenMasking, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
                 </StackPanel>
             </Expander>
         </Border>

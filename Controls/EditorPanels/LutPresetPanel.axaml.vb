@@ -56,11 +56,14 @@ Namespace Controls.EditorPanels
             End Try
         End Sub
 
-        Public Sub OnApplySavedLutPresetClick(sender As Object, e As RoutedEventArgs)
+        ''' Über ApplySavedLutPresetAsync statt direkt über ApplyLutPreset: nur hier steht ein
+        ''' LISTENEINTRAG hinter dem Klick, und nur hier lässt sich deshalb anbieten, ihn zu entfernen,
+        ''' wenn die Datei nicht mehr da ist.
+        Public Async Sub OnApplySavedLutPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LutPresetSettings)
             If vm Is Nothing OrElse preset Is Nothing Then Return
-            vm.ApplyLutPreset(preset.Path)
+            Await vm.ApplySavedLutPresetAsync(preset.Path)
         End Sub
 
         Public Sub OnRemoveSavedLutPresetClick(sender As Object, e As RoutedEventArgs)

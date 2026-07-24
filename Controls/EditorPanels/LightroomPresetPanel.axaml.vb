@@ -56,11 +56,14 @@ Namespace Controls.EditorPanels
             End Try
         End Sub
 
-        Public Sub OnApplySavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        ''' Über ApplySavedLightroomPresetAsync statt direkt über ApplyLightroomPreset: nur hier steht ein
+        ''' LISTENEINTRAG hinter dem Klick, und nur hier lässt sich deshalb anbieten, ihn zu entfernen,
+        ''' wenn die Datei nicht mehr da ist.
+        Public Async Sub OnApplySavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LightroomPresetSettings)
             If vm Is Nothing OrElse preset Is Nothing Then Return
-            vm.ApplyLightroomPreset(preset.Path)
+            Await vm.ApplySavedLightroomPresetAsync(preset.Path)
         End Sub
 
         Public Sub OnRemoveSavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)

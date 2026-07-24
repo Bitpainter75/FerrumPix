@@ -18,7 +18,12 @@ Namespace Services
         ''' Look also vollständig, statt sich mit dem vorherigen zu vermischen.</summary>
         Public Shared Function LoadLook(xmpPath As String) As ImageAdjustments
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return Nothing
-            Dim xmpText = File.ReadAllText(xmpPath)
+            Dim rawText = File.ReadAllText(xmpPath)
+            ' Das Profil MUSS aus dem ungekuerzten Text gelesen werden - gleich danach faellt sein Block
+            ' weg, damit seine Attribute (crs:Name, crs:Amount, crs:Copyright ...) nicht in die flache
+            ' Wertetabelle sickern und dort gleichnamige Regler des Kopf-Blocks ueberschreiben.
+            Dim look = ParseLookProfile(rawText)
+            Dim xmpText = StripNestedCrsBlocks(rawText)
             Dim values = ParseLightroomXmpValues(xmpText)
             If values.Count = 0 Then Return Nothing
 
@@ -64,6 +69,10 @@ Namespace Services
             ' unser Radius 0..100: (r-1)*50, unter 1.0 auf 0 geklemmt. crs:SharpenDetail ist 0..100.
             If TryGetXmpDouble(values, "SharpenRadius", d) Then adj.SharpenRadius = Clamp((d - 1.0) * 50.0, 0, 100)
             If TryGetXmpDouble(values, "SharpenDetail", d) Then adj.SharpenDetail = Clamp(d, 0, 100)
+            ' crs:SharpenEdgeMasking ist 0..100 wie unser Regler. Stand in 15 von 25 untersuchten Presets
+            ' mit Werten bis 85 und fiel bisher komplett weg: unser Import schärfte damit die ganze Fläche
+            ' inklusive Himmel und Haut, wo Adobe nur die Kanten anfasst.
+            If TryGetXmpDouble(values, "SharpenEdgeMasking", d) Then adj.SharpenMasking = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "LuminanceSmoothing", d) Then adj.NoiseReduction = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "LuminanceNoiseReductionDetail", d) Then adj.NoiseReductionDetail = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "ColorNoiseReduction", d) Then adj.ColorNoiseReduction = Clamp(d, 0, 100)
@@ -102,10 +111,25 @@ Namespace Services
             ''' crs:ConvertToGrayscale="True" - beide Formen kommen in freier Wildbahn vor. Ohne das kam
             ''' ein S/W-Preset in voller Farbe an, und zwar wortlos: alle anderen Regler stimmten, nur die
             ''' Umwandlung fehlte. Der Filtername ist zugleich der Schaltschlüssel in BuildFilterPresetMatrix.
-            If IsXmpTrue(values, "ConvertToGrayscale") OrElse
-               GetXmpString(values, "Treatment").StartsWith("Black", StringComparison.OrdinalIgnoreCase) Then
+            ''' DRITTE Quelle: das PROFIL (crs:Look). Presets aus der Lightroom-CC-Zeit setzen keinen der
+            ''' beiden Schlüssel, sondern verweisen nur auf ein monochromes Kameraprofil ("Adobe
+            ''' Monochrome", Gruppe "B&W") - gemessen an einer echten Sammlung betraf das 3 von 25
+            ''' Presets, und alle drei kamen BUNT an. Dieselbe Falle wie oben, nur eine Ebene höher.
+            Dim monoFromKeys = IsXmpTrue(values, "ConvertToGrayscale") OrElse
+                               GetXmpString(values, "Treatment").StartsWith("Black", StringComparison.OrdinalIgnoreCase)
+            Dim monoFromLook = look IsNot Nothing AndAlso look.IsMonochrome()
+            If monoFromKeys OrElse monoFromLook Then
                 adj.FilterPreset = "S/W"
                 adj.FilterStrength = ImageAdjustments.DefaultFilterStrength("S/W")
+                ' Kommt das Schwarzweiß NUR aus dem Profil, trägt dessen crs:Amount die Stärke: Lightroom
+                ' blendet ein Profil damit gegen die Farbwiedergabe (1.0 = voll). Ein B/W-Profil bei 0,67
+                ' ergibt dort ein teilentsättigtes Bild - genau das macht unsere FilterStrength auch.
+                ' Bei crs:SupportsAmount="false" ist der Regler in Lightroom gesperrt, dann gilt voll.
+                ' Steht crs:Treatment/ConvertToGrayscale in der Datei, ist die Umwandlung ausdrücklich
+                ' gewollt und bleibt voll - eine halbe Umwandlung ergäbe nur ein blasses Bild.
+                If Not monoFromKeys AndAlso look.HasAmount AndAlso look.SupportsAmount Then
+                    adj.FilterStrength = Clamp(look.Amount * 100.0, 0, 100)
+                End If
             End If
 
             ''' WEISSABGLEICH. crs:IncrementalTemperature/-Tint ist die relative ±100-Verschiebung, die
@@ -133,18 +157,29 @@ Namespace Services
             If TryGetXmpDouble(values, "BlueSaturation", d) Then adj.CalibrationBlueSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "ShadowTint", d) Then adj.CalibrationShadowTint = Clamp100(d)
 
-            If TryGetXmpDouble(values, "IncrementalTemperature", d) Then
-                adj.Temperature = Clamp100(d)
-            ElseIf TryGetXmpDouble(values, "Temperature", d) AndAlso d >= 1000 Then
-                ' Absolutes Kelvin (Adobe-Bereich 2000..50000). Der >=1000-Wächter trennt es sicher von
-                ' einem versehentlich relativen Wert; crs:Temperature ist bei Adobe immer Kelvin.
-                adj.Temperature = KelvinToRelativeTemperature(d)
-            End If
-            If TryGetXmpDouble(values, "IncrementalTint", d) Then
-                ' Tint deckt den vollen Adobe-Bereich ab: absolutes crs:Tint reicht bis ±150.
-                adj.Tint = Clamp(d, -150, 150)
-            ElseIf TryGetXmpDouble(values, "Tint", d) Then
-                adj.Tint = Clamp(d, -150, 150)
+            ' TORWÄCHTER crs:WhiteBalance. "As Shot" heißt in Lightroom: den Weißabgleich der AUFNAHME
+            ' behalten, das Preset fasst ihn nicht an. Ein Preset in diesem Modus schleppt trotzdem oft
+            ' crs:Temperature/crs:Tint mit (Lightroom schreibt den zuletzt gesehenen Stand einfach mit),
+            ' und die Werte gehören dann zu einem fremden Foto. Ohne diesen Wächter zog ein solches
+            ' Preset den Weißabgleich des eigenen Bildes auf die Aufnahmebedingungen eines anderen.
+            ' NUR bei "As Shot" gesperrt: "Custom", "Auto" und die Vorgaben ("Daylight", "Cloudy" …)
+            ' meinen ausdrücklich eine Änderung.
+            Dim whiteBalanceMode = GetXmpString(values, "WhiteBalance")
+            Dim keepsCaptureWhiteBalance = whiteBalanceMode.Replace(" ", "").Equals("AsShot", StringComparison.OrdinalIgnoreCase)
+            If Not keepsCaptureWhiteBalance Then
+                If TryGetXmpDouble(values, "IncrementalTemperature", d) Then
+                    adj.Temperature = Clamp100(d)
+                ElseIf TryGetXmpDouble(values, "Temperature", d) AndAlso d >= 1000 Then
+                    ' Absolutes Kelvin (Adobe-Bereich 2000..50000). Der >=1000-Wächter trennt es sicher von
+                    ' einem versehentlich relativen Wert; crs:Temperature ist bei Adobe immer Kelvin.
+                    adj.Temperature = KelvinToRelativeTemperature(d)
+                End If
+                If TryGetXmpDouble(values, "IncrementalTint", d) Then
+                    ' Tint deckt den vollen Adobe-Bereich ab: absolutes crs:Tint reicht bis ±150.
+                    adj.Tint = Clamp(d, -150, 150)
+                ElseIf TryGetXmpDouble(values, "Tint", d) Then
+                    adj.Tint = Clamp(d, -150, 150)
+                End If
             End If
 
             ' HUE-Skalierung (Audit 2026-07-22): Adobes HueAdjustment* ±100 verschiebt den Farbton
@@ -179,6 +214,30 @@ Namespace Services
             If TryGetXmpDouble(values, "HueAdjustmentMagenta", d) Then adj.MagentaHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentMagenta", d) Then adj.MagentaSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentMagenta", d) Then adj.MagentaLuminance = Clamp100(d)
+
+            ''' SCHWARZWEISS-MISCHER (crs:GrayMixer*). Lightroom ersetzt im S/W-Modus das ganze HSL-Panel
+            ''' durch diese acht Regler - sie bestimmen, wie hell jeder Farbbereich im Grau landet, und
+            ''' sind damit der eigentliche Charakter eines S/W-Presets (gemessen an einer echten Sammlung:
+            ''' Silvertide zieht Aqua +32, Blau +39, Purpur +27, Magenta +26 hoch). Ohne sie kam JEDES
+            ''' S/W-Preset als dieselbe flache Entsättigung an.
+            ''' Abgebildet auf die vorhandenen HSL-LUMINANZ-Bänder - es sind dieselben acht Farbbereiche,
+            ''' und die HSL-Stufe läuft in der Punktoperationskette VOR der S/W-Matrix (siehe
+            ''' ImageProcessorPointOps: HSL-Bänder, dann Preset-Farbmatrix). Die Gewichtung greift also
+            ''' noch am farbigen Pixel, genau wie bei Adobe.
+            ''' ÜBERSCHREIBT LuminanceAdjustment* bewusst: im S/W-Modus wertet Lightroom die Farb-HSL-
+            ''' Regler nicht mehr aus, ein aus dem Farbteil geerbter Wert wäre ein Rest, kein Look.
+            ''' Nur im S/W-Modus - sonst würde ein Farbpreset, das die Werte für einen möglichen
+            ''' S/W-Wechsel bloß mitschleppt, seine Farbluminanzen verlieren.
+            If String.Equals(adj.FilterPreset, "S/W", StringComparison.Ordinal) Then
+                If TryGetXmpDouble(values, "GrayMixerRed", d) Then adj.RedLuminance = Clamp100(d)
+                If TryGetXmpDouble(values, "GrayMixerOrange", d) Then adj.OrangeLuminance = Clamp100(d)
+                If TryGetXmpDouble(values, "GrayMixerYellow", d) Then adj.YellowLuminance = Clamp100(d)
+                If TryGetXmpDouble(values, "GrayMixerGreen", d) Then adj.GreenLuminance = Clamp100(d)
+                If TryGetXmpDouble(values, "GrayMixerAqua", d) Then adj.AquaLuminance = Clamp100(d)
+                If TryGetXmpDouble(values, "GrayMixerBlue", d) Then adj.BlueLuminance = Clamp100(d)
+                If TryGetXmpDouble(values, "GrayMixerPurple", d) Then adj.PurpleLuminance = Clamp100(d)
+                If TryGetXmpDouble(values, "GrayMixerMagenta", d) Then adj.MagentaLuminance = Clamp100(d)
+            End If
 
             ''' crs:SplitToning*Hue ist bereits 0..360, *Saturation 0..100 - beides deckungsgleich mit den
             ''' Split-Toning-Reglern dieser App, keine Skalierung nötig. Balance ist bei beiden -100..100.
@@ -320,6 +379,85 @@ Namespace Services
             Return nodesY(nodesY.Length - 1)
         End Function
 
+        ''' <summary>Das PROFIL eines Presets (crs:Look), soweit es aus der .xmp ablesbar ist. Die
+        ''' eigentlichen Profildaten (eine 3D-Farbtabelle) stecken NICHT in der Datei - Lightroom holt sie
+        ''' über die UUID aus seiner Profilbibliothek und schreibt deshalb crs:Stubbed="true". Ein Profil
+        ''' exakt nachzubilden ist damit unmöglich; ablesbar bleiben Name, Gruppe und Stärke. Genau daran
+        ''' hängt aber die Entscheidung "ist dieses Preset schwarzweiß?" - siehe LoadLook.</summary>
+        Private Class LookProfile
+            Public Name As String = ""
+            Public Group As String = ""
+            Public Amount As Double = 1.0
+            Public HasAmount As Boolean = False
+            ''' Lightroom sperrt den Stärkeregler bei manchen Profilen (crs:SupportsAmount="false").
+            Public SupportsAmount As Boolean = True
+
+            ''' <summary>Erkennt ein monochromes Profil an Name ODER Gruppe. Adobe benennt sie
+            ''' "Adobe Monochrome" bzw. gruppiert sie unter "B&amp;W" (Namen wie "B&amp;W 11"); Fremd-
+            ''' profile halten sich in der Praxis daran. Bewusst eine NAMENSPRÜFUNG: die Profildaten
+            ''' fehlen in der Datei, es gibt nichts Messbares.</summary>
+            Public Function IsMonochrome() As Boolean
+                Dim probe = ((Name & " " & Group)).ToLowerInvariant()
+                Return probe.Contains("monochrome") OrElse probe.Contains("b&w") OrElse
+                       probe.Contains("black & white") OrElse probe.Contains("schwarzweiß")
+            End Function
+        End Class
+
+        ''' <summary>Nothing, wenn das Preset kein Profil nennt. Der Name steht als ATTRIBUT in der
+        ''' verschachtelten rdf:Description, die Gruppe dagegen als Elementkörper in einem rdf:Alt -
+        ''' beides braucht seinen eigenen Zugriff.</summary>
+        Private Shared Function ParseLookProfile(xmpText As String) As LookProfile
+            Dim block = Regex.Match(xmpText, "<crs:Look>(?<b>.*?)</crs:Look>", RegexOptions.Singleline)
+            If Not block.Success Then Return Nothing
+            Dim body = block.Groups("b").Value
+
+            Dim result As New LookProfile()
+            Dim nameMatch = Regex.Match(body, "crs:Name\s*=\s*""(?<v>[^""]*)""")
+            If nameMatch.Success Then result.Name = DecodeXmlEntities(nameMatch.Groups("v").Value)
+            ' Gruppe: <crs:Group><rdf:Alt><rdf:li xml:lang="x-default">B&amp;W</rdf:li>…
+            Dim groupMatch = Regex.Match(body, "<crs:Group>.*?<rdf:li[^>]*>(?<v>[^<]*)</rdf:li>", RegexOptions.Singleline)
+            If groupMatch.Success Then result.Group = DecodeXmlEntities(groupMatch.Groups("v").Value)
+
+            Dim amountMatch = Regex.Match(body, "crs:Amount\s*=\s*""(?<v>[^""]*)""")
+            If amountMatch.Success Then
+                Dim parsed As Double
+                If Double.TryParse(amountMatch.Groups("v").Value.Replace("+", ""), NumberStyles.Float,
+                                   CultureInfo.InvariantCulture, parsed) Then
+                    result.Amount = parsed
+                    result.HasAmount = True
+                End If
+            End If
+            Dim supportsMatch = Regex.Match(body, "crs:SupportsAmount\s*=\s*""(?<v>[^""]*)""")
+            If supportsMatch.Success Then
+                result.SupportsAmount = Not String.Equals(supportsMatch.Groups("v").Value, "false",
+                                                          StringComparison.OrdinalIgnoreCase)
+            End If
+            Return result
+        End Function
+
+        ''' Profilnamen wie "B&amp;W 11" kommen XML-kodiert an; ohne Auflösung greift keine Namensprüfung.
+        Private Shared Function DecodeXmlEntities(value As String) As String
+            If String.IsNullOrEmpty(value) Then Return ""
+            Return value.Replace("&lt;", "<").Replace("&gt;", ">").Replace("&quot;", """").
+                         Replace("&apos;", "'").Replace("&amp;", "&").Trim()
+        End Function
+
+        ''' <summary>Entfernt die VERSCHACHTELTEN crs-Blöcke (Profil, lokale Korrekturen, Retusche) aus dem
+        ''' Text. ParseLightroomXmpValues sammelt crs:-Attribute flach über die ganze Datei ein und kennt
+        ''' die Verschachtelung nicht - ein crs:Amount aus dem Profil oder ein crs:Feather aus einer Maske
+        ''' landet dort unter demselben Schlüssel wie ein Regler des Kopf-Blocks und würde ihn stumm
+        ''' überschreiben. Solange LoadLook nur lange, eindeutige Namen las, ging das gut; mit dem Profil
+        ''' kommen kurze Namen ins Spiel, und dann ist die Trennung Pflicht. Betrifft nur die flache
+        ''' Wertetabelle - ParseLocalCorrections und ParseLookProfile bekommen weiter den ganzen Text.</summary>
+        Private Shared Function StripNestedCrsBlocks(text As String) As String
+            If String.IsNullOrEmpty(text) Then Return ""
+            For Each name In {"Look", "GradientBasedCorrections", "CircularGradientBasedCorrections",
+                              "PaintBasedCorrections", "MaskGroupBasedCorrections", "RetouchAreas"}
+                text = Regex.Replace(text, "<crs:" & name & ">.*?</crs:" & name & ">", "", RegexOptions.Singleline)
+            Next
+            Return text
+        End Function
+
         Private Shared Function ParseLightroomXmpValues(text As String) As Dictionary(Of String, String)
             Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
             If String.IsNullOrWhiteSpace(text) Then Return result
@@ -395,6 +533,16 @@ Namespace Services
             Return fallback
         End Function
 
+        ''' Wahrheitswert einer Korrektur-Eigenschaft; fehlt sie, gilt der Rückfall.
+        Private Shared Function CorrFlag(chunk As String, name As String, fallback As Boolean) As Boolean
+            Dim m = Regex.Match(chunk, "crs:" & name & "=""(?<v>[^""]*)""")
+            If Not m.Success Then Return fallback
+            Dim raw = m.Groups("v").Value.Trim()
+            If String.Equals(raw, "true", StringComparison.OrdinalIgnoreCase) OrElse raw = "1" Then Return True
+            If String.Equals(raw, "false", StringComparison.OrdinalIgnoreCase) OrElse raw = "0" Then Return False
+            Return fallback
+        End Function
+
         ''' <summary>Bildet die Local*-Werte einer Correction auf ImageAdjustments ab. Achtung auf die
         ''' Einheiten: Local*2012 (außer Exposure) sind BRÜCHE -1..1 (global sind sie ganze -100..100),
         ''' LocalExposure2012 ist EV wie global. Toning (Hue/Sat) → Farbgradierung-Global der Ebene.</summary>
@@ -438,12 +586,25 @@ Namespace Services
                 Dim parts = Regex.Split(block.Groups("b").Value, "crs:What=""Correction""")
                 For i = 1 To parts.Length - 1
                     Dim chunk = parts(i)
+                    ' crs:CorrectionActive="false" heißt: in Lightroom ist der Haken raus, die Korrektur
+                    ' liegt zwar im Preset, wirkt aber nicht. Bisher ungelesen - eine abgeschaltete Maske
+                    ' kam als aktive Anpassungsebene an, und der Nutzer sah einen Effekt, den das Preset
+                    ' ausdrücklich nicht will. Fehlt das Attribut, gilt aktiv (so schreiben es ältere
+                    ' Erzeuger).
+                    If Not CorrFlag(chunk, "CorrectionActive", True) Then Continue For
+                    ' crs:CorrectionAmount ist die Gesamtstärke der Korrektur (1.0 = voll). Sie gehört mit
+                    ' crs:MaskValue zusammen in die MASKE, nicht in die Regler: Lightroom blendet damit die
+                    ' ganze Korrektur aus, und genau das macht ein flacherer Maskenwert bei uns auch. Über
+                    ' die Regler zu skalieren wäre falsch - Werte wie Farbton skalieren nicht linear.
+                    Dim correctionAmount = CorrAttr(chunk, "CorrectionAmount", 1.0)
+                    If correctionAmount <= 0 Then Continue For
+
                     Dim mm = Regex.Match(chunk, "<rdf:li\s(?<body>[^>]*?crs:What=""Mask/(?<t>[A-Za-z]+)""[^>]*?)/>", RegexOptions.Singleline)
                     If Not mm.Success Then Continue For
                     Dim body = mm.Groups("body").Value
                     Dim spec As New LocalCorrectionSpec With {
                         .MaskType = mm.Groups("t").Value,
-                        .MaskValue = CorrAttr(body, "MaskValue", 1.0),
+                        .MaskValue = Math.Max(0.0, Math.Min(1.0, CorrAttr(body, "MaskValue", 1.0) * correctionAmount)),
                         .Adjustments = BuildLocalAdjustments(chunk)
                     }
                     If Not HasAnyLocalEffect(spec.Adjustments) Then Continue For

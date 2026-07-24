@@ -1084,6 +1084,10 @@ Namespace Services
         ''' <summary>Detailanhebung der Unschärfemaske, 0-100. 0 = neutral; höher = die feinen
         ''' Hochfrequenzanteile werden stärker herausgearbeitet.</summary>
         Public Property SharpenDetail As Single = 0
+        ''' <summary>Kantenmaskierung der Schärfung, 0-100 (Adobes „Maskieren"). 0 = die ganze Fläche wird
+        ''' geschärft (bisheriges Verhalten); höher = die Schärfung zieht sich auf die Kanten zurück, glatte
+        ''' Flächen wie Himmel und Haut bleiben ruhig. Bei 0 rechnet ApplySharpness bitgenau wie zuvor.</summary>
+        Public Property SharpenMasking As Single = 0
         Public Property NoiseReduction As Single = 0
         ''' <summary>Kantenerhalt der (gaußschen) Rauschreduzierung, 0-100. 0 = reines Weichzeichnen wie
         ''' bisher; höher = an kontrastreichen Kanten wird das Original zurückgemischt, Details bleiben
@@ -2883,7 +2887,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             End If
 
             If adj.Sharpness > 0 Then
-                processed = ReplaceBitmap(processed, ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F))
+                processed = ReplaceBitmap(processed, ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F))
             End If
 
             If adj.Vignette <> 0 Then
@@ -3881,6 +3885,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
+                adj.SharpenMasking,
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.ColorNoiseReduction,
                 adj.DustScratches, adj.Haze, adj.AddNoise, adj.[Structure], adj.Glow,
 adj.CalibrationRedHue, adj.CalibrationRedSaturation,
@@ -8504,18 +8509,47 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         '''
         ''' Randbehandlung wie zuvor SKShaderTileMode.Clamp: ausserhalb liegende Nachbarn werden auf
         ''' den Rand geklemmt. Alpha bleibt unveraendert (entsprach convolveAlpha:=False).</summary>
-        ''' <summary>Schärfen. Ohne Radius/Detail (beide 0) die bisherige feste 3×3-Maske, bitgenau
-        ''' unverändert; sonst eine echte Unschärfemaske mit variablem Radius und Detailanhebung.</summary>
-        Private Shared Function ApplySharpness(source As SKBitmap, amount As Single, radiusAmount As Single, detailAmount As Single) As SKBitmap
-            If radiusAmount <= 0 AndAlso detailAmount <= 0 Then Return ApplySharpness3x3(source, amount)
-            Return ApplyUnsharpMask(source, amount, radiusAmount, detailAmount)
+        ''' <summary>Schärfen. Ohne Radius/Detail/Maskierung (alle 0) die bisherige feste 3×3-Maske,
+        ''' bitgenau unverändert; sonst eine echte Unschärfemaske mit variablem Radius, Detailanhebung
+        ''' und Kantenmaskierung.</summary>
+        Private Shared Function ApplySharpness(source As SKBitmap, amount As Single, radiusAmount As Single,
+                                               detailAmount As Single, maskingAmount As Single) As SKBitmap
+            ' Die Maskierung MUSS die 3x3-Abkuerzung mit abwaehlen: dort gibt es keine Kantenmaske, ein
+            ' allein gezogener Maskierungsregler waere sonst ein stummer No-Op.
+            If radiusAmount <= 0 AndAlso detailAmount <= 0 AndAlso maskingAmount <= 0 Then Return ApplySharpness3x3(source, amount)
+            Return ApplyUnsharpMask(source, amount, radiusAmount, detailAmount, maskingAmount)
+        End Function
+
+        ''' <summary>Kantenstärke, ab der die Maskierung voll durchlässt - gemessen als Summe der
+        ''' Helligkeitsunterschiede zu den vier Nachbarn (0..255 je Richtung). 48 liegt deutlich über dem
+        ''' Rauschen eines normal belichteten Fotos und deutlich unter einer echten Motivkante.</summary>
+        Private Const SharpenEdgeFullScale As Single = 48.0F
+
+        ''' <summary>Helligkeit eines Pixels für die Kantenmessung. Über ReadUnpremultiplied, weil die
+        ''' Puffer premultipliziert vorliegen können - roh gelesen wäre in halbtransparenten Bereichen die
+        ''' Alpha-Kante als Motivkante durchgegangen.</summary>
+        Private Shared Function LumaAt(buf As Byte(), offset As Integer, ri As Integer, gi As Integer,
+                                       bi As Integer, ai As Integer) As Single
+            Dim r As Integer, g As Integer, b As Integer, a As Integer
+            ReadUnpremultiplied(buf, offset, ri, gi, bi, ai, r, g, b, a)
+            Return 0.299F * r + 0.587F * g + 0.114F * b
         End Function
 
         ''' <summary>Unschärfemaske: Bild − Gaußunschärfe ergibt die Hochfrequenzanteile, die verstärkt
-        ''' aufaddiert werden. Radius steuert das Gauß-Sigma (Wirkgröße), Detail die Verstärkung.</summary>
-        Private Shared Function ApplyUnsharpMask(source As SKBitmap, amount As Single, radiusAmount As Single, detailAmount As Single) As SKBitmap
+        ''' aufaddiert werden. Radius steuert das Gauß-Sigma (Wirkgröße), Detail die Verstärkung.
+        '''
+        ''' MASKIERUNG (Adobes „Maskieren", crs:SharpenEdgeMasking): die Verstärkung wird je Pixel mit der
+        ''' lokalen Kantenstärke gewichtet. 0 = überall voll (wie bisher), 100 = nur noch an Kanten. Die
+        ''' Formel ist eine NÄHERUNG an Adobe (deren Maske steckt im geschlossenen Camera-Raw-Kern):
+        ''' gewicht = (1 − m) + m · kante, mit kante = smoothstep der Gradientensumme. Sie hat die
+        ''' richtigen Endpunkte (m=0 → überall 1, m=100 → glatte Fläche 0, Kante 1) und läuft dazwischen
+        ''' stetig, statt eine harte Schwelle zu ziehen - eine harte Schwelle setzt bei Rauschen sichtbare
+        ''' Flecken, weil benachbarte Pixel auf verschiedene Seiten fallen.</summary>
+        Private Shared Function ApplyUnsharpMask(source As SKBitmap, amount As Single, radiusAmount As Single,
+                                                 detailAmount As Single, maskingAmount As Single) As SKBitmap
             Dim sigma = 0.8F + Clamp(radiusAmount, 0, 1) * 2.7F
             Dim gain = amount * (1.0F + Clamp(detailAmount, 0, 1) * 1.5F)
+            Dim masking = Clamp(maskingAmount, 0, 1)
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Dim blurred = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
@@ -8542,6 +8576,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Sub(y)
                     Dim rowOffset = y * stride
                     Dim bRow = y * bStride
+                    ' Zeilen ober-/unterhalb für den senkrechten Gradienten; am Bildrand auf die eigene
+                    ' Zeile geklemmt (wie die restliche Randbehandlung dieser Datei).
+                    Dim upRow = If(y > 0, (y - 1) * stride, rowOffset)
+                    Dim downRow = If(y < h - 1, (y + 1) * stride, rowOffset)
                     For x = 0 To w - 1
                         Dim o = rowOffset + x * 4
                         Dim bo = bRow + x * 4
@@ -8549,10 +8587,24 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
                         Dim lr As Integer, lg As Integer, lb As Integer, la As Integer
                         ReadUnpremultiplied(blurBuf, bo, bri, bgi, bbi, bai, lr, lg, lb, la)
+
+                        Dim pixelGain = gain
+                        If masking > 0 Then
+                            Dim leftOff = rowOffset + If(x > 0, (x - 1) * 4, 0)
+                            Dim rightOff = rowOffset + If(x < w - 1, (x + 1) * 4, (w - 1) * 4)
+                            Dim edge = Clamp((Math.Abs(LumaAt(srcBuf, leftOff, ri, gi, bi, ai) - LumaAt(srcBuf, rightOff, ri, gi, bi, ai)) +
+                                              Math.Abs(LumaAt(srcBuf, upRow + x * 4, ri, gi, bi, ai) - LumaAt(srcBuf, downRow + x * 4, ri, gi, bi, ai))) /
+                                             SharpenEdgeFullScale, 0, 1)
+                            ' Smoothstep: an beiden Enden Ableitung null, der Übergang von "glatt" nach
+                            ' "Kante" zieht deshalb keine sichtbare Linie ins Bild.
+                            edge = edge * edge * (3.0F - 2.0F * edge)
+                            pixelGain = gain * ((1.0F - masking) + masking * edge)
+                        End If
+
                         WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                            ClampToByte(cr + gain * (cr - lr)),
-                            ClampToByte(cg + gain * (cg - lg)),
-                            ClampToByte(cb + gain * (cb - lb)), a)
+                            ClampToByte(cr + pixelGain * (cr - lr)),
+                            ClampToByte(cg + pixelGain * (cg - lg)),
+                            ClampToByte(cb + pixelGain * (cb - lb)), a)
                     Next
                 End Sub)
 

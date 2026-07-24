@@ -4058,4 +4058,22 @@
   <data name="Das_Bild_konnte_nicht_analysiert_werden_bc3f2a3f" xml:space="preserve">
     <value>Impossible d'analyser l'image</value>
   </data>
+  <data name="Datei_nicht_gefunden_3cc1ce35" xml:space="preserve">
+    <value>Fichier introuvable</value>
+  </data>
+  <data name="Die_Datei_ist_nicht_mehr_vorhanden_0_Soll_der_Ei_e639d762" xml:space="preserve">
+    <value>Le fichier n’existe plus : {0}. Voulez-vous retirer l’entrée de la liste ?</value>
+  </data>
+  <data name="Behalten_99f6d4d3" xml:space="preserve">
+    <value>Conserver</value>
+  </data>
+  <data name="Eintrag_aus_der_Liste_entfernt_85b7bc11" xml:space="preserve">
+    <value>Entrée retirée de la liste</value>
+  </data>
+  <data name="Maskierung_964c3806" xml:space="preserve">
+    <value>Masquage</value>
+  </data>
+  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
+    <value>Limite l’accentuation aux contours : 0 accentue toute la surface, des valeurs plus élevées laissent tranquilles les zones lisses comme le ciel et la peau.</value>
+  </data>
 </root>
