@@ -4018,4 +4018,25 @@
   <data name="Zeigt_die_Metadaten_Symbole_EXIF_IPTC_XMP_ICC_au_b5e647fb" xml:space="preserve">
     <value>Mostra os ícones de metadados (EXIF, IPTC, XMP, ICC) no bloco permanentemente em vez de apenas ao passar o rato.</value>
   </data>
+  <data name="Als_Bild_kopieren_f707a88e" xml:space="preserve">
+    <value>Copiar como imagem</value>
+  </data>
+  <data name="Auswahl_als_Korrekturebene_62bc6d0e" xml:space="preserve">
+    <value>Seleção como camada de ajuste</value>
+  </data>
+  <data name="Aus_der_Auswahl_direkt_eine_maskierte_Korrekture_4c153e49" xml:space="preserve">
+    <value>Criar uma camada de ajuste com máscara diretamente a partir da seleção (sem precisar alterar primeiro um ajuste)</value>
+  </data>
+  <data name="Auswahl_Korrektur_0bc9f496" xml:space="preserve">
+    <value>Correção de seleção</value>
+  </data>
+  <data name="Masken_Korrektur_99247e22" xml:space="preserve">
+    <value>Correção de máscara</value>
+  </data>
+  <data name="Neue_Maskenebene_7e9e5245" xml:space="preserve">
+    <value>Nova camada de máscara</value>
+  </data>
+  <data name="Neue_Korrekturebene_d50075bf" xml:space="preserve">
+    <value>Nova camada de ajuste</value>
+  </data>
 </root>

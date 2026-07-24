@@ -1287,9 +1287,15 @@ Namespace Views
                     ' Add/Subtract/Intersect starten auch innerhalb der bestehenden Auswahl eine neue
                     ' Kandidatenform; nur "Neu" nutzt den Treffer zum Verschieben der Auswahl.
                 End If
+                ' Ein Klick AUSSERHALB hebt die Auswahl nur auf, wenn ein Klick dort das auch bedeuten soll:
+                ' im Verschieben-Modus oder bei "Neu". In Hinzufügen/Abziehen/Schnittmenge beginnt ein Klick
+                ' außerhalb eine WEITERE Region und darf die bestehende Auswahl/Maske NIE löschen - sonst
+                ' löscht ein Lasso im +-Modus, das außerhalb ansetzt, die vorhandene Auswahl statt sie zu
+                ' ergänzen (Nutzer-Befund 2026-07-24).
                 _selectionClickOutsideActiveSelection = vm.HasActiveSelection AndAlso
                                                         vm.SelectionMode <> "MagicWand" AndAlso
-                                                        Not clickedInsideSelection
+                                                        Not clickedInsideSelection AndAlso
+                                                        (vm.SelectionMode = "Move" OrElse vm.SelectionCombineMode = "New")
                 _selectionGestureStart = rawPos
                 _selectionGestureMoved = False
                 _selectionDragReplacesExisting = vm.HasActiveSelection AndAlso
@@ -2415,10 +2421,12 @@ Namespace Views
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            ' Masken-Pinsel: rotes Quick-Mask-Overlay über das ganze Bild (deckungsgleich zum After-Bild),
-            ' KEINE Laufameisen. Das rote Bild deckt den ganzen Anzeigebereich ab (siehe
-            ' BuildSelectionRedOverlayBitmap) und wird per Stretch=Fill auf das Bildrechteck gestreckt.
-            If vm IsNot Nothing AndAlso IsMaskBrushActive(vm) AndAlso vm.SelectionMaskPreviewImage IsNot Nothing Then
+            ' MASKE = rotes Quick-Mask-Overlay über das ganze Bild, KEINE Laufameisen. Entscheidend ist die
+            ' ART der aktiven Auswahl (ActiveSelectionIsMask), NICHT das Werkzeug - so zeigt eine Masken-
+            ' Ebene überall rot, eine Auswahl-Ebene überall Ameisen. Das rote Bild deckt den ganzen
+            ' Anzeigebereich ab (BuildSelectionRedOverlayBitmap) und wird per Stretch=Fill gestreckt.
+            If vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
+               vm.ActiveSelectionIsMask AndAlso vm.SelectionMaskPreviewImage IsNot Nothing Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
                 If maskOverlay IsNot Nothing Then
                     maskOverlay.IsVisible = True

@@ -30,7 +30,8 @@ Namespace ViewModels
         Public ReadOnly Property LayerLabel As String
             Get
                 If AdjustmentLayer IsNot Nothing Then
-                    Return If(String.IsNullOrWhiteSpace(AdjustmentLayer.Name), LocalizationService.T("Lokale Korrektur"), AdjustmentLayer.Name)
+                    If Not String.IsNullOrWhiteSpace(AdjustmentLayer.Name) Then Return AdjustmentLayer.Name
+                    Return If(AdjustmentLayer.IsMaskLayer, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur"))
                 End If
                 Return If(Annotation Is Nothing, "Ebene", Annotation.LayerLabel)
             End Get
@@ -72,7 +73,14 @@ Namespace ViewModels
 
         Public ReadOnly Property IconSource As String
             Get
-                If AdjustmentLayer IsNot Nothing Then Return "avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
+                ' Art-abhängiges Symbol: MASKEN-Ebene = Masken-Symbol (rotes Overlay im Bild), AUSWAHL-Ebene
+                ' = Laufameisen-Rechteck (Ameisen im Bild). So sind die beiden im Panel unterscheidbar - und
+                ' von der globalen Bildanpassungen-Zeile (Regler-Symbol) und Objekt-Ebenen.
+                If AdjustmentLayer IsNot Nothing Then
+                    Return If(AdjustmentLayer.IsMaskLayer,
+                              "avares://FerrumPix/Assets/Icons/outline/mask.svg",
+                              "avares://FerrumPix/Assets/Icons/outline/marquee.svg")
+                End If
                 Return If(Annotation Is Nothing, "", Annotation.IconSource)
             End Get
         End Property

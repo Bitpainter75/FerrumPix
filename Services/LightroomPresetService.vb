@@ -214,7 +214,11 @@ Namespace Services
             ''' wirken übereinander. Wird sie ignoriert, fehlt Presets, die ihren Tonwert-Look darüber
             ''' aufbauen, genau dieser Teil. Sie wird deshalb in die Punktkurve eingerechnet - eine
             ''' Annäherung an Adobes Kurvenform, kein exakter Nachbau.
-            Dim combinedCurve = ApplyParametricCurve(values, ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012"))
+            ' Punktkurve: bevorzugt PV2012; fehlt sie (alte PV2003/2010-Presets), auf die Alt-Kurve
+            ' <crs:ToneCurve> zurückfallen (gleiches rdf:Seq-Format). Beide durchlaufen dieselbe Faltung.
+            Dim mainCurvePoints = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012")
+            If mainCurvePoints Is Nothing Then mainCurvePoints = ParseLightroomCurvePoints(xmpText, "ToneCurve")
+            Dim combinedCurve = ApplyParametricCurve(values, mainCurvePoints)
             If combinedCurve IsNot Nothing Then adj.CurveRgbPoints = combinedCurve
             Dim redCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Red")
             If redCurve IsNot Nothing Then adj.CurveRedPoints = redCurve
@@ -366,6 +370,96 @@ Namespace Services
             Next
             If points.Count < 2 Then Return Nothing
             Return String.Join(";", points)
+        End Function
+
+        ''' <summary>Eine lokale Korrektur aus einem XMP-Preset: Masken-Geometrie (roh, wird erst zur
+        ''' Anwendungszeit mit den Bildmaßen gerastert) plus die auf unsere Regler abgebildeten
+        ''' Local*-Werte.</summary>
+        Public Class LocalCorrectionSpec
+            Public MaskType As String                 ' "Gradient" | "CircularGradient"
+            Public MaskValue As Double = 1.0
+            Public ZeroX, ZeroY, FullX, FullY As Double
+            Public Top, Left, Bottom, Right, Angle, Feather As Double
+            Public Flipped As Boolean
+            Public Adjustments As ImageAdjustments
+        End Class
+
+        Private Shared Function CorrAttr(chunk As String, name As String, fallback As Double) As Double
+            Dim m = Regex.Match(chunk, "crs:" & name & "=""(?<v>[^""]*)""")
+            If Not m.Success Then Return fallback
+            Dim raw = m.Groups("v").Value.Replace("+", "")
+            Dim d As Double
+            If Double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, d) Then Return d
+            Return fallback
+        End Function
+
+        ''' <summary>Bildet die Local*-Werte einer Correction auf ImageAdjustments ab. Achtung auf die
+        ''' Einheiten: Local*2012 (außer Exposure) sind BRÜCHE -1..1 (global sind sie ganze -100..100),
+        ''' LocalExposure2012 ist EV wie global. Toning (Hue/Sat) → Farbgradierung-Global der Ebene.</summary>
+        Private Shared Function BuildLocalAdjustments(chunk As String) As ImageAdjustments
+            Dim a As New ImageAdjustments()
+            a.Exposure = Clamp100(CorrAttr(chunk, "LocalExposure2012", 0) * 25.0)
+            a.Contrast = Clamp100(CorrAttr(chunk, "LocalContrast2012", 0) * 100.0)
+            a.Highlights = Clamp100(CorrAttr(chunk, "LocalHighlights2012", 0) * 100.0)
+            a.ShadowsLevel = Clamp100(CorrAttr(chunk, "LocalShadows2012", 0) * 100.0)
+            a.Whites = Clamp100(CorrAttr(chunk, "LocalWhites2012", 0) * 100.0)
+            a.Blacks = Clamp100(CorrAttr(chunk, "LocalBlacks2012", 0) * 100.0)
+            a.Clarity = Clamp100(CorrAttr(chunk, "LocalClarity2012", 0) * 100.0)
+            a.Haze = Clamp100(-CorrAttr(chunk, "LocalDehaze", 0) * 100.0)
+            a.Saturation = Clamp100(CorrAttr(chunk, "LocalSaturation", 0) * 100.0)
+            a.Temperature = Clamp100(CorrAttr(chunk, "LocalTemperature", 0) * 100.0)
+            a.Tint = Clamp100(CorrAttr(chunk, "LocalTint", 0) * 100.0)
+            Dim tSat = CorrAttr(chunk, "LocalToningSaturation", 0)
+            If tSat > 0 Then
+                a.ColorGradeGlobalHue = Clamp(CorrAttr(chunk, "LocalToningHue", 0), 0, 360)
+                a.ColorGradeGlobalSaturation = Clamp(tSat, 0, 100)
+            End If
+            Return a
+        End Function
+
+        Private Shared Function HasAnyLocalEffect(a As ImageAdjustments) As Boolean
+            Return a IsNot Nothing AndAlso (a.Exposure <> 0 OrElse a.Contrast <> 0 OrElse a.Highlights <> 0 OrElse
+                a.ShadowsLevel <> 0 OrElse a.Whites <> 0 OrElse a.Blacks <> 0 OrElse a.Clarity <> 0 OrElse
+                a.Haze <> 0 OrElse a.Saturation <> 0 OrElse a.Temperature <> 0 OrElse a.Tint <> 0 OrElse
+                a.ColorGradeGlobalSaturation <> 0)
+        End Function
+
+        ''' <summary>Parst die lokalen Korrekturen (Radial-/Verlaufsmasken) eines XMP-Presets. Jede
+        ''' Correction (in GradientBasedCorrections bzw. CircularGradientBasedCorrections) hat genau eine
+        ''' Maske und ihre Local*-Werte; Pinsel-/Bereichsmasken werden (noch) übersprungen.</summary>
+        Public Shared Function ParseLocalCorrections(xmpText As String) As List(Of LocalCorrectionSpec)
+            Dim result As New List(Of LocalCorrectionSpec)()
+            If String.IsNullOrEmpty(xmpText) Then Return result
+            For Each container In {"GradientBasedCorrections", "CircularGradientBasedCorrections"}
+                Dim block = Regex.Match(xmpText, "<crs:" & container & ">(?<b>.*?)</crs:" & container & ">", RegexOptions.Singleline)
+                If Not block.Success Then Continue For
+                Dim parts = Regex.Split(block.Groups("b").Value, "crs:What=""Correction""")
+                For i = 1 To parts.Length - 1
+                    Dim chunk = parts(i)
+                    Dim mm = Regex.Match(chunk, "<rdf:li\s(?<body>[^>]*?crs:What=""Mask/(?<t>[A-Za-z]+)""[^>]*?)/>", RegexOptions.Singleline)
+                    If Not mm.Success Then Continue For
+                    Dim body = mm.Groups("body").Value
+                    Dim spec As New LocalCorrectionSpec With {
+                        .MaskType = mm.Groups("t").Value,
+                        .MaskValue = CorrAttr(body, "MaskValue", 1.0),
+                        .Adjustments = BuildLocalAdjustments(chunk)
+                    }
+                    If Not HasAnyLocalEffect(spec.Adjustments) Then Continue For
+                    If String.Equals(spec.MaskType, "CircularGradient", StringComparison.Ordinal) Then
+                        spec.Top = CorrAttr(body, "Top", 0) : spec.Left = CorrAttr(body, "Left", 0)
+                        spec.Bottom = CorrAttr(body, "Bottom", 1) : spec.Right = CorrAttr(body, "Right", 1)
+                        spec.Angle = CorrAttr(body, "Angle", 0)
+                        spec.Feather = CorrAttr(body, "Feather", 50)
+                        Dim m2 = Regex.Match(body, "crs:Flipped=""(?<v>[^""]*)""")
+                        spec.Flipped = m2.Success AndAlso String.Equals(m2.Groups("v").Value, "true", StringComparison.OrdinalIgnoreCase)
+                    Else
+                        spec.ZeroX = CorrAttr(body, "ZeroX", 0) : spec.ZeroY = CorrAttr(body, "ZeroY", 0)
+                        spec.FullX = CorrAttr(body, "FullX", 1) : spec.FullY = CorrAttr(body, "FullY", 0)
+                    End If
+                    result.Add(spec)
+                Next
+            Next
+            Return result
         End Function
 
     End Class

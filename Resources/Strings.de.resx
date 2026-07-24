@@ -4019,4 +4019,25 @@
   <data name="Zeigt_die_Metadaten_Symbole_EXIF_IPTC_XMP_ICC_au_b5e647fb" xml:space="preserve">
     <value>Zeigt die Metadaten-Symbole (EXIF, IPTC, XMP, ICC) auf der Kachel dauerhaft an statt erst beim Überfahren mit der Maus.</value>
   </data>
+  <data name="Als_Bild_kopieren_f707a88e" xml:space="preserve">
+    <value>Als Bild kopieren</value>
+  </data>
+  <data name="Auswahl_als_Korrekturebene_62bc6d0e" xml:space="preserve">
+    <value>Auswahl als Korrekturebene</value>
+  </data>
+  <data name="Aus_der_Auswahl_direkt_eine_maskierte_Korrekture_4c153e49" xml:space="preserve">
+    <value>Aus der Auswahl direkt eine maskierte Korrekturebene erstellen (ohne erst eine Anpassung ändern zu müssen)</value>
+  </data>
+  <data name="Auswahl_Korrektur_0bc9f496" xml:space="preserve">
+    <value>Auswahl-Korrektur</value>
+  </data>
+  <data name="Masken_Korrektur_99247e22" xml:space="preserve">
+    <value>Masken-Korrektur</value>
+  </data>
+  <data name="Neue_Maskenebene_7e9e5245" xml:space="preserve">
+    <value>Neue Maskenebene</value>
+  </data>
+  <data name="Neue_Korrekturebene_d50075bf" xml:space="preserve">
+    <value>Neue Korrekturebene</value>
+  </data>
 </root>

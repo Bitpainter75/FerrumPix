@@ -1007,13 +1007,39 @@ Namespace Services
         Public Property IsVisible As Boolean = True
         Public Property Opacity As Single = 1.0F
         Public Property Adjustments As ImageAdjustments = New ImageAdjustments()
+        ''' <summary>True = diese Ebene wurde aus einem Lightroom-Preset importiert (lokale Korrektur).
+        ''' Beim Anwenden eines ANDEREN Presets werden diese entfernt, damit sich Presets nicht
+        ''' aufeinander stapeln - manuell erstellte Ebenen (False) bleiben davon unberührt.</summary>
+        Public Property FromPreset As Boolean = False
+        ''' <summary>Thematische Art der Ebene: False = AUSWAHL-Ebene (aus Rechteck/Ellipse/Lasso/
+        ''' Zauberstab, im Editor als Laufameisen), True = MASKEN-Ebene (aus Masken-Pinsel/Verlauf, im
+        ''' Editor als rotes Overlay). Steuert Symbol/Name im Ebenen-Panel und die Overlay-Darstellung.</summary>
+        Public Property IsMaskLayer As Boolean = False
+
+        ''' <summary>DEKLARATIVE Füllung (kein PNG/Objekt): leer = keine Füllung, sonst "Solid"/
+        ''' "LinearGradient"/"RadialGradient". Bei einer AUSWAHL-Ebene wird die Füllung SICHTBAR in die
+        ''' Auswahl komponiert (Farbe/Verlauf); bei einer MASKEN-Ebene stuft die LUMINANZ der Füllung die
+        ''' Maske ab und bestimmt so, wie stark die Anpassung der Ebene je Bereich wirkt. Der Render zeichnet
+        ''' beides selbst - so bleibt die Füllung nachträglich änderbar (Winkel/Farben) statt eingebrannt.</summary>
+        Public Property FillKind As String = ""
+        Public Property FillColor As String = "#FFFFFFFF"
+        Public Property FillColor2 As String = "#FF000000"
+        Public Property FillAngle As Double = 0
+        Public Property FillInverted As Boolean = False
 
         Public Function Clone() As MaskedAdjustmentLayer
             Return New MaskedAdjustmentLayer With {
                 .Id = Id, .Name = Name, .MaskId = MaskId,
-                .IsVisible = IsVisible, .Opacity = Opacity,
+                .IsVisible = IsVisible, .Opacity = Opacity, .FromPreset = FromPreset, .IsMaskLayer = IsMaskLayer,
+                .FillKind = FillKind, .FillColor = FillColor, .FillColor2 = FillColor2,
+                .FillAngle = FillAngle, .FillInverted = FillInverted,
                 .Adjustments = If(Adjustments Is Nothing, New ImageAdjustments(), Adjustments.Clone())
             }
+        End Function
+
+        ''' <summary>True, wenn diese Ebene eine deklarative Füllung trägt.</summary>
+        Public Function HasFill() As Boolean
+            Return Not String.IsNullOrWhiteSpace(FillKind)
         End Function
     End Class
 
@@ -2894,20 +2920,108 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                                      GroupBy(Function(m) m.Id, StringComparer.Ordinal).
                                      ToDictionary(Function(g) g.Key, Function(g) g.First(), StringComparer.Ordinal)
             For Each layer In adj.MaskedAdjustmentLayers
-                If layer Is Nothing OrElse Not layer.IsVisible OrElse layer.Adjustments Is Nothing OrElse
-                   Not layer.Adjustments.HasPixelAdjustments() Then Continue For
+                If layer Is Nothing OrElse Not layer.IsVisible Then Continue For
+                Dim hasAdj = layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.HasPixelAdjustments()
+                Dim hasFill = layer.HasFill()
+                ' Auch Ebenen OHNE Pixel-Anpassung verarbeiten, wenn sie eine deklarative Füllung tragen
+                ' (sichtbare Auswahl-Füllung bzw. Masken-Abstufung).
+                If Not hasAdj AndAlso Not hasFill Then Continue For
                 Dim maskData As ImageMask = Nothing
                 If Not masksById.TryGetValue(If(layer.MaskId, ""), maskData) Then Continue For
 
+                ' MASKEN-Ebene: die Füllung stuft die Maske ab (Modulation in BuildPersistentMaskForOutput).
+                ' AUSWAHL-Ebene: die Maske bleibt Form, die Füllung wird separat sichtbar komponiert.
+                Dim modulateFill = hasFill AndAlso layer.IsMaskLayer
                 Using mask = BuildPersistentMaskForOutput(maskData, adj, pipelineInputWidth, pipelineInputHeight,
-                                                          processed.Width, processed.Height, layer.Opacity)
+                                                          processed.Width, processed.Height, layer.Opacity,
+                                                          If(modulateFill, layer, Nothing))
                     If mask Is Nothing Then Continue For
-                    Using adjusted = ApplyPixelAdjustmentStages(processed, layer.Adjustments.ExtractPixelAdjustments())
-                        processed = ReplaceBitmap(processed, CompositeSelectionScoped(processed, adjusted, mask))
-                    End Using
+                    If hasAdj Then
+                        Using adjusted = ApplyPixelAdjustmentStages(processed, layer.Adjustments.ExtractPixelAdjustments())
+                            processed = ReplaceBitmap(processed, CompositeSelectionScoped(processed, adjusted, mask))
+                        End Using
+                    End If
+                    ' Sichtbare Füllung nur für AUSWAHL-Ebenen (Masken-Ebenen nutzen die Füllung als Abstufung).
+                    If hasFill AndAlso Not layer.IsMaskLayer Then
+                        Dim filled = CompositeVisibleFill(processed, mask, layer)
+                        If filled IsNot Nothing Then processed = ReplaceBitmap(processed, filled)
+                    End If
                 End Using
             Next
             Return processed
+        End Function
+
+        ''' <summary>Komponiert die deklarative Füllung einer AUSWAHL-Ebene SICHTBAR in ihre Auswahlregion:
+        ''' Vollfarbe/Verlauf/radial über die Bounding-Box der Maske, Deckung = Maskenwert × Eigen-Alpha der
+        ''' Füllung. So erscheint die Füllung als Farbfläche/Verlauf in der Auswahl - ohne PNG-Objekt.</summary>
+        Private Shared Function CompositeVisibleFill(processed As SKBitmap, mask As SKBitmap, layer As MaskedAdjustmentLayer) As SKBitmap
+            If processed Is Nothing OrElse mask Is Nothing OrElse layer Is Nothing Then Return Nothing
+            Dim w = processed.Width, h = processed.Height
+            If mask.Width <> w OrElse mask.Height <> h Then Return Nothing
+
+            ' Bounding-Box der Maske, damit der Verlauf die Auswahl umspannt (nicht das ganze Bild).
+            Dim mStride = mask.RowBytes
+            Dim mBuf = New Byte(mStride * h - 1) {}
+            Marshal.Copy(mask.GetPixels(), mBuf, 0, mBuf.Length)
+            Dim minX = w, minY = h, maxX = -1, maxY = -1
+            For y = 0 To h - 1
+                Dim mRow = y * mStride
+                For x = 0 To w - 1
+                    If mBuf(mRow + x) > 0 Then
+                        If x < minX Then minX = x
+                        If x > maxX Then maxX = x
+                        If y < minY Then minY = y
+                        If y > maxY Then maxY = y
+                    End If
+                Next
+            Next
+            If maxX < minX OrElse maxY < minY Then Return Nothing
+
+            Dim col = ParseColor(layer.FillColor, SKColors.White)
+            Using fill = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(fill)
+                    canvas.Clear(SKColors.Transparent)
+                    Dim rect = New SKRect(minX, minY, maxX + 1, maxY + 1)
+                    Dim nk = If(layer.FillKind, "Solid").Trim().ToLowerInvariant()
+                    If nk = "lineargradient" OrElse nk = "radialgradient" Then
+                        Dim col2 = ParseColor(layer.FillColor2, col)
+                        Using shader = CreateFillGradientShader(rect, nk, col, col2, CSng(layer.FillAngle), layer.FillInverted)
+                            Using paint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                                canvas.DrawRect(rect, paint)
+                            End Using
+                        End Using
+                    Else
+                        Using paint = New SKPaint With {.Color = col, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                            canvas.DrawRect(rect, paint)
+                        End Using
+                    End If
+                End Using
+
+                ' Deckung = Maskenwert einmultiplizieren (premultipliziert: alle Kanäle skalieren).
+                Dim fStride = fill.RowBytes
+                Dim fBuf = New Byte(fStride * h - 1) {}
+                Marshal.Copy(fill.GetPixels(), fBuf, 0, fBuf.Length)
+                For y = 0 To h - 1
+                    Dim fRow = y * fStride, mRow = y * mStride
+                    For x = 0 To w - 1
+                        Dim m = CInt(mBuf(mRow + x))
+                        If m < 255 Then
+                            Dim o = fRow + x * 4
+                            fBuf(o) = CByte(CInt(fBuf(o)) * m \ 255)
+                            fBuf(o + 1) = CByte(CInt(fBuf(o + 1)) * m \ 255)
+                            fBuf(o + 2) = CByte(CInt(fBuf(o + 2)) * m \ 255)
+                            fBuf(o + 3) = CByte(CInt(fBuf(o + 3)) * m \ 255)
+                        End If
+                    Next
+                Next
+                Marshal.Copy(fBuf, 0, fill.GetPixels(), fBuf.Length)
+
+                Dim result = CloneBitmap(processed)
+                Using canvas = New SKCanvas(result)
+                    canvas.DrawBitmap(fill, 0, 0)   ' SrcOver: Füllung über das Bild
+                End Using
+                Return result
+            End Using
         End Function
 
         ''' <summary>Projiziert eine SourceSpace-Maske durch exakt dieselbe Geometriekette wie das Bild:
@@ -2915,7 +3029,8 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
         Private Shared Function BuildPersistentMaskForOutput(maskData As ImageMask, geometry As ImageAdjustments,
                                                               pipelineInputWidth As Integer, pipelineInputHeight As Integer,
                                                               targetW As Integer, targetH As Integer,
-                                                              layerOpacity As Single) As SKBitmap
+                                                              layerOpacity As Single,
+                                                              Optional fillLayer As MaskedAdjustmentLayer = Nothing) As SKBitmap
             If maskData Is Nothing OrElse pipelineInputWidth <= 0 OrElse pipelineInputHeight <= 0 OrElse
                targetW <= 0 OrElse targetH <= 0 OrElse
                maskData.SourceWidthPixels <= 0 OrElse maskData.SourceHeightPixels <= 0 OrElse
@@ -2928,6 +3043,22 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                     Dim dStride = decoded.RowBytes
                     Dim dBuf = New Byte(dStride * decoded.Height - 1) {}
                     Marshal.Copy(decoded.GetPixels(), dBuf, 0, dBuf.Length)
+
+                    ' MASKEN-Ebene mit deklarativer Füllung: die LUMINANZ der Füllung stuft die Maskenform ab
+                    ' (Schwarz→0, Weiß→voll, Verlauf→Rampe), bevor sie durch die Geometrie läuft. So bestimmt
+                    ' die Füllung, WIE STARK die Anpassung je Bereich wirkt - ohne die Maskenform zu verlieren.
+                    If fillLayer IsNot Nothing AndAlso fillLayer.HasFill() Then
+                        Dim lum = ComputeFillLuminance(decoded.Width, decoded.Height, fillLayer.FillKind,
+                            fillLayer.FillColor, fillLayer.FillColor2, CSng(fillLayer.FillAngle), fillLayer.FillInverted)
+                        If lum IsNot Nothing Then
+                            For y = 0 To decoded.Height - 1
+                                Dim dRow = y * dStride, lRow = y * decoded.Width
+                                For x = 0 To decoded.Width - 1
+                                    dBuf(dRow + x) = CByte(CInt(dBuf(dRow + x)) * CInt(lum(lRow + x)) \ 255)
+                                Next
+                            Next
+                        End If
+                    End If
 
                     ' Zunächst in die tatsächliche Pipeline-Eingangsgröße (Vollbild oder Preview)
                     ' rasterisieren. Dadurch benutzt die anschließende Geometrie exakt dieselben
@@ -3314,6 +3445,175 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             Finally
                 decoded?.Dispose()
             End Try
+        End Function
+
+        ''' <summary>Inverse zu CreateSourceMaskFromSelection: projiziert eine Ebenen-Maske (ImageMask,
+        ''' Quellraum) in den ANZEIGE-Bildraum und liefert eine Alpha8-Maske + Rechteck für die editierbare
+        ''' Auswahlmaske (_selectionMask). Damit lässt sich eine Ebenen-Maske im Masken-Pinsel wieder als
+        ''' rotes Overlay anzeigen und per +/- ändern. Inverted wird beim Sampeln aufgelöst (die editierbare
+        ''' Kopie ist danach nicht invertiert); die weiche Kante (FeatherPixels) bleibt Sache der Ebene und
+        ''' wird hier NICHT eingerechnet - der Pinsel bearbeitet die harte Form, der Feather wirkt beim
+        ''' Rendern (BuildPersistentMaskForOutput).</summary>
+        Public Shared Function BuildSelectionMaskFromLayerMask(mask As ImageMask, adj As ImageAdjustments,
+                                                               ByRef rectPx As SKRectI) As SKBitmap
+            rectPx = SKRectI.Empty
+            If mask Is Nothing OrElse adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return Nothing
+            Dim displaySize = ComputeGeometryOutputSize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
+
+            Dim decoded As SKBitmap = Nothing
+            Try
+                If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return Nothing
+                decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
+                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return Nothing
+                Dim mStride = decoded.RowBytes
+                Dim mBuf = New Byte(mStride * decoded.Height - 1) {}
+                Marshal.Copy(decoded.GetPixels(), mBuf, 0, mBuf.Length)
+
+                Dim dw = displaySize.Width, dh = displaySize.Height
+                Dim sourceW = adj.SourceWidthPixels, sourceH = adj.SourceHeightPixels
+                Dim full = New Byte(dw * dh - 1) {}
+                Dim left = dw, top = dh, right = 0, bottom = 0
+                For dy = 0 To dh - 1
+                    For dx = 0 To dw - 1
+                        Dim sp As SKPoint
+                        If Not TryGeometryOutputToSourcePoint(dx + 0.5, dy + 0.5, sourceW, sourceH, adj, sp) Then Continue For
+                        Dim mx = CInt(Math.Floor(sp.X)) - mask.Left
+                        Dim my = CInt(Math.Floor(sp.Y)) - mask.Top
+                        Dim alpha As Byte = 0
+                        If mx >= 0 AndAlso my >= 0 AndAlso mx < decoded.Width AndAlso my < decoded.Height Then
+                            alpha = mBuf(my * mStride + mx)
+                        End If
+                        If mask.Inverted Then alpha = CByte(255 - alpha)
+                        If alpha = 0 Then Continue For
+                        full(dy * dw + dx) = alpha
+                        left = Math.Min(left, dx) : top = Math.Min(top, dy)
+                        right = Math.Max(right, dx + 1) : bottom = Math.Max(bottom, dy + 1)
+                    Next
+                Next
+                If right <= left OrElse bottom <= top Then Return Nothing
+
+                Dim result = New SKBitmap(right - left, bottom - top, SKColorType.Alpha8, SKAlphaType.Premul)
+                Dim cStride = result.RowBytes
+                Dim cBuf = New Byte(cStride * result.Height - 1) {}
+                For y = 0 To result.Height - 1
+                    Buffer.BlockCopy(full, (top + y) * dw + left, cBuf, y * cStride, result.Width)
+                Next
+                Marshal.Copy(cBuf, 0, result.GetPixels(), cBuf.Length)
+                rectPx = New SKRectI(left, top, right, bottom)
+                Return result
+            Catch
+                Return Nothing
+            Finally
+                decoded?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Baut eine ImageMask (Quellraum) aus einem vollbildgroßen Alpha-Puffer: schneidet auf
+        ''' die Bounding-Box der gesetzten Pixel zu und kodiert Alpha8-PNG. Nothing, wenn leer.</summary>
+        Private Shared Function EncodeSourceMaskFromAlpha(full As Byte(), sourceW As Integer, sourceH As Integer, name As String) As ImageMask
+            Dim left = sourceW, top = sourceH, right = 0, bottom = 0
+            For sy = 0 To sourceH - 1
+                Dim row = sy * sourceW
+                For sx = 0 To sourceW - 1
+                    If full(row + sx) > 0 Then
+                        If sx < left Then left = sx
+                        If sy < top Then top = sy
+                        If sx + 1 > right Then right = sx + 1
+                        If sy + 1 > bottom Then bottom = sy + 1
+                    End If
+                Next
+            Next
+            If right <= left OrElse bottom <= top Then Return Nothing
+            Using cropped = New SKBitmap(right - left, bottom - top, SKColorType.Alpha8, SKAlphaType.Premul)
+                Dim cStride = cropped.RowBytes
+                Dim cBuf = New Byte(cStride * cropped.Height - 1) {}
+                For y = 0 To cropped.Height - 1
+                    Buffer.BlockCopy(full, (top + y) * sourceW + left, cBuf, y * cStride, cropped.Width)
+                Next
+                Marshal.Copy(cBuf, 0, cropped.GetPixels(), cBuf.Length)
+                Using image = SKImage.FromBitmap(cropped)
+                    Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
+                        Return New ImageMask With {
+                            .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Auswahlmaske"), name),
+                            .SourceWidthPixels = sourceW, .SourceHeightPixels = sourceH,
+                            .Left = left, .Top = top, .Right = right, .Bottom = bottom,
+                            .PngBase64 = Convert.ToBase64String(data.ToArray()),
+                            .FeatherPixels = 0
+                        }
+                    End Using
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Rastert eine LINEARE Verlaufsmaske (Lightroom „Mask/Gradient") in den Quellraum.
+        ''' Zero/Full sind Bruchkoordinaten des Bildes (0..1, dürfen außerhalb liegen). Die Maske ist 0 an
+        ''' der Zero-Linie und rampt entlang der Senkrechten linear auf maskValue an der Full-Linie (danach
+        ''' konstant).</summary>
+        Public Shared Function BuildLinearGradientMask(sourceW As Integer, sourceH As Integer,
+                                                       zeroX As Double, zeroY As Double, fullX As Double, fullY As Double,
+                                                       maskValue As Double, name As String) As ImageMask
+            If sourceW <= 0 OrElse sourceH <= 0 Then Return Nothing
+            Dim dirX = fullX - zeroX, dirY = fullY - zeroY
+            Dim len2 = dirX * dirX + dirY * dirY
+            If len2 <= 0.0000001 Then Return Nothing
+            Dim mv = Math.Max(0.0, Math.Min(1.0, maskValue))
+            Dim full = New Byte(sourceW * sourceH - 1) {}
+            For sy = 0 To sourceH - 1
+                Dim fy = (sy + 0.5) / sourceH
+                Dim row = sy * sourceW
+                For sx = 0 To sourceW - 1
+                    Dim fx = (sx + 0.5) / sourceW
+                    Dim t = ((fx - zeroX) * dirX + (fy - zeroY) * dirY) / len2
+                    If t <= 0.0 Then Continue For
+                    If t > 1.0 Then t = 1.0
+                    full(row + sx) = CByte(Math.Round(t * mv * 255.0))
+                Next
+            Next
+            Return EncodeSourceMaskFromAlpha(full, sourceW, sourceH, name)
+        End Function
+
+        ''' <summary>Rastert eine RADIALE Verlaufsmaske (Lightroom „Mask/CircularGradient") in den
+        ''' Quellraum. Top/Left/Bottom/Right in Bruchkoordinaten; angleDeg Grad; feather 0..100 (Anteil des
+        ''' Radius mit weichem Auslauf); Flipped=True → Wirkung INNEN, sonst AUSSEN (Lightroom-Standard).
+        ''' Roundness/Midpoint werden in v1 vereinfacht (reine Ellipse, Halbwert = 1-feather).</summary>
+        Public Shared Function BuildRadialGradientMask(sourceW As Integer, sourceH As Integer,
+                                                       top As Double, left As Double, bottom As Double, right As Double,
+                                                       angleDeg As Double, feather As Double, flipped As Boolean,
+                                                       maskValue As Double, name As String) As ImageMask
+            If sourceW <= 0 OrElse sourceH <= 0 Then Return Nothing
+            Dim cx = (left + right) / 2.0, cy = (top + bottom) / 2.0
+            Dim rx = Math.Max(0.0001, (right - left) / 2.0)
+            Dim ry = Math.Max(0.0001, (bottom - top) / 2.0)
+            Dim ang = -angleDeg * Math.PI / 180.0
+            Dim cosA = Math.Cos(ang), sinA = Math.Sin(ang)
+            Dim mv = Math.Max(0.0, Math.Min(1.0, maskValue))
+            Dim inner = 1.0 - Math.Max(0.0, Math.Min(1.0, feather / 100.0))
+            Dim full = New Byte(sourceW * sourceH - 1) {}
+            For sy = 0 To sourceH - 1
+                Dim fy = (sy + 0.5) / sourceH
+                Dim row = sy * sourceW
+                For sx = 0 To sourceW - 1
+                    Dim fx = (sx + 0.5) / sourceW
+                    Dim ddx = fx - cx, ddy = fy - cy
+                    Dim ex = (ddx * cosA - ddy * sinA) / rx
+                    Dim ey = (ddx * sinA + ddy * cosA) / ry
+                    Dim d = Math.Sqrt(ex * ex + ey * ey)
+                    Dim cover As Double
+                    If d <= inner Then
+                        cover = 1.0
+                    ElseIf d >= 1.0 Then
+                        cover = 0.0
+                    Else
+                        Dim tt = (1.0 - d) / Math.Max(0.0001, 1.0 - inner)
+                        cover = tt * tt * (3.0 - 2.0 * tt)
+                    End If
+                    Dim m = If(flipped, cover, 1.0 - cover)
+                    If m <= 0.0 Then Continue For
+                    full(row + sx) = CByte(Math.Round(Math.Min(1.0, m) * mv * 255.0))
+                Next
+            Next
+            Return EncodeSourceMaskFromAlpha(full, sourceW, sourceH, name)
         End Function
 
         ''' <summary>Baut aus der aktiven Auswahl eine Alpha8-Maske in der Größe des verarbeiteten Bildes
@@ -9344,6 +9644,73 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Finally
                 fill.Dispose()
             End Try
+        End Function
+
+        ''' <summary>Rendert die LUMINANZ einer Füllung (Vollfarbe/Verlauf/radial) als dichten w×h-Byte-Puffer
+        ''' (0..255): Schwarz → 0, Weiß → 255, Verlauf → Rampe. Kern für die deklarative Masken-Abstufung -
+        ''' die Luminanz stuft, WIE STARK die Anpassung einer Masken-Ebene je Bereich wirkt.</summary>
+        Friend Shared Function ComputeFillLuminance(w As Integer, h As Integer, fillKind As String, colorHex As String,
+                                                    color2Hex As String, gradientAngleDegrees As Single,
+                                                    gradientInverted As Boolean) As Byte()
+            If w <= 0 OrElse h <= 0 Then Return Nothing
+            Dim col = ParseColor(colorHex, SKColors.White)
+            Using fill = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                Using canvas = New SKCanvas(fill)
+                    canvas.Clear(SKColors.Transparent)
+                    Dim rect = New SKRect(0, 0, w, h)
+                    Dim nk = If(fillKind, "Solid").Trim().ToLowerInvariant()
+                    If nk = "lineargradient" OrElse nk = "radialgradient" Then
+                        Dim col2 = ParseColor(color2Hex, col)
+                        Using shader = CreateFillGradientShader(rect, nk, col, col2, gradientAngleDegrees, gradientInverted)
+                            Using paint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                                canvas.DrawRect(rect, paint)
+                            End Using
+                        End Using
+                    Else
+                        Using paint = New SKPaint With {.Color = col, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                            canvas.DrawRect(rect, paint)
+                        End Using
+                    End If
+                End Using
+                Dim fillStride = fill.RowBytes
+                Dim fillBuf = New Byte(fillStride * h - 1) {}
+                Marshal.Copy(fill.GetPixels(), fillBuf, 0, fillBuf.Length)
+                Dim lum = New Byte(w * h - 1) {}
+                For y = 0 To h - 1
+                    Dim fRow = y * fillStride, lRow = y * w
+                    For x = 0 To w - 1
+                        Dim o = fRow + x * 4
+                        ' Bgra8888: 0=B, 1=G, 2=R. Luminanz (Rec.601) der Füllung.
+                        lum(lRow + x) = CByte(Math.Round(fillBuf(o + 2) * 0.299 + fillBuf(o + 1) * 0.587 + fillBuf(o) * 0.114))
+                    Next
+                Next
+                Return lum
+            End Using
+        End Function
+
+        ''' <summary>Multipliziert die LUMINANZ einer Füllung in eine vorhandene Alpha8-Maske. Weiterhin genutzt
+        ''' für die headless-Diagnose; der interaktive Weg speichert die Füllung deklarativ auf der Ebene.</summary>
+        Public Shared Function RenderMaskFilledWithGradient(mask As SKBitmap, colorHex As String, fillKind As String,
+                                                            color2Hex As String, gradientAngleDegrees As Single,
+                                                            gradientInverted As Boolean) As SKBitmap
+            If mask Is Nothing OrElse mask.Width <= 0 OrElse mask.Height <= 0 Then Return Nothing
+            Dim w = mask.Width, h = mask.Height
+            Dim lum = ComputeFillLuminance(w, h, fillKind, colorHex, color2Hex, gradientAngleDegrees, gradientInverted)
+            If lum Is Nothing Then Return Nothing
+            Dim mStride = mask.RowBytes
+            Dim mBuf = New Byte(mStride * h - 1) {}
+            Marshal.Copy(mask.GetPixels(), mBuf, 0, mBuf.Length)
+            Dim result = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim rStride = result.RowBytes
+            Dim rBuf = New Byte(rStride * h - 1) {}
+            For y = 0 To h - 1
+                Dim mRow = y * mStride, rRow = y * rStride, lRow = y * w
+                For x = 0 To w - 1
+                    rBuf(rRow + x) = CByte(CInt(mBuf(mRow + x)) * CInt(lum(lRow + x)) \ 255)
+                Next
+            Next
+            Marshal.Copy(rBuf, 0, result.GetPixels(), rBuf.Length)
+            Return result
         End Function
 
         Public Shared Function RenderMaskedFillToFile(mask As SKBitmap, colorHex As String, fillKind As String,

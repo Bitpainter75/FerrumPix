@@ -61,6 +61,7 @@
                                 DragDrop.AllowDrop="True"
                                 PointerPressed="OnLayerRowPointerPressed"
                                 PointerMoved="OnLayerRowPointerMoved"
+                                ContextRequested="OnLayerRowContextRequested"
                                 DragDrop.DragOver="OnLayerRowDragOver"
                                 DragDrop.Drop="OnLayerRowDrop">
                             <Grid ColumnDefinitions="Auto,*,Auto">

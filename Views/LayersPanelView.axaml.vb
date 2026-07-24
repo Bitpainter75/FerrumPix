@@ -7,6 +7,7 @@ Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Threading
 Imports Avalonia.VisualTree
+Imports FerrumPix.Controls
 Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
 
@@ -94,6 +95,52 @@ Namespace Views
         Private Sub OnRenameSelectedClick(sender As Object, e As RoutedEventArgs)
             StartRenameSelectedLayer()
         End Sub
+
+        ' Rechtsklick auf eine Ebene: dieselben Aktionen wie im Footer, aber als Kontextmenü direkt an der
+        ' Zeile. Der Klick wählt die Zeile zuerst aus, damit die Selected*-Kommandos auf sie wirken; kind-
+        ' abhängige Einträge (Maske/Rastern) erscheinen nur, wo sie gelten. Programmatisch aufgebaut, weil
+        ' ein Popup die VM-Kommandos nicht über AncestorType aus dem UserControl-DataContext erreicht.
+        Private Sub OnLayerRowContextRequested(sender As Object, e As ContextRequestedEventArgs)
+            Dim border = TryCast(sender, Control)
+            Dim row = TryCast(border?.DataContext, LayerPanelRow)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If border Is Nothing OrElse row Is Nothing OrElse vm Is Nothing Then Return
+            vm.SelectedLayerRow = row
+
+            Dim items As New List(Of Control)()
+            items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene nach vorne"), "arrow-up", vm.MoveSelectedAnnotationUpCommand))
+            items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene nach hinten"), "arrow-down", vm.MoveSelectedAnnotationDownCommand))
+            items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene duplizieren (Strg+D)"), "copy", vm.DuplicateSelectedAnnotationCommand))
+            If vm.HasSelectedAdjustmentLayer Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Neue Korrektur mit derselben Maske"), "adjustments-plus", vm.AddAdjustmentWithSameMaskCommand))
+            End If
+            If vm.CanRasterizeSelectedAnnotation Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern (ins Bild einbacken)"), "layers-union", vm.RasterizeSelectedAnnotationCommand))
+            End If
+            Dim renameItem = MakeLayerMenuItem(LocalizationService.T("Ebene umbenennen (F2)"), "edit", Nothing)
+            AddHandler renameItem.Click, Sub(s2, e2) StartRenameSelectedLayer()
+            items.Add(renameItem)
+            items.Add(New Separator())
+            items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene löschen (Entf)"), "trash", vm.DeleteSelectedAnnotationCommand))
+
+            Dim menu As New ContextMenu()
+            menu.ItemsSource = items
+            border.ContextMenu = menu
+            menu.Open(border)
+            e.Handled = True
+        End Sub
+
+        Private Function MakeLayerMenuItem(header As String, iconName As String, command As System.Windows.Input.ICommand) As MenuItem
+            Dim mi As New MenuItem With {.Header = header}
+            If command IsNot Nothing Then mi.Command = command
+            If Not String.IsNullOrEmpty(iconName) Then
+                mi.Icon = New SvgIcon With {
+                    .Source = $"avares://FerrumPix/Assets/Icons/outline/{iconName}.svg",
+                    .Width = 15, .Height = 15
+                }
+            End If
+            Return mi
+        End Function
 
         ' Startet das Umbenennen der aktuell markierten Ebene und fokussiert ihr Eingabefeld.
         Private Sub StartRenameSelectedLayer()

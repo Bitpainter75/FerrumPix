@@ -28,7 +28,7 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 
 <img src="Screenshots/Gallery.png" />
 
-The gallery is built for daily photo work. It supports folder browsing, fast thumbnails, file operations, ratings, favorites, tags and saved searches.
+The gallery is built for daily photo work. It supports folder browsing, fast thumbnails, file operations, ratings, favorites, tags and saved searches. Star ratings, the favourite mark and the metadata badges on each tile can be set to stay visible or to appear only on hover, each independently, in Settings.
 
 Search can combine normal text with metadata such as camera, ISO, aperture, focal length, date taken and image size. Batch tools are available from the context menu and from the footer menu.
 
@@ -57,14 +57,15 @@ The editor covers the most common photo work:
 - Create a blank image with `Ctrl+N`: presets for photo, screen and paper sizes, free width and height in mm, cm, inches or pixels at 72–600 dpi, and a white, transparent or coloured background.
 - Crop, resize, rotate, flip and canvas resize.
 - Exposure, brightness, contrast, highlights, shadows, tone curves and white balance.
-- Color tools with HSL, vibrance, saturation, colour grading (four colour wheels for shadows, midtones, highlights and global), camera calibration and colour noise reduction.
+- Color tools with HSL, vibrance, saturation, colour grading (four colour wheels for shadows, midtones, highlights and global — double-click a wheel to reset it), camera calibration and colour noise reduction.
 - Filters, LUT files and Lightroom `.xmp` preset import, including the newer colour-grading keys and black-and-white presets.
 - Film negative conversion for scanned negatives.
 - Text, shapes, symbols, images, QR codes and watermarks. Text can be set bold or italic, spaced out, and placed along an arc, a circle or a wave.
 - Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools. The brush picker offers 13 variants — soft round, pencil, marker, grainy acrylic, sandpaper, smudge, spatter, charcoal, crayon, airbrush, calligraphy, stipple and watercolor.
-- Rectangle, ellipse, lasso and magic wand selections.
+- Rectangle, ellipse, lasso and magic wand selections, plus a mask brush with an adjustable soft edge and add/subtract painting. Selections are shown as marching ants, masks as a red overlay.
+- Turn a selection or mask into a correction layer whose adjustment applies only inside it. The fill tool fills a selection layer with a solid colour or a linear/radial gradient; on a mask layer the fill's brightness grades how strongly the adjustment applies across the mask — and stays editable afterwards.
 - Per object editing with opacity, blend modes, shadows, glow and transform controls.
-- A toggleable Layers panel with the full object stack: per-layer visibility, opacity, blend mode, drag-and-drop reorder, rename (double-click or F2), rasterize (bake a layer into the image so retouching can work on its pixels) and delete, plus the base image as a hideable background layer.
+- A toggleable Layers panel with the full object stack: per-layer visibility, opacity, blend mode, drag-and-drop reorder, rename (double-click or F2), rasterize (bake a layer into the image so retouching can work on its pixels) and delete, plus the base image as a hideable background layer. Selection and mask correction layers appear with their own name and icon, and every layer's actions are available from the footer or a right-click context menu.
 - A native project format (`.fpx`): *Save as…* can bundle the whole edit — adjustments, layer stack and the baked working image — so it can be reopened and continued. Adjustments and object layers stay editable after reopening; retouching, brush strokes and rasterized layers are baked into the image (undo covers them only within the session). `.fpx` projects show up in the gallery, viewer and fullscreen like any image.
 
 ### RAW and Photoshop files

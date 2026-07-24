@@ -4019,4 +4019,25 @@
   <data name="Zeigt_die_Metadaten_Symbole_EXIF_IPTC_XMP_ICC_au_b5e647fb" xml:space="preserve">
     <value>Affiche les icônes de métadonnées (EXIF, IPTC, XMP, ICC) sur la vignette en permanence au lieu de seulement au survol de la souris.</value>
   </data>
+  <data name="Als_Bild_kopieren_f707a88e" xml:space="preserve">
+    <value>Copier comme image</value>
+  </data>
+  <data name="Auswahl_als_Korrekturebene_62bc6d0e" xml:space="preserve">
+    <value>Sélection comme calque de réglage</value>
+  </data>
+  <data name="Aus_der_Auswahl_direkt_eine_maskierte_Korrekture_4c153e49" xml:space="preserve">
+    <value>Créer directement un calque de réglage masqué à partir de la sélection (sans devoir d'abord modifier un réglage)</value>
+  </data>
+  <data name="Auswahl_Korrektur_0bc9f496" xml:space="preserve">
+    <value>Correction de sélection</value>
+  </data>
+  <data name="Masken_Korrektur_99247e22" xml:space="preserve">
+    <value>Correction de masque</value>
+  </data>
+  <data name="Neue_Maskenebene_7e9e5245" xml:space="preserve">
+    <value>Nouveau calque de masque</value>
+  </data>
+  <data name="Neue_Korrekturebene_d50075bf" xml:space="preserve">
+    <value>Nouveau calque de réglage</value>
+  </data>
 </root>

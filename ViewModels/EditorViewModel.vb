@@ -427,6 +427,13 @@ Namespace ViewModels
         ' True, sobald die Auswahlmaske Masken-Pinsel-Striche enthält: die weiche Kante steckt dann in den
         ' Alpha-Werten, der globale Feather darf NICHT erneut weichzeichnen (siehe SelectionMaskSoftBaked).
         Private _selectionMaskSoftBaked As Boolean = False
+        ' <> "" wenn die aktuelle _selectionMask die editierbare Kopie einer EBENEN-Maske ist (MaskId).
+        ' Dann malt der Pinsel die harte Form; die weiche Kante steuert mask.FeatherPixels (Render-Feather),
+        ' und jeder Strich wird in die Ebenen-Maske zurückgeschrieben. Rein transient (nicht persistiert).
+        Private _editingLayerMaskId As String = ""
+        ' Art der aktuell aktiven Auswahl: False = AUSWAHL (Laufameisen), True = MASKE (rotes Overlay).
+        ' Bestimmt die Overlay-Darstellung UNABHÄNGIG vom Werkzeug (Nutzerwunsch: Auswahl vs. Maske getrennt).
+        Private _activeSelectionIsMask As Boolean = False
         Private _selectionShapeMode As String = "Rectangle"
         Private _selectionShapePointsX As Double() = Nothing
         Private _selectionShapePointsY As Double() = Nothing
@@ -830,6 +837,15 @@ Namespace ViewModels
                     _selectedLayerRow = Nothing
                 End If
                 RaiseLayerPanelSelectionChanged()
+                ' Nur die Auswahl/Maske DER gewählten Ebene aktiv: vorige Selektion im Bild verwerfen und
+                ' die dieser Ebene laden (Auswahl-Ebene -> Ameisen, Masken-Ebene -> rot). Objekt/Nichts
+                ' gewählt -> gar keine Bild-Auswahl. Funktioniert in JEDEM Werkzeug (nicht nur Anpassen).
+                If Not String.IsNullOrWhiteSpace(adjustmentId) Then
+                    Dim picked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = adjustmentId)
+                    If picked IsNot Nothing Then LoadLayerMaskIntoSelection(picked)
+                ElseIf _hasActiveSelection Then
+                    ClearSelection(captureUndo:=False)
+                End If
                 RefreshSelectionAdjustMode()
             End Set
         End Property
@@ -5382,16 +5398,11 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsLassoSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsMagicWandSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsBrushSelectionMode))
-                If v = "Brush" Then
-                    ' Beim Wechsel in den Masken-Pinsel sinnvoll auf "Hinzufügen" vorbelegen (der erste
-                    ' Strich ohne aktive Auswahl läuft über ApplySelectionCandidate ohnehin als "New").
-                    If _selectionCombineMode = "New" Then SelectionCombineMode = "Add"
-                    ' Bestehende Maske sofort als rotes Overlay zeigen.
-                    PublishSelectionRedOverlay()
-                Else
-                    ' Zurück auf Laufameisen: das rote Overlay-Bild verwerfen.
-                    SetSelectionMaskPreviewImage(Nothing)
-                End If
+                ' Beim Wechsel in den Masken-Pinsel sinnvoll auf "Hinzufügen" vorbelegen (der erste Strich
+                ' ohne aktive Auswahl läuft über ApplySelectionCandidate ohnehin als "New"). Das Overlay
+                ' (rot vs. Ameisen) steuert NICHT mehr der Modus, sondern die Art der Auswahl
+                ' (ActiveSelectionIsMask) - so bleibt eine Masken-Ebene auch außerhalb des Pinsels rot.
+                If v = "Brush" AndAlso _selectionCombineMode = "New" Then SelectionCombineMode = "Add"
             End Set
         End Property
 
@@ -5877,7 +5888,7 @@ Namespace ViewModels
                             scaled.Add(New SKPoint(CSng(p.X * ovScale), CSng(p.Y * ovScale)))
                         Next
                         Dim r = CSng(Math.Max(0.5, MaskBrushRadiusDisplay() * ovScale))
-                        Dim soft = CSng(Math.Max(0.0, _selectionFeather * ovScale))
+                        Dim soft = CSng(MaskBrushStrokeSoftness() * ovScale)
                         ImageProcessor.DrawSoftMaskStroke(canvas, scaled, r, soft, redColor, eraseMode)
                     End If
                 End Using
@@ -5890,6 +5901,23 @@ Namespace ViewModels
             SetSelectionMaskPreviewImage(BuildSelectionRedOverlayBitmap(Nothing, False))
         End Sub
 
+        ''' <summary>Art der aktiven Auswahl: True = MASKE (rotes Overlay), False = AUSWAHL (Laufameisen).
+        ''' Von der View gelesen, um die richtige Darstellung zu wählen - unabhängig vom Werkzeug.</summary>
+        Public ReadOnly Property ActiveSelectionIsMask As Boolean
+            Get
+                Return _activeSelectionIsMask
+            End Get
+        End Property
+
+        ''' <summary>Setzt die Art der aktiven Auswahl und baut das rote Overlay bzw. wechselt auf
+        ''' Laufameisen. Das SelectionMaskPreviewImage-PropertyChanged löst danach das Layout/Overlay aus.</summary>
+        Private Sub SetActiveSelectionIsMask(value As Boolean)
+            If _activeSelectionIsMask = value Then Return
+            _activeSelectionIsMask = value
+            Me.RaisePropertyChanged(NameOf(ActiveSelectionIsMask))
+            If value Then PublishSelectionRedOverlay() Else SetSelectionMaskPreviewImage(Nothing)
+        End Sub
+
         ''' Live-Vorschau während des Strichs: committete Maske + laufender Strich in Rot.
         Public Sub RefreshMaskBrushLivePreview(xsPercent As Double(), ysPercent As Double())
             If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length = 0 OrElse xsPercent.Length <> ysPercent.Length Then
@@ -5899,6 +5927,7 @@ Namespace ViewModels
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
+            SetActiveSelectionIsMask(True)   ' laufender Masken-Strich = rotes Overlay
             Dim eraseMode = _hasActiveSelection AndAlso _selectionCombineMode = "Subtract"
             SetSelectionMaskPreviewImage(BuildSelectionRedOverlayBitmap(MaskBrushDisplayPoints(xsPercent, ysPercent, bw, bh), eraseMode))
         End Sub
@@ -5920,7 +5949,7 @@ Namespace ViewModels
             Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
             Dim radius = CSng(MaskBrushRadiusDisplay())
-            Dim softness = CSng(Math.Max(0.0, _selectionFeather))
+            Dim softness = MaskBrushStrokeSoftness()
             Dim pts = MaskBrushDisplayPoints(xsPercent, ysPercent, bw, bh)
 
             Dim margin = CInt(Math.Ceiling(radius + softness + 2))
@@ -5939,13 +5968,129 @@ Namespace ViewModels
             PushUndo()
             Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx)
                 If stamp IsNot Nothing Then
-                    ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing)
-                    _selectionMaskSoftBaked = True
+                    ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing, isMask:=True)
+                    ' Freistehende Auswahl: weiche Kante ist in die Alpha-Werte gebacken. Ebenen-Maske:
+                    ' harte Form (Feather kommt beim Rendern über mask.FeatherPixels) - nicht baken.
+                    _selectionMaskSoftBaked = (_editingLayerMaskId = "")
                 End If
             End Using
+            ' Beim Bearbeiten einer Ebenen-Maske jeden Strich in die Ebene zurückschreiben, damit die
+            ' Anpassung der Ebene der neuen Maskenform sofort folgt.
+            If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
             PublishSelectionRedOverlay()
             SchedulePreviewUpdate()
         End Sub
+
+        ''' Strich-Randweichheit: freistehend aus dem "Weiche Kante"-Regler (in die Maske gebacken); beim
+        ''' Bearbeiten einer Ebenen-Maske 0 (harte Form, Feather wirkt beim Rendern über die Ebene).
+        Private Function MaskBrushStrokeSoftness() As Single
+            If _editingLayerMaskId <> "" Then Return 0.0F
+            Return CSng(Math.Max(0.0, _selectionFeather))
+        End Function
+
+        ''' <summary>Lädt die Maske einer Anpassungsebene in die editierbare Auswahlmaske (Anzeigeraum),
+        ''' schaltet in den Masken-Pinsel und zeigt sie als rotes Overlay. Ab jetzt bearbeitet der Pinsel
+        ''' die harte Form dieser Ebenen-Maske; die "Weiche Kante" steuert mask.FeatherPixels.</summary>
+        Private Sub LoadLayerMaskIntoSelection(layer As MaskedAdjustmentLayer)
+            _editingLayerMaskId = ""
+            If layer Is Nothing Then Return
+            Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
+            If mask Is Nothing Then Return
+            Dim adj = BuildAdjustmentsFromFields()
+            Dim rectPx As SKRectI
+            Dim bmp = ImageProcessor.BuildSelectionMaskFromLayerMask(mask, adj, rectPx)
+            If bmp Is Nothing OrElse rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return
+            ClearSelectionMask()
+            SetSelectionBoundsFromPixels(rectPx)
+            SetSelectionShape("MagicWand", Nothing, Nothing)
+            SetSelectionMaskData(bmp, rectPx)
+            _selectionMaskSoftBaked = False
+            _selectionFeather = Math.Max(0, Math.Min(200, mask.FeatherPixels))
+            Me.RaisePropertyChanged(NameOf(SelectionFeather))
+            HasActiveSelection = True
+            _editingLayerMaskId = mask.Id
+            ' Overlay nach EBENEN-ART: Masken-Ebene → rotes Overlay, Auswahl-Ebene → Laufameisen. Kein
+            ' Werkzeugwechsel; die Maske bleibt mit dem Masken-Pinsel editierbar (Auswahl-Werkzeug + Pinsel).
+            SetActiveSelectionIsMask(layer.IsMaskLayer)
+        End Sub
+
+        ''' <summary>Schreibt die aktuelle _selectionMask (harte Form) in die bearbeitete Ebenen-Maske
+        ''' zurück (Anzeige- → Quellraum via CreateSourceMaskFromSelection). FeatherPixels bleibt unberührt
+        ''' (die "Weiche Kante" pflegt sie über die bestehende Brücke). Danach folgt die Anpassung der
+        ''' Ebene der neuen Maske, weil der Render adj.Masks je Frame neu liest.</summary>
+        Private Sub WriteSelectionMaskBackToLayer()
+            If _editingLayerMaskId = "" Then Return
+            Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _editingLayerMaskId)
+            If mask Is Nothing OrElse _selectionMask Is Nothing Then Return
+            Dim rebuilt = ImageProcessor.CreateSourceMaskFromSelection(BuildAdjustmentsFromFields(), mask.Name)
+            If rebuilt Is Nothing Then Return
+            mask.SourceWidthPixels = rebuilt.SourceWidthPixels
+            mask.SourceHeightPixels = rebuilt.SourceHeightPixels
+            mask.Left = rebuilt.Left
+            mask.Top = rebuilt.Top
+            mask.Right = rebuilt.Right
+            mask.Bottom = rebuilt.Bottom
+            mask.PngBase64 = rebuilt.PngBase64
+            mask.Inverted = False
+        End Sub
+
+        ''' <summary>Erzeugt aus der aktiven Auswahl SOFORT eine maskierte Korrekturebene (leere Anpassung),
+        ''' statt erst bei der ersten Regleränderung. Nutzt dieselbe Source-Masken-Erzeugung + Dedup wie der
+        ''' automatische Promote-Pfad, also legt eine spätere Anpassung KEINE zweite Ebene an.</summary>
+        Public Sub CreateAdjustmentLayerFromSelection()
+            If Not _hasActiveSelection Then Return
+            PushUndo()
+            Dim layer = PromoteActiveSelectionToLayer()
+            If layer Is Nothing Then Return
+            _selectedMaskedAdjustmentLayerId = layer.Id
+            RebuildLayerRows()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Erzeugt (oder findet) die persistente Korrekturebene der aktiven Auswahl und gibt sie
+        ''' zurück - OHNE Undo/Rebuild/Preview (der Aufrufer steuert das). Dedup gegen den Auto-Promote-Pfad,
+        ''' also legt eine spätere Anpassung KEINE zweite Ebene an. Setzt _editingLayerMaskId, damit
+        ''' Füllung/Anpassung anschließend auf DIESER Ebene landen.</summary>
+        Private Function PromoteActiveSelectionToLayer() As MaskedAdjustmentLayer
+            If Not _hasActiveSelection Then Return Nothing
+            If _editingLayerMaskId <> "" Then
+                Dim existing = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = _editingLayerMaskId)
+                If existing IsNot Nothing Then Return existing
+            End If
+            Dim snapshot = BuildAdjustmentsFromFields()
+            Dim mask = ImageProcessor.CreateSourceMaskFromSelection(snapshot,
+                LocalizationService.T("Auswahlmaske") & " " & (_imageMasks.Count + 1).ToString())
+            If mask Is Nothing Then Return Nothing
+            Dim existingMask = _imageMasks.LastOrDefault(Function(m) m IsNot Nothing AndAlso
+                m.SourceWidthPixels = mask.SourceWidthPixels AndAlso m.SourceHeightPixels = mask.SourceHeightPixels AndAlso
+                m.Left = mask.Left AndAlso m.Top = mask.Top AndAlso m.Right = mask.Right AndAlso m.Bottom = mask.Bottom AndAlso
+                m.PngBase64 = mask.PngBase64)
+            Dim layer As MaskedAdjustmentLayer = Nothing
+            If existingMask IsNot Nothing Then
+                layer = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = existingMask.Id)
+            End If
+            If layer Is Nothing Then
+                Dim boundMask = If(existingMask, mask)
+                If existingMask Is Nothing Then _imageMasks.Add(mask)
+                layer = New MaskedAdjustmentLayer With {
+                    .Name = If(_activeSelectionIsMask, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                    .MaskId = boundMask.Id,
+                    .Adjustments = New ImageAdjustments(),
+                    .IsMaskLayer = _activeSelectionIsMask
+                }
+                _maskedAdjustmentLayers.Add(layer)
+            End If
+            ' Die aktive Auswahl ist ab jetzt an diese Ebene gebunden: weitere Füllung/Anpassung landen hier,
+            ' statt eine zweite Ebene anzulegen.
+            _editingLayerMaskId = layer.MaskId
+            Return layer
+        End Function
+
+        ''' <summary>Liefert die Korrekturebene, auf der das Füll-Werkzeug arbeiten soll: die gerade im Panel
+        ''' bearbeitete Ebene, sonst promotet es die aktive Auswahl zu einer neuen Ebene.</summary>
+        Private Function EnsureCorrectionLayerForActiveSelection() As MaskedAdjustmentLayer
+            Return PromoteActiveSelectionToLayer()
+        End Function
 
         ''' Zauberstab: wählt die zusammenhängende Farbfläche am Klickpunkt (Prozentkoordinaten).
         Public Async Function SetSelectionMagicWand(xPercent As Double, yPercent As Double) As Task
@@ -6024,6 +6169,9 @@ Namespace ViewModels
             SetSelectionShape("Rectangle", Nothing, Nothing)
             _selectionScopeEnabled = False
             HasActiveSelection = False
+            ' Deselektieren beendet auch das Bearbeiten einer Ebenen-Maske (die editierbare Kopie ist weg).
+            _editingLayerMaskId = ""
+            SetActiveSelectionIsMask(False)
         End Sub
 
         ''' <summary>Verwirft die aktive Auswahl beim Anwenden von Geometrie (Crop/Resize/Canvas/Transform):
@@ -6069,7 +6217,8 @@ Namespace ViewModels
                                             candidateRect As SKRectI,
                                             candidateShapeMode As String,
                                             candidateXsPercent As Double(),
-                                            candidateYsPercent As Double())
+                                            candidateYsPercent As Double(),
+                                            Optional isMask As Boolean = False)
             If candidateMask Is Nothing OrElse candidateRect.Width <= 0 OrElse candidateRect.Height <= 0 Then Return
             Dim combineMode = If(_hasActiveSelection, _selectionCombineMode, "New")
 
@@ -6079,6 +6228,7 @@ Namespace ViewModels
                 SetSelectionShape(candidateShapeMode, candidateXsPercent, candidateYsPercent)
                 SetSelectionMaskData(candidateMask.Copy(), candidateRect)
                 HasActiveSelection = True
+                SetActiveSelectionIsMask(isMask)
                 Return
             End If
 
@@ -6093,6 +6243,7 @@ Namespace ViewModels
                         SetSelectionShape(candidateShapeMode, candidateXsPercent, candidateYsPercent)
                         SetSelectionMaskData(candidateMask.Copy(), candidateRect)
                         HasActiveSelection = True
+                        SetActiveSelectionIsMask(isMask)
                     End If
                     Return
                 End If
@@ -6129,6 +6280,7 @@ Namespace ViewModels
                 SetSelectionShape("MagicWand", Nothing, Nothing)
                 SetSelectionMaskData(combined, resultRect)
                 HasActiveSelection = True
+                SetActiveSelectionIsMask(isMask)
             End Using
         End Sub
 
@@ -6699,58 +6851,23 @@ Namespace ViewModels
         Public Sub FillSelection()
             If Not _hasActiveSelection Then Return
 
-            ' Maskierte Auswahl: unregelmäßige Auswahl immer, Rechtecke sobald eine weiche Kante aktiv ist.
-            If _selectionMask IsNot Nothing OrElse _selectionFeather > 0.05 Then
-                Dim tempPath = CreateSelectionAssetTempPath("fill")
-                Dim ownsMask As Boolean
-                Dim maskRect As SKRectI
-                Dim mask = GetSelectionMaskForOutput(maskRect, ownsMask)
-                Try
-                    If mask Is Nothing Then Return
-                    If ImageProcessor.RenderMaskedFillToFile(mask, _annotationFillColor, _annotationFillKind,
-                                                             _annotationFillColor2, CSng(_annotationGradientAngle),
-                                                             _annotationGradientInverted, tempPath) Then
-                        Dim p = PixelRectToPercent(maskRect)
-                        AddSelectionImageAnnotationAt(tempPath, p.X, p.Y, p.W, p.H)
-                        AddHistoryEntry("Auswahl gefüllt")
-                    End If
-                Finally
-                    If ownsMask Then mask.Dispose()
-                End Try
-                Return
-            End If
-
+            ' DEKLARATIVE Füllung: es entsteht KEINE Grafik / kein PNG-Objekt. Die Füll-Definition (Art,
+            ' Farben, Winkel) wird auf die KORREKTUR-EBENE geschrieben. AUSWAHL-Ebene → die Füllung wird
+            ' sichtbar in die Auswahl komponiert (Farbe/Verlauf). MASKEN-Ebene → die Luminanz der Füllung
+            ' stuft die Maske ab und bestimmt so, WIE STARK die Anpassung je Bereich wirkt. Der Render
+            ' zeichnet beides selbst - die Füllung bleibt nachträglich änderbar statt eingebrannt.
             PushUndo()
-            Dim stored = DisplayAnnotationRectToStoredPercent("SelectionFill", _selectionXPercent, _selectionYPercent, _selectionWidthPercent, _selectionHeightPercent)
-            Dim annotation = New ImageAnnotation With {
-                .Kind = "SelectionFill",
-                .Text = NextSelectionObjectLabel(),
-                .ImagePath = "",
-                .XPixels = CSng(PercentXToPixels(stored.X)),
-                .YPixels = CSng(PercentYToPixels(stored.Y)),
-                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(stored.Width))),
-                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(stored.Height))),
-                .FillColor = _annotationFillColor,
-                .FillKind = _annotationFillKind,
-                .FillColor2 = _annotationFillColor2,
-                .GradientAngleDegrees = CSng(_annotationGradientAngle),
-                .GradientInverted = _annotationGradientInverted,
-                .StrokeColor = _annotationStrokeColor,
-                .StrokeWidth = 0,
-                .Opacity = CSng(_annotationOpacity),
-                .BlendMode = _annotationBlendMode,
-                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionFill", 0)),
-                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(False),
-                .FlipVertical = DisplayAnnotationFlipVerticalToStored(False),
-                .IsVisible = True
-            }
-            HardenAnnotationBuffersForNewObject()
-            _annotations.Add(annotation)
-            CurrentTool = EditorTool.Move
-            SelectedAnnotationIndex = _annotations.Count - 1
-            RaiseResetButtonStateChanged()
-            AddHistoryEntry("Auswahl gefüllt")
-            RefreshPreviewImmediately()
+            Dim layer = EnsureCorrectionLayerForActiveSelection()
+            If layer Is Nothing Then Return
+            layer.FillKind = If(String.IsNullOrWhiteSpace(_annotationFillKind), "Solid", _annotationFillKind)
+            layer.FillColor = _annotationFillColor
+            layer.FillColor2 = _annotationFillColor2
+            layer.FillAngle = _annotationGradientAngle
+            layer.FillInverted = _annotationGradientInverted
+            _selectedMaskedAdjustmentLayerId = layer.Id
+            RebuildLayerRows()
+            AddHistoryEntry(If(layer.IsMaskLayer, "Maske gefüllt", "Auswahl gefüllt"))
+            SchedulePreviewUpdate()
         End Sub
 
         ' Setzt X/Y/Breite/Höhe in einem Rutsch (z.B. beim Ziehen/Skalieren im Canvas), damit
@@ -8153,6 +8270,7 @@ Namespace ViewModels
         Public ReadOnly Property ClearSelectionCommand As ICommand
         Public ReadOnly Property InvertSelectionCommand As ICommand
         Public ReadOnly Property CopySelectionCommand As ICommand
+        Public ReadOnly Property CreateAdjustmentLayerFromSelectionCommand As ICommand
         Public ReadOnly Property FillSelectionCommand As ICommand
         Public ReadOnly Property SetSelectionModeCommand As ICommand
         Public ReadOnly Property SetSelectionCombineModeCommand As ICommand
@@ -8442,6 +8560,7 @@ Namespace ViewModels
             ClearSelectionCommand = ReactiveCommand.Create(Sub() ClearSelection())
             InvertSelectionCommand = ReactiveCommand.Create(Sub() InvertSelection())
             CopySelectionCommand = ReactiveCommand.Create(Sub() CopySelectionToNewObject())
+            CreateAdjustmentLayerFromSelectionCommand = ReactiveCommand.Create(Sub() CreateAdjustmentLayerFromSelection())
             FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
             SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
             SetSelectionCombineModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionCombineMode(mode))
@@ -13776,7 +13895,7 @@ Namespace ViewModels
             PushUndo()
             Dim copy = _maskedAdjustmentLayers(index).Clone()
             copy.Id = Guid.NewGuid().ToString("N")
-            copy.Name = If(String.IsNullOrWhiteSpace(copy.Name), LocalizationService.T("Lokale Korrektur"), copy.Name) &
+            copy.Name = If(String.IsNullOrWhiteSpace(copy.Name), LocalizationService.T("Auswahl-Korrektur"), copy.Name) &
                         " " & LocalizationService.T("Kopie")
             _maskedAdjustmentLayers.Insert(index + 1, copy)
             _selectedMaskedAdjustmentLayerId = copy.Id
@@ -13804,7 +13923,7 @@ Namespace ViewModels
 
             PushUndo()
             Dim layer = New MaskedAdjustmentLayer With {
-                .Name = LocalizationService.T("Lokale Korrektur") & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                .Name = LocalizationService.T("Auswahl-Korrektur") & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
                 .MaskId = source.MaskId,
                 .Adjustments = New ImageAdjustments()
             }
@@ -13987,6 +14106,10 @@ Namespace ViewModels
             If Not IsSelectionAdjustModeActive() Then Return
             _selectionAdjustSwapInProgress = True
             Try
+                ' Bearbeitete Ebenen-Maske zurückschreiben (aber NICHT räumen): der Wechsel ins
+                ' Auswahl-Werkzeug verlässt zwar den Anpassungs-Modus, die editierbare Maske soll dort
+                ' aber weiter mit dem Pinsel bearbeitbar bleiben. Geräumt wird erst beim Deselektieren.
+                If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
                 Dim localValues = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
                 Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectionAdjustLayerId)
                 If layer IsNot Nothing Then layer.Adjustments = localValues
@@ -14007,7 +14130,10 @@ Namespace ViewModels
         ''' eingefroren und eine nicht-destruktive lokale Einstellungsebene angelegt.</summary>
         Private Sub RefreshSelectionAdjustMode()
             If _selectionAdjustSwapInProgress Then Return
-            Dim selectedExisting = If(_hasActiveSelection, Nothing,
+            ' Beim Bearbeiten einer Ebenen-Maske (_editingLayerMaskId gesetzt) ist _hasActiveSelection zwar
+            ' True (die editierbare Maskenkopie), meint aber KEINE frei-promotebare Auswahl - dann trotzdem
+            ' die gewählte Ebene auflösen, sonst liefe es in den Promote-Zweig (neue Maske).
+            Dim selectedExisting = If(_hasActiveSelection AndAlso _editingLayerMaskId = "", Nothing,
                 _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId))
             Dim shouldBeActive = Not HasSelectedAnnotation AndAlso Not IsObjectAdjustModeActive() AndAlso
                                  IsObjectAdjustTool(_currentTool) AndAlso
@@ -14042,6 +14168,8 @@ Namespace ViewModels
                     existingTarget.CopyPixelAdjustmentsFrom(If(selectedExisting.Adjustments, New ImageAdjustments()))
                     ApplyAdjustments(existingTarget)
                     RebuildLayerRows()
+                    ' (Das Laden der Ebenen-Auswahl/-Maske passiert im SelectedLayerRow-Setter, damit es in
+                    ' JEDEM Werkzeug greift - nicht nur in den Anpassungs-Werkzeugen.)
                     Return
                 End If
 
@@ -14064,9 +14192,10 @@ Namespace ViewModels
                 If layer Is Nothing Then
                     _imageMasks.Add(mask)
                     layer = New MaskedAdjustmentLayer With {
-                        .Name = LocalizationService.T("Lokale Korrektur") & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                        .Name = If(_activeSelectionIsMask, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
                         .MaskId = mask.Id,
-                        .Adjustments = New ImageAdjustments()
+                        .Adjustments = New ImageAdjustments(),
+                        .IsMaskLayer = _activeSelectionIsMask
                     }
                     _maskedAdjustmentLayers.Add(layer)
                 End If
@@ -15307,6 +15436,28 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Setzt die Kamerakalibrierung (die 7 Calibration*-Regler) zurück. Presets setzen sie über
+        ''' ApplyLookAdjustments - ohne diesen Reset blieb sie beim Neutralisieren eines Presets/Looks stehen
+        ''' (eine der "nicht zurückgenommenen Einstellungen").</summary>
+        Private Sub ResetCalibrationInternal()
+            _calibrationRedHue = 0
+            _calibrationRedSaturation = 0
+            _calibrationGreenHue = 0
+            _calibrationGreenSaturation = 0
+            _calibrationBlueHue = 0
+            _calibrationBlueSaturation = 0
+            _calibrationShadowTint = 0
+            Me.RaisePropertyChanged(NameOf(CalibrationRedHue))
+            Me.RaisePropertyChanged(NameOf(CalibrationRedSaturation))
+            Me.RaisePropertyChanged(NameOf(CalibrationGreenHue))
+            Me.RaisePropertyChanged(NameOf(CalibrationGreenSaturation))
+            Me.RaisePropertyChanged(NameOf(CalibrationBlueHue))
+            Me.RaisePropertyChanged(NameOf(CalibrationBlueSaturation))
+            Me.RaisePropertyChanged(NameOf(CalibrationShadowTint))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
         ''' Eigene Gruppe im Werkzeug "Farbe" (unterhalb des HSL-Farbmischers) - wird sowohl vom
         ''' eigenen Reset-Icon der Split-Toning-Gruppe als auch vom "Farbe"-Tool-Reset aufgerufen.
         Private Sub ResetColorGradingInternal()
@@ -15569,7 +15720,14 @@ Namespace ViewModels
             ResetEffectsInternal()
             ResetHslInternal()
             ResetColorGradingInternal()
+            ResetCalibrationInternal()
             ResetCurvePoints()
+            ' Ein Preset kann lokale Korrekturen (Radial-/Verlaufsmasken) als Ebenen mitbringen. Beim
+            ' Neutralisieren des Looks müssen die ebenfalls weg - sonst blieben z. B. eine radiale
+            ' Abdunklung/Vignette "für immer" aktiv, die kein globaler Regler entfernt. Nur die aus einem
+            ' Preset importierten (FromPreset=True) - manuelle Ebenen bleiben unberührt.
+            ClearPresetImportedLayers()
+            RebuildLayerRows()
             RaiseExtendedAdjustmentProperties()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
@@ -15972,6 +16130,10 @@ Namespace ViewModels
                 _suppressUndoCapture = True
                 Try
                     ApplyLookAdjustments(look)
+                    ' Lokale Korrekturen (Radial-/Verlaufsmasken) als Anpassungsebenen importieren - erst
+                    ' hier möglich, weil die Masken die echten Bildmaße brauchen (im Preset stehen nur
+                    ' Bruchkoordinaten). Pinsel-/Bereichsmasken werden noch übersprungen.
+                    ImportLocalCorrectionsFromPreset(xmpPath)
                 Finally
                     _suppressUndoCapture = False
                 End Try
@@ -15983,6 +16145,75 @@ Namespace ViewModels
             Catch ex As Exception
                 StatusText = LocalizationService.T("Lightroom-Preset konnte nicht geladen werden: ") & ex.Message
             End Try
+        End Sub
+
+        ''' <summary>Importiert die lokalen Korrekturen (Radial-/Verlaufsmasken) eines Presets als
+        ''' Anpassungsebenen. Die Masken werden JETZT mit den echten Bildmaßen gerastert (im Preset stehen
+        ''' nur Bruchkoordinaten). v1: fügt hinzu (mehrfaches Anwenden stapelt - per Undo widerrufbar);
+        ''' Pinsel-/Bereichsmasken werden übersprungen.</summary>
+        ''' <summary>Entfernt alle aus einem Preset importierten Korrekturebenen (und ihre nun ungenutzten
+        ''' Masken), damit ein Preset-Wechsel die vorigen nicht stapelt. MANUELLE Ebenen (FromPreset=False)
+        ''' bleiben unangetastet.</summary>
+        Private Sub ClearPresetImportedLayers()
+            Dim removed = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing AndAlso l.FromPreset).ToList()
+            If removed.Count = 0 Then Return
+            Dim removedMaskIds = removed.Select(Function(l) l.MaskId).ToList()
+            Dim removedLayerIds = removed.Select(Function(l) l.Id).ToList()
+            _maskedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.FromPreset)
+            For Each maskId In removedMaskIds
+                If Not _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.MaskId, maskId, StringComparison.Ordinal)) Then
+                    _imageMasks.RemoveAll(Function(m) m IsNot Nothing AndAlso String.Equals(m.Id, maskId, StringComparison.Ordinal))
+                End If
+            Next
+            ' Auf entfernte Ebenen zeigende Zustände aufräumen.
+            If removedLayerIds.Contains(_selectedMaskedAdjustmentLayerId) Then _selectedMaskedAdjustmentLayerId = ""
+            If removedLayerIds.Contains(_selectionAdjustLayerId) Then _selectionAdjustLayerId = ""
+            If removedMaskIds.Contains(_editingLayerMaskId) Then _editingLayerMaskId = ""
+        End Sub
+
+        Private Sub ImportLocalCorrectionsFromPreset(xmpPath As String)
+            ' IMMER zuerst die Ebenen des VORIGEN Presets entfernen - sonst stapeln sich Presets beim
+            ' Wechsel aufeinander (z. B. bleibt eine radiale Abdunklung als Ebene "für immer" aktiv, die
+            ' der globale Vignetten-Regler nicht entfernen kann).
+            ClearPresetImportedLayers()
+            Dim srcW = GetBaseWidth(), srcH = GetBaseHeight()
+            If srcW <= 0 OrElse srcH <= 0 Then
+                RebuildLayerRows()
+                Return
+            End If
+            Dim xmp As String
+            Try
+                xmp = File.ReadAllText(xmpPath)
+            Catch
+                RebuildLayerRows()
+                Return
+            End Try
+            Dim specs = LightroomPresetService.ParseLocalCorrections(xmp)
+            If specs Is Nothing OrElse specs.Count = 0 Then
+                RebuildLayerRows()
+                Return
+            End If
+            For Each spec In specs
+                Dim maskName = LocalizationService.T("Masken-Korrektur") & " " & (_maskedAdjustmentLayers.Count + 1).ToString()
+                Dim mask As ImageMask
+                If String.Equals(spec.MaskType, "CircularGradient", StringComparison.Ordinal) Then
+                    mask = ImageProcessor.BuildRadialGradientMask(srcW, srcH, spec.Top, spec.Left, spec.Bottom, spec.Right,
+                                                                  spec.Angle, spec.Feather, spec.Flipped, spec.MaskValue, maskName)
+                Else
+                    mask = ImageProcessor.BuildLinearGradientMask(srcW, srcH, spec.ZeroX, spec.ZeroY, spec.FullX, spec.FullY,
+                                                                  spec.MaskValue, maskName)
+                End If
+                If mask Is Nothing Then Continue For
+                _imageMasks.Add(mask)
+                _maskedAdjustmentLayers.Add(New MaskedAdjustmentLayer With {
+                    .Name = maskName,
+                    .MaskId = mask.Id,
+                    .Adjustments = spec.Adjustments,
+                    .FromPreset = True,
+                    .IsMaskLayer = True
+                })
+            Next
+            RebuildLayerRows()
         End Sub
 
         ''' Schreibt die Look-Felder eines ImageAdjustments in die Regler des Editors - über die

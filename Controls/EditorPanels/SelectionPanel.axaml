@@ -151,12 +151,25 @@
                 HorizontalAlignment="Stretch"
                 Padding="10,6"
                 IsEnabled="{Binding HasActiveSelection}"
+                Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
+                ToolTip.Tip="Aus der Auswahl direkt eine maskierte Korrekturebene erstellen (ohne erst eine Anpassung ändern zu müssen)">
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
+                               Width="16" Height="16" />
+                <TextBlock Text="Neue Korrekturebene" />
+            </StackPanel>
+        </Button>
+
+        <Button Classes="ghost"
+                HorizontalAlignment="Stretch"
+                Padding="10,6"
+                IsEnabled="{Binding HasActiveSelection}"
                 Command="{Binding CopySelectionCommand}"
                 ToolTip.Tip="Auswahlinhalt als neues, frei verschiebbares Bild-Objekt kopieren">
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
                                Width="16" Height="16" />
-                <TextBlock Text="Kopieren" />
+                <TextBlock Text="Als Bild kopieren" />
             </StackPanel>
         </Button>
 

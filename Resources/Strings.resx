@@ -4020,4 +4020,25 @@
   <data name="Zeigt_die_Metadaten_Symbole_EXIF_IPTC_XMP_ICC_au_b5e647fb" xml:space="preserve">
     <value>Shows the metadata icons (EXIF, IPTC, XMP, ICC) on the tile permanently instead of only on mouse hover.</value>
   </data>
+  <data name="Als_Bild_kopieren_f707a88e" xml:space="preserve">
+    <value>Copy as image</value>
+  </data>
+  <data name="Auswahl_als_Korrekturebene_62bc6d0e" xml:space="preserve">
+    <value>Selection as adjustment layer</value>
+  </data>
+  <data name="Aus_der_Auswahl_direkt_eine_maskierte_Korrekture_4c153e49" xml:space="preserve">
+    <value>Create a masked adjustment layer directly from the selection (without having to change an adjustment first)</value>
+  </data>
+  <data name="Auswahl_Korrektur_0bc9f496" xml:space="preserve">
+    <value>Selection correction</value>
+  </data>
+  <data name="Masken_Korrektur_99247e22" xml:space="preserve">
+    <value>Mask correction</value>
+  </data>
+  <data name="Neue_Maskenebene_7e9e5245" xml:space="preserve">
+    <value>New mask layer</value>
+  </data>
+  <data name="Neue_Korrekturebene_d50075bf" xml:space="preserve">
+    <value>New adjustment layer</value>
+  </data>
 </root>
