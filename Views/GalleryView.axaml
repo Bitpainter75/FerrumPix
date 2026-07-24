@@ -689,6 +689,7 @@
                                         ItemsSource="{Binding FolderTree}"
                                         Background="Transparent"
                                         BorderThickness="0"
+                                        AutoScrollToSelectedItem="False"
                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                         ContextRequested="OnFolderTreeContextRequested"
                                         DragDrop.AllowDrop="True"

@@ -345,6 +345,7 @@ Namespace ViewModels
         Private _annotationFontFamily As String = "Arial"
         Private _annotationOpacity As Double = 100
         Private _annotationBlendMode As String = "Normal"
+        Private _annotationBlendIncludesStroke As Boolean = True
         ' Hintergrund-Ebene (Basisbild) im Ebenen-Panel aus-/eingeblendet. Wirkt strukturell übers
         ' Compositing (siehe ImageProcessor.ApplyAnnotations), nicht als Pixel-Anpassung.
         Private _backgroundHidden As Boolean = False
@@ -2144,6 +2145,7 @@ Namespace ViewModels
             AnnotationFontFamily = "Arial"
             AnnotationOpacity = 100
             AnnotationBlendMode = "Normal"
+            AnnotationBlendIncludesStroke = True
             AnnotationRotation = 0
             AnnotationFlipHorizontal = False
             AnnotationFlipVertical = False
@@ -4701,10 +4703,34 @@ Namespace ViewModels
                                      Not String.Equals(normalized, "Normal", StringComparison.OrdinalIgnoreCase)
                 _annotationBlendMode = normalized
                 Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
+                Me.RaisePropertyChanged(NameOf(UsesAnnotationBlendMode))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
                 Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
                 SyncSelectedAnnotation()
                 If wasBakedOnly <> willBeBakedOnly Then RequestOverlayStateNotify()
+            End Set
+        End Property
+
+        ''' <summary>Ist ueberhaupt ein Mischmodus eingestellt? Bei "Normal" hat "Kontur mitmischen" nichts
+        ''' zu tun - das Kontrollkaestchen im Objekt-Panel ist dann ausgegraut.</summary>
+        Public ReadOnly Property UsesAnnotationBlendMode As Boolean
+            Get
+                Return Not String.Equals(If(_annotationBlendMode, "Normal").Trim(), "Normal", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Gehoert die Kontur des markierten Objekts zum gemischten Teil? Aus = nur die Fuellung
+        ''' mischt sich mit dem Untergrund, die Kontur liegt unveraendert darueber. Bei "Normal" ohne
+        ''' Wirkung, ebenso bei Arten ohne eigene Fuellung (Linie, Bild, QR-Code ...).</summary>
+        Public Property AnnotationBlendIncludesStroke As Boolean
+            Get
+                Return _annotationBlendIncludesStroke
+            End Get
+            Set(value As Boolean)
+                If _annotationBlendIncludesStroke = value Then Return
+                _annotationBlendIncludesStroke = value
+                Me.RaisePropertyChanged(NameOf(AnnotationBlendIncludesStroke))
+                SyncSelectedAnnotation()
             End Set
         End Property
 
@@ -6904,6 +6930,7 @@ Namespace ViewModels
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
+                .BlendIncludesStroke = _annotationBlendIncludesStroke,
                 .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionImage", 0)),
                 .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(False),
                 .FlipVertical = DisplayAnnotationFlipVerticalToStored(False),
@@ -12849,6 +12876,7 @@ Namespace ViewModels
             _annotationFontFamily = "Arial"
             _annotationOpacity = 100
             _annotationBlendMode = "Normal"
+            _annotationBlendIncludesStroke = True
             _annotationRotation = 0
             _annotationFlipH = False
             _annotationFlipV = False
@@ -13399,6 +13427,7 @@ Namespace ViewModels
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
+                .BlendIncludesStroke = _annotationBlendIncludesStroke,
                 .RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, _annotationRotation)),
                 .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(_annotationFlipH),
                 .FlipVertical = DisplayAnnotationFlipVerticalToStored(_annotationFlipV),
@@ -13499,6 +13528,7 @@ Namespace ViewModels
                 .FontFamily = _annotationFontFamily,
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
+                .BlendIncludesStroke = _annotationBlendIncludesStroke,
                 .RotationDegrees = CSng(DisplayAnnotationRotationToStored("Image", _annotationRotation)),
                 .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(_annotationFlipH),
                 .FlipVertical = DisplayAnnotationFlipVerticalToStored(_annotationFlipV),
@@ -14599,6 +14629,7 @@ Namespace ViewModels
                     AnnotationFontFamily = a.FontFamily
                     AnnotationOpacity = a.Opacity
                     AnnotationBlendMode = a.BlendMode
+                    AnnotationBlendIncludesStroke = a.BlendIncludesStroke
                     AnnotationRotation = StoredAnnotationRotationToDisplay(a)
                     AnnotationFlipHorizontal = a.FlipHorizontal
                     AnnotationFlipVertical = a.FlipVertical
@@ -14714,6 +14745,7 @@ Namespace ViewModels
                 a.EraserFillColor = _eraserFillColor
             End If
             a.BlendMode = _annotationBlendMode
+            a.BlendIncludesStroke = _annotationBlendIncludesStroke
             a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, _annotationRotation))
             a.FlipHorizontal = _annotationFlipH
             a.FlipVertical = _annotationFlipV

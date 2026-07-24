@@ -761,6 +761,7 @@ Namespace ViewModels
         Public ReadOnly Property FlipHorizontalCommand As ICommand
         Public ReadOnly Property BackToGalleryCommand As ICommand
         Public ReadOnly Property DeleteCurrentCommand As ICommand
+        Public ReadOnly Property ResizeCurrentCommand As ICommand
         Public ReadOnly Property RenameCurrentCommand As ICommand
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property OpenFileManagerCommand As ICommand
@@ -837,6 +838,7 @@ Namespace ViewModels
             FlipHorizontalCommand = ReactiveCommand.Create(Sub() ScaleX = ScaleX * -1)
             BackToGalleryCommand = ReactiveCommand.Create(Sub() _mainVm.BackToGallery(_currentImagePath))
             DeleteCurrentCommand = ReactiveCommand.Create(Sub() DeleteCurrent())
+            ResizeCurrentCommand = ReactiveCommand.Create(Sub() ResizeCurrent())
             RenameCurrentCommand = ReactiveCommand.Create(Sub() RenameCurrent())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopyToClipboard())
             OpenFileManagerCommand = ReactiveCommand.Create(Sub() OpenInFileManager())
@@ -1997,6 +1999,31 @@ Namespace ViewModels
             LoadFilmstrip()
             LoadImmichAt(idx)
         End Function
+
+        ''' <summary>Strg+R im Betrachter: derselbe "Bildgröße ändern"-Ablauf wie in der Galerie, nur für
+        ''' das angezeigte Bild. Bewusst über die Galerie-Umsetzung, damit Dialog, Überschreiben/Kopie und
+        ''' der Immich-Weg an EINER Stelle stehen. Danach wird das Bild neu geladen - beim Überschreiben
+        ''' liegt auf dem Pfad jetzt eine andere Datei.</summary>
+        Private Async Sub ResizeCurrent()
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            Dim gallery = _mainVm?.Gallery
+            If gallery Is Nothing Then Return
+
+            Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                         PathIdentity.AreSame(i.FilePath, _currentImagePath))
+            If item Is Nothing Then
+                If Not File.Exists(_currentImagePath) Then Return
+                item = New ImageItem(_currentImagePath)
+            End If
+            If Not item.IsImage Then Return
+
+            Await gallery.ResizeImageItemsAsync(New List(Of ImageItem) From {item})
+
+            If File.Exists(_currentImagePath) Then
+                item.EvictThumbnail()
+                OpenImage(_currentImagePath, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+            End If
+        End Sub
 
         Private Sub RenameCurrent()
             If String.IsNullOrEmpty(_currentImagePath) Then Return

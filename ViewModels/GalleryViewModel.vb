@@ -1173,6 +1173,10 @@ Namespace ViewModels
         End Property
 
         Private _allItems As New List(Of ImageItem)()
+        Private _lastWindowFirst As Integer = -1
+        Private _lastWindowLast As Integer = -1
+        Private _lastWindowSlotHeight As Double = 0
+        Private _lastWindowColumns As Integer = 0
         Private _displayWindowFirst As Integer = -1
         Private _displayWindowLast As Integer = -1
         Private _topSpacerHeight As Double
@@ -2448,10 +2452,9 @@ Namespace ViewModels
         ''' Metadaten) mit Favorit-/Bewertungsfilter ab und spielt die Treffer als virtuellen Ordner ein.
         ''' Strukturbedingungen (Breite/ISO/…) gelten hier nicht - Immich kennt diese Felder in der Suche nicht.</summary>
         Private Async Sub StartImmichSearch(node As VirtualNavigationNode)
-            CancelActiveSearch()
+            Dim thumbnailToken = StartEmptyVirtualFolder(node.Name)
             _activeSearchCts = New CancellationTokenSource()
             Dim token = _activeSearchCts.Token
-            Dim thumbnailToken = StartEmptyVirtualFolder(node.Name)
             SelectedImmichNode = Nothing
             Dim favoriteOnly = String.Equals(AppSettingsService.NormalizeSearchFavoriteMode(node.FavoriteMode), "Only", StringComparison.OrdinalIgnoreCase)
             Dim ratings = NormalizeRatings(node.Ratings)
@@ -2521,13 +2524,14 @@ Namespace ViewModels
         End Function
 
         Private Async Sub StartIncrementalSavedSearch(node As VirtualNavigationNode)
-            CancelActiveSearch()
+            Dim cacheScopeId = GetSearchListCacheScopeId(node.Id)
+            Dim cacheScopeName = "Suchliste: " & node.Name
+            ' Erst die Ansicht leeren (bricht einen laufenden Suchlauf ab), dann den eigenen Token
+            ' anlegen - umgekehrt wuerde StartEmptyVirtualFolder die gerade begonnene Suche abwuergen.
+            Dim thumbnailToken = StartEmptyVirtualFolder(node.Name)
             _activeSearchCts = New CancellationTokenSource()
             Dim searchCts = _activeSearchCts
             Dim token = _activeSearchCts.Token
-            Dim cacheScopeId = GetSearchListCacheScopeId(node.Id)
-            Dim cacheScopeName = "Suchliste: " & node.Name
-            Dim thumbnailToken = StartEmptyVirtualFolder(node.Name)
             ' Saved results are loaded inside Task.Run below — no synchronous I/O on UI thread
             Dim savedPaths = If(node.Results, New List(Of String)())
             Dim textQuery = If(node.TextQuery, "").Trim()
@@ -2576,14 +2580,14 @@ Namespace ViewModels
                                                       End Function).ToList()
 
                                            Await Dispatcher.UIThread.InvokeAsync(Sub()
-                                               If token.IsCancellationRequested Then Return
+                                               If Not SearchMayPublish(node, token) Then Return
                                                AddPrebuiltItemsToVirtualFolder(prebuilt)
                                            End Sub, DispatcherPriority.Background)
 
                                            published += prebuilt.Count
                                            Dim localPublished = published
                                            Await Dispatcher.UIThread.InvokeAsync(Sub()
-                                               If token.IsCancellationRequested Then Return
+                                               If Not SearchMayPublish(node, token) Then Return
                                                StatusText = $"{localPublished:N0} gespeicherte {LocalizationService.T("Bilder")}  •  Suche läuft..."
                                            End Sub, DispatcherPriority.Background)
                                        Next
@@ -2602,7 +2606,7 @@ Namespace ViewModels
                                                pending.Clear()
                                                Dim localFound = foundCount
                                                Await Dispatcher.UIThread.InvokeAsync(Sub()
-                                                   If token.IsCancellationRequested Then Return
+                                                   If Not SearchMayPublish(node, token) Then Return
                                                    StatusText = $"Suche läuft... {localFound:N0} {LocalizationService.T("Bilder")}"
                                                End Sub)
                                            End If
@@ -2625,7 +2629,7 @@ Namespace ViewModels
                                                pending.Clear()
                                                Dim localFound = foundCount
                                                Await Dispatcher.UIThread.InvokeAsync(Sub()
-                                                   If token.IsCancellationRequested Then Return
+                                                   If Not SearchMayPublish(node, token) Then Return
                                                    StatusText = $"Suche läuft... {localFound:N0} {LocalizationService.T("Bilder")}"
                                                End Sub)
                                            End If
@@ -2638,7 +2642,7 @@ Namespace ViewModels
                                    End If
                                End Function, token)
 
-                If Not token.IsCancellationRequested Then
+                If SearchMayPublish(node, token) Then
                     CleanupSearchListResults(node, foundThisRun)
                     StatusText = $"{foundCount:N0} {LocalizationService.T("Bilder")}  •  {CurrentFolderName}"
                 End If
@@ -2715,7 +2719,7 @@ Namespace ViewModels
             Dim matchedPaths = matches.Select(Function(m) m.FilePath).ToList()
 
             Await Dispatcher.UIThread.InvokeAsync(Sub()
-                If searchToken.IsCancellationRequested Then Return
+                If Not SearchMayPublish(node, searchToken) Then Return
                 AddMetasToVirtualFolder(matches, thumbnailToken, cacheScopeId, cacheScopeName)
                 AppendSearchListResults(node, matchedPaths)
             End Sub)
@@ -2765,7 +2769,7 @@ Namespace ViewModels
             Dim matchedPaths = matches.Select(Function(m) m.FilePath).ToList()
 
             Await Dispatcher.UIThread.InvokeAsync(Sub()
-                If searchToken.IsCancellationRequested Then Return
+                If Not SearchMayPublish(node, searchToken) Then Return
                 AddMetasToVirtualFolder(matches, thumbnailToken, cacheScopeId, cacheScopeName)
                 AppendSearchListResults(node, matchedPaths)
             End Sub)
@@ -3141,7 +3145,13 @@ Namespace ViewModels
             SearchListService.Save(_savedSearches)
         End Sub
 
+        ''' <summary>Leert die Ansicht fuer einen virtuellen Ordner (Suchliste, Immich-Album, ...). Bricht
+        ''' dabei einen noch laufenden Suchlauf ab: JEDER Ansichtswechsel geht hier durch, deshalb ist das
+        ''' die Stelle, an der eine Suche stirbt - sonst schuettet ein Wechsel im Baum (Album, Person, Ort)
+        ''' die weiterlaufenden Treffer in die neue Ansicht. Die Starter legen ihren Abbruch-Token deshalb
+        ''' erst NACH diesem Aufruf an.</summary>
         Private Function StartEmptyVirtualFolder(name As String) As CancellationToken
+            CancelActiveSearch()
             Dim thumbnailToken = BeginNewFolderThumbnailScope()
             ClearSelection()
             _allItems.Clear()
@@ -3173,6 +3183,9 @@ Namespace ViewModels
                                             thumbnailToken As CancellationToken,
                                             Optional cacheScopeId As String = Nothing,
                                             Optional cacheScopeName As String = Nothing)
+            ' Ein Nachzuegler aus einem abgebrochenen Suchlauf darf niemals in eine echte Ordner-
+            ' ansicht rieseln - geprueft wird am ZIEL, nicht am Abbruch-Token des Aufrufers.
+            If Not _isVirtualFolder Then Return
             Dim added = False
             For Each meta In If(metas, Enumerable.Empty(Of LibraryImageMeta)())
                 If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
@@ -3196,6 +3209,8 @@ Namespace ViewModels
         ''' Adds pre-built ImageItem objects (constructed on a background thread) to the virtual
         ''' folder without any filesystem I/O — only dedup check and collection mutation.
         Private Sub AddPrebuiltItemsToVirtualFolder(items As List(Of ImageItem), Optional sortNow As Boolean = True)
+            ' Siehe AddMetasToVirtualFolder: Zielpruefung, kein Vertrauen auf den Aufrufer.
+            If Not _isVirtualFolder Then Return
             ApplyLocalColorLabelsToImmichItems(items)
             Dim added = False
             For Each item In If(items, New List(Of ImageItem)())
@@ -3267,7 +3282,9 @@ Namespace ViewModels
             If changed Then
                 target.Results = cleaned
                 node.Results = cleaned.ToList()
-                If currentRunResults IsNot Nothing Then
+                ' Die Ansicht nur aufraeumen, solange sie diesem Suchlauf gehoert - sonst wuerde das
+                ' Aufraeumen die Bilder eines inzwischen geoeffneten Ordners wegwerfen.
+                If currentRunResults IsNot Nothing AndAlso _isVirtualFolder Then
                     Dim keep = cleaned.ToHashSet(PathIdentity.Comparer)
                     _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not keep.Contains(i.FilePath))
                     FilterAndSort()
@@ -3276,6 +3293,17 @@ Namespace ViewModels
             End If
         End Sub
 
+
+        ''' <summary>Darf dieser Suchlauf noch in die Ansicht schreiben? Nur wenn er nicht abgebrochen ist,
+        ''' die Ansicht ueberhaupt ein virtueller Ordner ist UND genau diese Suchliste offen steht. Der
+        ''' Abbruch-Token allein reicht nicht: zwischen dem Abbruch und dem naechsten Ausfuehren einer
+        ''' bereits eingereihten UI-Rueckmeldung liegt eine Luecke, und ein Wechsel im Baum (Ordner,
+        ''' Album, andere Suchliste) darf die Treffer nicht in die neue Ansicht kippen.</summary>
+        Private Function SearchMayPublish(node As VirtualNavigationNode, searchToken As CancellationToken) As Boolean
+            If searchToken.IsCancellationRequested Then Return False
+            If Not _isVirtualFolder Then Return False
+            Return node IsNot Nothing AndAlso Object.ReferenceEquals(_selectedSearchNode, node)
+        End Function
 
         Private Sub CancelActiveSearch()
             If _activeSearchCts Is Nothing Then Return
@@ -4051,6 +4079,13 @@ Namespace ViewModels
             firstIndex = Math.Max(0, Math.Min(firstIndex, Items.Count - 1))
             lastIndex = Math.Max(firstIndex, Math.Min(lastIndex, Items.Count - 1))
 
+            ' Die zuletzt von der Ansicht gemeldete Fenstergeometrie merken, damit das ViewModel das
+            ' Fenster nach einer Aenderung der Liste selbst nachziehen kann (siehe RefreshDisplayWindow).
+            _lastWindowFirst = firstIndex
+            _lastWindowLast = lastIndex
+            _lastWindowSlotHeight = itemSlotHeight
+            _lastWindowColumns = columns
+
             If columns > 1 Then
                 Dim firstRow = firstIndex \ columns
                 Dim lastRow = lastIndex \ columns
@@ -4098,8 +4133,29 @@ Namespace ViewModels
             Else
                 _displayWindowFirst = firstIndex
                 _displayWindowLast = lastIndex
-                DisplayItems.ReplaceAll(Items.Skip(firstIndex).Take(lastIndex - firstIndex + 1))
+                Dim slice = Items.Skip(firstIndex).Take(lastIndex - firstIndex + 1).ToList()
+                If Not DisplayItems.SequenceEqual(slice) Then DisplayItems.ReplaceAll(slice)
             End If
+        End Sub
+
+        ''' <summary>Baut das angezeigte Fenster mit der zuletzt gemeldeten Geometrie neu auf. Noetig nach
+        ''' jeder Aenderung an <see cref="Items"/>: die Kacheln binden an DisplayItems, und das fuellt sonst
+        ''' erst das naechste Viewport-Ereignis der Ansicht nach.</summary>
+        Private Sub RefreshDisplayWindow()
+            If Items Is Nothing OrElse DisplayItems Is Nothing Then Return
+            If Items.Count = 0 Then
+                If DisplayItems.Count > 0 Then DisplayItems.Clear()
+                Return
+            End If
+            ' Vor dem ersten Layout gibt es keine Fenstergeometrie - dann steht im Anzeigefenster das
+            ' Anfangsfenster (ResetDisplayWindow), und genau das muss hier nachgezogen werden. Sonst
+            ' bliebe eine geloeschte Kachel stehen, solange die Ansicht noch nie gescrollt wurde.
+            If _lastWindowColumns <= 0 OrElse _lastWindowSlotHeight <= 0 Then
+                Dim initial = Items.Take(Math.Min(120, Items.Count)).ToList()
+                If Not DisplayItems.SequenceEqual(initial) Then ResetDisplayWindow()
+                Return
+            End If
+            SetDisplayWindow(_lastWindowFirst, _lastWindowLast, _lastWindowSlotHeight, _lastWindowColumns)
         End Sub
 
         Private Sub ResetDisplayWindow()
@@ -4152,6 +4208,12 @@ Namespace ViewModels
             Else
                 _displayWindowFirst = -1
                 _displayWindowLast = -1
+                ' Die Kacheln haengen an DisplayItems, nicht an Items: ohne diesen Neuaufbau blieb ein
+                ' geloeschtes Bild stehen, bis das naechste Viewport-Ereignis (Scrollen, Groessenaenderung)
+                ' SetDisplayWindow rief. Das Fenster wird nur ersetzt, wenn sich sein Inhalt wirklich
+                ' geaendert hat - waehrend einer laufenden Suche kaeme sonst pro Stapel ein voller
+                ' Neuaufbau der sichtbaren Kacheln.
+                RefreshDisplayWindow()
             End If
             Me.RaisePropertyChanged(NameOf(FooterStatusText))
 
@@ -4387,8 +4449,10 @@ Namespace ViewModels
                     Return
                 End If
 
+                Dim deletionAnchor = CaptureDeletionAnchor(items.Select(Function(i) i.FilePath))
                 ClearSelection()
                 RemoveImmichItems(assetIds)
+                SelectAfterDeletion(deletionAnchor)
                 RefreshImmichAlbumsAsync()
                 StatusText = String.Format(LocalizationService.T("{0} aus Immich gelöscht"), assetIds.Count)
             Catch ex As Exception
@@ -4432,13 +4496,16 @@ Namespace ViewModels
                 ToList()
             targets = targets.Where(Function(p) FileOperationPolicy.CanDelete(p)).ToList()
             If targets.Count = 0 Then Return
+            Dim deletionAnchor = CaptureDeletionAnchor(targets)
             If _isVirtualFolder Then
                 Dim deletedSet = targets.ToHashSet(PathIdentity.Comparer)
-                _mainVm.RequestDeletePaths(targets, Sub()
-                                                        ClearSelection()
-                                                        _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso deletedSet.Contains(i.FilePath))
-                                                        FilterAndSort()
-                                                    End Sub)
+                _mainVm.RequestDeletePaths(targets, Nothing,
+                                           Sub()
+                                               ClearSelection()
+                                               _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso deletedSet.Contains(i.FilePath))
+                                               FilterAndSort()
+                                               SelectAfterDeletion(deletionAnchor)
+                                           End Sub)
                 Return
             End If
             Dim currentFolderWasDeleted = Not String.IsNullOrEmpty(_currentFolder) AndAlso
@@ -4447,18 +4514,66 @@ Namespace ViewModels
             ' Vor dem Löschen feststellen: danach sagt Directory.Exists nichts mehr. Nur wenn ein Ordner
             ' dabei war, muss der Baum neu aufgebaut werden.
             Dim anyFolderDeleted = targets.Any(Function(p) Directory.Exists(p))
-            _mainVm.RequestDeletePaths(targets, Sub()
-                                                    ClearSelection()
-                                                    If currentFolderWasDeleted AndAlso Not String.IsNullOrEmpty(fallbackFolder) AndAlso Directory.Exists(fallbackFolder) Then
-                                                        CurrentFolder = fallbackFolder
-                                                        LoadFolderImages(fallbackFolder)
-                                                        RefreshTree()
-                                                        SelectFolderInTreeByPath(fallbackFolder)
-                                                    Else
-                                                        SyncFolderItems()
-                                                        If anyFolderDeleted Then RefreshTree()
-                                                    End If
-                                                End Sub)
+            Dim deletedPaths = targets.ToHashSet(PathIdentity.Comparer)
+            _mainVm.RequestDeletePaths(targets,
+                                       Sub()
+                                           ' Nachlauf: Verzeichnis abgleichen (holt zurueck, was doch nicht
+                                           ' geloescht werden konnte) und den Baum nachziehen.
+                                           If currentFolderWasDeleted AndAlso Not String.IsNullOrEmpty(fallbackFolder) AndAlso Directory.Exists(fallbackFolder) Then
+                                               CurrentFolder = fallbackFolder
+                                               LoadFolderImages(fallbackFolder)
+                                               RefreshTree()
+                                               SelectFolderInTreeByPath(fallbackFolder)
+                                           Else
+                                               SyncFolderItems()
+                                               If anyFolderDeleted Then RefreshTree()
+                                           End If
+                                       End Sub,
+                                       Sub()
+                                           ' Sofort ausblenden, noch VOR dem Papierkorb-Aufruf: das eigentliche
+                                           ' Loeschen laeuft im Hintergrund, und SyncFolderItems zaehlt danach
+                                           ' das ganze Verzeichnis neu auf - beides war frueher zu sehen.
+                                           ClearSelection()
+                                           _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso deletedPaths.Contains(i.FilePath))
+                                           FilterAndSort()
+                                           If Not currentFolderWasDeleted Then SelectAfterDeletion(deletionAnchor)
+                                       End Sub)
+        End Sub
+
+        ''' <summary>Merkt sich vor dem Löschen, an welcher Stelle der Liste das erste betroffene Element
+        ''' steht. Danach rücken die überlebenden Elemente in die Lücke nach, sodass genau dieser Index
+        ''' auf den Nachfolger zeigt - beim letzten Bild auf das neue letzte. Ohne diesen Anker bliebe die
+        ''' Auswahl leer und die nächste Pfeiltaste sprang an den Listenanfang.</summary>
+        Private Function CaptureDeletionAnchor(deletedPaths As IEnumerable(Of String)) As Integer
+            Dim gone = If(deletedPaths, Enumerable.Empty(Of String)()).ToHashSet(PathIdentity.Comparer)
+            If gone.Count = 0 Then Return -1
+            For i = 0 To Items.Count - 1
+                Dim item = Items(i)
+                If item IsNot Nothing AndAlso item.IsSelectableEntry AndAlso gone.Contains(item.FilePath) Then Return i
+            Next
+            Return -1
+        End Function
+
+        ''' <summary>Setzt die Auswahl nach dem Löschen auf das nachgerückte Element. Greift nur, wenn
+        ''' nichts von der alten Auswahl übrig ist - sonst bliebe eine bewusst erhaltene Auswahl auf der
+        ''' Strecke.</summary>
+        Private Sub SelectAfterDeletion(anchor As Integer)
+            If anchor < 0 OrElse Items.Count = 0 Then Return
+            If SelectedItem IsNot Nothing OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Count > 0) Then Return
+
+            Dim start = Math.Min(anchor, Items.Count - 1)
+            For i = start To Items.Count - 1
+                If Items(i) IsNot Nothing AndAlso Items(i).IsSelectableEntry Then
+                    SelectOnly(Items(i))
+                    Return
+                End If
+            Next
+            For i = start - 1 To 0 Step -1
+                If Items(i) IsNot Nothing AndAlso Items(i).IsSelectableEntry Then
+                    SelectOnly(Items(i))
+                    Return
+                End If
+            Next
         End Sub
 
         Private Sub OpenInFileManager()
@@ -4969,7 +5084,14 @@ Namespace ViewModels
         Private Shared ReadOnly BatchImageEditWritableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
 
         Private Async Sub ResizeSelected()
-            Dim targetItems = GetSelectedBatchEditableImageItems()
+            Await ResizeImageItemsAsync(GetSelectedBatchEditableImageItems())
+        End Sub
+
+        ''' <summary>Der komplette "Bildgröße ändern"-Ablauf für eine Liste von Bildern - Dialog,
+        ''' Überschreiben oder Kopie, lokal oder nach Immich. Öffentlich, weil der Betrachter mit
+        ''' Strg+R denselben Ablauf für das gerade angezeigte Bild auslöst: eine Umsetzung, nicht zwei.</summary>
+        Public Async Function ResizeImageItemsAsync(items As IList(Of ImageItem)) As Task
+            Dim targetItems = If(items, New List(Of ImageItem)()).Where(Function(i) i IsNot Nothing).ToList()
             If targetItems.Count = 0 Then Return
 
             Dim samplePath = Await EnsureLocalPathForBatchAsync(targetItems(0))
@@ -5062,7 +5184,7 @@ Namespace ViewModels
 
             StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
-        End Sub
+        End Function
 
         ''' <summary>Stapel: einen eingebauten Filter, ein Lightroom-Preset (.xmp) oder eine LUT (.cube) auf
         ''' die Auswahl anwenden - entweder in die Originale hinein oder in neue Dateien (mit dem Namen der

@@ -585,6 +585,27 @@ Namespace Views
                 End Select
             End If
 
+            ' Strg+R öffnet „Bildgröße ändern" - in der Galerie für die Auswahl, im Betrachter für das
+            ' angezeigte Bild. Aus demselben Grund wie Strg+P im Tunnel und nicht in den Ansichten: so
+            ' greift es unabhängig davon, wo der Fokus gerade steht (Ordnerbaum, Filmstreifen), auch im
+            ' Vollbild und auch noch, nachdem ein Overlay-Dialog den Fokus hatte. Im Editor bleibt
+            ' Strg+R das Drehen-Werkzeug - dort fällt dieser Zweig bewusst durch.
+            If e.Key = Key.R AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso Not IsTextInputSource(e.Source) Then
+                Select Case vm.CurrentMode
+                    Case AppMode.Gallery
+                        If vm.Gallery IsNot Nothing AndAlso vm.Gallery.HasSelectedImage Then
+                            vm.Gallery.ResizeSelectedCommand.Execute(Nothing)
+                        End If
+                        e.Handled = True
+                        Return
+                    Case AppMode.Viewer
+                        vm.Viewer.ResizeCurrentCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
+                End Select
+            End If
+
             ' F11 schaltet in jedem Modus um - hier oben im Tunnel, damit es auch im Vollbild greift,
             ' wo die darunterliegenden Ansichten keine Tasten mehr sehen.
             If e.Key = Key.F11 Then

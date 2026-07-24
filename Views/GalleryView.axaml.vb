@@ -639,7 +639,10 @@ Namespace Views
             If _restoringFolderTreeSelection Then Return
             If _suppressFolderTreeSelectionChange Then
                 _suppressFolderTreeSelectionChange = False
-                RestoreFolderTreeSelection(sender, vm)
+                ' Rechtsklick: nur die Markierung zurueckholen, NICHT scrollen. In einem grossen Baum
+                ' liegt der markierte Ordner oft weit weg vom angeklickten - das Zentrieren riss die
+                ' Ansicht dorthin, waehrend das Kontextmenue ueber einer nun unsichtbaren Zeile stand.
+                RestoreFolderTreeSelection(sender, vm, bringIntoView:=False)
                 Return
             End If
             If e.AddedItems Is Nothing OrElse e.AddedItems.Count = 0 Then Return
@@ -897,13 +900,13 @@ Namespace Views
                 End Sub, DispatcherPriority.Background)
         End Sub
 
-        Private Sub RestoreFolderTreeSelection(sender As Object, vm As GalleryViewModel)
+        Private Sub RestoreFolderTreeSelection(sender As Object, vm As GalleryViewModel, Optional bringIntoView As Boolean = True)
             Dim tree = TryCast(sender, TreeView)
             If tree Is Nothing OrElse vm.SelectedFolderNode Is Nothing Then Return
-            RestoreFolderTreeSelection(tree, vm.SelectedFolderNode)
+            RestoreFolderTreeSelection(tree, vm.SelectedFolderNode, bringIntoView)
         End Sub
 
-        Private Sub RestoreFolderTreeSelection(tree As TreeView, node As FolderNode)
+        Private Sub RestoreFolderTreeSelection(tree As TreeView, node As FolderNode, Optional bringIntoView As Boolean = True)
             If tree Is Nothing OrElse node Is Nothing Then Return
             _restoringFolderTreeSelection = True
             Try
@@ -913,8 +916,11 @@ Namespace Views
             End Try
             ' NUR beim initialen Anzeigen der (neu aufgebauten) TreeView den aktuellen Ordner in den
             ' sichtbaren Bereich holen - Auto-Scrollen bei normaler Navigation stoerte den Nutzer
-            ' (der Baum "zog" jeden angeklickten Ordner in die Mitte).
-            BringTreeItemIntoView(tree, node)
+            ' (der Baum "zog" jeden angeklickten Ordner in die Mitte). Der Baum selbst scrollt nicht
+            ' von sich aus: AutoScrollToSelectedItem ist im XAML abgeschaltet, sonst riss das
+            ' Zurueckholen der Markierung nach einem Rechtsklick die Ansicht weg (und ein
+            ' nachtraegliches Zurueckstellen des Scroll-Stands flackerte sichtbar).
+            If bringIntoView Then BringTreeItemIntoView(tree, node)
         End Sub
 
         Public Sub OnThumbnailPointerPressed(sender As Object, e As PointerPressedEventArgs)
@@ -1967,12 +1973,6 @@ Namespace Views
                         ' Strg+W: Filter anwenden (Nutzerwunsch 2026-07-17, vorher Strg+Umschalt+F).
                         DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+W hasSelectedImage={vm.HasSelectedImage}")
                         If vm.HasSelectedImage Then vm.ApplyFilterSelectedCommand.Execute(Nothing)
-                        e.Handled = True
-                        Return
-                    Case Key.R
-                        ' Strg+R: Bildgröße ändern (Nutzerwunsch 2026-07-17).
-                        DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+R hasSelectedImage={vm.HasSelectedImage}")
-                        If vm.HasSelectedImage Then vm.ResizeSelectedCommand.Execute(Nothing)
                         e.Handled = True
                         Return
                     Case Key.D

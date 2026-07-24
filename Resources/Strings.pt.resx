@@ -4075,4 +4075,145 @@
   <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
     <value>Limita a nitidez às bordas: 0 aplica nitidez em toda a superfície, valores maiores deixam áreas lisas como céu e pele em paz.</value>
   </data>
+  <data name="Kontur_mitmischen_f0d70cba" xml:space="preserve">
+    <value>Misturar também o contorno</value>
+  </data>
+  <data name="Aus_nur_die_F_llung_wird_gemischt_die_Kontur_ble_2afa532a" xml:space="preserve">
+    <value>Desligado: apenas o preenchimento é misturado, o contorno permanece inalterado por cima</value>
+  </data>
+  <data name="Strg_Pfeil_links_Strg_Pfeil_rechts_105062ba" xml:space="preserve">
+    <value>Ctrl+Seta esquerda / Ctrl+Seta direita</value>
+  </data>
+  <data name="Bild_nach_links_drehen_Strg_Pfeil_links_4817edca" xml:space="preserve">
+    <value>Girar a imagem para a esquerda (Ctrl+Seta esquerda)</value>
+  </data>
+  <data name="Bild_nach_rechts_drehen_Strg_Pfeil_rechts_34a9a828" xml:space="preserve">
+    <value>Girar a imagem para a direita (Ctrl+Seta direita)</value>
+  </data>
+  <data name="Werkzeug_Bildgr_e_Text_Zeichnen_Einf_gen_5b7b9566" xml:space="preserve">
+    <value>Ferramenta: Tamanho da imagem / Texto / Desenhar / Inserir</value>
+  </data>
+  <data name="Strg_0_a3622365" xml:space="preserve">
+    <value>Ctrl+0</value>
+  </data>
+  <data name="Strg_B_d7c995b1" xml:space="preserve">
+    <value>Ctrl+B</value>
+  </data>
+  <data name="Strg_C_e180266d" xml:space="preserve">
+    <value>Ctrl+C</value>
+  </data>
+  <data name="Strg_G_a8e90537" xml:space="preserve">
+    <value>Ctrl+G</value>
+  </data>
+  <data name="Strg_T_5d85b26c" xml:space="preserve">
+    <value>Ctrl+T</value>
+  </data>
+  <data name="Strg_V_0c87a974" xml:space="preserve">
+    <value>Ctrl+V</value>
+  </data>
+  <data name="Strg_X_5ae494a5" xml:space="preserve">
+    <value>Ctrl+X</value>
+  </data>
+  <data name="Strg_Y_00ebae83" xml:space="preserve">
+    <value>Ctrl+Y</value>
+  </data>
+  <data name="Strg_Z_bd55875e" xml:space="preserve">
+    <value>Ctrl+Z</value>
+  </data>
+  <data name="Strg_1_bis_Strg_5_344fe0c7" xml:space="preserve">
+    <value>Ctrl+1 a Ctrl+5</value>
+  </data>
+  <data name="Strg_Pfeil_links_56022ea2" xml:space="preserve">
+    <value>Ctrl+Seta esquerda</value>
+  </data>
+  <data name="Strg_Pfeil_rechts_2d1d6844" xml:space="preserve">
+    <value>Ctrl+Seta direita</value>
+  </data>
+  <data name="Bild_auf_094e1a7a" xml:space="preserve">
+    <value>Page Up</value>
+  </data>
+  <data name="Bild_ab_5936ced2" xml:space="preserve">
+    <value>Page Down</value>
+  </data>
+  <data name="Pos1_509bf088" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Ende_920e9c46" xml:space="preserve">
+    <value>End</value>
+  </data>
+  <data name="Plus_2d05d0f1" xml:space="preserve">
+    <value>Mais</value>
+  </data>
+  <data name="Minus_02b11141" xml:space="preserve">
+    <value>Menos</value>
+  </data>
+  <data name="Pfeil_links_oder_Bild_auf_a072f7c6" xml:space="preserve">
+    <value>Seta esquerda ou Page Up</value>
+  </data>
+  <data name="Pfeil_rechts_oder_Bild_ab_a5ecf0e5" xml:space="preserve">
+    <value>Seta direita ou Page Down</value>
+  </data>
+  <data name="Eine_Seite_nach_oben_fc24e606" xml:space="preserve">
+    <value>Uma página para cima</value>
+  </data>
+  <data name="Eine_Seite_nach_unten_4db7a722" xml:space="preserve">
+    <value>Uma página para baixo</value>
+  </data>
+  <data name="Zum_ersten_Element_0f22b8dc" xml:space="preserve">
+    <value>Para o primeiro item</value>
+  </data>
+  <data name="Zum_letzten_Element_81aa511e" xml:space="preserve">
+    <value>Para o último item</value>
+  </data>
+  <data name="Voriges_Bild_f04c91d3" xml:space="preserve">
+    <value>Imagem anterior</value>
+  </data>
+  <data name="Nach_rechts_drehen_a8942991" xml:space="preserve">
+    <value>Girar para a direita</value>
+  </data>
+  <data name="Bewertung_entfernen_6e74699a" xml:space="preserve">
+    <value>Remover avaliação</value>
+  </data>
+  <data name="Bewertung_setzen_dieselbe_Zahl_erneut_entfernt_s_98ac91f1" xml:space="preserve">
+    <value>Definir avaliação (premir o mesmo número novamente remove-a)</value>
+  </data>
+  <data name="Auswahl_kopieren_924351a5" xml:space="preserve">
+    <value>Copiar seleção</value>
+  </data>
+  <data name="Auswahl_einf_gen_b5b1d499" xml:space="preserve">
+    <value>Colar seleção</value>
+  </data>
+  <data name="Werkzeug_Bildgr_e_304ea854" xml:space="preserve">
+    <value>Ferramenta: Tamanho da imagem</value>
+  </data>
+  <data name="Werkzeug_Text_ed0c2a5f" xml:space="preserve">
+    <value>Ferramenta: Texto</value>
+  </data>
+  <data name="Werkzeug_Zeichnen_dc14727c" xml:space="preserve">
+    <value>Ferramenta: Desenhar</value>
+  </data>
+  <data name="Werkzeug_Einf_gen_225982f3" xml:space="preserve">
+    <value>Ferramenta: Inserir</value>
+  </data>
+  <data name="Werkzeuggr_e_kleiner_845be946" xml:space="preserve">
+    <value>Tamanho da ferramenta menor</value>
+  </data>
+  <data name="Werkzeuggr_e_gr_er_16f964e5" xml:space="preserve">
+    <value>Tamanho da ferramenta maior</value>
+  </data>
+  <data name="F5_b5cbd343" xml:space="preserve">
+    <value>F5</value>
+  </data>
+  <data name="Werkzeug_Bild_01d69592" xml:space="preserve">
+    <value>Ferramenta: Imagem</value>
+  </data>
+  <data name="Werkzeug_QR_Code_93b7978d" xml:space="preserve">
+    <value>Ferramenta: Código QR</value>
+  </data>
+  <data name="Favorit_ein_aus_Galerie_und_Betrachter_37855f03" xml:space="preserve">
+    <value>Favorito ligado/desligado (galeria e visualizador)</value>
+  </data>
+  <data name="Strg_K_e12b34b4" xml:space="preserve">
+    <value>Ctrl+K</value>
+  </data>
 </root>

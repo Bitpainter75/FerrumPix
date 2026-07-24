@@ -45,13 +45,13 @@
 
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding RotateLeftCommand}"
-                            ToolTip.Tip="Bild nach links drehen (Strg+L)">
+                            ToolTip.Tip="Bild nach links drehen (Strg+Pfeil links)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
                                Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding RotateRightCommand}"
-                            ToolTip.Tip="Bild nach rechts drehen (Strg+R)">
+                            ToolTip.Tip="Bild nach rechts drehen (Strg+Pfeil rechts)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise-2.svg"
                                Width="20" Height="20"/>
                     </Button>

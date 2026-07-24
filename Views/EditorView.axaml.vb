@@ -2292,10 +2292,16 @@ Namespace Views
             If canvas Is Nothing OrElse vm Is Nothing OrElse displayBitmap Is Nothing Then Return New Avalonia.Rect()
             Dim effectiveSize = GetEffectiveDisplaySize(vm)
             Dim scale = SliderToZoom(_zoomSliderValue) / 100.0
-            Dim iw = effectiveSize.Width * scale
-            Dim ih = effectiveSize.Height * scale
-            Dim ix = (canvas.Bounds.Width - iw) / 2.0 + _panX
-            Dim iy = (canvas.Bounds.Height - ih) / 2.0 + _panY
+            ' EXAKT dieselbe Rechnung (inkl. Rundung auf ganze Geraete-Pixel) wie in UpdateSliderLayout,
+            ' das die Bild-Controls und die Overlays platziert. Vorher rundete nur die eine Seite: das
+            ' Objekt-Overlay bekam seine Groesse aus dem GERUNDETEN Rechteck, der Zieh-Code rechnete sie
+            ' gegen das UNGERUNDETE zurueck - pro Verschieben schrumpfte ein Objekt so um bis zu einen
+            ' halben Anzeigepixel, bei starker Verkleinerung also um ganze Bildpixel (Befund 2026-07-24:
+            ' 1000x1000 wurde nach dem Verschieben zu 1000x999).
+            Dim iw = Math.Round(effectiveSize.Width * scale, MidpointRounding.AwayFromZero)
+            Dim ih = Math.Round(effectiveSize.Height * scale, MidpointRounding.AwayFromZero)
+            Dim ix = Math.Round((canvas.Bounds.Width - iw) / 2.0 + _panX, MidpointRounding.AwayFromZero)
+            Dim iy = Math.Round((canvas.Bounds.Height - ih) / 2.0 + _panY, MidpointRounding.AwayFromZero)
             Return New Avalonia.Rect(ix, iy, iw, ih)
         End Function
 
@@ -3689,11 +3695,19 @@ Namespace Views
             ' Verschieben bleibt die Schrift unangetastet (siehe ScaleSelectedTextFontFromDrag).
             If IsSelectedAnnotationTextLayer(vm) Then ScaleSelectedTextFontFromDrag(textRect, vm)
 
+            ' Verschieben und Drehen aendern die GROESSE nicht - dann die Werte des ViewModels
+            ' unveraendert durchreichen, statt sie aus dem Bildschirm-Rechteck zurueckzurechnen. Jede
+            ' Rueckrechnung ueber die Anzeigegroesse rundet, und bei stark verkleinerter Anzeige kostet
+            ' das pro Geste ganze Bildpixel.
+            Dim keepsSize = _textDragMode = TextDragMode.Move OrElse _textDragMode = TextDragMode.Rotate
+            Dim widthPercent = If(keepsSize, vm.AnnotationWidthPercent, textRect.Width / imageRect.Width * 100.0)
+            Dim heightPercent = If(keepsSize, vm.AnnotationHeightPercent, textRect.Height / imageRect.Height * 100.0)
+
             vm.SetSelectedAnnotationRect(
                 (textRect.Left - imageRect.Left) / imageRect.Width * 100.0,
                 (textRect.Top - imageRect.Top) / imageRect.Height * 100.0,
-                textRect.Width / imageRect.Width * 100.0,
-                textRect.Height / imageRect.Height * 100.0)
+                widthPercent,
+                heightPercent)
         End Sub
 
         ''' <summary>Skaliert den Schriftgrad eines Textobjekts aus dem gezogenen Griff - gleichmäßig aus
@@ -3916,17 +3930,24 @@ Namespace Views
                             vm.ClearSelection()
                             e.Handled = True
                         End If
-                    Case Key.P
-                        ' Strg+P ist seit 2026-07-18 durchgängig „Drucken" (Weltstandard, im
-                        ' Fenster-Tunnel abgefangen). „Vorschau anwenden" liegt jetzt auf
-                        ' Strg+UMSCHALT+P; ohne die Umschalt-Prüfung würden beide feuern.
-                        If Not isTextInputFocused AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
-                            vm.ApplyPreviewCommand.Execute(Nothing)
+                    Case Key.R
+                        ' Strg+R ist überall „Bildgröße": in Galerie und Betrachter der Overlay-Dialog,
+                        ' hier das Werkzeug mit seinem Panel (Nutzerwunsch 2026-07-24). Gedreht wird
+                        ' jetzt mit Strg+Pfeil, das Drehen-Werkzeug braucht das Kürzel also nicht mehr.
+                        If Not isTextInputFocused Then
+                            vm.CurrentTool = EditorTool.Resize
                             e.Handled = True
                         End If
-                    Case Key.R
-                        If Not isTextInputFocused Then
-                            vm.CurrentTool = EditorTool.Rotate
+                    Case Key.Left
+                        ' Strg+Pfeil dreht - dieselben Kuerzel wie im Betrachter (Nutzerwunsch
+                        ' 2026-07-24). Ohne Strg verschieben die Pfeile weiterhin das Objekt.
+                        If Not isInputControlFocused Then
+                            vm.RotateLeftCommand.Execute(Nothing)
+                            e.Handled = True
+                        End If
+                    Case Key.Right
+                        If Not isInputControlFocused Then
+                            vm.RotateRightCommand.Execute(Nothing)
                             e.Handled = True
                         End If
                     Case Key.T
@@ -3942,6 +3963,21 @@ Namespace Views
                     Case Key.G
                         If Not isTextInputFocused Then
                             vm.CurrentTool = EditorTool.Insert
+                            e.Handled = True
+                        End If
+                    Case Key.I
+                        ' Bild- und QR-Objekt sind keine eigenen Werkzeuge, sondern Platzierungsarten:
+                        ' SetToolCommand stellt dafür das Objekt-Werkzeug samt Art scharf (derselbe Weg
+                        ' wie die Knöpfe in der Werkzeugleiste).
+                        If Not isTextInputFocused Then
+                            vm.SetToolCommand.Execute("Image")
+                            e.Handled = True
+                        End If
+                    Case Key.K
+                        ' QR-Code auf Strg+K: Strg+Q ist in ALLEN Ansichten der Favorit (Fenster-Tunnel),
+                        ' und K war das nächstliegende freie Kürzel.
+                        If Not isTextInputFocused Then
+                            vm.SetToolCommand.Execute("QR")
                             e.Handled = True
                         End If
                     Case Key.E

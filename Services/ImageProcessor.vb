@@ -219,6 +219,11 @@ Namespace Services
         Private _fontFamily As String = "Arial"
         Private _opacity As Single = 100
         Private _blendMode As String = "Normal"
+        ''' Gehoert die Kontur zum gemischten Teil des Objekts? True = wie bisher, das ganze Objekt geht
+        ''' durch den Mischmodus. False = nur die Fuellung mischt sich mit dem Untergrund, die Kontur
+        ''' liegt unveraendert (Normal) darueber - so bleibt z.B. ein Rahmen sichtbar, waehrend die
+        ''' Flaeche multipliziert oder aufgehellt wird.
+        Private _blendIncludesStroke As Boolean = True
         Private _flowPercent As Single = 100
         Private _rotationDegrees As Single = 0
         ' Spiegelung des Objekts um seine eigene Mitte (nicht um die Bildmitte): das Drehen-Werkzeug
@@ -597,6 +602,16 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Wird die Kontur mitgemischt? Siehe _blendIncludesStroke.</summary>
+        Public Property BlendIncludesStroke As Boolean
+            Get
+                Return _blendIncludesStroke
+            End Get
+            Set(value As Boolean)
+                SetField(_blendIncludesStroke, value)
+            End Set
+        End Property
+
         Public Property FlowPercent As Single
             Get
                 Return _flowPercent
@@ -930,6 +945,7 @@ Namespace Services
                 .FontFamily = FontFamily,
                 .Opacity = Opacity,
                 .BlendMode = BlendMode,
+                .BlendIncludesStroke = BlendIncludesStroke,
                 .FlowPercent = FlowPercent,
                 .RotationDegrees = RotationDegrees,
                 .FlipHorizontal = FlipHorizontal,
@@ -6408,24 +6424,20 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' die Pixel-Pipeline darauf laufen lassen (Belichtung, Farbe, Filter … treffen so nur das
                 ' Objekt), dann an Ort und Stelle in der Z-Reihenfolge einkomponieren. Ohne eigene
                 ' Anpassungen wird wie bisher direkt gezeichnet - kein zusätzlicher Speicher, keine Zeit.
-                If HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) Then
-                    Using layer = New SKBitmap(layerWidth, layerHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
-                        Using layerCanvas = New SKCanvas(layer)
-                            layerCanvas.Clear(SKColors.Transparent)
-                            layerCanvas.Translate(-offsetX, -offsetY)
-                            DrawAnnotationOnCanvas(layerCanvas, kind, renderAnnotation, rect, sourceWidth, sourceHeight)
-                        End Using
-                        If HasObjectAdjustments(annotation) Then
-                            Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
-                            objectAdj.SourceWidthPixels = layer.Width
-                            objectAdj.SourceHeightPixels = layer.Height
-                            Using processedLayer = ProcessBitmapBase(layer, objectAdj)
-                                DrawAnnotationLayer(canvas, processedLayer, renderAnnotation.BlendMode)
-                            End Using
-                        Else
-                            DrawAnnotationLayer(canvas, layer, renderAnnotation.BlendMode)
-                        End If
-                    End Using
+                If SplitsStrokeFromBlend(renderAnnotation, kind) Then
+                    ' Kontur NICHT mitmischen: die Fuellung geht durch den Mischmodus, die Kontur wird
+                    ' anschliessend normal darueber gelegt. Gezeichnet wird dafuer zweimal mit je einer
+                    ' durchsichtig gesetzten Farbe - so bleibt jede der Zeichenroutinen unberuehrt.
+                    DrawAnnotationViaLayer(canvas, annotation, AnnotationFillOnly(renderAnnotation), kind, rect,
+                                           sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
+                                           renderAnnotation.BlendMode)
+                    DrawAnnotationViaLayer(canvas, annotation, AnnotationStrokeOnly(renderAnnotation), kind, rect,
+                                           sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
+                                           "Normal")
+                ElseIf HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) Then
+                    DrawAnnotationViaLayer(canvas, annotation, renderAnnotation, kind, rect,
+                                           sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
+                                           renderAnnotation.BlendMode)
                 Else
                     canvas.Save()
                     canvas.Translate(-offsetX, -offsetY)
@@ -6434,6 +6446,73 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End If
             Next
         End Sub
+
+        ''' <summary>Zeichnet ein Objekt auf eine eigene transparente Ebene, laesst - falls vorhanden - die
+        ''' Pixel-Anpassungen des Objekts darauf laufen und komponiert sie mit dem angegebenen Mischmodus
+        ''' ein.</summary>
+        Private Shared Sub DrawAnnotationViaLayer(canvas As SKCanvas, annotation As ImageAnnotation,
+                                                  renderAnnotation As ImageAnnotation, kind As String, rect As SKRect,
+                                                  sourceWidth As Integer, sourceHeight As Integer,
+                                                  layerWidth As Integer, layerHeight As Integer,
+                                                  offsetX As Integer, offsetY As Integer,
+                                                  blendModeName As String)
+            Using layer = New SKBitmap(layerWidth, layerHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using layerCanvas = New SKCanvas(layer)
+                    layerCanvas.Clear(SKColors.Transparent)
+                    layerCanvas.Translate(-offsetX, -offsetY)
+                    DrawAnnotationOnCanvas(layerCanvas, kind, renderAnnotation, rect, sourceWidth, sourceHeight)
+                End Using
+                If HasObjectAdjustments(annotation) Then
+                    Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
+                    objectAdj.SourceWidthPixels = layer.Width
+                    objectAdj.SourceHeightPixels = layer.Height
+                    Using processedLayer = ProcessBitmapBase(layer, objectAdj)
+                        DrawAnnotationLayer(canvas, processedLayer, blendModeName)
+                    End Using
+                Else
+                    DrawAnnotationLayer(canvas, layer, blendModeName)
+                End If
+            End Using
+        End Sub
+
+        Private Const TransparentColorHex As String = "#00000000"
+
+        ''' <summary>Objekte, bei denen sich Fuellung und Kontur getrennt zeichnen lassen. Ausgenommen sind
+        ''' Arten, deren Inhalt nicht die "Fuellung" ist (Bild, QR-Code, SVG, Wasserzeichen mit Bild - die
+        ''' kaemen sonst doppelt), reine Kontur-Arten (Linie, Pfeil, Spirale - da bliebe zum Mischen nichts
+        ''' uebrig) und Pinselstriche. Ohne sichtbare Kontur ist das Aufteilen ohnehin sinnlos.</summary>
+        Private Shared Function SplitsStrokeFromBlend(renderAnnotation As ImageAnnotation, kind As String) As Boolean
+            If renderAnnotation Is Nothing OrElse renderAnnotation.BlendIncludesStroke Then Return False
+            If IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) Then Return False
+            If renderAnnotation.StrokeWidth <= 0 Then Return False
+            If ParseColor(renderAnnotation.StrokeColor, SKColors.Black).Alpha = 0 Then Return False
+            Select Case kind
+                Case "image", "selectionimage", "qr", "qrcode", "qr-code", "svg", "watermark",
+                     "line", "arrow", "spiral", "brush", "eraser"
+                    Return False
+                Case Else
+                    Return True
+            End Select
+        End Function
+
+        ''' Fuellung ohne Kontur bzw. Kontur ohne Fuellung: statt jede der Zeichenroutinen um einen Schalter
+        ''' zu erweitern, wird mit durchsichtig gesetzter Kontur- bzw. Fuellfarbe gezeichnet.
+        Private Shared Function AnnotationFillOnly(source As ImageAnnotation) As ImageAnnotation
+            Dim clone = source.Clone()
+            clone.StrokeColor = TransparentColorHex
+            Return clone
+        End Function
+
+        Private Shared Function AnnotationStrokeOnly(source As ImageAnnotation) As ImageAnnotation
+            Dim clone = source.Clone()
+            clone.FillColor = TransparentColorHex
+            clone.FillColor2 = TransparentColorHex
+            ' Schatten und Gluehen gehoeren zur Silhouette und liegen bereits unter der gemischten
+            ' Fuellung - ein zweites Mal gezeichnet wuerden sie sich selbst verdoppeln.
+            clone.ShadowEnabled = False
+            clone.GlowEnabled = False
+            Return clone
+        End Function
 
         Private Shared Sub DrawAnnotationLayer(canvas As SKCanvas, layer As SKBitmap, blendModeName As String)
             Using paint = New SKPaint With {.BlendMode = ResolveAnnotationBlendMode(blendModeName), .IsAntialias = True}

@@ -135,11 +135,13 @@ Namespace Views
 
             If e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
                 Select Case e.Key
-                    Case Key.L
+                    Case Key.Left
+                        ' Drehen liegt seit 2026-07-24 auf Strg+Pfeil (in Betrachter und Editor gleich),
+                        ' damit Strg+R wie in der Galerie „Bildgröße ändern" öffnet.
                         vm.RotateLeftCommand.Execute(Nothing)
                         e.Handled = True
                         Return
-                    Case Key.R
+                    Case Key.Right
                         vm.RotateRightCommand.Execute(Nothing)
                         e.Handled = True
                         Return

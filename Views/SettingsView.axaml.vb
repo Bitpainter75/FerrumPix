@@ -116,11 +116,41 @@ Namespace Views
         End Sub
 
         Public Shadows Sub OnKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key <> Key.Escape Then Return
+            If e.Key = Key.Escape Then
+                Dim vm = TryCast(DataContext, SettingsViewModel)
+                vm?.CancelCommand.Execute(Nothing)
+                e.Handled = True
+                Return
+            End If
 
-            Dim vm = TryCast(DataContext, SettingsViewModel)
-            vm?.CancelCommand.Execute(Nothing)
+            If e.KeyModifiers <> KeyModifiers.None Then Return
+            Dim sv = Me.FindControl(Of ScrollViewer)("SettingsScrollViewer")
+            If sv Is Nothing OrElse sv.Viewport.Height <= 0 Then Return
+
+            ' Bild auf/ab und Pos1/Ende blättern durch die Einstellungsliste. Bedienelemente, die diese
+            ' Tasten selbst brauchen (Textfeld, Regler, Auswahlliste), markieren sie als behandelt - das
+            ' XAML-Ereignis kommt dann gar nicht erst hier an, der Cursor im Textfeld bleibt also heil.
+            ' Eine Bildschirmhöhe minus einer Zeile Überlappung, damit beim Blättern nichts überspringt.
+            Dim page = Math.Max(40.0, sv.Viewport.Height - 40.0)
+            Select Case e.Key
+                Case Key.PageDown
+                    ScrollSettingsBy(sv, page)
+                Case Key.PageUp
+                    ScrollSettingsBy(sv, -page)
+                Case Key.Home
+                    sv.Offset = New Avalonia.Vector(sv.Offset.X, 0)
+                Case Key.End
+                    sv.Offset = New Avalonia.Vector(sv.Offset.X, Math.Max(0, sv.Extent.Height - sv.Viewport.Height))
+                Case Else
+                    Return
+            End Select
             e.Handled = True
+        End Sub
+
+        Private Shared Sub ScrollSettingsBy(sv As ScrollViewer, delta As Double)
+            Dim maxOffset = Math.Max(0, sv.Extent.Height - sv.Viewport.Height)
+            Dim target = Math.Max(0, Math.Min(maxOffset, sv.Offset.Y + delta))
+            sv.Offset = New Avalonia.Vector(sv.Offset.X, target)
         End Sub
     End Class
 

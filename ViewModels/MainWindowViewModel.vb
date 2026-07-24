@@ -2322,7 +2322,11 @@ Namespace ViewModels
             Return IO.Path.GetFileName(candidate)
         End Function
 
-        Public Async Sub RequestDeletePaths(paths As IEnumerable(Of String), Optional afterDelete As Action = Nothing)
+        ''' <param name="beforeDelete">Läuft direkt nach der Rückfrage und VOR dem eigentlichen Löschen -
+        ''' die Ansicht blendet die Elemente damit sofort aus, statt auf den Papierkorb zu warten. Ein
+        ''' fehlgeschlagenes Löschen holt sie über den Abgleich in <paramref name="afterDelete"/> zurück.</param>
+        Public Async Sub RequestDeletePaths(paths As IEnumerable(Of String), Optional afterDelete As Action = Nothing,
+                                            Optional beforeDelete As Action = Nothing)
             Dim pathList = paths.
                 Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
                 Where(Function(p) FileOperationPolicy.CanDelete(p)).
@@ -2346,16 +2350,23 @@ Namespace ViewModels
             Viewer.ReleaseCurrentImageIfAny(pathList)
             Editor.ReleaseCurrentImageIfAny(pathList)
 
+            beforeDelete?.Invoke()
+
             ' Pro Element abfangen, damit ein einzelner Fehler (z.B. Papierkorb nicht verfügbar) den Rest
             ' nicht abbricht und die Ansicht trotzdem aktualisiert wird.
-            Dim failures As New List(Of String)()
-            For Each itemPath In pathList
-                Try
-                    DeletePath(itemPath, useTrash)
-                Catch ex As Exception
-                    failures.Add($"{IO.Path.GetFileName(itemPath)}: {ex.Message}")
-                End Try
-            Next
+            ' Im Hintergrund: "gio trash" ist ein eigener Prozess je Datei - auf dem UI-Thread stand das
+            ' Fenster so lange still, und die Ansicht konnte das Ausblenden gar nicht erst zeigen.
+            Dim failures = Await Task.Run(Function()
+                                              Dim errors As New List(Of String)()
+                                              For Each itemPath In pathList
+                                                  Try
+                                                      DeletePath(itemPath, useTrash)
+                                                  Catch ex As Exception
+                                                      errors.Add($"{IO.Path.GetFileName(itemPath)}: {ex.Message}")
+                                                  End Try
+                                              Next
+                                              Return errors
+                                          End Function)
             afterDelete?.Invoke()
 
             If failures.Count > 0 Then
