@@ -4040,4 +4040,22 @@
   <data name="Neue_Korrekturebene_d50075bf" xml:space="preserve">
     <value>Nuovo livello di regolazione</value>
   </data>
+  <data name="Auto_c614ba7c" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Bild_messen_und_die_Grundregler_automatisch_eins_42b02f71" xml:space="preserve">
+    <value>Misura l'immagine e imposta automaticamente i cursori di base (la freccia di ripristino sopra lo annulla)</value>
+  </data>
+  <data name="Filter_und_Auto_zur_cksetzen_59b18561" xml:space="preserve">
+    <value>Reimposta filtro e Auto</value>
+  </data>
+  <data name="Automatisch_verbessert_bb23ee73" xml:space="preserve">
+    <value>Migliorato automaticamente</value>
+  </data>
+  <data name="Das_Bild_steht_bereits_gut_nichts_zu_verbessern_c2050851" xml:space="preserve">
+    <value>L'immagine è già a posto: non c'è nulla da migliorare</value>
+  </data>
+  <data name="Das_Bild_konnte_nicht_analysiert_werden_bc3f2a3f" xml:space="preserve">
+    <value>Impossibile analizzare l'immagine</value>
+  </data>
 </root>

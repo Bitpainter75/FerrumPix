@@ -4041,4 +4041,22 @@
   <data name="Neue_Korrekturebene_d50075bf" xml:space="preserve">
     <value>New adjustment layer</value>
   </data>
+  <data name="Auto_c614ba7c" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Bild_messen_und_die_Grundregler_automatisch_eins_42b02f71" xml:space="preserve">
+    <value>Measure the image and set the basic sliders automatically (the reset arrow above undoes it)</value>
+  </data>
+  <data name="Filter_und_Auto_zur_cksetzen_59b18561" xml:space="preserve">
+    <value>Reset filter and Auto</value>
+  </data>
+  <data name="Automatisch_verbessert_bb23ee73" xml:space="preserve">
+    <value>Automatically enhanced</value>
+  </data>
+  <data name="Das_Bild_steht_bereits_gut_nichts_zu_verbessern_c2050851" xml:space="preserve">
+    <value>The image is already fine — nothing to enhance</value>
+  </data>
+  <data name="Das_Bild_konnte_nicht_analysiert_werden_bc3f2a3f" xml:space="preserve">
+    <value>The image could not be analysed</value>
+  </data>
 </root>

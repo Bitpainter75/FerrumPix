@@ -740,7 +740,9 @@ Namespace ViewModels
             "Glühlampe", "Leuchtstoff", "Blitz", "Benutzerdefiniert"
         }
 
-        Public Property FilterPresetOptions As New System.Collections.ObjectModel.ObservableCollection(Of String)(ImageAdjustments.FilterPresetNames)
+        ' FilterPresetOptions ist mit der Auswahlliste im Filter-Panel entfallen: die Filter stehen
+        ' dort als Knöpfe (Quelle der Namen bleibt ImageAdjustments.FilterPresetNames, die auch die
+        ' Stapelverarbeitung der Galerie bedient).
 
 
         ' Undo-Stack
@@ -1350,6 +1352,122 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(FilterStrength))
             SetLastAppliedFilterPreset(normalized)
             RaiseResetButtonStateChanged()
+            SchedulePreviewForCurrentTarget()
+        End Sub
+
+        ''' <summary>„Auto" im Filter-Werkzeug: misst das Bild und schiebt die Grundregler dorthin, wo
+        ''' das Bild nach seiner eigenen Charakteristik am besten steht (ImageProcessor.AnalyzeAutoAdjustments).
+        '''
+        ''' Bewusst KEIN eigener Renderweg und KEIN gebackenes Ergebnis: die Automatik setzt genau die
+        ''' Regler, die der Nutzer auch von Hand bedient - er kann jeden davon hinterher nachziehen,
+        ''' sieht in den Panels, was passiert ist, und ein einziges Rückgängig nimmt alles zusammen
+        ''' zurück. Gemessen wird das UNBEARBEITETE Bild, die Werte sind absolut: zweimal „Auto" ergibt
+        ''' dasselbe wie einmal.</summary>
+        ''' Zustand der Automatik: die Werte VOR dem Knopfdruck und die, die sie gesetzt hat. Nur damit
+        ''' kann der Zurücksetzen-Knopf der Filter-Gruppe „Auto" wieder herausnehmen, ohne die übrige
+        ''' Bearbeitung anzufassen (siehe RevertAutoAdjustInternal).
+        Private _autoAdjustActive As Boolean = False
+        Private _autoAdjustBefore As Double() = Nothing
+        Private _autoAdjustApplied As Double() = Nothing
+
+        ''' <summary>True, solange die automatische Bildverbesserung anliegt - der „Auto"-Knopf im
+        ''' Filter-Panel zeigt sich dann als aktiv.</summary>
+        Public ReadOnly Property IsAutoAdjustApplied As Boolean
+            Get
+                Return _autoAdjustActive
+            End Get
+        End Property
+
+        ''' Die neun Regler, die die Automatik setzt - IMMER in dieser Reihenfolge.
+        Private Function CurrentAutoAdjustValues() As Double()
+            Return New Double() {_exposure, _contrast, _highlights, _shadowsLevel, _whites, _blacks,
+                                 _vibrance, _temperature, _tint}
+        End Function
+
+        Private Sub WriteAutoAdjustValues(values As Double())
+            _exposure = values(0)
+            _contrast = values(1)
+            _highlights = values(2)
+            _shadowsLevel = values(3)
+            _whites = values(4)
+            _blacks = values(5)
+            _vibrance = values(6)
+            _temperature = values(7)
+            _tint = values(8)
+            RaiseLightPropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(Vibrance))
+            Me.RaisePropertyChanged(NameOf(Temperature))
+            Me.RaisePropertyChanged(NameOf(Tint))
+        End Sub
+
+        Private Sub ClearAutoAdjustState()
+            If Not _autoAdjustActive AndAlso _autoAdjustBefore Is Nothing Then Return
+            _autoAdjustActive = False
+            _autoAdjustBefore = Nothing
+            _autoAdjustApplied = Nothing
+            Me.RaisePropertyChanged(NameOf(IsAutoAdjustApplied))
+        End Sub
+
+        ''' <summary>Nimmt die automatische Bildverbesserung wieder heraus - Regler für Regler und nur
+        ''' dort, wo der Wert seit dem Knopfdruck UNVERÄNDERT ist. Was der Nutzer danach selbst
+        ''' nachgezogen hat, gehört ihm und bleibt stehen; ohne diesen Vergleich wäre der kleine
+        ''' Zurücksetzen-Pfeil wieder das, was er bis 2026-07-21 war: ein Knopf, der stillschweigend
+        ''' fremde Bearbeitung verwirft.</summary>
+        Private Sub RevertAutoAdjustInternal()
+            If Not _autoAdjustActive OrElse _autoAdjustBefore Is Nothing OrElse _autoAdjustApplied Is Nothing Then
+                ClearAutoAdjustState()
+                Return
+            End If
+            Dim values = CurrentAutoAdjustValues()
+            For i = 0 To values.Length - 1
+                If Math.Abs(values(i) - _autoAdjustApplied(i)) < 0.0001 Then values(i) = _autoAdjustBefore(i)
+            Next
+            WriteAutoAdjustValues(values)
+            ClearAutoAdjustState()
+        End Sub
+
+        Public Sub ApplyAutoAdjustments()
+            Dim source = GetPreviewSource()
+            Dim measured = If(source Is Nothing, Nothing, ImageProcessor.AnalyzeAutoAdjustments(source))
+            If measured Is Nothing OrElse Not measured.HasMeasurement Then
+                StatusText = LocalizationService.T("Das Bild konnte nicht analysiert werden")
+                Return
+            End If
+
+            PushUndo()
+            ' Beim ERSTEN „Auto" den Stand davor merken - ein zweiter Knopfdruck darf ihn nicht mit
+            ' den Werten der Automatik überschreiben, sonst führte der Zurücksetzen-Knopf danach
+            ' nirgendwohin.
+            If Not _autoAdjustActive Then _autoAdjustBefore = CurrentAutoAdjustValues()
+            ' Ein Undo-Schritt für den ganzen Vorgang: PushUndo hat den Stand schon gesichert, die
+            ' neun Setter dürfen nicht jeder noch einen eigenen Schritt anlegen.
+            _suppressUndoCapture = True
+            Try
+                Exposure = measured.Exposure
+                Contrast = measured.Contrast
+                Highlights = measured.Highlights
+                ShadowsLevel = measured.ShadowsLevel
+                Whites = measured.Whites
+                Blacks = measured.Blacks
+                Vibrance = measured.Vibrance
+                Temperature = measured.Temperature
+                Tint = measured.Tint
+            Finally
+                _suppressUndoCapture = False
+            End Try
+
+            _autoAdjustApplied = CurrentAutoAdjustValues()
+            _autoAdjustActive = True
+            Me.RaisePropertyChanged(NameOf(IsAutoAdjustApplied))
+
+            RaiseLightPropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(Vibrance))
+            Me.RaisePropertyChanged(NameOf(Temperature))
+            Me.RaisePropertyChanged(NameOf(Tint))
+            RaiseResetButtonStateChanged()
+            StatusText = If(measured.IsNeutral(),
+                            LocalizationService.T("Das Bild steht bereits gut - nichts zu verbessern"),
+                            LocalizationService.T("Automatisch verbessert"))
             SchedulePreviewForCurrentTarget()
         End Sub
 
@@ -8395,6 +8513,7 @@ Namespace ViewModels
         Public ReadOnly Property ResetTransformCommand As ICommand
         Public ReadOnly Property SetBrushPresetCommand As ICommand
         Public ReadOnly Property SetFilterPresetCommand As ICommand
+        Public ReadOnly Property AutoAdjustCommand As ICommand
         Public ReadOnly Property ResetSharpnessCommand As ICommand
         Public ReadOnly Property ResetSharpenCommand As ICommand
         Public ReadOnly Property ResetSoftenCommand As ICommand
@@ -8691,6 +8810,7 @@ Namespace ViewModels
                                                                           PushUndo()
                                                                           ApplyExclusiveFilterPreset(preset)
                                                                       End Sub)
+            AutoAdjustCommand = ReactiveCommand.Create(AddressOf ApplyAutoAdjustments)
             ' Gruppen-Zurücksetzer: nur die Filter-Regler. Das globale Verwerfen des ganzen Looks
             ' sitzt sichtbar auf dem Knopf „Keine".
             ResetFilterCommand = ReactiveCommand.Create(Sub()
@@ -12478,6 +12598,7 @@ Namespace ViewModels
         End Function
 
         Private Sub ResetAdjustmentsInternal(Optional resetEditorUi As Boolean = False)
+            ClearAutoAdjustState()
             ' ARBEITSBILD (Stufe D): Zurücksetzen entfernt auch gebackene Striche/Retusche -
             ' das Arbeitsbild wird frisch vom Original (bzw. .fpx-Basisbild) aufgebaut. Die
             ' Undo-Pixel-Patches sterben dabei (Init räumt sie ab): ein Undo nach dem
@@ -12684,6 +12805,8 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetEditorUiStateForNewImage(Optional resetTool As Boolean = False)
+            ' Gemessene Werte gehören zu GENAU DIESEM Bild - beim Bildwechsel gilt keine Automatik mehr.
+            ClearAutoAdjustState()
             If resetTool Then _currentTool = EditorTool.Crop
             _pendingInsertKind = ""
             _selectedWatermarkPresetName = ""
@@ -15731,7 +15854,11 @@ Namespace ViewModels
         ''' Begründung dafür war, dass Lightroom-Presets und LUTs im selben Bereich angewendet werden
         ''' - nur sah man dem kleinen Pfeil in der Ecke nicht an, dass er die ganze Bearbeitung
         ''' verwirft. Dieser Weg gibt es weiterhin, aber sichtbar beschriftet: der Knopf „Keine".</summary>
+        ''' <summary>Seit „Auto" im selben Panel sitzt, nimmt dieser Zurücksetzer auch die automatische
+        ''' Bildverbesserung wieder heraus - sie ist Teil der Gruppe, also muss sie hier verschwinden
+        ''' (Symmetrie Setzen/Zurücksetzen). Zurückgenommen wird nur, was seither unangetastet blieb.</summary>
         Private Sub ResetFilterGroupInternal()
+            RevertAutoAdjustInternal()
             _filterPreset = "Keine"
             _filterStrength = 50
             SetLastAppliedFilterPreset("Keine")
@@ -15851,6 +15978,9 @@ Namespace ViewModels
         ''' hinter jedem Preset-Wechsel (ein Preset ERSETZT den Look) - NICHT der Gruppen-Zurücksetzer,
         ''' dafür gibt es ResetFilterGroupInternal.
         Private Sub ResetFilterInternal()
+            ' Der weite Look-Neutralisierer nullt Licht und Farbe ohnehin gleich mit - die Automatik
+            ' ist damit weg und darf sich nicht weiter als aktiv ausgeben.
+            ClearAutoAdjustState()
             _filterPreset = "Keine"
             _filterStrength = 50
             _lutPath = ""

@@ -4039,4 +4039,22 @@
   <data name="Neue_Korrekturebene_d50075bf" xml:space="preserve">
     <value>Nova camada de ajuste</value>
   </data>
+  <data name="Auto_c614ba7c" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Bild_messen_und_die_Grundregler_automatisch_eins_42b02f71" xml:space="preserve">
+    <value>Medir a imagem e definir automaticamente os controlos básicos (a seta de reposição acima anula-o)</value>
+  </data>
+  <data name="Filter_und_Auto_zur_cksetzen_59b18561" xml:space="preserve">
+    <value>Repor filtro e Auto</value>
+  </data>
+  <data name="Automatisch_verbessert_bb23ee73" xml:space="preserve">
+    <value>Melhorado automaticamente</value>
+  </data>
+  <data name="Das_Bild_steht_bereits_gut_nichts_zu_verbessern_c2050851" xml:space="preserve">
+    <value>A imagem já está boa – não há nada a melhorar</value>
+  </data>
+  <data name="Das_Bild_konnte_nicht_analysiert_werden_bc3f2a3f" xml:space="preserve">
+    <value>Não foi possível analisar a imagem</value>
+  </data>
 </root>

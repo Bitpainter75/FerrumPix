@@ -18,7 +18,7 @@
                             Height="28"
                             Padding="0"
                             Command="{Binding DataContext.ResetFilterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            ToolTip.Tip="Filter zurücksetzen">
+                            ToolTip.Tip="Filter und Auto zurücksetzen">
                         <icons:SvgIcon
                             Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
                             Width="14" Height="14" />
@@ -27,23 +27,32 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <ComboBox ItemsSource="{Binding FilterPresetOptions}"
-                      SelectedItem="{Binding FilterPreset}"
-                      HorizontalAlignment="Stretch"
-                      FontSize="{DynamicResource FP.Font.Small}"
-                      DropDownOpened="OnMatchWidthDropDownOpened" />
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   DefaultValue="100"
-                                   Value="{Binding FilterStrength}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FilterStrength, Mode=TwoWay}"
-                                         Minimum="0" Maximum="100" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
+            <!-- Steht bewusst GANZ OBEN und außerhalb der Filterliste: „Auto" ist kein Look mit
+                 Stärkeregler, sondern misst das Bild und setzt die Grundregler (Belichtung, Kontrast,
+                 Lichter/Tiefen, Schwarz/Weiß, Dynamik, Weißabgleich). -->
+            <Button Classes="ghost"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="8,6" Margin="0,0,0,6"
+                    Classes.active="{Binding IsAutoAdjustApplied}"
+                    Command="{Binding AutoAdjustCommand}"
+                    ToolTip.Tip="Bild messen und die Grundregler automatisch einstellen (der Zurücksetzen-Pfeil oben nimmt es wieder heraus)">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="Auto" FontSize="{DynamicResource FP.Font.Small}" />
+                </StackPanel>
+            </Button>
+            <!-- Die Auswahlliste ist entfallen: sie zeigte dieselben Filter ein zweites Mal. Ihr
+                 einziger eigener Eintrag war „Keine" - der steht jetzt als erster Knopf und macht
+                 dasselbe (SetFilterPresetCommand mit „Keine" verwirft den ganzen Look). -->
             <WrapPanel>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Keine}"
+                        Command="{Binding SetFilterPresetCommand}" CommandParameter="Keine">
+                    <TextBlock Text="Keine" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=S/W}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="S/W">
@@ -124,6 +133,19 @@
                     <TextBlock Text="Alt" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </WrapPanel>
+            <!-- Die Stärke gehört UNTER die Auswahl: sie wirkt auf den gerade gewählten Filter,
+                 vorher stand sie über der Liste, zu der sie gehört. -->
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   DefaultValue="100"
+                                   Value="{Binding FilterStrength}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FilterStrength, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
         </StackPanel>
     </Expander>
 </UserControl>
