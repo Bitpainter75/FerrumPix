@@ -6080,9 +6080,14 @@ Namespace ViewModels
                 }
                 _maskedAdjustmentLayers.Add(layer)
             End If
-            ' Die aktive Auswahl ist ab jetzt an diese Ebene gebunden: weitere Füllung/Anpassung landen hier,
-            ' statt eine zweite Ebene anzulegen.
-            _editingLayerMaskId = layer.MaskId
+            ' KEINE Dauerbindung von _editingLayerMaskId mehr setzen: die verhinderte zwar Dubletten beim
+            ' späteren Anpassen, band aber die Auswahl PERMANENT an diese Ebene - legte man danach eine neue
+            ' (Masken-)Ebene an und füllte sie, landete die Füllung wieder auf DIESER Ebene (Nutzer-Befund
+            ' 2026-07-24). Die Dubletten-Vermeidung übernimmt die Masken-Deduplizierung oben und in
+            ' RefreshSelectionAdjustMode (gleiche Auswahl → gleiche SourceSpace-Maske → gleiche Ebene).
+            ' _editingLayerMaskId wird NUR noch von LoadLayerMaskIntoSelection gesetzt (bewusstes Auswählen
+            ' einer Ebene im Panel), sodass Füllung/Anpassung dann gezielt DIESE Ebene treffen.
+            _selectedMaskedAdjustmentLayerId = layer.Id
             Return layer
         End Function
 
@@ -12191,6 +12196,16 @@ Namespace ViewModels
             End If
             RebuildLayerRows()
             ClearSelectionMask()
+            ' Transienter Masken-Bearbeitungszustand gehört NICHT in den Undo-Snapshot: nach dem
+            ' Wiederherstellen ist die (evtl. rekonstruierte) Auswahl eine freie Auswahl. Ohne dieses
+            ' Zurücksetzen dinglet _editingLayerMaskId auf eine gerade entfernte Ebenen-Maske (weiche
+            ' Kante geht verloren, spätere Pinsel-Edits landen ins Leere) und die rote/Ameisen-Darstellung
+            ' desynchronisiert.
+            _editingLayerMaskId = ""
+            If _activeSelectionIsMask Then
+                _activeSelectionIsMask = False
+                Me.RaisePropertyChanged(NameOf(ActiveSelectionIsMask))
+            End If
             _selectionScopeEnabled = adj.SelectionScopeEnabled
             _hasActiveSelection = adj.HasActiveSelection
             _globalAdjustmentsHidden = adj.GlobalAdjustmentsHidden

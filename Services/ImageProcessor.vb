@@ -2929,9 +2929,12 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                 Dim maskData As ImageMask = Nothing
                 If Not masksById.TryGetValue(If(layer.MaskId, ""), maskData) Then Continue For
 
-                ' MASKEN-Ebene: die Füllung stuft die Maske ab (Modulation in BuildPersistentMaskForOutput).
-                ' AUSWAHL-Ebene: die Maske bleibt Form, die Füllung wird separat sichtbar komponiert.
-                Dim modulateFill = hasFill AndAlso layer.IsMaskLayer
+                ' Rolle der Füllung nach Zweck, nicht nur nach Ebenenart: Eine Füllung, die MIT einer
+                ' Anpassung auf derselben Ebene liegt, existiert, um diese Anpassung ABZUSTUFEN (Luminanz →
+                ' Maskenstärke) - egal ob Masken- oder Auswahl-Ebene. Eine Füllung OHNE Anpassung ist reine
+                ' sichtbare Farb-/Verlaufsfläche. (Geometrische Auswahlen kommen als IsMaskLayer=False; ohne
+                ' diese hasAdj-Weiche stufte eine Verlaufsfüllung die Anpassung dort nie ab.)
+                Dim modulateFill = hasFill AndAlso (layer.IsMaskLayer OrElse hasAdj)
                 Using mask = BuildPersistentMaskForOutput(maskData, adj, pipelineInputWidth, pipelineInputHeight,
                                                           processed.Width, processed.Height, layer.Opacity,
                                                           If(modulateFill, layer, Nothing))
@@ -2941,8 +2944,8 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                             processed = ReplaceBitmap(processed, CompositeSelectionScoped(processed, adjusted, mask))
                         End Using
                     End If
-                    ' Sichtbare Füllung nur für AUSWAHL-Ebenen (Masken-Ebenen nutzen die Füllung als Abstufung).
-                    If hasFill AndAlso Not layer.IsMaskLayer Then
+                    ' Sichtbare Füllung nur, wenn die Füllung NICHT bereits eine Anpassung abstuft.
+                    If hasFill AndAlso Not layer.IsMaskLayer AndAlso Not hasAdj Then
                         Dim filled = CompositeVisibleFill(processed, mask, layer)
                         If filled IsNot Nothing Then processed = ReplaceBitmap(processed, filled)
                     End If

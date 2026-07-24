@@ -1397,6 +1397,15 @@ Namespace Views
                     Dim hitSlopYPercent = hitSlopPixels / imageRect.Height * 100.0
                     Dim hitIndex = vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent)
 
+                    ' In Anpassungswerkzeugen (Anpassen/Farbe/Effekte/Rahmen/Filter) hebt ein Klick in den
+                    ' FREIEN Bildbereich - kein Objekt getroffen, außerhalb der Auswahl/Maske - die Auswahl UND
+                    ' Maske auf (analog zum Verschieben-Modus im Auswahlwerkzeug). Nutzerwunsch 2026-07-24.
+                    If hitIndex < 0 AndAlso EditorViewModel.IsObjectAdjustTool(vm.CurrentTool) AndAlso
+                       vm.HasActiveSelection AndAlso Not vm.IsPointInsideSelectionPercent(xPct, yPct) Then
+                        vm.ClearSelection()
+                        UpdateSelectionOverlayVisibility()
+                    End If
+
                     If hitIndex >= 0 Then
                         vm.SelectedAnnotationIndex = hitIndex
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()

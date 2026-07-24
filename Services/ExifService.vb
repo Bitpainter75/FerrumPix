@@ -108,6 +108,10 @@ Namespace Services
         End Class
 
         Private Shared ReadOnly _cacheLock As New Object()
+        ' XMP-Sidecars gehören oft FREMDEN Apps (Lightroom/darktable/digiKam). Deshalb atomar schreiben
+        ' (temp + Move) und serialisiert, damit ein Abbruch mitten im Schreiben die fremde Datei nicht
+        ' abgeschnitten/unlesbar zurücklässt und zwei Schreiber sich nicht überholen.
+        Private Shared ReadOnly _sidecarWriteLock As New Object()
         ' Pfad-Schluessel: PathIdentity.Comparer statt OrdinalIgnoreCase. Auf Linux sind
         ' /Bilder/RAW.jpg und /Bilder/raw.jpg zwei Dateien - vorher teilten sie sich den
         ' EXIF-Eintrag, die zweite Datei bekam also die Aufnahmedaten der ersten angezeigt.
@@ -818,11 +822,30 @@ Namespace Services
                 description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
                 description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
 
-                System.IO.File.WriteAllText(sidecarPath, doc.ToString(SaveOptions.DisableFormatting), New UTF8Encoding(False))
-                Return True
+                Return WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting))
             Catch
                 Return False
             End Try
+        End Function
+
+        ''' <summary>Schreibt den Sidecar-Inhalt atomar (temp-Datei + Move) und serialisiert über
+        ''' <see cref="_sidecarWriteLock"/>. Schützt fremde XMP-Beistelldateien vor Abschneiden bei
+        ''' Abbruch/voller Platte und vor verschränkten Schreibern.</summary>
+        Private Shared Function WriteXmpSidecarAtomic(sidecarPath As String, content As String) As Boolean
+            SyncLock _sidecarWriteLock
+                Dim tempPath = sidecarPath & ".tmp"
+                Try
+                    System.IO.File.WriteAllText(tempPath, content, New UTF8Encoding(False))
+                    System.IO.File.Move(tempPath, sidecarPath, overwrite:=True)
+                    Return True
+                Catch
+                    Try
+                        If System.IO.File.Exists(tempPath) Then System.IO.File.Delete(tempPath)
+                    Catch
+                    End Try
+                    Return False
+                End Try
+            End SyncLock
         End Function
 
         ''' <summary>Schreibt Katalogdaten (Bewertung, Farb-Label, Stichworte) in ein Adobe-XMP-Sidecar -
@@ -902,8 +925,7 @@ Namespace Services
                     description.Add(New XElement(dcNamespace + "subject", bag))
                 End If
 
-                System.IO.File.WriteAllText(sidecarPath, doc.ToString(SaveOptions.DisableFormatting), New UTF8Encoding(False))
-                Return True
+                Return WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting))
             Catch
                 Return False
             End Try

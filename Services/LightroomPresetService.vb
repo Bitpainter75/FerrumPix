@@ -31,10 +31,11 @@ Namespace Services
             ''' irgendetwas darauf hindeutet - der Nutzer sieht ein Preset, das nichts tut. Deshalb je Regler
             ''' erst der moderne Schlüssel, dann der alte.
             If TryGetXmpDouble(values, "Exposure2012", d) Then
-                adj.Exposure = Clamp100(d * 25.0)
+                ' Belichtung deckt den vollen Adobe-Bereich ±5 EV ab: ×25 → ±125.
+                adj.Exposure = Clamp(d * 25.0, -125, 125)
             ElseIf TryGetXmpDouble(values, "Exposure", d) Then
                 ' Auch die alte Belichtung steht in Blendenstufen, gleiche Skalierung.
-                adj.Exposure = Clamp100(d * 25.0)
+                adj.Exposure = Clamp(d * 25.0, -125, 125)
             End If
             ' Das alte crs:Brightness (-150..+150) hat in PV2012 keine Entsprechung mehr; es kommt der
             ' Helligkeit am nächsten und wird auf deren ±100 gestaucht.
@@ -58,7 +59,7 @@ Namespace Services
             If TryGetXmpDouble(values, "Dehaze", d) Then adj.Haze = Clamp100(-d)
             If TryGetXmpDouble(values, "Vibrance", d) Then adj.Vibrance = Clamp100(d)
             If TryGetXmpDouble(values, "Saturation", d) Then adj.Saturation = Clamp100(d)
-            If TryGetXmpDouble(values, "Sharpness", d) Then adj.Sharpness = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "Sharpness", d) Then adj.Sharpness = Clamp(d, 0, 150)   ' Adobe-Bereich 0..150
             ' Schärfen-Feinregler. crs:SharpenRadius ist 0.5..3.0 (Adobe-Standard 1.0 = neutral),
             ' unser Radius 0..100: (r-1)*50, unter 1.0 auf 0 geklemmt. crs:SharpenDetail ist 0..100.
             If TryGetXmpDouble(values, "SharpenRadius", d) Then adj.SharpenRadius = Clamp((d - 1.0) * 50.0, 0, 100)
@@ -140,9 +141,10 @@ Namespace Services
                 adj.Temperature = KelvinToRelativeTemperature(d)
             End If
             If TryGetXmpDouble(values, "IncrementalTint", d) Then
-                adj.Tint = Clamp100(d)
+                ' Tint deckt den vollen Adobe-Bereich ab: absolutes crs:Tint reicht bis ±150.
+                adj.Tint = Clamp(d, -150, 150)
             ElseIf TryGetXmpDouble(values, "Tint", d) Then
-                adj.Tint = Clamp100(d)
+                adj.Tint = Clamp(d, -150, 150)
             End If
 
             ' HUE-Skalierung (Audit 2026-07-22): Adobes HueAdjustment* ±100 verschiebt den Farbton

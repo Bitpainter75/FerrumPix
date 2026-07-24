@@ -462,6 +462,11 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_rating, value)
                 Me.RaisePropertyChanged(NameOf(RatingText))
                 If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
+                    ' Auch das Sitzungs-Item mitschreiben (wie der ColorLabel-Setter), sonst liest
+                    ' LoadImmichAt beim Zurücknavigieren den alten Wert und die Bewertung springt zurück.
+                    If _currentIndex >= 0 AndAlso _currentIndex < _immichSessionItems.Count Then
+                        _immichSessionItems(_currentIndex).Rating = value
+                    End If
                     Dim ignored = ImmichService.SetRatingAsync(_currentImmichAssetId, value)
                 ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                     LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
@@ -483,6 +488,11 @@ Namespace ViewModels
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isFavorite, value)
                 If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
+                    ' Auch das Sitzungs-Item mitschreiben (wie der ColorLabel-Setter), sonst springt der
+                    ' Favorit beim Zurücknavigieren zurück, weil LoadImmichAt aus dem Meta neu liest.
+                    If _currentIndex >= 0 AndAlso _currentIndex < _immichSessionItems.Count Then
+                        _immichSessionItems(_currentIndex).IsFavorite = value
+                    End If
                     Dim ignored = ImmichService.SetFavoriteAsync(_currentImmichAssetId, value)
                 ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                     LibraryService.Instance.SetFavorite(_currentImagePath, value)

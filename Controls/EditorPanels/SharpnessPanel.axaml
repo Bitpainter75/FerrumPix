@@ -32,10 +32,10 @@
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Schärfe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="150"
                                            Value="{Binding Sharpness}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding Sharpness, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                                 Value="{Binding Sharpness, Mode=TwoWay}" Minimum="0" Maximum="150" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
