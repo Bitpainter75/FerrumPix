@@ -3174,8 +3174,15 @@ Namespace Views
             overlay.RenderTransform = New RotateTransform(If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation))
             overlay.IsVisible = True
             ' Der Selektionsrahmen folgt bewusst der Objekt-Konturfarbe (Nutzer-Entscheidung 2026-07-16:
-            ' "so wie frueher darstellen", nicht Akzentfarbe).
-            If frame IsNot Nothing Then frame.Stroke = New SolidColorBrush(ParseAvaloniaColor(vm.AnnotationStrokeColor, Colors.White))
+            ' "so wie frueher darstellen", nicht Akzentfarbe). Genau deshalb braucht er einen
+            ' Gegenstrich in den Luecken: ein schwarz konturiertes Objekt auf dunklem Bild war sonst
+            ' gar nicht zu sehen (Nutzer-Befund 2026-07-25, Nachtaufnahme).
+            If frame IsNot Nothing Then
+                Dim rahmenfarbe = ParseAvaloniaColor(vm.AnnotationStrokeColor, Colors.White)
+                frame.Stroke = New SolidColorBrush(rahmenfarbe)
+                Dim gegen = Me.FindControl(Of Rectangle)("TextOverlayFrameCounter")
+                If gegen IsNot Nothing Then gegen.Stroke = New SolidColorBrush(ContrastPartner(rahmenfarbe))
+            End If
             If overlayImage IsNot Nothing Then
                 overlayImage.Margin = ComputeSelectedOverlayImageMargin(vm, width, height)
                 ' KEIN IsVisible hier setzen: die Sichtbarkeit gehoert allein dem Binding
@@ -3230,6 +3237,15 @@ Namespace Views
                 editor.RenderTransform = New TranslateTransform(0, ImageProcessor.GetBakedTextTopOffset(vm.AnnotationFontFamily, CSng(displayFontSize)))
             End If
         End Sub
+
+        ''' <summary>Die Gegenfarbe für den Gegenstrich des Selektionsrahmens: zu einer hellen
+        ''' Rahmenfarbe fast Schwarz, zu einer dunklen Weiß. Damit ist IMMER eine der beiden Hälften
+        ''' des Strichmusters vom Untergrund unterscheidbar - egal, welche Konturfarbe das Objekt
+        ''' hat und wie hell das Bild darunter ist. Rec.601-Helligkeit als Schwelle.</summary>
+        Private Shared Function ContrastPartner(color As Color) As Color
+            Dim luma = (299 * CInt(color.R) + 587 * CInt(color.G) + 114 * CInt(color.B)) \ 1000
+            Return If(luma >= 128, Color.FromArgb(220, 0, 0, 0), Color.FromArgb(230, 255, 255, 255))
+        End Function
 
         ''' Umrechnungsfaktor von Basisbild-Pixeln (Speichereinheit der Annotationen) in Display-Pixel.
         ''' Uniform (Wurzel aus x*y), genau wie ImageProcessor.ScaleAnnotationForSource beim Backen.

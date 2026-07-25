@@ -693,11 +693,23 @@
                                 PointerReleased="OnTextOverlayPointerReleased"
                                 PointerCaptureLost="OnTextOverlayCaptureLost">
                             <Grid>
+                                <!-- Gegenstrich: liegt in den Luecken des Rahmens und traegt die
+                                     GEGENFARBE (siehe PositionTextOverlayFromViewModel). Der Rahmen
+                                     selbst folgt der Konturfarbe des Objekts - ein schwarzes Objekt
+                                     auf dunklem Bild waere sonst nicht zu sehen. StrokeDashArray und
+                                     -Offset rechnen in VIELFACHEN der Strichbreite, beide Rechtecke
+                                     brauchen deshalb dieselbe Breite. -->
+                                <Rectangle x:Name="TextOverlayFrameCounter"
+                                           Fill="Transparent"
+                                           StrokeThickness="1.5"
+                                           StrokeDashArray="4,4"
+                                           StrokeDashOffset="4"
+                                           IsHitTestVisible="False" />
                                 <Rectangle x:Name="TextOverlayFrame"
                                            Fill="Transparent"
                                            Stroke="{DynamicResource FP.Accent}"
                                            StrokeThickness="1.5"
-                                           StrokeDashArray="5,3"
+                                           StrokeDashArray="4,4"
                                            IsHitTestVisible="False" />
                                 <Image x:Name="SelectedAnnotationOverlayImage"
                                        Source="{Binding SelectedAnnotationOverlayImage}"

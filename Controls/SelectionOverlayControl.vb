@@ -9,8 +9,26 @@ Namespace Controls
     Public Class SelectionOverlayControl
         Inherits Control
 
+        ' Strichlaenge, Luecke und Stiftbreite in PIXELN.
         Private Const DashLength As Double = 5.0
         Private Const DashGap As Double = 5.0
+        Private Const DashThickness As Double = 1.6
+
+        ''' <summary>Baut das Strichmuster der Laufameisen.
+        '''
+        ''' FALLE: Avalonia rechnet Strichmuster UND Versatz in VIELFACHEN DER STIFTBREITE, nicht in
+        ''' Pixeln. Die beiden Stifte waren frueher verschieden breit (2,6 und 1,4) und bekamen
+        ''' dieselben Zahlen {5,5} - damit war der dunkle Strich 13 px lang, der helle 7 px, und der
+        ''' Versatz zog die beiden auch noch verschieden weit. Statt sich zu ergaenzen liefen sie
+        ''' gegeneinander: mal lagen beide uebereinander, mal war ein Stueck Kontur GAR NICHT
+        ''' gezeichnet. Auf hellem Bild fiel das kaum auf, auf schwarzem war die Auswahl streckenweise
+        ''' unsichtbar (Nutzer-Befund 2026-07-25, Nachtaufnahme). Auch das Laufen war betroffen:
+        ''' pro Takt wanderte Schwarz 2,6 px, Weiss nur 1,4 px.
+        ''' Deshalb: gleiche Breite fuer beide, und die Pixelwerte hier einmal durch sie geteilt.</summary>
+        Private Shared Function MakeDashStyle(offsetPixels As Double) As DashStyle
+            Return New DashStyle(New Double() {DashLength / DashThickness, DashGap / DashThickness},
+                                 offsetPixels / DashThickness)
+        End Function
 
         Private ReadOnly _marchingTimer As DispatcherTimer
         Private _dashOffset As Double
@@ -151,12 +169,16 @@ Namespace Controls
                 Return
             End If
 
-            Dim darkPen = New Pen(GetDarkDashBrush(), 2.6) With {
-                .DashStyle = New DashStyle(New Double() {DashLength, DashGap}, _dashOffset),
+            ' Schwarz und Weiss teilen sich die Linie LUECKENLOS: Weiss liegt genau in den Luecken
+            ' von Schwarz. Auf schwarzem Grund (Nachthimmel) traegt die weisse Haelfte die Kontur,
+            ' auf hellem die dunkle - eine Auswahl ist dadurch auf JEDEM Untergrund zu sehen.
+            ' Beide Stifte muessen dafuer gleich breit sein, siehe MakeDashStyle.
+            Dim darkPen = New Pen(GetDarkDashBrush(), DashThickness) With {
+                .DashStyle = MakeDashStyle(_dashOffset),
                 .LineJoin = PenLineJoin.Round
             }
-            Dim lightPen = New Pen(Brushes.White, 1.4) With {
-                .DashStyle = New DashStyle(New Double() {DashLength, DashGap}, _dashOffset + DashLength),
+            Dim lightPen = New Pen(Brushes.White, DashThickness) With {
+                .DashStyle = MakeDashStyle(_dashOffset + DashLength),
                 .LineJoin = PenLineJoin.Round
             }
             Select Case If(ShapeMode, "Rectangle")
