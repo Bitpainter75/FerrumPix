@@ -1679,12 +1679,14 @@ Namespace ViewModels
             AppSettingsService.Save(settings)
         End Sub
 
-        ''' Schaltet das Datei-Logging in DiagnosticLogService ein/aus (schreibt nach
-        ''' %LocalAppData%/FerrumPix/logs/diagnostics.log) - deckt sowohl gezielt instrumentierte
-        ''' Stellen (Editor-Vorschau, Video-Wiedergabe) als auch wirklich unbehandelte Ausnahmen
-        ''' (App.axaml.vb, AppDomain.UnhandledException/TaskScheduler.UnobservedTaskException) ab.
-        ''' Standardmäßig aus, damit im Normalbetrieb keine Logdatei anwächst - nur zur gezielten
-        ''' Fehlersuche einschalten.
+        ''' Schaltet die AUSFÜHRLICHE Ablaufspur in DiagnosticLogService ein/aus (schreibt nach
+        ''' %LocalAppData%/FerrumPix/logs/diagnostics.log): gezielt instrumentierte Stellen wie
+        ''' Editor-Vorschau, Renderzeiten, Video-Wiedergabe und Immich-Antworten. Standardmäßig aus,
+        ''' damit im Normalbetrieb keine Logdatei anwächst - nur zur gezielten Fehlersuche einschalten.
+        '''
+        ''' AUSNAHMEN hängen NICHT an diesem Schalter: sie gehen immer nach logs/errors.log (auf 1 MB
+        ''' gedeckelt, eine Vorgängerfassung). Seit die Async-Einstiegspunkte ihre Ausnahmen abfangen,
+        ''' beendet ein Fehler die App nicht mehr - ohne diese Datei wäre er dafür spurlos weg.
         Public Property EnableDiagnosticLogging As Boolean
             Get
                 Return _enableDiagnosticLogging

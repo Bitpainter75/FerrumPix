@@ -273,26 +273,38 @@ Namespace ViewModels
         End Function
 
         Public Async Sub OpenImageInViewer(imagePath As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional bypassEditorPrompt As Boolean = False, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
-            If CurrentMode = AppMode.Editor AndAlso Not bypassEditorPrompt Then
-                If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
-            End If
-            If CurrentMode = AppMode.Viewer AndAlso
-               Viewer IsNot Nothing AndAlso
-               Not String.Equals(Viewer.CurrentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
-                If Not Await ConfirmViewerLeaveAsync("ein anderes Bild öffnest") Then Return
-            End If
-            Viewer.OpenImage(imagePath, allPaths, cacheScopeId, cacheScopeName)
-            CurrentMode = AppMode.Viewer
+            Try
+                If CurrentMode = AppMode.Editor AndAlso Not bypassEditorPrompt Then
+                    If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
+                End If
+                If CurrentMode = AppMode.Viewer AndAlso
+                   Viewer IsNot Nothing AndAlso
+                   Not String.Equals(Viewer.CurrentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+                    If Not Await ConfirmViewerLeaveAsync("ein anderes Bild öffnest") Then Return
+                End If
+                Viewer.OpenImage(imagePath, allPaths, cacheScopeId, cacheScopeName)
+                CurrentMode = AppMode.Viewer
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindowViewModel.OpenImageInViewer", ex)
+            End Try
         End Sub
 
         ''' <summary>Öffnet eine Immich-Sitzung im Betrachter: der Filmstreifen zeigt das ganze Album
         ''' (Pseudo-Pfade), das aktuelle Bild wird on-demand heruntergeladen.</summary>
         Public Async Sub OpenImmichViewer(startPseudoPath As String, sessionItems As System.Collections.Generic.List(Of Models.ImageItem), Optional immichAlbumId As String = Nothing)
-            If CurrentMode = AppMode.Editor Then
-                If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
-            End If
-            Viewer.OpenImmichSession(startPseudoPath, sessionItems, immichAlbumId)
-            CurrentMode = AppMode.Viewer
+            Try
+                If CurrentMode = AppMode.Editor Then
+                    If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
+                End If
+                Viewer.OpenImmichSession(startPseudoPath, sessionItems, immichAlbumId)
+                CurrentMode = AppMode.Viewer
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindowViewModel.OpenImmichViewer", ex)
+            End Try
         End Sub
 
         Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing) As Task
@@ -308,18 +320,24 @@ Namespace ViewModels
         End Function
 
         Public Async Sub OpenSettings()
-            If CurrentMode = AppMode.Editor Then
-                If Not Await ConfirmEditorLeaveAsync("die Einstellungen zu öffnen") Then Return
-            End If
-            If CurrentMode = AppMode.Viewer Then
-                If Not Await ConfirmViewerLeaveAsync("die Einstellungen öffnest") Then Return
-            End If
-            If CurrentMode <> AppMode.Settings Then
-                _previousModeBeforeSettings = CurrentMode
-                Settings?.BeginEditSession()
-            End If
-            Settings?.RefreshThumbnailCacheFolders()
-            CurrentMode = AppMode.Settings
+            Try
+                If CurrentMode = AppMode.Editor Then
+                    If Not Await ConfirmEditorLeaveAsync("die Einstellungen zu öffnen") Then Return
+                End If
+                If CurrentMode = AppMode.Viewer Then
+                    If Not Await ConfirmViewerLeaveAsync("die Einstellungen öffnest") Then Return
+                End If
+                If CurrentMode <> AppMode.Settings Then
+                    _previousModeBeforeSettings = CurrentMode
+                    Settings?.BeginEditSession()
+                End If
+                Settings?.RefreshThumbnailCacheFolders()
+                CurrentMode = AppMode.Settings
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindowViewModel.OpenSettings", ex)
+            End Try
         End Sub
 
         Public Sub CloseSettings()
@@ -327,63 +345,81 @@ Namespace ViewModels
         End Sub
 
         Public Async Sub BackToGallery(Optional sourcePath As String = Nothing)
-            If CurrentMode = AppMode.Editor Then
-                If Not Await ConfirmEditorLeaveAsync("zur Galerie zu wechseln") Then Return
-            End If
-            If CurrentMode = AppMode.Viewer Then
-                If Not Await ConfirmViewerLeaveAsync("zur Galerie wechselst") Then Return
-            End If
-            If String.IsNullOrEmpty(sourcePath) AndAlso Viewer IsNot Nothing Then
-                sourcePath = Viewer.CurrentImagePath
-            End If
+            Try
+                If CurrentMode = AppMode.Editor Then
+                    If Not Await ConfirmEditorLeaveAsync("zur Galerie zu wechseln") Then Return
+                End If
+                If CurrentMode = AppMode.Viewer Then
+                    If Not Await ConfirmViewerLeaveAsync("zur Galerie wechselst") Then Return
+                End If
+                If String.IsNullOrEmpty(sourcePath) AndAlso Viewer IsNot Nothing Then
+                    sourcePath = Viewer.CurrentImagePath
+                End If
 
-            If Not String.IsNullOrEmpty(sourcePath) Then
-                If Gallery IsNot Nothing AndAlso Gallery.IsVirtualFolder AndAlso Gallery.SelectImageInCurrentView(sourcePath) Then
-                    CurrentMode = AppMode.Gallery
-                    Return
+                If Not String.IsNullOrEmpty(sourcePath) Then
+                    If Gallery IsNot Nothing AndAlso Gallery.IsVirtualFolder AndAlso Gallery.SelectImageInCurrentView(sourcePath) Then
+                        CurrentMode = AppMode.Gallery
+                        Return
+                    End If
+                    If IO.File.Exists(sourcePath) Then
+                        Await Gallery.OpenFolderForImage(sourcePath)
+                    ElseIf IO.Directory.Exists(sourcePath) Then
+                        Gallery.SetInitialFolderNodeForPath(sourcePath)
+                        Gallery.NavigateToFolder(sourcePath)
+                    End If
                 End If
-                If IO.File.Exists(sourcePath) Then
-                    Await Gallery.OpenFolderForImage(sourcePath)
-                ElseIf IO.Directory.Exists(sourcePath) Then
-                    Gallery.SetInitialFolderNodeForPath(sourcePath)
-                    Gallery.NavigateToFolder(sourcePath)
-                End If
-            End If
-            CurrentMode = AppMode.Gallery
+                CurrentMode = AppMode.Gallery
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindowViewModel.BackToGallery", ex)
+            End Try
         End Sub
 
         Public Async Sub EnterFullscreen()
-            If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso (Gallery.SelectedItem.IsImage OrElse Gallery.SelectedItem.IsVideoFile) Then
-                _previousModeBeforeFullscreen = AppMode.Gallery
-                OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
-                                  cacheScopeId:=Gallery.CurrentThumbnailCacheScopeId, cacheScopeName:=Gallery.CurrentThumbnailCacheScopeName)
-            ElseIf CurrentMode = AppMode.Editor AndAlso Editor.IsNewDocument Then
-                ' Ein nie gespeichertes neues Bild hat auf der Platte nur seine LEERE Temp-Datei -
-                ' Vollbild zeigte also eine leere Fläche und zöge den Betrachter in den Temp-Ordner.
-                ' Wie beim bildlosen Betrachter unten: nichts tun.
-                Return
-            ElseIf CurrentMode = AppMode.Editor AndAlso Not String.IsNullOrEmpty(Editor.CurrentImagePath) Then
-                If Not Await ConfirmEditorLeaveAsync("den Vollbildmodus zu öffnen") Then Return
-                _previousModeBeforeFullscreen = AppMode.Editor
-                Viewer.OpenImage(Editor.CurrentImagePath)
-                CurrentMode = AppMode.Viewer
-            ElseIf CurrentMode = AppMode.Viewer AndAlso String.IsNullOrEmpty(Viewer.CurrentImagePath) Then
-                Return
-            ElseIf CurrentMode = AppMode.Gallery Then
-                Return
-            Else
-                _previousModeBeforeFullscreen = CurrentMode
-            End If
-            IsFullscreen = True
+            Try
+                If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso (Gallery.SelectedItem.IsImage OrElse Gallery.SelectedItem.IsVideoFile) Then
+                    _previousModeBeforeFullscreen = AppMode.Gallery
+                    OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
+                                      cacheScopeId:=Gallery.CurrentThumbnailCacheScopeId, cacheScopeName:=Gallery.CurrentThumbnailCacheScopeName)
+                ElseIf CurrentMode = AppMode.Editor AndAlso Editor.IsNewDocument Then
+                    ' Ein nie gespeichertes neues Bild hat auf der Platte nur seine LEERE Temp-Datei -
+                    ' Vollbild zeigte also eine leere Fläche und zöge den Betrachter in den Temp-Ordner.
+                    ' Wie beim bildlosen Betrachter unten: nichts tun.
+                    Return
+                ElseIf CurrentMode = AppMode.Editor AndAlso Not String.IsNullOrEmpty(Editor.CurrentImagePath) Then
+                    If Not Await ConfirmEditorLeaveAsync("den Vollbildmodus zu öffnen") Then Return
+                    _previousModeBeforeFullscreen = AppMode.Editor
+                    Viewer.OpenImage(Editor.CurrentImagePath)
+                    CurrentMode = AppMode.Viewer
+                ElseIf CurrentMode = AppMode.Viewer AndAlso String.IsNullOrEmpty(Viewer.CurrentImagePath) Then
+                    Return
+                ElseIf CurrentMode = AppMode.Gallery Then
+                    Return
+                Else
+                    _previousModeBeforeFullscreen = CurrentMode
+                End If
+                IsFullscreen = True
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindowViewModel.EnterFullscreen", ex)
+            End Try
         End Sub
 
         Public Async Sub ExitFullscreen()
-            If CurrentMode = AppMode.Viewer AndAlso _previousModeBeforeFullscreen <> AppMode.Viewer Then
-                If Not Await ConfirmViewerLeaveAsync("den Vollbildmodus verlässt") Then Return
-            End If
-            IsFullscreen = False
-            Viewer.StopSlideshow()
-            CurrentMode = _previousModeBeforeFullscreen
+            Try
+                If CurrentMode = AppMode.Viewer AndAlso _previousModeBeforeFullscreen <> AppMode.Viewer Then
+                    If Not Await ConfirmViewerLeaveAsync("den Vollbildmodus verlässt") Then Return
+                End If
+                IsFullscreen = False
+                Viewer.StopSlideshow()
+                CurrentMode = _previousModeBeforeFullscreen
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindowViewModel.ExitFullscreen", ex)
+            End Try
         End Sub
 
         Private Sub OpenInitialImage(imagePath As String)
@@ -2816,39 +2852,51 @@ Namespace ViewModels
         ''' Ergebnisse, die während des Renderns von einer neueren Einstellung überholt wurden -
         ''' sonst würde beim schnellen Reglerdrehen ein veraltetes Bild „gewinnen".</summary>
         Private Async Sub RefreshPrintPreviewAsync()
-            Dim requestId = Interlocked.Increment(_printPreviewRequestId)
-            If Not IsPrintDialogOpen Then Return
+            Try
+                Dim requestId = Interlocked.Increment(_printPreviewRequestId)
+                If Not IsPrintDialogOpen Then Return
 
-            Dim paths = _printPaths.ToList()
-            Dim options = BuildPrintOptions()
-            Dim preview = Await Task.Run(Function() PrintService.RenderPreview(paths, options, 900))
-            If requestId <> _printPreviewRequestId OrElse Not IsPrintDialogOpen Then Return
-            PrintPreviewImage = preview
+                Dim paths = _printPaths.ToList()
+                Dim options = BuildPrintOptions()
+                Dim preview = Await Task.Run(Function() PrintService.RenderPreview(paths, options, 900))
+                If requestId <> _printPreviewRequestId OrElse Not IsPrintDialogOpen Then Return
+                PrintPreviewImage = preview
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindowViewModel.RefreshPrintPreviewAsync", ex)
+            End Try
         End Sub
 
         ''' <summary>Erzeugt das PDF und übergibt es dem System. Der Dialog schließt vorher, damit
         ''' der Systemviewer nicht hinter dem Overlay auftaucht.</summary>
         Public Async Sub ConfirmPrint()
-            Dim paths = _printPaths.ToList()
-            Dim options = BuildPrintOptions()
-            Dim tempFile = _printTempFile
+            Try
+                Dim paths = _printPaths.ToList()
+                Dim options = BuildPrintOptions()
+                Dim tempFile = _printTempFile
 
-            AppSettingsService.SavePrintOptions(options)
+                AppSettingsService.SavePrintOptions(options)
 
-            IsPrintDialogOpen = False
-            _printPreviewTimer?.Stop()
-            PrintPreviewImage = Nothing
-            ' Die Temp-Datei erst NACH dem Rendern löschen - sie ist die Druckquelle.
-            _printTempFile = Nothing
+                IsPrintDialogOpen = False
+                _printPreviewTimer?.Stop()
+                PrintPreviewImage = Nothing
+                ' Die Temp-Datei erst NACH dem Rendern löschen - sie ist die Druckquelle.
+                _printTempFile = Nothing
 
-            Dim ok = Await PrintService.PrintAsync(paths, options)
-            DeletePrintTempFile(tempFile)
-            _printPaths = New List(Of String)()
+                Dim ok = Await PrintService.PrintAsync(paths, options)
+                DeletePrintTempFile(tempFile)
+                _printPaths = New List(Of String)()
 
-            If Not ok Then
-                Await ShowMessageAsync(LocalizationService.T("Drucken fehlgeschlagen"),
-                                       LocalizationService.T("Das PDF konnte nicht erzeugt oder geöffnet werden."))
-            End If
+                If Not ok Then
+                    Await ShowMessageAsync(LocalizationService.T("Drucken fehlgeschlagen"),
+                                           LocalizationService.T("Das PDF konnte nicht erzeugt oder geöffnet werden."))
+                End If
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindowViewModel.ConfirmPrint", ex)
+            End Try
         End Sub
 
 #End Region

@@ -1422,23 +1422,56 @@ Namespace ViewModels
 
         ''' <summary>Persistiert eine Bewertung ans passende Backend: Immich-Items an den Server
         ''' (Rückrichtung), lokale Dateien in den SQLite-Katalog samt XMP-Sidecar.</summary>
-        Private Shared Sub PersistRating(item As ImageItem, rating As Integer)
+        Private Sub PersistRating(item As ImageItem, rating As Integer, vorher As Integer)
             If item Is Nothing Then Return
             If item.IsImmichAsset Then
-                Dim ignored = ImmichService.SetRatingAsync(item.ImmichAssetId, rating)
+                SchreibeNachImmich(Function() ImmichService.SetRatingAsync(item.ImmichAssetId, rating),
+                                   Sub()
+                                       item.Rating = vorher
+                                       Me.RaisePropertyChanged(NameOf(SelectedRating))
+                                   End Sub)
             Else
                 LibraryService.Instance.SetRating(item.FilePath, rating, syncToXmp:=True)
             End If
         End Sub
 
         ''' <summary>Persistiert den Favoriten-Status ans passende Backend (Immich-Server bzw. Katalog).</summary>
-        Private Shared Sub PersistFavorite(item As ImageItem, value As Boolean)
+        Private Sub PersistFavorite(item As ImageItem, value As Boolean, vorher As Boolean)
             If item Is Nothing Then Return
             If item.IsImmichAsset Then
-                Dim ignored = ImmichService.SetFavoriteAsync(item.ImmichAssetId, value)
+                SchreibeNachImmich(Function() ImmichService.SetFavoriteAsync(item.ImmichAssetId, value),
+                                   Sub()
+                                       item.IsFavorite = vorher
+                                       Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
+                                   End Sub)
             Else
                 LibraryService.Instance.SetFavorite(item.FilePath, value)
             End If
+        End Sub
+
+        ''' <summary>
+        ''' Schreibt eine Änderung an Immich und macht sie in der Anzeige RÜCKGÄNGIG, wenn der Server
+        ''' sie nicht angenommen hat.
+        '''
+        ''' Vorher liefen diese Aufrufe als "Dim ignored = ..." ins Leere: die Kachel zeigte Sterne oder
+        ''' Herz als gespeichert an, während der Server 403 oder 500 gemeldet hatte - beim Stapelsetzen
+        ''' gleich für viele Fotos (Audit A5). Der Dienst selbst wirft nicht (er fängt intern und liefert
+        ''' False); das Try/Catch hier deckt nur den Rest ab.
+        ''' </summary>
+        Private Async Sub SchreibeNachImmich(vorgang As Func(Of Task(Of Boolean)), zuruecknehmen As Action)
+            Dim ok As Boolean = False
+            Try
+                ok = Await vorgang()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.ImmichWrite", ex)
+            End Try
+            If ok Then Return
+            Try
+                zuruecknehmen?.Invoke()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.ImmichRevert", ex)
+            End Try
+            StatusText = LocalizationService.T("Änderung konnte nicht an Immich übertragen werden")
         End Sub
 
         Private Sub SetSelectedRating(ratingText As String)
@@ -1449,6 +1482,9 @@ Namespace ViewModels
 
             Dim currentRating = SelectedRating
             Dim targetRating = If(currentRating = rating, 0, rating)
+            ' Alte Werte VOR dem Setzen sichern - nur damit kann ein abgelehnter Immich-Schreibvorgang
+            ' die Kachel wieder auf ihren echten Stand zurückdrehen (Audit A5).
+            Dim vorherProItem = images.ToDictionary(Function(i) i, Function(i) i.Rating)
             For Each item In images
                 item.Rating = targetRating
             Next
@@ -1456,7 +1492,7 @@ Namespace ViewModels
             Dim localPaths = images.Where(Function(i) Not i.IsImmichAsset).Select(Function(i) i.FilePath).ToList()
             If localPaths.Count > 0 Then LibraryService.Instance.SetRatingForMany(localPaths, targetRating, syncToXmp:=True)
             For Each im In images.Where(Function(i) i.IsImmichAsset)
-                Dim ignored = ImmichService.SetRatingAsync(im.ImmichAssetId, targetRating)
+                PersistRating(im, targetRating, vorherProItem(im))
             Next
 
             Me.RaisePropertyChanged(NameOf(SelectedRating))
@@ -1489,8 +1525,9 @@ Namespace ViewModels
         Public Sub SetItemRating(item As ImageItem, rating As Integer)
             If item Is Nothing OrElse Not item.IsImage Then Return
             Dim targetRating = If(item.Rating = rating, 0, rating)
+            Dim vorher = item.Rating
             item.Rating = targetRating
-            PersistRating(item, targetRating)
+            PersistRating(item, targetRating, vorher)
 
             If Object.ReferenceEquals(item, _selectedItem) OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item)) Then
                 Me.RaisePropertyChanged(NameOf(SelectedRating))
@@ -1904,61 +1941,82 @@ Namespace ViewModels
 
         ''' <summary>Legt ein neues Immich-Album an (nach Namenseingabe) und aktualisiert den Baum.</summary>
         Public Async Sub CreateImmichAlbum()
-            If Not ImmichService.IsConfigured Then Return
-            Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Input, LocalizationService.T("Neues Immich-Album"), LocalizationService.T("Name des Albums:"), "")
-            If String.IsNullOrWhiteSpace(name) Then Return
-            Dim id = Await ImmichService.CreateAlbumAsync(name)
-            If String.IsNullOrEmpty(id) Then
-                StatusText = LocalizationService.T("Album konnte nicht angelegt werden")
-                Return
-            End If
-            RefreshImmichAlbumsAsync()
-            StatusText = String.Format(LocalizationService.T("Album {0} angelegt"), name.Trim())
+            Try
+                If Not ImmichService.IsConfigured Then Return
+                Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Input, LocalizationService.T("Neues Immich-Album"), LocalizationService.T("Name des Albums:"), "")
+                If String.IsNullOrWhiteSpace(name) Then Return
+                Dim id = Await ImmichService.CreateAlbumAsync(name)
+                If String.IsNullOrEmpty(id) Then
+                    StatusText = LocalizationService.T("Album konnte nicht angelegt werden")
+                    Return
+                End If
+                RefreshImmichAlbumsAsync()
+                StatusText = String.Format(LocalizationService.T("Album {0} angelegt"), name.Trim())
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.CreateImmichAlbum", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         ''' <summary>Benennt ein Immich-Album um (nach Namenseingabe) und aktualisiert den Baum.</summary>
         Public Async Sub RenameImmichAlbum(node As VirtualNavigationNode)
-            If node Is Nothing OrElse Not String.Equals(node.Kind, "ImmichAlbum", StringComparison.Ordinal) OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
-            Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Rename, LocalizationService.T("Album umbenennen"), LocalizationService.T("Neuer Name:"), node.Name)
-            If String.IsNullOrWhiteSpace(name) OrElse String.Equals(name.Trim(), node.Name, StringComparison.Ordinal) Then Return
-            Dim ok = Await ImmichService.RenameAlbumAsync(node.Id, name)
-            If Not ok Then
-                StatusText = LocalizationService.T("Umbenennen fehlgeschlagen")
-                Return
-            End If
-            RefreshImmichAlbumsAsync()
-            StatusText = String.Format(LocalizationService.T("Album umbenannt: {0}"), name.Trim())
+            Try
+                If node Is Nothing OrElse Not String.Equals(node.Kind, "ImmichAlbum", StringComparison.Ordinal) OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
+                Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Rename, LocalizationService.T("Album umbenennen"), LocalizationService.T("Neuer Name:"), node.Name)
+                If String.IsNullOrWhiteSpace(name) OrElse String.Equals(name.Trim(), node.Name, StringComparison.Ordinal) Then Return
+                Dim ok = Await ImmichService.RenameAlbumAsync(node.Id, name)
+                If Not ok Then
+                    StatusText = LocalizationService.T("Umbenennen fehlgeschlagen")
+                    Return
+                End If
+                RefreshImmichAlbumsAsync()
+                StatusText = String.Format(LocalizationService.T("Album umbenannt: {0}"), name.Trim())
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.RenameImmichAlbum", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         ''' <summary>Löscht ein Immich-Album - nur die Zusammenstellung, die Fotos bleiben in Immich. Hängt am
         ''' selben Schalter wie das Löschen von Fotos („Löschen in Immich erlauben"), weil auch das auf dem
         ''' Server wirkt. Steht das gelöschte Album gerade offen, fällt die Ansicht auf „Alle Fotos" zurück.</summary>
         Public Async Sub DeleteImmichAlbum(node As VirtualNavigationNode)
-            If node Is Nothing OrElse Not node.IsImmichAlbumNode OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
-            Dim settings = AppSettingsService.Load()
-            If Not settings.ImmichAllowDelete Then
-                StatusText = LocalizationService.T("Löschen in Immich ist in den Einstellungen nicht erlaubt")
-                Return
-            End If
+            Try
+                If node Is Nothing OrElse Not node.IsImmichAlbumNode OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
+                Dim settings = AppSettingsService.Load()
+                If Not settings.ImmichAllowDelete Then
+                    StatusText = LocalizationService.T("Löschen in Immich ist in den Einstellungen nicht erlaubt")
+                    Return
+                End If
 
-            If Not settings.DeleteSkipConfirmation Then
-                Dim message = String.Format(LocalizationService.T("Album {0} löschen? Die Fotos darin bleiben in Immich erhalten."), node.Name)
-                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Album löschen"), message,
-                                                      LocalizationService.T("Löschen"), LocalizationService.T("Abbrechen")) Then Return
-            End If
+                If Not settings.DeleteSkipConfirmation Then
+                    Dim message = String.Format(LocalizationService.T("Album {0} löschen? Die Fotos darin bleiben in Immich erhalten."), node.Name)
+                    If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Album löschen"), message,
+                                                          LocalizationService.T("Löschen"), LocalizationService.T("Abbrechen")) Then Return
+                End If
 
-            If Not Await ImmichService.DeleteAlbumAsync(node.Id) Then
-                StatusText = LocalizationService.T("Album konnte nicht gelöscht werden")
-                Return
-            End If
+                If Not Await ImmichService.DeleteAlbumAsync(node.Id) Then
+                    StatusText = LocalizationService.T("Album konnte nicht gelöscht werden")
+                    Return
+                End If
 
-            Dim wasOpen = SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Id, node.Id, StringComparison.Ordinal)
-            RefreshImmichAlbumsAsync()
-            If wasOpen Then
-                Dim allNode = ImmichTree.FirstOrDefault(Function(n) String.Equals(n.Kind, "ImmichAll", StringComparison.Ordinal))
-                If allNode IsNot Nothing Then Await OpenVirtualNavigationNode(allNode)
-            End If
-            StatusText = String.Format(LocalizationService.T("Album gelöscht: {0}"), node.Name)
+                Dim wasOpen = SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Id, node.Id, StringComparison.Ordinal)
+                RefreshImmichAlbumsAsync()
+                If wasOpen Then
+                    Dim allNode = ImmichTree.FirstOrDefault(Function(n) String.Equals(n.Kind, "ImmichAll", StringComparison.Ordinal))
+                    If allNode IsNot Nothing Then Await OpenVirtualNavigationNode(allNode)
+                End If
+                StatusText = String.Format(LocalizationService.T("Album gelöscht: {0}"), node.Name)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.DeleteImmichAlbum", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         ''' <summary>Lädt lokale Dateien nach Immich hoch und ordnet sie - falls ein Album-Knoten übergeben
@@ -2418,38 +2476,45 @@ Namespace ViewModels
         ''' Suchliste, übernimmt die Änderungen auf denselben Eintrag (gleiche Id) und startet die
         ''' Suche neu. Aufgerufen aus dem Kontextmenü der Sidebar-Suchliste.
         Public Async Sub EditVirtualSearchNode(node As VirtualNavigationNode)
-            If node Is Nothing OrElse Not String.Equals(node.Kind, "SavedSearch", StringComparison.Ordinal) Then Return
-            Dim existing = _savedSearches.FirstOrDefault(Function(s) String.Equals(s.Id, node.Id, StringComparison.OrdinalIgnoreCase))
-            If existing Is Nothing Then Return
+            Try
+                If node Is Nothing OrElse Not String.Equals(node.Kind, "SavedSearch", StringComparison.Ordinal) Then Return
+                Dim existing = _savedSearches.FirstOrDefault(Function(s) String.Equals(s.Id, node.Id, StringComparison.OrdinalIgnoreCase))
+                If existing Is Nothing Then Return
 
-            Dim result = Await _mainVm.ShowSearchDialogAsync(existing.TextQuery, existing)
-            If result Is Nothing Then Return
+                Dim result = Await _mainVm.ShowSearchDialogAsync(existing.TextQuery, existing)
+                If result Is Nothing Then Return
 
-            existing.Name = result.Name
-            existing.Source = If(String.Equals(result.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local")
-            existing.TextQuery = result.TextQuery
-            existing.RootFolder = result.RootFolder
-            existing.IncludeSubfolders = result.IncludeSubfolders
-            existing.FavoriteMode = result.FavoriteMode
-            existing.RatingMin = result.RatingMin
-            existing.Ratings = If(result.Ratings, New List(Of Integer)())
-            existing.Conditions = If(result.Conditions, New List(Of SearchCondition)())
-            existing.ConditionCombinator = If(result.ConditionCombinator, "AND")
-            ' Zwischengespeicherte Treffer verwerfen - sie können durch die geänderten Parameter veraltet sein.
-            existing.Results = New List(Of String)()
-            ThumbnailCacheService.DeleteSearchListCache(existing.Id)
-            SaveSearches()
+                existing.Name = result.Name
+                existing.Source = If(String.Equals(result.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local")
+                existing.TextQuery = result.TextQuery
+                existing.RootFolder = result.RootFolder
+                existing.IncludeSubfolders = result.IncludeSubfolders
+                existing.FavoriteMode = result.FavoriteMode
+                existing.RatingMin = result.RatingMin
+                existing.Ratings = If(result.Ratings, New List(Of Integer)())
+                existing.Conditions = If(result.Conditions, New List(Of SearchCondition)())
+                existing.ConditionCombinator = If(result.ConditionCombinator, "AND")
+                ' Zwischengespeicherte Treffer verwerfen - sie können durch die geänderten Parameter veraltet sein.
+                existing.Results = New List(Of String)()
+                ThumbnailCacheService.DeleteSearchListCache(existing.Id)
+                SaveSearches()
 
-            ' VirtualNavigationNode hat kein INotifyPropertyChanged - den Baumknoten daher ersetzen,
-            ' damit u.a. der geänderte Name in der Sidebar erscheint.
-            Dim newNode = CreateSavedSearchNode(existing)
-            Dim index = SearchTree.IndexOf(node)
-            If index >= 0 Then
-                SearchTree(index) = newNode
-            Else
-                SearchTree.Add(newNode)
-            End If
-            OpenSavedSearch(newNode)
+                ' VirtualNavigationNode hat kein INotifyPropertyChanged - den Baumknoten daher ersetzen,
+                ' damit u.a. der geänderte Name in der Sidebar erscheint.
+                Dim newNode = CreateSavedSearchNode(existing)
+                Dim index = SearchTree.IndexOf(node)
+                If index >= 0 Then
+                    SearchTree(index) = newNode
+                Else
+                    SearchTree.Add(newNode)
+                End If
+                OpenSavedSearch(newNode)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.EditVirtualSearchNode", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         Private Sub OpenSavedSearch(node As VirtualNavigationNode)
@@ -3435,7 +3500,7 @@ Namespace ViewModels
             If item Is Nothing OrElse item.IsFolder Then Return
             Dim newVal = Not item.IsFavorite
             item.IsFavorite = newVal
-            PersistFavorite(item, newVal)
+            PersistFavorite(item, newVal, Not newVal)
             If Object.ReferenceEquals(item, _selectedItem) OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item)) Then
                 Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
             End If
@@ -3450,8 +3515,9 @@ Namespace ViewModels
 
             Dim target = Not SelectedIsFavorite
             For Each item In images
+                Dim vorher = item.IsFavorite
                 item.IsFavorite = target
-                PersistFavorite(item, target)
+                PersistFavorite(item, target, vorher)
             Next
 
             Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
@@ -4353,32 +4419,46 @@ Namespace ViewModels
         End Property
 
         Public Async Sub OpenSelectedInViewer()
-            Dim selectedMedia = Items.Where(Function(i) i IsNot Nothing AndAlso (i.IsImage OrElse i.IsVideoFile) AndAlso i.IsSelected).ToList()
-            If selectedMedia.Count > 0 Then
-                Dim first = selectedMedia(0)
-                If first.IsImmichAsset Then
-                    Await OpenImmichItemInViewerAsync(first)
-                    Return
+            Try
+                Dim selectedMedia = Items.Where(Function(i) i IsNot Nothing AndAlso (i.IsImage OrElse i.IsVideoFile) AndAlso i.IsSelected).ToList()
+                If selectedMedia.Count > 0 Then
+                    Dim first = selectedMedia(0)
+                    If first.IsImmichAsset Then
+                        Await OpenImmichItemInViewerAsync(first)
+                        Return
+                    End If
+                    _mainVm.OpenImageInViewer(first.FilePath, Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
+                                              cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
+                ElseIf SelectedItem IsNot Nothing AndAlso (SelectedItem.IsImage OrElse SelectedItem.IsVideoFile) Then
+                    _mainVm.OpenImageInViewer(SelectedItem.FilePath, Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
+                                              cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
+                ElseIf SelectedItem IsNot Nothing AndAlso SelectedItem.IsParentFolderEntry Then
+                    NavigateToParent()
                 End If
-                _mainVm.OpenImageInViewer(first.FilePath, Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
-                                          cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
-            ElseIf SelectedItem IsNot Nothing AndAlso (SelectedItem.IsImage OrElse SelectedItem.IsVideoFile) Then
-                _mainVm.OpenImageInViewer(SelectedItem.FilePath, Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
-                                          cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
-            ElseIf SelectedItem IsNot Nothing AndAlso SelectedItem.IsParentFolderEntry Then
-                NavigateToParent()
-            End If
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.OpenSelectedInViewer", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         Public Async Sub OpenSelectedInEditor()
-            Dim image = GetSelectedImageItems().FirstOrDefault(Function(i) i.CanEditFile)
-            If image Is Nothing Then Return
-            If image.IsImmichAsset Then
-                Await OpenImmichItemInEditorAsync(image)
-                Return
-            End If
-            Await _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList(),
-                                            cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
+            Try
+                Dim image = GetSelectedImageItems().FirstOrDefault(Function(i) i.CanEditFile)
+                If image Is Nothing Then Return
+                If image.IsImmichAsset Then
+                    Await OpenImmichItemInEditorAsync(image)
+                    Return
+                End If
+                Await _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList(),
+                                                cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.OpenSelectedInEditor", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         ''' <summary>Lädt das Immich-Original in eine Temp-Kopie und öffnet es im Editor mit
@@ -4874,73 +4954,87 @@ Namespace ViewModels
         End Sub
 
         Private Async Sub RefreshCollagePreviewAsync()
-            Dim requestId = Interlocked.Increment(_collagePreviewRequestId)
-            If Not IsCollageDialogOpen Then Return
+            Try
+                Dim requestId = Interlocked.Increment(_collagePreviewRequestId)
+                If Not IsCollageDialogOpen Then Return
 
-            Dim paths = GetSelectedPaths().
-                Where(Function(p) File.Exists(p) AndAlso IsImagePath(p)).
-                ToList()
-            If paths.Count < 2 Then
-                CollagePreviewImage = Nothing
-                Return
-            End If
+                Dim paths = GetSelectedPaths().
+                    Where(Function(p) File.Exists(p) AndAlso IsImagePath(p)).
+                    ToList()
+                If paths.Count < 2 Then
+                    CollagePreviewImage = Nothing
+                    Return
+                End If
 
-            Dim options = New CollageOptions With {
-                .Width = CollageWidth,
-                .Columns = CollageColumns,
-                .Gap = CollageGap,
-                .Margin = CollageMargin,
-                .BackgroundColor = CollageBackgroundColor,
-                .LayoutMode = CollageLayoutMode,
-                .HeroIndex = CollageHeroIndex,
-                .HeroPosition = CollageHeroPosition,
-                .RandomSeed = CollageRandomSeed,
-                .OrderSeed = CollageOrderSeed
-            }
+                Dim options = New CollageOptions With {
+                    .Width = CollageWidth,
+                    .Columns = CollageColumns,
+                    .Gap = CollageGap,
+                    .Margin = CollageMargin,
+                    .BackgroundColor = CollageBackgroundColor,
+                    .LayoutMode = CollageLayoutMode,
+                    .HeroIndex = CollageHeroIndex,
+                    .HeroPosition = CollageHeroPosition,
+                    .RandomSeed = CollageRandomSeed,
+                    .OrderSeed = CollageOrderSeed
+                }
 
-            Dim preview = Await Task.Run(Function() CollageService.RenderPreview(paths, options, 900))
-            If requestId <> _collagePreviewRequestId OrElse Not IsCollageDialogOpen Then Return
-            CollagePreviewImage = preview
+                Dim preview = Await Task.Run(Function() CollageService.RenderPreview(paths, options, 900))
+                If requestId <> _collagePreviewRequestId OrElse Not IsCollageDialogOpen Then Return
+                CollagePreviewImage = preview
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.RefreshCollagePreviewAsync", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         Public Async Sub CreateCollage()
-            Dim paths = GetSelectedPaths().
-                Where(Function(p) File.Exists(p) AndAlso IsImagePath(p)).
-                ToList()
-            If paths.Count < 2 Then
-                StatusText = LocalizationService.T("Für eine Collage müssen mindestens zwei Bilder ausgewählt sein.")
-                Return
-            End If
-            If String.IsNullOrWhiteSpace(CurrentFolder) OrElse Not Directory.Exists(CurrentFolder) Then Return
+            Try
+                Dim paths = GetSelectedPaths().
+                    Where(Function(p) File.Exists(p) AndAlso IsImagePath(p)).
+                    ToList()
+                If paths.Count < 2 Then
+                    StatusText = LocalizationService.T("Für eine Collage müssen mindestens zwei Bilder ausgewählt sein.")
+                    Return
+                End If
+                If String.IsNullOrWhiteSpace(CurrentFolder) OrElse Not Directory.Exists(CurrentFolder) Then Return
 
-            Dim baseName = IO.Path.GetFileNameWithoutExtension(If(String.IsNullOrWhiteSpace(CollageBaseName), "Collage", CollageBaseName.Trim()))
-            If String.IsNullOrWhiteSpace(baseName) Then baseName = "Collage"
-            Dim ext = If(String.Equals(CollageFormat, "PNG", StringComparison.OrdinalIgnoreCase), ".png",
-                      If(String.Equals(CollageFormat, "WEBP", StringComparison.OrdinalIgnoreCase), ".webp", ".jpg"))
-            Dim target = MakeUniquePath(IO.Path.Combine(CurrentFolder, baseName & ext))
-            Dim options = New CollageOptions With {
-                .OutputPath = target,
-                .Width = CollageWidth,
-                .Columns = CollageColumns,
-                .Gap = CollageGap,
-                .Margin = CollageMargin,
-                .BackgroundColor = CollageBackgroundColor,
-                .Format = CollageFormat,
-                .Quality = CollageQuality,
-                .LayoutMode = CollageLayoutMode,
-                .HeroIndex = CollageHeroIndex,
-                .HeroPosition = CollageHeroPosition,
-                .RandomSeed = CollageRandomSeed,
-                .OrderSeed = CollageOrderSeed
-            }
+                Dim baseName = IO.Path.GetFileNameWithoutExtension(If(String.IsNullOrWhiteSpace(CollageBaseName), "Collage", CollageBaseName.Trim()))
+                If String.IsNullOrWhiteSpace(baseName) Then baseName = "Collage"
+                Dim ext = If(String.Equals(CollageFormat, "PNG", StringComparison.OrdinalIgnoreCase), ".png",
+                          If(String.Equals(CollageFormat, "WEBP", StringComparison.OrdinalIgnoreCase), ".webp", ".jpg"))
+                Dim target = MakeUniquePath(IO.Path.Combine(CurrentFolder, baseName & ext))
+                Dim options = New CollageOptions With {
+                    .OutputPath = target,
+                    .Width = CollageWidth,
+                    .Columns = CollageColumns,
+                    .Gap = CollageGap,
+                    .Margin = CollageMargin,
+                    .BackgroundColor = CollageBackgroundColor,
+                    .Format = CollageFormat,
+                    .Quality = CollageQuality,
+                    .LayoutMode = CollageLayoutMode,
+                    .HeroIndex = CollageHeroIndex,
+                    .HeroPosition = CollageHeroPosition,
+                    .RandomSeed = CollageRandomSeed,
+                    .OrderSeed = CollageOrderSeed
+                }
 
-            IsCollageDialogOpen = False
-            _collagePreviewTimer.Stop()
-            CollagePreviewImage = Nothing
-            StatusText = LocalizationService.T("Collage wird erstellt...")
-            Dim ok = Await Task.Run(Function() CollageService.SaveCollage(paths, options))
-            StatusText = If(ok, $"Collage gespeichert: {IO.Path.GetFileName(target)}", "Collage konnte nicht erstellt werden")
-            If ok Then SyncFolderItems()
+                IsCollageDialogOpen = False
+                _collagePreviewTimer.Stop()
+                CollagePreviewImage = Nothing
+                StatusText = LocalizationService.T("Collage wird erstellt...")
+                Dim ok = Await Task.Run(Function() CollageService.SaveCollage(paths, options))
+                StatusText = If(ok, $"Collage gespeichert: {IO.Path.GetFileName(target)}", "Collage konnte nicht erstellt werden")
+                If ok Then SyncFolderItems()
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.CreateCollage", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         Private Shared Function MakeUniquePath(path As String) As String
@@ -5103,7 +5197,14 @@ Namespace ViewModels
         Private Shared ReadOnly BatchImageEditWritableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
 
         Private Async Sub ResizeSelected()
-            Await ResizeImageItemsAsync(GetSelectedBatchEditableImageItems())
+            Try
+                Await ResizeImageItemsAsync(GetSelectedBatchEditableImageItems())
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.ResizeSelected", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         ''' <summary>Der komplette "Bildgröße ändern"-Ablauf für eine Liste von Bildern - Dialog,
@@ -5316,15 +5417,22 @@ Namespace ViewModels
         End Function
 
         Private Async Sub RemoveMetadataSelected()
-            Dim targets = GetSelectedEditableImagePaths()
-            If targets.Count = 0 Then Return
+            Try
+                Dim targets = GetSelectedEditableImagePaths()
+                If targets.Count = 0 Then Return
 
-            StatusText = LocalizationService.T("Entferne Metadaten...")
-            Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
-                Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95, preserveMetadata:=False))
+                StatusText = LocalizationService.T("Entferne Metadaten...")
+                Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
+                    Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95, preserveMetadata:=False))
 
-            StatusText = $"{changedCount} von {targets.Count} Datei(en) bereinigt"
-            RefreshAfterBatchFileRewrite(targets)
+                StatusText = $"{changedCount} von {targets.Count} Datei(en) bereinigt"
+                RefreshAfterBatchFileRewrite(targets)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryViewModel.RemoveMetadataSelected", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Sub
 
         Private Async Sub ApplyWatermarkSelected()

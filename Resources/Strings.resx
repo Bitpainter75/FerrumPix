@@ -4272,4 +4272,34 @@
   <data name="Ebenen_gerastert_2f200a4a" xml:space="preserve">
     <value>Layers rasterised</value>
   </data>
+  <data name="nderung_konnte_nicht_an_Immich_bertragen_werden_dd83dd41" xml:space="preserve">
+    <value>The change could not be sent to Immich</value>
+  </data>
+  <data name="Aktion_fehlgeschlagen_dc921022" xml:space="preserve">
+    <value>Action failed</value>
+  </data>
+  <data name="Ebene_sperren_2ec93cb4" xml:space="preserve">
+    <value>Lock layer</value>
+  </data>
+  <data name="Ebene_entsperren_c0627044" xml:space="preserve">
+    <value>Unlock layer</value>
+  </data>
+  <data name="Ebene_gesperrt_2bacca17" xml:space="preserve">
+    <value>Layer locked</value>
+  </data>
+  <data name="Ebene_entsperrt_d30bb982" xml:space="preserve">
+    <value>Layer unlocked</value>
+  </data>
+  <data name="Ebene_ist_gesperrt_klicken_zum_Entsperren_ec3788db" xml:space="preserve">
+    <value>Layer is locked - click to unlock</value>
+  </data>
+  <data name="Ebene_sperren_entsperren_gesperrt_sind_keine_Ver_bac1d95a" xml:space="preserve">
+    <value>Lock/unlock layer - a locked layer cannot be moved, resized or rotated</value>
+  </data>
+  <data name="Gruppe_sperren_c149d028" xml:space="preserve">
+    <value>Lock group</value>
+  </data>
+  <data name="Gruppe_entsperren_aaba907d" xml:space="preserve">
+    <value>Unlock group</value>
+  </data>
 </root>

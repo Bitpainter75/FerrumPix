@@ -233,6 +233,7 @@ Namespace Services
         Private _flipVertical As Boolean = False
         Private _anchor As String = ""
         Private _isVisible As Boolean = True
+        Private _isLocked As Boolean = False
         ' Vom Nutzer im Ebenen-Panel vergebener Name. Leer = automatische Beschriftung aus Art/Text/Datei.
         Private _customName As String = ""
         ' Zugehörigkeit zu einer Objekt-Gruppe (leer = keine). Siehe GroupId.
@@ -698,6 +699,19 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>GESPERRT: keine geometrischen Änderungen mehr an diesem Objekt - kein Verschieben,
+        ''' Skalieren, Drehen oder Spiegeln, weder per Maus noch über die Regler, und auch nicht als
+        ''' Teil einer Gruppen-Transformation. Auswählen, Sichtbarkeit und Aussehen bleiben möglich;
+        ''' der Renderer kennt die Sperre gar nicht (Nutzerwunsch 2026-07-25).</summary>
+        Public Property IsLocked As Boolean
+            Get
+                Return _isLocked
+            End Get
+            Set(value As Boolean)
+                SetField(_isLocked, value)
+            End Set
+        End Property
+
         Public Property IsVisible As Boolean
             Get
                 Return _isVisible
@@ -984,7 +998,7 @@ Namespace Services
                 .FlipVertical = FlipVertical,
                 .Adjustments = If(Adjustments Is Nothing, Nothing, Adjustments.Clone()),
                 .Anchor = Anchor,
-                .IsVisible = IsVisible,
+                .IsVisible = IsVisible, .IsLocked = IsLocked,
                 .HardnessPercent = HardnessPercent,
                 .BrushPreset = BrushPreset,
                 .FillKind = FillKind,
@@ -1052,6 +1066,9 @@ Namespace Services
         Public Property Name As String = LocalizationService.T("Lokale Korrektur")
         Public Property MaskId As String = ""
         Public Property IsVisible As Boolean = True
+        ''' <summary>GESPERRT - siehe ImageAnnotation.IsLocked. Bei einer Korrekturebene heißt das:
+        ''' ihre Maske wandert bei Gruppen-Transformationen nicht mit.</summary>
+        Public Property IsLocked As Boolean = False
         Public Property Opacity As Single = 1.0F
         Public Property Adjustments As ImageAdjustments = New ImageAdjustments()
         ''' <summary>True = diese Ebene wurde aus einem Lightroom-Preset importiert (lokale Korrektur).
@@ -1091,7 +1108,7 @@ Namespace Services
         Public Function Clone() As MaskedAdjustmentLayer
             Return New MaskedAdjustmentLayer With {
                 .Id = Id, .Name = Name, .MaskId = MaskId,
-                .IsVisible = IsVisible, .Opacity = Opacity, .FromPreset = FromPreset, .IsMaskLayer = IsMaskLayer,
+                .IsVisible = IsVisible, .IsLocked = IsLocked, .Opacity = Opacity, .FromPreset = FromPreset, .IsMaskLayer = IsMaskLayer,
                 .GroupId = GroupId,
                 .StackAboveAnnotationId = StackAboveAnnotationId,
                 .FillKind = FillKind, .FillColor = FillColor, .FillColor2 = FillColor2,
@@ -1121,13 +1138,17 @@ Namespace Services
         ''' <summary>Sichtbarkeit der GRUPPE. Ein Mitglied wird gezeichnet, wenn sein eigenes IsVisible
         ''' UND die Gruppe sichtbar sind (siehe ImageAdjustments.IsAnnotationRenderVisible).</summary>
         Public Property IsVisible As Boolean = True
+        ''' <summary>GESPERRT: sperrt die ganze Gruppe. Ein Mitglied ist geometrisch unantastbar, wenn
+        ''' sein eigenes IsLocked ODER das der Gruppe gesetzt ist (siehe
+        ''' ImageAdjustments.IsAnnotationGeometryLocked).</summary>
+        Public Property IsLocked As Boolean = False
         ''' <summary>Reiner Panel-Zustand: Mitglieder eingeklappt. Persistiert, weil er sonst bei jedem
         ''' Öffnen verloren ginge; ohne Wirkung auf das Bild.</summary>
         Public Property IsCollapsed As Boolean = False
 
         Public Function Clone() As AnnotationGroup
             Return New AnnotationGroup With {
-                .Id = Id, .Name = Name, .IsVisible = IsVisible, .IsCollapsed = IsCollapsed
+                .Id = Id, .Name = Name, .IsVisible = IsVisible, .IsLocked = IsLocked, .IsCollapsed = IsCollapsed
             }
         End Function
     End Class
@@ -1488,6 +1509,18 @@ Namespace Services
 
         ''' <summary>Wie IsAnnotationRenderVisible, aber für lokale Korrekturebenen: eigene Sichtbarkeit
         ''' UND die ihrer Gruppe.</summary>
+        ''' <summary>Ist dieses Objekt geometrisch gesperrt - eigenes Schloss oder das seiner Gruppe?
+        ''' Der Renderer fragt das nie; es entscheidet allein, was der Editor zulässt.</summary>
+        Public Function IsAnnotationGeometryLocked(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing Then Return False
+            If annotation.IsLocked Then Return True
+            If String.IsNullOrEmpty(annotation.GroupId) OrElse AnnotationGroups Is Nothing Then Return False
+            For Each g In AnnotationGroups
+                If g IsNot Nothing AndAlso String.Equals(g.Id, annotation.GroupId, StringComparison.Ordinal) Then Return g.IsLocked
+            Next
+            Return False
+        End Function
+
         Public Function IsMaskedLayerRenderVisible(layer As MaskedAdjustmentLayer) As Boolean
             If layer Is Nothing OrElse Not layer.IsVisible Then Return False
             If String.IsNullOrEmpty(layer.GroupId) Then Return True
@@ -2353,6 +2386,33 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             If annotation Is Nothing OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return SKRectI.Empty
             annotation = TransformAnnotationForGeometry(annotation, adj, sourceWidth, sourceHeight)
             Return ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, annotation)
+        End Function
+
+        ''' <summary>
+        ''' Wo liegt eine MASKE in der Szene? Gerechnet wird über dieselbe Geometriekette wie bei
+        ''' Objekten - dafür wandert das Maskenrechteck als Pseudo-Objekt hindurch, statt die Kette
+        ''' (Crop, Vierteldrehung, Spiegelung, Skalierung) ein zweites Mal nachzubilden. Eine zweite
+        ''' Formel wäre genau die Sorte Abweichung, die im Koordinaten-Audit steht.
+        '''
+        ''' Gebraucht wird das, um zu entscheiden, ob eine im Objektstapel hängende Korrektur eine
+        ''' bestimmte Region überhaupt berührt (sonst darf der schnelle Region-Patch laufen).
+        ''' Die weiche Kante wird großzügig mitgerechnet.
+        ''' </summary>
+        Public Shared Function ComputeMaskDirtyRect(sourceWidth As Integer, sourceHeight As Integer,
+                                                    mask As ImageMask, adj As ImageAdjustments) As SKRectI
+            If mask Is Nothing OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return SKRectI.Empty
+            Dim breite = mask.Right - mask.Left
+            Dim hoehe = mask.Bottom - mask.Top
+            If breite <= 0 OrElse hoehe <= 0 Then Return SKRectI.Empty
+            Dim rand = Math.Max(0.0F, mask.FeatherPixels) + 2.0F
+            Dim pseudo As New ImageAnnotation With {
+                .Kind = "Rectangle",
+                .XPixels = mask.Left - rand,
+                .YPixels = mask.Top - rand,
+                .WidthPixels = breite + 2.0F * rand,
+                .HeightPixels = hoehe + 2.0F * rand
+            }
+            Return ComputeAnnotationDirtyRect(sourceWidth, sourceHeight, pseudo, adj)
         End Function
 
         Private Shared Function ComputeAnnotationDirtyRectCore(sourceWidth As Integer, sourceHeight As Integer, annotation As ImageAnnotation) As SKRectI
@@ -4070,8 +4130,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Select(Function(m) String.Join(":", m.Id, m.SourceWidthPixels, m.SourceHeightPixels,
                                                m.Left, m.Top, m.Right, m.Bottom, m.FeatherPixels,
                                                m.Inverted, SelectionMaskFingerprint(m.PngBase64)))
+            ' Ebenen IM OBJEKTSTAPEL gehören NICHT in den Basis-Schlüssel: die Basis-Stufe überspringt
+            ' sie (ApplyMaskedAdjustmentLayers ohne onlyStackedAboveId), sie wirken erst im
+            ' Objektdurchlauf. Stünden sie hier, würde jede Änderung an ihnen den Basis-Cache
+            ' wegwerfen - und der Zug, der sie für die Live-Darstellung kurz weglässt, würde ihn
+            ' gleich zweimal neu aufbauen.
             Dim layers = If(adj.MaskedAdjustmentLayers, New List(Of MaskedAdjustmentLayer)()).
-                Where(Function(l) l IsNot Nothing).
+                Where(Function(l) l IsNot Nothing AndAlso String.IsNullOrEmpty(l.StackAboveAnnotationId)).
                 Select(Function(l)
                            Dim values = If(l.Adjustments, New ImageAdjustments())
                            Dim pixelValues = ImageAdjustments.PixelAdjustmentProperties().
@@ -4082,7 +4147,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                            ' zurück - die ERSTE Füllung blieb sichtbar und liess sich nie ersetzen
                            ' (Nutzer-Befund 2026-07-24; exakt die im Kopf von ComputeBaseKey beschriebene
                            ' Fehlerklasse "Regler macht nix").
-                           Return String.Join(":", l.Id, l.MaskId, l.IsVisible, l.Opacity, l.GroupId,
+                           ' Die Sichtbarkeit der GRUPPE gehört mit hinein: liegt die Korrektur in einer
+                           ' Gruppe, entscheidet deren Auge mit darüber, ob sie gerendert wird
+                           ' (IsMaskedLayerRenderVisible). Ohne sie war der Schlüssel vor und nach dem
+                           ' Umschalten identisch - der Vollrender bekam die gecachte Basis zurück und
+                           ' die Korrektur blieb sichtbar (Audit A2).
+                           Dim gruppeSichtbar = adj.IsMaskedLayerRenderVisible(l)
+                           Return String.Join(":", l.Id, l.MaskId, l.IsVisible, gruppeSichtbar, l.Opacity, l.GroupId,
                                               l.StackAboveAnnotationId,
                                               l.IsMaskLayer, l.FillKind, l.FillColor, l.FillColor2,
                                               KeyPart(l.FillAngle), l.FillInverted,
@@ -6513,22 +6584,37 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Return result
             End If
 
+            ' FARBTYP: das Objekt-Komposit ist Rgba8888, die Masken-Komposition rechnet aber in
+            ' Bgra8888 (TryBorrowBgraBuffer) und fiele sonst STILL auf die Baseline zurück - die
+            ' Korrektur wäre wirkungslos.
+            '
+            ' Umgewandelt wird EINMAL für den ganzen Durchlauf statt zweimal je Korrektur: vorher
+            ' kostete jede eingehängte Korrektur drei Vollkopien des Bildes (hin, Klon in
+            ' ApplyMaskedAdjustmentLayers, zurück) - bei 24 MP rund 300 MB Speicherverkehr pro
+            ' Korrektur und Frame. Jetzt bleibt es bei einer Umwandlung am Anfang, einer am Ende und
+            ' dem unvermeidbaren Klon je Korrektur.
+            Dim zielFarbtyp = result.ColorType
+            If zielFarbtyp <> SKColorType.Bgra8888 Then
+                result = ReplaceBitmap(result, ConvertBitmapToColorType(result, SKColorType.Bgra8888))
+            End If
+
             For Each annotation In adj.Annotations
                 Using canvas = New SKCanvas(result)
                     DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height,
                                             New System.Collections.Generic.List(Of ImageAnnotation) From {annotation})
                 End Using
                 If stacked.Any(Function(l) String.Equals(l.StackAboveAnnotationId, annotation.Id, StringComparison.Ordinal)) Then
-                    ' FARBTYP: das Objekt-Komposit ist Rgba8888, die Masken-Komposition rechnet aber in
-                    ' Bgra8888 (TryBorrowBgraBuffer) und fiele sonst STILL auf die Baseline zurück - die
-                    ' Korrektur wäre wirkungslos. Deshalb für den Durchlauf umwandeln und danach zurück.
-                    Using bgra = ConvertBitmapToColorType(result, SKColorType.Bgra8888)
-                        Using corrected = ApplyMaskedAdjustmentLayers(bgra, adj, source.Width, source.Height, annotation.Id)
-                            result = ReplaceBitmap(result, ConvertBitmapToColorType(corrected, result.ColorType))
-                        End Using
-                    End Using
+                    ' KEIN Using um das Ergebnis: es WIRD das neue Komposit (ReplaceBitmap gibt das
+                    ' alte frei). Ein Using würde genau das Bitmap freigeben, mit dem weitergezeichnet
+                    ' wird.
+                    Dim corrected = ApplyMaskedAdjustmentLayers(result, adj, source.Width, source.Height, annotation.Id)
+                    If corrected IsNot Nothing Then result = ReplaceBitmap(result, corrected)
                 End If
             Next
+
+            If result.ColorType <> zielFarbtyp Then
+                result = ReplaceBitmap(result, ConvertBitmapToColorType(result, zielFarbtyp))
+            End If
             Return result
         End Function
 
@@ -6548,6 +6634,18 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 If Not adj.IsAnnotationRenderVisible(annotation) Then Continue For
                 Dim renderAnnotation = TransformAnnotationForGeometry(annotation, adj, sourceWidth, sourceHeight)
                 If renderAnnotation Is Nothing Then Continue For
+                ' AUSSERHALB DES CLIPS GAR NICHT ERST ZEICHNEN. Ein Region-Patch ist nur wenige hundert
+                ' Pixel groß, zeichnete bisher aber JEDES Objekt des Dokuments - bei 36 eingefügten
+                ' Bildern hieß das 36 Decodes und Skalierungen für einen 400x400-Fleck (gemessen 550 ms
+                ' statt ~20 ms; der Zug wirkte dadurch zäh und die Ghost-Übergabe kam nicht durch,
+                ' Nutzer-Log 2026-07-25). QuickReject prüft gegen den aktuellen Clip des Canvas und ist
+                ' selbst praktisch kostenlos.
+                Dim eigenRect = ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, renderAnnotation)
+                If Not eigenRect.IsEmpty Then
+                    Dim clipTest = New SKRect(eigenRect.Left - offsetX, eigenRect.Top - offsetY,
+                                              eigenRect.Right - offsetX, eigenRect.Bottom - offsetY)
+                    If canvas.QuickReject(clipTest) Then Continue For
+                End If
                 Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
 
                 If IsPaintKind(kind) Then
@@ -9085,9 +9183,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             Else
                                 Using image = SKImage.FromBitmap(toEncode)
                                     Using data = image.Encode(format, quality)
-                                        Using fs = File.Open(targetPath, FileMode.Create, FileAccess.Write)
-                                            data.SaveTo(fs)
-                                        End Using
+                                        ' Atomar: erst daneben schreiben, dann darüberbewegen - ein
+                                        ' abgebrochener Encode darf das Original nicht zerstören.
+                                        WriteFileAtomic(targetPath, Sub(fs) data.SaveTo(fs))
                                     End Using
                                 End Using
                             End If
@@ -9171,6 +9269,50 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Try
         End Sub
 
+        ''' <summary>
+        ''' Schreibt eine Datei so, dass die alte Fassung bis zum letzten Moment unangetastet bleibt:
+        ''' erst in eine Nachbardatei, dann darüberbewegen.
+        '''
+        ''' `File.Open(..., FileMode.Create)` kürzt das Ziel SOFORT auf 0 Byte. Bricht das Encodieren
+        ''' danach ab - voller Datenträger, Encoder-Ausnahme, abgezogenes Netzlaufwerk, Absturz -,
+        ''' ist das Original weg und an seiner Stelle liegt ein Torso. Beim Speichern ÜBER das
+        ''' Original (nicht "Speichern unter") ist das ein Datenverlust ohne Rückweg (Audit A1).
+        ''' `FpxService` macht es seit jeher so; hier gilt derselbe Weg für alle Bild-Schreibpfade.
+        '''
+        ''' Die Nachbardatei liegt bewusst im ZIELVERZEICHNIS - `File.Move` ist nur innerhalb
+        ''' desselben Dateisystems ein Umhängen und damit unteilbar; über `Path.GetTempPath()` wäre
+        ''' es wieder ein Kopieren mit denselben Abbruchstellen.
+        ''' </summary>
+        Friend Shared Function WriteFileAtomic(targetPath As String, writer As Action(Of Stream)) As Boolean
+            If String.IsNullOrWhiteSpace(targetPath) OrElse writer Is Nothing Then Return False
+            Dim verzeichnis = IO.Path.GetDirectoryName(targetPath)
+            If Not String.IsNullOrEmpty(verzeichnis) Then Directory.CreateDirectory(verzeichnis)
+            ' Prozess-ID im Namen: zwei gleichzeitig laufende FerrumPix-Instanzen (oder der
+            ' Prüfstand daneben) dürfen sich nicht dieselbe Zwischendatei teilen.
+            Dim tempPath = targetPath & ".fpwrite" & Environment.ProcessId.ToString() & ".tmp"
+            Try
+                Using fs = File.Open(tempPath, FileMode.Create, FileAccess.Write)
+                    writer(fs)
+                    fs.Flush()
+                End Using
+                File.Move(tempPath, targetPath, overwrite:=True)
+                Return True
+            Catch
+                Try
+                    If File.Exists(tempPath) Then File.Delete(tempPath)
+                Catch
+                End Try
+                Throw
+            End Try
+        End Function
+
+        ''' <summary>Byte-Fassung von <see cref="WriteFileAtomic"/> - für die Metadaten-Nachläufe,
+        ''' die die fertige Datei einlesen, umbauen und zurückschreiben.</summary>
+        Friend Shared Function WriteAllBytesAtomic(targetPath As String, bytes As Byte()) As Boolean
+            If bytes Is Nothing Then Return False
+            Return WriteFileAtomic(targetPath, Sub(fs) fs.Write(bytes, 0, bytes.Length))
+        End Function
+
         Private Shared Function IsJpegPath(path As String) As Boolean
             Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
             Return ext = ".jpg" OrElse ext = ".jpeg"
@@ -9193,7 +9335,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 output.AddRange(segment)
             Next
             output.AddRange(stripped.Skip(insertAt))
-            File.WriteAllBytes(targetPath, output.ToArray())
+            WriteAllBytesAtomic(targetPath, output.ToArray())
         End Sub
 
         Private Shared Function ReadJpegMetadataSegments(path As String) As List(Of Byte())
@@ -9375,7 +9517,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 offset = chunkEnd
             End While
 
-            File.WriteAllBytes(targetPath, output.ToArray())
+            WriteAllBytesAtomic(targetPath, output.ToArray())
         End Sub
 
         Private Shared Function ReadPngMetadataChunks(path As String) As List(Of Byte())
@@ -9768,9 +9910,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             End Using
                             Using image = SKImage.FromBitmap(cropped)
                                 Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                                    Using fs = File.Open(targetPngPath, FileMode.Create, FileAccess.Write)
-                                        data.SaveTo(fs)
-                                    End Using
+                                    WriteFileAtomic(targetPngPath, Sub(fs) data.SaveTo(fs))
                                 End Using
                             End Using
                         End Using
@@ -10060,9 +10200,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function SaveBitmapPng(bmp As SKBitmap, targetPngPath As String) As Boolean
             Using image = SKImage.FromBitmap(bmp)
                 Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                    Using fs = File.Open(targetPngPath, FileMode.Create, FileAccess.Write)
-                        data.SaveTo(fs)
-                    End Using
+                    WriteFileAtomic(targetPngPath, Sub(fs) data.SaveTo(fs))
                 End Using
             End Using
             Return True
@@ -10209,6 +10347,111 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Korrektur einer mitbewegten Ebene an Ort und Größe stehen (Nutzer-Befund 2026-07-25).
         ''' Die Maske wird dafür neu gerastert - das kostet etwas Kantenschärfe, ist aber die einzige
         ''' Möglichkeit, solange die Ursprungsform nicht als Geometrie aufbewahrt wird.</summary>
+        ''' <summary>
+        ''' Dreht die Maskenregion um einen Punkt - das Gegenstück zu <see cref="TransformMaskRegion"/>
+        ''' für Gruppen-Drehungen. Ohne das blieb die Korrektur einer mitgedrehten Gruppe an Ort und
+        ''' Lage liegen, während ihre Objekte wanderten.
+        '''
+        ''' Die Maske wird dabei NEU GERASTERT (Alpha8 kennt keine Drehung im Rechteck), verliert also
+        ''' bei jeder Drehung ein wenig Kantenschärfe - dieselbe bewusst in Kauf genommene Einbuße wie
+        ''' beim Skalieren. Gerechnet wird im Quellraum, in dem die Maske gespeichert ist.
+        ''' </summary>
+        Public Shared Function RotateMaskRegion(mask As ImageMask, degrees As Double,
+                                                pivotX As Double, pivotY As Double) As Boolean
+            If mask Is Nothing OrElse String.IsNullOrWhiteSpace(mask.PngBase64) Then Return False
+            If Math.Abs(degrees) < 0.0001 Then Return True
+
+            Dim rad = degrees * Math.PI / 180.0
+            Dim cosR = Math.Cos(rad), sinR = Math.Sin(rad)
+            Dim ecken = {(CDbl(mask.Left), CDbl(mask.Top)), (CDbl(mask.Right), CDbl(mask.Top)),
+                         (CDbl(mask.Right), CDbl(mask.Bottom)), (CDbl(mask.Left), CDbl(mask.Bottom))}
+            Dim minX = Double.MaxValue, minY = Double.MaxValue, maxX = Double.MinValue, maxY = Double.MinValue
+            For Each e In ecken
+                Dim dx = e.Item1 - pivotX, dy = e.Item2 - pivotY
+                Dim nx = pivotX + dx * cosR - dy * sinR
+                Dim ny = pivotY + dx * sinR + dy * cosR
+                minX = Math.Min(minX, nx) : maxX = Math.Max(maxX, nx)
+                minY = Math.Min(minY, ny) : maxY = Math.Max(maxY, ny)
+            Next
+
+            Dim l = CInt(Math.Floor(minX)), t = CInt(Math.Floor(minY))
+            Dim w = Math.Max(1, CInt(Math.Ceiling(maxX)) - l), h = Math.Max(1, CInt(Math.Ceiling(maxY)) - t)
+
+            Dim decoded As SKBitmap = Nothing
+            Try
+                decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
+                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                Using gedreht = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(gedreht)
+                        canvas.Clear(SKColors.Transparent)
+                        ' Im QUELLRAUM zeichnen: erst den Ursprung des neuen Rechtecks wegschieben,
+                        ' dann um den Drehpunkt drehen, dann die Maske an ihrer alten Stelle absetzen.
+                        canvas.Translate(CSng(-l), CSng(-t))
+                        canvas.RotateDegrees(CSng(degrees), CSng(pivotX), CSng(pivotY))
+                        Using paint = New SKPaint With {.IsAntialias = True, .FilterQuality = SKFilterQuality.High}
+                            canvas.DrawBitmap(decoded, New SKRect(mask.Left, mask.Top,
+                                                                  mask.Left + decoded.Width, mask.Top + decoded.Height), paint)
+                        End Using
+                    End Using
+                    Using img = SKImage.FromPixels(gedreht.PeekPixels())
+                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return False
+                            mask.PngBase64 = Convert.ToBase64String(data.ToArray())
+                        End Using
+                    End Using
+                End Using
+                mask.Left = l : mask.Top = t : mask.Right = l + w : mask.Bottom = t + h
+                Return True
+            Catch
+                Return False
+            Finally
+                decoded?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Spiegelt die Maskenregion an einer Achse (Gruppen-Spiegelung). Hier bleibt die
+        ''' Auflösung erhalten - gespiegelt wird pixelgenau, nur die Lage wechselt die Seite.</summary>
+        Public Shared Function FlipMaskRegion(mask As ImageMask, horizontal As Boolean, axis As Double) As Boolean
+            If mask Is Nothing OrElse String.IsNullOrWhiteSpace(mask.PngBase64) Then Return False
+
+            Dim decoded As SKBitmap = Nothing
+            Try
+                decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
+                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                Dim w = decoded.Width, h = decoded.Height
+                Dim l = mask.Left, t = mask.Top
+                If horizontal Then
+                    l = CInt(Math.Round(2 * axis - mask.Right))
+                Else
+                    t = CInt(Math.Round(2 * axis - mask.Bottom))
+                End If
+
+                Using gespiegelt = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(gespiegelt)
+                        canvas.Clear(SKColors.Transparent)
+                        If horizontal Then
+                            canvas.Scale(-1.0F, 1.0F, w / 2.0F, 0.0F)
+                        Else
+                            canvas.Scale(1.0F, -1.0F, 0.0F, h / 2.0F)
+                        End If
+                        canvas.DrawBitmap(decoded, 0.0F, 0.0F)
+                    End Using
+                    Using img = SKImage.FromPixels(gespiegelt.PeekPixels())
+                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return False
+                            mask.PngBase64 = Convert.ToBase64String(data.ToArray())
+                        End Using
+                    End Using
+                End Using
+                mask.Left = l : mask.Top = t : mask.Right = l + w : mask.Bottom = t + h
+                Return True
+            Catch
+                Return False
+            Finally
+                decoded?.Dispose()
+            End Try
+        End Function
+
         Public Shared Function TransformMaskRegion(mask As ImageMask,
                                                    scaleX As Double, scaleY As Double,
                                                    pivotX As Double, pivotY As Double,

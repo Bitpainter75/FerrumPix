@@ -136,6 +136,27 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Gesperrt? Ein Objekt gilt auch dann als gesperrt, wenn seine GRUPPE es ist -
+        ''' das Schloss in der Mitgliedszeile zeigt dann denselben Zustand wie die Kopfzeile.</summary>
+        Public ReadOnly Property IsLocked As Boolean
+            Get
+                If Group IsNot Nothing Then Return Group.IsLocked
+                If MemberOfGroup IsNot Nothing AndAlso MemberOfGroup.IsLocked Then Return True
+                If AdjustmentLayer IsNot Nothing Then Return AdjustmentLayer.IsLocked
+                Return Annotation IsNot Nothing AndAlso Annotation.IsLocked
+            End Get
+        End Property
+
+        ''' <summary>Das Schloss wird nur bei GESPERRTEN Zeilen gezeichnet - offen bliebe es sonst als
+        ''' Dauergast in jeder Zeile stehen und würde das Auge verwässern.</summary>
+        Public ReadOnly Property LockIconSource As String
+            Get
+                Return If(IsLocked,
+                          "avares://FerrumPix/Assets/Icons/outline/lock.svg",
+                          "avares://FerrumPix/Assets/Icons/outline/lock-open.svg")
+            End Get
+        End Property
+
         Public ReadOnly Property IconSource As String
             Get
                 If Group IsNot Nothing Then Return "avares://FerrumPix/Assets/Icons/outline/folder.svg"
@@ -155,6 +176,8 @@ Namespace ViewModels
             RaisePropertyChanged(NameOf(LayerLabel))
             RaisePropertyChanged(NameOf(EditableName))
             RaisePropertyChanged(NameOf(IsVisible))
+            RaisePropertyChanged(NameOf(IsLocked))
+            RaisePropertyChanged(NameOf(LockIconSource))
             RaisePropertyChanged(NameOf(GroupToggleIconSource))
         End Sub
 

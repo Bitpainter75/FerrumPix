@@ -4271,4 +4271,34 @@
   <data name="Ebenen_gerastert_2f200a4a" xml:space="preserve">
     <value>Calques rastérisés</value>
   </data>
+  <data name="nderung_konnte_nicht_an_Immich_bertragen_werden_dd83dd41" xml:space="preserve">
+    <value>La modification n'a pas pu être transmise à Immich</value>
+  </data>
+  <data name="Aktion_fehlgeschlagen_dc921022" xml:space="preserve">
+    <value>L'action a échoué</value>
+  </data>
+  <data name="Ebene_sperren_2ec93cb4" xml:space="preserve">
+    <value>Verrouiller le calque</value>
+  </data>
+  <data name="Ebene_entsperren_c0627044" xml:space="preserve">
+    <value>Déverrouiller le calque</value>
+  </data>
+  <data name="Ebene_gesperrt_2bacca17" xml:space="preserve">
+    <value>Calque verrouillé</value>
+  </data>
+  <data name="Ebene_entsperrt_d30bb982" xml:space="preserve">
+    <value>Calque déverrouillé</value>
+  </data>
+  <data name="Ebene_ist_gesperrt_klicken_zum_Entsperren_ec3788db" xml:space="preserve">
+    <value>Le calque est verrouillé - cliquez pour déverrouiller</value>
+  </data>
+  <data name="Ebene_sperren_entsperren_gesperrt_sind_keine_Ver_bac1d95a" xml:space="preserve">
+    <value>Verrouiller/déverrouiller le calque - un calque verrouillé ne peut être ni déplacé, ni redimensionné, ni pivoté</value>
+  </data>
+  <data name="Gruppe_sperren_c149d028" xml:space="preserve">
+    <value>Verrouiller le groupe</value>
+  </data>
+  <data name="Gruppe_entsperren_aaba907d" xml:space="preserve">
+    <value>Déverrouiller le groupe</value>
+  </data>
 </root>

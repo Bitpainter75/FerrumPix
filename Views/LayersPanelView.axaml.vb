@@ -92,6 +92,22 @@ Namespace Views
         End Sub
 
         ' Umbenennen-Knopf in der unteren Werkzeugleiste.
+        ''' Schloss in der Zeile: entsperrt genau DIESE Zeile (sichtbar ist es nur bei gesperrten).
+        Private Sub OnToggleRowLockClick(sender As Object, e As RoutedEventArgs)
+            Dim row = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If row Is Nothing OrElse vm Is Nothing Then Return
+            vm.SelectedLayerRow = row
+            vm.ToggleSelectionLocked()
+            e.Handled = True
+        End Sub
+
+        ''' Knopf in der Fußzeile: sperrt bzw. entsperrt die aktuelle Auswahl.
+        Private Sub OnToggleSelectionLockClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            vm?.ToggleSelectionLocked()
+        End Sub
+
         Private Sub OnRenameSelectedClick(sender As Object, e As RoutedEventArgs)
             StartRenameSelectedLayer()
         End Sub
@@ -137,6 +153,11 @@ Namespace Views
             If vm.CanRasterizeSelectedAnnotation Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern (ins Bild einbacken)"), "layers-union", vm.RasterizeSelectedAnnotationCommand))
             End If
+            ' Sperren gilt für alles Markierte - bei einer Gruppen-Kopfzeile also für die ganze Gruppe.
+            Dim sperrEintrag = MakeLayerMenuItem(vm.SelectionLockLabel,
+                                                 If(vm.IsSelectionGeometryLocked, "lock-open", "lock"), Nothing)
+            AddHandler sperrEintrag.Click, Sub(s2, e2) vm.ToggleSelectionLocked()
+            items.Add(sperrEintrag)
             ' Umbenennen gilt für die angeklickte ZEILE - eine Gruppen-Kopfzeile also auch, obwohl mit
             ' ihr alle Mitglieder markiert sind (sonst wäre eine Gruppe nur per F2 umbenennbar).
             If row.IsGroupHeader Then

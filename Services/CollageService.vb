@@ -60,9 +60,9 @@ Namespace Services
                                    SKEncodedImageFormat.Jpeg))
                 Using image = SKImage.FromBitmap(surfaceBitmap)
                     Using data = image.Encode(format, Math.Max(1, Math.Min(100, options.Quality)))
-                        Using fs = File.Open(options.OutputPath, FileMode.Create, FileAccess.Write)
-                            data.SaveTo(fs)
-                        End Using
+                        ' Atomar schreiben (Audit A1): eine bestehende Collage bleibt heil,
+                        ' wenn das Schreiben abbricht.
+                        ImageProcessor.WriteFileAtomic(options.OutputPath, Sub(fs) data.SaveTo(fs))
                     End Using
                 End Using
             End Using

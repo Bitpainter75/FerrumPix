@@ -884,77 +884,83 @@ Namespace ViewModels
         ''' Navigations-Token verwirft ein spät eintreffendes Download-Ergebnis, falls der Nutzer
         ''' inzwischen weitergeblättert hat.</summary>
         Private Async Sub LoadImmichAt(idx As Integer)
-            If idx < 0 OrElse idx >= _folderPaths.Count Then Return
-            Dim pseudo = _folderPaths(idx)
-            Dim assetId As String = Nothing, fileName As String = Nothing
-            If Not ImmichService.TryParsePseudoPath(pseudo, assetId, fileName) Then Return
+            Try
+                If idx < 0 OrElse idx >= _folderPaths.Count Then Return
+                Dim pseudo = _folderPaths(idx)
+                Dim assetId As String = Nothing, fileName As String = Nothing
+                If Not ImmichService.TryParsePseudoPath(pseudo, assetId, fileName) Then Return
 
-            Dim token = System.Threading.Interlocked.Increment(_immichNavToken)
-            _currentIndex = idx
-            CurrentIndex = idx
-            MarkCurrentFilmstripItem()
-            CurrentFileName = fileName
-            _currentImmichAssetId = assetId
-            StatusInfo = LocalizationService.T("Lade…")
+                Dim token = System.Threading.Interlocked.Increment(_immichNavToken)
+                _currentIndex = idx
+                CurrentIndex = idx
+                MarkCurrentFilmstripItem()
+                CurrentFileName = fileName
+                _currentImmichAssetId = assetId
+                StatusInfo = LocalizationService.T("Lade…")
 
-            ' Infopanel SOFORT auf das neue Asset umschalten (Minimalstand): während des
-            ' Original-Downloads (Sekunden) stand sonst das komplette Panel des vorherigen
-            ' Bildes da (Nutzer-Befund 17.07., Filmstrip-Wechsel). Der volle EXIF-Stand kommt
-            ' nach dem Download über LoadInfoPanelData mit der Temp-Kopie.
-            BeginInfoPanelSwitch(pseudo, New ExifData With {
-                .FileName = If(fileName, ""),
-                .FileType = IO.Path.GetExtension(If(fileName, "")).TrimStart("."c).ToUpperInvariant()
-            })
+                ' Infopanel SOFORT auf das neue Asset umschalten (Minimalstand): während des
+                ' Original-Downloads (Sekunden) stand sonst das komplette Panel des vorherigen
+                ' Bildes da (Nutzer-Befund 17.07., Filmstrip-Wechsel). Der volle EXIF-Stand kommt
+                ' nach dem Download über LoadInfoPanelData mit der Temp-Kopie.
+                BeginInfoPanelSwitch(pseudo, New ExifData With {
+                    .FileName = If(fileName, ""),
+                    .FileType = IO.Path.GetExtension(If(fileName, "")).TrimStart("."c).ToUpperInvariant()
+                })
 
-            ' Favorit/Rating/Stichwörter aus dem durchgereichten Galerie-Item übernehmen - Felder direkt
-            ' setzen, damit die Property-Setter nicht sofort wieder an den Server zurückschreiben.
-            If idx < _immichSessionItems.Count Then
-                Dim meta = _immichSessionItems(idx)
-                _isFavorite = meta.IsFavorite
-                Me.RaisePropertyChanged(NameOf(IsFavorite))
-                _rating = meta.Rating
-                Me.RaisePropertyChanged(NameOf(Rating))
-                Me.RaisePropertyChanged(NameOf(RatingText))
-                ' Etikett ist lokal (Bibliotheks-DB, Pseudo-Pfad) - das Galerie-Item traegt es schon.
-                _colorLabel = If(meta.ColorLabel, "")
-                RaiseColorLabelProperties()
-                Tags.Clear()
-                If meta.Tags IsNot Nothing Then
-                    For Each t In meta.Tags
-                        Tags.Add(t)
-                    Next
+                ' Favorit/Rating/Stichwörter aus dem durchgereichten Galerie-Item übernehmen - Felder direkt
+                ' setzen, damit die Property-Setter nicht sofort wieder an den Server zurückschreiben.
+                If idx < _immichSessionItems.Count Then
+                    Dim meta = _immichSessionItems(idx)
+                    _isFavorite = meta.IsFavorite
+                    Me.RaisePropertyChanged(NameOf(IsFavorite))
+                    _rating = meta.Rating
+                    Me.RaisePropertyChanged(NameOf(Rating))
+                    Me.RaisePropertyChanged(NameOf(RatingText))
+                    ' Etikett ist lokal (Bibliotheks-DB, Pseudo-Pfad) - das Galerie-Item traegt es schon.
+                    _colorLabel = If(meta.ColorLabel, "")
+                    RaiseColorLabelProperties()
+                    Tags.Clear()
+                    If meta.Tags IsNot Nothing Then
+                        For Each t In meta.Tags
+                            Tags.Add(t)
+                        Next
+                    End If
                 End If
-            End If
 
-            Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
-            ' Zwischenzeitlich weitergeblättert oder Sitzung verlassen? Dann Ergebnis verwerfen.
-            If token <> System.Threading.Volatile.Read(_immichNavToken) OrElse Not _isImmichSession Then Return
-            If String.IsNullOrEmpty(localPath) Then
-                StatusInfo = LocalizationService.T("Bild konnte nicht aus Immich geladen werden")
-                Return
-            End If
+                Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
+                ' Zwischenzeitlich weitergeblättert oder Sitzung verlassen? Dann Ergebnis verwerfen.
+                If token <> System.Threading.Volatile.Read(_immichNavToken) OrElse Not _isImmichSession Then Return
+                If String.IsNullOrEmpty(localPath) Then
+                    StatusInfo = LocalizationService.T("Bild konnte nicht aus Immich geladen werden")
+                    Return
+                End If
 
-            _currentImagePath = localPath
-            CurrentImagePath = localPath
-            ResetViewerRotation()
-            ScaleX = 1.0
-            Select Case _activeZoomPreset
-                Case ZoomPresetMode.Fit : IsFitToWindow = True
-                Case ZoomPresetMode.Actual
-                    IsFitToWindow = False
-                    ZoomLevel = 1.0
-                Case Else : IsFitToWindow = False
-            End Select
-            LoadBitmap()
-            If _isFitToWindow Then UpdateFitZoom()
-            UpdateStatus()
-            ' Die heruntergeladene Temp-Kopie ist das Original - EXIF/IPTC/XMP direkt daraus lesen.
-            LoadInfoPanelData(_currentImagePath, preserveExistingTags:=True)
-            Me.RaisePropertyChanged(NameOf(IsRawFile))
-            Me.RaisePropertyChanged(NameOf(IsVideoFile))
-            Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
-            Me.RaisePropertyChanged(NameOf(HasNoMedia))
-            Me.RaisePropertyChanged(NameOf(CanEdit))
+                _currentImagePath = localPath
+                CurrentImagePath = localPath
+                ResetViewerRotation()
+                ScaleX = 1.0
+                Select Case _activeZoomPreset
+                    Case ZoomPresetMode.Fit : IsFitToWindow = True
+                    Case ZoomPresetMode.Actual
+                        IsFitToWindow = False
+                        ZoomLevel = 1.0
+                    Case Else : IsFitToWindow = False
+                End Select
+                LoadBitmap()
+                If _isFitToWindow Then UpdateFitZoom()
+                UpdateStatus()
+                ' Die heruntergeladene Temp-Kopie ist das Original - EXIF/IPTC/XMP direkt daraus lesen.
+                LoadInfoPanelData(_currentImagePath, preserveExistingTags:=True)
+                Me.RaisePropertyChanged(NameOf(IsRawFile))
+                Me.RaisePropertyChanged(NameOf(IsVideoFile))
+                Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
+                Me.RaisePropertyChanged(NameOf(HasNoMedia))
+                Me.RaisePropertyChanged(NameOf(CanEdit))
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("ViewerViewModel.LoadImmichAt", ex)
+            End Try
         End Sub
 
         Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
@@ -1038,11 +1044,17 @@ Namespace ViewModels
         End Function
 
         Public Async Sub OpenCropInEditor(cropLeft As Double, cropTop As Double, cropRight As Double, cropBottom As Double)
-            If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
-            Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName, forceSaveAsOnly:=_isImmichSession, immichAlbumId:=_immichSourceAlbumId)
-            If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
-            _mainVm.Editor.CurrentTool = EditorTool.Crop
-            _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
+            Try
+                If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
+                Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName, forceSaveAsOnly:=_isImmichSession, immichAlbumId:=_immichSourceAlbumId)
+                If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
+                _mainVm.Editor.CurrentTool = EditorTool.Crop
+                _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("ViewerViewModel.OpenCropInEditor", ex)
+            End Try
         End Sub
 
         ''' <summary>Startet das Laden des aktuellen Bildes. Der DECODE laeuft im HINTERGRUND
@@ -1364,10 +1376,16 @@ Namespace ViewModels
         End Sub
 
         Private Async Sub ContinueSlideshowAfterVideoEndAsync(sequence As Integer)
-            Await Task.Delay(1000)
-            If Not _isSlideshowPlaying OrElse sequence <> _slideshowVideoEndSequence Then Return
-            If Not IsVideoFile Then Return
-            NavigateNext()
+            Try
+                Await Task.Delay(1000)
+                If Not _isSlideshowPlaying OrElse sequence <> _slideshowVideoEndSequence Then Return
+                If Not IsVideoFile Then Return
+                NavigateNext()
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("ViewerViewModel.ContinueSlideshowAfterVideoEndAsync", ex)
+            End Try
         End Sub
 
         Private Sub LoadFolderContext(folder As String, currentPath As String)
@@ -1923,9 +1941,15 @@ Namespace ViewModels
         End Sub
 
         Public Async Sub NavigateToItem(item As ImageItem)
-            If item Is Nothing Then Return
-            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, StringComparison.OrdinalIgnoreCase))
-            If idx >= 0 Then Await CommitNavigateAsync(idx)
+            Try
+                If item Is Nothing Then Return
+                Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, StringComparison.OrdinalIgnoreCase))
+                If idx >= 0 Then Await CommitNavigateAsync(idx)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("ViewerViewModel.NavigateToItem", ex)
+            End Try
         End Sub
 
         Private Sub DeleteCurrent()
@@ -2005,24 +2029,30 @@ Namespace ViewModels
         ''' der Immich-Weg an EINER Stelle stehen. Danach wird das Bild neu geladen - beim Überschreiben
         ''' liegt auf dem Pfad jetzt eine andere Datei.</summary>
         Private Async Sub ResizeCurrent()
-            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
-            Dim gallery = _mainVm?.Gallery
-            If gallery Is Nothing Then Return
+            Try
+                If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+                Dim gallery = _mainVm?.Gallery
+                If gallery Is Nothing Then Return
 
-            Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
-                                                         PathIdentity.AreSame(i.FilePath, _currentImagePath))
-            If item Is Nothing Then
-                If Not File.Exists(_currentImagePath) Then Return
-                item = New ImageItem(_currentImagePath)
-            End If
-            If Not item.IsImage Then Return
+                Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                             PathIdentity.AreSame(i.FilePath, _currentImagePath))
+                If item Is Nothing Then
+                    If Not File.Exists(_currentImagePath) Then Return
+                    item = New ImageItem(_currentImagePath)
+                End If
+                If Not item.IsImage Then Return
 
-            Await gallery.ResizeImageItemsAsync(New List(Of ImageItem) From {item})
+                Await gallery.ResizeImageItemsAsync(New List(Of ImageItem) From {item})
 
-            If File.Exists(_currentImagePath) Then
-                item.EvictThumbnail()
-                OpenImage(_currentImagePath, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
-            End If
+                If File.Exists(_currentImagePath) Then
+                    item.EvictThumbnail()
+                    OpenImage(_currentImagePath, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+                End If
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("ViewerViewModel.ResizeCurrent", ex)
+            End Try
         End Sub
 
         Private Sub RenameCurrent()

@@ -40,17 +40,29 @@ Namespace Controls.EditorPanels
         End Function
 
         Public Async Sub OnInsertImageClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing Then Return
-            Dim path = Await PickSingleImagePathAsync("Bild auswählen")
-            If Not String.IsNullOrWhiteSpace(path) Then vm.AddImageAnnotationAtCurrentPosition(path)
+            Try
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If vm Is Nothing Then Return
+                Dim path = Await PickSingleImagePathAsync("Bild auswählen")
+                If Not String.IsNullOrWhiteSpace(path) Then vm.AddImageAnnotationAtCurrentPosition(path)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("AnnotationPropertiesPanel.OnInsertImageClick", ex)
+            End Try
         End Sub
 
         Public Async Sub OnWatermarkChooseImageClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing Then Return
-            Dim path = Await PickSingleImagePathAsync("Wasserzeichen-Bild auswählen")
-            If Not String.IsNullOrWhiteSpace(path) Then vm.SetWatermarkImagePath(path)
+            Try
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If vm Is Nothing Then Return
+                Dim path = Await PickSingleImagePathAsync("Wasserzeichen-Bild auswählen")
+                If Not String.IsNullOrWhiteSpace(path) Then vm.SetWatermarkImagePath(path)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("AnnotationPropertiesPanel.OnWatermarkChooseImageClick", ex)
+            End Try
         End Sub
 
         Public Sub OnWatermarkClearImageClick(sender As Object, e As RoutedEventArgs)

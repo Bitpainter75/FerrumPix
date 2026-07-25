@@ -301,11 +301,17 @@ Namespace Views
         ''' <summary>„Bild öffnen" aus dem Leerzustand. Nutzt denselben Dateidialog wie das Einfügen
         ''' eines Bildobjekts und gibt den Pfad an den regulären Editor-Einstieg weiter.</summary>
         Public Async Sub OnPlaceholderOpenImageClick(sender As Object, e As RoutedEventArgs)
-            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
-            If mainVm Is Nothing Then Return
-            Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild öffnen"), includeReadOnlyFormats:=True)
-            If String.IsNullOrWhiteSpace(path) Then Return
-            Await mainVm.OpenImageInEditor(path)
+            Try
+                Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+                If mainVm Is Nothing Then Return
+                Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild öffnen"), includeReadOnlyFormats:=True)
+                If String.IsNullOrWhiteSpace(path) Then Return
+                Await mainVm.OpenImageInEditor(path)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("EditorView.OnPlaceholderOpenImageClick", ex)
+            End Try
         End Sub
 
         Private Async Sub PlacePendingImageAsync(xPercent As Double, yPercent As Double)
@@ -357,15 +363,10 @@ Namespace Views
                           (String.IsNullOrEmpty(vm.PendingInsertKind) AndAlso
                            (vm.CurrentTool = EditorTool.Text OrElse vm.CurrentTool = EditorTool.Geometry OrElse
                             vm.CurrentTool = EditorTool.Insert))
-            If Not erlaubt Then
-                DiagnosticLogService.LogAlways("Editor.ObjectMarquee",
-                                               $"kein Rechteck: werkzeug={vm.CurrentTool} pendingKind='{vm.PendingInsertKind}'")
-            End If
             Return erlaubt
         End Function
 
         Private Sub BeginObjectMarquee(start As Avalonia.Point)
-            DiagnosticLogService.LogAlways("Editor.ObjectMarquee", $"start x={start.X:F0} y={start.Y:F0}")
             _objectMarqueeActive = True
             _objectMarqueeStart = start
             _objectMarqueeEnd = start
@@ -396,7 +397,6 @@ Namespace Views
         End Sub
 
         Private Sub EndObjectMarquee()
-            DiagnosticLogService.LogAlways("Editor.ObjectMarquee", $"ende rect={ObjectMarqueeRect().Width:F0}x{ObjectMarqueeRect().Height:F0}")
             _objectMarqueeActive = False
             Dim marquee = Me.FindControl(Of Border)("ObjectMarquee")
             If marquee IsNot Nothing Then marquee.IsVisible = False
@@ -406,7 +406,25 @@ Namespace Views
             If canvas Is Nothing OrElse vm Is Nothing Then Return
             Dim rect = ObjectMarqueeRect()
             If rect.Width < ObjectMarqueeThreshold AndAlso rect.Height < ObjectMarqueeThreshold Then
+                ' Kein Zug, sondern ein KLICK ins Leere: Objektauswahl weg - und die Pixel-Auswahl bzw.
+                ' Maske gleich mit, wenn der Klick ausserhalb von ihr lag (auch ausserhalb des Bildes).
+                ' Vorher blieben Laufameisen und rotes Overlay stehen, obwohl man sichtbar daneben
+                ' geklickt hatte (Nutzerwunsch 2026-07-25).
                 vm.SelectedAnnotationIndex = -1
+                If vm.HasActiveSelection Then
+                    Dim bildRect = GetDisplayedImageRect(canvas, vm)
+                    Dim draussen = True
+                    If bildRect.Width > 0 AndAlso bildRect.Height > 0 Then
+                        Dim xP = (_objectMarqueeStart.X - bildRect.Left) / bildRect.Width * 100.0
+                        Dim yP = (_objectMarqueeStart.Y - bildRect.Top) / bildRect.Height * 100.0
+                        draussen = xP < 0 OrElse yP < 0 OrElse xP > 100 OrElse yP > 100 OrElse
+                                   Not vm.IsPointInsideSelectionPercent(xP, yP)
+                    End If
+                    If draussen Then
+                        vm.ClearSelection()
+                        UpdateSelectionOverlayVisibility()
+                    End If
+                End If
                 Return
             End If
 
@@ -491,10 +509,16 @@ Namespace Views
         End Sub
 
         Public Async Sub OnWatermarkChooseImageClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing Then Return
-            Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Wasserzeichen-Bild auswählen"))
-            If Not String.IsNullOrWhiteSpace(path) Then vm.SetWatermarkImagePath(path)
+            Try
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If vm Is Nothing Then Return
+                Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Wasserzeichen-Bild auswählen"))
+                If Not String.IsNullOrWhiteSpace(path) Then vm.SetWatermarkImagePath(path)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("EditorView.OnWatermarkChooseImageClick", ex)
+            End Try
         End Sub
 
         Public Sub OnWatermarkClearImageClick(sender As Object, e As RoutedEventArgs)
@@ -1086,6 +1110,16 @@ Namespace Views
             If Not _isCropDragging Then
                 PositionCropOverlayFromViewModel(ix, iy, iw, ih)
             End If
+            ' Während eines Zuges führt normalerweise die VIEW den Rahmen (sie schiebt den Border
+            ' direkt mit der Maus) - das ViewModel darf ihn dann nicht überschreiben. Beim DREHEN einer
+            ' Mehrfachauswahl gibt es diese Führung aber nicht: die gemeinsame Box hat keine eigene
+            ' Drehung, ihre Lage und Größe ergeben sich aus den mitgedrehten Mitgliedern. Ohne diese
+            ' Ausnahme blieb der Rahmen während des Drehens einfach stehen (Nutzer-Befund 2026-07-25).
+            ' Während eines Zuges führt die VIEW den Rahmen (sie schiebt bzw. dreht den Border direkt
+            ' mit der Maus) - das ViewModel darf ihn dann nicht überschreiben. Beim Drehen einer
+            ' Mehrfachauswahl passte ein Neueinpassen aus dem Modell den Rahmen bei JEDEM Winkel neu
+            ' an die umschließende Box an; er sprang dadurch größer/kleiner, statt einfach mitzudrehen
+            ' (Nutzer-Befund 2026-07-25). Die Box setzt sich beim Loslassen wieder auf das Modell.
             If Not _isTextDragging Then
                 PositionTextOverlayFromViewModel(ix, iy, iw, ih, scale)
                 ' Selbstheilung: eine ohne aktiven Zug sichtbare Einrast-Hilfslinie ist immer ein
@@ -1268,7 +1302,7 @@ Namespace Views
                     If vm.HasSelectedAnnotation Then
                         Dim overlayOutside = Me.FindControl(Of Border)("TextOverlay")
                         If overlayOutside IsNot Nothing AndAlso overlayOutside.IsVisible Then
-                            Dim outsideMode = GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), vm.AnnotationRotation)
+                            Dim outsideMode = If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None)
                             If outsideMode <> TextDragMode.None Then
                                 OnTextOverlayPointerPressed(overlayOutside, e)
                                 Return
@@ -1338,7 +1372,7 @@ Namespace Views
                 Dim overlayForHandles = Me.FindControl(Of Border)("TextOverlay")
                 If overlayForHandles IsNot Nothing AndAlso overlayForHandles.IsVisible Then
                     Dim handleRect = GetTextOverlayRect()
-                    Dim handleMode = GetTextDragMode(e.GetPosition(canvas), handleRect, vm.AnnotationRotation)
+                    Dim handleMode = If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), handleRect, OverlayHitRotation(vm)), TextDragMode.None)
                     If handleMode <> TextDragMode.None AndAlso handleMode <> TextDragMode.Move Then
                         OnTextOverlayPointerPressed(overlayForHandles, e)
                         Return
@@ -1570,10 +1604,13 @@ Namespace Views
                     Dim hitSlopYPercent = hitSlopPixels / imageRect.Height * 100.0
                     Dim hitIndex = vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent)
 
-                    ' In Anpassungswerkzeugen (Anpassen/Farbe/Effekte/Rahmen/Filter) hebt ein Klick in den
-                    ' FREIEN Bildbereich - kein Objekt getroffen, außerhalb der Auswahl/Maske - die Auswahl UND
-                    ' Maske auf (analog zum Verschieben-Modus im Auswahlwerkzeug). Nutzerwunsch 2026-07-24.
-                    If hitIndex < 0 AndAlso EditorViewModel.IsObjectAdjustTool(vm.CurrentTool) AndAlso
+                    ' In Anpassungswerkzeugen (Anpassen/Farbe/Effekte/Rahmen/Filter) UND im
+                    ' VERSCHIEBEN-Werkzeug hebt ein Klick in den freien Bereich - kein Objekt getroffen,
+                    ' außerhalb der Auswahl/Maske - die Auswahl UND Maske auf (Nutzerwunsch 2026-07-24,
+                    ' fürs Verschieben-Werkzeug nachgezogen 2026-07-25: Laufameisen bzw. rotes Overlay
+                    ' blieben dort stehen, obwohl man sichtbar daneben geklickt hatte).
+                    If hitIndex < 0 AndAlso
+                       (EditorViewModel.IsObjectAdjustTool(vm.CurrentTool) OrElse vm.CurrentTool = EditorTool.Move) AndAlso
                        vm.HasActiveSelection AndAlso Not vm.IsPointInsideSelectionPercent(xPct, yPct) Then
                         vm.ClearSelection()
                         UpdateSelectionOverlayVisibility()
@@ -1712,7 +1749,7 @@ Namespace Views
                Not _isRetouching AndAlso Not _isTextDragging AndAlso Not _isDraggingSlider AndAlso Not _isSelectionDragging AndAlso Not _isSelectionMoveDragging AndAlso Not _isLassoDrawing AndAlso
                cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso
                cursorVm.HasSelectedAnnotation AndAlso IsLayerPlacementTool(cursorVm.CurrentTool) Then
-                Dim mode = GetTextDragMode(e.GetPosition(cursorCanvas), GetTextOverlayRect(), cursorVm.AnnotationRotation)
+                Dim mode = If(SelectionAcceptsDrag(cursorVm), GetTextDragMode(e.GetPosition(cursorCanvas), GetTextOverlayRect(), OverlayHitRotation(cursorVm)), TextDragMode.None)
                 cursorCanvas.Cursor = GetCursorForTextDragMode(mode, IsSelectedAnnotationTextLayer(cursorVm))
             ElseIf cursorCanvas IsNot Nothing Then
                 cursorCanvas.Cursor = Nothing
@@ -3311,7 +3348,7 @@ Namespace Views
             End If
 
             Dim rect = GetTextOverlayRect()
-            Dim mode = GetTextDragMode(pos, rect, vm.AnnotationRotation)
+            Dim mode = If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None)
             If mode = TextDragMode.None Then Return
             _textDragMode = mode
             _textDragInitialRect = rect
@@ -3349,6 +3386,9 @@ Namespace Views
         ''' True, sobald der laufende Overlay-Drag den Placement-Edit tatsächlich gestartet hat
         ''' (erst ab ~3 px Bewegung) - ein reiner Auswahl-Klick bleibt dadurch flackerfrei.
         Private _textDragPlacementStarted As Boolean = False
+        ' Sichtbare Drehung des Auswahlrahmens bei einer Mehrfachauswahl (nur Anzeige, das Modell
+        ' rechnet in den Mitgliedern).
+        Private _textRotateBoxAngle As Double = 0
 
         Private Const RotateHandleDistance As Double = 28
         Private Const RotateHandleHitRadius As Double = 12
@@ -3373,6 +3413,29 @@ Namespace Views
         ''' wird deshalb um denselben Winkel zurückgedreht; danach liegen alle Zonen wieder
         ''' achsenparallel und die Prüfung stimmt mit dem überein, was auf dem Bild zu sehen ist.
         ''' </summary>
+        ''' <summary>
+        ''' Die Drehung, mit der die Trefferprüfung des Auswahlrahmens rechnen MUSS.
+        '''
+        ''' Bei einer Mehrfachauswahl wird der Rahmen ungedreht gezeichnet (die gemeinsame Box hat
+        ''' keine eigene Drehung, siehe PositionTextOverlayFromViewModel) - die Prüfung darf dann auch
+        ''' nicht mit der Drehung des ANKER-Objekts rechnen. Sonst sucht sie die Anfasser an
+        ''' verdrehten Stellen, der Griff geht ins Leere und der Druck gilt als Klick neben die
+        ''' Auswahl: das Aufziehen beginnt und die Auswahl ist beim Loslassen weg (Nutzer-Befund
+        ''' 2026-07-25 - „Anfasser nicht anfassbar, Selektionsbox verschwindet"). Genau nach einer
+        ''' Gruppendrehung trat das zuverlässig auf, weil danach jedes Mitglied gedreht ist.
+        ''' </summary>
+        ''' <summary>Eine GESPERRTE Auswahl bekommt keine Zug-Modi: kein Anfasser, kein Verschieben,
+        ''' kein Drehen. Der Rahmen bleibt sichtbar (man soll sehen, was markiert ist, und die Ebene
+        ''' im Panel wieder entsperren können).</summary>
+        Private Shared Function SelectionAcceptsDrag(vm As EditorViewModel) As Boolean
+            Return vm IsNot Nothing AndAlso Not vm.IsSelectionGeometryLocked
+        End Function
+
+        Private Shared Function OverlayHitRotation(vm As EditorViewModel) As Double
+            If vm Is Nothing Then Return 0
+            Return If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation)
+        End Function
+
         Private Function GetTextDragMode(point As Avalonia.Point, rect As Avalonia.Rect, rotationDegrees As Double) As TextDragMode
             If rect.Width < 4 OrElse rect.Height < 4 Then Return TextDragMode.None
 
@@ -3456,7 +3519,7 @@ Namespace Views
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If canvas Is Nothing OrElse vm Is Nothing Then Return
-            Dim mode = GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), vm.AnnotationRotation)
+            Dim mode = If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None)
             overlay.Cursor = GetCursorForTextDragMode(mode, IsSelectedAnnotationTextLayer(vm))
         End Sub
 
@@ -3493,6 +3556,11 @@ Namespace Views
                     ' Mehrfachauswahl: die Differenz zum letzten Frame um die Mitte der gemeinsamen Box.
                     vm.RotateSelectionBy(newRotation - _textRotateLastAngle)
                     _textRotateLastAngle = newRotation
+                    ' Der Rahmen dreht SICHTBAR mit (die gemeinsame Box selbst kennt keine Drehung -
+                    ' sie wird beim Loslassen aus den gedrehten Mitgliedern neu eingepasst).
+                    _textRotateBoxAngle = newRotation - _textRotateStartRotation
+                    overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
+                    overlay.RenderTransform = New RotateTransform(_textRotateBoxAngle)
                     e.Handled = True
                     Return
                 End If

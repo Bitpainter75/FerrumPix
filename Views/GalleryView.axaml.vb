@@ -661,49 +661,61 @@ Namespace Views
         End Sub
 
         Public Async Sub OnVirtualTreeSelectionChanged(sender As Object, e As SelectionChangedEventArgs)
-            Dim vm = GetVm()
-            If vm Is Nothing OrElse e.AddedItems Is Nothing OrElse e.AddedItems.Count = 0 Then Return
-            If _clearingNavigationSelection Then Return
-            Dim node = TryCast(e.AddedItems.Item(0), VirtualNavigationNode)
-            If node Is Nothing Then Return
-            ClearOtherNavigationSelections(TryCast(sender, TreeView))
-            Dim opened = Await vm.OpenVirtualNavigationNode(node)
-            ' Personen/Orte sind reine Auf-/Zuklapp-Knoten (öffnen keine Ansicht): Auswahl sofort
-            ' wieder lösen, damit der NÄCHSTE Klick erneut ein SelectionChanged auslöst - sonst
-            ' ließe sich der Knoten nach dem Aufklappen nie wieder zuklappen (der Chevron ist im
-            ' Immich-Baum ausgeblendet, siehe Style im XAML) - und die Ordner-Markierung des
-            ' weiterhin aktiven Ordners zurückholen.
-            If String.Equals(node.Kind, "ImmichPeopleRoot", StringComparison.Ordinal) OrElse
-               String.Equals(node.Kind, "ImmichPlacesRoot", StringComparison.Ordinal) Then
-                ClearVirtualTreeSelections()
-                Dim activeFolderTree = Me.FindControl(Of TreeView)("FolderTreeView")
-                RestoreFolderTreeSelection(activeFolderTree, vm)
-                Return
-            End If
-            ' "Neue Suche" per Dialog abgebrochen: der Ordner-/Suchbaum blieb oben bereits ohne
-            ' Auswahl (ClearOtherNavigationSelections) - sichtbare Baumauswahl wieder auf den
-            ' tatsächlich aktiven Ordner zurücksetzen, statt sie auf "Neue Suche" hängen zu lassen.
-            If Not opened AndAlso String.Equals(node.Kind, "NewSearch", StringComparison.Ordinal) Then
-                ClearVirtualTreeSelections()
-                Dim folderTree = Me.FindControl(Of TreeView)("FolderTreeView")
-                RestoreFolderTreeSelection(folderTree, vm)
-            End If
+            Try
+                Dim vm = GetVm()
+                If vm Is Nothing OrElse e.AddedItems Is Nothing OrElse e.AddedItems.Count = 0 Then Return
+                If _clearingNavigationSelection Then Return
+                Dim node = TryCast(e.AddedItems.Item(0), VirtualNavigationNode)
+                If node Is Nothing Then Return
+                ClearOtherNavigationSelections(TryCast(sender, TreeView))
+                Dim opened = Await vm.OpenVirtualNavigationNode(node)
+                ' Personen/Orte sind reine Auf-/Zuklapp-Knoten (öffnen keine Ansicht): Auswahl sofort
+                ' wieder lösen, damit der NÄCHSTE Klick erneut ein SelectionChanged auslöst - sonst
+                ' ließe sich der Knoten nach dem Aufklappen nie wieder zuklappen (der Chevron ist im
+                ' Immich-Baum ausgeblendet, siehe Style im XAML) - und die Ordner-Markierung des
+                ' weiterhin aktiven Ordners zurückholen.
+                If String.Equals(node.Kind, "ImmichPeopleRoot", StringComparison.Ordinal) OrElse
+                   String.Equals(node.Kind, "ImmichPlacesRoot", StringComparison.Ordinal) Then
+                    ClearVirtualTreeSelections()
+                    Dim activeFolderTree = Me.FindControl(Of TreeView)("FolderTreeView")
+                    RestoreFolderTreeSelection(activeFolderTree, vm)
+                    Return
+                End If
+                ' "Neue Suche" per Dialog abgebrochen: der Ordner-/Suchbaum blieb oben bereits ohne
+                ' Auswahl (ClearOtherNavigationSelections) - sichtbare Baumauswahl wieder auf den
+                ' tatsächlich aktiven Ordner zurücksetzen, statt sie auf "Neue Suche" hängen zu lassen.
+                If Not opened AndAlso String.Equals(node.Kind, "NewSearch", StringComparison.Ordinal) Then
+                    ClearVirtualTreeSelections()
+                    Dim folderTree = Me.FindControl(Of TreeView)("FolderTreeView")
+                    RestoreFolderTreeSelection(folderTree, vm)
+                End If
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnVirtualTreeSelectionChanged", ex)
+            End Try
         End Sub
 
         Public Async Sub OnImmichNodePointerPressed(sender As Object, e As PointerPressedEventArgs)
-            Dim point = e.GetCurrentPoint(TryCast(sender, Control))
-            If Not point.Properties.IsLeftButtonPressed Then Return
-            Dim node = TryCast(TryCast(sender, Control)?.DataContext, VirtualNavigationNode)
-            If node Is Nothing Then Return
-            If Not (String.Equals(node.Kind, "ImmichPeopleRoot", StringComparison.Ordinal) OrElse
-                    String.Equals(node.Kind, "ImmichPlacesRoot", StringComparison.Ordinal)) Then Return
+            Try
+                Dim point = e.GetCurrentPoint(TryCast(sender, Control))
+                If Not point.Properties.IsLeftButtonPressed Then Return
+                Dim node = TryCast(TryCast(sender, Control)?.DataContext, VirtualNavigationNode)
+                If node Is Nothing Then Return
+                If Not (String.Equals(node.Kind, "ImmichPeopleRoot", StringComparison.Ordinal) OrElse
+                        String.Equals(node.Kind, "ImmichPlacesRoot", StringComparison.Ordinal)) Then Return
 
-            e.Handled = True
-            Dim vm = GetVm()
-            If vm Is Nothing Then Return
-            Await vm.OpenVirtualNavigationNode(node)
-            ClearVirtualTreeSelections()
-            RestoreFolderTreeSelection(Me.FindControl(Of TreeView)("FolderTreeView"), vm)
+                e.Handled = True
+                Dim vm = GetVm()
+                If vm Is Nothing Then Return
+                Await vm.OpenVirtualNavigationNode(node)
+                ClearVirtualTreeSelections()
+                RestoreFolderTreeSelection(Me.FindControl(Of TreeView)("FolderTreeView"), vm)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnImmichNodePointerPressed", ex)
+            End Try
         End Sub
 
         ''' Namen aller virtuellen Baeume - seit dem Tab-Umbau vier Stueck (je Tab eigene
@@ -819,38 +831,50 @@ Namespace Views
         End Sub
 
         Public Async Sub OnImmichPasteClick(sender As Object, e As RoutedEventArgs)
-            e.Handled = True
-            Dim vm = GetVm()
-            If vm Is Nothing Then Return
-            Dim node = GetVirtualNodeFromSender(sender)
-            If node Is Nothing OrElse Not node.IsImmichNode Then Return
-            Dim clipboardData = Await ClipboardPathService.ReadPathDataAsync(TopLevel.GetTopLevel(Me)?.Clipboard)
-            Dim localPaths = clipboardData.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso IO.File.Exists(p)).ToList()
-            If localPaths.Count = 0 Then Return
-            vm.UploadToImmich(node, localPaths)
+            Try
+                e.Handled = True
+                Dim vm = GetVm()
+                If vm Is Nothing Then Return
+                Dim node = GetVirtualNodeFromSender(sender)
+                If node Is Nothing OrElse Not node.IsImmichNode Then Return
+                Dim clipboardData = Await ClipboardPathService.ReadPathDataAsync(TopLevel.GetTopLevel(Me)?.Clipboard)
+                Dim localPaths = clipboardData.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso IO.File.Exists(p)).ToList()
+                If localPaths.Count = 0 Then Return
+                vm.UploadToImmich(node, localPaths)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnImmichPasteClick", ex)
+            End Try
         End Sub
 
         Public Async Sub OnImmichUploadClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = GetVm()
-            If vm Is Nothing Then Return
-            Dim node = GetVirtualNodeFromSender(sender)
-            Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
-            If storageProvider Is Nothing Then Return
-            e.Handled = True
-            Dim mediaType = New Avalonia.Platform.Storage.FilePickerFileType(LocalizationService.T("Bilder & Videos")) With {
-                .Patterns = New List(Of String) From {
-                    "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
-                    "*.heic", "*.heif", "*.avif", "*.mp4", "*.mov", "*.mkv", "*.avi", "*.webm"}
-            }
-            Dim files = Await storageProvider.OpenFilePickerAsync(New Avalonia.Platform.Storage.FilePickerOpenOptions With {
-                .Title = LocalizationService.T("Bilder/Videos zum Hochladen wählen"),
-                .AllowMultiple = True,
-                .FileTypeFilter = New List(Of Avalonia.Platform.Storage.FilePickerFileType) From {mediaType}
-            })
-            If files Is Nothing Then Return
-            Dim paths = files.Select(Function(f) f.Path.LocalPath).Where(Function(p) Not String.IsNullOrEmpty(p)).ToList()
-            If paths.Count = 0 Then Return
-            vm.UploadToImmich(node, paths)
+            Try
+                Dim vm = GetVm()
+                If vm Is Nothing Then Return
+                Dim node = GetVirtualNodeFromSender(sender)
+                Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
+                If storageProvider Is Nothing Then Return
+                e.Handled = True
+                Dim mediaType = New Avalonia.Platform.Storage.FilePickerFileType(LocalizationService.T("Bilder & Videos")) With {
+                    .Patterns = New List(Of String) From {
+                        "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
+                        "*.heic", "*.heif", "*.avif", "*.mp4", "*.mov", "*.mkv", "*.avi", "*.webm"}
+                }
+                Dim files = Await storageProvider.OpenFilePickerAsync(New Avalonia.Platform.Storage.FilePickerOpenOptions With {
+                    .Title = LocalizationService.T("Bilder/Videos zum Hochladen wählen"),
+                    .AllowMultiple = True,
+                    .FileTypeFilter = New List(Of Avalonia.Platform.Storage.FilePickerFileType) From {mediaType}
+                })
+                If files Is Nothing Then Return
+                Dim paths = files.Select(Function(f) f.Path.LocalPath).Where(Function(p) Not String.IsNullOrEmpty(p)).ToList()
+                If paths.Count = 0 Then Return
+                vm.UploadToImmich(node, paths)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnImmichUploadClick", ex)
+            End Try
         End Sub
 
         ' Kein Kontextmenü für den festen "Neue Suche"-Knoten (nicht bearbeit-/entfernbar) - würde
@@ -1323,9 +1347,15 @@ Namespace Views
         End Sub
 
         Public Async Sub OnContextPaste(sender As Object, e As RoutedEventArgs)
-            Dim item = GetItemFromSender(sender)
-            Dim targetFolder = If(item IsNot Nothing AndAlso item.IsFolder, item.FilePath, GetVm()?.CurrentFolder)
-            Await PasteClipboardIntoFolder(targetFolder)
+            Try
+                Dim item = GetItemFromSender(sender)
+                Dim targetFolder = If(item IsNot Nothing AndAlso item.IsFolder, item.FilePath, GetVm()?.CurrentFolder)
+                Await PasteClipboardIntoFolder(targetFolder)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnContextPaste", ex)
+            End Try
         End Sub
 
         Public Sub OnContextDuplicate(sender As Object, e As RoutedEventArgs)
@@ -1416,7 +1446,13 @@ Namespace Views
         End Sub
 
         Public Async Sub OnGalleryAreaPaste(sender As Object, e As RoutedEventArgs)
-            Await PasteClipboardIntoFolder(GetVm()?.CurrentFolder)
+            Try
+                Await PasteClipboardIntoFolder(GetVm()?.CurrentFolder)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnGalleryAreaPaste", ex)
+            End Try
         End Sub
 
         Public Sub OnFolderTreeContextRequested(sender As Object, e As ContextRequestedEventArgs)
@@ -1484,9 +1520,15 @@ Namespace Views
         End Sub
 
         Public Async Sub OnFavoritePasteFolderClick(sender As Object, e As RoutedEventArgs)
-            Dim path = GetFavoriteFolderPath(sender)
-            If path Is Nothing Then Return
-            Await PasteClipboardIntoFolder(path)
+            Try
+                Dim path = GetFavoriteFolderPath(sender)
+                If path Is Nothing Then Return
+                Await PasteClipboardIntoFolder(path)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnFavoritePasteFolderClick", ex)
+            End Try
         End Sub
 
         Public Sub OnFavoriteCopyFolderPathClick(sender As Object, e As RoutedEventArgs)
@@ -1739,9 +1781,15 @@ Namespace Views
         End Sub
 
         Public Async Sub OnContextPasteFolder(sender As Object, e As RoutedEventArgs)
-            Dim node = GetFolderTreeContextNode()
-            If node Is Nothing Then Return
-            Await PasteClipboardIntoFolder(node.FullPath)
+            Try
+                Dim node = GetFolderTreeContextNode()
+                If node Is Nothing Then Return
+                Await PasteClipboardIntoFolder(node.FullPath)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnContextPasteFolder", ex)
+            End Try
         End Sub
 
         ''' <summary>Stammt die Ziehlast aus Immich? Der Pseudo-Pfad allein reicht NICHT: eine Ziehgeste
@@ -1823,11 +1871,17 @@ Namespace Views
         End Sub
 
         Public Async Sub OnFolderTreeDrop(sender As Object, e As DragEventArgs)
-            ClearDropHighlight()
-            Dim target = GetDropFolder(e)
-            If target Is Nothing Then Return
-            Await ApplyDropAsync(GetDragPayload(e), target.FullPath)
-            e.Handled = True
+            Try
+                ClearDropHighlight()
+                Dim target = GetDropFolder(e)
+                If target Is Nothing Then Return
+                Await ApplyDropAsync(GetDragPayload(e), target.FullPath)
+                e.Handled = True
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnFolderTreeDrop", ex)
+            End Try
         End Sub
 
         Public Sub OnItemDragOver(sender As Object, e As DragEventArgs)
@@ -1838,10 +1892,16 @@ Namespace Views
         End Sub
 
         Public Async Sub OnItemDrop(sender As Object, e As DragEventArgs)
-            Dim item = TryCast(TryCast(sender, Border)?.DataContext, ImageItem)
-            If item Is Nothing OrElse Not item.IsFolder Then Return
-            Await ApplyDropAsync(GetDragPayload(e), item.FilePath)
-            e.Handled = True
+            Try
+                Dim item = TryCast(TryCast(sender, Border)?.DataContext, ImageItem)
+                If item Is Nothing OrElse Not item.IsFolder Then Return
+                Await ApplyDropAsync(GetDragPayload(e), item.FilePath)
+                e.Handled = True
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnItemDrop", ex)
+            End Try
         End Sub
 
         ''' Ablegen auf der freien Fläche der Galerie: fremde Dateien landen im gerade angezeigten Ordner.
@@ -1863,17 +1923,23 @@ Namespace Views
         End Sub
 
         Public Async Sub OnGalleryAreaDrop(sender As Object, e As DragEventArgs)
-            Dim payload = GetDragPayload(e)
-            If payload.IsInternal Then Return
-            Dim vm = GetVm()
-            If IsImmichAlbumView(vm) Then
-                Dim immichPaths = payload.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso IO.File.Exists(p)).ToList()
+            Try
+                Dim payload = GetDragPayload(e)
+                If payload.IsInternal Then Return
+                Dim vm = GetVm()
+                If IsImmichAlbumView(vm) Then
+                    Dim immichPaths = payload.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso IO.File.Exists(p)).ToList()
+                    e.Handled = True
+                    If immichPaths.Count > 0 Then vm.UploadToImmich(vm.SelectedImmichNode, immichPaths)
+                    Return
+                End If
+                Await ApplyDropAsync(payload, vm?.CurrentFolder)
                 e.Handled = True
-                If immichPaths.Count > 0 Then vm.UploadToImmich(vm.SelectedImmichNode, immichPaths)
-                Return
-            End If
-            Await ApplyDropAsync(payload, vm?.CurrentFolder)
-            e.Handled = True
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.OnGalleryAreaDrop", ex)
+            End Try
         End Sub
 
         ''' <summary>True, wenn die Galerie gerade eine Immich-Ansicht (Album oder „Alle Fotos") zeigt -
@@ -2091,8 +2157,14 @@ Namespace Views
         End Sub
 
         Private Async Sub CopyPathsToClipboard(paths As List(Of String), cut As Boolean)
-            Dim owner = TopLevel.GetTopLevel(Me)
-            Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, paths, cut)
+            Try
+                Dim owner = TopLevel.GetTopLevel(Me)
+                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, paths, cut)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("GalleryView.CopyPathsToClipboard", ex)
+            End Try
         End Sub
 
         Private Async Function PasteClipboardIntoFolder(targetFolder As String) As Task

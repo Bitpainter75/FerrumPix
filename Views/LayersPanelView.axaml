@@ -65,7 +65,7 @@
                                 ContextRequested="OnLayerRowContextRequested"
                                 DragDrop.DragOver="OnLayerRowDragOver"
                                 DragDrop.Drop="OnLayerRowDrop">
-                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="{Binding IndentMargin}">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="{Binding IndentMargin}">
                                 <!-- Klapp-Pfeil nur bei einer Gruppen-Kopfzeile; sonst hält die Spalte
                                      nur die Breite, damit Symbole und Namen aller Zeilen fluchten. -->
                                 <Button Grid.Column="0" Classes="ghost"
@@ -107,7 +107,17 @@
                                              KeyDown="OnLayerRenameKeyDown"
                                              LostFocus="OnLayerRenameLostFocus" />
                                 </Panel>
-                                <ToggleButton Grid.Column="3"
+                                <!-- Schloss NUR bei gesperrten Zeilen: ein Dauergast neben dem Auge
+                                     würde die Zeile zustellen. Klick entsperrt wieder. -->
+                                <Button Grid.Column="3" Classes="ghost"
+                                        Width="24" Height="24" Padding="0" MinWidth="24"
+                                        Background="Transparent" BorderThickness="0"
+                                        IsVisible="{Binding IsLocked}"
+                                        Click="OnToggleRowLockClick"
+                                        ToolTip.Tip="Ebene ist gesperrt - klicken zum Entsperren">
+                                    <icons:SvgIcon Source="{Binding LockIconSource}" Width="14" Height="14" />
+                                </Button>
+                                <ToggleButton Grid.Column="4"
                                               Classes="ghost layer-eye"
                                               Width="24" Height="24" Padding="0"
                                               IsChecked="{Binding IsVisible, Mode=OneWay}"
@@ -286,16 +296,25 @@
                          derselben Art markiert sind bzw. eine markierte Ebene in einer Gruppe liegt. -->
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding GroupSelectedAnnotationsCommand}"
-                            IsEnabled="{Binding CanGroupSelectedAnnotations}"
+                            IsVisible="{Binding CanGroupSelectedAnnotations}"
                             ToolTip.Tip="Markierte Ebenen gruppieren (Strg+G)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
                                        Width="16" Height="16" />
                     </Button>
+                    <!-- Nur sichtbar, wenn die Auswahl WIRKLICH in einer Gruppe liegt - sonst steht
+                         ein Knopf da, der nichts zu tun hat (Nutzerwunsch 2026-07-25). -->
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding UngroupSelectedAnnotationsCommand}"
-                            IsEnabled="{Binding CanUngroupSelectedAnnotations}"
+                            IsVisible="{Binding CanUngroupSelectedAnnotations}"
                             ToolTip.Tip="Gruppierung aufheben (Strg+Umschalt+G)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-x.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Click="OnToggleSelectionLockClick"
+                            IsEnabled="{Binding HasSelectedPanelLayer}"
+                            ToolTip.Tip="Ebene sperren/entsperren - gesperrt sind keine Verschiebungen, Größenänderungen oder Drehungen mehr möglich">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/lock.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"

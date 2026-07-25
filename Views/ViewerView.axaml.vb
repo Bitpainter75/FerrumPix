@@ -206,10 +206,16 @@ Namespace Views
         ' sich wie in der Galerie in einem Dateimanager (z.B. Dolphin) als echte Datei einfügen
         ' lässt - reines SetTextAsync(path) erzeugt dort keinen einfügbaren Dateiverweis.
         Public Async Sub OnCopyPathClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = GetVm()
-            If vm Is Nothing OrElse String.IsNullOrEmpty(vm.CurrentImagePath) Then Return
-            Dim owner = TopLevel.GetTopLevel(Me)
-            Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {vm.CurrentImagePath}, cut:=False)
+            Try
+                Dim vm = GetVm()
+                If vm Is Nothing OrElse String.IsNullOrEmpty(vm.CurrentImagePath) Then Return
+                Dim owner = TopLevel.GetTopLevel(Me)
+                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {vm.CurrentImagePath}, cut:=False)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("ViewerView.OnCopyPathClick", ex)
+            End Try
         End Sub
 
         Public Sub OnToggleFullscreenClick(sender As Object, e As RoutedEventArgs)
@@ -750,12 +756,18 @@ Namespace Views
         End Sub
 
         Private Async Sub StartPendingVideoAutoplayAfterHostReady(target As MpvVideoView, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
-            Await Task.Delay(180)
-            If target Is Nothing OrElse vm Is Nothing Then Return
-            If Not Object.ReferenceEquals(target.Player, mediaPlayer) Then Return
-            If Not Object.ReferenceEquals(vm.VideoMediaPlayer, mediaPlayer) Then Return
-            If Not vm.IsVideoFile Then Return
-            vm.StartPendingVideoAutoplay()
+            Try
+                Await Task.Delay(180)
+                If target Is Nothing OrElse vm Is Nothing Then Return
+                If Not Object.ReferenceEquals(target.Player, mediaPlayer) Then Return
+                If Not Object.ReferenceEquals(vm.VideoMediaPlayer, mediaPlayer) Then Return
+                If Not vm.IsVideoFile Then Return
+                vm.StartPendingVideoAutoplay()
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("ViewerView.StartPendingVideoAutoplayAfterHostReady", ex)
+            End Try
         End Sub
 
         Public Sub OnVideoViewTapped(sender As Object, e As TappedEventArgs)

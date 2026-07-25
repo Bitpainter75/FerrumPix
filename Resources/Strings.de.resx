@@ -4271,4 +4271,34 @@
   <data name="Ebenen_gerastert_2f200a4a" xml:space="preserve">
     <value>Ebenen gerastert</value>
   </data>
+  <data name="nderung_konnte_nicht_an_Immich_bertragen_werden_dd83dd41" xml:space="preserve">
+    <value>Änderung konnte nicht an Immich übertragen werden</value>
+  </data>
+  <data name="Aktion_fehlgeschlagen_dc921022" xml:space="preserve">
+    <value>Aktion fehlgeschlagen</value>
+  </data>
+  <data name="Ebene_sperren_2ec93cb4" xml:space="preserve">
+    <value>Ebene sperren</value>
+  </data>
+  <data name="Ebene_entsperren_c0627044" xml:space="preserve">
+    <value>Ebene entsperren</value>
+  </data>
+  <data name="Ebene_gesperrt_2bacca17" xml:space="preserve">
+    <value>Ebene gesperrt</value>
+  </data>
+  <data name="Ebene_entsperrt_d30bb982" xml:space="preserve">
+    <value>Ebene entsperrt</value>
+  </data>
+  <data name="Ebene_ist_gesperrt_klicken_zum_Entsperren_ec3788db" xml:space="preserve">
+    <value>Ebene ist gesperrt - klicken zum Entsperren</value>
+  </data>
+  <data name="Ebene_sperren_entsperren_gesperrt_sind_keine_Ver_bac1d95a" xml:space="preserve">
+    <value>Ebene sperren/entsperren - gesperrt sind keine Verschiebungen, Größenänderungen oder Drehungen mehr möglich</value>
+  </data>
+  <data name="Gruppe_sperren_c149d028" xml:space="preserve">
+    <value>Gruppe sperren</value>
+  </data>
+  <data name="Gruppe_entsperren_aaba907d" xml:space="preserve">
+    <value>Gruppe entsperren</value>
+  </data>
 </root>

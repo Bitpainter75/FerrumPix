@@ -60,10 +60,16 @@ Namespace Controls.EditorPanels
         ''' LISTENEINTRAG hinter dem Klick, und nur hier lässt sich deshalb anbieten, ihn zu entfernen,
         ''' wenn die Datei nicht mehr da ist.
         Public Async Sub OnApplySavedLutPresetClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LutPresetSettings)
-            If vm Is Nothing OrElse preset Is Nothing Then Return
-            Await vm.ApplySavedLutPresetAsync(preset.Path)
+            Try
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LutPresetSettings)
+                If vm Is Nothing OrElse preset Is Nothing Then Return
+                Await vm.ApplySavedLutPresetAsync(preset.Path)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("LutPresetPanel.OnApplySavedLutPresetClick", ex)
+            End Try
         End Sub
 
         Public Sub OnRemoveSavedLutPresetClick(sender As Object, e As RoutedEventArgs)

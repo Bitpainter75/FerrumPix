@@ -194,57 +194,63 @@ Namespace Views
         End Sub
 
         Private Async Sub HandleWindowClosing(sender As Object, e As WindowClosingEventArgs)
-            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            Try
+                Dim vm = TryCast(DataContext, MainWindowViewModel)
 
-            If _allowWindowClose Then
+                If _allowWindowClose Then
+                    vm?.Viewer?.ShutdownVideo()
+                    ' Szene-/Zoom-Worker stilllegen: eine ausstehende Fortsetzung griff sonst waehrend
+                    ' des Fenster-Teardowns auf die bereits disposte Anzeige zu (Absturz beim Beenden).
+                    vm?.Editor?.ShutdownSceneWork()
+                    If WindowState = WindowState.Normal Then
+                        AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
+                    End If
+                    SaveWindowStateOnExit()
+                    ' Einstellungen werden entprellt geschrieben; beim Schließen darf nichts ausstehen.
+                    AppSettingsService.Flush()
+                    Return
+                End If
+
+                ' Das Video erst abräumen, wenn feststeht, dass wirklich geschlossen wird: bricht der Nutzer
+                ' die Nachfrage nach ungespeicherten Änderungen ab, bleibt die App offen - dann darf der Player
+                ' nicht schon tot sein.
+                If vm IsNot Nothing AndAlso
+                   vm.CurrentMode = AppMode.Editor AndAlso
+                   vm.Editor IsNot Nothing AndAlso
+                   vm.Editor.HasUnsavedChanges AndAlso
+                   e.CloseReason = WindowCloseReason.WindowClosing Then
+                    e.Cancel = True
+                    If Await vm.Editor.ConfirmSaveBeforeLeavingAsync("die Anwendung schließt") Then
+                        _allowWindowClose = True
+                        Close()
+                    End If
+                    Return
+                End If
+
+                If vm IsNot Nothing AndAlso
+                   vm.CurrentMode = AppMode.Viewer AndAlso
+                   vm.Viewer IsNot Nothing AndAlso
+                   e.CloseReason = WindowCloseReason.WindowClosing Then
+                    e.Cancel = True
+                    If Await vm.Viewer.ConfirmPendingRotationAsync("die Anwendung schließt") Then
+                        _allowWindowClose = True
+                        Close()
+                    End If
+                    Return
+                End If
+
                 vm?.Viewer?.ShutdownVideo()
-                ' Szene-/Zoom-Worker stilllegen: eine ausstehende Fortsetzung griff sonst waehrend
-                ' des Fenster-Teardowns auf die bereits disposte Anzeige zu (Absturz beim Beenden).
                 vm?.Editor?.ShutdownSceneWork()
                 If WindowState = WindowState.Normal Then
                     AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
                 End If
                 SaveWindowStateOnExit()
-                ' Einstellungen werden entprellt geschrieben; beim Schließen darf nichts ausstehen.
                 AppSettingsService.Flush()
-                Return
-            End If
-
-            ' Das Video erst abräumen, wenn feststeht, dass wirklich geschlossen wird: bricht der Nutzer
-            ' die Nachfrage nach ungespeicherten Änderungen ab, bleibt die App offen - dann darf der Player
-            ' nicht schon tot sein.
-            If vm IsNot Nothing AndAlso
-               vm.CurrentMode = AppMode.Editor AndAlso
-               vm.Editor IsNot Nothing AndAlso
-               vm.Editor.HasUnsavedChanges AndAlso
-               e.CloseReason = WindowCloseReason.WindowClosing Then
-                e.Cancel = True
-                If Await vm.Editor.ConfirmSaveBeforeLeavingAsync("die Anwendung schließt") Then
-                    _allowWindowClose = True
-                    Close()
-                End If
-                Return
-            End If
-
-            If vm IsNot Nothing AndAlso
-               vm.CurrentMode = AppMode.Viewer AndAlso
-               vm.Viewer IsNot Nothing AndAlso
-               e.CloseReason = WindowCloseReason.WindowClosing Then
-                e.Cancel = True
-                If Await vm.Viewer.ConfirmPendingRotationAsync("die Anwendung schließt") Then
-                    _allowWindowClose = True
-                    Close()
-                End If
-                Return
-            End If
-
-            vm?.Viewer?.ShutdownVideo()
-            vm?.Editor?.ShutdownSceneWork()
-            If WindowState = WindowState.Normal Then
-                AppSettingsService.SaveMainWindowPlacement(Position.X, Position.Y, Width, Height)
-            End If
-            SaveWindowStateOnExit()
-            AppSettingsService.Flush()
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindow.HandleWindowClosing", ex)
+            End Try
         End Sub
 
         Private Sub ApplyLocalization()
@@ -528,186 +534,192 @@ Namespace Views
         End Function
 
         Private Async Sub OnWindowKeyDown(sender As Object, e As KeyEventArgs)
-            Dim vm = TryCast(DataContext, MainWindowViewModel)
-            If vm Is Nothing Then Return
+            Try
+                Dim vm = TryCast(DataContext, MainWindowViewModel)
+                If vm Is Nothing Then Return
 
-            If vm.IsDialogOpen Then
-                Select Case e.Key
-                    Case Key.Escape
-                        vm.CancelDialog()
-                        e.Handled = True
-                    Case Key.Return, Key.Enter
-                        vm.ConfirmDialog()
-                        e.Handled = True
-                    Case Key.Tab
-                        CycleDialogFocus(e.KeyModifiers.HasFlag(KeyModifiers.Shift))
-                        e.Handled = True
-                    Case Else
-                        e.Handled = False
-                End Select
-                Return
-            End If
-
-            ' Solange der Druckdialog offen ist, darf KEINE Taste an die Ansicht dahinter
-            ' durchfallen - sonst blättert Links/Rechts im Betrachter weiter, während vorne der
-            ' Dialog steht.
-            If vm.IsPrintDialogOpen Then
-                Select Case e.Key
-                    Case Key.Escape
-                        vm.ClosePrintDialog()
-                    Case Key.Return, Key.Enter
-                        vm.ConfirmPrint()
-                End Select
-                e.Handled = True
-                Return
-            End If
-
-            ' Strg+P zentral im Fenster-Tunnel statt in den einzelnen Ansichten: so greift es in
-            ' jedem Modus, im Vollbild und - weil der Tunnel vor den View-Kürzeln feuert - auch
-            ' noch, nachdem ein Overlay-Dialog den Fokus hatte.
-            ' Ohne den Umschalt-Ausschluss würde dieser Zweig auch Strg+Umschalt+P schlucken -
-            ' das ist im Editor „Vorschau anwenden".
-            If e.Key = Key.P AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
-               Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
-                Select Case vm.CurrentMode
-                    Case AppMode.Editor
-                        vm.Editor.PrintCommand.Execute(Nothing)
-                        e.Handled = True
-                        Return
-                    Case AppMode.Viewer
-                        vm.Viewer.PrintCommand.Execute(Nothing)
-                        e.Handled = True
-                        Return
-                    Case AppMode.Gallery
-                        vm.Gallery.PrintSelectedCommand.Execute(Nothing)
-                        e.Handled = True
-                        Return
-                End Select
-            End If
-
-            ' Strg+R öffnet „Bildgröße ändern" - in der Galerie für die Auswahl, im Betrachter für das
-            ' angezeigte Bild. Aus demselben Grund wie Strg+P im Tunnel und nicht in den Ansichten: so
-            ' greift es unabhängig davon, wo der Fokus gerade steht (Ordnerbaum, Filmstreifen), auch im
-            ' Vollbild und auch noch, nachdem ein Overlay-Dialog den Fokus hatte. Im Editor bleibt
-            ' Strg+R das Drehen-Werkzeug - dort fällt dieser Zweig bewusst durch.
-            If e.Key = Key.R AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
-               Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso Not IsTextInputSource(e.Source) Then
-                Select Case vm.CurrentMode
-                    Case AppMode.Gallery
-                        If vm.Gallery IsNot Nothing AndAlso vm.Gallery.HasSelectedImage Then
-                            vm.Gallery.ResizeSelectedCommand.Execute(Nothing)
-                        End If
-                        e.Handled = True
-                        Return
-                    Case AppMode.Viewer
-                        vm.Viewer.ResizeCurrentCommand.Execute(Nothing)
-                        e.Handled = True
-                        Return
-                End Select
-            End If
-
-            ' F11 schaltet in jedem Modus um - hier oben im Tunnel, damit es auch im Vollbild greift,
-            ' wo die darunterliegenden Ansichten keine Tasten mehr sehen.
-            If e.Key = Key.F11 Then
-                If vm.IsFullscreen Then vm.ExitFullscreen() Else vm.EnterFullscreen()
-                e.Handled = True
-                Return
-            End If
-
-            If TryHandleRatingShortcut(vm, e) Then
-                e.Handled = True
-                Return
-            End If
-
-            If vm.IsFullscreen Then
-                Select Case e.Key
-                    Case Key.Escape, Key.Back
-                        vm.ExitFullscreen()
-                        e.Handled = True
-                    Case Key.Left, Key.PageUp
-                        vm.Viewer.PreviousCommand.Execute(Nothing)
-                        e.Handled = True
-                    Case Key.Right, Key.PageDown
-                        vm.Viewer.NextCommand.Execute(Nothing)
-                        e.Handled = True
-                    Case Key.Space
-                        If vm.Viewer.IsVideoFile Then
-                            vm.Viewer.PlayPauseVideoCommand.Execute(Nothing)
-                        Else
-                            vm.Viewer.ToggleSlideshowCommand.Execute(Nothing)
-                        End If
-                        e.Handled = True
-                    Case Key.Delete
-                        vm.Viewer.DeleteCurrentCommand.Execute(Nothing)
-                        e.Handled = True
-                    Case Key.F2
-                        vm.Viewer.RenameCurrentCommand.Execute(Nothing)
-                        e.Handled = True
-                End Select
-                Return
-            End If
-
-            If vm.CurrentMode = AppMode.Viewer Then
-                Select Case e.Key
-                    Case Key.Delete
-                        vm.Viewer.DeleteCurrentCommand.Execute(Nothing)
-                        e.Handled = True
-                        Return
-                    Case Key.F2
-                        vm.Viewer.RenameCurrentCommand.Execute(Nothing)
-                        e.Handled = True
-                        Return
-                End Select
-            End If
-
-            If vm.CurrentMode = AppMode.Gallery AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso Not IsTextInputSource(e.Source) Then
-                Select Case e.Key
-                    Case Key.A
-                        vm.Gallery?.SelectAllVisible()
-                        e.Handled = True
-                        Return
-                    ' e.Handled MUSS vor dem Await stehen. Dieser Handler läuft in der Tunnel-Phase, also
-                    ' VOR der Galerie - aber ein Await gibt die Kontrolle an die Ereignisweiterleitung zurück,
-                    ' und die sieht dann ein noch UNbehandeltes Ereignis. Die Galerie hat einen eigenen
-                    ' Ctrl+V-Handler: das Einfügen lief dadurch zweimal, und jedes markierte Bild landete als
-                    ' "Kopie" UND "Kopie 2" im Ordner.
-                    Case Key.C
-                        e.Handled = True
-                        Await CopyGallerySelectionToClipboard(vm, False)
-                        Return
-                    Case Key.X
-                        e.Handled = True
-                        Await CopyGallerySelectionToClipboard(vm, True)
-                        Return
-                    Case Key.V
-                        e.Handled = True
-                        Await PasteClipboardIntoGallery(vm)
-                        Return
-                End Select
-            End If
-
-            If vm.CurrentMode = AppMode.Editor AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso e.Key = Key.S Then
-                If vm.Editor.CanSaveInPlace Then
-                    vm.Editor.SaveCommand.Execute(Nothing)
-                Else
-                    vm.Editor.SaveAsCommand.Execute(Nothing)
+                If vm.IsDialogOpen Then
+                    Select Case e.Key
+                        Case Key.Escape
+                            vm.CancelDialog()
+                            e.Handled = True
+                        Case Key.Return, Key.Enter
+                            vm.ConfirmDialog()
+                            e.Handled = True
+                        Case Key.Tab
+                            CycleDialogFocus(e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+                            e.Handled = True
+                        Case Else
+                            e.Handled = False
+                    End Select
+                    Return
                 End If
-                e.Handled = True
-                Return
-            End If
 
-            If e.Key = Key.Escape Then
-                If vm.CurrentMode = AppMode.Editor Then
-                    vm.Editor.BackToViewerCommand.Execute(Nothing)
+                ' Solange der Druckdialog offen ist, darf KEINE Taste an die Ansicht dahinter
+                ' durchfallen - sonst blättert Links/Rechts im Betrachter weiter, während vorne der
+                ' Dialog steht.
+                If vm.IsPrintDialogOpen Then
+                    Select Case e.Key
+                        Case Key.Escape
+                            vm.ClosePrintDialog()
+                        Case Key.Return, Key.Enter
+                            vm.ConfirmPrint()
+                    End Select
                     e.Handled = True
-                ElseIf vm.CurrentMode = AppMode.Viewer Then
-                    vm.Viewer.BackToGalleryCommand.Execute(Nothing)
-                    e.Handled = True
-                ElseIf vm.CurrentMode = AppMode.Settings Then
-                    vm.Settings.CancelCommand.Execute(Nothing)
-                    e.Handled = True
+                    Return
                 End If
-            End If
+
+                ' Strg+P zentral im Fenster-Tunnel statt in den einzelnen Ansichten: so greift es in
+                ' jedem Modus, im Vollbild und - weil der Tunnel vor den View-Kürzeln feuert - auch
+                ' noch, nachdem ein Overlay-Dialog den Fokus hatte.
+                ' Ohne den Umschalt-Ausschluss würde dieser Zweig auch Strg+Umschalt+P schlucken -
+                ' das ist im Editor „Vorschau anwenden".
+                If e.Key = Key.P AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
+                   Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                    Select Case vm.CurrentMode
+                        Case AppMode.Editor
+                            vm.Editor.PrintCommand.Execute(Nothing)
+                            e.Handled = True
+                            Return
+                        Case AppMode.Viewer
+                            vm.Viewer.PrintCommand.Execute(Nothing)
+                            e.Handled = True
+                            Return
+                        Case AppMode.Gallery
+                            vm.Gallery.PrintSelectedCommand.Execute(Nothing)
+                            e.Handled = True
+                            Return
+                    End Select
+                End If
+
+                ' Strg+R öffnet „Bildgröße ändern" - in der Galerie für die Auswahl, im Betrachter für das
+                ' angezeigte Bild. Aus demselben Grund wie Strg+P im Tunnel und nicht in den Ansichten: so
+                ' greift es unabhängig davon, wo der Fokus gerade steht (Ordnerbaum, Filmstreifen), auch im
+                ' Vollbild und auch noch, nachdem ein Overlay-Dialog den Fokus hatte. Im Editor bleibt
+                ' Strg+R das Drehen-Werkzeug - dort fällt dieser Zweig bewusst durch.
+                If e.Key = Key.R AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
+                   Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso Not IsTextInputSource(e.Source) Then
+                    Select Case vm.CurrentMode
+                        Case AppMode.Gallery
+                            If vm.Gallery IsNot Nothing AndAlso vm.Gallery.HasSelectedImage Then
+                                vm.Gallery.ResizeSelectedCommand.Execute(Nothing)
+                            End If
+                            e.Handled = True
+                            Return
+                        Case AppMode.Viewer
+                            vm.Viewer.ResizeCurrentCommand.Execute(Nothing)
+                            e.Handled = True
+                            Return
+                    End Select
+                End If
+
+                ' F11 schaltet in jedem Modus um - hier oben im Tunnel, damit es auch im Vollbild greift,
+                ' wo die darunterliegenden Ansichten keine Tasten mehr sehen.
+                If e.Key = Key.F11 Then
+                    If vm.IsFullscreen Then vm.ExitFullscreen() Else vm.EnterFullscreen()
+                    e.Handled = True
+                    Return
+                End If
+
+                If TryHandleRatingShortcut(vm, e) Then
+                    e.Handled = True
+                    Return
+                End If
+
+                If vm.IsFullscreen Then
+                    Select Case e.Key
+                        Case Key.Escape, Key.Back
+                            vm.ExitFullscreen()
+                            e.Handled = True
+                        Case Key.Left, Key.PageUp
+                            vm.Viewer.PreviousCommand.Execute(Nothing)
+                            e.Handled = True
+                        Case Key.Right, Key.PageDown
+                            vm.Viewer.NextCommand.Execute(Nothing)
+                            e.Handled = True
+                        Case Key.Space
+                            If vm.Viewer.IsVideoFile Then
+                                vm.Viewer.PlayPauseVideoCommand.Execute(Nothing)
+                            Else
+                                vm.Viewer.ToggleSlideshowCommand.Execute(Nothing)
+                            End If
+                            e.Handled = True
+                        Case Key.Delete
+                            vm.Viewer.DeleteCurrentCommand.Execute(Nothing)
+                            e.Handled = True
+                        Case Key.F2
+                            vm.Viewer.RenameCurrentCommand.Execute(Nothing)
+                            e.Handled = True
+                    End Select
+                    Return
+                End If
+
+                If vm.CurrentMode = AppMode.Viewer Then
+                    Select Case e.Key
+                        Case Key.Delete
+                            vm.Viewer.DeleteCurrentCommand.Execute(Nothing)
+                            e.Handled = True
+                            Return
+                        Case Key.F2
+                            vm.Viewer.RenameCurrentCommand.Execute(Nothing)
+                            e.Handled = True
+                            Return
+                    End Select
+                End If
+
+                If vm.CurrentMode = AppMode.Gallery AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso Not IsTextInputSource(e.Source) Then
+                    Select Case e.Key
+                        Case Key.A
+                            vm.Gallery?.SelectAllVisible()
+                            e.Handled = True
+                            Return
+                        ' e.Handled MUSS vor dem Await stehen. Dieser Handler läuft in der Tunnel-Phase, also
+                        ' VOR der Galerie - aber ein Await gibt die Kontrolle an die Ereignisweiterleitung zurück,
+                        ' und die sieht dann ein noch UNbehandeltes Ereignis. Die Galerie hat einen eigenen
+                        ' Ctrl+V-Handler: das Einfügen lief dadurch zweimal, und jedes markierte Bild landete als
+                        ' "Kopie" UND "Kopie 2" im Ordner.
+                        Case Key.C
+                            e.Handled = True
+                            Await CopyGallerySelectionToClipboard(vm, False)
+                            Return
+                        Case Key.X
+                            e.Handled = True
+                            Await CopyGallerySelectionToClipboard(vm, True)
+                            Return
+                        Case Key.V
+                            e.Handled = True
+                            Await PasteClipboardIntoGallery(vm)
+                            Return
+                    End Select
+                End If
+
+                If vm.CurrentMode = AppMode.Editor AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso e.Key = Key.S Then
+                    If vm.Editor.CanSaveInPlace Then
+                        vm.Editor.SaveCommand.Execute(Nothing)
+                    Else
+                        vm.Editor.SaveAsCommand.Execute(Nothing)
+                    End If
+                    e.Handled = True
+                    Return
+                End If
+
+                If e.Key = Key.Escape Then
+                    If vm.CurrentMode = AppMode.Editor Then
+                        vm.Editor.BackToViewerCommand.Execute(Nothing)
+                        e.Handled = True
+                    ElseIf vm.CurrentMode = AppMode.Viewer Then
+                        vm.Viewer.BackToGalleryCommand.Execute(Nothing)
+                        e.Handled = True
+                    ElseIf vm.CurrentMode = AppMode.Settings Then
+                        vm.Settings.CancelCommand.Execute(Nothing)
+                        e.Handled = True
+                    End If
+                End If
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess (Audit A4).
+                DiagnosticLogService.LogException("MainWindow.OnWindowKeyDown", ex)
+            End Try
         End Sub
 
         Private Async Function CopyGallerySelectionToClipboard(vm As MainWindowViewModel, cut As Boolean) As Task
