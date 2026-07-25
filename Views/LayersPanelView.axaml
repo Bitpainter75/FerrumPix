@@ -320,7 +320,7 @@
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding RasterizeSelectedAnnotationCommand}"
                             IsEnabled="{Binding CanRasterizeSelectedAnnotation}"
-                            ToolTip.Tip="Ebene rastern (ins Bild einbacken)">
+                            ToolTip.Tip="Ebene rastern">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-union.svg"
                                        Width="16" Height="16" />
                     </Button>

@@ -151,7 +151,7 @@ Namespace Views
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Neue Korrektur mit derselben Maske"), "adjustments-plus", vm.AddAdjustmentWithSameMaskCommand))
             End If
             If vm.CanRasterizeSelectedAnnotation Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern (ins Bild einbacken)"), "layers-union", vm.RasterizeSelectedAnnotationCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern"), "layers-union", vm.RasterizeSelectedAnnotationCommand))
             End If
             ' Sperren gilt für alles Markierte - bei einer Gruppen-Kopfzeile also für die ganze Gruppe.
             Dim sperrEintrag = MakeLayerMenuItem(vm.SelectionLockLabel,
