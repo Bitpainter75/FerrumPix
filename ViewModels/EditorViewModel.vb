@@ -677,6 +677,9 @@ Namespace ViewModels
         Private _annotationDirtyRect As SKRectI = SKRectI.Empty
         Private _annotationPlacementEditActive As Boolean = False
         Private _annotationPlacementStartDirtyRect As SKRectI = SKRectI.Empty
+        ''' Ob die Startregion des laufenden Zuges bereits ohne das Objekt neu gerendert wurde
+        ''' (das Objekt haengt dann nur noch am Ghost) - siehe ClearPlacementStartRegionFromScene.
+        Private _placementStartRegionCleared As Boolean = False
         Private _activePreviewRenders As Integer
         Private _showBeforeImage As Boolean = False
         ' Zuletzt vom Nutzer gewählter Vergleichs-Zustand; kommt aus den Einstellungen und wird dort beim
@@ -1161,10 +1164,15 @@ Namespace ViewModels
         ''' diese Spanne im Bild: das "Flackern nach dem Verschieben" (Nutzer-Befund 2026-07-17).
         Private _placementGhostLinger As Boolean = False
 
+        ''' <summary>Der Ghost darf waehrend eines Zuges erst sichtbar werden, wenn die Szene ihre Kopie
+        ''' des Objekts an der Startstelle WIRKLICH verloren hat (_placementStartRegionCleared). Beide
+        ''' Seiten haengen damit an EINEM Zustand: entweder zeichnet die Szene das Objekt oder der Ghost -
+        ''' nie beide. Die frueheren Doppelbilder ("Kopie an der alten Stelle") kamen genau daher, dass
+        ''' der Ghost sofort erschien und die Szene ihre Kopie erst nach einem Hintergrund-Render verlor.</summary>
         Public ReadOnly Property ShowSelectedSvgOverlay As Boolean
             Get
                 Return _selectedAnnotationOverlayImage IsNot Nothing AndAlso
-                       (_annotationPlacementEditActive OrElse _placementGhostLinger)
+                       ((_annotationPlacementEditActive AndAlso _placementStartRegionCleared) OrElse _placementGhostLinger)
             End Get
         End Property
 
@@ -6914,6 +6922,9 @@ Namespace ViewModels
         Private Sub AddSelectionImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
             PushUndo()
+            ' Eine Auswahl-Kopie ist ein reiner Pixelausschnitt: sie entsteht nie ueber ein scharfgestelltes
+            ' Werkzeug, darf also keine Kontur/keinen Mischmodus aus den Puffern eines anderen Objekts erben.
+            ResetAnnotationBuffersToImageDefaults()
             Dim stored = DisplayAnnotationRectToStoredPercent("SelectionImage", xPercent, yPercent, widthPercent, heightPercent)
             Dim annotation = New ImageAnnotation With {
                 .Kind = "SelectionImage",
@@ -10149,6 +10160,10 @@ Namespace ViewModels
                     InvalidateZoomDetail()
                     EnsureSceneDisplay()
                     BlitSceneRegionToDisplay(clamped)
+                    ' Der Snapshot dieses Patches blendet das gezogene Objekt aus (und die Ausblendung
+                    ' gilt noch, siehe placementExclusionStale): die Szene ist ihre Kopie los, ab jetzt
+                    ' darf der Ghost sichtbar werden.
+                    If excludedPlacementIndex >= 0 Then MarkPlacementSceneCopyRemoved()
                     ClearPlacementGhostLinger()
                     _previewPending = False
                     StatusText = LocalizationService.T("Vorschau bereit")
@@ -10635,6 +10650,7 @@ Namespace ViewModels
             If Not HasSelectedAnnotation Then Return
             _annotationPlacementEditActive = True
             _placementGhostLinger = False
+            _placementStartRegionCleared = False
             _annotationPlacementStartDirtyRect = SKRectI.Empty
             _previewTimer.Stop()
             _previewPending = False
@@ -10652,11 +10668,37 @@ Namespace ViewModels
                 ' _annotationDirtyRect bleibt gesetzt, damit der Commit alte+neue Bounds vereint.
                 _annotationDirtyRect = _annotationPlacementStartDirtyRect
             End If
-            ' KOMPLETT ASYNCHRON: weder Ghost-Render (Effekte: 100-300 ms) noch das Herausloesen aus
-            ' der Szene duerfen den Drag-Start blockieren (~1 s Haenger). Bis der Ghost steht, bleibt
-            ' die Szene-Kopie sichtbar (kein Loch); danach uebernimmt der Ghost und die Kopie
-            ' verschwindet einen Wimpernschlag spaeter.
+            ' KOMPLETT ASYNCHRON: weder Ghost-Render (Effekte: 100-300 ms) noch das Herausloesen aus der
+            ' Szene duerfen den Drag-Start blockieren. Ein SYNCHRONER Loesch-Render an dieser Stelle hat
+            ' den Zug-Start sichtbar verzoegert (Nutzer-Befund 2026-07-25): die Region wird bei einem
+            ' Objekt mit Mischmodus ueber SceneBlendCompositeRequiredRect auf den Composite-Bereich
+            ' aufgezogen, das ist im Zweifel das halbe Bild. Bis der Loesch-Render landet, zeigt die
+            ' SZENE das Objekt weiter an der alten Stelle - und genau solange bleibt der Ghost unsichtbar
+            ' (ShowSelectedSvgOverlay), sonst stuende es doppelt. Der Auswahlrahmen folgt dem Zeiger
+            ' bereits, die Pixel ziehen einen Wimpernschlag spaeter nach.
+            RequestPlacementSceneCopyRemoval()
             BeginPlacementGhostAsync()
+        End Sub
+
+        ''' <summary>Fordert an, dass die Szene ihre Kopie des gezogenen Objekts verliert: die Startregion
+        ''' wird OHNE das Objekt neu gerendert (GetSceneAdjustments blendet es waehrend des Placement-Edits
+        ''' aus). Immer asynchron - der Worker meldet ueber MarkPlacementSceneCopyRemoved zurueck, sobald
+        ''' die Pixel wirklich getauscht sind; erst dann wird der Ghost sichtbar.</summary>
+        Private Sub RequestPlacementSceneCopyRemoval()
+            If _annotationPlacementStartDirtyRect.IsEmpty Then
+                ' Keine Szene/Quelle: es gibt keine Kopie, die stoeren koennte - Ghost sofort freigeben.
+                MarkPlacementSceneCopyRemoved()
+                Return
+            End If
+            RequestSceneRegionRender(_annotationPlacementStartDirtyRect)
+        End Sub
+
+        ''' <summary>Vom Szene-Worker aufgerufen, sobald ein Patch angewendet wurde, dessen Snapshot das
+        ''' gezogene Objekt ausblendet: ab jetzt zeichnet die Szene es nicht mehr, der Ghost uebernimmt.</summary>
+        Private Sub MarkPlacementSceneCopyRemoved()
+            If _placementStartRegionCleared Then Return
+            _placementStartRegionCleared = True
+            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
         End Sub
 
         ''' <summary>Rendert den Drag-Ghost im Hintergrund und loest ERST DANACH die Szene-Kopie heraus -
@@ -10689,30 +10731,30 @@ Namespace ViewModels
                 Return
             End If
 
+            ' Nur die Bitmap nachreichen (Mischmodus-Objekte haben ausserhalb des Zuges gar keine).
+            ' Ob der Ghost dadurch SICHTBAR wird, entscheidet allein, ob die Szene ihre Kopie schon
+            ' verloren hat - angefordert wurde das bereits beim Zug-Start.
             SetSelectedAnnotationOverlay(render)
             Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
-            If Not _annotationPlacementStartDirtyRect.IsEmpty Then
-                ' ATOMAR im selben UI-Frame (Nutzer-Befund 17.07.: Objekt kurz doppelt am Zug-START):
-                ' der Ghost erscheint und die Szene verliert das Objekt in EINEM Durchlauf. Der
-                ' Lösch-Render ist billig - das gezogene Objekt ist ausgeblendet, gerendert werden
-                ' nur Basis + andere Objekte der Region (keine Effekt-Kosten des Objekts selbst).
-                ' Nur bei kaltem/gesperrtem Base-Cache bleibt der asynchrone Weg (kurzes Doppel
-                ' möglich, aber selten). Das Leeren von _annotationDirtyRect im Sync-Pfad ist
-                ' korrekt: die Altregion ist danach bereits sauber, der Commit braucht nur noch
-                ' die Endposition (Fallback in TryRenderAnnotationPatchSync).
-                If Not TryRenderSceneRegionSync(_annotationPlacementStartDirtyRect) Then
-                    RequestSceneRegionRender(_annotationPlacementStartDirtyRect)
-                End If
-            End If
         End Sub
 
         Public Sub EndSelectedAnnotationPlacementEdit()
             _annotationPlacementEditActive = False
+            Dim sceneCopyWasRemoved = _placementStartRegionCleared
+            ' Wurde die Startregion nie aus der Szene geloest (kurzer Zug: der Loesch-Render war beim
+            ' Loslassen noch unterwegs), MUSS der Commit sie mitnehmen - sonst bleibt die alte Kopie in
+            ' der Szene stehen und sieht aus wie ein zweites Objekt.
+            If Not sceneCopyWasRemoved AndAlso Not _annotationPlacementStartDirtyRect.IsEmpty Then
+                _annotationDirtyRect = ImageProcessor.UnionRects(_annotationDirtyRect, _annotationPlacementStartDirtyRect)
+            End If
+            _placementStartRegionCleared = False
             _annotationPlacementStartDirtyRect = SKRectI.Empty
             ' Ghost weiterzeigen, bis die Szene das Objekt an der Endposition gerendert hat
             ' (ClearPlacementGhostLinger im Region-Worker/Vollrender) - sonst fehlt das Objekt
-            ' für die Renderdauer im Bild.
-            If _selectedAnnotationOverlayImage IsNot Nothing Then _placementGhostLinger = True
+            ' für die Renderdauer im Bild. ABER nur, wenn die Szene ihre Kopie ueberhaupt verloren hat:
+            ' sonst zeichnete sie das Objekt noch an der ALTEN Stelle, und der nachlaufende Ghost an der
+            ' neuen waere wieder das Doppelbild.
+            If _selectedAnnotationOverlayImage IsNot Nothing AndAlso sceneCopyWasRemoved Then _placementGhostLinger = True
             Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
         End Sub
 
@@ -13462,6 +13504,39 @@ Namespace ViewModels
             _annotationFlipV = False
         End Sub
 
+        ''' <summary>Beschreiben die Annotation*-Puffer wirklich ein noch zu PLATZIERENDES Objekt dieses Typs?
+        ''' Nur dann sind es die bewusst gewaehlten Panel-Vorgaben (SeedAnnotationDefaultsForKind beim
+        ''' Scharfstellen, danach ggf. vom Nutzer angepasst). Steht dagegen ein Objekt in der Selektion,
+        ''' gehoeren die Puffer diesem Objekt - siehe [Annotation-Puffer-Leck].</summary>
+        Private Function BuffersDescribePendingInsert(normalizedKind As String) As Boolean
+            If HasSelectedAnnotation Then Return False
+            Return String.Equals(NormalizeAnnotationKind(_pendingInsertKind), normalizedKind, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Setzt die Annotation*-Puffer auf die Typ-Vorgaben eines Bild-Objekts, bevor eines OHNE
+        ''' scharfgestelltes Werkzeug entsteht (Bilddatei aus dem Dateimanager auf die Leinwand gezogen,
+        ''' Auswahl-Kopie). Auf diesen Wegen ist SeedAnnotationDefaultsForKind nie gelaufen - es laeuft nur
+        ''' OHNE Selektion -, also beschrieben die Puffer noch das zuletzt selektierte Objekt und das neue
+        ''' Bild erbte dessen Kontur, Mischmodus, Deckkraft, Drehung und sogar "ausgeblendet" (beobachtet:
+        ''' Textobjekt mit Mischmodus und Kontur, dann eine Grafikdatei ins Bild gezogen).
+        ''' Direktfelder ohne Setter-Nebenwirkungen: die Setter schrieben ueber SyncSelectedAnnotation sofort
+        ''' in das noch selektierte Objekt zurueck. Zusaetzlich schliesst das Zuruecksetzen VOR dem Anlegen
+        ''' das gleiche Sync-Fenster, das HardenAnnotationBuffersForNewObject fuer Schatten/Glueh abdeckt.
+        ''' Die Werte sind dieselben wie in SeedAnnotationDefaultsForKind fuer "Image".</summary>
+        Private Sub ResetAnnotationBuffersToImageDefaults()
+            _annotationStrokeColor = "#FF000000"
+            _annotationStrokeWidth = 0
+            _annotationFontSize = 48
+            _annotationFontFamily = "Arial"
+            _annotationOpacity = 100
+            _annotationBlendMode = "Normal"
+            _annotationBlendIncludesStroke = True
+            _annotationRotation = 0
+            _annotationFlipH = False
+            _annotationFlipV = False
+            _annotationIsVisible = True
+        End Sub
+
         Private Function GetDefaultAnnotationSizePercent(normalizedKind As String, rawKind As String) As (WidthPercent As Double, HeightPercent As Double)
             Select Case normalizedKind
                 Case "Line", "Arrow"
@@ -13507,6 +13582,9 @@ Namespace ViewModels
         Public Sub AddImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
             PushUndo()
+            ' Ohne scharfgestelltes Bild-Werkzeug (Drag&Drop aus dem Dateimanager) beschreiben die Puffer
+            ' noch das selektierte Objekt - sonst erbt das Bild dessen Kontur/Mischmodus/Deckkraft.
+            If Not BuffersDescribePendingInsert("Image") Then ResetAnnotationBuffersToImageDefaults()
             Dim size = GetInitialImageAnnotationSize(imagePath)
             Dim width = size.WidthPercent
             Dim height = size.HeightPercent

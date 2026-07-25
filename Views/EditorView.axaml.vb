@@ -36,7 +36,7 @@ Namespace Views
         Private _pickSampleSource As Bitmap = Nothing
         Private _pickSampleBitmap As SKBitmap = Nothing
 
-        ' Zoom state (0-100 slider maps exponentially to 10%-500%)
+        ' Zoom state (0-100 slider maps exponentially to 5%-2000%)
         Private _zoomSliderValue As Double = 50
         Private _zoomInitialized As Boolean = False
         Private _ignoreSliderChange As Boolean = False
@@ -136,13 +136,20 @@ Namespace Views
             Rotate
         End Enum
 
+        ''' <summary>Der Regler läuft von 0-100 und bildet logarithmisch auf den Zoombereich ab -
+        ''' derselbe Bereich wie im Betrachter (Nutzerwunsch 2026-07-25), damit dasselbe Bild in
+        ''' beiden Ansichten gleich weit auf- und zugezogen werden kann.</summary>
+        Private Const ZoomSliderMinPercent As Double = 5.0
+        Private Const ZoomSliderMaxPercent As Double = 2000.0
+
         Private Function SliderToZoom(s As Double) As Double
-            Return 10.0 * Math.Pow(50.0, s / 100.0)
+            Return ZoomSliderMinPercent * Math.Pow(ZoomSliderMaxPercent / ZoomSliderMinPercent, s / 100.0)
         End Function
 
         Private Function ZoomToSlider(zoomPct As Double) As Double
-            Dim clamped = Math.Max(10.0, Math.Min(500.0, zoomPct))
-            Return Math.Max(0, Math.Min(100, Math.Log(clamped / 10.0) / Math.Log(50.0) * 100.0))
+            Dim clamped = Math.Max(ZoomSliderMinPercent, Math.Min(ZoomSliderMaxPercent, zoomPct))
+            Return Math.Max(0, Math.Min(100, Math.Log(clamped / ZoomSliderMinPercent) /
+                                             Math.Log(ZoomSliderMaxPercent / ZoomSliderMinPercent) * 100.0))
         End Function
 
         Private Sub SetZoom(sliderValue As Double)
@@ -3195,11 +3202,19 @@ Namespace Views
             Dim hitRect = rect.Inflate(hitSlop)
             If Not hitRect.Contains(local) Then Return TextDragMode.None
 
-            Const handleSize As Double = 16
-            Dim nearLeft = Math.Abs(local.X - rect.Left) <= handleSize
-            Dim nearRight = Math.Abs(local.X - rect.Right) <= handleSize
-            Dim nearTop = Math.Abs(local.Y - rect.Top) <= handleSize
-            Dim nearBottom = Math.Abs(local.Y - rect.Bottom) <= handleSize
+            ' Die Zone ist ABSICHTLICH unsymmetrisch: nach aussen bleibt sie gross (bis hitSlop - dort
+            ' liegen die gezeichneten Griffe, die per Margin ueber den Rahmen hinausragen), nach INNEN
+            ' reicht sie nur so weit wie der Griff selbst zu sehen ist (Kreise 12-14 px, Margin -7/-8,
+            ' also gut 6 px ins Objekt). Frueher waren es 16 px nach innen: beim Greifen zum Verschieben
+            ' landete man dadurch staendig im Skalieren (Nutzer-Befund 2026-07-25). Zusaetzlich auf einen
+            ' Anteil der Kantenlaenge gedeckelt, damit kleine Objekte eine greifbare Mitte behalten.
+            Const handleInward As Double = 8
+            Dim inwardX = Math.Min(handleInward, rect.Width * 0.25)
+            Dim inwardY = Math.Min(handleInward, rect.Height * 0.25)
+            Dim nearLeft = local.X <= rect.Left + inwardX
+            Dim nearRight = local.X >= rect.Right - inwardX
+            Dim nearTop = local.Y <= rect.Top + inwardY
+            Dim nearBottom = local.Y >= rect.Bottom - inwardY
 
             If nearLeft AndAlso nearTop Then Return TextDragMode.TopLeft
             If nearRight AndAlso nearTop Then Return TextDragMode.TopRight
