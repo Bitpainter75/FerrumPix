@@ -273,7 +273,8 @@
                   IsChecked="{Binding AnnotationGradientInverted}" FontSize="{DynamicResource FP.Font.Small}"
                   IsVisible="{Binding ShowRadialGradientControl}" />
         <!-- Beim QR-Code ist das die Modulfarbe ("Vordergrund", siehe StrokeColorLabel). -->
-        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
+              IsVisible="{Binding ShowStrokeColorControls}">
             <TextBlock Text="{Binding StrokeColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

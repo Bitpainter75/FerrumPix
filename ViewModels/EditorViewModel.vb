@@ -543,6 +543,13 @@ Namespace ViewModels
         ' nur die Union.
         Private _sceneRegionPendingRect As SKRectI = SKRectI.Empty
         Private _sceneRegionWorkerBusy As Boolean = False
+        ' Modell-Version der Objekte: jede Eigenschafts- oder Lageaenderung zaehlt hoch. Der Worker
+        ' merkt sich den Stand seines Snapshots und LEGT DIE REGION NACH, wenn das Modell sich
+        ' waehrend des Renders bewegt hat. Ohne das konnte ein Patch, der noch die alte Lage zeigte,
+        ' als letzter geschrieben werden - das Objekt blieb dann sichtbar an seiner Startstelle
+        ' stehen ("Kopie beim Verschieben", sporadisch, Diagnose-Wettlauf 2026-07-25). Verworfen wird
+        ' der Patch bewusst NICHT: waehrend eines Zuges ist ein Zwischenstand besser als ein Loch.
+        Private _annotationModelVersion As Long = 0
         ' Inhalts-Version der Szene: JEDER Szene-Write (sync-Region, Worker-Apply, Vollrender) zaehlt
         ' hoch. Der Worker verwirft sein Ergebnis, wenn sich der Inhalt seit seinem Snapshot geaendert
         ' hat, und rendert neu - sonst ueberschreibt ein langer Hintergrund-Render (grosse weiche
@@ -865,19 +872,20 @@ Namespace ViewModels
                                                                      String.Equals(l.GroupId, value.Group.Id, StringComparison.Ordinal)).ToList()
                     _extraSelectedAdjustmentLayers.Clear()
                     _selectedMaskedAdjustmentLayerId = ""
-                    If members.Count = 0 AndAlso layerMembers.Count > 0 Then
-                        ' Gruppe aus Korrekturebenen
-                        SelectedAnnotationIndex = -1
-                        _selectedMaskedAdjustmentLayerId = layerMembers(layerMembers.Count - 1).Id
-                        For Each l In layerMembers
-                            If l.Id <> _selectedMaskedAdjustmentLayerId Then _extraSelectedAdjustmentLayers.Add(l)
-                        Next
-                        RaiseMultiSelectionChanged()
-                    ElseIf members.Count = 0 Then
+                    If members.Count = 0 Then
                         SelectedAnnotationIndex = -1
                     Else
                         SelectAnnotationWithGroup(_annotations.IndexOf(members(members.Count - 1)))
                     End If
+                    ' Korrekturebenen der Gruppe gehören zur Auswahl dazu - eine Gruppe wird als GANZES
+                    ' markiert, auch wenn Objekte und Korrekturen darin gemischt sind.
+                    If layerMembers.Count > 0 Then
+                        _selectedMaskedAdjustmentLayerId = layerMembers(layerMembers.Count - 1).Id
+                        For Each l In layerMembers
+                            If l.Id <> _selectedMaskedAdjustmentLayerId Then _extraSelectedAdjustmentLayers.Add(l)
+                        Next
+                    End If
+                    RaiseMultiSelectionChanged()
                     _selectedLayerRow = value
                     RaiseLayerPanelSelectionChanged()
                     If _hasActiveSelection Then ClearSelection(captureUndo:=False)
@@ -1017,6 +1025,32 @@ Namespace ViewModels
                 Dim emittedGroups As New HashSet(Of String)(StringComparer.Ordinal)
                 For i = _annotations.Count - 1 To 0 Step -1
                     Dim a = _annotations(i)
+                    ' Korrekturebenen, die ÜBER diesem Objekt einsortiert sind, stehen im Panel direkt
+                    ' darüber - sie wirken auf alles darunter (Basis und die Objekte bis hierher).
+                    ' Gehört das Objekt zu einer Gruppe, erscheinen sie nur über dem OBERSTEN Mitglied,
+                    ' also über der ganzen Gruppe: eine Zeile mitten im Gruppenblock sähe aus, als läge
+                    ' die Korrektur „in" der Gruppe - das gibt es nicht.
+                    Dim aGroup = If(a Is Nothing, Nothing, FindAnnotationGroup(a.GroupId))
+                    ' Liegt das Objekt in einer Gruppe, steht auch seine Korrektur EINGERÜCKT im Block
+                    ' (und verschwindet mit ihm, wenn die Gruppe zugeklappt ist) - sie gehört ja oft
+                    ' genau zu diesem einen Objekt.
+                    For k = _maskedAdjustmentLayers.Count - 1 To 0 Step -1
+                        Dim stacked = _maskedAdjustmentLayers(k)
+                        If stacked Is Nothing Then Continue For
+                        If Not String.Equals(stacked.StackAboveAnnotationId, a.Id, StringComparison.Ordinal) Then Continue For
+                        ' Gehört die Korrektur zur selben Gruppe wie ihr Anker, steht sie EINGERÜCKT im
+                        ' Block (und verschwindet mit ihm beim Zuklappen). Sonst liegt sie darüber -
+                        ' also VOR der Kopfzeile, ausserhalb des Blocks.
+                        Dim imBlock = aGroup IsNot Nothing AndAlso
+                                      String.Equals(stacked.GroupId, aGroup.Id, StringComparison.Ordinal)
+                        If imBlock Then
+                            If aGroup.IsCollapsed Then Continue For
+                            If emittedGroups.Add(aGroup.Id) Then _layerRows.Add(New LayerPanelRow(aGroup))
+                            _layerRows.Add(New LayerPanelRow(stacked, aGroup))
+                        Else
+                            _layerRows.Add(New LayerPanelRow(stacked))
+                        End If
+                    Next
                     Dim grp = If(a Is Nothing, Nothing, FindAnnotationGroup(a.GroupId))
                     If grp Is Nothing Then
                         _layerRows.Add(New LayerPanelRow(a))
@@ -1027,6 +1061,7 @@ Namespace ViewModels
                 Next
                 For i = _maskedAdjustmentLayers.Count - 1 To 0 Step -1
                     Dim l = _maskedAdjustmentLayers(i)
+                    If l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId) Then Continue For
                     Dim lgrp = If(l Is Nothing, Nothing, FindAnnotationGroup(l.GroupId))
                     If lgrp Is Nothing Then
                         _layerRows.Add(New LayerPanelRow(l))
@@ -1136,6 +1171,8 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowWatermarkPresetControls As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return EffectiveAnnotationKind = "Watermark"
             End Get
         End Property
@@ -1144,7 +1181,18 @@ Namespace ViewModels
         ''' öffnen. Der Knopf im Eigenschaften-Panel bietet denselben Weg wie beim Wasserzeichen an.
         Public ReadOnly Property ShowImageSourceControls As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return EffectiveAnnotationKind = "Image"
+            End Get
+        End Property
+
+        ''' <summary>Konturfarbe: objekt-eigen. Bei einer Mehrfachauswahl würde sie nur den Anker
+        ''' beschreiben (SyncSelectedAnnotation gibt sie bewusst NICHT an die anderen weiter) -
+        ''' deshalb blendet das Panel die Zeile dann aus.</summary>
+        Public ReadOnly Property ShowStrokeColorControls As Boolean
+            Get
+                Return Not HasMultiAnnotationSelection
             End Get
         End Property
 
@@ -2141,6 +2189,45 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanGroupSelectedAnnotations))
             Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
             Me.RaisePropertyChanged(NameOf(CanUngroupSelectedAnnotations))
+            RaiseSelectionScopedPanelChanged()
+        End Sub
+
+        ''' <summary>
+        ''' Alles, was das Eigenschaften-Panel je nach Auswahlgröße anders zeigt.
+        '''
+        ''' Diese Eigenschaften prüfen selbst auf HasMultiAnnotationSelection und lieferten deshalb
+        ''' immer den richtigen Wert - gemeldet wurde die Änderung aber nie. Die Anzeige blieb
+        ''' dadurch auf dem Stand des zuletzt geladenen Objekts stehen: Kopfzeile "Bild" statt
+        ''' "Gruppe 1", dazu Quelle, Kontur und Seitenverhältnis, obwohl fünf Ebenen markiert waren
+        ''' (Nutzer-Befund 2026-07-25). Wer hier eine neue auswahlabhängige Eigenschaft baut, trägt
+        ''' sie in diese Liste ein - sonst wiederholt sich genau dieser Fehler.
+        ''' </summary>
+        Private Sub RaiseSelectionScopedPanelChanged()
+            Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
+            Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
+            Me.RaisePropertyChanged(NameOf(ShowWatermarkPresetControls))
+            Me.RaisePropertyChanged(NameOf(ShowImageSourceControls))
+            Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
+            Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
+            Me.RaisePropertyChanged(NameOf(ShowFontControls))
+            Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
+            Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
+            Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
+            Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
+            Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+            Me.RaisePropertyChanged(NameOf(ShowStrokeColorControls))
+            Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
+            Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
+            Me.RaisePropertyChanged(NameOf(ShowTextPathRow))
+            Me.RaisePropertyChanged(NameOf(ShowTextPathControls))
+            ' Lage und Größe stehen bei mehreren Objekten für die gemeinsame Box - auch die muss
+            ' beim Wechsel neu gelesen werden, sonst zeigen die Regler die Werte des Ankers.
+            Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationXSliderValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationYSliderValue))
         End Sub
 
         Public Function FindAnnotationGroup(groupId As String) As AnnotationGroup
@@ -2181,6 +2268,21 @@ Namespace ViewModels
                 For Each m In members
                     If Not Object.ReferenceEquals(m, hit) Then _extraSelectedAnnotations.Add(m)
                 Next
+            End If
+            ' Korrekturebenen der Gruppe gehören dazu - sonst blieben sie beim Transformieren der
+            ' Gruppe an Ort und Größe stehen (sie sind ja für eines dieser Objekte gemacht).
+            If Not String.IsNullOrEmpty(hit.GroupId) Then
+                _extraSelectedAdjustmentLayers.Clear()
+                Dim layerMembers = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing AndAlso
+                                                                  String.Equals(l.GroupId, hit.GroupId, StringComparison.Ordinal)).ToList()
+                If layerMembers.Count > 0 Then
+                    _selectedMaskedAdjustmentLayerId = layerMembers(layerMembers.Count - 1).Id
+                    For Each l In layerMembers
+                        If l.Id <> _selectedMaskedAdjustmentLayerId Then _extraSelectedAdjustmentLayers.Add(l)
+                    Next
+                End If
+            End If
+            If members.Count > 1 OrElse SelectedAdjustmentLayers.Count > 0 Then
                 RaiseMultiSelectionChanged()
                 RequestOverlayStateNotify()
             End If
@@ -5450,7 +5552,8 @@ Namespace ViewModels
         ''' <summary>Rastern backt ins Arbeitsbild - bei ausgeblendeter Pixel-Ebene gesperrt.</summary>
         Public ReadOnly Property CanRasterizeSelectedAnnotation As Boolean
             Get
-                Return HasSelectedAnnotation AndAlso CanUsePixelTools
+                ' Gilt auch für eine Gruppe/Mehrfachauswahl - die wird als Ganzes eingebacken.
+                Return (HasSelectedAnnotation OrElse SelectedAnnotationCount > 0) AndAlso CanUsePixelTools
             End Get
         End Property
 
@@ -7026,6 +7129,7 @@ Namespace ViewModels
                     .Adjustments = New ImageAdjustments(),
                     .IsMaskLayer = _activeSelectionIsMask
                 }
+                PlaceNewCorrectionLayerInBaseImage(layer)
                 _maskedAdjustmentLayers.Add(layer)
             End If
             ' KEINE Dauerbindung von _editingLayerMaskId mehr setzen: die verhinderte zwar Dubletten beim
@@ -7951,6 +8055,40 @@ Namespace ViewModels
             Return (left, top, right - left, bottom - top)
         End Function
 
+        ''' <summary>Verschiebt die Masken der markierten Korrekturebenen um denselben Betrag wie die
+        ''' Objekte. Nur Masken, die AUSSCHLIESSLICH von markierten Ebenen benutzt werden - eine
+        ''' geteilte Maske würde sonst auch die Korrektur einer fremden Ebene mitziehen.</summary>
+        Private Sub TransformSelectedCorrectionMasks(box As (X As Double, Y As Double, Width As Double, Height As Double),
+                                                     newX As Double, newY As Double,
+                                                     sx As Double, sy As Double)
+            Dim layers = SelectedAdjustmentLayers
+            If layers.Count = 0 Then Return
+            Dim dx = PercentXToPixels(newX - box.X * sx)
+            Dim dy = PercentYToPixels(newY - box.Y * sy)
+            Dim pivotX = PercentXToPixels(box.X)
+            Dim pivotY = PercentYToPixels(box.Y)
+            ' Verschiebung im Pivot-Bezug: die Box-Ecke ist der Fixpunkt der Skalierung.
+            Dim offsetX = PercentXToPixels(newX) - pivotX
+            Dim offsetY = PercentYToPixels(newY) - pivotY
+            If Math.Abs(offsetX) < 0.01 AndAlso Math.Abs(offsetY) < 0.01 AndAlso
+               Math.Abs(sx - 1.0) < 0.0001 AndAlso Math.Abs(sy - 1.0) < 0.0001 Then Return
+
+            Dim erledigt As New HashSet(Of String)(StringComparer.Ordinal)
+            For Each layer In layers
+                If layer Is Nothing OrElse String.IsNullOrWhiteSpace(layer.MaskId) Then Continue For
+                If Not erledigt.Add(layer.MaskId) Then Continue For
+                ' Eine GETEILTE Maske bleibt unangetastet - sonst zöge sie die Korrektur einer nicht
+                ' markierten Ebene mit.
+                Dim fremdGenutzt = _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso
+                                                                l.MaskId = layer.MaskId AndAlso
+                                                                Not layers.Contains(l))
+                If fremdGenutzt Then Continue For
+                Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
+                If mask Is Nothing Then Continue For
+                ImageProcessor.TransformMaskRegion(mask, sx, sy, pivotX, pivotY, offsetX, offsetY)
+            Next
+        End Sub
+
         ''' <summary>Vereinigte Dirty-Region ALLER markierten Objekte im aktuellen Zustand. Wird VOR
         ''' einer Gruppen-Transformation gemerkt: ohne die alte Lage bliebe beim Ziehen die verlassene
         ''' Stelle stehen (bei gedrehten Objekten besonders sichtbar, weil ihre Ecken über das
@@ -7999,6 +8137,11 @@ Namespace ViewModels
 
             Dim vorher = SelectionDirtyRect()
             CaptureUndoState("AnnotationGroupTransform")
+            ' Gehört eine Korrekturebene zur Auswahl (z.B. weil sie in der bewegten Gruppe liegt), zieht
+            ' ihre Maske beim VERSCHIEBEN mit - sonst bliebe die Korrektur an der alten Stelle liegen,
+            ' obwohl sie für genau dieses Objekt gemacht wurde. Beim Skalieren bleibt sie stehen: die
+            ' Maske müsste dafür neu gerastert werden (verlustbehaftet), das ist ein eigener Schritt.
+            TransformSelectedCorrectionMasks(box, xPercent, yPercent, sx, sy)
             For Each a In selected
                 Dim r = StoredAnnotationRectToDisplayPercent(a)
                 If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
@@ -8089,6 +8232,10 @@ Namespace ViewModels
                 dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(a))
             Next
             _annotationDirtyRect = dirty
+            ' Gruppen-Transformationen schreiben direkt in die Objekte (nicht über SyncSelectedAnnotation) -
+            ' die Modell-Version muss trotzdem hochzählen, sonst hält der Region-Worker einen Patch mit
+            ' der alten Lage für aktuell.
+            _annotationModelVersion += 1
 
             _isLoadingAnnotation = True
             Try
@@ -8325,9 +8472,13 @@ Namespace ViewModels
             Return displaySize.Height * value / 100.0
         End Function
 
+        ' Die vier Pixel-Eigenschaften lesen bewusst die PROZENT-EIGENSCHAFTEN, nicht deren Felder:
+        ' nur die Eigenschaft kennt den Mehrfachauswahl-Zweig (SelectionBoxComponent). Über das Feld
+        ' zeigten Lage und Größe die Werte des zuletzt angeklickten Objekts statt die der gemeinsamen
+        ' Box (Nutzer-Befund 2026-07-25).
         Public Property AnnotationXPixels As Integer
             Get
-                Return CInt(Math.Round(DisplayPercentXToPixels(_annotationXPercent)))
+                Return CInt(Math.Round(DisplayPercentXToPixels(AnnotationXPercent)))
             End Get
             Set(value As Integer)
                 Dim displaySize = GetAnnotationDisplayPixelSize()
@@ -8338,7 +8489,7 @@ Namespace ViewModels
 
         Public Property AnnotationYPixels As Integer
             Get
-                Return CInt(Math.Round(DisplayPercentYToPixels(_annotationYPercent)))
+                Return CInt(Math.Round(DisplayPercentYToPixels(AnnotationYPercent)))
             End Get
             Set(value As Integer)
                 Dim displaySize = GetAnnotationDisplayPixelSize()
@@ -8349,7 +8500,7 @@ Namespace ViewModels
 
         Public Property AnnotationWidthPixels As Integer
             Get
-                Return CInt(Math.Round(DisplayPercentXToPixels(_annotationWidthPercent)))
+                Return CInt(Math.Round(DisplayPercentXToPixels(AnnotationWidthPercent)))
             End Get
             Set(value As Integer)
                 Dim displaySize = GetAnnotationDisplayPixelSize()
@@ -8360,7 +8511,7 @@ Namespace ViewModels
 
         Public Property AnnotationHeightPixels As Integer
             Get
-                Return CInt(Math.Round(DisplayPercentYToPixels(_annotationHeightPercent)))
+                Return CInt(Math.Round(DisplayPercentYToPixels(AnnotationHeightPercent)))
             End Get
             Set(value As Integer)
                 Dim displaySize = GetAnnotationDisplayPixelSize()
@@ -10718,6 +10869,18 @@ Namespace ViewModels
         End Sub
 
         Private Sub ScheduleAnnotationCompositePreviewUpdate(Optional delayMs As Double = PreviewDebounceMs)
+            ' Liegt eine Korrektur IM Objektstapel, kann der Patch-Weg grundsätzlich nicht liefern
+            ' (TryRenderAnnotationPatchSync steigt dann sofort aus). Ohne diese Weiche versuchte es
+            ' OnPreviewTimerTick sechsmal vergeblich, gab auf und meldete "Vorschau bereit" - die
+            ' Szene behielt den alten Stand. Sichtbar wurde das beim Verschieben einer Gruppe mit
+            ' Korrektur: die Objekte blieben stehen, nur der Auswahlrahmen stand an der neuen Stelle
+            ' (Nutzer-Befund 2026-07-25).
+            If RequiresFullRenderForStackedCorrections() Then
+                _annotationCompositePreviewPending = False
+                _annotationCompositePreviewRetries = 0
+                SchedulePreviewUpdate()
+                Return
+            End If
             _annotationCompositePreviewPending = True
             _annotationCompositePreviewRetries = 0
             _previewPending = True
@@ -10739,10 +10902,14 @@ Namespace ViewModels
                 ' bleibt sichtbar und die UI wird nicht durch Objekt-Loslassen blockiert.
                 _annotationCompositePreviewRetries += 1
                 If _annotationCompositePreviewRetries >= 6 Then
+                    ' Aufgeben hieß bisher: Szene bleibt auf dem ALTEN Stand und meldet trotzdem
+                    ' "bereit". Der Vollrender ist teuer, aber ein stehengebliebenes Bild ist ein
+                    ' Fehler - lieber einmal voll rendern als eine Änderung verschlucken.
                     _annotationCompositePreviewPending = False
                     _annotationCompositePreviewRetries = 0
-                    _previewPending = False
-                    StatusText = LocalizationService.T("Vorschau bereit")
+                    DiagnosticLogService.LogAlways("Editor.AnnotationComposite",
+                                                   "fallback=fullRender reason=patchRetriesExhausted")
+                    SchedulePreviewUpdate(markDirty:=False)
                     Return
                 End If
                 RestartPreviewTimer(Math.Max(40.0, PreviewDebounceMs * 0.5))
@@ -10838,6 +11005,11 @@ Namespace ViewModels
             InvalidateZoomDetail()
             EnsureSceneDisplay()
             BlitSceneRegionToDisplay(New SKRectI(0, 0, _sceneSk.Width, _sceneSk.Height))
+            ' Auch ein VOLLRENDER räumt die Startregion: sein Snapshot blendet das gezogene Objekt
+            ' genauso aus (GetSceneAdjustments). Die Ghost-Übergabe hing bisher allein am Region-
+            ' Worker - fiel der Patch auf den Vollrender zurück (belegter Basis-Cache), blieb der
+            ' Ghost unsichtbar und das Objekt war während des Ziehens gar nicht mehr zu sehen.
+            If _annotationPlacementEditActive AndAlso Not HasMultiAnnotationSelection Then MarkPlacementSceneCopyRemoved()
         End Sub
 
         ''' <summary>Stellt sicher, dass die persistente Anzeige-Bitmap existiert und zur Szene passt
@@ -10999,6 +11171,7 @@ Namespace ViewModels
 
                     Dim adj = GetSceneAdjustments()
                     Dim versionAtStart = _sceneContentVersion
+                    Dim modelAtStart = _annotationModelVersion
                     ' Merken, ob der Snapshot das aktiv gezogene Objekt AUSBLENDET: gilt die Ausblendung
                     ' beim Anwenden nicht mehr (Loslassen/Commit), wuerde der Patch das Objekt loeschen.
                     ' Nur bei EINZELauswahl blendet der Snapshot das gezogene Objekt aus (siehe
@@ -11080,6 +11253,11 @@ Namespace ViewModels
                     ' darf der Ghost sichtbar werden.
                     If excludedPlacementIndex >= 0 Then MarkPlacementSceneCopyRemoved()
                     ClearPlacementGhostLinger()
+                    ' Das Modell hat sich waehrend des Renders geaendert: dieser Patch zeigt einen
+                    ' ueberholten Stand. Region nachlegen, damit nicht der alte Stand stehen bleibt.
+                    If _annotationModelVersion <> modelAtStart Then
+                        _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, rect)
+                    End If
                     _previewPending = False
                     StatusText = LocalizationService.T("Vorschau bereit")
                     DiagnosticLogService.LogAlways("Editor.SceneRegion",
@@ -11466,6 +11644,7 @@ Namespace ViewModels
         Private Function TryRenderAnnotationPatchSync() As Boolean
             Dim previewSource = GetPreviewSource()
             If previewSource Is Nothing Then Return False
+            If RequiresFullRenderForStackedCorrections() Then Return False
 
             Dim rect = _annotationDirtyRect
             If rect.IsEmpty AndAlso _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
@@ -11486,7 +11665,36 @@ Namespace ViewModels
             Return True
         End Function
 
+        ''' <summary>Liegt eine Korrekturebene IM Objektstapel, ist der Basis-Cache für die Region-
+        ''' Patches nicht mehr die Wahrheit (die Korrektur wirkt auf das Komposit). Dann muss voll
+        ''' gerendert werden - das ist der bewusst in Kauf genommene Preis dieser Einsortierung.</summary>
+        ''' <summary>
+        ''' Legt eine NEUE Korrekturebene im Basisbild an, also unter allen Objekten (Ende der
+        ''' Ebenenliste).
+        '''
+        ''' Sie wurde zwischenzeitlich ganz OBEN einsortiert, damit sie sofort auch auf die Objekte
+        ''' wirkt. Der Preis dafür steht in RequiresFullRenderForStackedCorrections: sobald auch nur
+        ''' EINE Korrektur im Objektstapel liegt, ist der Basis-Cache nicht mehr die Wahrheit, und
+        ''' JEDE Objektänderung braucht einen Vollrender statt eines Region-Patches - dauerhaft, für
+        ''' das ganze Dokument. Der Normalfall ist aber die Korrektur am Bild, nicht über den
+        ''' Objekten. Deshalb: unten anlegen (schneller Weg bleibt erhalten), und wer sie über ein
+        ''' Objekt legen will, zieht sie im Ebenenpanel dorthin und zahlt den Vollrender bewusst
+        ''' (Nutzerentscheidung 2026-07-25).
+        ''' </summary>
+        Private Sub PlaceNewCorrectionLayerInBaseImage(layer As MaskedAdjustmentLayer)
+            If layer Is Nothing Then Return
+            layer.StackAboveAnnotationId = ""
+        End Sub
+
+        Private Function RequiresFullRenderForStackedCorrections() As Boolean
+            Return _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId))
+        End Function
+
         Private Sub RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
+            If RequiresFullRenderForStackedCorrections() Then
+                SchedulePreviewUpdate()
+                Return
+            End If
             ' Im Objekt-Anpassungsmodus (Anpassen/Farbe/Details+Effekte/Filter auf ein Objekt) leben die
             ' Reglerwerte bis zum Commit NUR im Editor-Puffer - das echte Objekt (das die Layer zeichnet)
             ' bekommt sie erst bei der Deselektion. Die Vorschau muss deshalb ueber den BAKED-Zweig laufen
@@ -15049,8 +15257,13 @@ Namespace ViewModels
             If row.AdjustmentLayer IsNot Nothing Then Return True
             If row.Annotation IsNot Nothing Then Return False
             If row.IsGroupHeader Then
-                If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, row.Group.Id, StringComparison.Ordinal)) Then Return True
+                ' OBJEKTE ZUERST: eine Gruppe darf beides enthalten. Wurde sie wegen einer einzigen
+                ' Korrektur darin als Korrektur-Gruppe eingestuft, war sie praktisch unverschiebbar -
+                ' CanDropLayerOn ließ sie weder auf Objektzeilen noch auf andere Gruppen (Nutzer-Befund
+                ' 2026-07-25). Die Korrekturen einer Objektgruppe hängen ohnehin per
+                ' StackAboveAnnotationId an ihrem Objekt und wandern mit ihm.
                 If AnnotationsInGroup(row.Group.Id).Count > 0 Then Return False
+                If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, row.Group.Id, StringComparison.Ordinal)) Then Return True
             End If
             Return Nothing
         End Function
@@ -15060,6 +15273,17 @@ Namespace ViewModels
             Dim a = RowIsAdjustmentKind(dragged)
             Dim b = RowIsAdjustmentKind(targetRow)
             If Not a.HasValue OrElse Not b.HasValue Then Return False
+            ' Eine KORREKTUREBENE darf in den Objektstapel gezogen werden - dort wirkt sie auf alles
+            ' unter ihr. Umgekehrt bleibt ein Objekt ein Objekt: es in den Korrekturblock zu ziehen
+            ' hätte keine Bedeutung.
+            If a.Value AndAlso Not b.Value Then Return dragged.AdjustmentLayer IsNot Nothing
+            ' Ein OBJEKT auf eine Korrekturzeile: erlaubt, wenn die Korrektur im Objektstapel hängt -
+            ' gemeint ist dann die Stelle dieser Korrektur (sonst fehlte in einer Gruppe mit Korrektur
+            ' genau diese Einfügestelle).
+            If Not a.Value AndAlso b.Value Then
+                Return targetRow.AdjustmentLayer IsNot Nothing AndAlso
+                       Not String.IsNullOrEmpty(targetRow.AdjustmentLayer.StackAboveAnnotationId)
+            End If
             Return a.Value = b.Value
         End Function
 
@@ -15067,6 +15291,78 @@ Namespace ViewModels
             If dragged Is Nothing OrElse targetRow Is Nothing Then Return
             If Not CanDropLayerOn(dragged, targetRow) Then Return
             If Object.ReferenceEquals(dragged, targetRow) Then Return
+
+            ' Objekt (oder eine Objektgruppe) auf eine im Stapel hängende Korrektur: die Korrektur klebt
+            ' an ihrem Anker-Objekt, also gilt dessen Zeile als Ziel.
+            If (dragged.Annotation IsNot Nothing OrElse
+                (dragged.IsGroupHeader AndAlso RowIsAdjustmentKind(dragged) = False)) AndAlso
+               targetRow.AdjustmentLayer IsNot Nothing Then
+                Dim anker = _annotations.FirstOrDefault(Function(x) x IsNot Nothing AndAlso
+                                                        String.Equals(x.Id, targetRow.AdjustmentLayer.StackAboveAnnotationId, StringComparison.Ordinal))
+                If anker Is Nothing Then Return
+                Dim ankerRow = _layerRows.FirstOrDefault(Function(r) Object.ReferenceEquals(r.Annotation, anker))
+                If ankerRow Is Nothing Then Return
+                ReorderLayerRelative(dragged, ankerRow, below:=False)
+                Return
+            End If
+
+            ' Korrekturebene IN den Objektstapel (oder wieder heraus): sie merkt sich, über welchem
+            ' Objekt sie liegt, und wirkt dann auf alles darunter. Leer = zurück ins Basisbild.
+            If dragged.AdjustmentLayer IsNot Nothing AndAlso (targetRow.Annotation IsNot Nothing OrElse targetRow.IsGroupHeader) Then
+                Dim ziel As ImageAnnotation = targetRow.Annotation
+                If ziel Is Nothing AndAlso targetRow.IsGroupHeader Then
+                    ' KOPFZEILE: untere Hälfte = HINEIN, als erste Zeile der Gruppe (über dem obersten
+                    ' Mitglied und mit dessen Gruppe). Obere Hälfte = darüber, also ausserhalb.
+                    Dim headerMembers = AnnotationsInGroup(targetRow.Group.Id)
+                    If headerMembers.Count = 0 Then Return
+                    PushUndo()
+                    dragged.AdjustmentLayer.StackAboveAnnotationId = headerMembers(headerMembers.Count - 1).Id
+                    dragged.AdjustmentLayer.GroupId = If(below, targetRow.Group.Id, "")
+                    CommitSelectionAdjustModeToModel()
+                    RebuildLayerRows()
+                    _hasChanges = True
+                    RaiseResetButtonStateChanged()
+                    SchedulePreviewUpdate()
+                    Return
+                End If
+                If ziel Is Nothing Then Return
+                ' Eine Korrektur DARF in einer Gruppe liegen - sie ist oft genau für eines der Objekte
+                ' darin gemacht. Sie erbt dann die Gruppenzugehörigkeit: das Auge der Gruppe blendet
+                ' sie mit aus, und im Panel steht sie eingerückt im Block. Beim Herausziehen fällt die
+                ' Zugehörigkeit wieder weg.
+                PushUndo()
+                ' „unterhalb abgelegt" heisst: unter diesem Objekt - dann gehört sie über das nächst
+                ' tiefere Objekt bzw. ins Basisbild, wenn es keines mehr gibt.
+                Dim zielIndex = _annotations.IndexOf(ziel)
+                If below Then
+                    Dim darunter = If(zielIndex > 0, _annotations(zielIndex - 1), Nothing)
+                    dragged.AdjustmentLayer.StackAboveAnnotationId = If(darunter Is Nothing, "", darunter.Id)
+                    dragged.AdjustmentLayer.GroupId = If(darunter Is Nothing, "", If(darunter.GroupId, ""))
+                Else
+                    dragged.AdjustmentLayer.StackAboveAnnotationId = ziel.Id
+                    dragged.AdjustmentLayer.GroupId = If(ziel.GroupId, "")
+                End If
+                CommitSelectionAdjustModeToModel()
+                RebuildLayerRows()
+                _hasChanges = True
+                RaiseResetButtonStateChanged()
+                SchedulePreviewUpdate()
+                Return
+            End If
+
+            ' Korrekturebene auf eine andere Korrektur des BASISBLOCKS: dort hat sie keine
+            ' Einsortierung mehr.
+            If dragged.AdjustmentLayer IsNot Nothing AndAlso targetRow.AdjustmentLayer IsNot Nothing AndAlso
+               String.IsNullOrEmpty(targetRow.AdjustmentLayer.StackAboveAnnotationId) AndAlso
+               Not String.IsNullOrEmpty(dragged.AdjustmentLayer.StackAboveAnnotationId) Then
+                PushUndo()
+                dragged.AdjustmentLayer.StackAboveAnnotationId = ""
+                RebuildLayerRows()
+                _hasChanges = True
+                RaiseResetButtonStateChanged()
+                SchedulePreviewUpdate()
+                Return
+            End If
 
             ' Gruppen im Spiel? Dann entscheidet der Ablageort auch über die ZUGEHÖRIGKEIT.
             If dragged.IsGroupHeader OrElse targetRow.IsGroupHeader OrElse
@@ -15294,22 +15590,26 @@ Namespace ViewModels
         Private Sub RasterizeSelectedAnnotation()
             If Not CanUsePixelTools Then Return
             If _rasterizeInFlight Then Return
-            Dim index = _selectedAnnotationIndex
-            If index < 0 OrElse index >= _annotations.Count Then Return
-            Dim annotation = _annotations(index)
-            If annotation Is Nothing Then Return
+            ' Eine GRUPPE bzw. Mehrfachauswahl wird als Ganzes gebacken - in EINEM Region-Commit und
+            ' EINEM Undo-Schritt, in Z-Reihenfolge von hinten nach vorn (Nutzerwunsch 2026-07-25).
+            Dim targets = SelectedAnnotations.Where(Function(a) a IsNot Nothing).
+                OrderBy(Function(a) _annotations.IndexOf(a)).ToList()
+            If targets.Count = 0 Then Return
 
             Dim baseW = GetBaseWidth()
             Dim baseH = GetBaseHeight()
             If baseW <= 0 OrElse baseH <= 0 OrElse Not _workingImage.IsInitialized Then Return
             CommitObjectAdjustModeToModel()
-            Dim rect = ImageProcessor.ComputeAnnotationDirtyRect(baseW, baseH, annotation, baseW, baseH)
+            Dim rect = SKRectI.Empty
+            For Each a In targets
+                rect = ImageProcessor.UnionRects(rect, ImageProcessor.ComputeAnnotationDirtyRect(baseW, baseH, a, baseW, baseH))
+            Next
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
 
-            ' Snapshot enthält das Objekt noch: Undo stellt Ebene UND Pixel wieder her.
+            ' Snapshot enthält die Objekte noch: Undo stellt Ebenen UND Pixel wieder her.
             PushUndo()
             Dim undoEntry = _lastPushedUndoEntry
-            Dim annClone = annotation.Clone()
+            Dim annClones = targets.Select(Function(a) a.Clone()).ToList()
             _rasterizeInFlight = True
             StatusText = LocalizationService.T("Ebene wird gerastert…")
 
@@ -15321,8 +15621,7 @@ Namespace ViewModels
                                 canvas.ClipRect(SKRect.Create(rect.Left, rect.Top, rect.Width, rect.Height))
                                 Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
                                 ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, full.Width, full.Height,
-                                                                       0, 0, full.Width, full.Height,
-                                                                       New List(Of ImageAnnotation) From {annClone})
+                                                                       0, 0, full.Width, full.Height, annClones)
                             End Using
                         End Sub)
                 End Function,
@@ -15335,21 +15634,17 @@ Namespace ViewModels
                     If undoEntry IsNot Nothing Then undoEntry.Patch = patch
                     ' Objekt aus dem Stapel nehmen - OHNE eigenen Undo-Push (der kam oben) - und
                     ' die Anzeige in EINEM Schritt auf den gebackenen Stand ziehen.
-                    Dim idx = _annotations.IndexOf(annotation)
-                    If idx >= 0 Then
-                        _annotations.RemoveAt(idx)
-                        If _selectedAnnotationIndex = idx Then
-                            SelectedAnnotationIndex = -1
-                        ElseIf _selectedAnnotationIndex > idx Then
-                            _selectedAnnotationIndex -= 1
-                            Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
-                            Me.RaisePropertyChanged(NameOf(SelectedLayer))
-                        End If
-                    End If
+                    For Each a In targets
+                        _annotations.Remove(a)
+                    Next
+                    DropOrphanedAnnotationGroups()
+                    SelectedAnnotationIndex = -1
+                    RebuildLayerRows()
                     _hasChanges = True
                     RaiseResetButtonStateChanged()
-                    AddHistoryEntry(LocalizationService.T("Ebene gerastert"))
-                    StatusText = LocalizationService.T("Ebene gerastert")
+                    Dim label = If(targets.Count > 1, LocalizationService.T("Ebenen gerastert"), LocalizationService.T("Ebene gerastert"))
+                    AddHistoryEntry(label)
+                    StatusText = label
                     SchedulePreviewUpdate()
                 End Sub)
         End Sub
@@ -15416,8 +15711,11 @@ Namespace ViewModels
                         " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
                 .MaskId = source.MaskId,
                 .Adjustments = New ImageAdjustments(),
-                .IsMaskLayer = source.IsMaskLayer
+                .IsMaskLayer = source.IsMaskLayer,
+                .StackAboveAnnotationId = source.StackAboveAnnotationId
             }
+            ' „Weitere Korrektur mit derselben Maske" gehört neben ihr Geschwister - also an dieselbe
+            ' Stelle im Stapel (StackAboveAnnotationId oben mitgenommen), nicht ans Ende.
             _maskedAdjustmentLayers.Insert(index + 1, layer)
             _selectedMaskedAdjustmentLayerId = layer.Id
             RebuildLayerRows()
@@ -15710,6 +16008,7 @@ Namespace ViewModels
                         .Adjustments = New ImageAdjustments(),
                         .IsMaskLayer = _activeSelectionIsMask
                     }
+                    PlaceNewCorrectionLayerInBaseImage(layer)
                     _maskedAdjustmentLayers.Add(layer)
                 End If
                 _selectionAdjustLayerId = layer.Id
@@ -15981,6 +16280,7 @@ Namespace ViewModels
             a.GlowBlur = CSng(_annotationGlowBlur)
             a.GlowStrength = CSng(_annotationGlowStrength)
             a.GlowColor = _annotationGlowColor
+            _annotationModelVersion += 1
             If previewSource IsNot Nothing Then
                 sceneSize = GetCurrentScenePixelSize()
                 Dim newDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(sceneSize.Width, sceneSize.Height, a,

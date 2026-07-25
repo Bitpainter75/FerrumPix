@@ -4268,4 +4268,7 @@
   <data name="Mehrfachauswahl_c20d2e98" xml:space="preserve">
     <value>Selezione multipla</value>
   </data>
+  <data name="Ebenen_gerastert_2f200a4a" xml:space="preserve">
+    <value>Livelli rasterizzati</value>
+  </data>
 </root>

@@ -237,6 +237,7 @@ Namespace Services
         Private _customName As String = ""
         ' Zugehörigkeit zu einer Objekt-Gruppe (leer = keine). Siehe GroupId.
         Private _groupId As String = ""
+        Private _id As String = ""
         ' Vorlagenname, aus dem ein Wasserzeichen entstanden ist. Leer = frei angelegt.
         Private _watermarkPresetName As String = ""
         ' Reiner UI-Zustand: gerade wird der Name inline bearbeitet (nicht persistiert, nicht geklont).
@@ -337,6 +338,19 @@ Namespace Services
                 SetField(_customName, If(value, ""))
                 RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(LayerLabel)))
                 RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(EditableName)))
+            End Set
+        End Property
+
+        ''' <summary>Stabile Kennung des Objekts. Nur intern gebraucht: eine Korrekturebene kann sich
+        ''' über <see cref="MaskedAdjustmentLayer.StackAboveAnnotationId"/> darauf beziehen und damit
+        ''' IN den Objektstapel einsortiert werden.</summary>
+        Public Property Id As String
+            Get
+                If String.IsNullOrEmpty(_id) Then _id = Guid.NewGuid().ToString("N")
+                Return _id
+            End Get
+            Set(value As String)
+                _id = If(value, "")
             End Set
         End Property
 
@@ -945,6 +959,7 @@ Namespace Services
                 .Kind = Kind,
                 .Text = Text,
                 .CustomName = CustomName,
+                .Id = Id,
                 .GroupId = GroupId,
                 .WatermarkPresetName = WatermarkPresetName,
                 .ImagePath = ImagePath,
@@ -1055,6 +1070,13 @@ Namespace Services
         ''' Renderer nicht gibt.</summary>
         Public Property GroupId As String = ""
 
+        ''' <summary>Leer = die Korrektur liegt im BASISBILD (schnell, im Basis-Cache) und wirkt damit
+        ''' unter allen Objekten - das ist der Normalfall. Steht hier die Id eines Objekts, ist die
+        ''' Korrektur ÜBER dieses Objekt einsortiert und wirkt auf alles, was darunter liegt: Basis
+        ''' UND die bis dahin gezeichneten Objekte. Solche Ebenen fallen aus dem Basis-Cache heraus,
+        ''' sie müssen bei jedem Render auf das Komposit angewendet werden.</summary>
+        Public Property StackAboveAnnotationId As String = ""
+
         ''' <summary>DEKLARATIVE Füllung (kein PNG/Objekt): leer = keine Füllung, sonst "Solid"/
         ''' "LinearGradient"/"RadialGradient". Bei einer AUSWAHL-Ebene wird die Füllung SICHTBAR in die
         ''' Auswahl komponiert (Farbe/Verlauf); bei einer MASKEN-Ebene stuft die LUMINANZ der Füllung die
@@ -1071,6 +1093,7 @@ Namespace Services
                 .Id = Id, .Name = Name, .MaskId = MaskId,
                 .IsVisible = IsVisible, .Opacity = Opacity, .FromPreset = FromPreset, .IsMaskLayer = IsMaskLayer,
                 .GroupId = GroupId,
+                .StackAboveAnnotationId = StackAboveAnnotationId,
                 .FillKind = FillKind, .FillColor = FillColor, .FillColor2 = FillColor2,
                 .FillAngle = FillAngle, .FillInverted = FillInverted,
                 .Adjustments = If(Adjustments Is Nothing, New ImageAdjustments(), Adjustments.Clone())
@@ -1431,6 +1454,17 @@ Namespace Services
             Dim result = New ImageAdjustments()
             result.CopyPixelAdjustmentsFrom(Me)
             Return result
+        End Function
+
+        ''' <summary>True, sobald mindestens eine Korrekturebene IN den Objektstapel einsortiert ist.
+        ''' Solche Ebenen wirken auf das Komposit und lassen sich deshalb nicht aus dem Basis-Cache
+        ''' bedienen - der Editor muss dann voll rendern statt nur eine Region zu flicken.</summary>
+        Public Function HasStackedCorrectionLayers() As Boolean
+            If MaskedAdjustmentLayers Is Nothing Then Return False
+            For Each l In MaskedAdjustmentLayers
+                If l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId) Then Return True
+            Next
+            Return False
         End Function
 
         ''' <summary>Findet die Gruppe eines Objekts (Nothing, wenn es keiner angehört).</summary>
@@ -3016,9 +3050,13 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
 
         ''' <summary>Wendet lokale Korrekturen in Ebenenreihenfolge an. Eine fehlende oder beschädigte
         ''' Maske bewirkt absichtlich gar nichts; sie darf nie zu einer globalen Korrektur werden.</summary>
+        ''' <param name="onlyStackedAboveId">Nothing = nur die Korrekturen des BASISBILDS (ohne
+        ''' Einsortierung in den Objektstapel). Sonst genau die Korrekturen, die über dem Objekt mit
+        ''' dieser Id liegen - sie wirken damit auf Basis UND die bereits gezeichneten Objekte.</param>
         Private Shared Function ApplyMaskedAdjustmentLayers(source As SKBitmap, adj As ImageAdjustments,
                                                              pipelineInputWidth As Integer,
-                                                             pipelineInputHeight As Integer) As SKBitmap
+                                                             pipelineInputHeight As Integer,
+                                                             Optional onlyStackedAboveId As String = Nothing) As SKBitmap
             Dim processed = CloneBitmap(source)
             If adj Is Nothing OrElse adj.MaskedAdjustmentLayers Is Nothing OrElse adj.Masks Is Nothing Then Return processed
 
@@ -3027,6 +3065,12 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                                      ToDictionary(Function(g) g.Key, Function(g) g.First(), StringComparer.Ordinal)
             For Each layer In adj.MaskedAdjustmentLayers
                 If Not adj.IsMaskedLayerRenderVisible(layer) Then Continue For
+                Dim stackedAbove = If(layer.StackAboveAnnotationId, "")
+                If onlyStackedAboveId Is Nothing Then
+                    If stackedAbove.Length > 0 Then Continue For          ' liegt im Objektstapel
+                ElseIf Not String.Equals(stackedAbove, onlyStackedAboveId, StringComparison.Ordinal) Then
+                    Continue For
+                End If
                 Dim hasAdj = layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.HasPixelAdjustments()
                 Dim hasFill = layer.HasFill()
                 ' Auch Ebenen OHNE Pixel-Anpassung verarbeiten, wenn sie eine deklarative Füllung tragen
@@ -4039,6 +4083,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                            ' (Nutzer-Befund 2026-07-24; exakt die im Kopf von ComputeBaseKey beschriebene
                            ' Fehlerklasse "Regler macht nix").
                            Return String.Join(":", l.Id, l.MaskId, l.IsVisible, l.Opacity, l.GroupId,
+                                              l.StackAboveAnnotationId,
                                               l.IsMaskLayer, l.FillKind, l.FillColor, l.FillColor2,
                                               KeyPart(l.FillAngle), l.FillInverted,
                                               String.Join(",", pixelValues))
@@ -4149,6 +4194,20 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function CloneBitmap(source As SKBitmap) As SKBitmap
             Dim clone = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(clone)
+                canvas.DrawBitmap(source, 0, 0)
+            End Using
+            Return clone
+        End Function
+
+        ''' <summary>Kopiert ein Bitmap in einen anderen Farbtyp (premultipliziert). Wird gebraucht, wo
+        ''' Stufen mit festem Farbtyp auf das Objekt-Komposit treffen - ohne die Umwandlung fallen sie
+        ''' still durch (bekannte Fallenklasse dieses Projekts).</summary>
+        Private Shared Function ConvertBitmapToColorType(source As SKBitmap, colorType As SKColorType) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            If source.ColorType = colorType Then Return CloneBitmap(source)
+            Dim clone = New SKBitmap(source.Width, source.Height, colorType, SKAlphaType.Premul)
+            Using canvas = New SKCanvas(clone)
+                canvas.Clear(SKColors.Transparent)
                 canvas.DrawBitmap(source, 0, 0)
             End Using
             Return clone
@@ -6441,9 +6500,35 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
             If Not hasObjects Then Return result
 
-            Using canvas = New SKCanvas(result)
-                DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height, adj.Annotations)
-            End Using
+            ' Korrekturebenen, die IN den Objektstapel einsortiert sind, wirken auf alles, was unter
+            ' ihnen liegt. Dafür werden die Objekte der Reihe nach gezeichnet und nach jedem Objekt die
+            ' dort eingehängten Korrekturen auf das bisherige Komposit angewendet. Ohne solche Ebenen
+            ' (Normalfall) bleibt es bei EINEM Aufruf über alle Objekte - kein Mehraufwand.
+            Dim stacked = If(adj.MaskedAdjustmentLayers, New System.Collections.Generic.List(Of MaskedAdjustmentLayer)()).
+                Where(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId)).ToList()
+            If stacked.Count = 0 Then
+                Using canvas = New SKCanvas(result)
+                    DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height, adj.Annotations)
+                End Using
+                Return result
+            End If
+
+            For Each annotation In adj.Annotations
+                Using canvas = New SKCanvas(result)
+                    DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height,
+                                            New System.Collections.Generic.List(Of ImageAnnotation) From {annotation})
+                End Using
+                If stacked.Any(Function(l) String.Equals(l.StackAboveAnnotationId, annotation.Id, StringComparison.Ordinal)) Then
+                    ' FARBTYP: das Objekt-Komposit ist Rgba8888, die Masken-Komposition rechnet aber in
+                    ' Bgra8888 (TryBorrowBgraBuffer) und fiele sonst STILL auf die Baseline zurück - die
+                    ' Korrektur wäre wirkungslos. Deshalb für den Durchlauf umwandeln und danach zurück.
+                    Using bgra = ConvertBitmapToColorType(result, SKColorType.Bgra8888)
+                        Using corrected = ApplyMaskedAdjustmentLayers(bgra, adj, source.Width, source.Height, annotation.Id)
+                            result = ReplaceBitmap(result, ConvertBitmapToColorType(corrected, result.ColorType))
+                        End Using
+                    End Using
+                End If
+            Next
             Return result
         End Function
 
@@ -10119,6 +10204,59 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' (Display-Bildraum). Die Strichpunkte liegen im Display-Bildraum; sie werden um rect.Left/Top
         ''' in die Stempel-lokalen Koordinaten verschoben. Für den Commit eines Strichs, danach über
         ''' ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnet.</summary>
+        ''' <summary>Bildet eine gespeicherte Maske im QUELLRAUM auf ein neues Rechteck ab - dieselbe
+        ''' Abbildung, die eine Gruppen-Transformation auf ihre Objekte anwendet. Ohne das bliebe die
+        ''' Korrektur einer mitbewegten Ebene an Ort und Größe stehen (Nutzer-Befund 2026-07-25).
+        ''' Die Maske wird dafür neu gerastert - das kostet etwas Kantenschärfe, ist aber die einzige
+        ''' Möglichkeit, solange die Ursprungsform nicht als Geometrie aufbewahrt wird.</summary>
+        Public Shared Function TransformMaskRegion(mask As ImageMask,
+                                                   scaleX As Double, scaleY As Double,
+                                                   pivotX As Double, pivotY As Double,
+                                                   offsetX As Double, offsetY As Double) As Boolean
+            If mask Is Nothing OrElse String.IsNullOrWhiteSpace(mask.PngBase64) Then Return False
+            If scaleX <= 0 OrElse scaleY <= 0 Then Return False
+
+            Dim neuLinks = pivotX + (mask.Left - pivotX) * scaleX + offsetX
+            Dim neuOben = pivotY + (mask.Top - pivotY) * scaleY + offsetY
+            Dim neuRechts = pivotX + (mask.Right - pivotX) * scaleX + offsetX
+            Dim neuUnten = pivotY + (mask.Bottom - pivotY) * scaleY + offsetY
+
+            Dim l = CInt(Math.Round(neuLinks)), t = CInt(Math.Round(neuOben))
+            Dim r = CInt(Math.Round(neuRechts)), b = CInt(Math.Round(neuUnten))
+            Dim w = Math.Max(1, r - l), h = Math.Max(1, b - t)
+
+            Dim decoded As SKBitmap = Nothing
+            Try
+                decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
+                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                If w = decoded.Width AndAlso h = decoded.Height Then
+                    ' Reine Verschiebung: die Pixel bleiben, nur das Rechteck wandert.
+                    mask.Left = l : mask.Top = t : mask.Right = l + decoded.Width : mask.Bottom = t + decoded.Height
+                    Return True
+                End If
+                Using skaliert = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(skaliert)
+                        canvas.Clear(SKColors.Transparent)
+                        Using paint = New SKPaint With {.IsAntialias = True, .FilterQuality = SKFilterQuality.High}
+                            canvas.DrawBitmap(decoded, New SKRect(0, 0, w, h), paint)
+                        End Using
+                    End Using
+                    Using img = SKImage.FromPixels(skaliert.PeekPixels())
+                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return False
+                            mask.PngBase64 = Convert.ToBase64String(data.ToArray())
+                        End Using
+                    End Using
+                End Using
+                mask.Left = l : mask.Top = t : mask.Right = l + w : mask.Bottom = t + h
+                Return True
+            Catch
+                Return False
+            Finally
+                decoded?.Dispose()
+            End Try
+        End Function
+
         Public Shared Function BuildSoftBrushStampMask(pts As IReadOnlyList(Of SKPoint), radius As Single,
                                                        softnessPx As Single, rect As SKRectI) As SKBitmap
             If pts Is Nothing OrElse pts.Count = 0 OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
