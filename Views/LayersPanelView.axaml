@@ -58,14 +58,28 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border Classes="layers-panel-row" Padding="8,5" MinHeight="42"
+                                Classes.multi-selected="{Binding IsInMultiSelection}"
                                 DragDrop.AllowDrop="True"
                                 PointerPressed="OnLayerRowPointerPressed"
                                 PointerMoved="OnLayerRowPointerMoved"
                                 ContextRequested="OnLayerRowContextRequested"
                                 DragDrop.DragOver="OnLayerRowDragOver"
                                 DragDrop.Drop="OnLayerRowDrop">
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <Border Grid.Column="0" Width="30" Height="30" CornerRadius="3"
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="{Binding IndentMargin}">
+                                <!-- Klapp-Pfeil nur bei einer Gruppen-Kopfzeile; sonst hält die Spalte
+                                     nur die Breite, damit Symbole und Namen aller Zeilen fluchten. -->
+                                <Button Grid.Column="0" Classes="ghost"
+                                        Width="16" Height="30" Padding="0" MinWidth="16"
+                                        Background="Transparent" BorderThickness="0"
+                                        IsVisible="{Binding IsGroupHeader}"
+                                        Command="{Binding DataContext.ToggleAnnotationGroupCollapsedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="Gruppe auf- oder zuklappen">
+                                    <icons:SvgIcon Source="{Binding GroupToggleIconSource}"
+                                                   Width="12" Height="12"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Button>
+                                <Border Grid.Column="1" Width="30" Height="30" CornerRadius="3"
                                         BorderThickness="1"
                                         BorderBrush="{DynamicResource FP.Border.Normal}"
                                         Background="{DynamicResource FP.Bg.Root}">
@@ -75,7 +89,7 @@
                                 </Border>
                                 <!-- Name: Doppelklick auf die Beschriftung öffnet das Eingabefeld (Enter oder
                                      Verlassen übernimmt, Esc verwirft). Beides teilt sich die Zelle. -->
-                                <Panel Grid.Column="1" Margin="9,0,6,0">
+                                <Panel Grid.Column="2" Margin="9,0,6,0">
                                     <TextBlock Classes="layer-name"
                                                Text="{Binding LayerLabel}"
                                                FontSize="{DynamicResource FP.Font.Small}"
@@ -93,7 +107,7 @@
                                              KeyDown="OnLayerRenameKeyDown"
                                              LostFocus="OnLayerRenameLostFocus" />
                                 </Panel>
-                                <ToggleButton Grid.Column="2"
+                                <ToggleButton Grid.Column="3"
                                               Classes="ghost layer-eye"
                                               Width="24" Height="24" Padding="0"
                                               IsChecked="{Binding IsVisible, Mode=OneWay}"
@@ -265,6 +279,23 @@
                             IsEnabled="{Binding HasSelectedAdjustmentLayer}"
                             ToolTip.Tip="Neue Korrektur mit derselben Maske">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <!-- Gruppieren/Gruppierung aufheben: der sichtbare Weg zu Gruppen (das Kürzel
+                         Strg+G kennt niemand, der es nicht gelesen hat). Aktiv, sobald mehrere Ebenen
+                         derselben Art markiert sind bzw. eine markierte Ebene in einer Gruppe liegt. -->
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding GroupSelectedAnnotationsCommand}"
+                            IsEnabled="{Binding CanGroupSelectedAnnotations}"
+                            ToolTip.Tip="Markierte Ebenen gruppieren (Strg+G)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding UngroupSelectedAnnotationsCommand}"
+                            IsEnabled="{Binding CanUngroupSelectedAnnotations}"
+                            ToolTip.Tip="Gruppierung aufheben (Strg+Umschalt+G)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-x.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"

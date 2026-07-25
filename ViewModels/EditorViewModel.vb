@@ -607,6 +607,12 @@ Namespace ViewModels
         Private _selectedLayerRow As LayerPanelRow = Nothing
         Private _selectedMaskedAdjustmentLayerId As String = ""
         Private _selectedAnnotationIndex As Integer = -1
+        ''' <summary>ZUSÄTZLICH markierte Objekte neben dem Anker (`_selectedAnnotationIndex`).
+        ''' Bewusst als REFERENZEN und nicht als Indizes: Umsortieren, Anlegen und Löschen verschieben
+        ''' Indizes laufend, Referenzen überleben das. Der Anker steht NICHT in dieser Liste - er bleibt
+        ''' der Index, mit dem alle bestehenden Pfade (Eigenschaften-Panel, Ghost, Anpassungsmodus)
+        ''' rechnen; die Liste beschreibt nur die Erweiterung auf eine Mehrfachauswahl.</summary>
+        Private ReadOnly _extraSelectedAnnotations As New List(Of ImageAnnotation)()
         ' Verfolgt den Raster-Paint-Eintrag, an den die aktuell laufende Pinsel-/Radiergummi-"Sitzung"
         ' noch weitere Striche anhängt, statt für jeden einzelnen Strich einen neuen Eintrag anzulegen (siehe
         ' AddBrushStroke). Per Objektreferenz statt Index verfolgt, damit ein zwischenzeitliches
@@ -824,6 +830,20 @@ Namespace ViewModels
 
         ''' <summary>Auswahl des gemeinsamen Panel-Stapels. Objektzeilen übersetzen weiter auf den
         ''' bestehenden SelectedAnnotationIndex; Korrekturzeilen bleiben ein eigenes Renderziel.</summary>
+        ''' <summary>Setzt die View kurz vor einem RECHTSklick auf eine bereits markierte Zeile: die
+        ''' ListBox setzt ihr SelectedItem auch bei der rechten Maustaste, und ohne diese Ausnahme
+        ''' zerstörte das die Mehrfachauswahl, bevor das Kontextmenü aufgeht. Wird beim nächsten
+        ''' Zeilenwechsel verbraucht.</summary>
+        Public Property PreserveMultiSelectionOnNextRowChange As Boolean
+            Get
+                Return _preserveMultiSelectionOnNextRowChange
+            End Get
+            Set(value As Boolean)
+                _preserveMultiSelectionOnNextRowChange = value
+            End Set
+        End Property
+        Private _preserveMultiSelectionOnNextRowChange As Boolean
+
         Public Property SelectedLayerRow As LayerPanelRow
             Get
                 Return _selectedLayerRow
@@ -838,11 +858,83 @@ Namespace ViewModels
                     ' Korrektur als seine Bildwerte parken.
                     CommitSelectionAdjustModeToModel()
                 End If
-                If annotationIndex >= 0 AndAlso annotationIndex < _annotations.Count Then
+                If value IsNot Nothing AndAlso value.IsGroupHeader Then
+                    ' Kopfzeile einer Gruppe: alle Mitglieder markieren, Anker ist das oberste.
+                    Dim members = AnnotationsInGroup(value.Group.Id)
+                    Dim layerMembers = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing AndAlso
+                                                                     String.Equals(l.GroupId, value.Group.Id, StringComparison.Ordinal)).ToList()
+                    _extraSelectedAdjustmentLayers.Clear()
+                    _selectedMaskedAdjustmentLayerId = ""
+                    If members.Count = 0 AndAlso layerMembers.Count > 0 Then
+                        ' Gruppe aus Korrekturebenen
+                        SelectedAnnotationIndex = -1
+                        _selectedMaskedAdjustmentLayerId = layerMembers(layerMembers.Count - 1).Id
+                        For Each l In layerMembers
+                            If l.Id <> _selectedMaskedAdjustmentLayerId Then _extraSelectedAdjustmentLayers.Add(l)
+                        Next
+                        RaiseMultiSelectionChanged()
+                    ElseIf members.Count = 0 Then
+                        SelectedAnnotationIndex = -1
+                    Else
+                        SelectAnnotationWithGroup(_annotations.IndexOf(members(members.Count - 1)))
+                    End If
+                    _selectedLayerRow = value
+                    RaiseLayerPanelSelectionChanged()
+                    If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+                    RefreshSelectionAdjustMode()
+                    Return
+                ElseIf annotationIndex >= 0 AndAlso annotationIndex < _annotations.Count Then
+                    ' Eine MITGLIEDS-Zeile meint bewusst das einzelne Objekt (die Gruppe wählt man über
+                    ' ihre Kopfzeile oder durch Anklicken auf der Leinwand).
+                    ' Gehört die Zeile bereits zur MEHRFACHauswahl, bleibt die Menge bestehen und nur der
+                    ' Anker wandert: sonst zerstörte schon der Rechtsklick auf ein markiertes Objekt die
+                    ' Auswahl, bevor das Kontextmenü überhaupt aufgeht (die ListBox setzt ihr SelectedItem
+                    ' auch bei der rechten Maustaste).
+                    ' Die Menge bleibt NUR beim Rechtsklick erhalten (Kontextmenü). Ein normaler
+                    ' Klick auf eine Zeile grenzt bewusst auf dieses eine Objekt ein - sonst käme man
+                    ' in einer Gruppe nie an ein einzelnes Mitglied (Nutzer-Befund 2026-07-25).
+                    Dim keepSet = _preserveMultiSelectionOnNextRowChange AndAlso
+                                  IsAnnotationSelected(_annotations(annotationIndex)) AndAlso HasMultiAnnotationSelection
+                    ' Beim Ankerwechsel MUSS der bisherige Anker in die Zusatzliste - er ist Teil der
+                    ' Auswahl und stünde sonst als einziger nicht mehr darin (Nutzer-Befund: nach
+                    ' Umschalt+Klick verlor die zuerst markierte Ebene beim Rechtsklick ihre Markierung).
+                    Dim keptExtras = If(keepSet, _extraSelectedAnnotations.ToList(), New List(Of ImageAnnotation)())
+                    Dim previousAnchor As ImageAnnotation = Nothing
+                    If keepSet AndAlso _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
+                        previousAnchor = _annotations(_selectedAnnotationIndex)
+                    End If
                     _selectedMaskedAdjustmentLayerId = ""
                     SelectedAnnotationIndex = annotationIndex
+                    If keepSet Then
+                        Dim newAnchor = _annotations(annotationIndex)
+                        If previousAnchor IsNot Nothing AndAlso Not Object.ReferenceEquals(previousAnchor, newAnchor) Then
+                            keptExtras.Add(previousAnchor)
+                        End If
+                        For Each a In keptExtras
+                            If Not Object.ReferenceEquals(a, newAnchor) AndAlso Not _extraSelectedAnnotations.Contains(a) Then
+                                _extraSelectedAnnotations.Add(a)
+                            End If
+                        Next
+                        RaiseMultiSelectionChanged()
+                    End If
                     _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) Object.ReferenceEquals(r.Annotation, _annotations(annotationIndex)))
                 ElseIf Not String.IsNullOrWhiteSpace(adjustmentId) Then
+                    ' Dieselbe Regel für Korrekturebenen: eine bereits mitmarkierte Zeile behält die Menge -
+                    ' inklusive der bisherigen Hauptebene, die dabei in die Zusatzliste rückt.
+                    Dim keepLayerSet = _preserveMultiSelectionOnNextRowChange AndAlso
+                                       value?.AdjustmentLayer IsNot Nothing AndAlso
+                                       IsAdjustmentLayerSelected(value.AdjustmentLayer) AndAlso
+                                       SelectedAdjustmentLayers.Count > 1
+                    If keepLayerSet Then
+                        Dim previousPrimary = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+                        If previousPrimary IsNot Nothing AndAlso previousPrimary.Id <> adjustmentId AndAlso
+                           Not _extraSelectedAdjustmentLayers.Contains(previousPrimary) Then
+                            _extraSelectedAdjustmentLayers.Add(previousPrimary)
+                        End If
+                        _extraSelectedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.Id = adjustmentId)
+                    Else
+                        _extraSelectedAdjustmentLayers.Clear()
+                    End If
                     _selectedMaskedAdjustmentLayerId = adjustmentId
                     SelectedAnnotationIndex = -1
                     _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) r.AdjustmentLayer IsNot Nothing AndAlso r.AdjustmentLayer.Id = adjustmentId)
@@ -862,6 +954,7 @@ Namespace ViewModels
                     ClearSelection(captureUndo:=False)
                 End If
                 RefreshSelectionAdjustMode()
+                _preserveMultiSelectionOnNextRowChange = False
             End Set
         End Property
 
@@ -917,11 +1010,30 @@ Namespace ViewModels
             _suppressLayerRowSelectionSync = True
             Try
                 _layerRows.Clear()
+                ' Von vorn (oberste Ebene) nach hinten. Trifft der Durchlauf auf ein Gruppenmitglied,
+                ' kommt zuerst die Kopfzeile der Gruppe und danach - eingerückt - ihre Mitglieder.
+                ' Mitglieder liegen zusammenhängend (siehe GroupSelectedAnnotations), der Block ist also
+                ' genau hier zu Ende; eine eingeklappte Gruppe zeigt nur ihre Kopfzeile.
+                Dim emittedGroups As New HashSet(Of String)(StringComparer.Ordinal)
                 For i = _annotations.Count - 1 To 0 Step -1
-                    _layerRows.Add(New LayerPanelRow(_annotations(i)))
+                    Dim a = _annotations(i)
+                    Dim grp = If(a Is Nothing, Nothing, FindAnnotationGroup(a.GroupId))
+                    If grp Is Nothing Then
+                        _layerRows.Add(New LayerPanelRow(a))
+                        Continue For
+                    End If
+                    If emittedGroups.Add(grp.Id) Then _layerRows.Add(New LayerPanelRow(grp))
+                    If Not grp.IsCollapsed Then _layerRows.Add(New LayerPanelRow(a, grp))
                 Next
                 For i = _maskedAdjustmentLayers.Count - 1 To 0 Step -1
-                    _layerRows.Add(New LayerPanelRow(_maskedAdjustmentLayers(i)))
+                    Dim l = _maskedAdjustmentLayers(i)
+                    Dim lgrp = If(l Is Nothing, Nothing, FindAnnotationGroup(l.GroupId))
+                    If lgrp Is Nothing Then
+                        _layerRows.Add(New LayerPanelRow(l))
+                        Continue For
+                    End If
+                    If emittedGroups.Add(lgrp.Id) Then _layerRows.Add(New LayerPanelRow(lgrp))
+                    If Not lgrp.IsCollapsed Then _layerRows.Add(New LayerPanelRow(l, lgrp))
                 Next
                 _selectedLayerRow = _layerRows.FirstOrDefault(Function(r)
                     Return (selectedAnnotation IsNot Nothing AndAlso Object.ReferenceEquals(r.Annotation, selectedAnnotation)) OrElse
@@ -934,6 +1046,7 @@ Namespace ViewModels
             End Try
             Me.RaisePropertyChanged(NameOf(SelectedLayer))
             RaiseLayerPanelSelectionChanged()
+            RefreshLayerRowSelectionMarks()
         End Sub
 
         Private Sub RaiseLayerPanelSelectionChanged()
@@ -1037,6 +1150,8 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowWatermarkAnchorControls As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return EffectiveAnnotationKind = "Watermark"
             End Get
         End Property
@@ -1172,6 +1287,7 @@ Namespace ViewModels
         Public ReadOnly Property ShowSelectedSvgOverlay As Boolean
             Get
                 Return _selectedAnnotationOverlayImage IsNot Nothing AndAlso
+                       Not HasMultiAnnotationSelection AndAlso
                        ((_annotationPlacementEditActive AndAlso _placementStartRegionCleared) OrElse _placementGhostLinger)
             End Get
         End Property
@@ -1855,9 +1971,13 @@ Namespace ViewModels
             End Get
             Set(value As Integer)
                 Dim clamped = If(value >= 0 AndAlso value < _annotations.Count, value, -1)
-                If clamped = _selectedAnnotationIndex Then Return
+                If clamped = _selectedAnnotationIndex AndAlso _extraSelectedAnnotations.Count = 0 Then Return
                 ' Ebenenwechsel beendet eine laufende Pinsel-/Radiergummi-Mal-Sitzung (siehe AddBrushStroke).
                 _pixelEditLayer.ResetActiveStroke()
+                ' Ein einfaches Setzen des Ankers ist immer eine EINZELauswahl - die Mehrfachauswahl
+                ' entsteht ausschliesslich ueber SelectAnnotationWithGroup/ToggleAnnotationInSelection.
+                ' So bleiben die vielen bestehenden Aufrufstellen unveraendert richtig.
+                _extraSelectedAnnotations.Clear()
                 _selectedAnnotationIndex = clamped
                 If clamped >= 0 Then
                     _selectedMaskedAdjustmentLayerId = ""
@@ -1914,6 +2034,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
+            Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
+                Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
@@ -1942,8 +2064,516 @@ Namespace ViewModels
                 ' Objekt-Layer sind im Editor echte Overlays. Der Wechsel aktualisiert nur den
                 ' Overlay-Zustand, nicht die Pixelvorschau.
                 RequestOverlayStateNotify()
+                RaiseMultiSelectionChanged()
             End Set
         End Property
+
+        ' ===================== Mehrfachauswahl und Gruppen =====================
+
+        ''' <summary>Die Objekt-Gruppen des Dokuments (Rezeptdaten, siehe AnnotationGroup).</summary>
+        Private ReadOnly _annotationGroups As New List(Of AnnotationGroup)()
+
+        Public ReadOnly Property AnnotationGroups As IReadOnlyList(Of AnnotationGroup)
+            Get
+                Return _annotationGroups
+            End Get
+        End Property
+
+        ''' <summary>Alle markierten Objekte: der Anker zuerst, danach die zusätzlich markierten.
+        ''' Bereits gelöschte Objekte fallen dabei heraus - deshalb wird hier gefiltert statt beim
+        ''' Löschen aufzuräumen (ein vergessener Aufräumpfad wäre sonst eine tote Referenz).</summary>
+        Public ReadOnly Property SelectedAnnotations As IReadOnlyList(Of ImageAnnotation)
+            Get
+                Dim result As New List(Of ImageAnnotation)()
+                If _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
+                    result.Add(_annotations(_selectedAnnotationIndex))
+                End If
+                For Each a In _extraSelectedAnnotations
+                    If a IsNot Nothing AndAlso _annotations.Contains(a) AndAlso Not result.Contains(a) Then result.Add(a)
+                Next
+                Return result
+            End Get
+        End Property
+
+        ''' <summary>Indizes der markierten Objekte in Z-Reihenfolge (aufsteigend).</summary>
+        Public Function SelectedAnnotationIndices() As List(Of Integer)
+            Dim result = SelectedAnnotations.Select(Function(a) _annotations.IndexOf(a)).
+                Where(Function(i) i >= 0).Distinct().ToList()
+            result.Sort()
+            Return result
+        End Function
+
+        Public ReadOnly Property SelectedAnnotationCount As Integer
+            Get
+                Return SelectedAnnotations.Count
+            End Get
+        End Property
+
+        ''' <summary>True, sobald mehr als ein Objekt markiert ist - dann arbeiten Rahmen, Anfasser und
+        ''' Transformationen auf der gemeinsamen Box statt auf einem Objekt.</summary>
+        Public ReadOnly Property HasMultiAnnotationSelection As Boolean
+            Get
+                Return SelectedAnnotationCount > 1
+            End Get
+        End Property
+
+        Public Function IsAnnotationSelected(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing Then Return False
+            Return SelectedAnnotations.Contains(annotation)
+        End Function
+
+        ''' <summary>Markiert im Panel alle Zeilen, die zur Mehrfachauswahl gehören.</summary>
+        Private Sub RefreshLayerRowSelectionMarks()
+            Dim objects = SelectedAnnotations
+            Dim layers = SelectedAdjustmentLayers
+            Dim mehrere = objects.Count + layers.Count > 1
+            For Each row In _layerRows
+                Dim drin = mehrere AndAlso ((row.Annotation IsNot Nothing AndAlso objects.Contains(row.Annotation)) OrElse
+                                            (row.AdjustmentLayer IsNot Nothing AndAlso layers.Contains(row.AdjustmentLayer)))
+                row.IsInMultiSelection = drin
+            Next
+        End Sub
+
+        Private Sub RaiseMultiSelectionChanged()
+            RefreshLayerRowSelectionMarks()
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationCount))
+            Me.RaisePropertyChanged(NameOf(HasMultiAnnotationSelection))
+            Me.RaisePropertyChanged(NameOf(CanGroupSelectedAnnotations))
+            Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
+            Me.RaisePropertyChanged(NameOf(CanUngroupSelectedAnnotations))
+        End Sub
+
+        Public Function FindAnnotationGroup(groupId As String) As AnnotationGroup
+            If String.IsNullOrEmpty(groupId) Then Return Nothing
+            Return _annotationGroups.FirstOrDefault(Function(g) g IsNot Nothing AndAlso String.Equals(g.Id, groupId, StringComparison.Ordinal))
+        End Function
+
+        ''' <summary>Alle Mitglieder einer Gruppe in Z-Reihenfolge.</summary>
+        Public Function AnnotationsInGroup(groupId As String) As List(Of ImageAnnotation)
+            If String.IsNullOrEmpty(groupId) Then Return New List(Of ImageAnnotation)()
+            Return _annotations.Where(Function(a) a IsNot Nothing AndAlso String.Equals(a.GroupId, groupId, StringComparison.Ordinal)).ToList()
+        End Function
+
+        ''' <summary>Entfernt Gruppen ohne Mitglieder. Läuft nach jedem Eingriff, der Objekte entfernt
+        ''' oder ihre Zugehörigkeit ändert - eine leere Gruppe hätte im Panel eine Zeile ohne Inhalt.</summary>
+        Private Sub DropOrphanedAnnotationGroups()
+            For i = _annotationGroups.Count - 1 To 0 Step -1
+                Dim grp = _annotationGroups(i)
+                Dim hatMitglieder = grp IsNot Nothing AndAlso
+                    (_annotations.Any(Function(a) a IsNot Nothing AndAlso String.Equals(a.GroupId, grp.Id, StringComparison.Ordinal)) OrElse
+                     _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, grp.Id, StringComparison.Ordinal)))
+                If Not hatMitglieder Then _annotationGroups.RemoveAt(i)
+            Next
+        End Sub
+
+        ''' <summary>Auswahl über die Leinwand: trifft der Klick ein Gruppenmitglied, wird die GANZE
+        ''' Gruppe markiert (Anker bleibt das getroffene Objekt). Ein einzelnes Mitglied bekommt man über
+        ''' seine Zeile im Ebenen-Panel oder per Strg+Klick.</summary>
+        Public Sub SelectAnnotationWithGroup(index As Integer)
+            If index < 0 OrElse index >= _annotations.Count Then
+                SelectedAnnotationIndex = -1
+                Return
+            End If
+            Dim hit = _annotations(index)
+            Dim members = AnnotationsInGroup(hit.GroupId)
+            SelectedAnnotationIndex = index          ' setzt die Menge auf den Anker zurück
+            If members.Count > 1 Then
+                For Each m In members
+                    If Not Object.ReferenceEquals(m, hit) Then _extraSelectedAnnotations.Add(m)
+                Next
+                RaiseMultiSelectionChanged()
+                RequestOverlayStateNotify()
+            End If
+        End Sub
+
+        ''' <summary>Strg+Klick: Objekt zur Auswahl hinzunehmen oder herausnehmen. Das zuletzt
+        ''' hinzugefügte Objekt wird der neue Anker - so beschreibt das Eigenschaften-Panel immer das
+        ''' Objekt, das man gerade angefasst hat.</summary>
+        Public Sub ToggleAnnotationInSelection(index As Integer)
+            If index < 0 OrElse index >= _annotations.Count Then Return
+            Dim target = _annotations(index)
+
+            If IsAnnotationSelected(target) Then
+                If SelectedAnnotationCount = 1 Then
+                    SelectedAnnotationIndex = -1
+                    Return
+                End If
+                If _selectedAnnotationIndex = index Then
+                    ' Der Anker fliegt raus: ein anderes markiertes Objekt übernimmt.
+                    Dim nextAnchor = _extraSelectedAnnotations.FirstOrDefault(Function(a) a IsNot Nothing AndAlso _annotations.Contains(a))
+                    _extraSelectedAnnotations.Remove(nextAnchor)
+                    Dim rest = _extraSelectedAnnotations.ToList()
+                    SelectedAnnotationIndex = _annotations.IndexOf(nextAnchor)
+                    _extraSelectedAnnotations.AddRange(rest)
+                Else
+                    _extraSelectedAnnotations.Remove(target)
+                End If
+            Else
+                Dim rest = _extraSelectedAnnotations.ToList()
+                Dim previousAnchor = If(_selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count,
+                                        _annotations(_selectedAnnotationIndex), Nothing)
+                SelectedAnnotationIndex = index
+                _extraSelectedAnnotations.AddRange(rest)
+                If previousAnchor IsNot Nothing AndAlso Not Object.ReferenceEquals(previousAnchor, target) Then
+                    _extraSelectedAnnotations.Add(previousAnchor)
+                End If
+            End If
+            RaiseMultiSelectionChanged()
+            RequestOverlayStateNotify()
+        End Sub
+
+        ''' <summary>Umschalt+Klick: alles vom Anker bis zum angeklickten Objekt markieren (in
+        ''' Z-Reihenfolge, unabhängig davon, ob nach oben oder unten geklickt wurde). Ohne Anker
+        ''' verhält es sich wie ein einfacher Klick.</summary>
+        Public Sub SelectAnnotationRangeTo(index As Integer)
+            If index < 0 OrElse index >= _annotations.Count Then Return
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then
+                SelectAnnotationWithGroup(index)
+                Return
+            End If
+            Dim anchorIndex = _selectedAnnotationIndex
+            Dim first = Math.Min(anchorIndex, index)
+            Dim last = Math.Max(anchorIndex, index)
+            _extraSelectedAnnotations.Clear()
+            For i = first To last
+                If i <> anchorIndex Then _extraSelectedAnnotations.Add(_annotations(i))
+            Next
+            RaiseMultiSelectionChanged()
+            RequestOverlayStateNotify()
+        End Sub
+
+        ''' <summary>Alle Objekte markieren, deren Anzeige-Rechteck das aufgezogene Rechteck schneidet
+        ''' (Prozent des angezeigten Bildes). Unsichtbare Objekte und Mitglieder ausgeblendeter Gruppen
+        ''' bleiben außen vor - was man nicht sieht, will man nicht versehentlich mitziehen.
+        ''' Trifft das Rechteck ein Gruppenmitglied, kommt die ganze Gruppe mit.</summary>
+        Public Sub SelectAnnotationsInRectPercent(x As Double, y As Double, width As Double, height As Double)
+            Dim left = Math.Min(x, x + width), top = Math.Min(y, y + height)
+            Dim right = Math.Max(x, x + width), bottom = Math.Max(y, y + height)
+            Dim adj = GetCurrentAdjustments(forPreview:=True)
+
+            Dim hits As New List(Of ImageAnnotation)()
+            For Each a In _annotations
+                If a Is Nothing OrElse Not adj.IsAnnotationRenderVisible(a) Then Continue For
+                Dim r = StoredAnnotationRectToDisplayPercent(a)
+                If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
+                If r.X > right OrElse r.X + r.Width < left OrElse r.Y > bottom OrElse r.Y + r.Height < top Then Continue For
+                hits.Add(a)
+                If Not String.IsNullOrEmpty(a.GroupId) Then
+                    For Each m In AnnotationsInGroup(a.GroupId)
+                        If Not hits.Contains(m) Then hits.Add(m)
+                    Next
+                End If
+            Next
+
+            If hits.Count = 0 Then
+                SelectedAnnotationIndex = -1
+                Return
+            End If
+            SelectedAnnotationIndex = _annotations.IndexOf(hits(hits.Count - 1))
+            For Each a In hits
+                If Not Object.ReferenceEquals(a, _annotations(_selectedAnnotationIndex)) Then _extraSelectedAnnotations.Add(a)
+            Next
+            RaiseMultiSelectionChanged()
+            RequestOverlayStateNotify()
+        End Sub
+
+        ''' <summary>Löscht ALLE markierten Objekte in einem Undo-Schritt (das Kontextmenü bietet das
+        ''' bei einer Mehrfachauswahl statt „Ebene löschen" an).</summary>
+        Public Sub DeleteSelectedAnnotations()
+            Dim victims = SelectedAnnotations.ToList()
+            If victims.Count = 0 Then Return
+            If victims.Count = 1 Then
+                DeleteSelectedAnnotation()
+                Return
+            End If
+            CommitObjectAdjustModeToModel()
+            PushUndo()
+            Dim dirty = SKRectI.Empty
+            For Each a In victims
+                dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(a))
+                _annotations.Remove(a)
+            Next
+            DropOrphanedAnnotationGroups()
+            SelectedAnnotationIndex = -1
+            RebuildLayerRows()
+            RaiseResetButtonStateChanged()
+            RefreshOverlayAfterAnnotationChange(dirty)
+        End Sub
+
+        ''' <summary>Dupliziert ALLE markierten Objekte in einem Undo-Schritt; die Kopien sind danach
+        ''' markiert (und bleiben in derselben Gruppe wie ihre Vorlage).</summary>
+        Public Sub DuplicateSelectedAnnotations()
+            Dim originals = SelectedAnnotations.ToList()
+            If originals.Count = 0 Then Return
+            If originals.Count = 1 Then
+                DuplicateSelectedAnnotation()
+                Return
+            End If
+            PushUndo()
+            Dim copies As New List(Of ImageAnnotation)()
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Dim offsetX = CSng(Math.Max(1.0, displaySize.Width * 0.02))
+            Dim offsetY = CSng(Math.Max(1.0, displaySize.Height * 0.02))
+            For Each a In originals
+                Dim copy = a.Clone()
+                copy.XPixels += offsetX
+                copy.YPixels += offsetY
+                _annotations.Add(copy)
+                copies.Add(copy)
+            Next
+            SelectedAnnotationIndex = _annotations.IndexOf(copies(copies.Count - 1))
+            For Each c In copies
+                If Not Object.ReferenceEquals(c, _annotations(_selectedAnnotationIndex)) Then _extraSelectedAnnotations.Add(c)
+            Next
+            RebuildLayerRows()
+            RaiseMultiSelectionChanged()
+            RaiseResetButtonStateChanged()
+            Dim dirty = SKRectI.Empty
+            For Each c In copies
+                dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(c))
+            Next
+            RefreshOverlayAfterAnnotationChange(dirty)
+        End Sub
+
+        ' ── Mehrfachauswahl von KORREKTUREBENEN (Auswahl-/Masken-Ebenen) ──────
+        ' Dieselbe Mechanik wie bei den Objekten, aber eine eigene Liste: Objekt- und Korrekturebenen
+        ' sind getrennte Rendergruppen, eine gemischte Gruppe gäbe es im Renderer nicht.
+
+        Private ReadOnly _extraSelectedAdjustmentLayers As New List(Of MaskedAdjustmentLayer)()
+
+        Public ReadOnly Property SelectedAdjustmentLayers As IReadOnlyList(Of MaskedAdjustmentLayer)
+            Get
+                Dim result As New List(Of MaskedAdjustmentLayer)()
+                Dim primary = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+                If primary IsNot Nothing Then result.Add(primary)
+                For Each l In _extraSelectedAdjustmentLayers
+                    If l IsNot Nothing AndAlso _maskedAdjustmentLayers.Contains(l) AndAlso Not result.Contains(l) Then result.Add(l)
+                Next
+                Return result
+            End Get
+        End Property
+
+        Public Function IsAdjustmentLayerSelected(layer As MaskedAdjustmentLayer) As Boolean
+            If layer Is Nothing Then Return False
+            Return SelectedAdjustmentLayers.Contains(layer)
+        End Function
+
+        ''' <summary>Strg+Klick auf eine Korrekturebene: dazu oder weg.</summary>
+        Public Sub ToggleAdjustmentLayerInSelection(layer As MaskedAdjustmentLayer)
+            If layer Is Nothing OrElse Not _maskedAdjustmentLayers.Contains(layer) Then Return
+            If IsAdjustmentLayerSelected(layer) Then
+                If _selectedMaskedAdjustmentLayerId = layer.Id Then
+                    Dim nextPrimary = _extraSelectedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso _maskedAdjustmentLayers.Contains(l))
+                    _extraSelectedAdjustmentLayers.Remove(nextPrimary)
+                    _selectedMaskedAdjustmentLayerId = If(nextPrimary Is Nothing, "", nextPrimary.Id)
+                Else
+                    _extraSelectedAdjustmentLayers.Remove(layer)
+                End If
+            Else
+                If String.IsNullOrWhiteSpace(_selectedMaskedAdjustmentLayerId) Then
+                    _selectedMaskedAdjustmentLayerId = layer.Id
+                Else
+                    _extraSelectedAdjustmentLayers.Add(layer)
+                End If
+            End If
+            _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) r.AdjustmentLayer IsNot Nothing AndAlso r.AdjustmentLayer.Id = _selectedMaskedAdjustmentLayerId)
+            RaiseLayerPanelSelectionChanged()
+            RaiseMultiSelectionChanged()
+        End Sub
+
+        ''' <summary>Umschalt+Klick auf eine Korrekturebene: Bereich von der aktuellen bis zu dieser.</summary>
+        Public Sub SelectAdjustmentLayerRangeTo(layer As MaskedAdjustmentLayer)
+            If layer Is Nothing Then Return
+            Dim target = _maskedAdjustmentLayers.IndexOf(layer)
+            Dim anchor = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+            If target < 0 Then Return
+            If anchor < 0 Then
+                ToggleAdjustmentLayerInSelection(layer)
+                Return
+            End If
+            _extraSelectedAdjustmentLayers.Clear()
+            For i = Math.Min(anchor, target) To Math.Max(anchor, target)
+                If i <> anchor Then _extraSelectedAdjustmentLayers.Add(_maskedAdjustmentLayers(i))
+            Next
+            RaiseLayerPanelSelectionChanged()
+            RaiseMultiSelectionChanged()
+        End Sub
+
+        ''' <summary>Schatten/Glühen (und andere objekt-eigene Blöcke) nur bei EINZELauswahl zeigen.</summary>
+        ''' <summary>Position und Größe im Panel beschreiben bei einer Mehrfachauswahl die GEMEINSAME
+        ''' Box, nicht den Anker: sonst zeigte das Panel die Maße des zuletzt angeklickten Objekts, und
+        ''' eine Eingabe änderte auch nur dieses (Nutzer-Befund 2026-07-25). Eingaben laufen über
+        ''' SetSelectionBoxRect und wirken damit auf alle markierten Objekte.</summary>
+        Private Function SelectionBoxComponent(index As Integer) As Double
+            Dim box = GetSelectionBoxDisplayRectPercent()
+            Select Case index
+                Case 0 : Return box.X
+                Case 1 : Return box.Y
+                Case 2 : Return box.Width
+                Case Else : Return box.Height
+            End Select
+        End Function
+
+        Private Sub SetSelectionBoxComponent(index As Integer, value As Double)
+            Dim box = GetSelectionBoxDisplayRectPercent()
+            Select Case index
+                Case 0 : SetSelectionBoxRect(value, box.Y, box.Width, box.Height)
+                Case 1 : SetSelectionBoxRect(box.X, value, box.Width, box.Height)
+                Case 2 : SetSelectionBoxRect(box.X, box.Y, Math.Max(1.0, value), box.Height)
+                Case Else : SetSelectionBoxRect(box.X, box.Y, box.Width, Math.Max(1.0, value))
+            End Select
+            RaiseAnnotationSizeChanged()
+            Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationYPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
+            RaiseAnnotationPositionControlProperties()
+        End Sub
+
+        ''' <summary>Die Gruppe, zu der ALLE markierten Objekte gehören - sonst Nothing.</summary>
+        Public Function SelectedAnnotationsGroup() As AnnotationGroup
+            Dim selected = SelectedAnnotations
+            If selected.Count = 0 Then Return Nothing
+            Dim id = selected(0).GroupId
+            If String.IsNullOrEmpty(id) Then Return Nothing
+            For Each a In selected
+                If Not String.Equals(a.GroupId, id, StringComparison.Ordinal) Then Return Nothing
+            Next
+            Return FindAnnotationGroup(id)
+        End Function
+
+        Public ReadOnly Property ShowSingleAnnotationEffects As Boolean
+            Get
+                Return ShowAnnotationProperties AndAlso Not HasMultiAnnotationSelection
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGroupSelectedAnnotations As Boolean
+            Get
+                ' Gruppierbar ist eine Auswahl von mindestens zwei Ebenen DERSELBEN Art.
+                If SelectedAnnotationCount > 1 AndAlso SelectedAdjustmentLayers.Count = 0 Then Return True
+                Return SelectedAdjustmentLayers.Count > 1 AndAlso SelectedAnnotationCount = 0
+            End Get
+        End Property
+
+        Public ReadOnly Property CanUngroupSelectedAnnotations As Boolean
+            Get
+                Return SelectedAnnotations.Any(Function(a) a IsNot Nothing AndAlso Not String.IsNullOrEmpty(a.GroupId)) OrElse
+                       SelectedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.GroupId))
+            End Get
+        End Property
+
+        ''' <summary>Fasst die markierten Objekte zu einer Gruppe zusammen. Die Mitglieder werden dabei
+        ''' ZUSAMMENHÄNGEND einsortiert - an die Z-Position des obersten markierten Objekts, in ihrer
+        ''' bisherigen relativen Reihenfolge. Ohne diese Verdichtung wäre die Gruppe nur eine Markierung:
+        ''' ein fremdes Objekt könnte zwischen zwei Mitgliedern liegen, und „Gruppe nach vorn" hätte keine
+        ''' definierte Bedeutung.</summary>
+        Public Sub GroupSelectedAnnotations()
+            If SelectedAdjustmentLayers.Count > 1 AndAlso SelectedAnnotationCount = 0 Then
+                GroupSelectedAdjustmentLayers()
+                Return
+            End If
+            Dim indices = SelectedAnnotationIndices()
+            If indices.Count < 2 Then Return
+
+            PushUndo()
+            Dim members = indices.Select(Function(i) _annotations(i)).ToList()
+            Dim dirty = ComputeSceneDirtyRectFor(members(0))
+            For Each m In members
+                dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(m))
+            Next
+
+            Dim grp As New AnnotationGroup With {.Name = NextAnnotationGroupName()}
+            _annotationGroups.Add(grp)
+            For Each m In members
+                m.GroupId = grp.Id
+            Next
+
+            ' Einfügestelle: dort, wo das oberste Mitglied lag, abzüglich der darunter entfernten.
+            Dim insertAt = indices.Last() - members.Count + 1
+            For Each m In members
+                _annotations.Remove(m)
+            Next
+            insertAt = Math.Max(0, Math.Min(_annotations.Count, insertAt))
+            For k = 0 To members.Count - 1
+                _annotations.Insert(insertAt + k, members(k))
+            Next
+
+            DropOrphanedAnnotationGroups()
+            _selectedAnnotationIndex = _annotations.IndexOf(members(members.Count - 1))
+            RebuildLayerRows()
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+            Me.RaisePropertyChanged(NameOf(SelectedLayer))
+            RaiseMultiSelectionChanged()
+            RaiseResetButtonStateChanged()
+            RefreshOverlayAfterAnnotationChange(dirty)
+        End Sub
+
+        ''' <summary>Hebt die Gruppierung aller markierten Objekte auf - und zwar für die GANZE Gruppe,
+        ''' nicht nur für das angeklickte Mitglied: eine Gruppe mit einem verbliebenen Mitglied wäre
+        ''' im Panel eine Zeile ohne Zweck. Z-Reihenfolge und Aussehen bleiben unverändert.</summary>
+        Public Sub UngroupSelectedAnnotations()
+            Dim groupIds = SelectedAnnotations.Where(Function(a) a IsNot Nothing AndAlso Not String.IsNullOrEmpty(a.GroupId)).
+                Select(Function(a) a.GroupId).
+                Concat(SelectedAdjustmentLayers.Where(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.GroupId)).
+                       Select(Function(l) l.GroupId)).
+                Distinct().ToList()
+            If groupIds.Count = 0 Then Return
+
+            PushUndo()
+            For Each id In groupIds
+                For Each m In AnnotationsInGroup(id)
+                    m.GroupId = ""
+                Next
+                For Each l In _maskedAdjustmentLayers
+                    If l IsNot Nothing AndAlso String.Equals(l.GroupId, id, StringComparison.Ordinal) Then l.GroupId = ""
+                Next
+            Next
+            DropOrphanedAnnotationGroups()
+            RebuildLayerRows()
+            RaiseMultiSelectionChanged()
+            RaiseResetButtonStateChanged()
+        End Sub
+
+        ''' <summary>Fasst die markierten KORREKTUREBENEN zu einer Gruppe zusammen - dieselbe Gruppenart
+        ''' wie bei Objekten, nur innerhalb der Korrektur-Rendergruppe zusammenhängend einsortiert.</summary>
+        Private Sub GroupSelectedAdjustmentLayers()
+            Dim members = SelectedAdjustmentLayers.ToList()
+            If members.Count < 2 Then Return
+            PushUndo()
+            Dim ordered = _maskedAdjustmentLayers.Where(Function(l) members.Contains(l)).ToList()
+            Dim topIndex = ordered.Select(Function(l) _maskedAdjustmentLayers.IndexOf(l)).Max()
+
+            Dim grp As New AnnotationGroup With {.Name = NextAnnotationGroupName()}
+            _annotationGroups.Add(grp)
+            For Each l In ordered
+                l.GroupId = grp.Id
+            Next
+            Dim insertAt = topIndex - ordered.Count + 1
+            For Each l In ordered
+                _maskedAdjustmentLayers.Remove(l)
+            Next
+            insertAt = Math.Max(0, Math.Min(_maskedAdjustmentLayers.Count, insertAt))
+            For k = 0 To ordered.Count - 1
+                _maskedAdjustmentLayers.Insert(insertAt + k, ordered(k))
+            Next
+            DropOrphanedAnnotationGroups()
+            RebuildLayerRows()
+            RaiseMultiSelectionChanged()
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>„Gruppe 1", „Gruppe 2", … - die kleinste noch freie Nummer, damit nach dem Löschen
+        ''' einer Gruppe keine Lücke im Namen bleibt.</summary>
+        Private Function NextAnnotationGroupName() As String
+            Dim prefix = LocalizationService.T("Gruppe")
+            Dim number = 1
+            While _annotationGroups.Any(Function(g) g IsNot Nothing AndAlso String.Equals(g.Name, prefix & " " & number.ToString(), StringComparison.Ordinal))
+                number += 1
+            End While
+            Return prefix & " " & number.ToString()
+        End Function
 
         Private _pendingInsertKind As String = ""
         Public Property PendingInsertKind As String
@@ -1968,6 +2598,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
+                Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
                 Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(ShowTextContentControls))
                 Me.RaisePropertyChanged(NameOf(ShowFontControls))
@@ -2020,6 +2651,8 @@ Namespace ViewModels
         ''' Textinhalt-Feld nur bei Objekttypen mit editierbarem Text (Text/Wasserzeichen/QR-Inhalt/Symbol-Zeichen).
         Public ReadOnly Property ShowTextContentControls As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Dim k = EffectiveAnnotationKind
                 Return k = "Text" OrElse k = "QR" OrElse k = "Symbol" OrElse (k = "Watermark" AndAlso Not IsWatermarkImageSource)
             End Get
@@ -2028,6 +2661,8 @@ Namespace ViewModels
         ''' Schrift/Größe nur dort relevant, wo tatsächlich Text gerendert wird.
         Public ReadOnly Property ShowFontControls As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Dim k = EffectiveAnnotationKind
                 Return k = "Text" OrElse (k = "Watermark" AndAlso Not IsWatermarkImageSource)
             End Get
@@ -2038,6 +2673,8 @@ Namespace ViewModels
         ''' Beim QR-Code ist die Füllfarbe der Hintergrund (siehe FillColorLabel).
         Public ReadOnly Property ShowFillColorPicker As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return EffectiveAnnotationKind <> "Image" AndAlso Not IsWatermarkImageSource
             End Get
         End Property
@@ -2047,24 +2684,32 @@ Namespace ViewModels
         ''' stattdessen Vordergrund- und Hintergrundfarbe im Eigenschaften-Panel.
         Public ReadOnly Property ShowFillColorControls As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return ShowFillColorPicker AndAlso EffectiveAnnotationKind <> "QR"
             End Get
         End Property
 
         Public ReadOnly Property ShowGradientFillControls As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return ShowFillColorControls AndAlso Not String.Equals(_annotationFillKind, "Solid", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
         Public ReadOnly Property ShowLinearGradientAngleControl As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return ShowGradientFillControls AndAlso String.Equals(_annotationFillKind, "LinearGradient", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
         Public ReadOnly Property ShowRadialGradientControl As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return ShowGradientFillControls AndAlso String.Equals(_annotationFillKind, "RadialGradient", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
@@ -2113,6 +2758,8 @@ Namespace ViewModels
         ''' einen sichtbaren Effekt.
         Public ReadOnly Property ShowStrokeWidthControls As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return EffectiveAnnotationKind <> "QR"
             End Get
         End Property
@@ -2743,6 +3390,14 @@ Namespace ViewModels
         ''' </summary>
         Public ReadOnly Property CurrentToolLabel As String
             Get
+                ' Bei einer Mehrfachauswahl beschreibt der Kopf die AUSWAHL, nicht das zuletzt
+                ' angeklickte Objekt - sonst stünde dort z.B. "Bild", obwohl fünf Objekte markiert
+                ' sind (Nutzer-Befund 2026-07-25). Eine Gruppe nennt sich beim Namen.
+                If HasMultiAnnotationSelection Then
+                    Dim grp = SelectedAnnotationsGroup()
+                    If grp IsNot Nothing Then Return If(String.IsNullOrWhiteSpace(grp.Name), LocalizationService.T("Gruppe"), grp.Name)
+                    Return LocalizationService.T("Mehrfachauswahl")
+                End If
                 Select Case _currentTool
                     Case EditorTool.Crop : Return "Zuschneiden"
                     Case EditorTool.Resize : Return "Bildgröße"
@@ -2768,6 +3423,10 @@ Namespace ViewModels
         Public ReadOnly Property CurrentToolIconSource As String
             Get
                 Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
+                If HasMultiAnnotationSelection Then
+                    ' Gruppe = Ordner, freie Mehrfachauswahl = Stapel.
+                    Return base & If(SelectedAnnotationsGroup() IsNot Nothing, "folder.svg", "stack-2.svg")
+                End If
                 Select Case _currentTool
                     Case EditorTool.Move : Return base & "pointer.svg"
                     Case EditorTool.Selection : Return base & "rectangle.svg"
@@ -4807,8 +5466,19 @@ Namespace ViewModels
                 Return _annotationRotation
             End Get
             Set(value As Double)
+                Dim gerundet = Math.Round(Math.Max(-180, Math.Min(180, value)), 1)
+                ' MEHRFACHAUSWAHL: der Regler beschreibt die gemeinsame Box - gedreht wird die DIFFERENZ
+                ' um deren Mitte, damit die Anordnung erhalten bleibt (ein absoluter Wert je Objekt
+                ' würde jedes Mitglied einzeln um sich selbst drehen und die Gruppe zerlegen).
+                If HasMultiAnnotationSelection AndAlso Not _isLoadingAnnotation Then
+                    Dim delta = gerundet - _annotationRotation
+                    Me.RaiseAndSetIfChanged(_annotationRotation, gerundet)
+                    Me.RaisePropertyChanged(NameOf(StraightenDegrees))
+                    If Math.Abs(delta) > 0.0001 Then RotateSelectionBy(delta)
+                    Return
+                End If
                 ' Nur 1 Nachkommastelle: der Slider-Drag liefert sonst beliebig krumme Gradwerte.
-                Me.RaiseAndSetIfChanged(_annotationRotation, Math.Round(Math.Max(-180, Math.Min(180, value)), 1))
+                Me.RaiseAndSetIfChanged(_annotationRotation, gerundet)
                 ' Der Begradigen-Regler zeigt bei markiertem Objekt dessen Drehung - mitziehen, damit
                 ' er nach den 90°-Knöpfen und beim freien Drehen am Anfasser aktuell bleibt.
                 Me.RaisePropertyChanged(NameOf(StraightenDegrees))
@@ -4822,6 +5492,13 @@ Namespace ViewModels
                 Return _annotationFlipH
             End Get
             Set(value As Boolean)
+                If HasMultiAnnotationSelection AndAlso Not _isLoadingAnnotation Then
+                    ' Mehrfachauswahl: an der Mittelachse der gemeinsamen Box spiegeln (Anordnung UND
+                    ' Objekte), statt nur das Ankerobjekt umzuklappen.
+                    Me.RaiseAndSetIfChanged(_annotationFlipH, value)
+                    FlipSelectionBox(horizontal:=True)
+                    Return
+                End If
                 Me.RaiseAndSetIfChanged(_annotationFlipH, value)
                 ' refreshOverlay:=True - anders als die Drehung (die legt die View als Transformation über das
                 ' Overlay) muss die Spiegelung in das Overlay-Bitmap hineingerendert werden.
@@ -4883,6 +5560,8 @@ Namespace ViewModels
         ''' Wasserzeichen mit Bilddatei (QR bleibt hart 1:1, Formen/Text duerfen frei).
         Public ReadOnly Property ShowAnnotationAspectLock As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return String.Equals(EffectiveAnnotationKind, "Image", StringComparison.OrdinalIgnoreCase) OrElse
                        IsWatermarkImageSource
             End Get
@@ -4893,6 +5572,11 @@ Namespace ViewModels
                 Return _annotationFlipV
             End Get
             Set(value As Boolean)
+                If HasMultiAnnotationSelection AndAlso Not _isLoadingAnnotation Then
+                    Me.RaiseAndSetIfChanged(_annotationFlipV, value)
+                    FlipSelectionBox(horizontal:=False)
+                    Return
+                End If
                 Me.RaiseAndSetIfChanged(_annotationFlipV, value)
                 SyncSelectedAnnotation(refreshOverlay:=True)
             End Set
@@ -4937,9 +5621,14 @@ Namespace ViewModels
 
         Public Property AnnotationXPercent As Double
             Get
+                If HasMultiAnnotationSelection Then Return SelectionBoxComponent(0)
                 Return _annotationXPercent
             End Get
             Set(value As Double)
+                If HasMultiAnnotationSelection AndAlso Not _isLoadingAnnotation Then
+                    SetSelectionBoxComponent(0, value)
+                    Return
+                End If
                 Dim normalized = If(ShowWatermarkAnchorControls,
                                     ClampAnnotationOffsetPercent(value),
                                     ClampAnnotationPositionPercent(value, _annotationWidthPercent))
@@ -4952,9 +5641,14 @@ Namespace ViewModels
 
         Public Property AnnotationYPercent As Double
             Get
+                If HasMultiAnnotationSelection Then Return SelectionBoxComponent(1)
                 Return _annotationYPercent
             End Get
             Set(value As Double)
+                If HasMultiAnnotationSelection AndAlso Not _isLoadingAnnotation Then
+                    SetSelectionBoxComponent(1, value)
+                    Return
+                End If
                 Dim normalized = If(ShowWatermarkAnchorControls,
                                     ClampAnnotationOffsetPercent(value),
                                     ClampAnnotationPositionPercent(value, _annotationHeightPercent))
@@ -4985,9 +5679,14 @@ Namespace ViewModels
 
         Public Property AnnotationWidthPercent As Double
             Get
+                If HasMultiAnnotationSelection Then Return SelectionBoxComponent(2)
                 Return _annotationWidthPercent
             End Get
             Set(value As Double)
+                If HasMultiAnnotationSelection AndAlso Not _isLoadingAnnotation Then
+                    SetSelectionBoxComponent(2, value)
+                    Return
+                End If
                 If EffectiveAnnotationKind = "QR" Then
                     Dim displaySize = GetAnnotationDisplayPixelSize()
                     If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
@@ -5012,9 +5711,14 @@ Namespace ViewModels
 
         Public Property AnnotationHeightPercent As Double
             Get
+                If HasMultiAnnotationSelection Then Return SelectionBoxComponent(3)
                 Return _annotationHeightPercent
             End Get
             Set(value As Double)
+                If HasMultiAnnotationSelection AndAlso Not _isLoadingAnnotation Then
+                    SetSelectionBoxComponent(3, value)
+                    Return
+                End If
                 If EffectiveAnnotationKind = "QR" Then
                     Dim displaySize = GetAnnotationDisplayPixelSize()
                     If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
@@ -5201,6 +5905,8 @@ Namespace ViewModels
         ''' Ein Wasserzeichen mit BILD hat keinen Text und damit auch keinen Pfad.</summary>
         Public ReadOnly Property ShowTextPathRow As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 If EffectiveAnnotationKind = "Text" Then Return True
                 Return EffectiveAnnotationKind = "Watermark" AndAlso String.IsNullOrWhiteSpace(SelectedAnnotationImagePath)
             End Get
@@ -5209,6 +5915,8 @@ Namespace ViewModels
         ''' <summary>Kruemmungs-/Startregler nur, wenn ueberhaupt eine Pfadform gewaehlt ist.</summary>
         Public ReadOnly Property ShowTextPathControls As Boolean
             Get
+                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
+                If HasMultiAnnotationSelection Then Return False
                 Return ShowTextPathRow AndAlso Not String.IsNullOrWhiteSpace(_annotationTextPathKind)
             End Get
         End Property
@@ -7211,6 +7919,192 @@ Namespace ViewModels
             SyncSelectedAnnotation(refreshOverlay:=sizeChanged)
         End Sub
 
+        ' ===================== Transformationen der Mehrfachauswahl =====================
+        '
+        ' Bei EINEM markierten Objekt bleibt alles wie bisher (Editor-Puffer, SetSelectedAnnotationRect).
+        ' Ab zwei Objekten arbeiten Rahmen, Anfasser und Werkzeuge auf der gemeinsamen Box: Änderungen
+        ' werden auf jedes Mitglied umgerechnet und DIREKT ins Objekt geschrieben - der Anker wird
+        ' danach einmal in die Puffer nachgeladen, damit das Eigenschaften-Panel stimmt.
+        '
+        ' Die Box ist die Vereinigung der UNGEDREHTEN Objektrechtecke (wie beim Einzelobjekt, wo die
+        ' Drehung als RenderTransform über dem Rahmen liegt). Bei Mitgliedern mit unterschiedlicher
+        ' eigener Drehung ist sie deshalb eine Näherung nach außen - sie umschließt die Objekte, sitzt
+        ' aber nicht überall bündig.
+
+        ''' <summary>Gemeinsame Box aller markierten Objekte in Anzeige-Prozent.</summary>
+        Public Function GetSelectionBoxDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
+            Dim selected = SelectedAnnotations
+            If selected.Count = 0 Then Return (0, 0, 0, 0)
+            If selected.Count = 1 Then Return GetSelectedAnnotationDisplayRectPercent()
+
+            Dim left = Double.MaxValue, top = Double.MaxValue
+            Dim right = Double.MinValue, bottom = Double.MinValue
+            For Each a In selected
+                Dim r = StoredAnnotationRectToDisplayPercent(a)
+                If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
+                left = Math.Min(left, r.X)
+                top = Math.Min(top, r.Y)
+                right = Math.Max(right, r.X + r.Width)
+                bottom = Math.Max(bottom, r.Y + r.Height)
+            Next
+            If left > right OrElse top > bottom Then Return (0, 0, 0, 0)
+            Return (left, top, right - left, bottom - top)
+        End Function
+
+        ''' <summary>Vereinigte Dirty-Region ALLER markierten Objekte im aktuellen Zustand. Wird VOR
+        ''' einer Gruppen-Transformation gemerkt: ohne die alte Lage bliebe beim Ziehen die verlassene
+        ''' Stelle stehen (bei gedrehten Objekten besonders sichtbar, weil ihre Ecken über das
+        ''' Auswahlrechteck hinausragen - ComputeAnnotationDirtyRect rechnet die Drehung mit ein).</summary>
+        Private Function SelectionDirtyRect() As SKRectI
+            Dim r = SKRectI.Empty
+            For Each a In SelectedAnnotations
+                r = ImageProcessor.UnionRects(r, ComputeSceneDirtyRectFor(a))
+            Next
+            Return r
+        End Function
+
+        ''' <summary>Schreibt ein Anzeige-Rechteck zurück in ein Objekt (Speicherraum, Basispixel).</summary>
+        Private Sub SetAnnotationDisplayRect(annotation As ImageAnnotation, x As Double, y As Double, width As Double, height As Double)
+            If annotation Is Nothing Then Return
+            Dim kind = NormalizeAnnotationKind(annotation.Kind)
+            Dim stored = DisplayAnnotationRectToStoredPercent(kind, x, y, width, height)
+            annotation.XPixels = CSng(PercentXToPixels(stored.X))
+            annotation.YPixels = CSng(PercentYToPixels(stored.Y))
+            annotation.WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(stored.Width)))
+            annotation.HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(stored.Height)))
+        End Sub
+
+        ''' <summary>Objekte, die eine Gruppen-Transformation NICHT mitmacht: verankerte Wasserzeichen
+        ''' rechnen ihre Lage aus dem Anker (Ecke/Rand) statt aus XPixels - eine gemeinsame Verschiebung
+        ''' würde dort nichts bewirken bzw. beim nächsten Render zurückspringen.</summary>
+        Private Shared Function ParticipatesInGroupTransform(annotation As ImageAnnotation) As Boolean
+            Return annotation IsNot Nothing AndAlso String.IsNullOrEmpty(annotation.Anchor)
+        End Function
+
+        ''' <summary>Verschiebt und skaliert alle markierten Objekte so, dass ihre gemeinsame Box das
+        ''' übergebene Rechteck wird. Schriftgrößen skalieren uniform mit (sqrt(sx*sy)) - sonst bliebe
+        ''' Text beim Aufziehen einer Gruppe stehen und die Gruppe verzöge sich.</summary>
+        Public Sub SetSelectionBoxRect(xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
+            Dim selected = SelectedAnnotations.Where(AddressOf ParticipatesInGroupTransform).ToList()
+            If selected.Count < 2 Then Return
+            Dim box = GetSelectionBoxDisplayRectPercent()
+            If box.Width <= 0 OrElse box.Height <= 0 Then Return
+
+            Dim newWidth = Math.Max(1.0, widthPercent)
+            Dim newHeight = Math.Max(1.0, heightPercent)
+            Dim sx = newWidth / box.Width
+            Dim sy = newHeight / box.Height
+            Dim fontScale = Math.Sqrt(Math.Max(0.0001, sx * sy))
+            Dim scales = Math.Abs(sx - 1.0) > 0.0001 OrElse Math.Abs(sy - 1.0) > 0.0001
+
+            Dim vorher = SelectionDirtyRect()
+            CaptureUndoState("AnnotationGroupTransform")
+            For Each a In selected
+                Dim r = StoredAnnotationRectToDisplayPercent(a)
+                If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
+                SetAnnotationDisplayRect(a,
+                                         xPercent + (r.X - box.X) * sx,
+                                         yPercent + (r.Y - box.Y) * sy,
+                                         r.Width * sx,
+                                         r.Height * sy)
+                If scales AndAlso IsTextualAnnotationKind(a.Kind) Then
+                    a.FontSizePixels = CSng(Math.Max(1.0, a.FontSizePixels * fontScale))
+                End If
+            Next
+            AfterGroupTransform(refreshOverlay:=scales, beforeRect:=vorher)
+        End Sub
+
+        ''' <summary>Dreht die Mehrfachauswahl um die Mitte der gemeinsamen Box: die Mittelpunkte wandern
+        ''' auf dem Kreis mit, und jedes Objekt dreht zusätzlich um denselben Winkel um sich selbst.
+        ''' Gerechnet wird in ANZEIGE-PIXELN - in Prozent hätten X und Y verschiedene Maßstäbe und der
+        ''' Kreis würde zur Ellipse.</summary>
+        Public Sub RotateSelectionBy(deltaDegrees As Double)
+            Dim selected = SelectedAnnotations.Where(AddressOf ParticipatesInGroupTransform).ToList()
+            If selected.Count < 2 OrElse Math.Abs(deltaDegrees) < 0.0001 Then Return
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return
+            Dim box = GetSelectionBoxDisplayRectPercent()
+            If box.Width <= 0 OrElse box.Height <= 0 Then Return
+
+            Dim centerX = (box.X + box.Width / 2.0) / 100.0 * displaySize.Width
+            Dim centerY = (box.Y + box.Height / 2.0) / 100.0 * displaySize.Height
+            Dim rad = deltaDegrees * Math.PI / 180.0
+            Dim cosR = Math.Cos(rad), sinR = Math.Sin(rad)
+
+            Dim vorher = SelectionDirtyRect()
+            CaptureUndoState("AnnotationGroupTransform")
+            For Each a In selected
+                Dim r = StoredAnnotationRectToDisplayPercent(a)
+                If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
+                Dim mx = (r.X + r.Width / 2.0) / 100.0 * displaySize.Width
+                Dim my = (r.Y + r.Height / 2.0) / 100.0 * displaySize.Height
+                Dim dx = mx - centerX, dy = my - centerY
+                Dim nx = centerX + dx * cosR - dy * sinR
+                Dim ny = centerY + dx * sinR + dy * cosR
+                SetAnnotationDisplayRect(a,
+                                         (nx / displaySize.Width * 100.0) - r.Width / 2.0,
+                                         (ny / displaySize.Height * 100.0) - r.Height / 2.0,
+                                         r.Width, r.Height)
+                Dim display = StoredAnnotationRotationToDisplay(a) + deltaDegrees
+                display = ((display + 180.0) Mod 360.0 + 360.0) Mod 360.0 - 180.0
+                a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(NormalizeAnnotationKind(a.Kind), display))
+            Next
+            AfterGroupTransform(refreshOverlay:=True, beforeRect:=vorher)
+        End Sub
+
+        ''' <summary>Spiegelt die Mehrfachauswahl an der Mittelachse der gemeinsamen Box: die Objekte
+        ''' tauschen die Seite UND spiegeln sich selbst. Nur die Objekte zu spiegeln würde die Anordnung
+        ''' stehen lassen, nur die Anordnung zu spiegeln die Objekte.</summary>
+        Public Sub FlipSelectionBox(horizontal As Boolean)
+            Dim selected = SelectedAnnotations.Where(AddressOf ParticipatesInGroupTransform).ToList()
+            If selected.Count < 2 Then Return
+            Dim box = GetSelectionBoxDisplayRectPercent()
+            If box.Width <= 0 OrElse box.Height <= 0 Then Return
+
+            Dim vorher = SelectionDirtyRect()
+            CaptureUndoState("AnnotationGroupTransform")
+            For Each a In selected
+                Dim r = StoredAnnotationRectToDisplayPercent(a)
+                If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
+                If horizontal Then
+                    SetAnnotationDisplayRect(a, 2 * box.X + box.Width - r.X - r.Width, r.Y, r.Width, r.Height)
+                    a.FlipHorizontal = Not a.FlipHorizontal
+                Else
+                    SetAnnotationDisplayRect(a, r.X, 2 * box.Y + box.Height - r.Y - r.Height, r.Width, r.Height)
+                    a.FlipVertical = Not a.FlipVertical
+                End If
+            Next
+            AfterGroupTransform(refreshOverlay:=True, beforeRect:=vorher)
+        End Sub
+
+        ''' <summary>Nachbereitung jeder Gruppen-Transformation: Anker zurück in die Editor-Puffer (das
+        ''' Eigenschaften-Panel zeigt weiter den Anker), Szene nachziehen. Das Dirty-Rect ist die
+        ''' Vereinigung aus ALTER und NEUER Lage aller Mitglieder - die alte Lage steckt bereits in
+        ''' _annotationDirtyRect, wenn der Zug läuft; hier kommt die neue dazu.</summary>
+        Private Sub AfterGroupTransform(refreshOverlay As Boolean, Optional beforeRect As SKRectI = Nothing)
+            ' ALTE und NEUE Lage: die verlassene Stelle muss mit neu gezeichnet werden, sonst bleiben
+            ' dort Reste stehen (der Region-Renderer zeichnet nur, was im Rect liegt).
+            Dim dirty = ImageProcessor.UnionRects(_annotationDirtyRect, beforeRect)
+            For Each a In SelectedAnnotations
+                dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(a))
+            Next
+            _annotationDirtyRect = dirty
+
+            _isLoadingAnnotation = True
+            Try
+                LoadSelectedAnnotationIntoEditor()
+            Finally
+                _isLoadingAnnotation = False
+            End Try
+            If refreshOverlay Then UpdateSelectedAnnotationOverlayPreview()
+            RaiseResetButtonStateChanged()
+            ' AUCH waehrend des Zuges rendern: bei einer Mehrfachauswahl gibt es keinen Ghost, der die
+            ' Live-Darstellung uebernimmt (siehe BeginSelectedAnnotationPlacementEdit) - ohne diesen
+            ' Render sieht man Drehen und Groessenaendern erst beim Loslassen. Der Region-Worker
+            ' koalesziert die Anforderungen von selbst, ein Zug erzeugt also keine Renderflut.
+            RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
+        End Sub
+
         Private Sub RaiseAnnotationSizeChanged()
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
@@ -8534,6 +9428,11 @@ Namespace ViewModels
         Public ReadOnly Property DeleteSelectedAnnotationCommand As ICommand
         Public ReadOnly Property DeleteAnnotationCommand As ICommand
         Public ReadOnly Property ToggleAnnotationVisibilityCommand As ICommand
+        Public ReadOnly Property DeleteSelectedAnnotationsCommand As ICommand
+        Public ReadOnly Property DuplicateSelectedAnnotationsCommand As ICommand
+        Public ReadOnly Property GroupSelectedAnnotationsCommand As ICommand
+        Public ReadOnly Property UngroupSelectedAnnotationsCommand As ICommand
+        Public ReadOnly Property ToggleAnnotationGroupCollapsedCommand As ICommand
         Public ReadOnly Property DuplicateSelectedAnnotationCommand As ICommand
         Public ReadOnly Property AddAdjustmentWithSameMaskCommand As ICommand
         Public ReadOnly Property RasterizeSelectedAnnotationCommand As ICommand
@@ -8777,12 +9676,21 @@ Namespace ViewModels
             DeleteSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                           DeleteSelectedAnnotation()
                                                                       End Sub)
+            DeleteSelectedAnnotationsCommand = ReactiveCommand.Create(Sub() DeleteSelectedAnnotations())
+            DuplicateSelectedAnnotationsCommand = ReactiveCommand.Create(Sub() DuplicateSelectedAnnotations())
             DeleteAnnotationCommand = ReactiveCommand.Create(Of ImageAnnotation)(Sub(annotation)
                                                                                       DeleteAnnotation(annotation)
                                                                                   End Sub)
             ToggleAnnotationVisibilityCommand = ReactiveCommand.Create(Of LayerPanelRow)(Sub(row)
                                                                                                ToggleLayerVisibility(row)
                                                                                            End Sub)
+            GroupSelectedAnnotationsCommand = ReactiveCommand.Create(Sub() GroupSelectedAnnotations())
+            UngroupSelectedAnnotationsCommand = ReactiveCommand.Create(Sub() UngroupSelectedAnnotations())
+            ToggleAnnotationGroupCollapsedCommand = ReactiveCommand.Create(Of LayerPanelRow)(Sub(row)
+                                                                                                 If row?.Group Is Nothing Then Return
+                                                                                                 row.Group.IsCollapsed = Not row.Group.IsCollapsed
+                                                                                                 RebuildLayerRows()
+                                                                                             End Sub)
             DuplicateSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                             DuplicateSelectedAnnotation()
                                                                         End Sub)
@@ -9907,7 +10815,11 @@ Namespace ViewModels
         ''' (Selektions-Overlay), in der Szene stuende es doppelt bzw. stale an der alten Position.</summary>
         Private Function GetSceneAdjustments() As ImageAdjustments
             Dim adj = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
-            If _annotationPlacementEditActive AndAlso
+            ' Nur bei EINEM gezogenen Objekt übernimmt der Ghost die Live-Darstellung. Bei einer
+            ' Mehrfachauswahl gibt es keinen Ghost (es müssten mehrere sein): dort bleiben alle Objekte
+            ' in der Szene und wandern mit - der Zug schreibt ohnehin direkt in die Objekte und stösst
+            ' je Bewegung einen Region-Render an.
+            If _annotationPlacementEditActive AndAlso Not HasMultiAnnotationSelection AndAlso
                _selectedAnnotationIndex >= 0 AndAlso adj.Annotations IsNot Nothing AndAlso
                _selectedAnnotationIndex < adj.Annotations.Count Then
                 adj.Annotations(_selectedAnnotationIndex).IsVisible = False
@@ -10089,7 +11001,10 @@ Namespace ViewModels
                     Dim versionAtStart = _sceneContentVersion
                     ' Merken, ob der Snapshot das aktiv gezogene Objekt AUSBLENDET: gilt die Ausblendung
                     ' beim Anwenden nicht mehr (Loslassen/Commit), wuerde der Patch das Objekt loeschen.
-                    Dim excludedPlacementIndex = If(_annotationPlacementEditActive, _selectedAnnotationIndex, -1)
+                    ' Nur bei EINZELauswahl blendet der Snapshot das gezogene Objekt aus (siehe
+                    ' GetSceneAdjustments) - nur dann darf der Patch die Ghost-Uebergabe melden.
+                    Dim excludedPlacementIndex = If(_annotationPlacementEditActive AndAlso Not HasMultiAnnotationSelection,
+                                                    _selectedAnnotationIndex, -1)
                     Dim sw = Diagnostics.Stopwatch.StartNew()
                     Dim clamped As SKRectI = SKRectI.Empty
                     Dim cacheState = ImageProcessor.AnnotationPatchCacheState.Unknown
@@ -10649,6 +11564,12 @@ Namespace ViewModels
         Public Sub BeginSelectedAnnotationPlacementEdit()
             If Not HasSelectedAnnotation Then Return
             _annotationPlacementEditActive = True
+            ' EIN Mauszug = EIN Undo-Schritt. Ohne das legt jede Bewegung nach Ablauf des
+            ' Sammelfensters (CaptureUndoState) einen weiteren Eintrag an - ein längeres Verschieben,
+            ' Drehen oder Skalieren erzeugte dutzende (Nutzer-Befund 2026-07-25). Der Schnappschuss
+            ' entsteht VOR der ersten Änderung, danach ist das Aufzeichnen bis zum Loslassen still.
+            PushUndo()
+            _suppressUndoCapture = True
             _placementGhostLinger = False
             _placementStartRegionCleared = False
             _annotationPlacementStartDirtyRect = SKRectI.Empty
@@ -10676,6 +11597,13 @@ Namespace ViewModels
             ' SZENE das Objekt weiter an der alten Stelle - und genau solange bleibt der Ghost unsichtbar
             ' (ShowSelectedSvgOverlay), sonst stuende es doppelt. Der Auswahlrahmen folgt dem Zeiger
             ' bereits, die Pixel ziehen einen Wimpernschlag spaeter nach.
+            If HasMultiAnnotationSelection Then
+                ' Mehrfachauswahl: kein Ghost, keine Szene-Kopie herauslösen - die Objekte bleiben in
+                ' der Szene und werden beim Ziehen mitgerendert (siehe GetSceneAdjustments).
+                SetSelectedAnnotationOverlay(Nothing)
+                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
+                Return
+            End If
             RequestPlacementSceneCopyRemoval()
             BeginPlacementGhostAsync()
         End Sub
@@ -10740,6 +11668,10 @@ Namespace ViewModels
 
         Public Sub EndSelectedAnnotationPlacementEdit()
             _annotationPlacementEditActive = False
+            ' Aufzeichnen wieder freigeben (siehe PushUndo beim Zug-Start). Läuft auch über den
+            ' PointerCaptureLost-Weg, damit ein abgebrochener Zug das Undo nicht dauerhaft stilllegt.
+            _suppressUndoCapture = False
+            ResetUndoCapture()
             Dim sceneCopyWasRemoved = _placementStartRegionCleared
             ' Wurde die Startregion nie aus der Szene geloest (kurzer Zug: der Loesch-Render war beim
             ' Loslassen noch unterwegs), MUSS der Commit sie mitnehmen - sonst bleibt die alte Kopie in
@@ -11928,9 +12860,14 @@ Namespace ViewModels
             Dim adj = BuildAdjustmentsFromFields(forPreview, includeEditorOverlayAnnotations)
             If IsObjectAdjustModeActive() Then
                 Dim objectValues = adj.ExtractPixelAdjustments()
-                If _objectAdjustIndex >= 0 AndAlso _objectAdjustIndex < adj.Annotations.Count Then
-                    adj.Annotations(_objectAdjustIndex).Adjustments = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
-                End If
+                Dim werte = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
+                ' Die Regler beschreiben die ganze Auswahl: bei einer Mehrfachauswahl bekommt JEDES
+                ' markierte Objekt dieselben Werte, nicht nur der Anker (Nutzer-Befund 2026-07-25).
+                For Each i In ObjectAdjustTargetIndices()
+                    If i >= 0 AndAlso i < adj.Annotations.Count Then
+                        adj.Annotations(i).Adjustments = If(werte Is Nothing, Nothing, werte.Clone())
+                    End If
+                Next
                 adj.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
                 Return adj
             End If
@@ -12068,6 +13005,7 @@ Namespace ViewModels
                 .LutPath = _lutPath,
                 .LutStrength = CSng(_lutStrength),
                 .Annotations = _annotations.Select(Function(a) a.Clone()).ToList(),
+                .AnnotationGroups = _annotationGroups.Select(Function(g) g.Clone()).ToList(),
                 .Masks = _imageMasks.Select(Function(m) m.Clone()).ToList(),
                 .MaskedAdjustmentLayers = _maskedAdjustmentLayers.Select(Function(l) l.Clone()).ToList(),
                 .GlobalAdjustmentsHidden = _globalAdjustmentsHidden,
@@ -12494,11 +13432,19 @@ Namespace ViewModels
             _annotations.Clear()
             _pixelEditLayer.Clear()
             _selectedAnnotationIndex = -1
+            _extraSelectedAnnotations.Clear()
             If adj.Annotations IsNot Nothing Then
                 For Each annotation In adj.Annotations
                     _annotations.Add(annotation.Clone())
                 Next
             End If
+            _annotationGroups.Clear()
+            If adj.AnnotationGroups IsNot Nothing Then
+                For Each grp In adj.AnnotationGroups
+                    If grp IsNot Nothing Then _annotationGroups.Add(grp.Clone())
+                Next
+            End If
+            DropOrphanedAnnotationGroups()
             _imageMasks.Clear()
             If adj.Masks IsNot Nothing Then
                 For Each mask In adj.Masks
@@ -12821,8 +13767,10 @@ Namespace ViewModels
             ClearLastAppliedLook()
             _retouchSpots.Clear()
             _annotations.Clear()
+            _annotationGroups.Clear()
             _pixelEditLayer.Clear()
             _selectedAnnotationIndex = -1
+            _extraSelectedAnnotations.Clear()
             If resetEditorUi Then ResetEditorUiStateForNewImage(resetTool:=False)
             _hasChanges = False
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
@@ -14093,8 +15041,40 @@ Namespace ViewModels
         ''' <summary>Panel-Drag für beide Zeilentypen. Objekt- und Einstellungsebenen bilden derzeit
         ''' getrennte Rendergruppen (Objekte liegen über Korrekturen), daher wird nur innerhalb derselben
         ''' Gruppe umsortiert.</summary>
+        ''' <summary>Welche Zeilenart steckt hinter einer Panel-Zeile? Eine Gruppen-Kopfzeile zählt als
+        ''' die Art ihrer Mitglieder - Objekt- und Korrekturebenen sind getrennte Rendergruppen und
+        ''' dürfen einander nicht aufnehmen.</summary>
+        Private Function RowIsAdjustmentKind(row As LayerPanelRow) As Boolean?
+            If row Is Nothing Then Return Nothing
+            If row.AdjustmentLayer IsNot Nothing Then Return True
+            If row.Annotation IsNot Nothing Then Return False
+            If row.IsGroupHeader Then
+                If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, row.Group.Id, StringComparison.Ordinal)) Then Return True
+                If AnnotationsInGroup(row.Group.Id).Count > 0 Then Return False
+            End If
+            Return Nothing
+        End Function
+
+        ''' <summary>Darf diese Zeile auf jener abgelegt werden? Nur innerhalb derselben Art.</summary>
+        Public Function CanDropLayerOn(dragged As LayerPanelRow, targetRow As LayerPanelRow) As Boolean
+            Dim a = RowIsAdjustmentKind(dragged)
+            Dim b = RowIsAdjustmentKind(targetRow)
+            If Not a.HasValue OrElse Not b.HasValue Then Return False
+            Return a.Value = b.Value
+        End Function
+
         Public Sub ReorderLayerRelative(dragged As LayerPanelRow, targetRow As LayerPanelRow, below As Boolean)
             If dragged Is Nothing OrElse targetRow Is Nothing Then Return
+            If Not CanDropLayerOn(dragged, targetRow) Then Return
+            If Object.ReferenceEquals(dragged, targetRow) Then Return
+
+            ' Gruppen im Spiel? Dann entscheidet der Ablageort auch über die ZUGEHÖRIGKEIT.
+            If dragged.IsGroupHeader OrElse targetRow.IsGroupHeader OrElse
+               dragged.IsGroupMember OrElse targetRow.IsGroupMember Then
+                DropLayerWithGrouping(dragged, targetRow, below)
+                Return
+            End If
+
             If dragged.Annotation IsNot Nothing AndAlso targetRow.Annotation IsNot Nothing Then
                 Dim displayIndex = _layerRows.Where(Function(r) r.Annotation IsNot Nothing).ToList().IndexOf(targetRow)
                 If displayIndex >= 0 Then ReorderLayerToDisplayGap(dragged.Annotation, displayIndex + If(below, 1, 0))
@@ -14130,6 +15110,111 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Ablegen im Ebenen-Panel, wenn Gruppen beteiligt sind. Der Ablageort bestimmt beides:
+        ''' die neue Z-Position UND die Gruppenzugehörigkeit.
+        '''
+        ''' - auf eine Gruppen-Kopfzeile, UNTERE Hälfte: hinein, als vorderstes Mitglied
+        ''' - auf eine Kopfzeile, OBERE Hälfte: davor, außerhalb der Gruppe
+        ''' - zwischen Mitglieder: hinein, an diese Stelle
+        ''' - irgendwo sonst: hinaus (Gruppenzugehörigkeit fällt weg)
+        '''
+        ''' Wird eine Kopfzeile selbst gezogen, wandert der ganze Block. Die Mitglieder bleiben dabei
+        ''' zusammenhängend - das ist die Invariante, an der die ganze Gruppen-Mechanik hängt.</summary>
+        Private Sub DropLayerWithGrouping(dragged As LayerPanelRow, targetRow As LayerPanelRow, below As Boolean)
+            Dim istKorrektur = RowIsAdjustmentKind(dragged)
+            If Not istKorrektur.HasValue Then Return
+
+            ' Zielgruppe und Einfügestelle bestimmen (im MODELL, dessen Reihenfolge der Anzeige
+            ' entgegenläuft: höherer Index = weiter vorn = im Panel weiter oben).
+            Dim zielGruppe As String = ""
+            Dim zielIndex As Integer
+
+            If istKorrektur.Value Then
+                Dim liste = _maskedAdjustmentLayers
+                If targetRow.IsGroupHeader Then
+                    Dim members = liste.Where(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, targetRow.Group.Id, StringComparison.Ordinal)).ToList()
+                    If members.Count = 0 Then Return
+                    zielIndex = liste.IndexOf(members(members.Count - 1)) + 1
+                    zielGruppe = If(below, targetRow.Group.Id, "")
+                Else
+                    If targetRow.AdjustmentLayer Is Nothing Then Return
+                    zielIndex = liste.IndexOf(targetRow.AdjustmentLayer) + If(below, 0, 1)
+                    zielGruppe = If(targetRow.AdjustmentLayer.GroupId, "")
+                End If
+
+                Dim block As List(Of MaskedAdjustmentLayer)
+                If dragged.IsGroupHeader Then
+                    block = liste.Where(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, dragged.Group.Id, StringComparison.Ordinal)).ToList()
+                    If String.Equals(zielGruppe, dragged.Group.Id, StringComparison.Ordinal) Then Return  ' in sich selbst
+                Else
+                    If dragged.AdjustmentLayer Is Nothing Then Return
+                    block = New List(Of MaskedAdjustmentLayer) From {dragged.AdjustmentLayer}
+                End If
+                If block.Count = 0 Then Return
+
+                PushUndo()
+                Dim entferntDavor = block.Where(Function(l) liste.IndexOf(l) < zielIndex).Count()
+                For Each l In block
+                    liste.Remove(l)
+                Next
+                zielIndex = Math.Max(0, Math.Min(liste.Count, zielIndex - entferntDavor))
+                For k = 0 To block.Count - 1
+                    liste.Insert(zielIndex + k, block(k))
+                    If Not dragged.IsGroupHeader Then block(k).GroupId = zielGruppe
+                Next
+                DropOrphanedAnnotationGroups()
+                RebuildLayerRows()
+                _hasChanges = True
+                RaiseResetButtonStateChanged()
+                SchedulePreviewUpdate()
+                Return
+            End If
+
+            ' ── Objekt-Ebenen ────────────────────────────────────────────────
+            If targetRow.IsGroupHeader Then
+                Dim members = AnnotationsInGroup(targetRow.Group.Id)
+                If members.Count = 0 Then Return
+                zielIndex = _annotations.IndexOf(members(members.Count - 1)) + 1
+                zielGruppe = If(below, targetRow.Group.Id, "")
+            Else
+                If targetRow.Annotation Is Nothing Then Return
+                zielIndex = _annotations.IndexOf(targetRow.Annotation) + If(below, 0, 1)
+                zielGruppe = If(targetRow.Annotation.GroupId, "")
+            End If
+
+            Dim objBlock As List(Of ImageAnnotation)
+            If dragged.IsGroupHeader Then
+                objBlock = AnnotationsInGroup(dragged.Group.Id)
+                If String.Equals(zielGruppe, dragged.Group.Id, StringComparison.Ordinal) Then Return
+            Else
+                If dragged.Annotation Is Nothing Then Return
+                objBlock = New List(Of ImageAnnotation) From {dragged.Annotation}
+            End If
+            If objBlock.Count = 0 Then Return
+
+            PushUndo()
+            Dim dirty = SKRectI.Empty
+            For Each a In objBlock
+                dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(a))
+            Next
+            Dim vorher = objBlock.Where(Function(a) _annotations.IndexOf(a) < zielIndex).Count()
+            For Each a In objBlock
+                _annotations.Remove(a)
+            Next
+            zielIndex = Math.Max(0, Math.Min(_annotations.Count, zielIndex - vorher))
+            For k = 0 To objBlock.Count - 1
+                _annotations.Insert(zielIndex + k, objBlock(k))
+                If Not dragged.IsGroupHeader Then objBlock(k).GroupId = zielGruppe
+            Next
+            DropOrphanedAnnotationGroups()
+            ' Nach dem Umsortieren die Auswahl aufheben: sonst zeigte ein Placement-Ghost eine alte
+            ' Z-Position weiter (gleiche Begründung wie beim einfachen Umsortieren).
+            SelectedAnnotationIndex = -1
+            RebuildLayerRows()
+            RaiseResetButtonStateChanged()
+            RefreshOverlayAfterAnnotationChange(dirty)
+        End Sub
+
         Private Sub ToggleAnnotationVisibility(annotation As ImageAnnotation)
             If annotation Is Nothing Then Return
             CaptureUndoState("LayerVisibility")
@@ -14143,6 +15228,27 @@ Namespace ViewModels
 
         Private Sub ToggleLayerVisibility(row As LayerPanelRow)
             If row Is Nothing Then Return
+            If row.IsGroupHeader Then
+                ' Der Schalter der GRUPPE. Die Mitglieder behalten ihr eigenes IsVisible - der
+                ' Render verundet beides (ImageAdjustments.IsAnnotationRenderVisible), ein wieder
+                ' eingeschaltetes Gruppenauge holt also genau die vorher sichtbaren Mitglieder zurück.
+                CaptureUndoState("AnnotationGroupVisibility")
+                row.Group.IsVisible = Not row.Group.IsVisible
+                row.Refresh()
+                _hasChanges = True
+                RaiseResetButtonStateChanged()
+                If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, row.Group.Id, StringComparison.Ordinal)) Then
+                    ' Korrekturebenen wirken auf die BASIS - dort hilft kein Objekt-Region-Patch.
+                    SchedulePreviewUpdate()
+                    Return
+                End If
+                Dim dirty = SKRectI.Empty
+                For Each m In AnnotationsInGroup(row.Group.Id)
+                    dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(m))
+                Next
+                RefreshOverlayAfterAnnotationChange(dirty)
+                Return
+            End If
             If row.AdjustmentLayer Is Nothing Then
                 ToggleAnnotationVisibility(row.Annotation)
                 row.Refresh()
@@ -14163,6 +15269,8 @@ Namespace ViewModels
             ' Rect VOR dem Entfernen erfassen - danach ist das Objekt weg.
             Dim deletedRect = ComputeSceneDirtyRectFor(_annotations(index))
             _annotations.RemoveAt(index)
+            ' War das das letzte Mitglied seiner Gruppe, verschwindet die Gruppe mit.
+            DropOrphanedAnnotationGroups()
             If _selectedAnnotationIndex = index Then
                 SelectedAnnotationIndex = -1
             ElseIf _selectedAnnotationIndex > index Then
@@ -14459,9 +15567,12 @@ Namespace ViewModels
             _objectAdjustSwapInProgress = True
             Try
                 Dim objectValues = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
-                If _objectAdjustIndex >= 0 AndAlso _objectAdjustIndex < _annotations.Count Then
-                    _annotations(_objectAdjustIndex).Adjustments = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
-                End If
+                Dim werte = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
+                For Each i In ObjectAdjustTargetIndices()
+                    If i >= 0 AndAlso i < _annotations.Count Then
+                        _annotations(i).Adjustments = If(werte Is Nothing, Nothing, werte.Clone())
+                    End If
+                Next
 
                 Dim restored = BuildAdjustmentsFromFields()
                 restored.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
@@ -14473,6 +15584,17 @@ Namespace ViewModels
             End Try
             Me.RaisePropertyChanged(NameOf(IsAdjustingObject))
         End Sub
+
+        ''' <summary>Auf welche Objekte wirken die Regler im Objekt-Anpassungsmodus? Bei einer
+        ''' Mehrfachauswahl auf ALLE markierten - das Panel beschreibt die Auswahl, nicht den Anker.
+        ''' Ohne Mehrfachauswahl bleibt es beim bisherigen Einzelziel.</summary>
+        Private Function ObjectAdjustTargetIndices() As List(Of Integer)
+            If HasMultiAnnotationSelection Then
+                Dim indices = SelectedAnnotationIndices()
+                If indices.Count > 0 Then Return indices
+            End If
+            Return New List(Of Integer) From {_objectAdjustIndex}
+        End Function
 
         Private Function IsObjectAdjustModeActive() As Boolean
             Return _objectAdjustIndex >= 0 AndAlso _imagePixelAdjustments IsNot Nothing
@@ -14870,6 +15992,19 @@ Namespace ViewModels
                                                                      ImageProcessor.UnionRects(oldDirtyRect, newDirtyRect))
                 End If
             End If
+            ' MEHRFACHAUSWAHL: die Eigenschaften, die für jedes Objekt dieselbe Bedeutung haben,
+            ' wirken auf ALLE markierten - sonst beschriebe das Panel nur den Anker, und Deckkraft
+            ' oder Mischmodus einer Gruppe wären wirkungslos. Alles Übrige (Text, Schrift, Füllung,
+            ' Kontur, Effekte) ist objekt-eigen und wird bei Mehrfachauswahl gar nicht erst angeboten.
+            If HasMultiAnnotationSelection Then
+                For Each other In SelectedAnnotations
+                    If Object.ReferenceEquals(other, a) Then Continue For
+                    other.Opacity = a.Opacity
+                    other.BlendMode = a.BlendMode
+                    other.BlendIncludesStroke = a.BlendIncludesStroke
+                    other.IsVisible = a.IsVisible
+                Next
+            End If
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
             If refreshOverlay Then UpdateSelectedAnnotationOverlayPreview()
             RaiseResetButtonStateChanged()
@@ -14898,6 +16033,14 @@ Namespace ViewModels
 
         Private Sub UpdateSelectedAnnotationOverlayPreview()
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then
+                SetSelectedAnnotationOverlay(Nothing)
+                Return
+            End If
+            ' MEHRFACHAUSWAHL: kein Ghost. Er zeigte das ANKER-Objekt, und die Anzeige streckt ihn per
+            ' Stretch=Fill auf die gemeinsame Box - das letzte markierte Objekt erschien dadurch
+            ' verzerrt über der ganzen Auswahl (Nutzer-Befund 2026-07-25). Live dargestellt wird bei
+            ' mehreren Objekten ohnehin die Szene selbst.
+            If HasMultiAnnotationSelection Then
                 SetSelectedAnnotationOverlay(Nothing)
                 Return
             End If

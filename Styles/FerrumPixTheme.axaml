@@ -899,6 +899,22 @@
         <Setter Property="IconBrush" Value="#FFFFFFFF"/>
     </Style>
 
+    <!-- MEHRFACHauswahl: die ListBox markiert nur EINE Zeile. Alle weiteren markierten Ebenen sehen
+         deshalb über diese Klasse genauso aus wie die ausgewählte - sonst wirkte eine funktionierende
+         Mehrfachauswahl, als hätte sie nicht gegriffen (Nutzer-Befund 2026-07-25). -->
+    <Style Selector="Border.layers-panel-row.multi-selected">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Border.layers-panel-row.multi-selected TextBlock.layer-name">
+        <Setter Property="Foreground" Value="#FFFFFFFF"/>
+    </Style>
+    <Style Selector="Border.layers-panel-row.multi-selected ToggleButton.layer-eye icons|SvgIcon">
+        <Setter Property="IconBrush" Value="#99FFFFFF"/>
+    </Style>
+    <Style Selector="Border.layers-panel-row.multi-selected ToggleButton.layer-eye:checked icons|SvgIcon">
+        <Setter Property="IconBrush" Value="#FFFFFFFF"/>
+    </Style>
+
     <Style Selector="ListBoxItem:selected:pressed">
         <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>

@@ -503,6 +503,7 @@
                             PointerPressed="OnSliderPointerPressed"
                             PointerMoved="OnSliderPointerMoved"
                             PointerReleased="OnSliderPointerReleased"
+                            PointerCaptureLost="OnPreviewCanvasCaptureLost"
                             PointerExited="OnPreviewCanvasPointerExited"
                             DragDrop.AllowDrop="True"
                             DragDrop.DragOver="OnPreviewCanvasDragOver"
@@ -770,6 +771,11 @@
                                         Margin="0,0,-8,-8" IsHitTestVisible="False" />
                             </Grid>
                         </Border>
+                        <!-- Aufgezogenes Auswahlrechteck für Objekte (Ziehen auf freier Fläche in den
+                             Objekt-Werkzeugen). Fängt keine Zeigereignisse ab. -->
+                        <Border x:Name="ObjectMarquee" IsVisible="False" IsHitTestVisible="False"
+                                BorderBrush="{DynamicResource FP.Accent}" BorderThickness="1"
+                                Background="#22F08A1A" />
                         <Line x:Name="SnapGuideV" IsVisible="False" IsHitTestVisible="False" Stroke="#FFFF3B8D"
                               StrokeThickness="1" StrokeDashArray="4,3" />
                         <Line x:Name="SnapGuideH" IsVisible="False" IsHitTestVisible="False" Stroke="#FFFF3B8D"
@@ -929,13 +935,15 @@
                                 <panels:AnnotationPropertiesPanel />
                             </Border>
 
+                            <!-- Schatten und Glühen sind objekt-eigen: bei einer Mehrfachauswahl
+                                 beschrieben sie nur den Anker und bleiben deshalb weg. -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowAnnotationProperties}">
+                                    IsVisible="{Binding ShowSingleAnnotationEffects}">
                                 <panels:AnnotationShadowPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowAnnotationProperties}">
+                                    IsVisible="{Binding ShowSingleAnnotationEffects}">
                                 <panels:AnnotationGlowPanel />
                             </Border>
 

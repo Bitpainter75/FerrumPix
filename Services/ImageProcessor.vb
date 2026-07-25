@@ -235,6 +235,8 @@ Namespace Services
         Private _isVisible As Boolean = True
         ' Vom Nutzer im Ebenen-Panel vergebener Name. Leer = automatische Beschriftung aus Art/Text/Datei.
         Private _customName As String = ""
+        ' Zugehörigkeit zu einer Objekt-Gruppe (leer = keine). Siehe GroupId.
+        Private _groupId As String = ""
         ' Vorlagenname, aus dem ein Wasserzeichen entstanden ist. Leer = frei angelegt.
         Private _watermarkPresetName As String = ""
         ' Reiner UI-Zustand: gerade wird der Name inline bearbeitet (nicht persistiert, nicht geklont).
@@ -335,6 +337,19 @@ Namespace Services
                 SetField(_customName, If(value, ""))
                 RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(LayerLabel)))
                 RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(EditableName)))
+            End Set
+        End Property
+
+        ''' <summary>Zugehörigkeit zu einer Objekt-Gruppe (leer = keine Gruppe). Die Gruppe selbst steht in
+        ''' <see cref="ImageAdjustments.AnnotationGroups"/> und trägt Name, Sichtbarkeit und Klappzustand.
+        ''' Mitglieder einer Gruppe liegen ZUSAMMENHÄNGEND in der Objektliste - die Gruppe ist damit auch
+        ''' ein Z-Order-Block und lässt sich als Ganzes umsortieren.</summary>
+        Public Property GroupId As String
+            Get
+                Return _groupId
+            End Get
+            Set(value As String)
+                SetField(_groupId, If(value, ""))
             End Set
         End Property
 
@@ -930,6 +945,7 @@ Namespace Services
                 .Kind = Kind,
                 .Text = Text,
                 .CustomName = CustomName,
+                .GroupId = GroupId,
                 .WatermarkPresetName = WatermarkPresetName,
                 .ImagePath = ImagePath,
                 .SourceFileName = SourceFileName,
@@ -1032,6 +1048,13 @@ Namespace Services
         ''' Editor als rotes Overlay). Steuert Symbol/Name im Ebenen-Panel und die Overlay-Darstellung.</summary>
         Public Property IsMaskLayer As Boolean = False
 
+        ''' <summary>Zugehörigkeit zu einer Gruppe (leer = keine). Dieselben Gruppen wie bei den
+        ''' Objekt-Ebenen (<see cref="AnnotationGroup"/>), aber eine Gruppe fasst entweder Objekte ODER
+        ''' Korrekturebenen zusammen: beide sind getrennte Rendergruppen (lokale Korrekturen laufen VOR
+        ''' den Objekt-Overlays), eine gemischte Gruppe würde eine Reihenfolge vortäuschen, die es im
+        ''' Renderer nicht gibt.</summary>
+        Public Property GroupId As String = ""
+
         ''' <summary>DEKLARATIVE Füllung (kein PNG/Objekt): leer = keine Füllung, sonst "Solid"/
         ''' "LinearGradient"/"RadialGradient". Bei einer AUSWAHL-Ebene wird die Füllung SICHTBAR in die
         ''' Auswahl komponiert (Farbe/Verlauf); bei einer MASKEN-Ebene stuft die LUMINANZ der Füllung die
@@ -1047,6 +1070,7 @@ Namespace Services
             Return New MaskedAdjustmentLayer With {
                 .Id = Id, .Name = Name, .MaskId = MaskId,
                 .IsVisible = IsVisible, .Opacity = Opacity, .FromPreset = FromPreset, .IsMaskLayer = IsMaskLayer,
+                .GroupId = GroupId,
                 .FillKind = FillKind, .FillColor = FillColor, .FillColor2 = FillColor2,
                 .FillAngle = FillAngle, .FillInverted = FillInverted,
                 .Adjustments = If(Adjustments Is Nothing, New ImageAdjustments(), Adjustments.Clone())
@@ -1056,6 +1080,32 @@ Namespace Services
         ''' <summary>True, wenn diese Ebene eine deklarative Füllung trägt.</summary>
         Public Function HasFill() As Boolean
             Return Not String.IsNullOrWhiteSpace(FillKind)
+        End Function
+    End Class
+
+    ''' <summary>Eine Gruppe von Objekt-Ebenen: gemeinsamer Name, gemeinsame Sichtbarkeit, gemeinsame
+    ''' Auswahl. Die Mitglieder verweisen über <see cref="ImageAnnotation.GroupId"/> hierher und liegen
+    ''' ZUSAMMENHÄNGEND in der Objektliste.
+    '''
+    ''' Die Gruppe ist BEWUSST kein eigener Renderschritt: Deckkraft und Mischmodus auf der Gruppenzeile
+    ''' schreiben ihren Wert in jedes Mitglied, statt die Gruppe als Ganzes zu komponieren. Damit bleibt
+    ''' der Renderer unberührt (keine zusätzliche bildgroße Ebene je Gruppe). Preis: bei überlappenden
+    ''' Mitgliedern stapelt sich Deckkraft an den Überlappungen, anders als bei einer echten
+    ''' Photoshop-Gruppe (Entscheidung 2026-07-25).</summary>
+    Public Class AnnotationGroup
+        Public Property Id As String = Guid.NewGuid().ToString("N")
+        Public Property Name As String = ""
+        ''' <summary>Sichtbarkeit der GRUPPE. Ein Mitglied wird gezeichnet, wenn sein eigenes IsVisible
+        ''' UND die Gruppe sichtbar sind (siehe ImageAdjustments.IsAnnotationRenderVisible).</summary>
+        Public Property IsVisible As Boolean = True
+        ''' <summary>Reiner Panel-Zustand: Mitglieder eingeklappt. Persistiert, weil er sonst bei jedem
+        ''' Öffnen verloren ginge; ohne Wirkung auf das Bild.</summary>
+        Public Property IsCollapsed As Boolean = False
+
+        Public Function Clone() As AnnotationGroup
+            Return New AnnotationGroup With {
+                .Id = Id, .Name = Name, .IsVisible = IsVisible, .IsCollapsed = IsCollapsed
+            }
         End Function
     End Class
 
@@ -1250,6 +1300,9 @@ Namespace Services
         Public Property LutStrength As Single = 100
         Public Property RetouchSpots As New System.Collections.Generic.List(Of RetouchSpot)()
         Public Property Annotations As New System.Collections.Generic.List(Of ImageAnnotation)()
+        ''' <summary>Objekt-Gruppen (siehe <see cref="AnnotationGroup"/>). Verwaist eine Gruppe (kein
+        ''' Mitglied mehr), wird sie beim nächsten Aufräumen entfernt.</summary>
+        Public Property AnnotationGroups As New System.Collections.Generic.List(Of AnnotationGroup)()
         Public Property RasterPaintStrokes As New System.Collections.Generic.List(Of PixelPaintStroke)()
         ''' <summary>Masken werden einmal gespeichert und können von mehreren lokalen Korrekturen benutzt werden.</summary>
         Public Property Masks As New System.Collections.Generic.List(Of ImageMask)()
@@ -1341,7 +1394,7 @@ Namespace Services
             "ResizeWidth", "ResizeHeight", "LockResizeAspect", "ResizeInterpolation",
             "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
             "BorderSize", "BorderColor", "BorderCornerRadius", "BorderEffect",
-            "RetouchSpots", "Annotations", "RasterPaintStrokes", "Masks", "MaskedAdjustmentLayers",
+            "RetouchSpots", "Annotations", "AnnotationGroups", "RasterPaintStrokes", "Masks", "MaskedAdjustmentLayers",
             "SelectionScopeEnabled", "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
@@ -1378,6 +1431,37 @@ Namespace Services
             Dim result = New ImageAdjustments()
             result.CopyPixelAdjustmentsFrom(Me)
             Return result
+        End Function
+
+        ''' <summary>Findet die Gruppe eines Objekts (Nothing, wenn es keiner angehört).</summary>
+        Public Function FindAnnotationGroup(annotation As ImageAnnotation) As AnnotationGroup
+            If annotation Is Nothing OrElse String.IsNullOrEmpty(annotation.GroupId) Then Return Nothing
+            If AnnotationGroups Is Nothing Then Return Nothing
+            For Each g In AnnotationGroups
+                If g IsNot Nothing AndAlso String.Equals(g.Id, annotation.GroupId, StringComparison.Ordinal) Then Return g
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>DER Chokepoint für „wird dieses Objekt gezeichnet?": eigenes IsVisible UND die
+        ''' Sichtbarkeit seiner Gruppe. Jede Renderstelle, die bisher `annotation.IsVisible` gelesen hat,
+        ''' muss hierüber gehen - sonst blendet der Gruppenschalter im Panel nichts aus.</summary>
+        Public Function IsAnnotationRenderVisible(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing OrElse Not annotation.IsVisible Then Return False
+            Dim group = FindAnnotationGroup(annotation)
+            Return group Is Nothing OrElse group.IsVisible
+        End Function
+
+        ''' <summary>Wie IsAnnotationRenderVisible, aber für lokale Korrekturebenen: eigene Sichtbarkeit
+        ''' UND die ihrer Gruppe.</summary>
+        Public Function IsMaskedLayerRenderVisible(layer As MaskedAdjustmentLayer) As Boolean
+            If layer Is Nothing OrElse Not layer.IsVisible Then Return False
+            If String.IsNullOrEmpty(layer.GroupId) Then Return True
+            If AnnotationGroups Is Nothing Then Return True
+            For Each g In AnnotationGroups
+                If g IsNot Nothing AndAlso String.Equals(g.Id, layer.GroupId, StringComparison.Ordinal) Then Return g.IsVisible
+            Next
+            Return True
         End Function
 
         ''' <summary>True, sobald irgendeine Pixel-Anpassung von der Voreinstellung abweicht. Nur dann muss
@@ -1508,6 +1592,8 @@ Namespace Services
                 .LutStrength = LutStrength,
                 .RetouchSpots = RetouchSpots.Select(Function(s) s.Clone()).ToList(),
                 .Annotations = Annotations.Select(Function(a) a.Clone()).ToList(),
+                .AnnotationGroups = If(AnnotationGroups, New System.Collections.Generic.List(Of AnnotationGroup)()).
+                    Where(Function(g) g IsNot Nothing).Select(Function(g) g.Clone()).ToList(),
                 .RasterPaintStrokes = RasterPaintStrokes.Select(Function(s) s.Clone()).ToList(),
                 .Masks = If(Masks, New List(Of ImageMask)()).Where(Function(m) m IsNot Nothing).Select(Function(m) m.Clone()).ToList(),
                 .MaskedAdjustmentLayers = If(MaskedAdjustmentLayers, New List(Of MaskedAdjustmentLayer)()).Where(Function(l) l IsNot Nothing).Select(Function(l) l.Clone()).ToList(),
@@ -2940,7 +3026,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                                      GroupBy(Function(m) m.Id, StringComparer.Ordinal).
                                      ToDictionary(Function(g) g.Key, Function(g) g.First(), StringComparer.Ordinal)
             For Each layer In adj.MaskedAdjustmentLayers
-                If layer Is Nothing OrElse Not layer.IsVisible Then Continue For
+                If Not adj.IsMaskedLayerRenderVisible(layer) Then Continue For
                 Dim hasAdj = layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.HasPixelAdjustments()
                 Dim hasFill = layer.HasFill()
                 ' Auch Ebenen OHNE Pixel-Anpassung verarbeiten, wenn sie eine deklarative Füllung tragen
@@ -3952,7 +4038,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                            ' zurück - die ERSTE Füllung blieb sichtbar und liess sich nie ersetzen
                            ' (Nutzer-Befund 2026-07-24; exakt die im Kopf von ComputeBaseKey beschriebene
                            ' Fehlerklasse "Regler macht nix").
-                           Return String.Join(":", l.Id, l.MaskId, l.IsVisible, l.Opacity,
+                           Return String.Join(":", l.Id, l.MaskId, l.IsVisible, l.Opacity, l.GroupId,
                                               l.IsMaskLayer, l.FillKind, l.FillColor, l.FillColor2,
                                               KeyPart(l.FillAngle), l.FillInverted,
                                               String.Join(",", pixelValues))
@@ -6372,7 +6458,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse layerWidth <= 0 OrElse layerHeight <= 0 Then Return
 
             For Each annotation In annotations
-                If annotation Is Nothing OrElse Not annotation.IsVisible Then Continue For
+                ' Sichtbarkeit IMMER über den Chokepoint: er verundet das eigene IsVisible mit dem
+                ' Schalter der Gruppe, zu der das Objekt gehört.
+                If Not adj.IsAnnotationRenderVisible(annotation) Then Continue For
                 Dim renderAnnotation = TransformAnnotationForGeometry(annotation, adj, sourceWidth, sourceHeight)
                 If renderAnnotation Is Nothing Then Continue For
                 Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()

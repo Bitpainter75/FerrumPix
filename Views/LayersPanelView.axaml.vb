@@ -105,23 +105,55 @@ Namespace Views
             Dim row = TryCast(border?.DataContext, LayerPanelRow)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If border Is Nothing OrElse row Is Nothing OrElse vm Is Nothing Then Return
-            vm.SelectedLayerRow = row
+            ' Eine bestehende MEHRFACHauswahl darf der Rechtsklick nicht zerstören - sonst wäre
+            ' „Gruppieren" über das Kontextmenü nie erreichbar (der Klick hätte die Auswahl schon auf
+            ' eine Zeile eingedampft). Nur wenn die angeklickte Zeile nicht dazugehört, wird gewechselt.
+            Dim rowIsInSelection = (row.Annotation IsNot Nothing AndAlso vm.IsAnnotationSelected(row.Annotation)) OrElse
+                                   (row.AdjustmentLayer IsNot Nothing AndAlso vm.IsAdjustmentLayerSelected(row.AdjustmentLayer)) OrElse
+                                   (row.IsGroupHeader AndAlso Object.ReferenceEquals(row, vm.SelectedLayerRow))
+            If Not rowIsInSelection Then vm.SelectedLayerRow = row
 
             Dim items As New List(Of Control)()
-            items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene nach vorne"), "arrow-up", vm.MoveSelectedAnnotationUpCommand))
-            items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene nach hinten"), "arrow-down", vm.MoveSelectedAnnotationDownCommand))
-            items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene duplizieren (Strg+D)"), "copy", vm.DuplicateSelectedAnnotationCommand))
+            Dim mehrere = vm.SelectedAnnotationCount > 1 OrElse vm.SelectedAdjustmentLayers.Count > 1
+            If vm.CanGroupSelectedAnnotations Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Objekte gruppieren (Strg+G)"), "folder", vm.GroupSelectedAnnotationsCommand))
+            End If
+            If vm.CanUngroupSelectedAnnotations Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Gruppierung aufheben (Strg+Umschalt+G)"), "folder-x", vm.UngroupSelectedAnnotationsCommand))
+            End If
+            If items.Count > 0 Then items.Add(New Separator())
+            If Not mehrere Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene nach vorne"), "arrow-up", vm.MoveSelectedAnnotationUpCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene nach hinten"), "arrow-down", vm.MoveSelectedAnnotationDownCommand))
+            End If
+            If mehrere Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Objekte duplizieren"), "copy", vm.DuplicateSelectedAnnotationsCommand))
+            Else
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene duplizieren (Strg+D)"), "copy", vm.DuplicateSelectedAnnotationCommand))
+            End If
             If vm.HasSelectedAdjustmentLayer Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Neue Korrektur mit derselben Maske"), "adjustments-plus", vm.AddAdjustmentWithSameMaskCommand))
             End If
             If vm.CanRasterizeSelectedAnnotation Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern (ins Bild einbacken)"), "layers-union", vm.RasterizeSelectedAnnotationCommand))
             End If
-            Dim renameItem = MakeLayerMenuItem(LocalizationService.T("Ebene umbenennen (F2)"), "edit", Nothing)
-            AddHandler renameItem.Click, Sub(s2, e2) StartRenameSelectedLayer()
-            items.Add(renameItem)
+            ' Umbenennen gilt für die angeklickte ZEILE - eine Gruppen-Kopfzeile also auch, obwohl mit
+            ' ihr alle Mitglieder markiert sind (sonst wäre eine Gruppe nur per F2 umbenennbar).
+            If row.IsGroupHeader Then
+                Dim renameGroupItem = MakeLayerMenuItem(LocalizationService.T("Gruppe umbenennen (F2)"), "edit", Nothing)
+                AddHandler renameGroupItem.Click, Sub(s2, e2) StartRenameSelectedLayer()
+                items.Add(renameGroupItem)
+            ElseIf Not mehrere Then
+                Dim renameItem = MakeLayerMenuItem(LocalizationService.T("Ebene umbenennen (F2)"), "edit", Nothing)
+                AddHandler renameItem.Click, Sub(s2, e2) StartRenameSelectedLayer()
+                items.Add(renameItem)
+            End If
             items.Add(New Separator())
-            items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene löschen (Entf)"), "trash", vm.DeleteSelectedAnnotationCommand))
+            If mehrere Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Objekte löschen"), "trash", vm.DeleteSelectedAnnotationsCommand))
+            Else
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene löschen (Entf)"), "trash", vm.DeleteSelectedAnnotationCommand))
+            End If
 
             Dim menu As New ContextMenu()
             menu.ItemsSource = items
@@ -211,13 +243,44 @@ Namespace Views
         ' ── Umsortieren per Drag & Drop ─────────────────────────────────────────
 
         Private Sub OnLayerRowPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            If e.GetCurrentPoint(Me).Properties.IsRightButtonPressed Then
+                ' Rechtsklick auf eine bereits markierte Zeile darf die Mehrfachauswahl nicht
+                ' eindampfen - die ListBox setzt ihr SelectedItem auch mit der rechten Taste.
+                Dim vmRight = TryCast(DataContext, EditorViewModel)
+                Dim rightRow = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
+                If vmRight IsNot Nothing AndAlso rightRow IsNot Nothing Then
+                    vmRight.PreserveMultiSelectionOnNextRowChange =
+                        (rightRow.Annotation IsNot Nothing AndAlso vmRight.IsAnnotationSelected(rightRow.Annotation)) OrElse
+                        (rightRow.AdjustmentLayer IsNot Nothing AndAlso vmRight.IsAdjustmentLayerSelected(rightRow.AdjustmentLayer))
+                End If
+                Return
+            End If
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
             ' Klicks auf Auge/Knöpfe/Eingabefeld nicht als Ziehstart werten.
             Dim src = TryCast(e.Source, Visual)
             If src IsNot Nothing AndAlso (src.FindAncestorOfType(Of Button)() IsNot Nothing OrElse
                                           src.FindAncestorOfType(Of ToggleButton)() IsNot Nothing OrElse
                                           src.FindAncestorOfType(Of TextBox)() IsNot Nothing) Then Return
-            _dragCandidate = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
+            Dim row = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
+            ' Strg+Klick nimmt eine Objektebene zur Auswahl hinzu bzw. heraus. Das Ereignis wird dabei
+            ' verbraucht: die ListBox ist einfach-auswählend und würde die Menge sonst sofort wieder
+            ' auf diese eine Zeile eindampfen.
+            Dim mehrfach = e.KeyModifiers.HasFlag(KeyModifiers.Control) OrElse e.KeyModifiers.HasFlag(KeyModifiers.Shift)
+            If mehrfach AndAlso row IsNot Nothing AndAlso (row.Annotation IsNot Nothing OrElse row.AdjustmentLayer IsNot Nothing) Then
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If vm IsNot Nothing Then
+                    Dim bereich = e.KeyModifiers.HasFlag(KeyModifiers.Shift)
+                    If row.Annotation IsNot Nothing Then
+                        Dim index = vm.TextAnnotations.IndexOf(row.Annotation)
+                        If bereich Then vm.SelectAnnotationRangeTo(index) Else vm.ToggleAnnotationInSelection(index)
+                    Else
+                        If bereich Then vm.SelectAdjustmentLayerRangeTo(row.AdjustmentLayer) Else vm.ToggleAdjustmentLayerInSelection(row.AdjustmentLayer)
+                    End If
+                    e.Handled = True
+                    Return
+                End If
+            End If
+            _dragCandidate = row
             _dragStartPoint = e.GetPosition(Me)
             _dragPressArgs = e
         End Sub
@@ -257,8 +320,10 @@ Namespace Views
             Dim layerRow = TryCast(row?.DataContext, LayerPanelRow)
             If row Is Nothing OrElse layerRow Is Nothing Then Return
             ' Objekt- und Korrekturebenen liegen in getrennten Rendergruppen und können nicht
-            ' gruppenübergreifend verschoben werden.
-            If _draggedLayer.IsAdjustmentLayer <> layerRow.IsAdjustmentLayer Then
+            ' gruppenübergreifend verschoben werden. Eine Gruppen-Kopfzeile zählt dabei als die Art
+            ' ihrer Mitglieder (die Entscheidung trifft das ViewModel).
+            Dim vmDrag = TryCast(DataContext, EditorViewModel)
+            If vmDrag Is Nothing OrElse Not vmDrag.CanDropLayerOn(_draggedLayer, layerRow) Then
                 e.DragEffects = DragDropEffects.None
                 HideDropIndicator()
                 Return

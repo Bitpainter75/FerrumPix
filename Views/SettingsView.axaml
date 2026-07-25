@@ -1407,6 +1407,14 @@
                                 <TextBlock Grid.Column="1" Text="Objekt duplizieren; ohne Objekt: Auswahl aufheben" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Strg+Klick" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Objekt zur Auswahl hinzufügen oder herausnehmen" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Strg+Umschalt+G" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Gruppierung aufheben" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Strg+P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Drucken (aktueller Bearbeitungsstand)" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </Grid>
@@ -1424,6 +1432,10 @@
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Strg+G" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Markierte Ebenen gruppieren" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Strg+M" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Werkzeug: Einfügen" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">

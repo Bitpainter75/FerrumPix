@@ -59,6 +59,8 @@ Namespace Views
         Private _cropDragPointerStart As Avalonia.Point
         Private _isTextDragging As Boolean = False
         Private _textDragMode As TextDragMode = TextDragMode.None
+        ' Letzter Winkel des laufenden Dreh-Zugs - die Mehrfachauswahl dreht in Differenzen.
+        Private _textRotateLastAngle As Double = 0
         Private _textDragInitialRect As Avalonia.Rect
         Private _textDragPointerStart As Avalonia.Point
         Private _textDragAspect As Double = 1.0
@@ -321,6 +323,130 @@ Namespace Views
 
         ''' Bilddateien aus einem fremden Dateimanager auf die Leinwand ziehen legt sie als neue
         ''' Bild-Objekte an - derselbe Weg wie das Einfuegen per Werkzeug, nur ohne Dateidialog.
+        ' ── Auswahlrechteck für Objekte ───────────────────────────────────────
+        ' Ziehen auf freier Fläche (Objekt-Werkzeug, kein Objekttyp scharfgestellt) markiert alle
+        ' Objekte, die das Rechteck berührt. Erst ab einer Mindestbewegung gilt es als Zug - ein
+        ' reiner Klick bleibt „Auswahl aufheben".
+        Private _objectMarqueeActive As Boolean = False
+        Private _objectMarqueeStart As Avalonia.Point
+        Private _objectMarqueeEnd As Avalonia.Point
+        Private Const ObjectMarqueeThreshold As Double = 4.0
+
+        ''' <summary>Geht die Zeiger-Erfassung während des Auswahlrechtecks verloren (Fokuswechsel,
+        ''' Popup), wird der Zug wie ein Loslassen abgewickelt - sonst bliebe das Rechteck sichtbar
+        ''' stehen und der nächste Klick liefe in einen halb offenen Zug (dieselbe Lehre wie bei den
+        ''' Einrast-Hilfslinien).</summary>
+        Private Sub OnPreviewCanvasCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
+            If _objectMarqueeActive Then EndObjectMarquee()
+        End Sub
+
+        ''' <summary>In welchen Werkzeugen zieht ein Zug auf freier Fläche ein OBJEKT-Auswahlrechteck?
+        ''' Bewusst eng: im VERSCHIEBEN-Werkzeug immer (dort sind Objekte das Thema, es wird nichts
+        ''' platziert), in den Objekt-Werkzeugen nur, solange KEIN Objekttyp scharfgestellt ist - sonst
+        ''' setzt der Klick dort ein neues Objekt. In den Anpassungs-Werkzeugen (Anpassen/Farbe/Effekte/
+        ''' Filter) NICHT: dort hebt ein Klick ins Leere weiterhin die Auswahl auf. Und im
+        ''' Auswahl-Werkzeug schon gar nicht - dessen Rechteck ist die Pixelauswahl.</summary>
+        Private Shared Function AllowsObjectMarquee(vm As EditorViewModel) As Boolean
+            If vm Is Nothing Then Return False
+            ' Im AUSWAHL-Werkzeug bleibt das Rechteck die Pixelauswahl - AUSSER im Untermodus
+            ' "Verschieben": dort zieht man heute nichts auf, also markiert ein Zug dort die Objekte,
+            ' die er berührt (Nutzerentscheidung 2026-07-25). Ein Klick ohne Zug hebt dort weiterhin
+            ' die Auswahl auf; das entscheidet erst das Loslassen (Zugschwelle).
+            If vm.CurrentTool = EditorTool.Selection Then Return vm.SelectionMode = "Move"
+            Dim erlaubt = vm.CurrentTool = EditorTool.Move OrElse
+                          (String.IsNullOrEmpty(vm.PendingInsertKind) AndAlso
+                           (vm.CurrentTool = EditorTool.Text OrElse vm.CurrentTool = EditorTool.Geometry OrElse
+                            vm.CurrentTool = EditorTool.Insert))
+            If Not erlaubt Then
+                DiagnosticLogService.LogAlways("Editor.ObjectMarquee",
+                                               $"kein Rechteck: werkzeug={vm.CurrentTool} pendingKind='{vm.PendingInsertKind}'")
+            End If
+            Return erlaubt
+        End Function
+
+        Private Sub BeginObjectMarquee(start As Avalonia.Point)
+            DiagnosticLogService.LogAlways("Editor.ObjectMarquee", $"start x={start.X:F0} y={start.Y:F0}")
+            _objectMarqueeActive = True
+            _objectMarqueeStart = start
+            _objectMarqueeEnd = start
+            UpdateObjectMarqueeVisual()
+        End Sub
+
+        Private Function ObjectMarqueeRect() As Avalonia.Rect
+            Return New Avalonia.Rect(
+                Math.Min(_objectMarqueeStart.X, _objectMarqueeEnd.X),
+                Math.Min(_objectMarqueeStart.Y, _objectMarqueeEnd.Y),
+                Math.Abs(_objectMarqueeEnd.X - _objectMarqueeStart.X),
+                Math.Abs(_objectMarqueeEnd.Y - _objectMarqueeStart.Y))
+        End Function
+
+        Private Sub UpdateObjectMarqueeVisual()
+            Dim marquee = Me.FindControl(Of Border)("ObjectMarquee")
+            If marquee Is Nothing Then Return
+            Dim rect = ObjectMarqueeRect()
+            If Not _objectMarqueeActive OrElse (rect.Width < ObjectMarqueeThreshold AndAlso rect.Height < ObjectMarqueeThreshold) Then
+                marquee.IsVisible = False
+                Return
+            End If
+            Avalonia.Controls.Canvas.SetLeft(marquee, rect.X)
+            Avalonia.Controls.Canvas.SetTop(marquee, rect.Y)
+            marquee.Width = rect.Width
+            marquee.Height = rect.Height
+            marquee.IsVisible = True
+        End Sub
+
+        Private Sub EndObjectMarquee()
+            DiagnosticLogService.LogAlways("Editor.ObjectMarquee", $"ende rect={ObjectMarqueeRect().Width:F0}x{ObjectMarqueeRect().Height:F0}")
+            _objectMarqueeActive = False
+            Dim marquee = Me.FindControl(Of Border)("ObjectMarquee")
+            If marquee IsNot Nothing Then marquee.IsVisible = False
+
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If canvas Is Nothing OrElse vm Is Nothing Then Return
+            Dim rect = ObjectMarqueeRect()
+            If rect.Width < ObjectMarqueeThreshold AndAlso rect.Height < ObjectMarqueeThreshold Then
+                vm.SelectedAnnotationIndex = -1
+                Return
+            End If
+
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            vm.SelectAnnotationsInRectPercent(
+                (rect.X - imageRect.Left) / imageRect.Width * 100.0,
+                (rect.Y - imageRect.Top) / imageRect.Height * 100.0,
+                rect.Width / imageRect.Width * 100.0,
+                rect.Height / imageRect.Height * 100.0)
+        End Sub
+
+        ''' <summary>Objektauswahl per Klick auf die Leinwand. Strg nimmt das Objekt zur bestehenden
+        ''' Auswahl hinzu bzw. heraus; ohne Strg wird neu ausgewählt - und trifft der Klick ein
+        ''' GRUPPEN-Mitglied, wird die ganze Gruppe markiert.</summary>
+        ''' <summary>Startet derselbe Druck, der ein Objekt auswählt, auch schon den Zieh-Vorgang?
+        ''' Im VERSCHIEBEN-Werkzeug (und im gleichnamigen Untermodus des Auswahl-Werkzeugs) nicht: dort
+        ''' ist der Klick primär AUSWAHL, verschoben wird erst, wenn der Druck in einem BEREITS
+        ''' markierten Objekt beginnt (Nutzerentscheidung 2026-07-25). Sonst würde jedes Antippen eines
+        ''' Objekts es sofort mitziehen, und eine Mehrfachauswahl liesse sich kaum aufbauen.
+        ''' In den Objekt-Werkzeugen (Text/Einfügen) bleibt es bei „Auswählen und Ziehen in EINER
+        ''' Geste" - dort war genau das ausdrücklich gewünscht.</summary>
+        Private Shared Function StartsMoveDragOnSelectPress(vm As EditorViewModel, wasAlreadySelected As Boolean) As Boolean
+            If vm Is Nothing Then Return False
+            If vm.CurrentTool = EditorTool.Move OrElse
+               (vm.CurrentTool = EditorTool.Selection AndAlso vm.SelectionMode = "Move") Then
+                Return wasAlreadySelected
+            End If
+            Return True
+        End Function
+
+        Private Shared Sub SelectAnnotationFromCanvas(vm As EditorViewModel, hitIndex As Integer, modifiers As KeyModifiers)
+            If vm Is Nothing Then Return
+            If modifiers.HasFlag(KeyModifiers.Control) Then
+                vm.ToggleAnnotationInSelection(hitIndex)
+            Else
+                vm.SelectAnnotationWithGroup(hitIndex)
+            End If
+        End Sub
+
         Private Shared Function GetDroppedImagePaths(e As DragEventArgs) As List(Of String)
             Try
                 Dim files = e.DataTransfer?.TryGetFiles()
@@ -737,7 +863,12 @@ Namespace Views
                     _hideBrushPreviewAfterBake = False
                     ShowBrushPreviewLine(False)
                 Case NameOf(EditorViewModel.SelectedAnnotationIndex),
-                     NameOf(EditorViewModel.HasSelectedAnnotation)
+                     NameOf(EditorViewModel.HasSelectedAnnotation),
+                     NameOf(EditorViewModel.HasMultiAnnotationSelection),
+                     NameOf(EditorViewModel.SelectedAnnotationCount)
+                    ' Die Mehrfachauswahl MUSS hier mit stehen: Strg+Klick behält den Anker, ändert also
+                    ' weder Index noch HasSelectedAnnotation - ohne diesen Fall bliebe der Rahmen auf dem
+                    ' einzelnen Objekt stehen und die Auswahl sähe aus, als hätte sie nicht gegriffen.
                     UpdateTextOverlayVisibility()
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.HasActiveSelection),
@@ -1152,6 +1283,16 @@ Namespace Views
                     ' "Zauberstab" haben außerhalb des Bildes keine Zieh-Geste und räumen weiterhin auf.
                     Dim startsSelectionDragOutside = vm.CurrentTool = EditorTool.Selection AndAlso
                                                      vm.SelectionMode <> "Move" AndAlso vm.SelectionMode <> "MagicWand"
+                    ' Dasselbe für das OBJEKT-Auswahlrechteck: es darf ausserhalb des Bildes ansetzen und
+                    ' ins Bild hineingezogen werden - genau so umschliesst man Objekte, die am Bildrand
+                    ' liegen, ohne sie anzufassen (Nutzerwunsch 2026-07-25).
+                    Dim startsObjectMarqueeOutside = AllowsObjectMarquee(vm)
+                    If startsObjectMarqueeOutside Then
+                        BeginObjectMarquee(e.GetPosition(canvas))
+                        e.Pointer.Capture(canvas)
+                        e.Handled = True
+                        Return
+                    End If
                     If Not startsSelectionDragOutside Then
                         ClearEditorSelections(vm)
                         e.Handled = True
@@ -1226,11 +1367,14 @@ Namespace Views
                         If vm.HasActiveSelection AndAlso Not vm.IsPointInsideSelectionPercent(xPct, yPct) Then
                             vm.ClearSelection()
                         End If
-                        vm.SelectedAnnotationIndex = hitIndex
+                        Dim wasSelectedBefore = hitIndex >= 0 AndAlso hitIndex < vm.TextAnnotations.Count AndAlso
+                                                vm.IsAnnotationSelected(vm.TextAnnotations(hitIndex))
+                        SelectAnnotationFromCanvas(vm, hitIndex, e.KeyModifiers)
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
                         ' Auswahl + Ziehen in EINER Geste (siehe gleicher Block im allgemeinen Pfad).
                         Dim overlayAfterSelect = Me.FindControl(Of Border)("TextOverlay")
-                        If overlayAfterSelect IsNot Nothing AndAlso overlayAfterSelect.IsVisible Then
+                        If overlayAfterSelect IsNot Nothing AndAlso overlayAfterSelect.IsVisible AndAlso
+                           StartsMoveDragOnSelectPress(vm, wasSelectedBefore) Then
                             OnTextOverlayPointerPressed(overlayAfterSelect, e)
                         End If
                         e.Handled = True
@@ -1264,15 +1408,27 @@ Namespace Views
                     Dim hitSlopYPercent = hitSlopPixels / imageRect.Height * 100.0
                     Dim hitIndex = vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent)
                     If hitIndex >= 0 Then
-                        vm.SelectedAnnotationIndex = hitIndex
+                        Dim wasSelectedBefore = hitIndex >= 0 AndAlso hitIndex < vm.TextAnnotations.Count AndAlso
+                                                vm.IsAnnotationSelected(vm.TextAnnotations(hitIndex))
+                        SelectAnnotationFromCanvas(vm, hitIndex, e.KeyModifiers)
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
                         ' Auswahl + Ziehen in EINER Geste: der Selektions-Setter hat das TextOverlay
                         ' synchron positioniert - den Move-Drag direkt auf DIESEM Press starten, statt
                         ' ein Loslassen und erneutes Anklicken zu verlangen.
                         Dim overlayAfterSelect = Me.FindControl(Of Border)("TextOverlay")
-                        If overlayAfterSelect IsNot Nothing AndAlso overlayAfterSelect.IsVisible Then
+                        If overlayAfterSelect IsNot Nothing AndAlso overlayAfterSelect.IsVisible AndAlso
+                           StartsMoveDragOnSelectPress(vm, wasSelectedBefore) Then
                             OnTextOverlayPointerPressed(overlayAfterSelect, e)
                         End If
+                        e.Handled = True
+                        Return
+                    ElseIf AllowsObjectMarquee(vm) Then
+                        ' Untermodus "Verschieben": ein Zug auf freier Fläche zieht das OBJEKT-Auswahl-
+                        ' rechteck auf und markiert alles, was es berührt. Ein Klick ohne Zug hebt wie
+                        ' bisher die Auswahl auf (das entscheidet die Zugschwelle beim Loslassen).
+                        ' Die Bühne verschiebt man hier weiterhin mit der RECHTEN Maustaste.
+                        BeginObjectMarquee(e.GetPosition(canvas))
+                        e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
                     ElseIf vm.HasSelectedAnnotation Then
@@ -1424,15 +1580,25 @@ Namespace Views
                     End If
 
                     If hitIndex >= 0 Then
-                        vm.SelectedAnnotationIndex = hitIndex
+                        Dim wasSelectedBefore = hitIndex >= 0 AndAlso hitIndex < vm.TextAnnotations.Count AndAlso
+                                                vm.IsAnnotationSelected(vm.TextAnnotations(hitIndex))
+                        SelectAnnotationFromCanvas(vm, hitIndex, e.KeyModifiers)
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
                         ' Auswahl + Ziehen in EINER Geste: der Selektions-Setter hat das TextOverlay
                         ' synchron positioniert - den Move-Drag direkt auf DIESEM Press starten, statt
                         ' ein Loslassen und erneutes Anklicken zu verlangen.
                         Dim overlayAfterSelect = Me.FindControl(Of Border)("TextOverlay")
-                        If overlayAfterSelect IsNot Nothing AndAlso overlayAfterSelect.IsVisible Then
+                        If overlayAfterSelect IsNot Nothing AndAlso overlayAfterSelect.IsVisible AndAlso
+                           StartsMoveDragOnSelectPress(vm, wasSelectedBefore) Then
                             OnTextOverlayPointerPressed(overlayAfterSelect, e)
                         End If
+                        e.Handled = True
+                        Return
+                    ElseIf AllowsObjectMarquee(vm) Then
+                        ' Freie Flaeche, kein scharfgestellter Objekttyp: ein Zug zieht ein
+                        ' AUSWAHLRECHTECK auf und markiert alle Objekte, die es beruehrt.
+                        BeginObjectMarquee(e.GetPosition(canvas))
+                        e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
                     ElseIf vm.HasSelectedAnnotation Then
@@ -1495,6 +1661,15 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerMoved(sender As Object, e As PointerEventArgs)
+            If _objectMarqueeActive Then
+                Dim marqueeCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                If marqueeCanvas IsNot Nothing Then
+                    _objectMarqueeEnd = e.GetPosition(marqueeCanvas)
+                    UpdateObjectMarqueeVisual()
+                    e.Handled = True
+                    Return
+                End If
+            End If
             Dim cursorCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim cursorVm = TryCast(DataContext, EditorViewModel)
             If cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing Then
@@ -1691,6 +1866,11 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            If _objectMarqueeActive Then
+                EndObjectMarquee()
+                e.Handled = True
+                Return
+            End If
             If _isGuideDragging Then
                 Dim guideCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 If guideCanvas IsNot Nothing Then EndGuideDrag(e.GetPosition(guideCanvas))
@@ -2938,7 +3118,10 @@ Namespace Views
                 Return
             End If
 
-            Dim rectPercent = vm.GetSelectedAnnotationDisplayRectPercent()
+            ' Bei einer Mehrfachauswahl umschliesst der Rahmen ALLE markierten Objekte.
+            Dim rectPercent = If(vm.HasMultiAnnotationSelection,
+                                 vm.GetSelectionBoxDisplayRectPercent(),
+                                 vm.GetSelectedAnnotationDisplayRectPercent())
             Dim width = iw * rectPercent.Width / 100.0
             Dim height = ih * rectPercent.Height / 100.0
             Dim left = ix + iw * rectPercent.X / 100.0
@@ -2949,7 +3132,9 @@ Namespace Views
             overlay.Width = width
             overlay.Height = height
             overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
-            overlay.RenderTransform = New RotateTransform(vm.AnnotationRotation)
+            ' Die gemeinsame Box hat keine eigene Drehung - die Mitglieder koennen verschieden gedreht
+            ' sein. Sie bleibt deshalb achsenparallel.
+            overlay.RenderTransform = New RotateTransform(If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation))
             overlay.IsVisible = True
             ' Der Selektionsrahmen folgt bewusst der Objekt-Konturfarbe (Nutzer-Entscheidung 2026-07-16:
             ' "so wie frueher darstellen", nicht Akzentfarbe).
@@ -3154,6 +3339,7 @@ Namespace Views
                 _textRotateCenter = New Avalonia.Point(rect.Left + rect.Width / 2.0, rect.Top + rect.Height / 2.0)
                 _textRotateStartAngle = Math.Atan2(pos.Y - _textRotateCenter.Y, pos.X - _textRotateCenter.X) * 180.0 / Math.PI
                 _textRotateStartRotation = vm.AnnotationRotation
+                _textRotateLastAngle = vm.AnnotationRotation
             ElseIf mode = TextDragMode.Move AndAlso (vm.CurrentTool = EditorTool.Text OrElse vm.CurrentTool = EditorTool.Insert) Then
                 FocusTextOverlayEditor()
             End If
@@ -3303,6 +3489,13 @@ Namespace Views
                 Dim newRotation = _textRotateStartRotation + (currentAngle - _textRotateStartAngle)
                 newRotation = ((newRotation + 180.0) Mod 360.0 + 360.0) Mod 360.0 - 180.0
                 If e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then newRotation = Math.Round(newRotation / 15.0) * 15.0
+                If vm.HasMultiAnnotationSelection Then
+                    ' Mehrfachauswahl: die Differenz zum letzten Frame um die Mitte der gemeinsamen Box.
+                    vm.RotateSelectionBy(newRotation - _textRotateLastAngle)
+                    _textRotateLastAngle = newRotation
+                    e.Handled = True
+                    Return
+                End If
                 vm.AnnotationRotation = newRotation
                 overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
                 overlay.RenderTransform = New RotateTransform(newRotation)
@@ -3498,18 +3691,30 @@ Namespace Views
                                                  isVerticalLine As Boolean,
                                                  minSize As Double) As Boolean
             Const tolerance As Double = 7.0
+            ' Die HILFSLINIE zeigt an, WO ausgerichtet würde - sie hängt deshalb an der Nähe, nicht am
+            ' Erfolg des Einrastens. Vorher blieb sie weg, sobald der Kandidat verworfen wurde
+            ' (Mindestgröße, gleich danach die Seitenverhältnis-Sperre) - beim Skalieren also fast
+            ' immer, obwohl man sichtbar an der Kante eines anderen Objekts stand
+            ' (Nutzer-Befund 2026-07-25).
+            Dim guideTarget As Double = 0
+            Dim guideFound = False
             For Each target In GetSnapTargets(axisStart, axisLength, isVerticalLine)
-                If Math.Abs(draggedEdge - target) <= tolerance Then
-                    Dim candidate = target
-                    If IsValidResizeEdge(candidate, fixedEdge, draggedIsStart, minSize) Then
-                        draggedEdge = candidate
-                        ShowTextSnapGuide(target, isVerticalLine)
-                        Return True
-                    End If
+                Dim center = (draggedEdge + fixedEdge) / 2.0
+                Dim nearEdge = Math.Abs(draggedEdge - target) <= tolerance
+                Dim nearCenter = Math.Abs(center - target) <= tolerance
+                If Not nearEdge AndAlso Not nearCenter Then Continue For
+
+                If Not guideFound Then
+                    guideTarget = target
+                    guideFound = True
                 End If
 
-                Dim center = (draggedEdge + fixedEdge) / 2.0
-                If Math.Abs(center - target) <= tolerance Then
+                If nearEdge AndAlso IsValidResizeEdge(target, fixedEdge, draggedIsStart, minSize) Then
+                    draggedEdge = target
+                    ShowTextSnapGuide(target, isVerticalLine)
+                    Return True
+                End If
+                If nearCenter Then
                     Dim candidate = target * 2.0 - fixedEdge
                     If IsValidResizeEdge(candidate, fixedEdge, draggedIsStart, minSize) Then
                         draggedEdge = candidate
@@ -3518,6 +3723,11 @@ Namespace Views
                     End If
                 End If
             Next
+            If guideFound Then
+                ' In Reichweite, aber nicht einrastbar: Linie trotzdem zeigen (reine Anzeige).
+                ShowTextSnapGuide(guideTarget, isVerticalLine)
+                Return True
+            End If
             Return False
         End Function
 
@@ -3708,7 +3918,7 @@ Namespace Views
             ' Beim Textobjekt zuerst die Schrift skalieren: das Rechteck ist bei ihm kein freier Rahmen,
             ' sondern der gemessene Textkasten - das ViewModel setzt es aus der Schrift neu. Beim
             ' Verschieben bleibt die Schrift unangetastet (siehe ScaleSelectedTextFontFromDrag).
-            If IsSelectedAnnotationTextLayer(vm) Then ScaleSelectedTextFontFromDrag(textRect, vm)
+            If Not vm.HasMultiAnnotationSelection AndAlso IsSelectedAnnotationTextLayer(vm) Then ScaleSelectedTextFontFromDrag(textRect, vm)
 
             ' Verschieben und Drehen aendern die GROESSE nicht - dann die Werte des ViewModels
             ' unveraendert durchreichen, statt sie aus dem Bildschirm-Rechteck zurueckzurechnen. Jede
@@ -3718,6 +3928,17 @@ Namespace Views
             Dim widthPercent = If(keepsSize, vm.AnnotationWidthPercent, textRect.Width / imageRect.Width * 100.0)
             Dim heightPercent = If(keepsSize, vm.AnnotationHeightPercent, textRect.Height / imageRect.Height * 100.0)
 
+            If vm.HasMultiAnnotationSelection Then
+                ' Mehrfachauswahl: die gezogene Box beschreibt ALLE markierten Objekte.
+                Dim boxWidth = If(keepsSize, textRect.Width / imageRect.Width * 100.0, widthPercent)
+                Dim boxHeight = If(keepsSize, textRect.Height / imageRect.Height * 100.0, heightPercent)
+                vm.SetSelectionBoxRect(
+                    (textRect.Left - imageRect.Left) / imageRect.Width * 100.0,
+                    (textRect.Top - imageRect.Top) / imageRect.Height * 100.0,
+                    boxWidth,
+                    boxHeight)
+                Return
+            End If
             vm.SetSelectedAnnotationRect(
                 (textRect.Left - imageRect.Left) / imageRect.Width * 100.0,
                 (textRect.Top - imageRect.Top) / imageRect.Height * 100.0,
@@ -3976,6 +4197,23 @@ Namespace Views
                             e.Handled = True
                         End If
                     Case Key.G
+                        ' Strg+G gehört ALLEIN dem Gruppieren, Strg+Umschalt+G dem Aufheben. Eine
+                        ' Doppelbelegung derselben Taste wäre nicht vorhersagbar (Nutzerentscheidung
+                        ' 2026-07-25); das Objekt-Werkzeug liegt dafür jetzt auf Strg+M.
+                        If Not isTextInputFocused Then
+                            If e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                                If vm.CanUngroupSelectedAnnotations Then
+                                    vm.UngroupSelectedAnnotationsCommand.Execute(Nothing)
+                                    e.Handled = True
+                                End If
+                            ElseIf vm.CanGroupSelectedAnnotations Then
+                                vm.GroupSelectedAnnotationsCommand.Execute(Nothing)
+                                e.Handled = True
+                            End If
+                        End If
+                    Case Key.M
+                        ' „Werkzeug: Einfügen" (Objekte platzieren) - vorher auf Strg+G, das jetzt dem
+                        ' Gruppieren gehört.
                         If Not isTextInputFocused Then
                             vm.CurrentTool = EditorTool.Insert
                             e.Handled = True

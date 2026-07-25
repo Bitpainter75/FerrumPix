@@ -4217,4 +4217,55 @@
   <data name="Strg_K_e12b34b4" xml:space="preserve">
     <value>Strg+K</value>
   </data>
+  <data name="Gruppe_auf_oder_zuklappen_37ee4059" xml:space="preserve">
+    <value>Gruppe auf- oder zuklappen</value>
+  </data>
+  <data name="Objekte_gruppieren_Strg_G_8f7b8599" xml:space="preserve">
+    <value>Objekte gruppieren (Strg+G)</value>
+  </data>
+  <data name="Gruppierung_aufheben_Strg_Umschalt_G_83e2db35" xml:space="preserve">
+    <value>Gruppierung aufheben (Strg+Umschalt+G)</value>
+  </data>
+  <data name="Gruppe_f4e8075c" xml:space="preserve">
+    <value>Gruppe</value>
+  </data>
+  <data name="Strg_Klick_f7bbde58" xml:space="preserve">
+    <value>Strg+Klick</value>
+  </data>
+  <data name="Objekt_zur_Auswahl_hinzuf_gen_oder_herausnehmen_2ecab8d9" xml:space="preserve">
+    <value>Objekt zur Auswahl hinzufügen oder herausnehmen</value>
+  </data>
+  <data name="Markierte_Objekte_gruppieren_771bf31d" xml:space="preserve">
+    <value>Markierte Objekte gruppieren</value>
+  </data>
+  <data name="Strg_Umschalt_G_e8482b18" xml:space="preserve">
+    <value>Strg+Umschalt+G</value>
+  </data>
+  <data name="Gruppierung_aufheben_286fb0a0" xml:space="preserve">
+    <value>Gruppierung aufheben</value>
+  </data>
+  <data name="Objekte_duplizieren_01d2ecb2" xml:space="preserve">
+    <value>Objekte duplizieren</value>
+  </data>
+  <data name="Objekte_l_schen_18530d42" xml:space="preserve">
+    <value>Objekte löschen</value>
+  </data>
+  <data name="Markierte_Objekte_gruppieren_ohne_Mehrfachauswah_bb56593e" xml:space="preserve">
+    <value>Markierte Objekte gruppieren; ohne Mehrfachauswahl: Werkzeug Einfügen</value>
+  </data>
+  <data name="Markierte_Ebenen_gruppieren_Strg_G_53ed2acf" xml:space="preserve">
+    <value>Markierte Ebenen gruppieren (Strg+G)</value>
+  </data>
+  <data name="Strg_M_6a3609ac" xml:space="preserve">
+    <value>Strg+M</value>
+  </data>
+  <data name="Markierte_Ebenen_gruppieren_e2bff6df" xml:space="preserve">
+    <value>Markierte Ebenen gruppieren</value>
+  </data>
+  <data name="Gruppe_umbenennen_F2_c548e049" xml:space="preserve">
+    <value>Gruppe umbenennen (F2)</value>
+  </data>
+  <data name="Mehrfachauswahl_c20d2e98" xml:space="preserve">
+    <value>Mehrfachauswahl</value>
+  </data>
 </root>

@@ -1126,7 +1126,10 @@
                                             </StackPanel>
                                         </ContextMenu>
                                     </Border.ContextMenu>
-                                    <Grid RowDefinitions="Auto,68">
+                                    <!-- Beschriftungszeile: AUTO, damit der Streifen exakt so hoch ist wie sein Inhalt.
+                                         Eine feste Höhe hinterließ unter dem Text einen sichtbaren Leerstreifen und
+                                         würde bei größerer Schrift klemmen. -->
+                                    <Grid RowDefinitions="Auto,Auto">
                                         <Border Grid.Row="0"
                                                 Background="{DynamicResource FP.Bg.Input}"
                                                 Height="{Binding DataContext.ThumbnailImageHeight, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -1179,41 +1182,41 @@
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Top"
                                                             Margin="8"
-                                                            Spacing="4">
+                                                            Spacing="5">
                                                     <Button Classes="gallery-overlay-btn"
-                                                            Width="24"
-                                                            Height="24"
+                                                            Width="30"
+                                                            Height="30"
                                                             Padding="0"
                                                             IsVisible="{Binding IsImage}"
                                                             Click="OnHoverOpenViewerClick"
                                                             ToolTip.Tip="Im Viewer öffnen">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
-                                                                       Width="13"
-                                                                       Height="13"
+                                                                       Width="17"
+                                                                       Height="17"
                                                                        IconBrush="White"/>
                                                     </Button>
                                                     <Button Classes="gallery-overlay-btn"
-                                                            Width="24"
-                                                            Height="24"
+                                                            Width="30"
+                                                            Height="30"
                                                             Padding="0"
                                                             IsVisible="{Binding CanEditFile}"
                                                             Click="OnHoverOpenEditorClick"
                                                             ToolTip.Tip="Anpassen">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg"
-                                                                       Width="13"
-                                                                       Height="13"
+                                                                       Width="17"
+                                                                       Height="17"
                                                                        IconBrush="White"/>
                                                     </Button>
                                                     <Button Classes="gallery-overlay-btn danger"
-                                                            Width="24"
-                                                            Height="24"
+                                                            Width="30"
+                                                            Height="30"
                                                             Padding="0"
                                                             IsVisible="{Binding CanFileOperationDelete}"
                                                             Click="OnHoverDeleteClick"
                                                             ToolTip.Tip="Löschen">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                                                       Width="14"
-                                                                       Height="14"
+                                                                       Width="18"
+                                                                       Height="18"
                                                                        IconBrush="White"/>
                                                     </Button>
                                                 </StackPanel>
@@ -1271,6 +1274,7 @@
                                                             VerticalAlignment="Bottom">
                                                     <StackPanel Classes="gallery-meta-badges gallery-toggle-badge"
                                                             Classes.badge-always="{Binding DataContext.MetadataBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            IsVisible="{Binding DataContext.TileHasRoomForDetails, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             Orientation="Horizontal"
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Bottom"
@@ -1406,19 +1410,27 @@
                                                                FontWeight="SemiBold"
                                                                TextTrimming="CharacterEllipsis"/>
                                                 </Grid>
-                                                <Grid ColumnDefinitions="*,*,Auto">
-                                                    <TextBlock Text="{Binding DateText}"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="{DynamicResource FP.Font.Body}"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding DimensionsText}"
-                                                               IsVisible="{Binding DimensionsText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="{DynamicResource FP.Font.Body}"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Grid.Column="2"
+                                                <!-- Datum und Maße stehen zusammen LINKS in einer Zeile,
+                                                     die Dateigröße rechts. Als drei feste Grid-Spalten
+                                                     hing die Bildgröße an der Dateigröße, sobald das
+                                                     Datum auf schmalen Kacheln wegfiel. -->
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                                                VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DateText}"
+                                                                   IsVisible="{Binding DataContext.TileHasRoomForDetails, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                                   FontSize="{DynamicResource FP.Font.Body}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding DimensionsText}"
+                                                                   IsVisible="{Binding DimensionsText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                                   FontSize="{DynamicResource FP.Font.Body}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1"
                                                                Text="{Binding FileSizeText}"
                                                                Foreground="{DynamicResource FP.Text.Secondary}"
                                                                FontSize="{DynamicResource FP.Font.Body}"

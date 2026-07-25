@@ -200,8 +200,21 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ThumbnailImageHeight))
                 Me.RaisePropertyChanged(NameOf(GridItemSlotHeight))
                 Me.RaisePropertyChanged(NameOf(GridColumnPitch))
+                Me.RaisePropertyChanged(NameOf(TileHasRoomForDetails))
                 AppSettingsService.SaveGalleryThumbnailSize(value)
             End Set
+        End Property
+
+        ''' <summary>Ab welcher Kachelbreite Metadaten-Abzeichen und Dateidatum noch sinnvoll
+        ''' hineinpassen. Darunter überlagern die 32-px-Abzeichen das halbe Bild und das Datum wird auf
+        ''' wenige Zeichen abgeschnitten - dann bleiben beide weg (Nutzerwunsch 2026-07-25).
+        ''' Der Regler geht von 140 bis 520; 200 liegt knapp über den kleinsten Stufen.</summary>
+        Public Const TileDetailsMinWidth As Double = 200
+
+        Public ReadOnly Property TileHasRoomForDetails As Boolean
+            Get
+                Return _thumbnailSize >= TileDetailsMinWidth
+            End Get
         End Property
 
         Public ReadOnly Property ThumbnailImageHeight As Double
@@ -216,9 +229,15 @@ Namespace ViewModels
         ' WrapPanel-Margin der Karte (Margin="5", oben+unten = 10). Muss mit dem tatsächlichen XAML
         ' übereinstimmen - sonst driftet die virtualisierte Scroll-Berechnung mit der Scrolltiefe
         ' immer weiter auseinander (einzige Quelle für beide, damit sie nicht wieder auseinanderlaufen).
-        ' Muss mit der Grid-Zeilenhöhe "RowDefinitions=Auto,92" in GalleryView.axaml übereinstimmen
-        ' (92 statt vormals 68, seit die Kachel zusätzlich eine DimensionsText-Zeile zeigt).
-        Private Const GridItemLabelRowHeight As Double = 92
+        ' SCHÄTZWERT für die virtualisierte Scroll-Rechnung. Die Kachel selbst misst ihre
+        ' Beschriftungszeile inzwischen selbst (RowDefinitions="Auto,Auto"), damit unter dem Text kein
+        ' Leerstreifen bleibt und größere Schrift nicht klemmt. Der Wert hier bildet denselben Inhalt
+        ' nach: 2x9 Innenabstand + Name (FP.Font.ItemTitle 13) + 7 Abstand + Detailzeile
+        ' (FP.Font.Body 12), Zeilenhöhe rund das 1,35-fache der Schriftgröße.
+        ' Stand hier vorübergehend 92, während das XAML bei 68 blieb: die Karte endete dadurch 24 px
+        ' über der Unterkante ihres Slots - sichtbar als großer Abstand unter jeder Kachel, und die
+        ' virtualisierte Scroll-Rechnung driftete mit der Scrolltiefe (Nutzer-Befund 2026-07-25).
+        Private Const GridItemLabelRowHeight As Double = 59
         Private Const GridItemCardBorderHeight As Double = 4
         Private Const GridItemCardMarginHeight As Double = 10
 
