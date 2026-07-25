@@ -70,12 +70,12 @@
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Farbrauschen" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                                   ToolTip.Tip="Glättet nur die Farbanteile (Chroma), die Helligkeit und damit Details bleiben erhalten." />
-                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   ToolTip.Tip="Negativ entfernt Farbrauschen: geglättet werden nur die Farbanteile (Chroma), Helligkeit und Details bleiben erhalten. Positiv fügt farbiges Rauschen hinzu." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                            DefaultValue="0"
-                                           Value="{Binding ColorNoiseReduction}" Margin="0,0" />
+                                           Value="{Binding ColorNoiseAmount}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding ColorNoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                                 Value="{Binding ColorNoiseAmount, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Struktur" Foreground="{DynamicResource FP.Text.Secondary}"

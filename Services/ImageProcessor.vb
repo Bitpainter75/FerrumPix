@@ -1208,6 +1208,12 @@ Namespace Services
         ''' bleibt unangetastet - Details bleiben stehen, Farbflecken verschwinden. Gerade bei der
         ''' echten RAW-Entwicklung sichtbar, wo die Kamera-Vorschau schon entrauscht war.
         Public Property ColorNoiseReduction As Single = 0
+        ''' <summary>Farbrauschen HINZUFUEGEN 0-100 - die Plus-Seite desselben Reglers im Panel
+        ''' („Farbrauschen" ist bipolar wie „Rauschen": minus entfernt, plus faerbt ein). Getrennt
+        ''' gespeichert, damit <see cref="ColorNoiseReduction"/> weiter genau das bleibt, was
+        ''' Lightroom unter crs:ColorNoiseReduction ablegt (0-100 Entfernung) - eine gemeinsame
+        ''' Skala mit Vorzeichen haette den Preset-Import zweideutig gemacht.</summary>
+        Public Property ColorNoiseAdd As Single = 0
         Public Property DustScratches As Single = 0
         Public Property Haze As Single = 0
         Public Property AddNoise As Single = 0
@@ -1570,6 +1576,7 @@ Namespace Services
                 .NoiseReduction = NoiseReduction,
                 .NoiseReductionMethod = NoiseReductionMethod,
                 .ColorNoiseReduction = ColorNoiseReduction,
+                .ColorNoiseAdd = ColorNoiseAdd,
                 .DustScratches = DustScratches,
                 .Haze = Haze,
                 .AddNoise = AddNoise,
@@ -3072,8 +3079,14 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                     processed = ReplaceBitmap(processed, ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
                 End If
             End If
+            ' Die beiden Seiten desselben Panel-Reglers: Minus glaettet die Farbanteile, Plus faerbt
+            ' sie ein. Getrennte Felder, weil nur die Reduzierung eine Entsprechung in den Presets hat
+            ' (crs:ColorNoiseReduction) - siehe ImageAdjustments.ColorNoiseAdd.
             If adj.ColorNoiseReduction > 0 Then
                 processed = ReplaceBitmap(processed, ApplyColorNoiseReduction(processed, adj.ColorNoiseReduction / 100.0F))
+            End If
+            If adj.ColorNoiseAdd > 0 Then
+                processed = ReplaceBitmap(processed, ApplyColorNoiseAdd(processed, adj.ColorNoiseAdd / 100.0F))
             End If
             If adj.DustScratches <> 0 Then
                 processed = ReplaceBitmap(processed, ApplyDustScratches(processed, adj.DustScratches / 100.0F))
@@ -4093,6 +4106,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.SharpenMasking,
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.ColorNoiseReduction,
+                adj.ColorNoiseAdd,
                 adj.DustScratches, adj.Haze, adj.AddNoise, adj.[Structure], adj.Glow,
 adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.CalibrationGreenHue, adj.CalibrationGreenSaturation,
@@ -10537,14 +10551,39 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Try
         End Function
 
+        ''' <summary>Radius des GROBEN Chroma-Durchgangs in Pixeln des GERADE bearbeiteten Bildes.
+        '''
+        ''' Bewusst relativ zur Bildkante: Farbflecken sind ein Anteil des Bildes, kein absolutes
+        ''' Pixelmass. Ein fester Radius traefe in der Vorschau (lange Kante ~1500 px) eine ganz
+        ''' andere Fleckengroesse als im Export (6000 px) - Vorschau und Ergebnis saehen verschieden
+        ''' aus. Weil `source` hier immer das ist, was auch angezeigt bzw. gespeichert wird, stimmen
+        ''' beide ueberein. Der Deckel haelt die Rechenzeit bei sehr grossen Bildern im Rahmen.</summary>
+        Private Shared Function CoarseChromaSigma(source As SKBitmap, amount As Single) As Single
+            Dim longEdge = CSng(Math.Max(source.Width, source.Height))
+            ' Der Teiler ist gemessen, nicht geschaetzt: bei 1600 px langer Kante und Flecken von
+            ' 6 bis 12 px bleiben mit /300 noch 36 bzw. 56 Prozent stehen, mit /150 nur noch 27
+            ' bzw. 39 Prozent - erst da ist der Vollausschlag das, was er verspricht. Feines
+            ' Pixelrauschen faellt dabei von 11 auf 0,5 Prozent.
+            Return Clamp(amount * longEdge / 150.0F, 0, 24.0F)
+        End Function
+
         ''' <summary>Farb-Rauschreduzierung (crs:ColorNoiseReduction): das Bild wird weichgezeichnet,
         ''' danach bekommt jedes Pixel seine ORIGINAL-Helligkeit zurueck (Differenz der Rec.601-Luma
         ''' auf alle Kanaele addiert). Ergebnis: Chroma aus dem Blur, Luminanz vom Original - Kanten
         ''' und Details bleiben stehen, Farbflecken verschwinden. Chroma vertraegt deutlich mehr
-        ''' Glaettung als Helligkeit, daher ein groesseres Sigma als bei ApplyNoiseReduction.</summary>
+        ''' Glaettung als Helligkeit, daher ein groesseres Sigma als bei ApplyNoiseReduction.
+        '''
+        ''' ZWEI DURCHGAENGE (Messung 2026-07-25): der feine Pass allein (Sigma bis 2,5 px) loescht
+        ''' pixelweises Farbrauschen restlos aus - genau das prueft die Diagnose seit 2026-07-20.
+        ''' Das Farbrauschen eines hochgezogenen Nachthimmels ist aber TIEFFREQUENT: Flecken von
+        ''' 5 bis 15 px. Davon liessen 2,5 px gemessen 61 bis 78 Prozent stehen, der Regler war fuer
+        ''' den eigentlichen Anwendungsfall wirkungslos (Nutzer-Befund 2026-07-25, Nachtaufnahme).
+        ''' Der grobe Pass setzt darum auf dem feinen auf; kaskadiert wirken beide wie ein Radius
+        ''' von Wurzel(fein^2 + grob^2), ohne dass der feine Anteil unten am Regler seine Wirkung
+        ''' verliert.</summary>
         Private Shared Function ApplyColorNoiseReduction(source As SKBitmap, amount As Single) As SKBitmap
             amount = Clamp(amount, 0, 1)
-            ' Sigma waechst nur noch bis 2,5 statt 4,5 Pixel, und die Staerke blendet zusaetzlich
+            ' Feiner Pass wie bisher: Sigma waechst bis 2,5 Pixel, und die Staerke blendet zusaetzlich
             ' zwischen Original-Chroma und geglaetteter Chroma ueber.
             ' Vorher steuerte NUR das Sigma - und weil schon rund 2 Pixel pixelweises Farbrauschen
             ' vollstaendig ausloeschen, war der Regler ab etwa 30 wirkungslos: gemessen aenderten 50
@@ -10560,40 +10599,124 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End Using
             End Using
 
+            ' Grober Pass auf dem feinen: nimmt die FLECKEN, die der feine Radius nicht erreicht.
+            Dim coarseSigma = CoarseChromaSigma(source, amount)
+            Dim coarse As SKBitmap = Nothing
+            If coarseSigma > 0.5F Then
+                coarse = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+                Using filter = SKImageFilter.CreateBlur(coarseSigma, coarseSigma)
+                    Using paint = New SKPaint With {.ImageFilter = filter}
+                        Using canvas = New SKCanvas(coarse)
+                            canvas.DrawBitmap(blurred, 0, 0, paint)
+                        End Using
+                    End Using
+                End Using
+            End If
+
             Dim srcBuf As Byte() = Nothing
             Dim srcStride As Integer = 0
             Dim blurBuf As Byte() = Nothing
             Dim blurStride As Integer = 0
+            Dim coarseBuf As Byte() = Nothing
+            Dim coarseStride As Integer = 0
             If Not TryBorrowBgraBuffer(source, srcBuf, srcStride) OrElse
                Not TryBorrowBgraBuffer(blurred, blurBuf, blurStride) Then
+                coarse?.Dispose()
                 Return blurred
             End If
+            If coarse IsNot Nothing AndAlso Not TryBorrowBgraBuffer(coarse, coarseBuf, coarseStride) Then
+                coarseBuf = Nothing
+            End If
 
+            ' SCHUTZ FUER ECHTE FARBEN: ein Chroma-Blur macht keinen Unterschied zwischen einem
+            ' Farbfleck und einem kleinen bunten Licht - beide sind "Farbe auf kleiner Flaeche".
+            ' Gemessen verlor eine 3x3 px grosse Fensterlampe bei Vollausschlag 80 Prozent ihrer
+            ' Saettigung. Rauschen ist aber SCHWACH gesaettigt und echte Lichter sind es stark:
+            ' ab einer Farbabweichung von 30 nimmt die Wirkung ab, ab 90 bleibt das Pixel ganz in
+            ' Ruhe. Der Schutz gilt fuer BEIDE Durchgaenge - am feinen allein vorbeigezogen haette
+            ' er nichts genuetzt, denn schon dessen 2,5 px bleichen ein so kleines Licht aus.
+            ' Farbsaum um ein Licht herum entsteht dadurch nicht nennenswert: die Farbe einer
+            ' 3x3-Lampe verteilt sich im Blur auf einige hundert Pixel und geht darin unter.
+            Const schutzVon As Double = 30.0
+            Const schutzBis As Double = 90.0
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Dim dstBuf(srcBuf.Length - 1) As Byte
             ForEachRow(source.Width, source.Height, Sub(y)
                                                         Dim so = y * srcStride
                                                         Dim bo = y * blurStride
+                                                        Dim co = y * coarseStride
                                                         For x = 0 To source.Width - 1
                                                             Dim si = so + x * 4
                                                             Dim bi = bo + x * 4
                                                             ' Rec.601-Luma in Ganzzahlarithmetik (x1024).
                                                             Dim lumaSrc = (299 * CInt(srcBuf(si + 2)) + 587 * CInt(srcBuf(si + 1)) + 114 * CInt(srcBuf(si))) \ 1000
-                                                            Dim lumaBlur = (299 * CInt(blurBuf(bi + 2)) + 587 * CInt(blurBuf(bi + 1)) + 114 * CInt(blurBuf(bi))) \ 1000
-                                                            Dim delta = lumaSrc - lumaBlur
+                                                            Dim mix0 = CDbl(blurBuf(bi))
+                                                            Dim mix1 = CDbl(blurBuf(bi + 1))
+                                                            Dim mix2 = CDbl(blurBuf(bi + 2))
+                                                            If coarseBuf IsNot Nothing Then
+                                                                Dim ci = co + x * 4
+                                                                mix0 = CDbl(coarseBuf(ci))
+                                                                mix1 = CDbl(coarseBuf(ci + 1))
+                                                                mix2 = CDbl(coarseBuf(ci + 2))
+                                                            End If
+                                                            Dim chroma = (Math.Abs(CInt(srcBuf(si + 2)) - lumaSrc) + Math.Abs(CInt(srcBuf(si)) - lumaSrc)) / 2.0
+                                                            Dim schutz = 1.0 - Math.Max(0.0, Math.Min(1.0, (chroma - schutzVon) / (schutzBis - schutzVon)))
+                                                            Dim wirkung = amount * schutz
+                                                            Dim lumaMix = (299 * mix2 + 587 * mix1 + 114 * mix0) / 1000.0
+                                                            Dim delta = lumaSrc - lumaMix
                                                             ' Chroma aus dem Blur, Luminanz vom Original - und beides
                                                             ' anteilig ueber das Original geblendet, damit der Regler
                                                             ' ueber den ganzen Weg etwas tut.
-                                                            Dim nb0 = CInt(blurBuf(bi)) + delta
-                                                            Dim nb1 = CInt(blurBuf(bi + 1)) + delta
-                                                            Dim nb2 = CInt(blurBuf(bi + 2)) + delta
-                                                            dstBuf(si) = ClampToByte(CInt(srcBuf(si)) + (nb0 - CInt(srcBuf(si))) * amount)
-                                                            dstBuf(si + 1) = ClampToByte(CInt(srcBuf(si + 1)) + (nb1 - CInt(srcBuf(si + 1))) * amount)
-                                                            dstBuf(si + 2) = ClampToByte(CInt(srcBuf(si + 2)) + (nb2 - CInt(srcBuf(si + 2))) * amount)
+                                                            Dim nb0 = mix0 + delta
+                                                            Dim nb1 = mix1 + delta
+                                                            Dim nb2 = mix2 + delta
+                                                            dstBuf(si) = ClampToByte(CInt(srcBuf(si)) + (nb0 - CInt(srcBuf(si))) * wirkung)
+                                                            dstBuf(si + 1) = ClampToByte(CInt(srcBuf(si + 1)) + (nb1 - CInt(srcBuf(si + 1))) * wirkung)
+                                                            dstBuf(si + 2) = ClampToByte(CInt(srcBuf(si + 2)) + (nb2 - CInt(srcBuf(si + 2))) * wirkung)
                                                             dstBuf(si + 3) = srcBuf(si + 3)
                                                         Next
                                                     End Sub)
             blurred.Dispose()
+            coarse?.Dispose()
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Return result
+        End Function
+
+        ''' <summary>Die PLUS-Seite des Farbrauschen-Reglers: faerbt das Bild ein, ohne es heller oder
+        ''' dunkler zu machen. Pro Pixel wandern Rot und Blau gegenlaeufig, Gruen gleicht die Helligkeit
+        ''' aus - das ist genau die Gegenrichtung zur Reduzierung (die Chroma glaettet und die Luma
+        ''' stehen laesst). Vom monochromen „Koernung" (ApplyGrain) unterscheidet es sich dadurch, dass
+        ''' die Helligkeit unangetastet bleibt und nur die Farbe zappelt.
+        ''' Der Zufall haengt allein an der Bildgroesse (wie ApplyAddNoise): derselbe Regler ergibt
+        ''' zweimal dasselbe Bild, und die Vorschau flackert beim Ziehen nicht.</summary>
+        Private Shared Function ApplyColorNoiseAdd(source As SKBitmap, amount As Single) As SKBitmap
+            Dim strength = Clamp(amount, 0, 1)
+            If strength <= 0 Then Return source
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim srcBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
+            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+
+            Dim random = New Random(source.Width * 733 Xor source.Height * 397)
+            Dim amplitude = strength * 48.0
+
+            For y As Integer = 0 To source.Height - 1
+                Dim rowOffset = y * stride
+                For x As Integer = 0 To source.Width - 1
+                    Dim o = rowOffset + x * 4
+                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                    Dim dr = (random.NextDouble() * 2.0 - 1.0) * amplitude
+                    Dim db = (random.NextDouble() * 2.0 - 1.0) * amplitude
+                    ' Rec.601: Gruen traegt 0,587 der Helligkeit - genau so viel gegensteuern, wie
+                    ' Rot (0,299) und Blau (0,114) zusammen einbringen, dann bleibt die Luma gleich.
+                    Dim dg = -(0.299 * dr + 0.114 * db) / 0.587
+                    WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                       ClampToByte(cr + dr), ClampToByte(cg + dg), ClampToByte(cb + db), a)
+                Next
+            Next
+
             Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
             Return result
         End Function

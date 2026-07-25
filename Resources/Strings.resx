@@ -3645,8 +3645,8 @@
   <data name="Farbrauschen_7e6f8299" xml:space="preserve">
     <value>Color noise</value>
   </data>
-  <data name="Gl_ttet_nur_die_Farbanteile_Chroma_die_Helligkei_1c158f60" xml:space="preserve">
-    <value>Smooths only the colour (chroma) components; luminance and therefore detail are preserved.</value>
+  <data name="Negativ_entfernt_Farbrauschen_gegl_ttet_werden_n_9662d0de" xml:space="preserve">
+    <value>Negative removes colour noise: only the colour (chroma) components are smoothed, luminance and therefore detail are preserved. Positive adds coloured noise.</value>
   </data>
   <data name="Positiv_f_gt_Staubk_rner_und_Kratzer_hinzu_Film__1d1681ed" xml:space="preserve">
     <value>Positive adds dust specks and scratches (film look); negative removes defects while preserving edges.</value>

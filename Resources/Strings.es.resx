@@ -3644,8 +3644,8 @@
   <data name="Farbrauschen_7e6f8299" xml:space="preserve">
     <value>Ruido de color</value>
   </data>
-  <data name="Gl_ttet_nur_die_Farbanteile_Chroma_die_Helligkei_1c158f60" xml:space="preserve">
-    <value>Suaviza solo los componentes de color (croma); la luminosidad y, por tanto, los detalles se conservan.</value>
+  <data name="Negativ_entfernt_Farbrauschen_gegl_ttet_werden_n_9662d0de" xml:space="preserve">
+    <value>En negativo elimina el ruido de color: solo se suavizan los componentes de color (croma); la luminosidad y, por tanto, los detalles se conservan. En positivo añade ruido de color.</value>
   </data>
   <data name="Positiv_f_gt_Staubk_rner_und_Kratzer_hinzu_Film__1d1681ed" xml:space="preserve">
     <value>En positivo añade motas de polvo y arañazos (aspecto de película); en negativo elimina defectos conservando los bordes.</value>

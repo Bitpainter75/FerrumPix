@@ -3350,6 +3350,16 @@ Namespace Views
             Dim rect = GetTextOverlayRect()
             Dim mode = If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None)
             If mode = TextDragMode.None Then Return
+
+            ' Doppelklick auf den Drehgriff stellt die Lage wieder gerade (Nutzerwunsch 2026-07-25).
+            ' Muss VOR dem Zug-Start stehen: sonst begänne der zweite Druck einen neuen Rotier-Zug,
+            ' der die soeben zurückgesetzte Drehung beim ersten Wackeln wieder überschriebe.
+            If mode = TextDragMode.Rotate AndAlso e.ClickCount >= 2 Then
+                ResetSelectionRotation(vm)
+                e.Handled = True
+                Return
+            End If
+
             _textDragMode = mode
             _textDragInitialRect = rect
             _textDragPointerStart = pos
@@ -3392,6 +3402,21 @@ Namespace Views
 
         Private Const RotateHandleDistance As Double = 28
         Private Const RotateHandleHitRadius As Double = 12
+
+        ''' <summary>Doppelklick auf den Drehgriff: die Drehung des Markierten geht auf 0 zurück.
+        ''' Den Rahmen stellt UpdateSliderLayout aus dem ViewModel wieder gerade (die
+        ''' Rotations-Eigenschaft löst es aus) - hier bleibt nur der Zug-Zustand aufzuräumen, damit
+        ''' kein Restwinkel aus dem vorherigen Rotier-Zug hängen bleibt.</summary>
+        Private Sub ResetSelectionRotation(vm As EditorViewModel)
+            If vm Is Nothing Then Return
+            If Not vm.ResetSelectedAnnotationRotation() Then Return
+            _isTextDragging = False
+            _textDragMode = TextDragMode.None
+            _textDragPlacementStarted = False
+            _textRotateBoxAngle = 0
+            _textRotateLastAngle = 0
+            _textRotateStartRotation = 0
+        End Sub
 
         ''' <summary>Dreht einen Punkt um <paramref name="center"/>. Positive Winkel drehen im
         ''' Uhrzeigersinn - dieselbe Richtung wie die RotateTransform des Overlays.</summary>

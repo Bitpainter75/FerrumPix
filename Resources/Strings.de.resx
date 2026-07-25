@@ -3644,8 +3644,8 @@
   <data name="Farbrauschen_7e6f8299" xml:space="preserve">
     <value>Farbrauschen</value>
   </data>
-  <data name="Gl_ttet_nur_die_Farbanteile_Chroma_die_Helligkei_1c158f60" xml:space="preserve">
-    <value>Glättet nur die Farbanteile (Chroma), die Helligkeit und damit Details bleiben erhalten.</value>
+  <data name="Negativ_entfernt_Farbrauschen_gegl_ttet_werden_n_9662d0de" xml:space="preserve">
+    <value>Negativ entfernt Farbrauschen: geglättet werden nur die Farbanteile (Chroma), Helligkeit und Details bleiben erhalten. Positiv fügt farbiges Rauschen hinzu.</value>
   </data>
   <data name="Positiv_f_gt_Staubk_rner_und_Kratzer_hinzu_Film__1d1681ed" xml:space="preserve">
     <value>Positiv fügt Staubkörner und Kratzer hinzu (Film-Look), negativ entfernt Störungen kantenerhaltend.</value>

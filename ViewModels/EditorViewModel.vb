@@ -109,6 +109,7 @@ Namespace ViewModels
         Private _noiseReduction As Double = 0
         Private _noiseReductionDetail As Double = 0
         Private _colorNoiseReduction As Double = 0
+        Private _colorNoiseAdd As Double = 0
         Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
         Private _dustScratches As Double = 0
         Private _haze As Double = 0
@@ -4085,7 +4086,43 @@ Namespace ViewModels
                 Return _colorNoiseReduction
             End Get
             Set(value As Double)
-                SetUndoableDouble(_colorNoiseReduction, Math.Max(0, Math.Min(100, value)), NameOf(ColorNoiseReduction))
+                If SetUndoableDouble(_colorNoiseReduction, Math.Max(0, Math.Min(100, value)), NameOf(ColorNoiseReduction)) Then
+                    Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
+                End If
+            End Set
+        End Property
+
+        ''' Farbrauschen HINZUFUEGEN (Chroma zappelt, Helligkeit bleibt) - die Plus-Seite des Reglers.
+        Public Property ColorNoiseAdd As Double
+            Get
+                Return _colorNoiseAdd
+            End Get
+            Set(value As Double)
+                If SetUndoableDouble(_colorNoiseAdd, Math.Max(0, Math.Min(100, value)), NameOf(ColorNoiseAdd)) Then
+                    Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Der EINE Regler „Farbrauschen" im Panel, bipolar wie sein Nachbar „Rauschen":
+        ''' minus entfernt Farbrauschen, plus fuegt welches hinzu. Er ist bewusst nur die Anzeigeseite
+        ''' zweier getrennt gespeicherter Werte - <see cref="ColorNoiseReduction"/> muss 0-100
+        ''' „Entfernung" bleiben, weil genau das aus crs:ColorNoiseReduction eines Lightroom-Presets
+        ''' kommt und auch dorthin zurueckgeschrieben wird. Eine gemeinsame Skala mit Vorzeichen waere
+        ''' beim Preset-Import zweideutig gewesen.
+        ''' Die beiden Seiten schliessen sich aus: wer ins Minus zieht, hat kein Plus mehr stehen.</summary>
+        Public Property ColorNoiseAmount As Double
+            Get
+                If _colorNoiseAdd > 0 Then Return _colorNoiseAdd
+                Return -_colorNoiseReduction
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(-100, Math.Min(100, value))
+                Dim entfernen = If(v < 0, -v, 0.0)
+                Dim hinzu = If(v > 0, v, 0.0)
+                Dim geaendert = SetUndoableDouble(_colorNoiseReduction, entfernen, NameOf(ColorNoiseReduction))
+                geaendert = SetUndoableDouble(_colorNoiseAdd, hinzu, NameOf(ColorNoiseAdd)) OrElse geaendert
+                If geaendert Then Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             End Set
         End Property
 
@@ -10121,8 +10158,11 @@ Namespace ViewModels
                                                                           ApplyExclusiveFilterPreset(preset)
                                                                       End Sub)
             AutoAdjustCommand = ReactiveCommand.Create(AddressOf ApplyAutoAdjustments)
-            ' Gruppen-Zurücksetzer: nur die Filter-Regler. Das globale Verwerfen des ganzen Looks
-            ' sitzt sichtbar auf dem Knopf „Keine".
+            ' Gruppen-Zurücksetzer: nur die Filter-Regler - er nimmt den gewählten Filter und „Auto"
+            ' heraus, lässt die übrigen Gruppen aber stehen. Seit der Knopf „Keine" aus der Liste
+            ' raus ist, ist er der sichtbare Weg zurück auf „kein Filter"; das WEITE Neutralisieren
+            ' des ganzen Looks (ResetFilterInternal) läuft nur noch beim Wechsel auf einen anderen
+            ' Filter mit, sonst über die Zurücksetzer der einzelnen Gruppen.
             ResetFilterCommand = ReactiveCommand.Create(Sub()
                                                             PushUndo()
                                                             ResetFilterGroupInternal()
@@ -13536,6 +13576,7 @@ Namespace ViewModels
                 .NoiseReduction = CSng(_noiseReduction),
                 .NoiseReductionDetail = CSng(_noiseReductionDetail),
                 .ColorNoiseReduction = CSng(_colorNoiseReduction),
+                .ColorNoiseAdd = CSng(_colorNoiseAdd),
                 .NoiseReductionMethod = _noiseReductionMethod,
                 .DustScratches = CSng(_dustScratches),
                 .Haze = CSng(_haze),
@@ -13947,6 +13988,7 @@ Namespace ViewModels
             _noiseReduction = adj.NoiseReduction
             _noiseReductionDetail = adj.NoiseReductionDetail
             _colorNoiseReduction = adj.ColorNoiseReduction
+            _colorNoiseAdd = adj.ColorNoiseAdd
             _noiseReductionMethod = adj.NoiseReductionMethod
             _dustScratches = adj.DustScratches
             _haze = adj.Haze
@@ -14142,6 +14184,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
@@ -14229,6 +14273,21 @@ Namespace ViewModels
             RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
         End Function
 
+        ''' <summary>Setzt die Drehung des Markierten auf 0 zurück - Doppelklick auf den Drehgriff.
+        ''' Bei einer Mehrfachauswahl beschreibt der Wert die gemeinsame Box: der Setter dreht die
+        ''' DIFFERENZ um deren Mitte zurück (RotateSelectionBy), die Anordnung bleibt also erhalten.
+        ''' Liefert False, wenn nichts zu tun war - dann entsteht auch kein leerer Undo-Schritt.</summary>
+        Public Function ResetSelectedAnnotationRotation() As Boolean
+            If Not HasSelectedAnnotation Then Return False
+            ' Gesperrte Auswahl: keine Geometrieänderung, genau wie Ziehen und Drehen am Anfasser.
+            If IsSelectionGeometryLocked Then Return False
+            If Math.Abs(_annotationRotation) < 0.05 Then Return False
+            PushUndo()
+            AnnotationRotation = 0
+            AddHistoryEntry("Objekt-Drehung zurückgesetzt")
+            Return True
+        End Function
+
         Private Async Function DoFlipHAsync() As Task
             If HasSelectedAnnotation Then
                 PushUndo()
@@ -14295,6 +14354,7 @@ Namespace ViewModels
             _noiseReduction = 0
             _noiseReductionDetail = 0
             _colorNoiseReduction = 0
+            _colorNoiseAdd = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             _vignette = 0
             _vignetteStyle = VignetteStyle.ColorPriority
@@ -14418,6 +14478,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
@@ -17854,6 +17916,7 @@ Namespace ViewModels
             _noiseReduction = 0
             _noiseReductionDetail = 0
             _colorNoiseReduction = 0
+            _colorNoiseAdd = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             _dustScratches = 0
             _haze = 0
@@ -17955,6 +18018,7 @@ Namespace ViewModels
             _haze = 0
             _addNoise = 0
             _colorNoiseReduction = 0
+            _colorNoiseAdd = 0
             _structure = 0
             _glow = 0
             Me.RaisePropertyChanged(NameOf(Clarity))
@@ -17962,6 +18026,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Haze))
             Me.RaisePropertyChanged(NameOf(AddNoise))
             Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf([Structure]))
             Me.RaisePropertyChanged(NameOf(Glow))
             RaiseResetButtonStateChanged()
@@ -18198,6 +18264,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             Me.RaisePropertyChanged(NameOf(DustScratches))
             Me.RaisePropertyChanged(NameOf(Haze))
@@ -18404,7 +18472,8 @@ Namespace ViewModels
                Not ImageAdjustments.IsIdentityCurve(adj.CurveGreenPoints) OrElse Not ImageAdjustments.IsIdentityCurve(adj.CurveBluePoints) OrElse
                Not ImageAdjustments.IsIdentityCurve(adj.CurveLuminancePoints) Then Return "Tonwertkurve"
             If adj.HasHslChanges() Then Return "Farbmischer"
-            If adj.Clarity <> 0 OrElse adj.Sharpness <> 0 OrElse adj.NoiseReduction <> 0 OrElse adj.ColorNoiseReduction <> 0 OrElse adj.Grain <> 0 Then Return "Details"
+            If adj.Clarity <> 0 OrElse adj.Sharpness <> 0 OrElse adj.NoiseReduction <> 0 OrElse adj.ColorNoiseReduction <> 0 OrElse
+               adj.ColorNoiseAdd <> 0 OrElse adj.Grain <> 0 Then Return "Details"
             If adj.Vignette <> 0 OrElse adj.BorderSize <> 0 Then Return "Vignette/Rahmen"
             If Not String.Equals(adj.FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase) Then Return "Filter"
             Return "Anpassung"
@@ -18560,6 +18629,10 @@ Namespace ViewModels
             NoiseReduction = look.NoiseReduction
             NoiseReductionDetail = look.NoiseReductionDetail
             ColorNoiseReduction = look.ColorNoiseReduction
+            ' Presets kennen nur die Entfernung (crs:ColorNoiseReduction); die Plus-Seite steht
+            ' trotzdem hier, damit ein Look sie genauso zuruecksetzt wie jedes andere Feld - sonst
+            ' bliebe ein eingefaerbtes Rauschen unter einem frisch geladenen Look stehen.
+            ColorNoiseAdd = look.ColorNoiseAdd
             Grain = look.Grain
             GrainSize = look.GrainSize
             GrainFrequency = look.GrainFrequency
