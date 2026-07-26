@@ -210,8 +210,14 @@
                                            Width="18" Height="18" IsVisible="{Binding IsToolSidebarCollapsed}" />
                         </Panel>
                     </Button>
+                    <!-- Die drei Werkzeuggruppen liegen in einem Raster mit drei Zeilen: welche
+                         Gruppe oben steht, sagt die Einstellung (Zeilennummer je Gruppe). Ein
+                         gestapeltes Panel könnte das nicht - eine Reihenfolge lässt sich nicht
+                         binden, eine Zeilennummer schon. -->
+                    <Grid RowDefinitions="Auto,Auto,Auto">
+                    <StackPanel Grid.Row="{Binding ToolGroupRowTransform}" Spacing="2">
                     <TextBlock Text="TRANSFORMIEREN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,0,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                               FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Zuschneiden"
                             Command="{Binding SetToolCommand}"
@@ -245,7 +251,9 @@
                             <TextBlock Text="Drehen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
+                    </StackPanel>
 
+                    <StackPanel Grid.Row="{Binding ToolGroupRowAdjust}" Spacing="2">
                     <TextBlock Text="ANPASSUNGEN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <Button Classes="tool-btn-row"
@@ -293,6 +301,9 @@
                             <TextBlock Text="Filter" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="{Binding ToolGroupRowTools}" Spacing="2">
                     <!-- Die Werkzeuge stehen hier einzeln, statt hinter den Sammelknöpfen "Text und Bild"
                          und "Malen" zu liegen: ein Klick wählt direkt das Werkzeug, mit dem gearbeitet
                          wird. Die zugehörigen Panels rechts zeigen nur noch dessen Einstellungen. -->
@@ -438,6 +449,8 @@
                             <TextBlock Text="Formen und Symbole" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
+                    </StackPanel>
+                    </Grid>
                 </StackPanel>
             </ScrollViewer>
         </Border>

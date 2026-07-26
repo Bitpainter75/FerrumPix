@@ -66,6 +66,7 @@ Namespace ViewModels
         Private _dialogBatchResizeSourceHeight As Integer = 0
         Private _dialogBatchResizeOverwrite As Boolean = True
         Private _dialogBatchResizeNoUpscale As Boolean
+        Private _dialogBatchResizeLongEdge As Boolean
         Private _dialogBatchWatermarkOverwrite As Boolean = True
         Private _dialogSelectedWatermarkPresetName As String = ""
         Private ReadOnly _dialogWatermarkPresets As New List(Of WatermarkPresetSettings)()
@@ -843,6 +844,7 @@ Namespace ViewModels
         Private _dialogExportUseFilter As Boolean
         Private _dialogExportUseWatermark As Boolean
         Private _dialogExportUseResize As Boolean
+        Private _dialogWatermarkKeepSize As Boolean
         Private _dialogExportPreserveMetadata As Boolean = True
         Private _dialogSaveAsPreserveExif As Boolean = True
 
@@ -872,7 +874,31 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_dialogExportUseResize, value)
+                ' Ohne Größenänderung gibt es nichts, wovon das Wasserzeichen sich abkoppeln könnte.
+                Me.RaisePropertyChanged(NameOf(IsDialogWatermarkKeepSizeVisible))
             End Set
+        End Property
+
+        ''' <summary>„Wasserzeichen nicht mitskalieren": normalerweise gelten Größe und Randabstand
+        ''' der Vorlage für das ORIGINALBILD und schrumpfen mit der Verkleinerung mit. Ist der
+        ''' Schalter an, gelten sie für das FERTIGE Bild - das Wasserzeichen wird also erst nach dem
+        ''' Verkleinern in seiner eingestellten Größe aufgebracht und ist auf jeder Ausgabegröße
+        ''' gleich groß.</summary>
+        Public Property DialogWatermarkKeepSize As Boolean
+            Get
+                Return _dialogWatermarkKeepSize
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogWatermarkKeepSize, value)
+            End Set
+        End Property
+
+        ''' Nur im Sammel-Export und nur bei aktiver Größenänderung sinnvoll - das Wasserzeichen-
+        ''' Formular teilen sich beide Dialoge, im Einzeldialog wird nichts skaliert.
+        Public ReadOnly Property IsDialogWatermarkKeepSizeVisible As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.ExportTo AndAlso _dialogExportUseResize
+            End Get
         End Property
 
 
@@ -903,6 +929,8 @@ Namespace ViewModels
             _dialogBatchResizeHeightText = If(settings.LastBatchResizeHeight > 0, settings.LastBatchResizeHeight.ToString(CultureInfo.InvariantCulture), "")
             _dialogBatchResizeLockAspect = settings.LastBatchResizeLockAspect
             _dialogBatchResizeNoUpscale = settings.LastBatchResizeNoUpscale
+            _dialogBatchResizeLongEdge = settings.LastBatchResizeLongEdge
+            If _dialogBatchResizeLongEdge Then _dialogBatchResizeLockAspect = True
             _dialogBatchResizeInterpolation = ParseResizeInterpolationMode(settings.LastBatchResizeInterpolation)
             _dialogBatchResizeScalePercent = settings.LastBatchResizeScalePercent
             _dialogBatchResizeSourceWidth = 0
@@ -916,6 +944,7 @@ Namespace ViewModels
                 End Try
             End If
             If _dialogBatchResizeScalePercent > 0 Then SetDialogBatchResizeTextsFromScale(_dialogBatchResizeScalePercent)
+            If _dialogBatchResizeLongEdge Then CollapseBatchResizeToLongEdge()
             RaiseDialogBatchResizeProperties()
 
             For Each name In {NameOf(DialogFilterSourceKind), NameOf(IsDialogFilterSourceFilter),
@@ -936,6 +965,7 @@ Namespace ViewModels
             DialogExportUseFilter = settings.ExportToUseFilter
             DialogExportUseWatermark = settings.ExportToUseWatermark
             DialogExportUseResize = settings.ExportToUseResize
+            DialogWatermarkKeepSize = settings.ExportToWatermarkKeepSize
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             ' Aufnahmedaten fuer die Muster-Platzhalter nicht ueber Dialogoeffnungen hinweg
             ' mitschleppen: sonst stehen geaenderte Dateien mit alten Werten im Namen.
@@ -943,7 +973,7 @@ Namespace ViewModels
             ResetDialogSaveAsMetaOptions()
             SetDialogFormats(includeFpx:=False)
             DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
-            DialogJpgQuality = 90
+            DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
                                           currentFolder,
@@ -962,7 +992,8 @@ Namespace ViewModels
 
             PersistDialogTargetFolderIfLocal()
             PersistDialogTargetNamePattern()
-            AppSettingsService.SaveExportToSections(_dialogExportUseFilter, _dialogExportUseWatermark, _dialogExportUseResize)
+            AppSettingsService.SaveExportToSections(_dialogExportUseFilter, _dialogExportUseWatermark, _dialogExportUseResize,
+                                                    _dialogWatermarkKeepSize)
 
             ' Nur AKTIVE Sektionen fliessen ins Ergebnis - was der Dialog verbirgt, wirkt auch nicht.
             ' Die automatische Bildverbesserung ist die vierte QUELLE des Filter-Formulars, kein
@@ -992,9 +1023,13 @@ Namespace ViewModels
                 If breite > 0 OrElse hoehe > 0 Then
                     AppSettingsService.SaveLastBatchResizeSettings(breite, hoehe, skalierung,
                                                                    _dialogBatchResizeLockAspect, _dialogBatchResizeInterpolation,
-                                                                   _dialogBatchResizeNoUpscale)
+                                                                   _dialogBatchResizeNoUpscale, _dialogBatchResizeLongEdge)
                 End If
             End If
+
+            ' Ohne Größenänderung gibt es nichts zu skalieren - der Wasserzeichen-Schalter darf dann
+            ' auch nichts bedeuten, sonst wirkte eine unsichtbare Einstellung.
+            Dim wasserzeichenGroesseHalten = _dialogExportUseResize AndAlso _dialogWatermarkKeepSize
 
             Return New ExportToDialogResult With {
                 .AutoEnhance = autoEnhance,
@@ -1007,6 +1042,7 @@ Namespace ViewModels
                                       BuildWatermarkPresetForRun(_dialogWatermarkPresets.FirstOrDefault(
                                           Function(pr) String.Equals(pr.Name, DialogSelectedWatermarkPresetName, StringComparison.OrdinalIgnoreCase))),
                                       Nothing),
+                .WatermarkKeepSize = wasserzeichenGroesseHalten,
                 .ResizeWidth = breite,
                 .ResizeHeight = hoehe,
                 .ResizeScalePercent = skalierung,
@@ -1051,7 +1087,7 @@ Namespace ViewModels
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
-            DialogJpgQuality = 90
+            DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
                                           currentFolder,
@@ -1693,6 +1729,13 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Startwert des Qualitätsreglers: die in den Einstellungen gepflegte
+        ''' JPEG-Qualität. Die Stapel- und Export-Dialoge starteten mit einer fest verdrahteten 90
+        ''' und gingen damit ausgerechnet an der Einstellung vorbei, die dafür da ist.</summary>
+        Private Shared Function DefaultJpgQuality() As Integer
+            Return AppSettingsService.NormalizeJpgSaveQuality(AppSettingsService.Load().JpgSaveQuality)
+        End Function
+
         Public ReadOnly Property IsDialogJpgQualityVisible As Boolean
             Get
                 Return DialogShowsSaveAsOptions AndAlso String.Equals(_dialogSelectedFormat, "JPG", StringComparison.OrdinalIgnoreCase)
@@ -1810,6 +1853,57 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_dialogBatchResizeLockAspect, value)
             End Set
         End Property
+
+        ''' <summary>„Lange Kante": EIN Wert statt Breite und Höhe. Er begrenzt bei jedem Bild die
+        ''' längere Kante - ein Stapel aus Quer- und Hochformaten kommt so einheitlich heraus, ohne
+        ''' dass man für jede Ausrichtung getrennt rechnen müsste. Technisch ist das genau der schon
+        ''' vorhandene Fall „nur eine Kante gesetzt" (siehe ImageProcessor.ApplyResize); der Schalter
+        ''' macht ihn bedienbar, statt ihn im leeren Höhenfeld zu verstecken. Das Seitenverhältnis
+        ''' ist dabei zwingend gehalten - ohne zweite Kante gäbe es sonst nichts zu strecken.</summary>
+        Public Property DialogBatchResizeLongEdge As Boolean
+            Get
+                Return _dialogBatchResizeLongEdge
+            End Get
+            Set(value As Boolean)
+                If _dialogBatchResizeLongEdge = value Then Return
+                _dialogBatchResizeLongEdge = value
+                If value Then
+                    _dialogBatchResizeLockAspect = True
+                    CollapseBatchResizeToLongEdge()
+                End If
+                Me.RaisePropertyChanged(NameOf(DialogBatchResizeLongEdge))
+                Me.RaisePropertyChanged(NameOf(DialogBatchResizeLockAspect))
+                Me.RaisePropertyChanged(NameOf(IsDialogBatchResizeLockAspectEnabled))
+                Me.RaisePropertyChanged(NameOf(IsDialogBatchResizeEdgeFieldsVisible))
+                Me.RaisePropertyChanged(NameOf(DialogBatchResizeWidthText))
+                Me.RaisePropertyChanged(NameOf(DialogBatchResizeHeightText))
+            End Set
+        End Property
+
+        ''' Im Lange-Kante-Modus ist das Seitenverhältnis zwingend gehalten - der Haken bleibt
+        ''' sichtbar und gesetzt, damit man sieht was gilt, ist aber nicht abwählbar.
+        Public ReadOnly Property IsDialogBatchResizeLockAspectEnabled As Boolean
+            Get
+                Return Not _dialogBatchResizeLongEdge
+            End Get
+        End Property
+
+        ''' Breite und Höhe weichen im Lange-Kante-Modus dem einen Kantenfeld.
+        Public ReadOnly Property IsDialogBatchResizeEdgeFieldsVisible As Boolean
+            Get
+                Return Not _dialogBatchResizeLongEdge
+            End Get
+        End Property
+
+        ''' <summary>Führt zwei eingetragene Kanten auf die längere zusammen: sie wird zur Kantenlänge,
+        ''' die zweite bleibt leer. Nur so bedeutet der Wert für ApplyResize „längste Kante".</summary>
+        Private Sub CollapseBatchResizeToLongEdge()
+            Dim breite = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
+            Dim hoehe = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
+            Dim kante = Math.Max(breite, hoehe)
+            _dialogBatchResizeWidthText = If(kante > 0, kante.ToString(CultureInfo.InvariantCulture), "")
+            _dialogBatchResizeHeightText = ""
+        End Sub
 
         ''' <summary>"Nicht vergroessern": Bilder unterhalb der Zielgroesse bleiben unveraendert
         ''' (Gegenstueck zu "Don't Enlarge" in gaengigen Export-Dialogen).</summary>
@@ -2027,6 +2121,9 @@ Namespace ViewModels
                         _dialogBatchResizeHeightText = ""
                     End If
             End Select
+            ' Die Kasten-Vorgaben (UHD, Full-HD, SD) und die Prozentwerte tragen zwei Kanten ein -
+            ' im Lange-Kante-Modus zählt davon nur die längere.
+            If _dialogBatchResizeLongEdge Then CollapseBatchResizeToLongEdge()
             RaiseDialogBatchResizeProperties()
         End Sub
 
@@ -2034,6 +2131,9 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(DialogBatchResizeWidthText))
             Me.RaisePropertyChanged(NameOf(DialogBatchResizeHeightText))
             Me.RaisePropertyChanged(NameOf(DialogBatchResizeLockAspect))
+            Me.RaisePropertyChanged(NameOf(DialogBatchResizeLongEdge))
+            Me.RaisePropertyChanged(NameOf(IsDialogBatchResizeLockAspectEnabled))
+            Me.RaisePropertyChanged(NameOf(IsDialogBatchResizeEdgeFieldsVisible))
             Me.RaisePropertyChanged(NameOf(DialogBatchResizeNoUpscale))
             Me.RaisePropertyChanged(NameOf(DialogBatchResizeInterpolationLabel))
             Me.RaisePropertyChanged(NameOf(DialogBatchResizeOverwrite))
@@ -2118,6 +2218,8 @@ Namespace ViewModels
             _dialogBatchResizeHeightText = If(settings.LastBatchResizeHeight > 0, settings.LastBatchResizeHeight.ToString(CultureInfo.InvariantCulture), "")
             _dialogBatchResizeLockAspect = settings.LastBatchResizeLockAspect
             _dialogBatchResizeNoUpscale = settings.LastBatchResizeNoUpscale
+            _dialogBatchResizeLongEdge = settings.LastBatchResizeLongEdge
+            If _dialogBatchResizeLongEdge Then _dialogBatchResizeLockAspect = True
             _dialogBatchResizeInterpolation = ParseResizeInterpolationMode(settings.LastBatchResizeInterpolation)
             _dialogBatchResizeScalePercent = settings.LastBatchResizeScalePercent
             _dialogBatchResizeSourceWidth = 0
@@ -2126,7 +2228,7 @@ Namespace ViewModels
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
-            DialogJpgQuality = 90
+            DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
                                           currentFolder,
@@ -2142,6 +2244,7 @@ Namespace ViewModels
             End If
 
             If _dialogBatchResizeScalePercent > 0 Then SetDialogBatchResizeTextsFromScale(_dialogBatchResizeScalePercent)
+            If _dialogBatchResizeLongEdge Then CollapseBatchResizeToLongEdge()
 
             RaiseDialogBatchResizeProperties()
 
@@ -2161,7 +2264,8 @@ Namespace ViewModels
             ' haette einem gemischten Stapel dessen Ausrichtung aufgezwungen.
 
             If _dialogBatchResizeScalePercent <= 0 AndAlso width <= 0 AndAlso height <= 0 Then Return Nothing
-            AppSettingsService.SaveLastBatchResizeSettings(width, height, _dialogBatchResizeScalePercent, _dialogBatchResizeLockAspect, _dialogBatchResizeInterpolation, _dialogBatchResizeNoUpscale)
+            AppSettingsService.SaveLastBatchResizeSettings(width, height, _dialogBatchResizeScalePercent, _dialogBatchResizeLockAspect, _dialogBatchResizeInterpolation, _dialogBatchResizeNoUpscale,
+                                                           _dialogBatchResizeLongEdge)
             If Not _dialogBatchResizeOverwrite Then PersistDialogTargetFolderIfLocal()
             PersistDialogTargetNamePattern()
             Return New BatchResizeResult With {
@@ -2194,7 +2298,7 @@ Namespace ViewModels
             _dialogBatchWatermarkOverwrite = allowOverwrite AndAlso settings.BatchWatermarkOverwriteOriginals
             ResetDialogSaveAsMetaOptions()
             DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
-            DialogJpgQuality = 90
+            DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
 
@@ -2414,12 +2518,13 @@ Namespace ViewModels
                                              messageText As String,
                                              initialBaseName As String,
                                              initialFormat As String,
-                                             Optional initialJpgQuality As Integer = 90,
+                                             Optional initialJpgQuality As Integer = 0,
                                              Optional confirmText As String = "Speichern",
                                              Optional cancelText As String = "Abbrechen") As Task(Of SaveAsDialogResult)
             SetDialogFormats(includeFpx:=True)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
-            DialogJpgQuality = initialJpgQuality
+            ' 0 = kein eigener Startwert, dann gilt die Einstellung.
+            DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
             ResetDialogSaveAsMetaOptions()
@@ -2445,10 +2550,11 @@ Namespace ViewModels
 
         ''' Wiederverwendet denselben Format+Qualität-Block wie ShowSaveAsAsync, aber ohne
         ''' Dateinamen-Feld (BatchConvert lässt die Originalnamen unangetastet, ändert nur die Endung).
-        Public Async Function ShowBatchConvertAsync(fileCount As Integer, initialFormat As String, Optional initialJpgQuality As Integer = 90) As Task(Of SaveAsDialogResult)
+        Public Async Function ShowBatchConvertAsync(fileCount As Integer, initialFormat As String, Optional initialJpgQuality As Integer = 0) As Task(Of SaveAsDialogResult)
             SetDialogFormats(includeFpx:=False)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
-            DialogJpgQuality = initialJpgQuality
+            ' 0 = kein eigener Startwert, dann gilt die Einstellung.
+            DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()

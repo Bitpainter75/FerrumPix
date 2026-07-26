@@ -4541,4 +4541,40 @@
   <data name="Stapelfunktionen_wie_Bildgr_e_ndern_oder_Exporti_a431c120" xml:space="preserve">
     <value>Le funzioni in serie come Modifica dimensioni o Esporta in sviluppano i RAW alla piena risoluzione del sensore. Disattivato, usano l’anteprima incorporata per i RAW non modificati: più veloce, ma più piccola. I RAW CON modifiche (.fpxmp) vengono sempre sviluppati e scritti con la loro ricetta, indipendentemente da questa impostazione.</value>
   </data>
+  <data name="Anzeigen_46a5a62e" xml:space="preserve">
+    <value>Visualizza</value>
+  </data>
+  <data name="Wasserzeichen_nicht_mitskalieren_8aadb419" xml:space="preserve">
+    <value>Non ridimensionare la filigrana</value>
+  </data>
+  <data name="Sonst_gelten_Gr_e_und_Randabstand_f_r_das_Origin_98a63bbf" xml:space="preserve">
+    <value>Altrimenti dimensione e margine si riferiscono all'immagine originale e si riducono con essa. Con il segno di spunta la filigrana viene applicata nella dimensione impostata dopo il ridimensionamento: risulta quindi uguale in ogni formato di uscita.</value>
+  </data>
+  <data name="Lange_Kante_d1bd6f55" xml:space="preserve">
+    <value>Lato lungo</value>
+  </data>
+  <data name="Ein_einziger_Wert_f_r_die_l_ngere_Kante_jedes_Bi_614c42bf" xml:space="preserve">
+    <value>Un unico valore per il lato più lungo di ogni immagine: così orizzontali e verticali risultano della stessa dimensione.</value>
+  </data>
+  <data name="Gilt_f_r_die_l_ngere_Kante_jedes_Bildes_die_k_rz_37f19f72" xml:space="preserve">
+    <value>Vale per il lato più lungo di ogni immagine; quello più corto segue le proporzioni</value>
+  </data>
+  <data name="Gilt_f_r_Editor_und_Viewer_nur_verkleinern_wenn__446e1a4a" xml:space="preserve">
+    <value>Vale per editor e visualizzatore: ridurre solo se l'immagine è più grande dell'area di visualizzazione, oppure adattare sempre all'area.</value>
+  </data>
+  <data name="Werkzeug_beim_ffnen_1487e97d" xml:space="preserve">
+    <value>Strumento all'apertura</value>
+  </data>
+  <data name="Welches_Werkzeug_aktiv_ist_sobald_der_Editor_ge__abfc9ed2" xml:space="preserve">
+    <value>Quale strumento è attivo appena si apre l'editor.</value>
+  </data>
+  <data name="Reihenfolge_der_Werkzeuggruppen_60d51676" xml:space="preserve">
+    <value>Ordine dei gruppi di strumenti</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_in__26d089b0" xml:space="preserve">
+    <value>Stabilisce in quale ordine i gruppi compaiono nella barra degli strumenti a sinistra dell'editor.</value>
+  </data>
+  <data name="Werkzeuge_6b11a2f9" xml:space="preserve">
+    <value>Strumenti</value>
+  </data>
 </root>

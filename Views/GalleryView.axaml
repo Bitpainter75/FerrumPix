@@ -1069,7 +1069,7 @@
                                         DragDrop.Drop="OnItemDrop">
                                     <Border.ContextMenu>
                                         <ContextMenu>
-                                            <MenuItem Name="GridContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
+                                            <MenuItem Name="GridContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
                                             <MenuItem Name="GridContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
                                             <Separator Name="GridContextTopSeparator"/>
                                             <MenuItem Name="GridContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
@@ -1192,7 +1192,7 @@
                                                             Padding="0"
                                                             IsVisible="{Binding IsImage}"
                                                             Click="OnHoverOpenViewerClick"
-                                                            ToolTip.Tip="Im Viewer öffnen">
+                                                            ToolTip.Tip="Anzeigen">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
                                                                        Width="17"
                                                                        Height="17"
@@ -1500,7 +1500,7 @@
                                         DragDrop.Drop="OnItemDrop">
                                     <Border.ContextMenu>
                                         <ContextMenu>
-                                            <MenuItem Name="ListContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
+                                            <MenuItem Name="ListContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
                                             <MenuItem Name="ListContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
                                             <Separator Name="ListContextTopSeparator"/>
                                             <MenuItem Name="ListContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
@@ -1839,7 +1839,7 @@
                             ToolTip.Tip="Menü für die Auswahl">
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Name="MenuContextOpenMenuItem" Header="Öffnen" Click="OnContextOpen"/>
+                                <MenuItem Name="MenuContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
                                 <MenuItem Name="MenuContextEditMenuItem" Header="Anpassen" Click="OnContextEdit"/>
                                 <Separator Name="MenuContextTopSeparator"/>
                                 <MenuItem Name="MenuContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>

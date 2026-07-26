@@ -53,6 +53,15 @@ Namespace Services
             Using surfaceBitmap = RenderCollage(imagePaths, options)
                 If surfaceBitmap Is Nothing Then Return False
 
+                ' PDF ist kein Bildformat, das Skia hier kodieren könnte - es entsteht als
+                ' einseitiges Dokument über denselben Weg wie „Speichern unter: PDF" und mit dem
+                ' zuletzt im Druckdialog gewählten Seitenlayout, damit Collage und Druck gleich
+                ' aussehen.
+                If String.Equals(options.Format, "PDF", StringComparison.OrdinalIgnoreCase) Then
+                    Return PrintService.WriteSinglePagePdf(surfaceBitmap, options.OutputPath,
+                                                           AppSettingsService.Load().ToPrintOptions())
+                End If
+
                 Dim format = If(String.Equals(options.Format, "PNG", StringComparison.OrdinalIgnoreCase),
                                 SKEncodedImageFormat.Png,
                                 If(String.Equals(options.Format, "WEBP", StringComparison.OrdinalIgnoreCase),
@@ -90,7 +99,8 @@ Namespace Services
                 .OrderSeed = options.OrderSeed
             }
 
-            Using bitmap = RenderCollage(imagePaths, previewOptions)
+            ' Vorschau ohne RAW-Entwicklung - siehe RenderCollage(developRaw).
+            Using bitmap = RenderCollage(imagePaths, previewOptions, developRaw:=False)
                 If bitmap Is Nothing Then Return Nothing
                 Return ImageProcessor.ToAvaloniaBitmap(bitmap)
             End Using
@@ -100,7 +110,12 @@ Namespace Services
         ''' Klick auf die Vorschau auf den getroffenen Bildindex zurückzurechnen (manuelle Hero-Auswahl).
         Public Shared Property LastPreviewSlots As List(Of CollageSlot) = New List(Of CollageSlot)()
 
-        Private Shared Function RenderCollage(imagePaths As IEnumerable(Of String), options As CollageOptions) As SKBitmap
+        ''' <param name="developRaw">False = RAW-Quellen über ihre eingebettete Vorschau lesen statt
+        ''' sie zu entwickeln. Für die LIVE-Vorschau: die läuft nach jeder Regleränderung neu, und
+        ''' der Entwicklungs-Cache hält nur EIN Bild - mit mehreren RAWs entwickelte er sonst bei
+        ''' jedem Durchgang jedes Bild neu. Für die gespeicherte Collage wird voll entwickelt.</param>
+        Private Shared Function RenderCollage(imagePaths As IEnumerable(Of String), options As CollageOptions,
+                                              Optional developRaw As Boolean = True) As SKBitmap
             If imagePaths Is Nothing OrElse options Is Nothing Then Return Nothing
 
             Dim paths = imagePaths.
@@ -131,29 +146,32 @@ Namespace Services
                     For Each slot In layout.Slots
                         If slot.SourceIndex < 0 OrElse slot.SourceIndex >= paths.Count Then Continue For
                         Dim path = paths(slot.SourceIndex)
-                        Using original = SKBitmap.Decode(path)
-                            If original Is Nothing Then Continue For
-                            Dim source = ImageOrientationService.ApplyOrientation(original, ImageOrientationService.ReadOrigin(path))
-                            Try
-                                Dim centerX = slot.X + slot.Width / 2.0F
-                                Dim centerY = slot.Y + slot.Height / 2.0F
-                                canvas.Save()
-                                If slot.RotationDegrees <> 0 Then
-                                    canvas.RotateDegrees(slot.RotationDegrees, centerX, centerY)
-                                End If
-                                Dim innerWidth = Math.Max(1.0F, slot.Width - border * 2)
-                                Dim innerHeight = Math.Max(1.0F, slot.Height - border * 2)
-                                Dim insetX = slot.X + (slot.Width - innerWidth) / 2.0F
-                                Dim insetY = slot.Y + (slot.Height - innerHeight) / 2.0F
-                                Dim dst = New SKRect(insetX, insetY, insetX + innerWidth, insetY + innerHeight)
-                                Dim src = GetUniformToFillSourceRect(source.Width, source.Height, CInt(innerWidth), CInt(innerHeight))
-                                Using image = SKImage.FromBitmap(source)
-                                    canvas.DrawImage(image, src, dst, samplingHigh, paint)
-                                End Using
-                                canvas.Restore()
-                            Finally
-                                If Not Object.ReferenceEquals(source, original) Then source.Dispose()
-                            End Try
+                        ' NICHT SKBitmap.Decode: das kennt weder RAW noch .fpx (und PSD/HEIC/TIFF
+                        ' ebenso wenig) - solche Quellen fielen stillschweigend aus der Collage,
+                        ' ihre Kachel blieb leer. DecodeForOutput ist der Funnel, der alle Formate
+                        ' UND die EXIF-Orientierung behandelt; ein zweiter Orientierungsschritt
+                        ' danach würde das Bild ein zweites Mal drehen.
+                        Using source = ImageProcessor.DecodeDevelopedForOutput(path, developRaw)
+                            If source Is Nothing Then
+                                DiagnosticLogService.LogAlways("Collage", $"Nicht dekodierbar, Kachel bleibt leer: {path}")
+                                Continue For
+                            End If
+                            Dim centerX = slot.X + slot.Width / 2.0F
+                            Dim centerY = slot.Y + slot.Height / 2.0F
+                            canvas.Save()
+                            If slot.RotationDegrees <> 0 Then
+                                canvas.RotateDegrees(slot.RotationDegrees, centerX, centerY)
+                            End If
+                            Dim innerWidth = Math.Max(1.0F, slot.Width - border * 2)
+                            Dim innerHeight = Math.Max(1.0F, slot.Height - border * 2)
+                            Dim insetX = slot.X + (slot.Width - innerWidth) / 2.0F
+                            Dim insetY = slot.Y + (slot.Height - innerHeight) / 2.0F
+                            Dim dst = New SKRect(insetX, insetY, insetX + innerWidth, insetY + innerHeight)
+                            Dim src = GetUniformToFillSourceRect(source.Width, source.Height, CInt(innerWidth), CInt(innerHeight))
+                            Using image = SKImage.FromBitmap(source)
+                                canvas.DrawImage(image, src, dst, samplingHigh, paint)
+                            End Using
+                            canvas.Restore()
                         End Using
                     Next
                 End Using

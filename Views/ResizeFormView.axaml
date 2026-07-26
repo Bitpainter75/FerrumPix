@@ -8,7 +8,14 @@
     <StackPanel Spacing="10">
         <Border Classes="adjustment-group">
             <StackPanel Spacing="8">
-                <Grid ColumnSpacing="14" VerticalAlignment="Center">
+                <!-- „Lange Kante": EIN Feld statt Breite und Höhe. Der Wert begrenzt bei jedem Bild
+                     die längere Kante, egal ob quer oder hoch - dafür muss das Seitenverhältnis
+                     gehalten sein, deshalb steht der Haken darunter dann fest. -->
+                <CheckBox Content="Lange Kante"
+                          IsChecked="{Binding DialogBatchResizeLongEdge, Mode=TwoWay}" FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Ein einziger Wert für die längere Kante jedes Bildes - Quer- und Hochformate kommen dadurch gleich groß heraus." />
+                <Grid ColumnSpacing="14" VerticalAlignment="Center"
+                      IsVisible="{Binding IsDialogBatchResizeEdgeFieldsVisible}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
                         <ColumnDefinition Width="*"/>
@@ -26,7 +33,8 @@
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 </Grid>
-                <Grid ColumnSpacing="14" VerticalAlignment="Center">
+                <Grid ColumnSpacing="14" VerticalAlignment="Center"
+                      IsVisible="{Binding IsDialogBatchResizeEdgeFieldsVisible}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
                         <ColumnDefinition Width="*"/>
@@ -43,8 +51,32 @@
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 </Grid>
+                <!-- Dasselbe Feld wie „Breite" - im Lange-Kante-Modus trägt die Breite den einen
+                     Kantenwert (die Höhe bleibt leer, genau das heißt für die Bildverarbeitung
+                     „längste Kante"). Zwei Eingabefelder auf dieselbe Eigenschaft wären eine
+                     zweite Wahrheit; sichtbar ist immer nur eines davon. -->
+                <Grid ColumnSpacing="14" VerticalAlignment="Center"
+                      IsVisible="{Binding DialogBatchResizeLongEdge}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Lange Kante" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <TextBox Name="BatchResizeLongEdgeTextBox"
+                             Classes="combo-like"
+                             Grid.Column="1"
+                             Text="{Binding DialogBatchResizeWidthText, Mode=TwoWay}"
+                             ToolTip.Tip="Gilt für die längere Kante jedes Bildes - die kürzere folgt dem Seitenverhältnis"
+                             FontSize="{DynamicResource FP.Font.Small}" />
+                    <TextBlock Grid.Column="2" Text="px"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                </Grid>
                 <CheckBox Content="Seitenverhältnis beibehalten"
                           IsChecked="{Binding DialogBatchResizeLockAspect}" FontSize="{DynamicResource FP.Font.Small}"
+                          IsEnabled="{Binding IsDialogBatchResizeLockAspectEnabled}"
                           ToolTip.Tip="Jedes Bild behält sein eigenes Seitenverhältnis: ein einzelner Wert begrenzt die längste Kante, zwei Werte sind der Kasten, in den eingepasst wird. Ohne Haken werden die Bilder exakt auf Breite × Höhe gestreckt." />
                 <CheckBox Content="Nicht vergrößern"
                           IsChecked="{Binding DialogBatchResizeNoUpscale}" FontSize="{DynamicResource FP.Font.Small}"

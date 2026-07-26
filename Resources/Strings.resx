@@ -4542,4 +4542,40 @@
   <data name="Stapelfunktionen_wie_Bildgr_e_ndern_oder_Exporti_a431c120" xml:space="preserve">
     <value>Batch functions such as Change image size or Export to develop RAWs at full sensor resolution. Switched off, they use the embedded preview for unedited RAWs – faster, but smaller. RAWs WITH edits (.fpxmp) are always developed and written with their recipe, whatever this setting says.</value>
   </data>
+  <data name="Anzeigen_46a5a62e" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="Wasserzeichen_nicht_mitskalieren_8aadb419" xml:space="preserve">
+    <value>Don't scale watermark with image</value>
+  </data>
+  <data name="Sonst_gelten_Gr_e_und_Randabstand_f_r_das_Origin_98a63bbf" xml:space="preserve">
+    <value>Otherwise size and margin refer to the original image and shrink along with it. When ticked, the watermark is applied at its set size after the resize – it then looks the same on every output size.</value>
+  </data>
+  <data name="Lange_Kante_d1bd6f55" xml:space="preserve">
+    <value>Long edge</value>
+  </data>
+  <data name="Ein_einziger_Wert_f_r_die_l_ngere_Kante_jedes_Bi_614c42bf" xml:space="preserve">
+    <value>A single value for the longer edge of every image – landscape and portrait shots come out the same size.</value>
+  </data>
+  <data name="Gilt_f_r_die_l_ngere_Kante_jedes_Bildes_die_k_rz_37f19f72" xml:space="preserve">
+    <value>Applies to the longer edge of every image – the shorter one follows the aspect ratio</value>
+  </data>
+  <data name="Gilt_f_r_Editor_und_Viewer_nur_verkleinern_wenn__446e1a4a" xml:space="preserve">
+    <value>Applies to editor and viewer: only shrink when the image is larger than the display area, or always scale to the area.</value>
+  </data>
+  <data name="Werkzeug_beim_ffnen_1487e97d" xml:space="preserve">
+    <value>Tool on opening</value>
+  </data>
+  <data name="Welches_Werkzeug_aktiv_ist_sobald_der_Editor_ge__abfc9ed2" xml:space="preserve">
+    <value>Which tool is active as soon as the editor opens.</value>
+  </data>
+  <data name="Reihenfolge_der_Werkzeuggruppen_60d51676" xml:space="preserve">
+    <value>Order of the tool groups</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_in__26d089b0" xml:space="preserve">
+    <value>Sets the order in which the groups appear in the editor's left tool bar.</value>
+  </data>
+  <data name="Werkzeuge_6b11a2f9" xml:space="preserve">
+    <value>Tools</value>
+  </data>
 </root>

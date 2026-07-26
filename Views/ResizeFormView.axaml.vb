@@ -27,9 +27,14 @@ Namespace Views
         End Sub
 
         ''' "BatchResizeWidthTextBox" liegt in der NameScope DIESES Controls - der Fokus muss
-        ''' über diese Methode gesetzt werden (siehe Hinweis im BatchResize-Dialog).
+        ''' über diese Methode gesetzt werden (siehe Hinweis im BatchResize-Dialog). Im
+        ''' Lange-Kante-Modus ist das Breitenfeld ausgeblendet; dort gehört der Fokus in das eine
+        ''' sichtbare Kantenfeld - sonst tippte der Nutzer ins Leere.
         Public Sub FocusWidthField()
             Dim widthBox = Me.FindControl(Of TextBox)("BatchResizeWidthTextBox")
+            If widthBox Is Nothing OrElse Not widthBox.IsVisible Then
+                widthBox = Me.FindControl(Of TextBox)("BatchResizeLongEdgeTextBox")
+            End If
             If widthBox Is Nothing Then Return
 
             Dispatcher.UIThread.Post(

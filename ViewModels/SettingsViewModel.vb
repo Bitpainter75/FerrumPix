@@ -52,6 +52,8 @@ Namespace ViewModels
         Private _editorInfoSidebarExpanded As Boolean = True
         Private _editorLayersPanelExpanded As Boolean = False
         Private _editorToolSidebarCollapsed As Boolean = False
+        Private _editorStartupTool As String = "Selection"
+        Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _startupImageMode As String = "Viewer"
         Private _startupNoImageMode As String = "Gallery"
@@ -94,6 +96,8 @@ Namespace ViewModels
         Private _savedAccentColor As String = "#F08A1A"
         Private _savedViewerOpenFitToWindow As Boolean = True
         Private _savedViewerFitBehavior As String = "Always"
+        Private _savedEditorStartupTool As String = "Selection"
+        Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _savedThumbnailQuality As Integer = 82
         Private _savedThumbnailMemoryCacheCapacity As Integer = 250
         Private _savedJpgSaveQuality As Integer = 90
@@ -1027,6 +1031,90 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Werkzeug, das beim Betreten des Editors aktiv ist. Zur Wahl stehen die beiden
+        ''' Einstiege, mit denen man tatsächlich anfängt: „Auswahl" (bisheriges Verhalten) und
+        ''' „Anpassen".</summary>
+        Public Property EditorStartupTool As String
+            Get
+                Return _editorStartupTool
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeEditorStartupTool(value)
+                If _editorStartupTool = value Then Return
+                Me.RaiseAndSetIfChanged(_editorStartupTool, value)
+                Me.RaisePropertyChanged(NameOf(IsEditorStartupToolSelection))
+                Me.RaisePropertyChanged(NameOf(IsEditorStartupToolAdjust))
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsEditorStartupToolSelection As Boolean
+            Get
+                Return String.Equals(_editorStartupTool, "Selection", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsEditorStartupToolAdjust As Boolean
+            Get
+                Return String.Equals(_editorStartupTool, "Adjust", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Reihenfolge der drei Werkzeuggruppen in der linken Editor-Leiste, von oben nach
+        ''' unten - als Komma-Liste der Gruppennamen. Die Liste daneben (EditorToolGroupItems) ist
+        ''' die Anzeigeform davon; geändert wird sie nur über die Verschiebe-Befehle, damit die
+        ''' Reihenfolge eine vollständige Permutation bleibt.</summary>
+        Public Property EditorToolGroupOrder As String
+            Get
+                Return _editorToolGroupOrder
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeEditorToolGroupOrder(value)
+                If _editorToolGroupOrder = value Then Return
+                Me.RaiseAndSetIfChanged(_editorToolGroupOrder, value)
+                RebuildEditorToolGroupItems()
+                SaveLayoutSettings()
+                _mainVm?.Editor?.RefreshToolGroupOrder()
+            End Set
+        End Property
+
+        Public ReadOnly Property EditorToolGroupItems As New ObservableCollection(Of EditorToolGroupItem)()
+
+        ''' <summary>Baut die Anzeigeliste neu auf. Die Beschriftungen kommen ÜBERSETZT aus dem
+        ''' ViewModel: der Sprach-Baumlauf sieht nur den Baum, den es beim Wechsel schon gibt -
+        ''' Zeilen, die eine Liste später erzeugt, blieben sonst deutsch.</summary>
+        Private Sub RebuildEditorToolGroupItems()
+            EditorToolGroupItems.Clear()
+            For Each name In AppSettingsService.NormalizeEditorToolGroupOrder(_editorToolGroupOrder).Split(","c)
+                EditorToolGroupItems.Add(New EditorToolGroupItem With {
+                    .Key = name,
+                    .Label = EditorToolGroupLabel(name)
+                })
+            Next
+        End Sub
+
+        Private Shared Function EditorToolGroupLabel(key As String) As String
+            Select Case If(key, "").Trim()
+                Case "Transform" : Return LocalizationService.T("Transformieren")
+                Case "Tools" : Return LocalizationService.T("Werkzeuge")
+                Case Else : Return LocalizationService.T("Anpassungen")
+            End Select
+        End Function
+
+        ''' <param name="richtung">-1 = nach oben, +1 = nach unten.</param>
+        Private Sub MoveEditorToolGroup(key As String, richtung As Integer)
+            Dim namen = AppSettingsService.NormalizeEditorToolGroupOrder(_editorToolGroupOrder).Split(","c).ToList()
+            Dim index = namen.FindIndex(Function(n) String.Equals(n, key, StringComparison.OrdinalIgnoreCase))
+            If index < 0 Then Return
+            Dim ziel = index + richtung
+            If ziel < 0 OrElse ziel >= namen.Count Then Return
+
+            Dim gemerkt = namen(index)
+            namen(index) = namen(ziel)
+            namen(ziel) = gemerkt
+            EditorToolGroupOrder = String.Join(",", namen)
+        End Sub
+
         Private _editorSnapMarginPercent As Integer = 4
 
         ''' Abstand der Einrast-Linien (Sicherheitsabstand) zu den Bildrändern (0 = deaktiviert).
@@ -1303,6 +1391,9 @@ Namespace ViewModels
         Public ReadOnly Property SetGalleryTimelineModeCommand As ICommand
         Public ReadOnly Property SetGalleryStartupFolderModeCommand As ICommand
         Public ReadOnly Property SetViewerFitBehaviorCommand As ICommand
+        Public ReadOnly Property SetEditorStartupToolCommand As ICommand
+        Public ReadOnly Property MoveEditorToolGroupUpCommand As ICommand
+        Public ReadOnly Property MoveEditorToolGroupDownCommand As ICommand
         Public ReadOnly Property SetLanguageModeCommand As ICommand
         Public ReadOnly Property SetTransparencyBackgroundModeCommand As ICommand
         Public ReadOnly Property CleanupDatabaseCommand As ICommand
@@ -1368,6 +1459,9 @@ Namespace ViewModels
             _editorInfoSidebarExpanded = _appSettings.EditorInfoSidebarExpanded
             _editorLayersPanelExpanded = _appSettings.EditorLayersPanelExpanded
             _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
+            _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
+            _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
+            RebuildEditorToolGroupItems()
             _editorSnapMarginPercent = Math.Max(0, Math.Min(20, _appSettings.EditorSnapMarginPercent))
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
@@ -1401,6 +1495,9 @@ Namespace ViewModels
             SetGalleryStartupFolderModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryStartupFolderMode = m)
             SetGalleryTimelineModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryTimelineMode = m)
             SetViewerFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerFitBehavior = m)
+            SetEditorStartupToolCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorStartupTool = m)
+            MoveEditorToolGroupUpCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, -1))
+            MoveEditorToolGroupDownCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, 1))
             SetLanguageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) LanguageMode = m)
             SetTransparencyBackgroundModeCommand = ReactiveCommand.Create(Of String)(Sub(m) TransparencyBackgroundMode = m)
             CleanupDatabaseCommand = ReactiveCommand.Create(Sub()
@@ -1504,6 +1601,8 @@ Namespace ViewModels
             _savedAccentColor = _accentColor
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
             _savedViewerFitBehavior = _viewerFitBehavior
+            _savedEditorStartupTool = _editorStartupTool
+            _savedEditorToolGroupOrder = _editorToolGroupOrder
             _savedThumbnailQuality = _thumbnailQuality
             _savedThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             _savedJpgSaveQuality = _jpgSaveQuality
@@ -1558,6 +1657,8 @@ Namespace ViewModels
             AccentColor = _savedAccentColor
             ViewerOpenFitToWindow = _savedViewerOpenFitToWindow
             ViewerFitBehavior = _savedViewerFitBehavior
+            EditorStartupTool = _savedEditorStartupTool
+            EditorToolGroupOrder = _savedEditorToolGroupOrder
             ThumbnailQuality = _savedThumbnailQuality
             ThumbnailMemoryCacheCapacity = _savedThumbnailMemoryCacheCapacity
             JpgSaveQuality = _savedJpgSaveQuality
@@ -1632,6 +1733,8 @@ Namespace ViewModels
             AccentColor = "#F08A1A"
             ViewerOpenFitToWindow = True
             ViewerFitBehavior = "Always"
+            EditorStartupTool = "Selection"
+            EditorToolGroupOrder = "Adjust,Transform,Tools"
             StartupImageMode = "Viewer"
             StartupNoImageMode = "Gallery"
             SyncCatalogToXmp = False
@@ -1775,6 +1878,8 @@ Namespace ViewModels
             settings.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             settings.EditorLayersPanelExpanded = _editorLayersPanelExpanded
             settings.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
+            settings.EditorStartupTool = _editorStartupTool
+            settings.EditorToolGroupOrder = _editorToolGroupOrder
             settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             AppSettingsService.Save(settings)
         End Sub
@@ -2040,6 +2145,13 @@ Namespace ViewModels
         Private Shared Function ToHex(color As Color) As String
             Return $"#{color.R:X2}{color.G:X2}{color.B:X2}"
         End Function
+    End Class
+
+    ''' <summary>Eine Zeile der Werkzeuggruppen-Reihenfolge auf der Einstellungsseite: der stabile
+    ''' Name (Key) geht an die Verschiebe-Befehle, die Beschriftung ist bereits übersetzt.</summary>
+    Public Class EditorToolGroupItem
+        Public Property Key As String = ""
+        Public Property Label As String = ""
     End Class
 
 End Namespace

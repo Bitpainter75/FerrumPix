@@ -137,5 +137,13 @@
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
         </Grid>
+
+        <!-- Nur im Sammel-Export und nur bei aktiver Größenänderung sichtbar: ohne Skalierung
+             gäbe es nichts, wovon das Wasserzeichen sich abkoppeln könnte. -->
+        <CheckBox Content="Wasserzeichen nicht mitskalieren"
+                  IsChecked="{Binding DialogWatermarkKeepSize, Mode=TwoWay}"
+                  IsVisible="{Binding IsDialogWatermarkKeepSizeVisible}"
+                  FontSize="{DynamicResource FP.Font.Small}"
+                  ToolTip.Tip="Sonst gelten Größe und Randabstand für das Originalbild und schrumpfen mit der Verkleinerung mit. Mit Haken kommt das Wasserzeichen erst nach dem Verkleinern in seiner eingestellten Größe auf das Bild - es ist dann in jeder Ausgabegröße gleich groß."/>
     </StackPanel>
 </UserControl>

@@ -4541,4 +4541,40 @@
   <data name="Stapelfunktionen_wie_Bildgr_e_ndern_oder_Exporti_a431c120" xml:space="preserve">
     <value>Stapelfunktionen wie Bildgröße ändern oder Exportieren nach entwickeln RAWs in voller Sensorauflösung. Ausgeschaltet nehmen sie für unbearbeitete RAWs die eingebettete Vorschau – schneller, aber kleiner. RAWs MIT Bearbeitung (.fpxmp) werden unabhängig davon immer entwickelt und mit ihrem Rezept geschrieben.</value>
   </data>
+  <data name="Anzeigen_46a5a62e" xml:space="preserve">
+    <value>Anzeigen</value>
+  </data>
+  <data name="Wasserzeichen_nicht_mitskalieren_8aadb419" xml:space="preserve">
+    <value>Wasserzeichen nicht mitskalieren</value>
+  </data>
+  <data name="Sonst_gelten_Gr_e_und_Randabstand_f_r_das_Origin_98a63bbf" xml:space="preserve">
+    <value>Sonst gelten Größe und Randabstand für das Originalbild und schrumpfen mit der Verkleinerung mit. Mit Haken kommt das Wasserzeichen erst nach dem Verkleinern in seiner eingestellten Größe auf das Bild - es ist dann in jeder Ausgabegröße gleich groß.</value>
+  </data>
+  <data name="Lange_Kante_d1bd6f55" xml:space="preserve">
+    <value>Lange Kante</value>
+  </data>
+  <data name="Ein_einziger_Wert_f_r_die_l_ngere_Kante_jedes_Bi_614c42bf" xml:space="preserve">
+    <value>Ein einziger Wert für die längere Kante jedes Bildes - Quer- und Hochformate kommen dadurch gleich groß heraus.</value>
+  </data>
+  <data name="Gilt_f_r_die_l_ngere_Kante_jedes_Bildes_die_k_rz_37f19f72" xml:space="preserve">
+    <value>Gilt für die längere Kante jedes Bildes - die kürzere folgt dem Seitenverhältnis</value>
+  </data>
+  <data name="Gilt_f_r_Editor_und_Viewer_nur_verkleinern_wenn__446e1a4a" xml:space="preserve">
+    <value>Gilt für Editor und Viewer: nur verkleinern, wenn das Bild größer als die Darstellungsfläche ist, oder immer auf die Fläche skalieren.</value>
+  </data>
+  <data name="Werkzeug_beim_ffnen_1487e97d" xml:space="preserve">
+    <value>Werkzeug beim Öffnen</value>
+  </data>
+  <data name="Welches_Werkzeug_aktiv_ist_sobald_der_Editor_ge__abfc9ed2" xml:space="preserve">
+    <value>Welches Werkzeug aktiv ist, sobald der Editor geöffnet wird.</value>
+  </data>
+  <data name="Reihenfolge_der_Werkzeuggruppen_60d51676" xml:space="preserve">
+    <value>Reihenfolge der Werkzeuggruppen</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_in__26d089b0" xml:space="preserve">
+    <value>Legt fest, in welcher Reihenfolge die Gruppen in der linken Werkzeugleiste des Editors stehen.</value>
+  </data>
+  <data name="Werkzeuge_6b11a2f9" xml:space="preserve">
+    <value>Werkzeuge</value>
+  </data>
 </root>

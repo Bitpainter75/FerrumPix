@@ -232,6 +232,10 @@ Namespace Services
         Private _lockAspect As Boolean = True
         Private _flipVertical As Boolean = False
         Private _anchor As String = ""
+        ' Wächst das Objekt mit dem Bild mit? Objekte leben im Pixelraum der QUELLE und werden auf die
+        ' Ausgabemaße umgerechnet - beim Verkleinern schrumpft ein Wasserzeichen deshalb mit. False
+        ' heißt: die Maße gelten für das AUSGEGEBENE Bild, das Wasserzeichen bleibt gleich groß.
+        Private _scaleWithImage As Boolean = True
         Private _isVisible As Boolean = True
         Private _isLocked As Boolean = False
         ' Vom Nutzer im Ebenen-Panel vergebener Name. Leer = automatische Beschriftung aus Art/Text/Datei.
@@ -699,6 +703,19 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Nur für verankerte Wasserzeichen ausgewertet: True (Vorgabe) rechnet Größe,
+        ''' Schriftgröße und Randabstand wie bei jedem Objekt von der Quellauflösung auf die
+        ''' Ausgabegröße um - beim Verkleinern schrumpft das Wasserzeichen mit. False lässt sie
+        ''' unverändert, die Zahlen gelten dann für das fertige Bild.</summary>
+        Public Property ScaleWithImage As Boolean
+            Get
+                Return _scaleWithImage
+            End Get
+            Set(value As Boolean)
+                SetField(_scaleWithImage, value)
+            End Set
+        End Property
+
         ''' <summary>GESPERRT: keine geometrischen Änderungen mehr an diesem Objekt - kein Verschieben,
         ''' Skalieren, Drehen oder Spiegeln, weder per Maus noch über die Regler, und auch nicht als
         ''' Teil einer Gruppen-Transformation. Auswählen, Sichtbarkeit und Aussehen bleiben möglich;
@@ -998,6 +1015,7 @@ Namespace Services
                 .FlipVertical = FlipVertical,
                 .Adjustments = If(Adjustments Is Nothing, Nothing, Adjustments.Clone()),
                 .Anchor = Anchor,
+                .ScaleWithImage = ScaleWithImage,
                 .IsVisible = IsVisible, .IsLocked = IsLocked,
                 .HardnessPercent = HardnessPercent,
                 .BrushPreset = BrushPreset,
@@ -1950,9 +1968,32 @@ Namespace Services
         ''' aber .fpx-Projekte werden aus Basisbild + Rezept gerendert statt als ZIP an den Codec
         ''' gereicht - dort kam bisher Nothing zurück, was in einer leeren Seite endete. Der Aufrufer
         ''' übernimmt das SKBitmap.</summary>
-        Friend Shared Function DecodeForOutput(path As String) As SKBitmap
+        Friend Shared Function DecodeForOutput(path As String, Optional developRaw As Boolean = True) As SKBitmap
             If FpxService.IsFpx(path) Then Return RenderFpxFullResolution(path)
-            Return DecodeOriented(path)
+            Return DecodeOriented(path, developRaw)
+        End Function
+
+        ''' <summary>Wie <see cref="DecodeForOutput"/>, wendet aber zusätzlich ein danebenliegendes
+        ''' Rezept an: Druck und Collage zeigen damit die BEARBEITETE Fassung - also das Bild, das
+        ''' der Nutzer im Editor gespeichert hat, statt der rohen Quelle daneben.
+        '''
+        ''' Bewusst NICHT in DecodeForOutput selbst: die automatische Bildverbesserung misst dort
+        ''' die unbearbeitete Quelle und dürfte das Rezept nicht schon eingerechnet bekommen.</summary>
+        ''' <param name="developRaw">Nur wirksam, solange KEIN Rezept vorliegt. Mit Rezept wird immer
+        ''' entwickelt - die eingebettete Vorschau wäre dort schlicht das falsche Bild.</param>
+        Friend Shared Function DecodeDevelopedForOutput(path As String, Optional developRaw As Boolean = True) As SKBitmap
+            If FpxService.IsFpx(path) Then Return RenderFpxFullResolution(path)
+
+            Dim rezept As ImageAdjustments = Nothing
+            If RawSidecarService.IsSidecarFormat(path) AndAlso RawSidecarService.Exists(path) Then
+                rezept = RawSidecarService.TryRead(path)
+            End If
+
+            Dim decoded = DecodeOriented(path, developRaw OrElse rezept IsNot Nothing)
+            If decoded Is Nothing OrElse rezept Is Nothing Then Return decoded
+            Using decoded
+                Return ProcessBitmap(decoded, rezept)
+            End Using
         End Function
 
         ''' <summary>Friend statt Private, damit PrintService dieselbe Dekodier-Route benutzt -
@@ -3114,7 +3155,24 @@ Namespace Services
 
         Private Shared Function ProcessBitmap(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim processed = ProcessBitmapBase(source, adj)
-            Return ReplaceBitmap(processed, ApplyAnnotations(processed, adj))
+            Return ReplaceBitmap(processed, ApplyAnnotations(processed, WithAnnotationSourceSpace(adj, source)))
+        End Function
+
+        ''' <summary>Stapel- und Export-Aufrufer bauen ihre Anpassungen frisch zusammen und kennen die
+        ''' Maße der Quelle nicht - SourceWidthPixels bleibt dort 0. Ohne Bezugsgröße rechnet
+        ''' TransformAnnotationForGeometry die Objekte gar nicht um: ein Wasserzeichen behielt seine
+        ''' Pixelmaße, obwohl das Bild verkleinert wurde, und wirkte auf dem kleinen Bild riesig.
+        ''' Bezug ist hier das dekodierte Bild selbst - genau der Raum, in dem die Pipeline gleich
+        ''' arbeitet; eine aus der Datei geschätzte Größe läge bei RAW/PSD/.fpx daneben.</summary>
+        Private Shared Function WithAnnotationSourceSpace(adj As ImageAdjustments, source As SKBitmap) As ImageAdjustments
+            If adj Is Nothing OrElse source Is Nothing Then Return adj
+            If adj.SourceWidthPixels > 0 AndAlso adj.SourceHeightPixels > 0 Then Return adj
+            If adj.Annotations Is Nothing OrElse adj.Annotations.Count = 0 Then Return adj
+
+            Dim ergaenzt = adj.Clone()
+            ergaenzt.SourceWidthPixels = source.Width
+            ergaenzt.SourceHeightPixels = source.Height
+            Return ergaenzt
         End Function
 
         ' Alle Pipeline-Schritte AUSSER dem Einzeichnen der Objekte (Annotations). Wird von
@@ -6724,9 +6782,17 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         Function(p) New StrokePoint(p.X - crop.Left, p.Y - crop.Top)).ToList())).ToList()
             End If
 
-            Dim renderAnnotation = ScaleAnnotationForSource(croppedAnnotation,
+            ' „Größe behalten": ein verankertes Wasserzeichen, das NICHT mitwachsen soll, wird gar
+            ' nicht erst umgerechnet - seine Zahlen gelten dann direkt im Ausgabebild. Die Verankerung
+            ' rechnet ComputeAnnotationRect ohnehin gegen die Ausgabemaße, die Lage stimmt also weiter.
+            Dim renderAnnotation As ImageAnnotation
+            If isAnchoredWatermark AndAlso Not croppedAnnotation.ScaleWithImage Then
+                renderAnnotation = croppedAnnotation
+            Else
+                renderAnnotation = ScaleAnnotationForSource(croppedAnnotation,
                                                             preWidth / CSng(crop.Width),
                                                             preHeight / CSng(crop.Height))
+            End If
             If renderAnnotation Is Nothing Then Return Nothing
             If q = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical Then Return renderAnnotation
 

@@ -785,6 +785,86 @@
                             <TextBlock Text="Einstellungen für Bearbeitung und Vorschau." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
+                        <!-- Dieselbe Einstellung wie im Betrachter-Abschnitt, bewusst auch hier:
+                             sie gilt für beide Ansichten, und wer sie für den Editor sucht, sucht
+                             sie hier. Gebunden ist DIESELBE Eigenschaft - zwei Bedienstellen, EIN
+                             Wert. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Einpassen-Verhalten" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt für Editor und Viewer: nur verkleinern, wenn das Bild größer als die Darstellungsfläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerFitBehaviorOnlyWhenLarger}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerFitBehaviorCommand}"
+                                        CommandParameter="OnlyWhenLarger">Nur wenn größer</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerFitBehaviorAlways}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerFitBehaviorCommand}"
+                                        CommandParameter="Always">Immer einpassen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Werkzeug beim Öffnen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Welches Werkzeug aktiv ist, sobald der Editor geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorStartupToolSelection}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorStartupToolCommand}"
+                                        CommandParameter="Selection">Auswahl</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorStartupToolAdjust}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorStartupToolCommand}"
+                                        CommandParameter="Adjust">Anpassen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="Reihenfolge der Werkzeuggruppen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt fest, in welcher Reihenfolge die Gruppen in der linken Werkzeugleiste des Editors stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding EditorToolGroupItems}" MaxWidth="420" HorizontalAlignment="Left">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="10,6"
+                                                Margin="0,0,0,6">
+                                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                                <TextBlock Text="{Binding Label}"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="{DynamicResource FP.Font.Body}"/>
+                                                <Button Grid.Column="1"
+                                                        Classes="ghost"
+                                                        Padding="10,4"
+                                                        Margin="0,0,4,0"
+                                                        ToolTip.Tip="Nach oben"
+                                                        Command="{Binding DataContext.MoveEditorToolGroupUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding Key}">▲</Button>
+                                                <Button Grid.Column="2"
+                                                        Classes="ghost"
+                                                        Padding="10,4"
+                                                        ToolTip.Tip="Nach unten"
+                                                        Command="{Binding DataContext.MoveEditorToolGroupDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding Key}">▼</Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Filmstrip im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>

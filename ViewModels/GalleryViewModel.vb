@@ -107,7 +107,7 @@ Namespace ViewModels
         Public Property Items As BulkObservableCollection(Of ImageItem)
         Public Property DisplayItems As BulkObservableCollection(Of ImageItem)
         Public Property SelectedItems As ObservableCollection(Of ImageItem)
-        Public ReadOnly Property CollageFormatOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {"JPG", "PNG", "WEBP"}
+        Public ReadOnly Property CollageFormatOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {"JPG", "PNG", "WEBP", "PDF"}
 
         Public Property CurrentFolder As String
             Get
@@ -4900,7 +4900,7 @@ Namespace ViewModels
 
         Public Sub OpenCollageDialog()
             Dim paths = GetSelectedPaths().
-                Where(Function(p) File.Exists(p) AndAlso IsImagePath(p)).
+                Where(Function(p) File.Exists(p) AndAlso IsCollageSourcePath(p)).
                 ToList()
             If paths.Count < 2 Then
                 StatusText = LocalizationService.T("Für eine Collage müssen mindestens zwei Bilder ausgewählt sein.")
@@ -4961,7 +4961,7 @@ Namespace ViewModels
                 If Not IsCollageDialogOpen Then Return
 
                 Dim paths = GetSelectedPaths().
-                    Where(Function(p) File.Exists(p) AndAlso IsImagePath(p)).
+                    Where(Function(p) File.Exists(p) AndAlso IsCollageSourcePath(p)).
                     ToList()
                 If paths.Count < 2 Then
                     CollagePreviewImage = Nothing
@@ -4995,7 +4995,7 @@ Namespace ViewModels
         Public Async Sub CreateCollage()
             Try
                 Dim paths = GetSelectedPaths().
-                    Where(Function(p) File.Exists(p) AndAlso IsImagePath(p)).
+                    Where(Function(p) File.Exists(p) AndAlso IsCollageSourcePath(p)).
                     ToList()
                 If paths.Count < 2 Then
                     StatusText = LocalizationService.T("Für eine Collage müssen mindestens zwei Bilder ausgewählt sein.")
@@ -5006,7 +5006,8 @@ Namespace ViewModels
                 Dim baseName = IO.Path.GetFileNameWithoutExtension(If(String.IsNullOrWhiteSpace(CollageBaseName), "Collage", CollageBaseName.Trim()))
                 If String.IsNullOrWhiteSpace(baseName) Then baseName = "Collage"
                 Dim ext = If(String.Equals(CollageFormat, "PNG", StringComparison.OrdinalIgnoreCase), ".png",
-                          If(String.Equals(CollageFormat, "WEBP", StringComparison.OrdinalIgnoreCase), ".webp", ".jpg"))
+                          If(String.Equals(CollageFormat, "WEBP", StringComparison.OrdinalIgnoreCase), ".webp",
+                          If(String.Equals(CollageFormat, "PDF", StringComparison.OrdinalIgnoreCase), ".pdf", ".jpg")))
                 Dim target = MakeUniquePath(IO.Path.Combine(CurrentFolder, baseName & ext))
                 Dim options = New CollageOptions With {
                     .OutputPath = target,
@@ -5052,9 +5053,15 @@ Namespace ViewModels
             Loop
         End Function
 
-        Private Shared Function IsImagePath(path As String) As Boolean
-            Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
-            Return {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico", ".psd", ".psb"}.Contains(ext)
+        ''' <summary>Quellen, aus denen eine Collage Bildinhalt beziehen kann. Gefragt wird DIESELBE
+        ''' Funktion wie bei den übrigen Stapelaktionen (IsBatchImageEditReadable) - die eigene
+        ''' Endungsliste hier kannte weder RAW noch .fpx, obwohl das Menü sie anbot: die Auswahl
+        ''' schrumpfte still auf null und der Dialog verlangte "mindestens zwei Bilder". ICO steht
+        ''' zusätzlich drin, weil der Renderer es lesen kann und die Collage es bisher annahm.</summary>
+        Private Shared Function IsCollageSourcePath(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            If IO.Path.GetExtension(path).ToLowerInvariant() = ".ico" Then Return True
+            Return IsBatchImageEditReadable(path)
         End Function
 
         Public Sub StoreClipboard(cut As Boolean)
@@ -6098,6 +6105,11 @@ Namespace ViewModels
                 vorlage.LockResizeAspect = result.LockAspect
                 vorlage.NoResizeUpscale = result.NoUpscale
                 vorlage.ResizeInterpolation = result.ResizeInterpolation
+                ' KASTEN-Modus wie in der Bildgroessen-Stapelaktion: EIN Wert begrenzt die laengste
+                ' Kante, zwei Werte sind der Kasten, in den eingepasst wird. Ohne ihn galten die
+                ' Werte exakt - ein Stapel aus Quer- und Hochformaten wurde damit gestreckt, und die
+                ' "Lange Kante" haette hier gar nicht gewirkt.
+                vorlage.ResizeFitInsideBox = True
             End If
             If Not String.IsNullOrEmpty(result.WatermarkPresetName) Then
                 ' Die Lauf-Kopie aus dem Dialog traegt Anker und Breite dieses Laufs; nur wenn sie
@@ -6114,6 +6126,10 @@ Namespace ViewModels
                                                    LocalizationService.T("Die gewählte Wasserzeichen-Vorlage enthält weder Text noch Bild."))
                     Return
                 End If
+                ' „Nicht mitskalieren": die Maße der Vorlage gelten dann fuer das FERTIGE Bild -
+                ' das Wasserzeichen kommt also erst nach dem Verkleinern in seiner eingestellten
+                ' Groesse darauf und ist in jeder Ausgabegroesse gleich gross.
+                annotation.ScaleWithImage = Not result.WatermarkKeepSize
                 vorlage.Annotations.Add(annotation)
             End If
 

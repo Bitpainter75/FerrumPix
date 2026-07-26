@@ -153,6 +153,12 @@ Namespace Services
         ''' Linke Werkzeugleiste des Editors eingeklappt (nur Symbole, keine Beschriftungen) -
         ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Leiste selbst.
         Public Property EditorToolSidebarCollapsed As Boolean = False
+        ''' Werkzeug, das beim Betreten des Editors aktiv ist: "Selection" (Auswahl, bisheriges
+        ''' Verhalten) oder "Adjust" (Anpassen).
+        Public Property EditorStartupTool As String = "Selection"
+        ''' Reihenfolge der drei Werkzeuggruppen in der linken Editor-Leiste, von oben nach unten.
+        ''' Erlaubt sind genau "Adjust", "Transform" und "Tools", jeder Name genau einmal.
+        Public Property EditorToolGroupOrder As String = "Adjust,Transform,Tools"
         ''' Gemerkter Auf-/Zuklapp-Zustand jeder Editor-Gruppe (Expander), Schlüssel = stabiler
         ''' Gruppenname (siehe Controls.ExpanderState). Fehlt ein Schlüssel, gilt der XAML-Standard.
         Public Property EditorExpanderStates As New Dictionary(Of String, Boolean)()
@@ -171,6 +177,11 @@ Namespace Services
         Public Property ExportToUseFilter As Boolean = False
         Public Property ExportToUseWatermark As Boolean = False
         Public Property ExportToUseResize As Boolean = False
+        ''' „Wasserzeichen nicht mitskalieren" im Export-Dialog: normalerweise gelten die Maße der
+        ''' Vorlage für das Originalbild und schrumpfen mit der Verkleinerung mit. Ist der Schalter
+        ''' an, gelten sie für das fertige Bild - das Wasserzeichen bleibt in jeder Ausgabegröße
+        ''' gleich groß.
+        Public Property ExportToWatermarkKeepSize As Boolean = False
         ''' Abstand der EINRAST-Linien (Sicherheitsabstand) zu den Bildrändern in Prozent - die
         ''' pinken Ziel-Linien, an denen Objekte beim Verschieben einrasten
         ''' (präzisiert: gemeint war diese Linie, nicht das Zuschneiden-Werkzeug).
@@ -215,6 +226,10 @@ Namespace Services
         Public Property LastBatchResizeLockAspect As Boolean = True
         ''' "Nicht vergroessern" im Bildgroessen-/Export-Formular (Standard aus = bisheriges Verhalten).
         Public Property LastBatchResizeNoUpscale As Boolean = False
+        ''' "Lange Kante": statt Breite und Hoehe wird EIN Wert eingetragen, der bei jedem Bild die
+        ''' laengere Kante begrenzt - die Ausrichtung ist dann egal. Das Seitenverhaeltnis ist dabei
+        ''' zwingend gehalten.
+        Public Property LastBatchResizeLongEdge As Boolean = False
         Public Property LastBatchResizeInterpolation As String = "Bilinear"
         Public Property LastWatermarkPresetName As String = ""
         Public Property EnableDiagnosticLogging As Boolean = False
@@ -345,6 +360,8 @@ Namespace Services
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
+                settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
+                settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
                 settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
@@ -422,6 +439,8 @@ Namespace Services
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
+                settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
+                settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
                 settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
@@ -572,6 +591,41 @@ Namespace Services
                 Case Else
                     Return "Always"
             End Select
+        End Function
+
+        Public Shared Function NormalizeEditorStartupTool(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Adjust"
+                    Return "Adjust"
+                Case Else
+                    Return "Selection"
+            End Select
+        End Function
+
+        ''' <summary>Die drei Werkzeuggruppen der Editor-Leiste, in der Reihenfolge, die als Vorgabe
+        ''' gilt.</summary>
+        Public Shared ReadOnly Property EditorToolGroupNames As String()
+            Get
+                Return {"Adjust", "Transform", "Tools"}
+            End Get
+        End Property
+
+        ''' <summary>Sorgt dafür, dass die gespeicherte Reihenfolge IMMER eine vollständige
+        ''' Permutation der drei Gruppen ist: Unbekanntes und Doppeltes fliegt raus, Fehlendes wird
+        ''' in der Vorgabereihenfolge angehängt. Eine unvollständige Liste hätte eine ganze Gruppe
+        ''' aus der Leiste verschwinden lassen - und mit ihr die Werkzeuge darin.</summary>
+        Public Shared Function NormalizeEditorToolGroupOrder(value As String) As String
+            Dim result As New List(Of String)()
+            For Each teil In If(value, "").Split(","c)
+                Dim name = teil.Trim()
+                Dim treffer = EditorToolGroupNames.FirstOrDefault(
+                    Function(e) String.Equals(e, name, StringComparison.OrdinalIgnoreCase))
+                If treffer IsNot Nothing AndAlso Not result.Contains(treffer) Then result.Add(treffer)
+            Next
+            For Each name In EditorToolGroupNames
+                If Not result.Contains(name) Then result.Add(name)
+            Next
+            Return String.Join(",", result)
         End Function
 
         ' Untergrenze -1: die kleinste Schrift der Oberfläche ist 9px (FP.Font.Label), bei -2 wäre sie
@@ -928,11 +982,13 @@ Namespace Services
         End Sub
 
         ''' <summary>Merkt sich die aktiven Sektionen des "Exportieren nach"-Dialogs.</summary>
-        Public Shared Sub SaveExportToSections(useFilter As Boolean, useWatermark As Boolean, useResize As Boolean)
+        Public Shared Sub SaveExportToSections(useFilter As Boolean, useWatermark As Boolean, useResize As Boolean,
+                                               watermarkKeepSize As Boolean)
             Update(Sub(s)
                        s.ExportToUseFilter = useFilter
                        s.ExportToUseWatermark = useWatermark
                        s.ExportToUseResize = useResize
+                       s.ExportToWatermarkKeepSize = watermarkKeepSize
                    End Sub)
         End Sub
 
@@ -941,7 +997,8 @@ Namespace Services
             SaveLastBatchRenameSettings(value, settings.LastBatchRenameStart, settings.LastBatchRenameStep)
         End Sub
 
-        Public Shared Sub SaveLastBatchResizeSettings(width As Integer, height As Integer, scalePercent As Integer, lockAspect As Boolean, interpolation As ResizeInterpolationMode, noUpscale As Boolean)
+        Public Shared Sub SaveLastBatchResizeSettings(width As Integer, height As Integer, scalePercent As Integer, lockAspect As Boolean, interpolation As ResizeInterpolationMode, noUpscale As Boolean,
+                                                      longEdge As Boolean)
             Update(Sub(s)
                        s.LastBatchResizeWidth = NormalizeBatchResizeDimension(width)
                        s.LastBatchResizeHeight = NormalizeBatchResizeDimension(height)
@@ -949,6 +1006,7 @@ Namespace Services
                        s.LastBatchResizeLockAspect = lockAspect
                        s.LastBatchResizeNoUpscale = noUpscale
                        s.LastBatchResizeInterpolation = interpolation.ToString()
+                       s.LastBatchResizeLongEdge = longEdge
                    End Sub)
         End Sub
 

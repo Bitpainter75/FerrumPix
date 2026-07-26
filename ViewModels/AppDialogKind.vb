@@ -35,6 +35,11 @@ Namespace ViewModels
         ''' <summary>Die Vorgabe MIT den Dialogwerten (Anker, Breite) - eine Kopie, die nur fuer
         ''' diesen Lauf gilt. Nothing, wenn kein Wasserzeichen gewaehlt ist.</summary>
         Public Property WatermarkPreset As WatermarkPresetSettings
+        ''' <summary>True: die Maße des Wasserzeichens gelten fuer das FERTIGE Bild - es wird also
+        ''' erst nach dem Verkleinern in seiner eingestellten Groesse aufgebracht und ist in jeder
+        ''' Ausgabegroesse gleich gross. False (Vorgabe): die Maße gelten fuer das Originalbild und
+        ''' schrumpfen mit.</summary>
+        Public Property WatermarkKeepSize As Boolean
         ''' <summary>0 = Originalmaß. Wie die Bildgrößen-Stapelfunktion über ImageAdjustments.Resize*;
         ''' ist nur EINE Kante gesetzt, gilt sie als längste Kante (siehe ImageProcessor.ApplyResize).</summary>
         Public Property ResizeWidth As Integer

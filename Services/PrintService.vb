@@ -122,28 +122,85 @@ Namespace Services
             Return 1
         End Function
 
-        ''' <summary>Teilt die bedruckbare Fläche in gleich große Zellen. Rückgabe in Seiten-
-        ''' koordinaten (Punkt), zeilenweise von links oben.</summary>
-        Private Shared Function BuildCells(contentRect As SKRect, imagesPerPage As Integer) As List(Of SKRect)
+        ''' <summary>Teilt die bedruckbare Fläche in gleich große Zellen - so viele, wie auf DIESER
+        ''' Seite wirklich Bilder stehen. Ein 2x2-Raster mit zwei Bildern ergibt deshalb eine Reihe
+        ''' aus zwei großen Zellen statt vier kleiner, von denen die halbe Seite leer bliebe: die
+        ''' Rasterwahl ist eine OBERGRENZE ("höchstens 4 pro Seite"), keine Anweisung, Papier zu
+        ''' verschenken. Bei mehreren Seiten kann die letzte dadurch größere Bilder tragen als die
+        ''' vollen davor - das ist gewollt.
+        '''
+        ''' Wie die Bilder auf Zeilen und Spalten verteilt werden, entscheidet ihr Seitenverhältnis:
+        ''' zwei querformatige Fotos werden auf einer Querformat-Seite ÜBEREINANDER am größten, zwei
+        ''' quadratische NEBENEINANDER. Deshalb wird jede mögliche Aufteilung durchgerechnet und die
+        ''' genommen, bei der insgesamt die meiste Bildfläche herauskommt. Sind die Maße unbekannt
+        ''' (Format ohne schnelle Größenabfrage), bleibt es beim breiten Raster.
+        '''
+        ''' Rückgabe in Seitenkoordinaten (Punkt), zeilenweise von links oben.</summary>
+        ''' <param name="scale">Vorschau-Maßstab. Der Zellabstand steht wie der Rand in Punkt und
+        ''' muss mitskaliert werden - sonst wirkt er in der verkleinerten Vorschau breiter, als er
+        ''' gedruckt wird.</param>
+        Private Shared Function BuildCells(contentRect As SKRect, imagesPerPage As Integer,
+                                           imageAspects As IList(Of Double), scale As Single) As List(Of SKRect)
             Dim cells = New List(Of SKRect)()
             Dim perPage = NormalizeImagesPerPage(imagesPerPage)
-            Dim columns = CInt(Math.Sqrt(perPage))
-            Dim rows = columns
+            Dim rasterColumns = CInt(Math.Sqrt(perPage))
+            Dim count = Math.Max(1, Math.Min(perPage, If(imageAspects Is Nothing, 1, imageAspects.Count)))
+            Dim gap = CellGapPoints * Math.Max(0.01F, scale)
 
-            Dim totalGapX = CellGapPoints * (columns - 1)
-            Dim totalGapY = CellGapPoints * (rows - 1)
-            Dim cellWidth = (contentRect.Width - totalGapX) / columns
-            Dim cellHeight = (contentRect.Height - totalGapY) / rows
+            Dim besteSpalten = Math.Min(count, rasterColumns)
+            Dim besteFlaeche = -1.0
+            For spalten = 1 To Math.Min(count, rasterColumns)
+                Dim zeilen = CInt(Math.Ceiling(count / CDbl(spalten)))
+                If zeilen > rasterColumns Then Continue For
+                Dim breite = (contentRect.Width - gap * (spalten - 1)) / spalten
+                Dim hoehe = (contentRect.Height - gap * (zeilen - 1)) / zeilen
+                If breite <= 0 OrElse hoehe <= 0 Then Continue For
+
+                Dim flaeche = 0.0
+                For Each aspect In imageAspects
+                    If aspect <= 0 Then Continue For
+                    ' Eingepasste Bildfläche in dieser Zelle: die kürzere der beiden Kanten begrenzt.
+                    Dim bildBreite = Math.Min(breite, hoehe * aspect)
+                    flaeche += bildBreite * (bildBreite / aspect)
+                Next
+                If flaeche > besteFlaeche Then
+                    besteFlaeche = flaeche
+                    besteSpalten = spalten
+                End If
+            Next
+
+            Dim columns = besteSpalten
+            Dim rows = CInt(Math.Ceiling(count / CDbl(columns)))
+            Dim cellWidth = (contentRect.Width - gap * (columns - 1)) / columns
+            Dim cellHeight = (contentRect.Height - gap * (rows - 1)) / rows
             If cellWidth <= 0 OrElse cellHeight <= 0 Then Return cells
 
             For row = 0 To rows - 1
                 For col = 0 To columns - 1
-                    Dim x = contentRect.Left + col * (cellWidth + CellGapPoints)
-                    Dim y = contentRect.Top + row * (cellHeight + CellGapPoints)
+                    Dim x = contentRect.Left + col * (cellWidth + gap)
+                    Dim y = contentRect.Top + row * (cellHeight + gap)
                     cells.Add(New SKRect(x, y, x + cellWidth, y + cellHeight))
                 Next
             Next
             Return cells
+        End Function
+
+        ''' <summary>Seitenverhältnisse (Breite/Höhe) der Bilder einer Seite - Grundlage für die
+        ''' Aufteilung in BuildCells. Unlesbare oder unbekannte Maße kommen als 0 zurück und zählen
+        ''' dort nicht mit; gemessen wird über die ORIENTIERTEN Maße, sonst läge ein hochkant
+        ''' aufgenommenes JPEG quer.</summary>
+        Private Shared Function BuildImageAspects(pagePaths As IList(Of String)) As List(Of Double)
+            Dim aspects = New List(Of Double)()
+            For Each imagePath In If(pagePaths, New List(Of String)())
+                Dim aspect = 0.0
+                Try
+                    Dim size = ImageProcessor.GetOrientedImageSize(imagePath)
+                    If size.Width > 0 AndAlso size.Height > 0 Then aspect = size.Width / CDbl(size.Height)
+                Catch
+                End Try
+                aspects.Add(aspect)
+            Next
+            Return aspects
         End Function
 
         ''' <summary>Das Zielrechteck für ein Bild innerhalb seiner Zelle. "Fit" passt vollständig
@@ -253,7 +310,7 @@ Namespace Services
                                          pageSize.Height * scale - margin)
             If contentRect.Width <= 0 OrElse contentRect.Height <= 0 Then Return
 
-            Dim cells = BuildCells(contentRect, options.ImagesPerPage)
+            Dim cells = BuildCells(contentRect, options.ImagesPerPage, BuildImageAspects(pagePaths), scale)
             If cells.Count = 0 Then Return
 
             Using imagePaint = New SKPaint With {.IsAntialias = True}
@@ -275,11 +332,13 @@ Namespace Services
                                 If imageCell.Height <= 0 Then imageCell = cell
                             End If
 
-                            ' DecodeForOutput ist der einzige Funnel, der RAW/ICO/WebP, die
-                            ' EXIF-Orientierung UND .fpx-Projekte korrekt behandelt - niemals
-                            ' SKBitmap.Decode direkt.
+                            ' DecodeDevelopedForOutput ist der einzige Funnel, der RAW/ICO/WebP, die
+                            ' EXIF-Orientierung, .fpx-Projekte UND ein danebenliegendes Rezept
+                            ' korrekt behandelt - niemals SKBitmap.Decode direkt. Gedruckt wird die
+                            ' BEARBEITETE Fassung; sonst käme aus dem Drucker ein anderes Bild, als
+                            ' der Editor zeigt.
                             Dim drawnRect As SKRect
-                            Using bitmap = ImageProcessor.DecodeForOutput(imagePath)
+                            Using bitmap = ImageProcessor.DecodeDevelopedForOutput(imagePath)
                                 If bitmap Is Nothing Then
                                     ' Ohne diese Spur ist eine leer gebliebene Zelle im fertigen PDF
                                     ' nicht mehr zu erklären (so fiel .fpx lange nicht auf).

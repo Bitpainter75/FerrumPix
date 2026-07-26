@@ -11191,12 +11191,55 @@ Namespace ViewModels
             Try
                 PendingInsertKind = ""
                 SelectedAnnotationIndex = -1
-                CurrentTool = EditorTool.Selection
+                CurrentTool = If(String.Equals(AppSettingsService.NormalizeEditorStartupTool(_mainVm?.Settings?.EditorStartupTool),
+                                               "Adjust", StringComparison.OrdinalIgnoreCase),
+                                 EditorTool.Adjust, EditorTool.Selection)
                 SelectedLayersPanelTab = LayersPanelTab.Tool
             Finally
                 _overlayNotifySuppressDepth -= 1
             End Try
             NotifyAnnotationOverlayStateChanged()
+            ' Die Reihenfolge der Werkzeuggruppen kann in den Einstellungen geändert worden sein -
+            ' die Leiste liest sie beim Betreten neu.
+            RefreshToolGroupOrder()
+        End Sub
+
+        ' ── Reihenfolge der Werkzeuggruppen in der linken Leiste ──────────────────────────────
+        ' Die drei Gruppen liegen in einem Raster mit drei Zeilen; welche Gruppe in welcher Zeile
+        ' steht, sagt die Einstellung. Ein Raster statt drei fest gestapelter Blöcke, weil sich eine
+        ' Zeilennummer binden lässt - eine Reihenfolge im StackPanel nicht.
+
+        Public ReadOnly Property ToolGroupRowAdjust As Integer
+            Get
+                Return ToolGroupRow("Adjust")
+            End Get
+        End Property
+
+        Public ReadOnly Property ToolGroupRowTransform As Integer
+            Get
+                Return ToolGroupRow("Transform")
+            End Get
+        End Property
+
+        Public ReadOnly Property ToolGroupRowTools As Integer
+            Get
+                Return ToolGroupRow("Tools")
+            End Get
+        End Property
+
+        Private Function ToolGroupRow(name As String) As Integer
+            Dim reihenfolge = AppSettingsService.NormalizeEditorToolGroupOrder(
+                If(_mainVm?.Settings?.EditorToolGroupOrder, "")).Split(","c)
+            For i = 0 To reihenfolge.Length - 1
+                If String.Equals(reihenfolge(i), name, StringComparison.OrdinalIgnoreCase) Then Return i
+            Next
+            Return 0
+        End Function
+
+        Public Sub RefreshToolGroupOrder()
+            Me.RaisePropertyChanged(NameOf(ToolGroupRowAdjust))
+            Me.RaisePropertyChanged(NameOf(ToolGroupRowTransform))
+            Me.RaisePropertyChanged(NameOf(ToolGroupRowTools))
         End Sub
 
         Public Sub NavigateToFilmstripItem(item As ImageItem)
