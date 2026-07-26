@@ -745,7 +745,8 @@ Namespace ViewModels
                 Return resolved
             End Get
         End Property
-        Private Const FpxCompositeMaxDimension As Integer = 2560
+        ' Deckel des Anzeigebilds im Bündel - EINE Quelle für Editor und Stapel-Export.
+        Private Const FpxCompositeMaxDimension As Integer = ImageProcessor.FpxCompositeMaxDimension
         Private Const PreviewDebounceMs As Double = 90.0
         Private Const UndoCaptureWindowMs As Double = 650
         ' Text und Wasserzeichen dürfen kleiner werden als die 5%/4%, die für Formen gelten: ihr Rechteck
@@ -9185,10 +9186,17 @@ Namespace ViewModels
             If annotation Is Nothing OrElse displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (0, 0, 0, 0)
             Dim renderAnnotation = TransformAnnotationToDisplayGeometry(annotation, displaySize.Width, displaySize.Height)
             If renderAnnotation Is Nothing Then Return (0, 0, 0, 0)
-            Return (renderAnnotation.XPixels / CDbl(displaySize.Width) * 100.0,
-                    renderAnnotation.YPixels / CDbl(displaySize.Height) * 100.0,
-                    renderAnnotation.WidthPixels / CDbl(displaySize.Width) * 100.0,
-                    renderAnnotation.HeightPixels / CDbl(displaySize.Height) * 100.0)
+            ' Ein verankertes Wasserzeichen traegt in X/Y den ABSTAND zum Anker, nicht seine Lage -
+            ' wo es wirklich sitzt, weiss nur die Layout-Funktion des Renderers. Ohne sie lag der
+            ' Klickbereich (und damit auch Auswahlrahmen und Anfasser) an den Abstaenden, also oben
+            ' links, waehrend das Wasserzeichen unten rechts stand: es war nicht anklickbar.
+            ' Fuer alle anderen Arten liefert dieselbe Funktion unveraendert X/Y/Breite/Hoehe.
+            Dim rect = ComputeAnnotationRect(displaySize.Width, displaySize.Height,
+                                             renderAnnotation.Kind, renderAnnotation)
+            Return (rect.Left / CDbl(displaySize.Width) * 100.0,
+                    rect.Top / CDbl(displaySize.Height) * 100.0,
+                    rect.Width / CDbl(displaySize.Width) * 100.0,
+                    rect.Height / CDbl(displaySize.Height) * 100.0)
         End Function
 
         Private Function TransformAnnotationToDisplayGeometry(annotation As ImageAnnotation,
@@ -9226,10 +9234,21 @@ Namespace ViewModels
                 _appliedRotationDegrees, _appliedFlipH, _appliedFlipV, 0)
             Dim normalizedKind = If(kind, "").Trim().ToLowerInvariant()
             Dim isAnchoredWatermark = normalizedKind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(_annotationAnchor)
-            Dim sourceX = sourceGeometry.Rect.Left + If(isAnchoredWatermark, 0, crop.Left)
-            Dim sourceY = sourceGeometry.Rect.Top + If(isAnchoredWatermark, 0, crop.Top)
-            Return (sourceX / baseWidth * 100.0,
-                    sourceY / baseHeight * 100.0,
+            If isAnchoredWatermark Then
+                ' Rueckweg zur Anzeige-Seite: dort loest ComputeAnnotationRect den Anker auf, hier
+                ' wird er wieder zu Abstaenden. Beide Richtungen benutzen dieselbe Funktion, damit
+                ' Ziehen und Anklicken nicht auseinanderlaufen koennen. Der Crop-Ursprung kommt
+                ' bewusst NICHT dazu: der Anker bezieht sich auf den sichtbaren Ausschnitt.
+                Dim offsets = ComputeAnnotationOffsets(crop.Width, crop.Height, _annotationAnchor,
+                                                       sourceGeometry.Rect.Left, sourceGeometry.Rect.Top,
+                                                       sourceGeometry.Rect.Width, sourceGeometry.Rect.Height)
+                Return (offsets.X / baseWidth * 100.0,
+                        offsets.Y / baseHeight * 100.0,
+                        sourceGeometry.Rect.Width / baseWidth * 100.0,
+                        sourceGeometry.Rect.Height / baseHeight * 100.0)
+            End If
+            Return ((sourceGeometry.Rect.Left + crop.Left) / baseWidth * 100.0,
+                    (sourceGeometry.Rect.Top + crop.Top) / baseHeight * 100.0,
                     sourceGeometry.Rect.Width / baseWidth * 100.0,
                     sourceGeometry.Rect.Height / baseHeight * 100.0)
         End Function
@@ -10501,6 +10520,9 @@ Namespace ViewModels
 
         Public ReadOnly Property CopyAdjustmentsCommand As ICommand
         Public ReadOnly Property PasteAdjustmentsCommand As ICommand
+        Public ReadOnly Property SaveAdjustmentPresetCommand As ICommand
+        Public ReadOnly Property DeleteAdjustmentPresetCommand As ICommand
+        Public ReadOnly Property ApplyAdjustmentPresetCommand As ICommand
 
         ''' <summary>Liegt etwas zum Einfuegen bereit? Steuert den Knopf; die Ablage ueberlebt den
         ''' Programmstart, deshalb wird sie gelesen statt gemerkt.</summary>
@@ -10517,6 +10539,130 @@ Namespace ViewModels
             AppSettingsService.SaveCopiedAdjustments(recipe)
             Me.RaisePropertyChanged(NameOf(CanPasteAdjustments))
             StatusText = LocalizationService.T("Anpassungen kopiert")
+        End Sub
+
+        ' ── Vorlagen für Anpassungen ──────────────────────────────────────────────────────────
+        ' Dieselbe Sache wie die Kopier-Ablage, nur unter einem NAMEN und beliebig oft: die Ablage
+        ' hält genau einen Stand und wird beim nächsten Kopieren überschrieben. Aufbau bewusst wie
+        ' bei den Wasserzeichen-Vorlagen (Auswahlliste + Namensfeld + Speichern/Löschen), damit man
+        ' die Bedienung nicht zweimal lernen muss. Gespeichert wird in den Einstellungen.
+
+        Public ReadOnly Property AdjustmentPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
+        Private _selectedAdjustmentPresetName As String = ""
+        Private _adjustmentPresetNameDraft As String = ""
+
+        Public Property SelectedAdjustmentPresetName As String
+            Get
+                Return _selectedAdjustmentPresetName
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "").Trim()
+                If normalized = _selectedAdjustmentPresetName Then Return
+                Me.RaiseAndSetIfChanged(_selectedAdjustmentPresetName, normalized)
+                ' Der Name wandert ins Eingabefeld: „Speichern" auf einer ausgewählten Vorlage soll
+                ' sie ersetzen, nicht eine namenlose zweite anlegen.
+                If Not String.IsNullOrWhiteSpace(normalized) Then
+                    _adjustmentPresetNameDraft = normalized
+                    Me.RaisePropertyChanged(NameOf(AdjustmentPresetNameDraft))
+                    AppSettingsService.SaveLastAdjustmentPresetName(normalized)
+                End If
+                Me.RaisePropertyChanged(NameOf(CanApplyAdjustmentPreset))
+            End Set
+        End Property
+
+        Public Property AdjustmentPresetNameDraft As String
+            Get
+                Return _adjustmentPresetNameDraft
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_adjustmentPresetNameDraft, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(CanSaveAdjustmentPreset))
+            End Set
+        End Property
+
+        Public ReadOnly Property CanSaveAdjustmentPreset As Boolean
+            Get
+                Return HasDocument AndAlso Not String.IsNullOrWhiteSpace(_adjustmentPresetNameDraft)
+            End Get
+        End Property
+
+        Public ReadOnly Property CanApplyAdjustmentPreset As Boolean
+            Get
+                Return HasDocument AndAlso Not String.IsNullOrWhiteSpace(_selectedAdjustmentPresetName)
+            End Get
+        End Property
+
+        Private Sub LoadAdjustmentPresetNames()
+            Dim settings = AppSettingsService.Load()
+            AdjustmentPresetNames.Clear()
+            For Each preset In settings.AdjustmentPresets
+                AdjustmentPresetNames.Add(preset.Name)
+            Next
+            Dim zuletzt = If(settings.LastAdjustmentPresetName, "").Trim()
+            If Not AdjustmentPresetNames.Contains(zuletzt) Then zuletzt = If(AdjustmentPresetNames.FirstOrDefault(), "")
+            _selectedAdjustmentPresetName = zuletzt
+            If Not String.IsNullOrWhiteSpace(zuletzt) Then _adjustmentPresetNameDraft = zuletzt
+            For Each name In {NameOf(SelectedAdjustmentPresetName), NameOf(AdjustmentPresetNameDraft),
+                              NameOf(CanSaveAdjustmentPreset), NameOf(CanApplyAdjustmentPreset)}
+                Me.RaisePropertyChanged(name)
+            Next
+        End Sub
+
+        Public Sub SaveCurrentAdjustmentPreset()
+            If Not HasDocument Then Return
+            Dim name = If(_adjustmentPresetNameDraft, "").Trim()
+            If String.IsNullOrWhiteSpace(name) Then
+                StatusText = LocalizationService.T("Bitte einen Namen für die Anpassung eingeben.")
+                Return
+            End If
+            Dim recipe = FpxService.SerializeAdjustments(GetCurrentAdjustments().ExtractPixelAdjustments())
+            If String.IsNullOrWhiteSpace(recipe) Then Return
+
+            AppSettingsService.SaveAdjustmentPreset(name, recipe)
+            LoadAdjustmentPresetNames()
+            SelectedAdjustmentPresetName = name
+            StatusText = String.Format(LocalizationService.T("Anpassung gespeichert: {0}"), name)
+        End Sub
+
+        Public Sub DeleteSelectedAdjustmentPreset()
+            Dim name = If(_selectedAdjustmentPresetName, "").Trim()
+            If String.IsNullOrWhiteSpace(name) Then Return
+            AppSettingsService.DeleteAdjustmentPreset(name)
+            LoadAdjustmentPresetNames()
+            StatusText = String.Format(LocalizationService.T("Anpassung gelöscht: {0}"), name)
+        End Sub
+
+        ''' <summary>Wendet die gewählte Vorlage an - denselben Weg wie das Einfügen der Ablage, also
+        ''' nur die Pixel-Anpassungen auf dem aktuellen Stand ersetzen.</summary>
+        Public Sub ApplySelectedAdjustmentPreset()
+            If Not HasDocument Then Return
+            Dim name = If(_selectedAdjustmentPresetName, "").Trim()
+            If String.IsNullOrWhiteSpace(name) Then Return
+            Dim preset = AppSettingsService.Load().AdjustmentPresets.
+                FirstOrDefault(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+            If preset Is Nothing Then Return
+
+            Dim gespeichert As ImageAdjustments = Nothing
+            Try
+                gespeichert = FpxService.DeserializeAdjustments(preset.RecipeJson)
+            Catch
+                gespeichert = Nothing
+            End Try
+            If gespeichert Is Nothing Then
+                StatusText = LocalizationService.T("Die Anpassung konnte nicht gelesen werden.")
+                Return
+            End If
+
+            PushUndo()
+            Dim ziel = GetCurrentAdjustments()
+            ziel.CopyPixelAdjustmentsFrom(gespeichert)
+            ApplyAdjustments(ziel)
+            _hasChanges = True
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            RaiseResetButtonStateChanged()
+            AddHistoryEntry("Anpassung angewendet")
+            SchedulePreviewUpdate()
+            StatusText = String.Format(LocalizationService.T("Anpassung angewendet: {0}"), name)
         End Sub
 
         Public Sub PasteCopiedAdjustments()
@@ -10644,6 +10790,7 @@ Namespace ViewModels
             LoadFixedShapeItems()
             LoadAllShapeIcons()
             LoadWatermarkPresets()
+            LoadAdjustmentPresetNames()
             LoadSavedLightroomPresets()
             LoadSavedLutPresets()
             _previewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(PreviewDebounceMs)}
@@ -10772,6 +10919,9 @@ Namespace ViewModels
                                                          End Function)
             CopyAdjustmentsCommand = ReactiveCommand.Create(Sub() CopyCurrentAdjustments())
             PasteAdjustmentsCommand = ReactiveCommand.Create(Sub() PasteCopiedAdjustments())
+            SaveAdjustmentPresetCommand = ReactiveCommand.Create(Sub() SaveCurrentAdjustmentPreset())
+            DeleteAdjustmentPresetCommand = ReactiveCommand.Create(Sub() DeleteSelectedAdjustmentPreset())
+            ApplyAdjustmentPresetCommand = ReactiveCommand.Create(Sub() ApplySelectedAdjustmentPreset())
             ApplyCropCommand = ReactiveCommand.Create(Async Function() As Task
                                                           Await ApplyCropAsync()
                                                       End Function)
@@ -11186,22 +11336,48 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
         End Sub
 
+        ''' <summary>Vorbereitung beim Betreten des Editors. Läuft im Setter von CurrentMode und damit
+        ''' INNERHALB des Try eines Aufrufers - eine Ausnahme hier hätte den Moduswechsel abgebrochen
+        ''' und wäre nur als "Aktion fehlgeschlagen" sichtbar geworden. Weil das Startwerkzeug aus
+        ''' einer EINSTELLUNG kommt, hätte eine solche Ausnahme den Editor dauerhaft unerreichbar
+        ''' gemacht - samt der Einstellungsseite, auf der man sie zurückstellen würde. Deshalb ist
+        ''' die Vorbereitung hier abgesichert: das Betreten gelingt immer, notfalls mit dem
+        ''' Auswahl-Werkzeug.</summary>
         Public Sub ActivateDefaultToolForModeEntry()
+            Dim startwerkzeug = EditorTool.Selection
+            Try
+                If String.Equals(AppSettingsService.NormalizeEditorStartupTool(_mainVm?.Settings?.EditorStartupTool),
+                                 "Adjust", StringComparison.OrdinalIgnoreCase) Then
+                    startwerkzeug = EditorTool.Adjust
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ModeEntry.Startwerkzeug", ex)
+            End Try
+
             _overlayNotifySuppressDepth += 1
             Try
                 PendingInsertKind = ""
                 SelectedAnnotationIndex = -1
-                CurrentTool = If(String.Equals(AppSettingsService.NormalizeEditorStartupTool(_mainVm?.Settings?.EditorStartupTool),
-                                               "Adjust", StringComparison.OrdinalIgnoreCase),
-                                 EditorTool.Adjust, EditorTool.Selection)
+                CurrentTool = startwerkzeug
                 SelectedLayersPanelTab = LayersPanelTab.Tool
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ModeEntry.Werkzeugwechsel", ex)
+                Try
+                    CurrentTool = EditorTool.Selection
+                Catch
+                End Try
             Finally
                 _overlayNotifySuppressDepth -= 1
             End Try
-            NotifyAnnotationOverlayStateChanged()
-            ' Die Reihenfolge der Werkzeuggruppen kann in den Einstellungen geändert worden sein -
-            ' die Leiste liest sie beim Betreten neu.
-            RefreshToolGroupOrder()
+
+            Try
+                NotifyAnnotationOverlayStateChanged()
+                ' Die Reihenfolge der Werkzeuggruppen kann in den Einstellungen geändert worden sein -
+                ' die Leiste liest sie beim Betreten neu.
+                RefreshToolGroupOrder()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ModeEntry.Leiste", ex)
+            End Try
         End Sub
 
         ' ── Reihenfolge der Werkzeuggruppen in der linken Leiste ──────────────────────────────
@@ -13956,7 +14132,9 @@ Namespace ViewModels
                 ' FPX als Standard-Vorschlag: das Projektformat erhält
                 ' Regler + Objekte editierbar - der Export in JPG/PNG/WEBP bleibt eine bewusste Wahl.
                 ' NormalizeSaveAsFormat fällt auf JPG zurück, falls FPX deaktiviert ist.
-                Dim initialFormat = If(FpxService.Enabled, "FPX", "JPG")
+                ' Vorgabe aus den Einstellungen (dort ist FPX waehlbar); ist FPX abgeschaltet oder
+                ' nicht eingestellt, kommt das dort gewaehlte Bildformat heraus.
+                Dim initialFormat = MainWindowViewModel.DefaultSaveFormat(allowFpx:=True)
                 saveAsResult = Await _mainVm.ShowSaveAsAsync(LocalizationService.T("Speichern unter"),
                                                              LocalizationService.T("Dateiname eingeben"),
                                                              proposedName,

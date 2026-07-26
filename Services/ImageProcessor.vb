@@ -1862,6 +1862,42 @@ Namespace Services
 
             Return New SKRect(x, y, x + width, y + height)
         End Function
+
+        ''' <summary>Gegenstück zu <see cref="ComputeAnnotationRect"/>: rechnet eine ABSOLUTE Lage
+        ''' zurück in die Anker-Abstände, mit denen ein Wasserzeichen gespeichert wird. Beide
+        ''' Richtungen gehören zusammen an EINE Stelle - eine gespiegelte Formel in der Oberfläche
+        ''' liefe unweigerlich auseinander, und genau das ist bereits passiert: der Klickbereich lag
+        ''' an den Abständen (also oben links), das Wasserzeichen selbst an seinem Anker.</summary>
+        Friend Function ComputeAnnotationOffsets(sourceWidth As Double, sourceHeight As Double, anchor As String,
+                                                 x As Double, y As Double, width As Double, height As Double) As (X As Double, Y As Double)
+            Dim w = Math.Max(1.0, width)
+            Dim h = Math.Max(1.0, height)
+            Dim offsetX As Double
+            Dim offsetY As Double
+
+            Select Case NormalizeAnnotationAnchor(anchor)
+                Case "TopLeft"
+                    offsetX = x : offsetY = y
+                Case "Top"
+                    offsetX = x - (sourceWidth - w) / 2.0 : offsetY = y
+                Case "TopRight"
+                    offsetX = sourceWidth - w - x : offsetY = y
+                Case "Left"
+                    offsetX = x : offsetY = y - (sourceHeight - h) / 2.0
+                Case "Center"
+                    offsetX = x - (sourceWidth - w) / 2.0 : offsetY = y - (sourceHeight - h) / 2.0
+                Case "Right"
+                    offsetX = sourceWidth - w - x : offsetY = y - (sourceHeight - h) / 2.0
+                Case "BottomLeft"
+                    offsetX = x : offsetY = sourceHeight - h - y
+                Case "Bottom"
+                    offsetX = x - (sourceWidth - w) / 2.0 : offsetY = sourceHeight - h - y
+                Case Else
+                    offsetX = sourceWidth - w - x : offsetY = sourceHeight - h - y
+            End Select
+
+            Return (offsetX, offsetY)
+        End Function
     End Module
 
     ' Partial: die Gleitkomma-Tonwertkette liegt in ImageProcessorPointOps.vb.
@@ -2111,6 +2147,44 @@ Namespace Services
                     Return ToAvaloniaBitmap(processed)
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Obergrenze für das Anzeigebild (composite.png) in einem .fpx-Bündel. Es ist nur
+        ''' die schnelle Vorschau für Galerie und Betrachter; die volle Auflösung entsteht beim
+        ''' Öffnen wieder aus Basisbild + Rezept. Ohne Deckel wäre jedes Bündel doppelt so groß wie
+        ''' nötig.</summary>
+        Public Const FpxCompositeMaxDimension As Integer = 2560
+
+        ''' <summary>Kodiert ein Bitmap als PNG in einen Speicherstrom, bei Bedarf auf
+        ''' <paramref name="maxDimension"/> verkleinert. Der Aufrufer übernimmt den Strom.</summary>
+        Friend Shared Function EncodePngStream(bitmap As SKBitmap, Optional maxDimension As Integer = 0) As MemoryStream
+            If bitmap Is Nothing Then Return Nothing
+            Dim scaled As SKBitmap = Nothing
+            Dim source = bitmap
+            Try
+                If maxDimension > 0 AndAlso (bitmap.Width > maxDimension OrElse bitmap.Height > maxDimension) Then
+                    Dim ratio = Math.Min(maxDimension / CDbl(bitmap.Width), maxDimension / CDbl(bitmap.Height))
+                    Dim w = Math.Max(1, CInt(Math.Round(bitmap.Width * ratio)))
+                    Dim h = Math.Max(1, CInt(Math.Round(bitmap.Height * ratio)))
+                    scaled = bitmap.Resize(New SKImageInfo(w, h), SamplingHigh)
+                    If scaled IsNot Nothing Then source = scaled
+                End If
+
+                Dim stream = New MemoryStream()
+                Using image = SKImage.FromBitmap(source)
+                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                        If data Is Nothing Then
+                            stream.Dispose()
+                            Return Nothing
+                        End If
+                        data.SaveTo(stream)
+                    End Using
+                End Using
+                stream.Position = 0
+                Return stream
+            Finally
+                scaled?.Dispose()
+            End Try
         End Function
 
         Public Shared Function RenderPngStream(sourcePath As String, adj As ImageAdjustments) As MemoryStream
@@ -9447,6 +9521,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Select Case IO.Path.GetExtension(If(path, "")).ToLowerInvariant()
                 Case ".jpg", ".jpeg", ".png", ".webp", ".pdf"
                     Return True
+                Case ".fpx"
+                    ' Kein Bildformat, sondern ein Projektbündel - geschrieben wird es unten über
+                    ' FpxService, nicht über Skia. Ist das Format abgeschaltet, bleibt es verboten.
+                    Return FpxService.Enabled
                 Case Else
                     Return False
             End Select
@@ -9503,11 +9581,31 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
                     Dim ext = IO.Path.GetExtension(targetPath).ToLowerInvariant()
                     Dim isPdf = ext = ".pdf"
+                    ' Ziel .fpx: kein Encode, sondern ein Projektbündel aus Originaldatei + Rezept +
+                    ' gerendertem Vorschaubild. Ein Stapel-Export bleibt damit weiterbearbeitbar,
+                    ' statt nur ein fertiges Bild zu liefern. Eine .fpx als QUELLE bleibt außen vor -
+                    ' das Bündel würde sich sonst selbst als Basisbild eintragen.
+                    Dim isFpxTarget = ext = ".fpx" AndAlso FpxService.Enabled AndAlso Not isFpxSource
+                    If ext = ".fpx" AndAlso Not isFpxTarget Then
+                        DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                            $"refused: .fpx-Ziel nicht moeglich target={IO.Path.GetFileName(targetPath)}")
+                        Return False
+                    End If
                     Dim format = If(ext = ".png", SKEncodedImageFormat.Png,
                                  If(ext = ".webp", SKEncodedImageFormat.Webp,
                                     SKEncodedImageFormat.Jpeg))
 
                     Using processed = ProcessBitmap(original, adj)
+                        If isFpxTarget Then
+                            ' composite.png ist nur das Anzeigebild des Bündels und bewusst gedeckelt -
+                            ' die volle Auflösung entsteht beim Öffnen wieder aus Basisbild + Rezept.
+                            Using composite = EncodePngStream(processed, FpxCompositeMaxDimension)
+                                If composite Is Nothing Then Return False
+                                FpxService.Save(targetPath, adj, sourcePath, composite)
+                            End Using
+                            Return IO.File.Exists(targetPath)
+                        End If
+
                         ' JPEG und PDF kennen kein Alpha: transparente Bereiche (Radierer-Löcher,
                         ' ausgeblendeter Hintergrund) liefen beim Encode auf SCHWARZ
                         '. Auf WEISS flatten - wie Photoshop.
@@ -9537,7 +9635,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     ' Metadaten nur von echten Bildquellen kopieren (ein .fpx-Bündel trägt keine).
                     ' In ein PDF lässt sich kein EXIF-Block kopieren - der Versuch würde die Datei
                     ' beschädigen.
-                    If preserveMetadata AndAlso Not isFpxSource AndAlso Not isPdf Then TryCopyMetadata(sourcePath, targetPath)
+                    If preserveMetadata AndAlso Not isFpxSource AndAlso Not isPdf AndAlso Not isFpxTarget Then TryCopyMetadata(sourcePath, targetPath)
                     Return True
                 End Using
             Catch ex As Exception

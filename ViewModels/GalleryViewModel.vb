@@ -107,7 +107,7 @@ Namespace ViewModels
         Public Property Items As BulkObservableCollection(Of ImageItem)
         Public Property DisplayItems As BulkObservableCollection(Of ImageItem)
         Public Property SelectedItems As ObservableCollection(Of ImageItem)
-        Public ReadOnly Property CollageFormatOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {"JPG", "PNG", "WEBP", "PDF"}
+        Public ReadOnly Property CollageFormatOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {"JPG", "PNG", "WEBP", "PDF", "FPX"}
 
         Public Property CurrentFolder As String
             Get
@@ -4458,6 +4458,9 @@ Namespace ViewModels
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
                 ' und beendet den Prozess.
+                ' LogException (nicht LogAlways): nur DIESER Weg schreibt unabhängig vom
+                ' Diagnose-Schalter in die Fehlerdatei. „Aktion fehlgeschlagen" ist die einzige Spur,
+                ' die der Nutzer sieht - ohne den Eintrag wäre der Grund nicht mehr zu ermitteln.
                 DiagnosticLogService.LogException("GalleryViewModel.OpenSelectedInEditor", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -5007,7 +5010,8 @@ Namespace ViewModels
                 If String.IsNullOrWhiteSpace(baseName) Then baseName = "Collage"
                 Dim ext = If(String.Equals(CollageFormat, "PNG", StringComparison.OrdinalIgnoreCase), ".png",
                           If(String.Equals(CollageFormat, "WEBP", StringComparison.OrdinalIgnoreCase), ".webp",
-                          If(String.Equals(CollageFormat, "PDF", StringComparison.OrdinalIgnoreCase), ".pdf", ".jpg")))
+                          If(String.Equals(CollageFormat, "PDF", StringComparison.OrdinalIgnoreCase), ".pdf",
+                          If(String.Equals(CollageFormat, "FPX", StringComparison.OrdinalIgnoreCase), ".fpx", ".jpg"))))
                 Dim target = MakeUniquePath(IO.Path.Combine(CurrentFolder, baseName & ext))
                 Dim options = New CollageOptions With {
                     .OutputPath = target,
@@ -6170,7 +6174,10 @@ Namespace ViewModels
             Dim exportedCount = 0
             Dim uploadedCount = 0
             Dim uploadedAssetIds As New List(Of String)()
-            Dim saveToImmich = String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured
+            ' Ein Projektbuendel gehoert nicht nach Immich - dort liegen Bild-Assets, keine
+            ' Dokumente (dieselbe Regel wie beim Speichern unter).
+            Dim saveToImmich = String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso
+                               ImmichService.IsConfigured AndAlso Not result.IsFpx
 
             If saveToImmich Then
                 exportedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
@@ -6218,7 +6225,7 @@ Namespace ViewModels
             DiagnosticLogService.LogAlways("Gallery.BatchConvert", $"selected={GetSelectedImageItems().Count} convertible={targetItems.Count}")
             If targetItems.Count = 0 Then Return
 
-            Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, "JPG")
+            Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, MainWindowViewModel.DefaultSaveFormat())
             If result Is Nothing Then Return
 
             StatusText = LocalizationService.T("Konvertiere…")

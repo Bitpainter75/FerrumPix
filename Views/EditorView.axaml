@@ -906,64 +906,101 @@
                             <panels:ResizePanel Margin="0,7,0,0"
                                                 IsVisible="{Binding ShowResizeAdjustments}" />
 
-                            <!-- AUTOMATISCHE BILDVERBESSERUNG - bewusst im Anpassen-Bereich (nicht
-                                 bei den Filtern): sie ist kein Look, sondern misst das Bild und
-                                 setzt die Grundregler (Belichtung, Kontrast, Lichter/Tiefen,
-                                 Schwarz/Weiß, Dynamik, Weißabgleich). -->
+                            <!-- EINE Gruppe für alles, was die Regler in einem Rutsch setzt: die
+                                 automatische Bildverbesserung misst DIESES Bild, eine gespeicherte
+                                 Anpassung überträgt eine fertige Reglerstellung auf eine ganze
+                                 Serie. Beides gehört bewusst in den Anpassen-Bereich und nicht zu
+                                 den Filtern - es ist kein Look, sondern die Grundeinstellung.
+                                 Die gespeicherten Anpassungen ersetzen das frühere Kopieren und
+                                 Einfügen: das hielt genau einen Stand und war beim nächsten
+                                 Kopieren weg. -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowLightAdjustments}">
-                                <Button Classes="ghost"
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Center"
-                                        Padding="8,6"
-                                        Classes.active="{Binding IsAutoAdjustApplied}"
-                                        Command="{Binding AutoAdjustCommand}"
-                                        ToolTip.Tip="Bild messen und die Grundregler automatisch einstellen (der Zurücksetzen-Pfeil oben nimmt es wieder heraus)">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <icons:SvgIcon
-                                            Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
-                                            Width="14" Height="14" />
-                                        <TextBlock Text="Automatische Bildverbesserung" FontSize="{DynamicResource FP.Font.Small}" />
+                                <Expander Header="Anpassungen" icons:ExpanderState.Key="adjust-presets">
+                                    <Expander.HeaderTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                                        VerticalAlignment="Center">
+                                                <icons:SvgIcon
+                                                    Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
+                                                    Width="14" Height="14" />
+                                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </Expander.HeaderTemplate>
+                                    <StackPanel Spacing="6" Margin="0,8,0,0">
+                                        <Button Classes="ghost"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Center"
+                                                Padding="8,6"
+                                                Classes.active="{Binding IsAutoAdjustApplied}"
+                                                Command="{Binding AutoAdjustCommand}"
+                                                ToolTip.Tip="Bild messen und die Grundregler automatisch einstellen (der Zurücksetzen-Pfeil oben nimmt es wieder heraus)">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <icons:SvgIcon
+                                                    Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
+                                                    Width="14" Height="14"
+                                                    VerticalAlignment="Center" />
+                                                <!-- Umbruch statt Abschneiden: die Beschriftung ist in
+                                                     anderen Sprachen deutlich länger (italienisch rund
+                                                     ein Drittel), und das Panel ist schmal. -->
+                                                <TextBlock Text="Automatische Bildverbesserung"
+                                                           FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextWrapping="Wrap"
+                                                           TextAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <!-- Auswahlliste und Namensfeld untereinander und gleich
+                                             breit: sie gehören zusammen (was ist gewählt / wie soll
+                                             es heißen). Die Knöpfe stehen darunter in EINER Reihe zu
+                                             gleichen Teilen. -->
+                                        <ComboBox ItemsSource="{Binding AdjustmentPresetNames}"
+                                                  SelectedItem="{Binding SelectedAdjustmentPresetName}"
+                                                  PlaceholderText="Keine Anpassung gespeichert"
+                                                  MinHeight="32"
+                                                  FontSize="{DynamicResource FP.Font.Small}"
+                                                  HorizontalAlignment="Stretch" />
+                                        <TextBox Text="{Binding AdjustmentPresetNameDraft}"
+                                                 Watermark="Name"
+                                                 MinHeight="32"
+                                                 FontSize="{DynamicResource FP.Font.Small}"
+                                                 HorizontalAlignment="Stretch" />
+                                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                                            <Button Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="6,5"
+                                                    IsEnabled="{Binding CanApplyAdjustmentPreset}"
+                                                    Command="{Binding ApplyAdjustmentPresetCommand}"
+                                                    ToolTip.Tip="Die gewählte Anpassung auf dieses Bild anwenden">
+                                                <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextWrapping="Wrap" TextAlignment="Center" />
+                                            </Button>
+                                            <Button Grid.Column="1"
+                                                    Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="6,5"
+                                                    IsEnabled="{Binding CanSaveAdjustmentPreset}"
+                                                    Command="{Binding SaveAdjustmentPresetCommand}"
+                                                    ToolTip.Tip="Die aktuellen Regler unter diesem Namen merken - ein gleichnamiger Eintrag wird ersetzt">
+                                                <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextWrapping="Wrap" TextAlignment="Center" />
+                                            </Button>
+                                            <Button Grid.Column="2"
+                                                    Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="6,5"
+                                                    IsEnabled="{Binding CanApplyAdjustmentPreset}"
+                                                    Command="{Binding DeleteAdjustmentPresetCommand}">
+                                                <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextWrapping="Wrap" TextAlignment="Center" />
+                                            </Button>
+                                        </Grid>
                                     </StackPanel>
-                                </Button>
-                            </Border>
-
-                            <!-- Reglerstellungen von Bild zu Bild übertragen - der übliche Weg,
-                                 eine Serie einheitlich zu entwickeln. Steht bewusst unter der
-                                 automatischen Verbesserung: beide setzen die Regler in einem
-                                 Rutsch, nur einmal gemessen und einmal übernommen. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowLightAdjustments}">
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                    <Button Classes="ghost"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Center"
-                                            Padding="8,6"
-                                            Command="{Binding CopyAdjustmentsCommand}"
-                                            ToolTip.Tip="Anpassen, Farbe, Details und Effekte dieses Bildes merken - Zuschnitt, Objekte und Masken bleiben außen vor">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <icons:SvgIcon
-                                                Source="avares://FerrumPix/Assets/Icons/outline/clipboard-copy.svg"
-                                                Width="14" Height="14" />
-                                            <TextBlock Text="Kopieren" FontSize="{DynamicResource FP.Font.Small}" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="1"
-                                            Classes="ghost"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Center"
-                                            Padding="8,6"
-                                            IsEnabled="{Binding CanPasteAdjustments}"
-                                            Command="{Binding PasteAdjustmentsCommand}"
-                                            ToolTip.Tip="Die gemerkten Anpassungen auf dieses Bild anwenden">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <icons:SvgIcon
-                                                Source="avares://FerrumPix/Assets/Icons/outline/clipboard.svg"
-                                                Width="14" Height="14" />
-                                            <TextBlock Text="Einfügen" FontSize="{DynamicResource FP.Font.Small}" />
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
+                                </Expander>
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"

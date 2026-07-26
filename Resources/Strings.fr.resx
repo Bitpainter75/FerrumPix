@@ -4577,4 +4577,52 @@
   <data name="Werkzeuge_6b11a2f9" xml:space="preserve">
     <value>Outils</value>
   </data>
+  <data name="Gilt_nur_f_r_den_Betrachter_nur_verkleinern_wenn_0b3e52de" xml:space="preserve">
+    <value>S'applique uniquement à la visionneuse : réduire seulement si l'image est plus grande que la zone d'affichage, ou toujours l'adapter à la zone.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Editor_nur_verkleinern_wenn_das_95f245ae" xml:space="preserve">
+    <value>S'applique uniquement à l'éditeur : réduire seulement si l'image est plus grande que la zone d'édition, ou toujours l'adapter à la zone.</value>
+  </data>
+  <data name="Keine_Anpassung_gespeichert_5f870105" xml:space="preserve">
+    <value>Aucun réglage enregistré</value>
+  </data>
+  <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
+    <value>Appliquer le réglage sélectionné à cette image</value>
+  </data>
+  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
+    <value>Mémoriser les curseurs actuels sous ce nom – une entrée du même nom est remplacée</value>
+  </data>
+  <data name="Standardformat_1c812c8e" xml:space="preserve">
+    <value>Format par défaut</value>
+  </data>
+  <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Konve_ca9e7ae1" xml:space="preserve">
+    <value>Format cible présélectionné dans Enregistrer sous, Convertir en et Exporter vers. FPX n'existe que dans Enregistrer sous ; les autres boîtes de dialogue utilisent JPG.</value>
+  </data>
+  <data name="Bitte_einen_Namen_f_r_die_Anpassung_eingeben_c5df6671" xml:space="preserve">
+    <value>Saisissez un nom pour le réglage.</value>
+  </data>
+  <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
+    <value>Réglage enregistré : {0}</value>
+  </data>
+  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
+    <value>Réglage supprimé : {0}</value>
+  </data>
+  <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
+    <value>Réglage appliqué : {0}</value>
+  </data>
+  <data name="Die_Anpassung_konnte_nicht_gelesen_werden_56ce3bec" xml:space="preserve">
+    <value>Le réglage n'a pas pu être lu.</value>
+  </data>
+  <data name="Anpassung_angewendet_b8ec5192" xml:space="preserve">
+    <value>Réglage appliqué</value>
+  </data>
+  <data name="FPX_19bc4fdb" xml:space="preserve">
+    <value>FPX</value>
+  </data>
+  <data name="PDF_d613d88c" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Expor_36a2bae3" xml:space="preserve">
+    <value>Format cible présélectionné dans Enregistrer sous, Exporter vers et les autres fonctions par lots. FPX est le format de projet modifiable, proposé dans Enregistrer sous et Exporter vers ; là où il ne l'est pas, JPG est utilisé.</value>
+  </data>
 </root>

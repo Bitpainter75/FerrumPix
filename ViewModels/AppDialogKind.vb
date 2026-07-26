@@ -78,8 +78,17 @@ Namespace ViewModels
                     Case "PNG" : Return ".png"
                     Case "WEBP" : Return ".webp"
                     Case "PDF" : Return ".pdf"
+                    Case "FPX" : Return ".fpx"
                     Case Else : Return ".jpg"
                 End Select
+            End Get
+        End Property
+
+        ''' <summary>Ein Projektbündel ist eine lokale Datei - Immich führt Bild-Assets, keine
+        ''' Dokumente (dieselbe Regel wie beim Speichern unter).</summary>
+        Public ReadOnly Property IsFpx As Boolean
+            Get
+                Return String.Equals(If(Format, "").Trim(), "FPX", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
     End Class

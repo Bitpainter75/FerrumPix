@@ -62,6 +62,32 @@ Namespace Services
                                                            AppSettingsService.Load().ToPrintOptions())
                 End If
 
+                ' .fpx: die fertige Collage wird zum Basisbild eines Projektbündels mit leerem
+                ' Rezept - man kann sie danach im Editor nicht-destruktiv weiterentwickeln. Das
+                ' Bündel braucht das Basisbild als DATEI, deshalb der Umweg über eine Temp-PNG.
+                If String.Equals(options.Format, "FPX", StringComparison.OrdinalIgnoreCase) Then
+                    If Not FpxService.Enabled Then Return False
+                    Dim tempBase = Path.Combine(Path.GetTempPath(), $"ferrumpix-collage-{Guid.NewGuid():N}.png")
+                    Try
+                        Using basisPng = ImageProcessor.EncodePngStream(surfaceBitmap)
+                            If basisPng Is Nothing Then Return False
+                            Using fs = File.Create(tempBase)
+                                basisPng.CopyTo(fs)
+                            End Using
+                        End Using
+                        Using composite = ImageProcessor.EncodePngStream(surfaceBitmap, ImageProcessor.FpxCompositeMaxDimension)
+                            If composite Is Nothing Then Return False
+                            FpxService.Save(options.OutputPath, New ImageAdjustments(), tempBase, composite)
+                        End Using
+                        Return File.Exists(options.OutputPath)
+                    Finally
+                        Try
+                            If File.Exists(tempBase) Then File.Delete(tempBase)
+                        Catch
+                        End Try
+                    End Try
+                End If
+
                 Dim format = If(String.Equals(options.Format, "PNG", StringComparison.OrdinalIgnoreCase),
                                 SKEncodedImageFormat.Png,
                                 If(String.Equals(options.Format, "WEBP", StringComparison.OrdinalIgnoreCase),

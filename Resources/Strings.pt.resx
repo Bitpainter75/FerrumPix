@@ -4576,4 +4576,52 @@
   <data name="Werkzeuge_6b11a2f9" xml:space="preserve">
     <value>Ferramentas</value>
   </data>
+  <data name="Gilt_nur_f_r_den_Betrachter_nur_verkleinern_wenn_0b3e52de" xml:space="preserve">
+    <value>Aplica-se apenas ao visualizador: reduzir só quando a imagem for maior do que a área de exibição, ou dimensionar sempre para a área.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Editor_nur_verkleinern_wenn_das_95f245ae" xml:space="preserve">
+    <value>Aplica-se apenas ao editor: reduzir só quando a imagem for maior do que a área de edição, ou dimensionar sempre para a área.</value>
+  </data>
+  <data name="Keine_Anpassung_gespeichert_5f870105" xml:space="preserve">
+    <value>Nenhum ajuste guardado</value>
+  </data>
+  <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
+    <value>Aplicar o ajuste selecionado a esta imagem</value>
+  </data>
+  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
+    <value>Guardar os controlos atuais com este nome — uma entrada com o mesmo nome é substituída</value>
+  </data>
+  <data name="Standardformat_1c812c8e" xml:space="preserve">
+    <value>Formato padrão</value>
+  </data>
+  <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Konve_ca9e7ae1" xml:space="preserve">
+    <value>Formato de destino pré-selecionado em Guardar como, Converter para e Exportar para. FPX só existe em Guardar como; os restantes diálogos usam JPG.</value>
+  </data>
+  <data name="Bitte_einen_Namen_f_r_die_Anpassung_eingeben_c5df6671" xml:space="preserve">
+    <value>Introduza um nome para o ajuste.</value>
+  </data>
+  <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
+    <value>Ajuste guardado: {0}</value>
+  </data>
+  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
+    <value>Ajuste eliminado: {0}</value>
+  </data>
+  <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
+    <value>Ajuste aplicado: {0}</value>
+  </data>
+  <data name="Die_Anpassung_konnte_nicht_gelesen_werden_56ce3bec" xml:space="preserve">
+    <value>Não foi possível ler o ajuste.</value>
+  </data>
+  <data name="Anpassung_angewendet_b8ec5192" xml:space="preserve">
+    <value>Ajuste aplicado</value>
+  </data>
+  <data name="FPX_19bc4fdb" xml:space="preserve">
+    <value>FPX</value>
+  </data>
+  <data name="PDF_d613d88c" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Expor_36a2bae3" xml:space="preserve">
+    <value>Formato de destino pré-selecionado em Guardar como, Exportar para e nas restantes funções em lote. FPX é o formato de projeto editável e pode escolher-se em Guardar como e Exportar para; onde não existe, é usado JPG.</value>
+  </data>
 </root>

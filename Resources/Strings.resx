@@ -4578,4 +4578,52 @@
   <data name="Werkzeuge_6b11a2f9" xml:space="preserve">
     <value>Tools</value>
   </data>
+  <data name="Gilt_nur_f_r_den_Betrachter_nur_verkleinern_wenn_0b3e52de" xml:space="preserve">
+    <value>Applies to the viewer only: only shrink when the image is larger than the display area, or always scale to the area.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Editor_nur_verkleinern_wenn_das_95f245ae" xml:space="preserve">
+    <value>Applies to the editor only: only shrink when the image is larger than the editing area, or always scale to the area.</value>
+  </data>
+  <data name="Keine_Anpassung_gespeichert_5f870105" xml:space="preserve">
+    <value>No adjustment saved</value>
+  </data>
+  <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
+    <value>Apply the selected adjustment to this image</value>
+  </data>
+  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
+    <value>Remember the current sliders under this name – an entry with the same name is replaced</value>
+  </data>
+  <data name="Standardformat_1c812c8e" xml:space="preserve">
+    <value>Default format</value>
+  </data>
+  <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Konve_ca9e7ae1" xml:space="preserve">
+    <value>Preselected target format in Save as, Convert to and Export to. FPX exists only in Save as; the other dialogs use JPG there.</value>
+  </data>
+  <data name="Bitte_einen_Namen_f_r_die_Anpassung_eingeben_c5df6671" xml:space="preserve">
+    <value>Please enter a name for the adjustment.</value>
+  </data>
+  <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
+    <value>Adjustment saved: {0}</value>
+  </data>
+  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
+    <value>Adjustment deleted: {0}</value>
+  </data>
+  <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
+    <value>Adjustment applied: {0}</value>
+  </data>
+  <data name="Die_Anpassung_konnte_nicht_gelesen_werden_56ce3bec" xml:space="preserve">
+    <value>The adjustment could not be read.</value>
+  </data>
+  <data name="Anpassung_angewendet_b8ec5192" xml:space="preserve">
+    <value>Adjustment applied</value>
+  </data>
+  <data name="FPX_19bc4fdb" xml:space="preserve">
+    <value>FPX</value>
+  </data>
+  <data name="PDF_d613d88c" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Expor_36a2bae3" xml:space="preserve">
+    <value>Preselected target format in Save as, Export to and the other batch functions. FPX is the editable project format and can be chosen in Save as and Export to; where it is not offered, JPG is used.</value>
+  </data>
 </root>

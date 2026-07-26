@@ -38,6 +38,16 @@ Namespace Services
         Public Property FillColor As String = "#FFFFFFFF"
     End Class
 
+    ''' <summary>Eine gespeicherte Regler-Zusammenstellung („Vorlage") aus dem Anpassen-Werkzeug.
+    ''' Inhalt ist dasselbe Rezept-JSON wie bei der Kopier-Ablage - also NUR die Pixel-Anpassungen
+    ''' (Anpassen, Farbe, Details, Effekte). Zuschnitt, Drehung, Objekte und Masken beschreiben ein
+    ''' bestimmtes Bild und gehören bewusst nicht dazu.</summary>
+    Public Class AdjustmentPresetSettings
+        Public Property Id As String = Guid.NewGuid().ToString("N")
+        Public Property Name As String = ""
+        Public Property RecipeJson As String = ""
+    End Class
+
     Public Class LightroomPresetSettings
         Implements INotifyPropertyChanged
 
@@ -107,6 +117,11 @@ Namespace Services
         ''' "Always" (immer einpassen, auch kleinere Bilder hochskalieren) oder "OnlyWhenLarger"
         ''' (nur einpassen, wenn das Bild größer als die Darstellungsfläche ist, sonst 100%).
         Public Property ViewerFitBehavior As String = "Always"
+        ''' Dasselbe für den Editor, aber GETRENNT einstellbar: beim Betrachten will man ein kleines
+        ''' Bild oft formatfüllend sehen, beim Bearbeiten dagegen in Originalgröße.
+        ''' Leer = noch nie gesetzt; dann wird beim Laden EINMALIG der Viewer-Wert übernommen, damit
+        ''' die bisherige gemeinsame Einstellung nicht stillschweigend zurückspringt.
+        Public Property EditorFitBehavior As String = ""
         Public Property EditorShowFilmstrip As Boolean = True
         ''' Kantenlänge einer Rasterzelle im Editor, in Bildpixeln.
         Public Property EditorGridSize As Integer = 50
@@ -128,6 +143,10 @@ Namespace Services
         Public Property ThumbnailQuality As Integer = 82
         Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 250
         Public Property JpgSaveQuality As Integer = 90
+        ''' Vorgewähltes Zielformat in „Speichern unter", „Konvertieren nach" und „Exportieren nach".
+        ''' "JPG" | "PNG" | "WEBP" | "FPX" - FPX gibt es nur beim Speichern unter, die übrigen
+        ''' Dialoge fallen dort auf JPG zurück.
+        Public Property DefaultSaveFormat As String = "JPG"
         Public Property PreserveMetadataOnSave As Boolean = True
         ''' Optionaler XMP-Katalog-Sync (Standard AUS): schreibt Rating/Farb-Label/Stichworte zusätzlich
         ''' zum .fpxmp-Rezept in ein Adobe-XMP-Sidecar, damit andere Programme sie sehen. .fpxmp bleibt
@@ -234,6 +253,10 @@ Namespace Services
         Public Property LastWatermarkPresetName As String = ""
         Public Property EnableDiagnosticLogging As Boolean = False
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
+        ''' Gespeicherte Regler-Zusammenstellungen aus dem Anpassen-Werkzeug (siehe
+        ''' AdjustmentPresetSettings) und der Name der zuletzt benutzten.
+        Public Property AdjustmentPresets As New List(Of AdjustmentPresetSettings)()
+        Public Property LastAdjustmentPresetName As String = ""
         Public Property LightroomPresets As New List(Of LightroomPresetSettings)()
         Public Property LutPresets As New List(Of LutPresetSettings)()
 
@@ -357,9 +380,13 @@ Namespace Services
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
+                settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
+                ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.
+                If String.IsNullOrWhiteSpace(settings.EditorFitBehavior) Then settings.EditorFitBehavior = settings.ViewerFitBehavior
+                settings.EditorFitBehavior = NormalizeViewerFitBehavior(settings.EditorFitBehavior)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
@@ -379,6 +406,7 @@ Namespace Services
                 settings.LastBatchResizeInterpolation = NormalizeResizeInterpolationModeName(settings.LastBatchResizeInterpolation)
                 settings.LastWatermarkPresetName = NormalizePresetName(settings.LastWatermarkPresetName)
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
+                settings.AdjustmentPresets = NormalizeAdjustmentPresets(settings.AdjustmentPresets)
                 settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Return settings
@@ -436,9 +464,13 @@ Namespace Services
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
+                settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
+                ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.
+                If String.IsNullOrWhiteSpace(settings.EditorFitBehavior) Then settings.EditorFitBehavior = settings.ViewerFitBehavior
+                settings.EditorFitBehavior = NormalizeViewerFitBehavior(settings.EditorFitBehavior)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
@@ -458,6 +490,7 @@ Namespace Services
                 settings.LastBatchResizeInterpolation = NormalizeResizeInterpolationModeName(settings.LastBatchResizeInterpolation)
                 settings.LastWatermarkPresetName = NormalizePresetName(settings.LastWatermarkPresetName)
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
+                settings.AdjustmentPresets = NormalizeAdjustmentPresets(settings.AdjustmentPresets)
                 settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Dim json = JsonSerializer.Serialize(settings, New JsonSerializerOptions With {.WriteIndented = True})
@@ -590,6 +623,16 @@ Namespace Services
                     Return "OnlyWhenLarger"
                 Case Else
                     Return "Always"
+            End Select
+        End Function
+
+        Public Shared Function NormalizeDefaultSaveFormat(value As String) As String
+            Select Case If(value, "").Trim().ToUpperInvariant()
+                Case "PNG" : Return "PNG"
+                Case "WEBP" : Return "WEBP"
+                Case "PDF" : Return "PDF"
+                Case "FPX" : Return "FPX"
+                Case Else : Return "JPG"
             End Select
         End Function
 
@@ -803,6 +846,57 @@ Namespace Services
             Next
             Return result
         End Function
+
+        ''' <summary>Eine Vorlage ohne Namen oder ohne Rezept ist nicht anwendbar und fliegt raus -
+        ''' sonst stünde ein Eintrag in der Liste, dessen Auswahl nichts täte.</summary>
+        Public Shared Function NormalizeAdjustmentPresets(value As List(Of AdjustmentPresetSettings)) As List(Of AdjustmentPresetSettings)
+            Dim result As New List(Of AdjustmentPresetSettings)()
+            For Each preset In If(value, New List(Of AdjustmentPresetSettings)())
+                If preset Is Nothing Then Continue For
+                Dim name = If(preset.Name, "").Trim()
+                Dim recipe = If(preset.RecipeJson, "").Trim()
+                If String.IsNullOrWhiteSpace(name) OrElse String.IsNullOrWhiteSpace(recipe) Then Continue For
+                result.Add(New AdjustmentPresetSettings With {
+                    .Id = If(String.IsNullOrWhiteSpace(preset.Id), Guid.NewGuid().ToString("N"), preset.Id),
+                    .Name = name,
+                    .RecipeJson = recipe
+                })
+            Next
+            Return result.OrderBy(Function(p) p.Name, StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
+        ''' <summary>Legt eine Vorlage an oder ERSETZT die gleichnamige - so wie bei den
+        ''' Wasserzeichen-Vorlagen. Zwei Einträge mit demselben Namen wären in der Auswahlliste
+        ''' nicht auseinanderzuhalten.</summary>
+        Public Shared Sub SaveAdjustmentPreset(name As String, recipeJson As String)
+            Dim sauber = If(name, "").Trim()
+            Dim recipe = If(recipeJson, "").Trim()
+            If String.IsNullOrWhiteSpace(sauber) OrElse String.IsNullOrWhiteSpace(recipe) Then Return
+            Update(Sub(s)
+                       Dim liste = If(s.AdjustmentPresets, New List(Of AdjustmentPresetSettings)())
+                       liste.RemoveAll(Function(p) p IsNot Nothing AndAlso String.Equals(p.Name, sauber, StringComparison.OrdinalIgnoreCase))
+                       liste.Add(New AdjustmentPresetSettings With {.Name = sauber, .RecipeJson = recipe})
+                       s.AdjustmentPresets = NormalizeAdjustmentPresets(liste)
+                       s.LastAdjustmentPresetName = sauber
+                   End Sub)
+        End Sub
+
+        Public Shared Sub DeleteAdjustmentPreset(name As String)
+            Dim sauber = If(name, "").Trim()
+            If String.IsNullOrWhiteSpace(sauber) Then Return
+            Update(Sub(s)
+                       Dim liste = If(s.AdjustmentPresets, New List(Of AdjustmentPresetSettings)())
+                       liste.RemoveAll(Function(p) p IsNot Nothing AndAlso String.Equals(p.Name, sauber, StringComparison.OrdinalIgnoreCase))
+                       s.AdjustmentPresets = NormalizeAdjustmentPresets(liste)
+                       If String.Equals(s.LastAdjustmentPresetName, sauber, StringComparison.OrdinalIgnoreCase) Then
+                           s.LastAdjustmentPresetName = If(s.AdjustmentPresets.FirstOrDefault()?.Name, "")
+                       End If
+                   End Sub)
+        End Sub
+
+        Public Shared Sub SaveLastAdjustmentPresetName(value As String)
+            Update(Sub(s) s.LastAdjustmentPresetName = If(value, "").Trim())
+        End Sub
 
         Public Shared Function NormalizeWatermarkPresets(value As List(Of WatermarkPresetSettings)) As List(Of WatermarkPresetSettings)
             Dim result As New List(Of WatermarkPresetSettings)()

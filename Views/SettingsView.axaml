@@ -704,7 +704,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Einpassen-Verhalten" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Gilt für Viewer und Editor: nur verkleinern, wenn das Bild größer als die Darstellungsfläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Gilt nur für den Betrachter: nur verkleinern, wenn das Bild größer als die Anzeigefläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"
@@ -785,25 +785,24 @@
                             <TextBlock Text="Einstellungen für Bearbeitung und Vorschau." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
-                        <!-- Dieselbe Einstellung wie im Betrachter-Abschnitt, bewusst auch hier:
-                             sie gilt für beide Ansichten, und wer sie für den Editor sucht, sucht
-                             sie hier. Gebunden ist DIESELBE Eigenschaft - zwei Bedienstellen, EIN
-                             Wert. -->
+                        <!-- Eigene Einstellung, NICHT dieselbe wie im Betrachter-Abschnitt: beim
+                             Betrachten will man ein kleines Bild oft formatfüllend sehen, beim
+                             Bearbeiten dagegen in Originalgröße. -->
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Einpassen-Verhalten" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Gilt für Editor und Viewer: nur verkleinern, wenn das Bild größer als die Darstellungsfläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Gilt nur für den Editor: nur verkleinern, wenn das Bild größer als die Bearbeitungsfläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"
-                                        Classes.active="{Binding IsViewerFitBehaviorOnlyWhenLarger}"
+                                        Classes.active="{Binding IsEditorFitBehaviorOnlyWhenLarger}"
                                         Padding="10,6"
-                                        Command="{Binding SetViewerFitBehaviorCommand}"
+                                        Command="{Binding SetEditorFitBehaviorCommand}"
                                         CommandParameter="OnlyWhenLarger">Nur wenn größer</Button>
                                 <Button Classes="ghost"
-                                        Classes.active="{Binding IsViewerFitBehaviorAlways}"
+                                        Classes.active="{Binding IsEditorFitBehaviorAlways}"
                                         Padding="10,6"
-                                        Command="{Binding SetViewerFitBehaviorCommand}"
+                                        Command="{Binding SetEditorFitBehaviorCommand}"
                                         CommandParameter="Always">Immer einpassen</Button>
                             </StackPanel>
                         </Grid>
@@ -832,7 +831,10 @@
                                 <TextBlock Text="Reihenfolge der Werkzeuggruppen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Legt fest, in welcher Reihenfolge die Gruppen in der linken Werkzeugleiste des Editors stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <ItemsControl ItemsSource="{Binding EditorToolGroupItems}" MaxWidth="420" HorizontalAlignment="Left">
+                            <!-- Breit genug, dass die längste Gruppenbeschriftung nicht bis an die
+                                 Pfeilknöpfe heranläuft - „Transformieren" braucht in mehreren
+                                 Sprachen deutlich mehr Platz als im Deutschen. -->
+                            <ItemsControl ItemsSource="{Binding EditorToolGroupItems}" MaxWidth="620" HorizontalAlignment="Left">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Background="{DynamicResource FP.Bg.Input}"
@@ -840,10 +842,13 @@
                                                 BorderThickness="1"
                                                 CornerRadius="6"
                                                 Padding="10,6"
-                                                Margin="0,0,0,6">
+                                                Margin="0,0,0,6"
+                                                MinWidth="380">
                                             <Grid ColumnDefinitions="*,Auto,Auto">
                                                 <TextBlock Text="{Binding Label}"
                                                            VerticalAlignment="Center"
+                                                           Margin="0,0,24,0"
+                                                           TextWrapping="Wrap"
                                                            FontSize="{DynamicResource FP.Font.Body}"/>
                                                 <Button Grid.Column="1"
                                                         Classes="ghost"
@@ -916,6 +921,40 @@
                                            TextAlignment="Right"
                                            VerticalAlignment="Center"
                                            Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Standardformat" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Vorgewähltes Zielformat in Speichern unter, Exportieren nach und den übrigen Stapelfunktionen. FPX ist das weiterbearbeitbare Projektformat und steht in Speichern unter und Exportieren nach zur Wahl; wo es das nicht gibt, wird JPG genommen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatJpg}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="JPG">JPG</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatPng}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="PNG">PNG</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatWebp}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="WEBP">WEBP</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatPdf}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="PDF">PDF</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatFpx}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="FPX">FPX</Button>
                             </StackPanel>
                         </Grid>
 

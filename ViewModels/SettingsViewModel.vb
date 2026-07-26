@@ -31,6 +31,8 @@ Namespace ViewModels
         Private _thumbnailCacheEnabled As Boolean = True
         Private _viewerOpenFitToWindow As Boolean = True
         Private _viewerFitBehavior As String = "Always"
+        Private _editorFitBehavior As String = "Always"
+        Private _defaultSaveFormat As String = "JPG"
         Private _showHiddenFolders As Boolean = False
         Private _deleteSkipTrash As Boolean = False
         Private _deleteSkipConfirmation As Boolean = False
@@ -96,8 +98,10 @@ Namespace ViewModels
         Private _savedAccentColor As String = "#F08A1A"
         Private _savedViewerOpenFitToWindow As Boolean = True
         Private _savedViewerFitBehavior As String = "Always"
+        Private _savedEditorFitBehavior As String = "Always"
         Private _savedEditorStartupTool As String = "Selection"
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
+        Private _savedDefaultSaveFormat As String = "JPG"
         Private _savedThumbnailQuality As Integer = 82
         Private _savedThumbnailMemoryCacheCapacity As Integer = 250
         Private _savedJpgSaveQuality As Integer = 90
@@ -434,6 +438,85 @@ Namespace ViewModels
         Public ReadOnly Property IsViewerFitBehaviorOnlyWhenLarger As Boolean
             Get
                 Return String.Equals(_viewerFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Welches Zielformat in „Speichern unter", „Konvertieren nach" und „Exportieren
+        ''' nach" vorgewählt ist. FPX ist nur beim Speichern unter eine echte Wahl - die übrigen
+        ''' Dialoge schreiben Bilddateien und fallen dort auf JPG zurück.</summary>
+        Public Property DefaultSaveFormat As String
+            Get
+                Return _defaultSaveFormat
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeDefaultSaveFormat(value)
+                If _defaultSaveFormat = value Then Return
+                Me.RaiseAndSetIfChanged(_defaultSaveFormat, value)
+                For Each name In {NameOf(IsDefaultSaveFormatJpg), NameOf(IsDefaultSaveFormatPng),
+                                  NameOf(IsDefaultSaveFormatWebp), NameOf(IsDefaultSaveFormatPdf),
+                                  NameOf(IsDefaultSaveFormatFpx)}
+                    Me.RaisePropertyChanged(name)
+                Next
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsDefaultSaveFormatJpg As Boolean
+            Get
+                Return String.Equals(_defaultSaveFormat, "JPG", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDefaultSaveFormatPng As Boolean
+            Get
+                Return String.Equals(_defaultSaveFormat, "PNG", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDefaultSaveFormatWebp As Boolean
+            Get
+                Return String.Equals(_defaultSaveFormat, "WEBP", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDefaultSaveFormatPdf As Boolean
+            Get
+                Return String.Equals(_defaultSaveFormat, "PDF", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDefaultSaveFormatFpx As Boolean
+            Get
+                Return String.Equals(_defaultSaveFormat, "FPX", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Dasselbe für den Editor - bewusst eine EIGENE Einstellung: beim Betrachten will
+        ''' man ein kleines Bild oft formatfüllend sehen, beim Bearbeiten dagegen in Originalgröße.
+        ''' Bis zur Trennung galt der Viewer-Wert für beide; er wird beim ersten Laden übernommen.</summary>
+        Public Property EditorFitBehavior As String
+            Get
+                Return _editorFitBehavior
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeViewerFitBehavior(value)
+                If _editorFitBehavior = value Then Return
+                Me.RaiseAndSetIfChanged(_editorFitBehavior, value)
+                Me.RaisePropertyChanged(NameOf(IsEditorFitBehaviorAlways))
+                Me.RaisePropertyChanged(NameOf(IsEditorFitBehaviorOnlyWhenLarger))
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsEditorFitBehaviorAlways As Boolean
+            Get
+                Return String.Equals(_editorFitBehavior, "Always", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsEditorFitBehaviorOnlyWhenLarger As Boolean
+            Get
+                Return String.Equals(_editorFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
@@ -1391,6 +1474,8 @@ Namespace ViewModels
         Public ReadOnly Property SetGalleryTimelineModeCommand As ICommand
         Public ReadOnly Property SetGalleryStartupFolderModeCommand As ICommand
         Public ReadOnly Property SetViewerFitBehaviorCommand As ICommand
+        Public ReadOnly Property SetEditorFitBehaviorCommand As ICommand
+        Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
         Public ReadOnly Property SetEditorStartupToolCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupUpCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupDownCommand As ICommand
@@ -1452,6 +1537,8 @@ Namespace ViewModels
             _viewerSlideshowIntervalSeconds = _appSettings.ViewerSlideshowIntervalSeconds
             _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
+            _editorFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.EditorFitBehavior)
+            _defaultSaveFormat = AppSettingsService.NormalizeDefaultSaveFormat(_appSettings.DefaultSaveFormat)
             _editorShowFilmstrip = _appSettings.EditorShowFilmstrip
             _editorGridSize = AppSettingsService.NormalizeEditorGridSize(_appSettings.EditorGridSize)
             _editorShowRulers = _appSettings.EditorShowRulers
@@ -1495,6 +1582,8 @@ Namespace ViewModels
             SetGalleryStartupFolderModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryStartupFolderMode = m)
             SetGalleryTimelineModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryTimelineMode = m)
             SetViewerFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerFitBehavior = m)
+            SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
+            SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
             SetEditorStartupToolCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorStartupTool = m)
             MoveEditorToolGroupUpCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, -1))
             MoveEditorToolGroupDownCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, 1))
@@ -1601,8 +1690,10 @@ Namespace ViewModels
             _savedAccentColor = _accentColor
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
             _savedViewerFitBehavior = _viewerFitBehavior
+            _savedEditorFitBehavior = _editorFitBehavior
             _savedEditorStartupTool = _editorStartupTool
             _savedEditorToolGroupOrder = _editorToolGroupOrder
+            _savedDefaultSaveFormat = _defaultSaveFormat
             _savedThumbnailQuality = _thumbnailQuality
             _savedThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             _savedJpgSaveQuality = _jpgSaveQuality
@@ -1657,8 +1748,10 @@ Namespace ViewModels
             AccentColor = _savedAccentColor
             ViewerOpenFitToWindow = _savedViewerOpenFitToWindow
             ViewerFitBehavior = _savedViewerFitBehavior
+            EditorFitBehavior = _savedEditorFitBehavior
             EditorStartupTool = _savedEditorStartupTool
             EditorToolGroupOrder = _savedEditorToolGroupOrder
+            DefaultSaveFormat = _savedDefaultSaveFormat
             ThumbnailQuality = _savedThumbnailQuality
             ThumbnailMemoryCacheCapacity = _savedThumbnailMemoryCacheCapacity
             JpgSaveQuality = _savedJpgSaveQuality
@@ -1733,8 +1826,10 @@ Namespace ViewModels
             AccentColor = "#F08A1A"
             ViewerOpenFitToWindow = True
             ViewerFitBehavior = "Always"
+            EditorFitBehavior = "Always"
             EditorStartupTool = "Selection"
             EditorToolGroupOrder = "Adjust,Transform,Tools"
+            DefaultSaveFormat = "JPG"
             StartupImageMode = "Viewer"
             StartupNoImageMode = "Gallery"
             SyncCatalogToXmp = False
@@ -1871,6 +1966,7 @@ Namespace ViewModels
             settings.ViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
             settings.ViewerOpenFitToWindow = _viewerOpenFitToWindow
             settings.ViewerFitBehavior = _viewerFitBehavior
+            settings.EditorFitBehavior = _editorFitBehavior
             settings.EditorShowFilmstrip = _editorShowFilmstrip
             settings.EditorGridSize = _editorGridSize
             settings.EditorShowRulers = _editorShowRulers
@@ -1880,6 +1976,7 @@ Namespace ViewModels
             settings.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
             settings.EditorStartupTool = _editorStartupTool
             settings.EditorToolGroupOrder = _editorToolGroupOrder
+            settings.DefaultSaveFormat = _defaultSaveFormat
             settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             AppSettingsService.Save(settings)
         End Sub

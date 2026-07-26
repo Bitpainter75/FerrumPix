@@ -971,8 +971,10 @@ Namespace ViewModels
             ' mitschleppen: sonst stehen geaenderte Dateien mit alten Werten im Namen.
             _dialogBatchRenameExifCache.Clear()
             ResetDialogSaveAsMetaOptions()
-            SetDialogFormats(includeFpx:=False)
-            DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
+            ' FPX auch hier: ein Sammel-Export darf weiterbearbeitbare Projekte liefern,
+            ' nicht nur fertige Bilder (SaveImage schreibt das Buendel).
+            SetDialogFormats(includeFpx:=True)
+            DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat(allowFpx:=True))
             DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
@@ -1086,7 +1088,7 @@ Namespace ViewModels
             _dialogBatchFilterAppendName = True
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
-            DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
+            DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
@@ -1736,6 +1738,16 @@ Namespace ViewModels
             Return AppSettingsService.NormalizeJpgSaveQuality(AppSettingsService.Load().JpgSaveQuality)
         End Function
 
+        ''' <summary>Vorgewähltes Zielformat aus den Einstellungen. FPX gibt es NUR beim Speichern
+        ''' unter; wo es nicht in der Auswahlliste steht (Stapel, Export), fällt die Vorgabe auf JPG
+        ''' zurück - sonst stünde in der Liste eine Auswahl, die es dort gar nicht gibt.</summary>
+        Public Shared Function DefaultSaveFormat(Optional allowFpx As Boolean = False) As String
+            Dim wert = AppSettingsService.NormalizeDefaultSaveFormat(AppSettingsService.Load().DefaultSaveFormat)
+            If String.Equals(wert, "FPX", StringComparison.OrdinalIgnoreCase) AndAlso
+               (Not allowFpx OrElse Not FpxService.Enabled) Then Return "JPG"
+            Return wert
+        End Function
+
         Public ReadOnly Property IsDialogJpgQualityVisible As Boolean
             Get
                 Return DialogShowsSaveAsOptions AndAlso String.Equals(_dialogSelectedFormat, "JPG", StringComparison.OrdinalIgnoreCase)
@@ -2227,7 +2239,7 @@ Namespace ViewModels
             _dialogBatchResizeOverwrite = allowOverwrite AndAlso settings.BatchResizeOverwriteOriginals
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
-            DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
+            DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
@@ -2297,7 +2309,7 @@ Namespace ViewModels
             _dialogBatchOverwriteAvailable = allowOverwrite
             _dialogBatchWatermarkOverwrite = allowOverwrite AndAlso settings.BatchWatermarkOverwriteOriginals
             ResetDialogSaveAsMetaOptions()
-            DialogSelectedFormat = NormalizeSaveAsFormat("JPG")
+            DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
             DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()

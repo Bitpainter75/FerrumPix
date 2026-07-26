@@ -253,11 +253,13 @@ Namespace Views
             SetZoom(ZoomToSlider(100.0))
         End Sub
 
-        ''' <summary>Liest die gemeinsame Viewer/Editor-Einstellung "Einpassen-Verhalten" - "OnlyWhenLarger"
-        ''' verkleinert größere Bilder auf die Fläche, skaliert kleinere Bilder aber nicht hoch (100%).</summary>
+        ''' <summary>Liest die Editor-Einstellung "Einpassen-Verhalten" - "OnlyWhenLarger" verkleinert
+        ''' größere Bilder auf die Fläche, skaliert kleinere Bilder aber nicht hoch (100%). Der
+        ''' Betrachter hat dafür seine EIGENE Einstellung: dort will man ein kleines Bild oft
+        ''' formatfüllend sehen, beim Bearbeiten dagegen in Originalgröße.</summary>
         Private Function IsOnlyWhenLargerFitBehavior() As Boolean
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
-            Return String.Equals(mainVm?.Settings?.ViewerFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
+            Return String.Equals(mainVm?.Settings?.EditorFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
         End Function
 
         ''' Endungen, die DrawImageAnnotation wirklich zeichnen kann (SKBitmap.Decode). EINE Quelle

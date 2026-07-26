@@ -4577,4 +4577,52 @@
   <data name="Werkzeuge_6b11a2f9" xml:space="preserve">
     <value>Strumenti</value>
   </data>
+  <data name="Gilt_nur_f_r_den_Betrachter_nur_verkleinern_wenn_0b3e52de" xml:space="preserve">
+    <value>Vale solo per il visualizzatore: ridurre solo se l'immagine è più grande dell'area di visualizzazione, oppure adattare sempre all'area.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Editor_nur_verkleinern_wenn_das_95f245ae" xml:space="preserve">
+    <value>Vale solo per l'editor: ridurre solo se l'immagine è più grande dell'area di modifica, oppure adattare sempre all'area.</value>
+  </data>
+  <data name="Keine_Anpassung_gespeichert_5f870105" xml:space="preserve">
+    <value>Nessuna regolazione salvata</value>
+  </data>
+  <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
+    <value>Applica la regolazione scelta a questa immagine</value>
+  </data>
+  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
+    <value>Memorizza i cursori attuali con questo nome: una voce con lo stesso nome viene sostituita</value>
+  </data>
+  <data name="Standardformat_1c812c8e" xml:space="preserve">
+    <value>Formato predefinito</value>
+  </data>
+  <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Konve_ca9e7ae1" xml:space="preserve">
+    <value>Formato di destinazione preselezionato in Salva con nome, Converti in ed Esporta in. FPX esiste solo in Salva con nome; le altre finestre usano JPG.</value>
+  </data>
+  <data name="Bitte_einen_Namen_f_r_die_Anpassung_eingeben_c5df6671" xml:space="preserve">
+    <value>Inserisci un nome per la regolazione.</value>
+  </data>
+  <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
+    <value>Regolazione salvata: {0}</value>
+  </data>
+  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
+    <value>Regolazione eliminata: {0}</value>
+  </data>
+  <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
+    <value>Regolazione applicata: {0}</value>
+  </data>
+  <data name="Die_Anpassung_konnte_nicht_gelesen_werden_56ce3bec" xml:space="preserve">
+    <value>Non è stato possibile leggere la regolazione.</value>
+  </data>
+  <data name="Anpassung_angewendet_b8ec5192" xml:space="preserve">
+    <value>Regolazione applicata</value>
+  </data>
+  <data name="FPX_19bc4fdb" xml:space="preserve">
+    <value>FPX</value>
+  </data>
+  <data name="PDF_d613d88c" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Expor_36a2bae3" xml:space="preserve">
+    <value>Formato di destinazione preselezionato in Salva con nome, Esporta in e nelle altre funzioni in serie. FPX è il formato di progetto modificabile e si può scegliere in Salva con nome ed Esporta in; dove non è disponibile viene usato JPG.</value>
+  </data>
 </root>
