@@ -19,7 +19,7 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - Browse local photo folders with thumbnails, ratings, favorites, tags and saved searches.
 - View photos fullscreen with zoom, pan, filmstrip navigation, metadata and histogram.
 - Edit photos with crop, resize, rotate, color tools, tone curves, filters, text, shapes, symbols, retouch tools, paint tools and selections.
-- Run batch work from the gallery, including rename, convert, resize, watermark, metadata removal, filters and *Export to*, which combines all of those into one dialog. Every photo format FerrumPix can open works as a source — RAW, PSD, `.fpx`, HEIC, TIFF, BMP and GIF included; formats that cannot be written back simply produce new files instead of offering *Overwrite originals*. A RAW with an `.fpxmp` recipe is developed and processed the way you edited it; whether RAWs without a recipe are developed too is a setting under *RAW development*.
+- Run batch work from the gallery, including rename, convert, resize, watermark, metadata removal, filters and *Export to*, which combines all of those into one dialog. Every photo format FerrumPix can open works as a source — RAW, PSD, `.fpx`, HEIC, TIFF, BMP and GIF included; formats that cannot be written back simply produce new files instead of offering *Overwrite originals*. A RAW with an `.fpxmp` recipe is developed and processed the way you edited it; whether RAWs without a recipe are developed too is a setting under *RAW development*. `.fpx` is available as a target format in *Export to*, so a batch can come out as reopenable projects rather than finished pictures.
 - Develop RAW files from the sensor data, with automatic sidecar files that keep the original untouched.
 - Work with common image and video formats — JPEG, PNG, WEBP, BMP, GIF, RAW, and read-only HEIC/HEIF/AVIF, TIFF and Photoshop files.
 - Connect to a self-hosted Immich server for browsing, upload, download, editing and metadata sync.
@@ -32,11 +32,15 @@ The gallery is built for daily photo work. It supports folder browsing, fast thu
 
 Search can combine normal text with metadata such as camera, ISO, aperture, focal length, date taken and image size. Batch tools are available from the context menu and from the footer menu.
 
+Wherever a batch run resizes photos, the size can be given as width and height or as a single *Long edge* value that limits whichever edge is longer, so a stack of landscape and portrait shots comes out at one consistent size; the aspect ratio is kept, and *Do not enlarge* leaves smaller images alone. A watermark in *Export to* normally has its size and margin measured against the original and shrinks with it — *Don't scale watermark with image* applies it after the resize at the size you set, so it looks the same on every output size.
+
 Ratings, colour labels and keywords are read from XMP sidecar files written by Lightroom, darktable or digiKam, so a collection you tagged elsewhere shows up here. Only empty fields are filled and keywords are merged — nothing you set in FerrumPix is overwritten.
 
 The sidebar is split into *Folders*, *Immich* and *Favourites*. Folders, Immich entries and saved searches can be pinned to Favourites by right-click, then reordered or removed; the *Immich* tab only appears when a server is configured.
 
-Printing works from the context menu, the footer menu or with `Ctrl+P`. A multiple selection becomes a multi-page document, or a contact sheet with 4, 9 or 16 images per page. The dialog can print borderless, and for a single selected image it can repeat the same photo several times on a sheet.
+Printing works from the context menu, the footer menu or with `Ctrl+P`. A multiple selection becomes a multi-page document, or a contact sheet with 4, 9 or 16 images per page. The images-per-page setting is an upper limit rather than a fixed grid: a page carrying fewer photos gets larger cells instead of leaving the rest of the sheet empty, and the split into rows and columns follows the orientations of the photos on it. The dialog can print borderless, and for a single selected image it can repeat the same photo several times on a sheet. Photos you edited are printed the way you edited them — the recipe beside a RAW, PSD or project file is applied, so the print matches what the editor shows.
+
+Several photos can also be laid out as a collage from the same menus, with a choice of layouts and background, and written as JPEG, PNG, WEBP, PDF or as an `.fpx` project that can be developed further in the editor. Every format FerrumPix can open works as a source, RAW, PSD and projects included.
 
 ## Viewer
 
@@ -65,11 +69,11 @@ The editor covers the most common photo work:
 - Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools. The brush picker offers 13 variants — soft round, pencil, marker, grainy acrylic, sandpaper, smudge, spatter, charcoal, crayon, airbrush, calligraphy, stipple and watercolor.
 - Rectangle, ellipse, lasso and magic wand selections. Selections are shown as marching ants, masks as a red overlay.
 - A separate mask tool with a mask brush (adjustable soft edge, add/subtract painting) and two masks you drag onto the image: a linear gradient that runs a correction out along the drag direction, and a radial one that fades it from a centre, invertible so it acts outside instead of inside. Gradient masks are stored as their geometry, not as painted pixels, so their handles, transition width, angle and — for the radial one — its ellipse can be changed at any time.
-- Copy the adjustments of one image (Adjust, Colour, Details, Effects) and paste them onto another; crop, size, objects and masks are deliberately left out. The copy survives restarts.
+- Save the current sliders under a name in the *Adjustments* group of the *Adjust* tool and apply them to any other image later — the usual way to develop a series consistently. Adjust, Colour, Details and Effects travel; crop, size, objects and masks are deliberately left out, because they belong to one particular picture. Any number of sets can be kept, saving under an existing name replaces that one, and the list survives restarts.
 - Turn a selection or mask into a correction layer whose adjustment applies only inside it. The fill tool fills a selection layer with a solid colour or a linear/radial gradient; on a mask layer the fill's brightness grades how strongly the adjustment applies across the mask — and stays editable afterwards.
 - Per object editing with opacity, blend modes, shadows, glow and transform controls.
 - A toggleable Layers panel with the full object stack: per-layer visibility, opacity, blend mode, drag-and-drop reorder, rename (double-click or F2), rasterize (bake a layer into the image so retouching can work on its pixels) and delete, plus the base image as a hideable background layer. Selection and mask correction layers appear with their own name and icon, and every layer's actions are available from the footer or a right-click context menu. Object layers can be grouped (Ctrl+G): a group is one named, collapsible row with its own visibility switch, and picking any member selects the whole group so it moves, scales, rotates and flips as one.
-- A native project format (`.fpx`): *Save as…* can bundle the whole edit — adjustments, layer stack and the baked working image — so it can be reopened and continued. Adjustments and object layers stay editable after reopening; retouching, brush strokes and rasterized layers are baked into the image (undo covers them only within the session). `.fpx` projects show up in the gallery, viewer and fullscreen like any image.
+- A native project format (`.fpx`): *Save as…* can bundle the whole edit — adjustments, layer stack and the baked working image — so it can be reopened and continued. Adjustments and object layers stay editable after reopening; retouching, brush strokes and rasterized layers are baked into the image (undo covers them only within the session). `.fpx` projects show up in the gallery, viewer and fullscreen like any image. The gallery can write them too: `.fpx` is one of the target formats in *Export to* and for a collage, so a batch result or a finished collage stays open for further work instead of being a final picture. A project is a local file, so it is not offered when the export target is Immich.
 
 ### RAW and Photoshop files
 
@@ -83,7 +87,7 @@ HEIC/HEIF/AVIF (the format current phones photograph in) and TIFF open the same 
 
 Exporting to JPEG/PNG/WEBP writes the result into pixels; while the editor is open, changes can be undone and objects stay editable. Save as a `.fpx` project (or use *Save as* to a normal image) if the original file should stay untouched.
 
-`Ctrl+P` prints the current edit state — adjustments, objects and brush work included, not the file on disk. PDF is also available as a target format in *Save as…* and *Convert to…*; it uses the page setup last confirmed in the print dialog.
+`Ctrl+P` prints the current edit state — adjustments, objects and brush work included, not the file on disk. PDF is also available as a target format in *Save as…*, *Convert to…* and for a collage; it uses the page setup last confirmed in the print dialog.
 
 <img src="Screenshots/Editor_Text.png" />
 
@@ -167,6 +171,8 @@ Permission names come from the Immich server source and apply to reasonably rece
 <img src="Screenshots/Settings.png" />
 
 Settings cover theme, accent color, language, thumbnail quality, export quality, metadata handling, video support, UI scale, font scale, cache cleanup and Immich connection details.
+
+The editor and the save dialogs can be set up to match how you work: a default target format that is preselected in *Save as…*, *Export to* and the batch dialogs (`.fpx` included, where the dialog offers it), which tool the editor opens with, the order of the three groups in its left tool bar, and how an image is fitted into the editing area — the last one separately from the viewer, since a small photo you want to see full-screen is often the one you want at its real size while editing.
 
 The last two sections are reference material: a full list of keyboard and mouse shortcuts for gallery, viewer and editor, and a *Technology* section listing everything FerrumPix is built on, with a link to each project and to its licence text.
 
