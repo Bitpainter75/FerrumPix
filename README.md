@@ -182,6 +182,8 @@ The last two sections are reference material: a full list of keyboard and mouse 
 - [QRCoder](https://github.com/codebude/QRCoder)
 - [libmpv](https://mpv.io/)
 - [LibRaw](https://www.libraw.org/) (RAW development)
+- [libheif](https://github.com/strukturag/libheif) (HEIC/HEIF/AVIF, optional and never bundled)
+- [BitMiracle.LibTiff.NET](https://github.com/BitMiracle/libtiff.net) (TIFF)
 - [Tabler Icons](https://github.com/tabler/tabler-icons)
 
 ## Installation
@@ -208,6 +210,8 @@ And as a package in the AUR:
 The packages are self-contained and include the .NET runtime.
 
 `libmpv` (video playback and thumbnails) and `libraw` (RAW development) are required, not optional. The Linux packages declare both as dependencies, so the package manager installs them along with FerrumPix. Windows releases bundle both under `runtimes/win-x64/native`, in the setup as well as in the portable ZIP.
+
+`libheif` is different: it is optional and never bundled, on any platform. It is what opens HEIC, HEIF and AVIF, and those files are usually HEVC-encoded — a codec that carries patent licensing in several countries, which is a decision for the distribution and not for this project. The Linux packages recommend it, so most package managers pull it in; where it is missing, HEIC files simply stay closed and everything else works unchanged. On Windows nothing is bundled either, so HEIC stays closed unless you place a `libheif.dll` next to FerrumPix yourself.
 
 Two cases differ. The Flatpak builds LibRaw into the sandbox but deliberately ships no `libmpv`, so it has no video support. The Linux ZIP and the AppImage have no package manager to pull anything in and expect both libraries on the system; the experimental macOS builds ship without LibRaw — install it with `brew install libraw`.
 
