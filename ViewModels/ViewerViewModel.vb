@@ -204,6 +204,8 @@ Namespace ViewModels
 
             If RawPreviewService.IsSupportedRaw(path) OrElse
                PsdPreviewService.IsSupportedPsd(path) OrElse
+               HeifDecodeService.IsSupportedHeif(path) OrElse
+               TiffPreviewService.IsSupportedTiff(path) OrElse
                FpxService.IsFpx(path) Then
                 Return True
             End If
@@ -432,7 +434,12 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Dim normalized = NormalizeRotationAngle(value)
-                If Me.RaiseAndSetIfChanged(_rotationAngle, normalized) AndAlso
+                ' RaiseAndSetIfChanged liefert den WERT, nicht "hat sich geaendert" - als Bedingung
+                ' gelesen war der Zweig bei 0 Grad (=False) tot und warf bei anderen Typen sogar
+                ' (siehe Bildgroessen-Dialog). Deshalb explizit vergleichen.
+                Dim geaendert = _rotationAngle <> normalized
+                Me.RaiseAndSetIfChanged(_rotationAngle, normalized)
+                If geaendert AndAlso
                    Not _suppressRotationDirty AndAlso
                    Not _isImmichSession AndAlso
                    Not String.IsNullOrEmpty(_currentImagePath) AndAlso
@@ -900,7 +907,7 @@ Namespace ViewModels
 
                 ' Infopanel SOFORT auf das neue Asset umschalten (Minimalstand): während des
                 ' Original-Downloads (Sekunden) stand sonst das komplette Panel des vorherigen
-                ' Bildes da (Nutzer-Befund 17.07., Filmstrip-Wechsel). Der volle EXIF-Stand kommt
+                ' Bildes da (Filmstrip-Wechsel). Der volle EXIF-Stand kommt
                 ' nach dem Download über LoadInfoPanelData mit der Temp-Kopie.
                 BeginInfoPanelSwitch(pseudo, New ExifData With {
                     .FileName = If(fileName, ""),
@@ -958,7 +965,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(CanEdit))
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerViewModel.LoadImmichAt", ex)
             End Try
         End Sub
@@ -1052,19 +1059,19 @@ Namespace ViewModels
                 _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerViewModel.OpenCropInEditor", ex)
             End Try
         End Sub
 
         ''' <summary>Startet das Laden des aktuellen Bildes. Der DECODE laeuft im HINTERGRUND
-        ''' (Analyse 2026-07-16: vorher synchron auf dem UI-Thread - jeder Bildwechsel fror den
+        ''' (Analyse: vorher synchron auf dem UI-Thread - jeder Bildwechsel fror den
         ''' Viewer fuer die Dekodier-Dauer ein, bei grossen JPEGs/RAWs deutlich spuerbar). Das
         ''' bisherige Bild wird beim Start des neuen Loads entfernt, damit waehrend des
         ''' Dekodierens/Renderns nicht kurz der vorherige Inhalt als aktuelles Bild erscheint;
         ''' ueberholte Ergebnisse verwirft der Lade-Token (schnelles Blaettern startet mehrere Loads, nur der juengste
         ''' gewinnt). Nach der Uebernahme werden Fit-Zoom und Statuszeile NACHGEZOGEN - die
-        ''' Aufrufer haben sie direkt nach LoadBitmap() nur fuer das noch angezeigte alte Bild
+        ''' Aufrufer haben sie direkt nach LoadBitmap nur fuer das noch angezeigte alte Bild
         ''' aktualisiert.</summary>
         Private Sub LoadBitmap()
             If VideoPreviewService.IsSupportedVideo(_currentImagePath) Then
@@ -1383,7 +1390,7 @@ Namespace ViewModels
                 NavigateNext()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerViewModel.ContinueSlideshowAfterVideoEndAsync", ex)
             End Try
         End Sub
@@ -1565,7 +1572,7 @@ Namespace ViewModels
                 HistogramImage = Nothing
             End If
 
-            ' NUTZER-BEFUND (17.07., 2. Runde): Beim schnellen Blättern blieb das KOMPLETTE Panel
+            ' NUTZER-BEFUND (2. Runde): Beim schnellen Blättern blieb das KOMPLETTE Panel
             ' auf dem vorherigen Bild stehen - ExifInfo wurde erst nach der gesamten Hintergrund-
             ' Arbeit ersetzt, und dazu gehörte auch der Histogramm-Volldecode. Deshalb jetzt
             ' dreistufig: (1) SOFORT auf einen Stand des NEUEN Bildes wechseln - aus dem Katalog,
@@ -1580,7 +1587,7 @@ Namespace ViewModels
                          ' Maße aus dem DATEI-Header statt aus dem VM-Zustand: seit der Viewer
                          ' asynchron lädt, hielt _imageWidth beim Aufruf noch das VORHERIGE Bild -
                          ' MP/Seitenverhältnis/Maße im Infopanel blieben bei schnellem Blättern
-                         ' auf dem alten Stand (Nutzer-Befund 2026-07-17).
+                         ' auf dem alten Stand.
                          Dim headerSize = ImageProcessor.GetOrientedImageSize(imagePath)
                          Dim infoWidth = If(headerSize.Width > 0, headerSize.Width, capturedWidth)
                          Dim infoHeight = If(headerSize.Height > 0, headerSize.Height, capturedHeight)
@@ -1639,7 +1646,7 @@ Namespace ViewModels
         ''' (Dateiname/Typ, Rest leer) zurück - NIE Nothing: Bindings wie „ExifInfo.Camera"
         ''' aktualisieren bei Nothing nicht auf leer, sondern behalten stumpf den letzten Wert -
         ''' genau so blieb das Panel beim Filmstrip-Wechsel auf dem Vorgängerbild stehen
-        ''' (Nutzer-Befund 17.07., 3. Runde).</summary>
+        ''' (3. Runde).</summary>
         Private Shared Function BuildProvisionalInfoFromCatalog(imagePath As String) As ExifData
             Try
                 Dim meta = LibraryService.Instance.GetMetaForPaths({imagePath}).Values.FirstOrDefault()
@@ -1947,7 +1954,7 @@ Namespace ViewModels
                 If idx >= 0 Then Await CommitNavigateAsync(idx)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerViewModel.NavigateToItem", ex)
             End Try
         End Sub
@@ -2050,7 +2057,7 @@ Namespace ViewModels
                 End If
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerViewModel.ResizeCurrent", ex)
             End Try
         End Sub

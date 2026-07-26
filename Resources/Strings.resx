@@ -4302,4 +4302,244 @@
   <data name="Gruppe_entsperren_aaba907d" xml:space="preserve">
     <value>Unlock group</value>
   </data>
+  <data name="Farbmischer_weiche_Farbverteilung_experimentell_b4eb2b02" xml:space="preserve">
+    <value>Colour mixer: soft colour distribution (experimental)</value>
+  </data>
+  <data name="Verteilt_die_Wirkung_der_acht_Farbregler_nach_ei_0d4f80ed" xml:space="preserve">
+    <value>Distributes the effect of the eight colour sliders using an alternative model: wider, softly overlapping colour ranges, and the luminance sliders act more strongly the more vivid the colour is. Takes effect immediately on an open image and can be switched back at any time.</value>
+  </data>
+  <data name="RAWs_beim_Entwickeln_automatisch_aufhellen_e01489cf" xml:space="preserve">
+    <value>Brighten RAWs automatically when developing</value>
+  </data>
+  <data name="RAW_Entwicklung_262a99f9" xml:space="preserve">
+    <value>RAW development</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Betrac_baaac979" xml:space="preserve">
+    <value>How RAW files are developed and shown in the gallery, viewer and editor.</value>
+  </data>
+  <data name="Hellt_jedes_entwickelte_RAW_automatisch_auf_bis__39c16dfa" xml:space="preserve">
+    <value>Automatically brightens every developed RAW until the brightest parts of the image are almost white. Switched off, FerrumPix develops like Lightroom: the tonality of the shot is preserved, and a filmic base curve gives midtones, highlights and colours their familiar character. Takes effect the next time an image is opened or a preview is rebuilt.</value>
+  </data>
+  <data name="Automatische_Bildverbesserung_4d6123c8" xml:space="preserve">
+    <value>Automatic image enhancement</value>
+  </data>
+  <data name="Rechte_Maustaste_halten_und_ziehen_c94e797b" xml:space="preserve">
+    <value>Right mouse button (hold and drag)</value>
+  </data>
+  <data name="Automatisch_95b51063" xml:space="preserve">
+    <value>Automatic</value>
+  </data>
+  <data name="Automatische_Bildverbesserung_jedes_Bild_wird_ei_cf05d4b4" xml:space="preserve">
+    <value>Automatic image enhancement: each image is measured individually and the basic sliders are set to match</value>
+  </data>
+  <data name="Bearbeitung_ba5ec78a" xml:space="preserve">
+    <value>Editing</value>
+  </data>
+  <data name="Look_b8db515e" xml:space="preserve">
+    <value>Look</value>
+  </data>
+  <data name="Kein_Look_cea142c2" xml:space="preserve">
+    <value>No look</value>
+  </data>
+  <data name="Kein_Wasserzeichen_26d169c9" xml:space="preserve">
+    <value>No watermark</value>
+  </data>
+  <data name="Metadaten_04dd4275" xml:space="preserve">
+    <value>Metadata</value>
+  </data>
+  <data name="Datei_Metadaten_EXIF_bernehmen_aa709748" xml:space="preserve">
+    <value>Keep file metadata (EXIF)</value>
+  </data>
+  <data name="Jedes_Bild_wird_einzeln_gemessen_und_die_Grundre_25829b43" xml:space="preserve">
+    <value>Each image is measured individually and the basic sliders are set to match</value>
+  </data>
+  <data name="Leer_Originalgr_e_23010adf" xml:space="preserve">
+    <value>Empty = original size</value>
+  </data>
+  <data name="Aufnahmedaten_der_Quelle_Kamera_Zeit_Objektiv_in_df8ac7ae" xml:space="preserve">
+    <value>Write the source's capture data (camera, time, lens) into the exported file</value>
+  </data>
+  <data name="name_leer_Originalname_behalten_539ded8c" xml:space="preserve">
+    <value>{name} (empty = keep original name)</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_81d2ee85" xml:space="preserve">
+    <value>Pattern as in batch rename: {name}, ### (counter), {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Exportieren_nach_cd806b98" xml:space="preserve">
+    <value>Export to...</value>
+  </data>
+  <data name="Exportieren_nach_fdc8937b" xml:space="preserve">
+    <value>Export to</value>
+  </data>
+  <data name="Exportiere_f97bf5c3" xml:space="preserve">
+    <value>Exporting…</value>
+  </data>
+  <data name="Stelle_den_Export_zusammen_die_Originale_bleiben_8304193a" xml:space="preserve">
+    <value>Configure the export - the originals remain untouched.</value>
+  </data>
+  <data name="Neue_Zeile_mit_Strg_Enter_6ca57482" xml:space="preserve">
+    <value>New line with Ctrl+Enter</value>
+  </data>
+  <data name="Strg_Enter_b8f703dc" xml:space="preserve">
+    <value>Ctrl+Enter</value>
+  </data>
+  <data name="Neue_Zeile_im_Text_Objekt_Text_bricht_nie_automa_e8fc07cc" xml:space="preserve">
+    <value>New line in a text object (text never wraps automatically)</value>
+  </data>
+  <data name="Neue_Zeile_mit_Strg_Enter_oder_Umschalt_Enter_fae9a32e" xml:space="preserve">
+    <value>New line with Ctrl+Enter or Shift+Enter</value>
+  </data>
+  <data name="Strg_Enter_oder_Umschalt_Enter_08237fda" xml:space="preserve">
+    <value>Ctrl+Enter or Shift+Enter</value>
+  </data>
+  <data name="Kein_Wasserzeichen_gespeichert_b079d262" xml:space="preserve">
+    <value>No watermark saved</value>
+  </data>
+  <data name="Jedes_Bild_beh_lt_sein_eigenes_Seitenverh_ltnis__5923eb7b" xml:space="preserve">
+    <value>Each image keeps its own aspect ratio: a single value limits the longest edge, two values form the box the image is fitted into. Without the check mark the images are stretched exactly to width × height.</value>
+  </data>
+  <data name="Leer_lassen_wenn_nur_die_andere_Kante_z_hlen_sol_c194dc1e" xml:space="preserve">
+    <value>Leave empty if only the other edge should count</value>
+  </data>
+  <data name="Nicht_vergr_ern_3a4b9ec8" xml:space="preserve">
+    <value>Do not enlarge</value>
+  </data>
+  <data name="Bilder_die_bereits_kleiner_als_die_Zielgr_e_sind_93914153" xml:space="preserve">
+    <value>Images already smaller than the target size stay unchanged - otherwise they would be upscaled and fake resolution.</value>
+  </data>
+  <data name="Die_gew_hlte_Wasserzeichen_Vorlage_enth_lt_weder_19865bdd" xml:space="preserve">
+    <value>The selected watermark preset contains neither text nor an image.</value>
+  </data>
+  <data name="von_445584ed" xml:space="preserve">
+    <value>of</value>
+  </data>
+  <data name="Datei_en_exportiert_8ffec299" xml:space="preserve">
+    <value>file(s) exported</value>
+  </data>
+  <data name="BMP_und_GIF_lassen_sich_nicht_zur_ckschreiben_es_5046f9e5" xml:space="preserve">
+    <value>BMP and GIF cannot be written back - new files are created instead.</value>
+  </data>
+  <data name="libheif_optional_b3984920" xml:space="preserve">
+    <value>libheif (optional)</value>
+  </data>
+  <data name="Lesen_von_HEIC_HEIF_AVIF_wird_nur_vom_System_gel_ebca6ebf" xml:space="preserve">
+    <value>Reading HEIC/HEIF/AVIF - loaded from the system only, not bundled</value>
+  </data>
+  <data name="LGPL_3_0_278977ae" xml:space="preserve">
+    <value>LGPL-3.0</value>
+  </data>
+  <data name="libheif_wird_bewusst_NICHT_mitgeliefert_sondern__6db1660e" xml:space="preserve">
+    <value>libheif is deliberately NOT bundled but loaded from the system only: HEIC files are usually HEVC-encoded, and the decision about an HEVC decoder belongs to the distribution. Without libheif, HEIC/AVIF files simply stay unopened - everything else works unchanged.</value>
+  </data>
+  <data name="TIFF_Dateien_lesen_5bf61045" xml:space="preserve">
+    <value>Reading TIFF files</value>
+  </data>
+  <data name="BSD_3_Clause_d6f9c69f" xml:space="preserve">
+    <value>BSD-3-Clause</value>
+  </data>
+  <data name="BitMiracle_LibTiff_NET_2_4_a3abc5f5" xml:space="preserve">
+    <value>BitMiracle.LibTiff.NET 2.4</value>
+  </data>
+  <data name="Maske_30ebc894" xml:space="preserve">
+    <value>Mask</value>
+  </data>
+  <data name="Linearer_Verlauf_f53727f3" xml:space="preserve">
+    <value>Linear gradient</value>
+  </data>
+  <data name="Radialer_Verlauf_f756dcfa" xml:space="preserve">
+    <value>Radial gradient</value>
+  </data>
+  <data name="Stauchung_809d8a8f" xml:space="preserve">
+    <value>Aspect</value>
+  </data>
+  <data name="Wirkung_umkehren_37f97f10" xml:space="preserve">
+    <value>Invert effect</value>
+  </data>
+  <data name="Im_Bild_ziehen_um_den_Verlauf_aufzuspannen_Die_G_9cee402f" xml:space="preserve">
+    <value>Drag on the image to span the gradient. The handles stay grabbable afterwards.</value>
+  </data>
+  <data name="Maske_frei_ins_Bild_malen_Hinzuf_gen_und_Abziehe_cbd0dead" xml:space="preserve">
+    <value>Paint the mask freely onto the image - add and subtract via the mode below</value>
+  </data>
+  <data name="Im_Bild_ziehen_die_Maske_l_uft_vom_Startpunkt_zu_f6f82936" xml:space="preserve">
+    <value>Drag on the image: the mask fades from the start point to the end point. Shift snaps the direction</value>
+  </data>
+  <data name="Von_der_Mitte_nach_aussen_ziehen_Mit_Umkehren_wi_cc5ca3fe" xml:space="preserve">
+    <value>Drag outwards from the centre. With “Invert” the mask acts outside instead of inside</value>
+  </data>
+  <data name="Neue_Maske_beginnen_8e8c0280" xml:space="preserve">
+    <value>Start a new mask</value>
+  </data>
+  <data name="Zur_Maske_hinzuf_gen_3350fe0d" xml:space="preserve">
+    <value>Add to the mask</value>
+  </data>
+  <data name="Von_der_Maske_abziehen_6538dcaf" xml:space="preserve">
+    <value>Subtract from the mask</value>
+  </data>
+  <data name="Maske_umkehren_6436cc9c" xml:space="preserve">
+    <value>Invert the mask</value>
+  </data>
+  <data name="Maske_verwerfen_Strg_D_oder_Esc_d8fce8b8" xml:space="preserve">
+    <value>Discard the mask (Ctrl+D or Esc)</value>
+  </data>
+  <data name="L_sst_den_Maskenrand_ber_die_angegebene_Anzahl_B_54f093a8" xml:space="preserve">
+    <value>Fades the mask edge over the given number of image pixels (0 = hard edge)</value>
+  </data>
+  <data name="Aus_der_gemalten_Maske_eine_Korrekturebene_erste_21dce517" xml:space="preserve">
+    <value>Create an adjustment layer from the painted mask</value>
+  </data>
+  <data name="Wie_weit_der_Verlauf_zwischen_voller_und_keiner__ed5c5e3b" xml:space="preserve">
+    <value>How far the gradient fades between full and no effect. Small = hard edge, large = gentle across the whole run</value>
+  </data>
+  <data name="Verh_ltnis_der_beiden_Halbachsen_1_00_ist_ein_Kr_b5f6ec44" xml:space="preserve">
+    <value>Ratio of the two semi-axes: 1.00 is a circle, below that the ellipse flattens</value>
+  </data>
+  <data name="Tauscht_gedeckte_und_freie_Seite_beim_radialen_V_c26e878a" xml:space="preserve">
+    <value>Swaps the covered and the free side - on a radial gradient the correction then acts outside instead of inside</value>
+  </data>
+  <data name="Breite_des_Wasserzeichens_in_Bildpunkten_379de9a6" xml:space="preserve">
+    <value>Width of the watermark in image pixels</value>
+  </data>
+  <data name="Bei_gesperrtem_Seitenverh_ltnis_ergibt_sich_die__befc24c8" xml:space="preserve">
+    <value>With the aspect ratio locked, the height follows from the width</value>
+  </data>
+  <data name="Die_H_he_folgt_der_Breite_im_Verh_ltnis_der_Vorl_deb82f5f" xml:space="preserve">
+    <value>The height follows the width at the preset’s ratio. Off: width and height can be set separately, which distorts the watermark.</value>
+  </data>
+  <data name="Breite_des_Wasserzeichens_in_Bildpunkten_Die_H_h_8ea0860c" xml:space="preserve">
+    <value>Width of the watermark in image pixels. The height follows the preset’s aspect ratio.</value>
+  </data>
+  <data name="Errechnet_aus_der_Breite_und_dem_Seitenverh_ltni_0fe6e266" xml:space="preserve">
+    <value>Calculated from the width and the preset’s aspect ratio</value>
+  </data>
+  <data name="Aufnahmedaten_der_Quelle_Kamera_Zeit_Objektiv_in_95f34251" xml:space="preserve">
+    <value>Write the source's capture data (camera, time, lens) into the target file</value>
+  </data>
+  <data name="Anpassungen_kopieren_f31a9184" xml:space="preserve">
+    <value>Copy adjustments</value>
+  </data>
+  <data name="Anpassungen_einf_gen_1bf8d44d" xml:space="preserve">
+    <value>Paste adjustments</value>
+  </data>
+  <data name="Anpassungen_kopiert_2702a48b" xml:space="preserve">
+    <value>Adjustments copied</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_7a30b501" xml:space="preserve">
+    <value>Adjustments pasted</value>
+  </data>
+  <data name="Anpassen_Farbe_Details_und_Effekte_dieses_Bildes_e25c4fab" xml:space="preserve">
+    <value>Remember this image's adjust, colour, detail and effect settings - crop, objects and masks stay out of it</value>
+  </data>
+  <data name="Die_gemerkten_Anpassungen_auf_dieses_Bild_anwend_ad37e4f4" xml:space="preserve">
+    <value>Apply the remembered adjustments to this image</value>
+  </data>
+  <data name="Diese_Auswahl_l_sst_sich_nicht_zur_ckschreiben_e_9871eda0" xml:space="preserve">
+    <value>This selection cannot be written back - new files are created.</value>
+  </data>
+  <data name="RAWs_ohne_Bearbeitung_im_Stapel_entwickeln_c6f05b13" xml:space="preserve">
+    <value>Develop unedited RAWs in batch runs</value>
+  </data>
+  <data name="Stapelfunktionen_wie_Bildgr_e_ndern_oder_Exporti_a431c120" xml:space="preserve">
+    <value>Batch functions such as Change image size or Export to develop RAWs at full sensor resolution. Switched off, they use the embedded preview for unedited RAWs – faster, but smaller. RAWs WITH edits (.fpxmp) are always developed and written with their recipe, whatever this setting says.</value>
+  </data>
 </root>

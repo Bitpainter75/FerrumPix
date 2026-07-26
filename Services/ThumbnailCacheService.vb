@@ -283,7 +283,7 @@ Namespace Services
         ''' der Platte waere per Definition Muell: die Datei ist beim naechsten Start weg, der
         ''' Cache-Ordner bleibt.
         '''
-        ''' Konkreter Anlass (Nutzer-Befund 2026-07-20): jedes NEUE Bild im Editor legt sich unter
+        ''' Konkreter Anlass: jedes NEUE Bild im Editor legt sich unter
         ''' "/tmp/FerrumPix/NewDocument/&lt;guid&gt;" an - also ein eigener Ordner je Bild. Der
         ''' Thumbnail-Cache registrierte jeden davon, und die Einstellungen fuellten sich mit
         ''' Cache-Ordnern, die auf laengst geloeschte Verzeichnisse zeigen. Betrifft genauso die
@@ -476,7 +476,7 @@ Namespace Services
                     Dim folderCachePath = IO.Path.Combine(CacheRoot, folder.Id)
                     If Not Directory.Exists(folderCachePath) Then Continue For
 
-                    ' Altlast aufraeumen: bis 2026-07-20 legte JEDES neue Bild im Editor einen
+                    ' Altlast aufraeumen: frueher legte JEDES neue Bild im Editor einen
                     ' Cache-Ordner fuer sein Temp-Verzeichnis an (/tmp/FerrumPix/NewDocument/<guid>).
                     ' Solche Eintraege zeigen auf laengst geloeschte Ordner und sind nur Muell in der
                     ' Liste - sie werden hier still entfernt, statt den Nutzer aufraeumen zu lassen.
@@ -699,6 +699,14 @@ Namespace Services
             If PsdPreviewService.IsSupportedPsd(filePath) Then
                 Return PsdPreviewService.ExtractPreview(filePath)
             End If
+            If HeifDecodeService.IsSupportedHeif(filePath) AndAlso HeifDecodeService.IsAvailable Then
+                Dim heif = HeifDecodeService.ExtractPreview(filePath)
+                If heif IsNot Nothing Then Return heif
+            End If
+            If TiffPreviewService.IsSupportedTiff(filePath) Then
+                Dim tiff = TiffPreviewService.ExtractPreview(filePath)
+                If tiff IsNot Nothing Then Return tiff
+            End If
             If FpxService.IsFpx(filePath) Then
                 Return FpxService.ExtractComposite(filePath)
             End If
@@ -809,6 +817,19 @@ Namespace Services
                     End Using
                 ElseIf PsdPreviewService.IsSupportedPsd(filePath) Then
                     Using preview = PsdPreviewService.ExtractPreview(filePath)
+                        cancellationToken.ThrowIfCancellationRequested()
+                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
+                    End Using
+                ElseIf TiffPreviewService.IsSupportedTiff(filePath) Then
+                    ' LibTiff wendet das Orientierungs-Tag selbst an - keine zweite Korrektur.
+                    Using preview = TiffPreviewService.ExtractPreview(filePath)
+                        cancellationToken.ThrowIfCancellationRequested()
+                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
+                    End Using
+                ElseIf HeifDecodeService.IsSupportedHeif(filePath) AndAlso HeifDecodeService.IsAvailable Then
+                    ' libheif wendet die Drehung aus dem Container selbst an - hier also KEINE
+                    ' zusaetzliche Korrektur, sonst waere sie doppelt.
+                    Using preview = HeifDecodeService.ExtractPreview(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
                     End Using

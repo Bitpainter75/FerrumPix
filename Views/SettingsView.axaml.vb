@@ -16,6 +16,8 @@ Namespace Views
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            ' Ausklappliste nie schmaler als der Knopf (siehe FlyoutHelpers).
+            MatchFlyoutWidthToButton(Me.FindControl(Of Button)("ScaleScreenDropDownButton"))
             AddHandler Loaded, AddressOf HandleLoaded
         End Sub
 

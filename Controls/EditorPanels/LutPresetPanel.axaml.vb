@@ -67,7 +67,7 @@ Namespace Controls.EditorPanels
                 Await vm.ApplySavedLutPresetAsync(preset.Path)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("LutPresetPanel.OnApplySavedLutPresetClick", ex)
             End Try
         End Sub

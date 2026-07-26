@@ -8,7 +8,7 @@ Module Program
     Function Main(args As String()) As Integer
         AppSettingsService.ApplyApplicationScaleEnvironment()
         ' Build-Marker (ungated): beim Auswerten von Logs/Stacktraces muss zweifelsfrei erkennbar
-        ' sein, WELCHER Build lief - mehrere Befunde am 2026-07-16 stammten unbemerkt aus einem
+        ' sein, WELCHER Build lief - mehrere Meldungen stammten unbemerkt aus einem
         ' veralteten Binary, und die Analyse jagte Geister.
         Try
             Dim asmPath = Reflection.Assembly.GetExecutingAssembly().Location

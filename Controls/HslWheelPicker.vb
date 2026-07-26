@@ -7,7 +7,7 @@ Imports Avalonia.Rendering
 
 Namespace Controls
 
-    ''' Farbrad zur Auswahl eines der 8 HSL-Bänder (Phase 1 "Farbmischer neu denken", siehe Roadmap) -
+    ''' Farbrad zur Auswahl eines der 8 HSL-Bänder -
     ''' ersetzt die vormals 8 gestapelten Ton/Sättigungs-Reglerpaare durch ein Rad aus 8 Segmenten;
     ''' das ausgewählte Segment bestimmt, welches Band die (weiterhin unveränderten) Editor-Regler
     ''' ActiveHslHue/ActiveHslSaturation gerade lesen/schreiben. Reine Auswahl-UI - das Rad selbst

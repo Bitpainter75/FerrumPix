@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Views.NewDocumentDialogOverlayView">
 
     <UserControl.Styles>
@@ -181,7 +182,7 @@
                         <TextBlock Grid.Row="3" Text="Breite"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <NumericUpDown Grid.Row="3" Grid.Column="1"
+                        <icons:SliderValueUpDown Grid.Row="3" Grid.Column="1"
                                        Classes="combo-like"
                                        Value="{Binding NewDocWidth}"
                                        Minimum="1"
@@ -193,7 +194,7 @@
                         <TextBlock Grid.Row="4" Text="Höhe"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <NumericUpDown Grid.Row="4" Grid.Column="1"
+                        <icons:SliderValueUpDown Grid.Row="4" Grid.Column="1"
                                        Classes="combo-like"
                                        Value="{Binding NewDocHeight}"
                                        Minimum="1"

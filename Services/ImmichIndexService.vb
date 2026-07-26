@@ -68,7 +68,7 @@ Namespace Services
                     cmd.ExecuteNonQuery()
                 End Using
                 Using cmd = conn.CreateCommand()
-                    ' Lokaler KATALOG der "Alle Fotos"-Timeline (2026-07-16): das Öffnen zeigt sofort
+                    ' Lokaler KATALOG der "Alle Fotos"-Timeline: das Öffnen zeigt sofort
                     ' diesen Stand, der Server-Abgleich läuft danach im Hintergrund. Position erhält
                     ' die Server-Reihenfolge (Timeline).
                     cmd.CommandText =

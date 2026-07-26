@@ -248,7 +248,7 @@ Namespace Views
                 AppSettingsService.Flush()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("MainWindow.HandleWindowClosing", ex)
             End Try
         End Sub
@@ -261,7 +261,7 @@ Namespace Views
         ''' zurück. Ohne das bleibt er beim verschwundenen Dialog hängen: Galerie/Viewer/Editor sehen
         ''' danach KEINE Tastendrücke mehr (ihre Kürzel hängen am KeyDown der jeweiligen View), und erst
         ''' ein Klick auf ein Bild belebt sie wieder — genau das Muster „zweiter Shortcut tot"
-        ''' (Nutzerbericht 2026-07-17). Die Fensterkürzel (Strg+C/V, Strg+1–5) liefen weiter, weil die
+        '''. Die Fensterkürzel (Strg+C/V, Strg+1–5) liefen weiter, weil die
         ''' im Tunnel des Fensters hängen — deshalb wirkte es so willkürlich.</summary>
         Private Sub RestoreFocusAfterDialog()
             Dim restore = Sub()
@@ -386,7 +386,7 @@ Namespace Views
 
         ''' <summary>Fenster verschieben: NUR aus Kopf- und Fusszeile heraus. Der Handler haengt am
         ''' Wurzel-Grid "TitleBar", das die GANZE Fensterflaeche umfasst - ohne die Pruefung unten
-        ''' liesse sich das Fenster an beliebiger Stelle im Inhalt greifen (Nutzerbefund 2026-07-19).
+        ''' liesse sich das Fenster an beliebiger Stelle im Inhalt greifen.
         ''' Ziehbereiche werden deshalb ausdruecklich mit der Style-Klasse "window-drag" markiert
         ''' (Kopfleiste in dieser Datei, die Fusszeilen in Galerie/Betrachter/Editor). Bedienelemente
         ''' darin bleiben bedienbar: die Suche nach oben bricht an Knoepfen, Eingabefeldern,
@@ -441,10 +441,10 @@ Namespace Views
             Try
                 Dim vm = TryCast(DataContext, MainWindowViewModel)
 
-                ' Das eigene Fenster-X ruft Close() programmgesteuert auf. Avalonia meldet dafür
+                ' Das eigene Fenster-X ruft Close programmgesteuert auf. Avalonia meldet dafür
                 ' je nach Plattform nicht zwingend WindowCloseReason.WindowClosing; der allgemeine
                 ' Closing-Handler konnte die Rückfrage deshalb komplett überspringen. Beim X die
-                ' Freigabe ausdrücklich VOR Close() einholen. Abbrechen lässt _allowWindowClose
+                ' Freigabe ausdrücklich VOR Close einholen. Abbrechen lässt _allowWindowClose
                 ' unverändert und beendet nur diesen Klick.
                 If Not _allowWindowClose AndAlso vm IsNot Nothing Then
                     If vm.CurrentMode = AppMode.Editor AndAlso
@@ -479,7 +479,7 @@ Namespace Views
                 ' Nur zurueckschalten, wenn wir wirklich im Vollbild SIND. Vorher lief das
                 ' bedingungslos - und weil HandleDataContextChanged diese Methode beim Start
                 ' aufruft, kam das maximiert wiederhergestellte Fenster kurz gross und fiel dann
-                ' auf Normalgroesse zurueck (Nutzerbefund 2026-07-19).
+                ' auf Normalgroesse zurueck.
                 Dispatcher.UIThread.Post(
                     Sub()
                         If WindowState <> WindowState.FullScreen Then Return
@@ -489,7 +489,7 @@ Namespace Views
             End If
         End Sub
 
-        ''' App-weite Kürzel (Nutzerwunsch 2026-07-17): Strg+1–5 setzt die Bewertung (Strg+0
+        ''' App-weite Kürzel: Strg+1–5 setzt die Bewertung (Strg+0
         ''' entfernt sie), Strg+Q schaltet den Favoriten - in Galerie, Viewer (auch Vollbild)
         ''' und Editor, jeweils auf dem aktuellen Bild bzw. der Galerie-Auswahl.
         Private Function TryHandleRatingShortcut(vm As MainWindowViewModel, e As KeyEventArgs) As Boolean
@@ -717,7 +717,7 @@ Namespace Views
                 End If
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("MainWindow.OnWindowKeyDown", ex)
             End Try
         End Sub

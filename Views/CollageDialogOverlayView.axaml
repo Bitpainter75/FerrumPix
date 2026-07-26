@@ -198,7 +198,7 @@
                                    Text="Breite"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <NumericUpDown Grid.Row="6"
+                        <icons:SliderValueUpDown Grid.Row="6"
                                        Grid.Column="1"
                                        Classes="combo-like"
                                        Minimum="640"
@@ -211,7 +211,7 @@
                                    Text="Spalten"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <NumericUpDown Grid.Row="7"
+                        <icons:SliderValueUpDown Grid.Row="7"
                                        Grid.Column="1"
                                        Classes="combo-like"
                                        Minimum="1"
@@ -225,7 +225,7 @@
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"
                                    ToolTip.Tip="Weißer (Hintergrundfarbe) Rahmen um jedes einzelne Bild"/>
-                        <NumericUpDown Grid.Row="8"
+                        <icons:SliderValueUpDown Grid.Row="8"
                                        Grid.Column="1"
                                        Classes="combo-like"
                                        Minimum="0"
@@ -238,7 +238,7 @@
                                    Text="Rand"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <NumericUpDown Grid.Row="9"
+                        <icons:SliderValueUpDown Grid.Row="9"
                                        Grid.Column="1"
                                        Classes="combo-like"
                                        Minimum="0"
@@ -296,7 +296,7 @@
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"
                                    IsVisible="{Binding IsCollageJpgQualityVisible}"/>
-                        <NumericUpDown Grid.Row="11"
+                        <icons:SliderValueUpDown Grid.Row="11"
                                        Grid.Column="1"
                                        Classes="combo-like"
                                        Minimum="1"

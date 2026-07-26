@@ -70,11 +70,17 @@
                 <TextBlock Text="Bild einfügen" FontSize="{DynamicResource FP.Font.Small}" />
             </Button>
         </Grid>
-        <TextBox Text="{Binding AnnotationText}"
+        <!-- Neue Zeile NUR über Strg+Enter: ein Tunnel-Handler im Code-Behind schluckt Enter
+             allein und fügt bei Strg+Enter selbst um (feuert VOR der TextBox-Interna - ein
+             Bubble-Handler kam dort nie an). AcceptsReturn bleibt an, damit mehrzeiliger Text
+             mehrzeilig ANGEZEIGT wird; kein Wrap, weil der Renderer nie automatisch umbricht. -->
+        <TextBox x:Name="AnnotationTextBox"
+                 Text="{Binding AnnotationText}"
                  PlaceholderText="Text, QR-Inhalt oder Symbol eingeben"
+                 ToolTip.Tip="Neue Zeile mit Strg+Enter oder Umschalt+Enter"
                  FontSize="{DynamicResource FP.Font.Body}"
                  AcceptsReturn="True"
-                 TextWrapping="Wrap"
+                 TextWrapping="NoWrap"
                  MaxHeight="70"
                  IsVisible="{Binding ShowTextContentControls}" />
         <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
@@ -141,7 +147,7 @@
             <TextBlock Text="Pfad" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <!-- WrapPanel statt StackPanel: fünf Knöpfe passen nicht in eine Zeile der 330 px
-                 breiten Spalte (Nutzerbefund 2026-07-20, "Welle" wurde abgeschnitten). Der Umbruch
+                 breiten Spalte ("Welle" wurde abgeschnitten). Der Umbruch
                  richtet sich nach der tatsächlichen Breite - in Spanisch und Italienisch sind die
                  Wörter länger ("Ninguno"/"Nessuno" statt "Kein"), eine fest verdrahtete
                  3+2-Aufteilung würde dort wieder klemmen.

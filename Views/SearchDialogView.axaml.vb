@@ -13,6 +13,8 @@ Namespace Views
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            ' Ausklappliste nie schmaler als der Knopf (siehe FlyoutHelpers).
+            MatchFlyoutWidthToButton(Me.FindControl(Of Button)("SearchRatingDropDownButton"))
         End Sub
 
         Private Sub OnFavoriteClick(sender As Object, e As RoutedEventArgs)

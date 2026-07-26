@@ -172,7 +172,15 @@ Namespace Services
                 ElseIf TryGetXmpDouble(values, "Temperature", d) AndAlso d >= 1000 Then
                     ' Absolutes Kelvin (Adobe-Bereich 2000..50000). Der >=1000-Wächter trennt es sicher von
                     ' einem versehentlich relativen Wert; crs:Temperature ist bei Adobe immer Kelvin.
-                    adj.Temperature = KelvinToRelativeTemperature(d)
+                    ' Referenz: crs:AsShotTemperature, wenn vorhanden (Sidecar-XMPs von RAWs tragen den
+                    ' Aufnahme-Weißabgleich) - damit ist die Näherung aufnahmespezifisch exakt. Der
+                    ' gleiche >=1000-Wächter, damit ein kaputter Wert nicht als Referenz durchgeht.
+                    Dim asShotKelvin As Double
+                    If TryGetXmpDouble(values, "AsShotTemperature", asShotKelvin) AndAlso asShotKelvin >= 1000 Then
+                        adj.Temperature = KelvinToRelativeTemperature(d, asShotKelvin)
+                    Else
+                        adj.Temperature = KelvinToRelativeTemperature(d)
+                    End If
                 End If
                 If TryGetXmpDouble(values, "IncrementalTint", d) Then
                     ' Tint deckt den vollen Adobe-Bereich ab: absolutes crs:Tint reicht bis ±150.
@@ -182,7 +190,7 @@ Namespace Services
                 End If
             End If
 
-            ' HUE-Skalierung (Audit 2026-07-22): Adobes HueAdjustment* ±100 verschiebt den Farbton
+            ' HUE-Skalierung: Adobes HueAdjustment* ±100 verschiebt den Farbton
             ' nur etwa bis zum NACHBARBAND (Bandabstand 30°, also ~±30°). Unsere Engine wendet den
             ' Bandwert dagegen direkt als Grad-Rotation an (±100 => ±100°) - 1:1 uebernommen drehte
             ' ein importiertes Preset Farbtoene rund dreimal so weit wie im Original (Rot wurde
@@ -249,7 +257,7 @@ Namespace Services
 
             ''' FARBGRADIERUNG (crs:ColorGrade*, ab Lightroom 2020). Sie hat das Split-Toning oben
             ''' abgelöst: Presets aus dieser Zeit schreiben NUR noch diese Schlüssel, und weil wir bis
-            ''' 2026-07-21 allein die alten lasen, kam ihre Farbstimmung überhaupt nicht an - wortlos,
+            ''' allein die alten lasen, kam ihre Farbstimmung überhaupt nicht an - wortlos,
             ''' denn alle übrigen Regler stimmten. Sie stehen bewusst NACH den alten Schlüsseln: liegen
             ''' beide in derselben Datei (Lightroom schreibt zur Rückwärtskompatibilität oft beides),
             ''' gewinnt die neuere Angabe. Die Skalen sind deckungsgleich, keine Umrechnung nötig.
@@ -291,19 +299,27 @@ Namespace Services
             Return adj
         End Function
 
-        ''' <summary>Feste Referenz für die Kelvin-Näherung: D65 = sRGB-Weißpunkt = neutrales Tageslicht.
-        ''' Ein Preset mit genau diesem Kelvin-Wert lässt die Temperatur unverändert (Regler 0).</summary>
+        ''' <summary>Rückfall-Referenz für die Kelvin-Näherung: D65 = sRGB-Weißpunkt = neutrales
+        ''' Tageslicht. Ein Preset mit genau diesem Kelvin-Wert lässt die Temperatur unverändert
+        ''' (Regler 0). Greift nur, wenn das XMP keine crs:AsShotTemperature trägt.</summary>
         Private Const WhiteBalanceReferenceKelvin As Double = 6500.0
 
         ''' <summary>Näherung eines absoluten Kelvin-Weißabgleichs an unseren relativen ±100-Regler.
         ''' Gerechnet wird im mired-Raum (1e6/K), weil eine Kelvin-Differenz dort perzeptuell viel
         ''' gleichmäßiger wirkt als in Kelvin selbst. Adobe-Konvention: höhere Kelvin = wärmeres Bild,
         ''' also positiver Regler - das ergibt sich hier von selbst, weil höhere Kelvin niedrigere mireds
-        ''' haben. Skala bewusst 1 mired ≈ 1 Reglerpunkt und hart auf ±100 geclampt: eine gute Näherung
-        ''' für Tageslicht, für Kunstlicht/Nacht bewusst nur annähernd (siehe Kommentar am Aufrufer).</summary>
-        Private Shared Function KelvinToRelativeTemperature(kelvin As Double) As Single
+        ''' haben. Skala bewusst 1 mired ≈ 1 Reglerpunkt und hart auf ±100 geclampt.
+        '''
+        ''' <paramref name="referenceKelvin"/> ist der Aufnahme-Weißabgleich (crs:AsShotTemperature),
+        ''' wenn das XMP ihn trägt - Sidecars von RAW-Dateien schreiben ihn, portable Presets meist
+        ''' nicht. MIT ihm ist die Umrechnung aufnahmespezifisch exakt (der Regler bildet die Differenz
+        ''' Aufnahme→Ziel ab, genau das, was Lightroom beim Anwenden tut); OHNE ihn bleibt die feste
+        ''' D65-Annahme - gut für Tageslicht, für Kunstlicht/Nacht bewusst nur annähernd (siehe
+        ''' Kommentar am Aufrufer).</summary>
+        Private Shared Function KelvinToRelativeTemperature(kelvin As Double, Optional referenceKelvin As Double = WhiteBalanceReferenceKelvin) As Single
             If kelvin <= 0 Then Return 0
-            Dim miredRef = 1000000.0 / WhiteBalanceReferenceKelvin
+            If referenceKelvin <= 0 Then referenceKelvin = WhiteBalanceReferenceKelvin
+            Dim miredRef = 1000000.0 / referenceKelvin
             Dim miredTarget = 1000000.0 / kelvin
             Return Clamp100(miredRef - miredTarget)
         End Function

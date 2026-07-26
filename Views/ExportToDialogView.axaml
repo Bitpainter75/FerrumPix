@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.ExportToDialogView">
+    <!-- „Exportieren nach": jede Bearbeitungsart ist eine ZUSCHALTBARE Sektion. Die Formulare
+         darin sind DIESELBEN Controls wie in den Einzeldialogen (FilterFormView, ResizeFormView)
+         und binden dieselben ViewModel-Eigenschaften - damit können die Optionen nicht
+         auseinanderlaufen. Format, Qualität, Ziel, Dateiname und „Übernehmen" stehen EINMAL
+         global im SaveAs-Block darunter (DialogOverlayView, Zeile 4); Originale werden nie
+         überschrieben, deshalb gibt es hier keinen Überschreiben-Haken.
+         Welche Sektionen aktiv sind, merkt sich die Anwendung (AppSettings.ExportTo*). Die
+         automatische Bildverbesserung ist KEINE eigene Sektion, sondern die vierte Quelle im
+         Filter-Formular - dort steht sie neben den anderen Looks, statt zweimal im Dialog.
+
+         AUFBAU-REGEL für die linke Kante: jedes Formular steckt gleich tief - Sektionskarte,
+         darin eine Inhaltskarte. Das Größen-Formular bringt seine Karten selbst mit, Filter und
+         Wasserzeichen bekommen sie hier. Zusammen mit der geteilten Beschriftungsspalte
+         („DialogLabelColumn") beginnen dadurch alle Eingabefelder auf derselben Linie. -->
+    <StackPanel Spacing="10">
+
+        <Border Classes="adjustment-group">
+            <StackPanel Spacing="10">
+                <CheckBox Content="Filter anwenden"
+                          IsChecked="{Binding DialogExportUseFilter, Mode=TwoWay}"/>
+                <Border Classes="adjustment-group" IsVisible="{Binding DialogExportUseFilter}">
+                    <local:FilterFormView/>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="adjustment-group">
+            <StackPanel Spacing="10">
+                <CheckBox Content="Wasserzeichen anwenden"
+                          IsChecked="{Binding DialogExportUseWatermark, Mode=TwoWay}"/>
+                <Border Classes="adjustment-group" IsVisible="{Binding DialogExportUseWatermark}">
+                    <local:WatermarkFormView />
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="adjustment-group">
+            <StackPanel Spacing="10">
+                <CheckBox Content="Bildgröße ändern"
+                          IsChecked="{Binding DialogExportUseResize, Mode=TwoWay}"/>
+                <!-- Bringt seine eigenen Inhaltskarten mit (wie im Einzeldialog). -->
+                <local:ResizeFormView IsVisible="{Binding DialogExportUseResize}"/>
+            </StackPanel>
+        </Border>
+
+    </StackPanel>
+</UserControl>

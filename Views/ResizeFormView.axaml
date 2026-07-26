@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FerrumPix.Views.ResizeFormView">
+    <!-- Alle Beschriftungsspalten haengen in der geteilten Gruppe "DialogLabelColumn": damit
+         beginnen die Eingabefelder auf DERSELBEN Linie wie in den anderen Formularen des
+         Export-Dialogs (dort steckt jedes Formular gleich tief in Sektionskarte + eigener
+         Karte). -->
+    <StackPanel Spacing="10">
+        <Border Classes="adjustment-group">
+            <StackPanel Spacing="8">
+                <Grid ColumnSpacing="14" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <TextBox Name="BatchResizeWidthTextBox"
+                             Classes="combo-like"
+                             Grid.Column="1"
+                             Text="{Binding DialogBatchResizeWidthText, Mode=TwoWay}"
+                             ToolTip.Tip="Leer lassen, wenn nur die andere Kante zählen soll"
+                             FontSize="{DynamicResource FP.Font.Small}" />
+                    <TextBlock Grid.Column="2" Text="px"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                </Grid>
+                <Grid ColumnSpacing="14" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <TextBox Classes="combo-like"
+                             Grid.Column="1"
+                             Text="{Binding DialogBatchResizeHeightText, Mode=TwoWay}"
+                             ToolTip.Tip="Leer lassen, wenn nur die andere Kante zählen soll"
+                             FontSize="{DynamicResource FP.Font.Small}" />
+                    <TextBlock Grid.Column="2" Text="px"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                </Grid>
+                <CheckBox Content="Seitenverhältnis beibehalten"
+                          IsChecked="{Binding DialogBatchResizeLockAspect}" FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Jedes Bild behält sein eigenes Seitenverhältnis: ein einzelner Wert begrenzt die längste Kante, zwei Werte sind der Kasten, in den eingepasst wird. Ohne Haken werden die Bilder exakt auf Breite × Höhe gestreckt." />
+                <CheckBox Content="Nicht vergrößern"
+                          IsChecked="{Binding DialogBatchResizeNoUpscale}" FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Bilder, die bereits kleiner als die Zielgröße sind, bleiben unverändert - sonst würden sie hochgerechnet und täuschten Auflösung vor." />
+                <Grid ColumnSpacing="14" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Neuberechnung"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding DialogBatchResizeInterpolationOptions}"
+                              SelectedItem="{Binding DialogBatchResizeInterpolationLabel}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              HorizontalAlignment="Stretch" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="adjustment-group">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Vorgaben" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" />
+                <WrapPanel>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="Original">
+                        <TextBlock Text="Original" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="75%">
+                        <TextBlock Text="75%" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="50%">
+                        <TextBlock Text="50%" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="25%">
+                        <TextBlock Text="25%" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="UHD">
+                        <TextBlock Text="UHD" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="Full-HD">
+                        <TextBlock Text="Full-HD" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="SD">
+                        <TextBlock Text="SD" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="1500">
+                        <TextBlock Text="1500" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="1000">
+                        <TextBlock Text="1000" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="800">
+                        <TextBlock Text="800" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="500">
+                        <TextBlock Text="500" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="256">
+                        <TextBlock Text="256" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="128">
+                        <TextBlock Text="128" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="64">
+                        <TextBlock Text="64" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Click="OnPresetClick" Tag="32">
+                        <TextBlock Text="32" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

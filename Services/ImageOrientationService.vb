@@ -98,7 +98,7 @@ Namespace Services
             ' Grund: SKCodec.Create(Stream) uebernimmt den Strom, und manche Codecs - allen voran
             ' WebP - schliessen ihn dabei sofort. Das spaetere stream.Seek fuer den Rueckfall warf
             ' dann ObjectDisposedException ("Cannot access a closed file"), womit sich WebP-Dateien
-            ' im Editor gar nicht anzeigen liessen (gefunden 2026-07-20 durch die neue Pruefung
+            ' im Editor gar nicht anzeigen liessen (gefunden durch die neue Pruefung
             ' "Anzeigebild aus dem Arbeitsbild stimmt mit dem separaten Decode ueberein").
             ' ImageProcessor.DecodeOriented hatte dieselbe Falle und loest sie genauso - der
             ' Anzeigeweg war nur nie nachgezogen worden.
@@ -147,7 +147,7 @@ Namespace Services
         End Function
 
         ' ── Orientierung einer RAW-Datei aus ihrem TIFF-Kopf ──────────────────────
-        ' Hintergrund (Nutzer-Befund 2026-07-20, belegt an PENTAX .PEF und Sony .ARW): die in eine
+        ' Hintergrund (belegt an PENTAX .PEF und Sony .ARW): die in eine
         ' RAW-Datei eingebettete JPEG-Vorschau traegt haeufig KEIN eigenes Orientation-Tag - sie
         ' liegt so quer da, wie der Sensor sie aufgenommen hat. libraw dreht die Entwicklung
         ' dagegen selbst anhand des Tags im RAW-CONTAINER. Ergebnis: der Editor zeigte das Bild
@@ -348,7 +348,7 @@ Namespace Services
         ''' WICHTIG: das ist der ANZEIGE-Pfad des Editors (CurrentImage) - er ist von
         ''' ImageProcessor.OpenSourceStream (Render/Export) getrennt, beide muessen dieselben
         ''' Sonderformate kennen. Genau das fehlte fuer PSD: die Render-Pipeline konnte es,
-        ''' der Editor zeigte trotzdem nichts (Nutzerbefund 2026-07-19).
+        ''' der Editor zeigte trotzdem nichts.
         ''' <paramref name="applySidecarRotation"/>: legt bei RAW die Drehung aus dem .fpxmp-Sidecar
         ''' oben drauf. Richtig fuer jeden Weg, der das Bild EINFACH ANZEIGT (Filmstreifen,
         ''' Konfliktvorschau). FALSCH fuer den Editor: der laedt dasselbe Sidecar als Rezept und

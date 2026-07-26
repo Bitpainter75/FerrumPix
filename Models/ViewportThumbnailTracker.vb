@@ -42,7 +42,7 @@ Namespace Models
             ' Delta-Evict: nur für Elemente aufgerufen, die den Keep-Alive-Bereich gerade verlassen
             ' haben. Bereits fertig geladene Thumbnails werden dadurch NICHT mehr sofort disposed -
             ' sie bleiben resident und werden nur noch über den globalen LRU-Cache in ImageItem
-            ' (TouchResident/MaxResidentThumbnails) verdrängt. Hier storniert EvictThumbnail() nur
+            ' (TouchResident/MaxResidentThumbnails) verdrängt. Hier storniert EvictThumbnail nur
             ' noch angeforderte, aber noch nicht fertig geladene Elemente.
             If _keepFirst >= 0 Then
                 Dim topEnd = Math.Min(keepFirst - 1, _keepLast)

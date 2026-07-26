@@ -4,6 +4,7 @@ Imports System.Linq
 Imports System.Threading.Tasks
 Imports Avalonia.Controls
 Imports Avalonia.Controls.Primitives
+Imports Avalonia.Input
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Platform.Storage
@@ -16,8 +17,37 @@ Namespace Controls.EditorPanels
     Public Class AnnotationPropertiesPanel
         Inherits UserControl
 
+
+        ''' <summary>Neue Zeile NUR per Strg+Enter oder Umschalt+Enter (
+        ''' Umschalt-Variante nachgereicht): der Renderer bricht
+        ''' Text-Objekte nie automatisch um, ein unbedachtes Enter erzeugte sonst Zeilen, deren Box
+        ''' beim Verschieben Geist-Fragmente hinterliess. Sitzt als TUNNEL direkt auf der TextBox -
+        ''' er feuert damit vor deren eigener Enter-Behandlung, ein Bubble-Handler kam nie an.</summary>
+        Private Sub OnAnnotationTextKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Enter Then Return
+            Dim box = TryCast(sender, TextBox)
+            If box Is Nothing Then Return
+            If e.KeyModifiers.HasFlag(KeyModifiers.Control) OrElse e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                Dim text = If(box.Text, "")
+                Dim selStart = Math.Min(box.SelectionStart, box.SelectionEnd)
+                Dim selEnd = Math.Max(box.SelectionStart, box.SelectionEnd)
+                Dim caret = If(selEnd > selStart, selStart, Math.Max(0, Math.Min(box.CaretIndex, text.Length)))
+                If selEnd > selStart Then text = text.Remove(selStart, selEnd - selStart)
+                box.Text = text.Insert(caret, vbLf)
+                box.SelectionStart = caret + 1
+                box.SelectionEnd = caret + 1
+                box.CaretIndex = caret + 1
+            End If
+            ' In BEIDEN Faellen erledigt: Enter allein darf keine Zeile einfuegen (AcceptsReturn
+            ' ist nur fuer die mehrzeilige ANZEIGE an), Strg+Enter hat sie schon eingefuegt.
+            e.Handled = True
+        End Sub
+
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            ' Tunnel statt XAML-KeyDown: siehe OnAnnotationTextKeyDown.
+            Dim textBox = Me.FindControl(Of TextBox)("AnnotationTextBox")
+            textBox?.AddHandler(KeyDownEvent, AddressOf OnAnnotationTextKeyDown, RoutingStrategies.Tunnel)
         End Sub
 
         Private Async Function PickSingleImagePathAsync(title As String) As Task(Of String)
@@ -47,7 +77,7 @@ Namespace Controls.EditorPanels
                 If Not String.IsNullOrWhiteSpace(path) Then vm.AddImageAnnotationAtCurrentPosition(path)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("AnnotationPropertiesPanel.OnInsertImageClick", ex)
             End Try
         End Sub
@@ -60,7 +90,7 @@ Namespace Controls.EditorPanels
                 If Not String.IsNullOrWhiteSpace(path) Then vm.SetWatermarkImagePath(path)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("AnnotationPropertiesPanel.OnWatermarkChooseImageClick", ex)
             End Try
         End Sub

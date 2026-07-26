@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Views.PrintDialogOverlayView">
 
     <Border Background="#B8000000"
@@ -114,7 +115,7 @@
                                    IsVisible="{Binding IsPrintSingleImage}"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <NumericUpDown Grid.Row="4"
+                        <icons:SliderValueUpDown Grid.Row="4"
                                        Grid.Column="1"
                                        Classes="combo-like"
                                        Minimum="1"
@@ -129,7 +130,7 @@
                                    Text="Rand (mm)"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <NumericUpDown Grid.Row="5"
+                        <icons:SliderValueUpDown Grid.Row="5"
                                        Grid.Column="1"
                                        Classes="combo-like"
                                        Minimum="0"

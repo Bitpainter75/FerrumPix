@@ -9,7 +9,7 @@ Imports FerrumPix.ViewModels
 
 Namespace Controls
 
-    ''' Zentraler, wiederverwendbarer Farbwähler (Phase 1 Roadmap "Zentraler Farbregler + Farbpipette"):
+    ''' Zentraler, wiederverwendbarer Farbwähler:
     ''' Farbfeld+Hex-Button mit Flyout (Farbrad, Hex-Eingabe, zuletzt verwendete Farben) sowie eine
     ''' eingebaute Pipette, die die Farbe direkt aus dem bearbeiteten Bild aufnimmt. Ersetzt die vormals
     ''' pro Eigenschaften-Panel einzeln kopierten Button+Flyout+ColorPicker-Blöcke - einfach per

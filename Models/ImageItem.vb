@@ -61,7 +61,7 @@ Namespace Models
         Private _extensionLower As String = Nothing
 
         ''' <summary>Die Dateiendung, einmal kleingeschrieben. Der RAW-Filter der Galerie rief sonst
-        ''' `IO.Path.GetExtension(...).ToLowerInvariant()` pro Element bei jedem Filterlauf - also bei jedem
+        ''' `IO.Path.GetExtension(...).ToLowerInvariant` pro Element bei jedem Filterlauf - also bei jedem
         ''' Tastendruck in der Suche, über den ganzen Ordner.</summary>
         Public ReadOnly Property ExtensionLower As String
             Get
@@ -186,7 +186,7 @@ Namespace Models
 
         ''' <summary>Spiegel der Einstellung „Löschen in Immich erlauben" (siehe SettingsViewModel). Als
         ''' statisches Feld, weil die Kachel-Bindung CanFileOperationDelete je Element ausgewertet wird und
-        ''' AppSettingsService.Load() dafür zu teuer wäre.</summary>
+        ''' AppSettingsService.Load dafür zu teuer wäre.</summary>
         Public Shared Property ImmichDeleteAllowed As Boolean = False
 
         ''' <summary>Immich-Assets haben keinen Dateipfad, für sie greift die Pfad-Policy nicht: über sie
@@ -1264,7 +1264,7 @@ Namespace Models
         ''' Warum nicht EvictThumbnail: das storniert nur ANGEFORDERTE, noch nicht fertige Ladungen
         ''' (_thumbState = 1) und ist bei einem bereits geladenen Bild (_thumbState = 2 - der
         ''' Normalfall fuer das Bild, das man gerade ansieht) ein No-Op. Genau daran blieb die
-        ''' gedrehte RAW in Filmstreifen und Galerie ungedreht stehen (Nutzer-Befund 2026-07-20).
+        ''' gedrehte RAW in Filmstreifen und Galerie ungedreht stehen.
         ''' Und ClearThumbnail allein reicht auch nicht: es leert nur, niemand laedt danach nach -
         ''' die Kachel bliebe leer, bis sie zufaellig erneut ins Sichtfenster geriete.</summary>
         Public Sub ReloadThumbnail()

@@ -31,7 +31,7 @@ Namespace Services
 
         Private Shared Function MoveToTrashWindows(path As String) As Boolean
             ' RecycleOption/RecycleBin funktioniert nur unter Windows; der Aufruf ist durch
-            ' OperatingSystem.IsWindows() abgesichert. OnlyErrorDialogs = keine Rückfrage, nur bei Fehlern eine.
+            ' OperatingSystem.IsWindows abgesichert. OnlyErrorDialogs = keine Rückfrage, nur bei Fehlern eine.
             If Directory.Exists(path) Then
                 Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
                     path, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,

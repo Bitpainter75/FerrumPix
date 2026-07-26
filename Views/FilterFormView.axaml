@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.FilterFormView">
+    <!-- Formularkern von "Filter anwenden" (Quelle/Vorgabe/Staerke) - vom Einzeldialog UND
+         vom "Exportieren nach"-Dialog eingebettet, damit beide exakt dieselben Optionen
+         zeigen. Bindet die DialogFilter*-Eigenschaften des MainWindowViewModel. -->
+    <Grid RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="Quelle"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <!-- WrapPanel statt einer Zeile: "Automatische Bildverbesserung" ist lang, in einer
+                 festen Zeile waere das letzte Segment aus dem Dialog gelaufen. -->
+            <WrapPanel Grid.Column="1">
+                <Button Classes="segmented" Margin="0,0,8,6"
+                        Classes.active="{Binding IsDialogFilterSourceFilter}"
+                        Click="OnFilterSourceClick"
+                        Tag="Filter">Filter</Button>
+                <Button Classes="segmented" Margin="0,0,8,6"
+                        Classes.active="{Binding IsDialogFilterSourceLightroom}"
+                        Click="OnFilterSourceClick"
+                        Tag="Lightroom">Lightroom (.xmp)</Button>
+                <Button Classes="segmented" Margin="0,0,8,6"
+                        Classes.active="{Binding IsDialogFilterSourceLut}"
+                        Click="OnFilterSourceClick"
+                        Tag="Lut">LUT (.cube)</Button>
+                <Button Classes="segmented" Margin="0,0,8,6"
+                        Classes.active="{Binding IsDialogFilterSourceAuto}"
+                        Click="OnFilterSourceClick"
+                        ToolTip.Tip="Automatische Bildverbesserung: jedes Bild wird einzeln gemessen und die Grundregler werden passend gesetzt"
+                        Tag="Auto">Automatische Bildverbesserung</Button>
+            </WrapPanel>
+
+            <TextBlock Grid.Row="1"
+                       Text="Vorgabe"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding IsDialogFilterChoiceVisible}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8"
+                  IsVisible="{Binding IsDialogFilterChoiceVisible}">
+                <ComboBox ItemsSource="{Binding DialogFilterChoices}"
+                          SelectedItem="{Binding DialogSelectedFilterChoice, Mode=TwoWay}"
+                          PlaceholderText="Keine Vorgabe gespeichert"
+                          MinHeight="36"
+                          HorizontalAlignment="Stretch"/>
+                <Button Grid.Column="1"
+                        Classes="icon-btn"
+                        Width="38"
+                        Height="36"
+                        IsVisible="{Binding IsDialogFilterFileVisible}"
+                        Click="OnBrowseFilterFileClick"
+                        ToolTip.Tip="Preset-Datei wählen">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg"
+                                   Width="18" Height="18"/>
+                </Button>
+            </Grid>
+
+            <TextBlock Grid.Row="2"
+                       Text="Stärke"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding IsDialogFilterStrengthVisible}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <Grid Grid.Row="2" Grid.Column="1"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12"
+                  IsVisible="{Binding IsDialogFilterStrengthVisible}">
+                <icons:RoundSlider Minimum="0"
+                                   Maximum="100"
+                                   Value="{Binding DialogFilterStrength, Mode=TwoWay}"
+                                   VerticalAlignment="Center"
+                                   Height="28"
+                                   MinHeight="0"
+                                   Width="220"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding DialogFilterStrength, StringFormat={}{0}%}"
+                           MinWidth="42"
+                           TextAlignment="Right"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+            </Grid>
+        </Grid>
+</UserControl>

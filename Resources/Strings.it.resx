@@ -4301,4 +4301,244 @@
   <data name="Gruppe_entsperren_aaba907d" xml:space="preserve">
     <value>Sblocca gruppo</value>
   </data>
+  <data name="Farbmischer_weiche_Farbverteilung_experimentell_b4eb2b02" xml:space="preserve">
+    <value>Miscelatore colori: distribuzione morbida del colore (sperimentale)</value>
+  </data>
+  <data name="Verteilt_die_Wirkung_der_acht_Farbregler_nach_ei_0d4f80ed" xml:space="preserve">
+    <value>Distribuisce l'effetto degli otto cursori colore secondo un modello alternativo: gamme di colore più ampie che si sovrappongono morbidamente, e i cursori di luminanza agiscono tanto più intensamente quanto più il colore è vivido. Ha effetto immediato su un'immagine aperta e può essere disattivato in qualsiasi momento.</value>
+  </data>
+  <data name="RAWs_beim_Entwickeln_automatisch_aufhellen_e01489cf" xml:space="preserve">
+    <value>Schiarire automaticamente i RAW durante lo sviluppo</value>
+  </data>
+  <data name="RAW_Entwicklung_262a99f9" xml:space="preserve">
+    <value>Sviluppo RAW</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Betrac_baaac979" xml:space="preserve">
+    <value>Come i file RAW vengono sviluppati e mostrati in galleria, visualizzatore ed editor.</value>
+  </data>
+  <data name="Hellt_jedes_entwickelte_RAW_automatisch_auf_bis__39c16dfa" xml:space="preserve">
+    <value>Schiarisce automaticamente ogni RAW sviluppato finché le parti più chiare dell'immagine sono quasi bianche. Disattivato, FerrumPix sviluppa come Lightroom: la tonalità dello scatto viene mantenuta e una curva di base filmica dà a mezzitoni, alte luci e colori il loro carattere consueto. Ha effetto alla prossima apertura di un'immagine o ricostruzione di un'anteprima.</value>
+  </data>
+  <data name="Automatische_Bildverbesserung_4d6123c8" xml:space="preserve">
+    <value>Miglioramento automatico dell'immagine</value>
+  </data>
+  <data name="Rechte_Maustaste_halten_und_ziehen_c94e797b" xml:space="preserve">
+    <value>Tasto destro del mouse (tenere premuto e trascinare)</value>
+  </data>
+  <data name="Automatisch_95b51063" xml:space="preserve">
+    <value>Automatico</value>
+  </data>
+  <data name="Automatische_Bildverbesserung_jedes_Bild_wird_ei_cf05d4b4" xml:space="preserve">
+    <value>Miglioramento automatico dell'immagine: ogni immagine viene misurata singolarmente e i regolatori di base vengono impostati di conseguenza</value>
+  </data>
+  <data name="Bearbeitung_ba5ec78a" xml:space="preserve">
+    <value>Elaborazione</value>
+  </data>
+  <data name="Look_b8db515e" xml:space="preserve">
+    <value>Look</value>
+  </data>
+  <data name="Kein_Look_cea142c2" xml:space="preserve">
+    <value>Nessun look</value>
+  </data>
+  <data name="Kein_Wasserzeichen_26d169c9" xml:space="preserve">
+    <value>Nessuna filigrana</value>
+  </data>
+  <data name="Metadaten_04dd4275" xml:space="preserve">
+    <value>Metadati</value>
+  </data>
+  <data name="Datei_Metadaten_EXIF_bernehmen_aa709748" xml:space="preserve">
+    <value>Mantenere i metadati del file (EXIF)</value>
+  </data>
+  <data name="Jedes_Bild_wird_einzeln_gemessen_und_die_Grundre_25829b43" xml:space="preserve">
+    <value>Ogni immagine viene misurata singolarmente e i regolatori di base vengono impostati di conseguenza</value>
+  </data>
+  <data name="Leer_Originalgr_e_23010adf" xml:space="preserve">
+    <value>Vuoto = dimensione originale</value>
+  </data>
+  <data name="Aufnahmedaten_der_Quelle_Kamera_Zeit_Objektiv_in_df8ac7ae" xml:space="preserve">
+    <value>Scrivere i dati di scatto della sorgente (fotocamera, ora, obiettivo) nel file esportato</value>
+  </data>
+  <data name="name_leer_Originalname_behalten_539ded8c" xml:space="preserve">
+    <value>{name} (vuoto = mantenere il nome originale)</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_81d2ee85" xml:space="preserve">
+    <value>Modello come nella rinomina in blocco: {name}, ### (contatore), {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Exportieren_nach_cd806b98" xml:space="preserve">
+    <value>Esporta in...</value>
+  </data>
+  <data name="Exportieren_nach_fdc8937b" xml:space="preserve">
+    <value>Esporta in</value>
+  </data>
+  <data name="Exportiere_f97bf5c3" xml:space="preserve">
+    <value>Esportazione…</value>
+  </data>
+  <data name="Stelle_den_Export_zusammen_die_Originale_bleiben_8304193a" xml:space="preserve">
+    <value>Componi l'esportazione: gli originali restano intatti.</value>
+  </data>
+  <data name="Neue_Zeile_mit_Strg_Enter_6ca57482" xml:space="preserve">
+    <value>Nuova riga con Ctrl+Invio</value>
+  </data>
+  <data name="Strg_Enter_b8f703dc" xml:space="preserve">
+    <value>Ctrl+Invio</value>
+  </data>
+  <data name="Neue_Zeile_im_Text_Objekt_Text_bricht_nie_automa_e8fc07cc" xml:space="preserve">
+    <value>Nuova riga in un oggetto di testo (il testo non va mai a capo automaticamente)</value>
+  </data>
+  <data name="Neue_Zeile_mit_Strg_Enter_oder_Umschalt_Enter_fae9a32e" xml:space="preserve">
+    <value>Nuova riga con Ctrl+Invio o Maiusc+Invio</value>
+  </data>
+  <data name="Strg_Enter_oder_Umschalt_Enter_08237fda" xml:space="preserve">
+    <value>Ctrl+Invio o Maiusc+Invio</value>
+  </data>
+  <data name="Kein_Wasserzeichen_gespeichert_b079d262" xml:space="preserve">
+    <value>Nessuna filigrana salvata</value>
+  </data>
+  <data name="Jedes_Bild_beh_lt_sein_eigenes_Seitenverh_ltnis__5923eb7b" xml:space="preserve">
+    <value>Ogni immagine mantiene le proprie proporzioni: un solo valore limita il lato più lungo, due valori formano il riquadro in cui viene adattata. Senza il segno di spunta le immagini vengono deformate esattamente a larghezza × altezza.</value>
+  </data>
+  <data name="Leer_lassen_wenn_nur_die_andere_Kante_z_hlen_sol_c194dc1e" xml:space="preserve">
+    <value>Lasciare vuoto se deve contare solo l'altro lato</value>
+  </data>
+  <data name="Nicht_vergr_ern_3a4b9ec8" xml:space="preserve">
+    <value>Non ingrandire</value>
+  </data>
+  <data name="Bilder_die_bereits_kleiner_als_die_Zielgr_e_sind_93914153" xml:space="preserve">
+    <value>Le immagini già più piccole della dimensione di destinazione restano invariate, altrimenti verrebbero ingrandite simulando una risoluzione inesistente.</value>
+  </data>
+  <data name="Die_gew_hlte_Wasserzeichen_Vorlage_enth_lt_weder_19865bdd" xml:space="preserve">
+    <value>Il modello di filigrana selezionato non contiene né testo né immagine.</value>
+  </data>
+  <data name="von_445584ed" xml:space="preserve">
+    <value>di</value>
+  </data>
+  <data name="Datei_en_exportiert_8ffec299" xml:space="preserve">
+    <value>file esportati</value>
+  </data>
+  <data name="BMP_und_GIF_lassen_sich_nicht_zur_ckschreiben_es_5046f9e5" xml:space="preserve">
+    <value>BMP e GIF non possono essere riscritti: vengono creati nuovi file.</value>
+  </data>
+  <data name="libheif_optional_b3984920" xml:space="preserve">
+    <value>libheif (opzionale)</value>
+  </data>
+  <data name="Lesen_von_HEIC_HEIF_AVIF_wird_nur_vom_System_gel_ebca6ebf" xml:space="preserve">
+    <value>Lettura di HEIC/HEIF/AVIF: caricata solo dal sistema, non inclusa</value>
+  </data>
+  <data name="LGPL_3_0_278977ae" xml:space="preserve">
+    <value>LGPL-3.0</value>
+  </data>
+  <data name="libheif_wird_bewusst_NICHT_mitgeliefert_sondern__6db1660e" xml:space="preserve">
+    <value>libheif non viene deliberatamente inclusa, ma caricata solo dal sistema: i file HEIC sono di norma codificati in HEVC e la decisione su un decodificatore HEVC spetta alla distribuzione. Senza libheif i file HEIC/AVIF restano semplicemente chiusi; tutto il resto funziona invariato.</value>
+  </data>
+  <data name="TIFF_Dateien_lesen_5bf61045" xml:space="preserve">
+    <value>Lettura di file TIFF</value>
+  </data>
+  <data name="BSD_3_Clause_d6f9c69f" xml:space="preserve">
+    <value>BSD-3-Clause</value>
+  </data>
+  <data name="BitMiracle_LibTiff_NET_2_4_a3abc5f5" xml:space="preserve">
+    <value>BitMiracle.LibTiff.NET 2.4</value>
+  </data>
+  <data name="Maske_30ebc894" xml:space="preserve">
+    <value>Maschera</value>
+  </data>
+  <data name="Linearer_Verlauf_f53727f3" xml:space="preserve">
+    <value>Sfumatura lineare</value>
+  </data>
+  <data name="Radialer_Verlauf_f756dcfa" xml:space="preserve">
+    <value>Sfumatura radiale</value>
+  </data>
+  <data name="Stauchung_809d8a8f" xml:space="preserve">
+    <value>Schiacciamento</value>
+  </data>
+  <data name="Wirkung_umkehren_37f97f10" xml:space="preserve">
+    <value>Inverti l’effetto</value>
+  </data>
+  <data name="Im_Bild_ziehen_um_den_Verlauf_aufzuspannen_Die_G_9cee402f" xml:space="preserve">
+    <value>Trascina sull’immagine per tracciare la sfumatura. Le maniglie restano afferrabili anche dopo.</value>
+  </data>
+  <data name="Maske_frei_ins_Bild_malen_Hinzuf_gen_und_Abziehe_cbd0dead" xml:space="preserve">
+    <value>Dipingi la maschera liberamente sull’immagine: aggiungi e sottrai tramite la modalità sotto</value>
+  </data>
+  <data name="Im_Bild_ziehen_die_Maske_l_uft_vom_Startpunkt_zu_f6f82936" xml:space="preserve">
+    <value>Trascina sull’immagine: la maschera sfuma dal punto iniziale a quello finale. Maiusc blocca la direzione</value>
+  </data>
+  <data name="Von_der_Mitte_nach_aussen_ziehen_Mit_Umkehren_wi_cc5ca3fe" xml:space="preserve">
+    <value>Trascina dal centro verso l’esterno. Con «Inverti» la maschera agisce all’esterno anziché all’interno</value>
+  </data>
+  <data name="Neue_Maske_beginnen_8e8c0280" xml:space="preserve">
+    <value>Inizia una nuova maschera</value>
+  </data>
+  <data name="Zur_Maske_hinzuf_gen_3350fe0d" xml:space="preserve">
+    <value>Aggiungi alla maschera</value>
+  </data>
+  <data name="Von_der_Maske_abziehen_6538dcaf" xml:space="preserve">
+    <value>Sottrai dalla maschera</value>
+  </data>
+  <data name="Maske_umkehren_6436cc9c" xml:space="preserve">
+    <value>Inverti la maschera</value>
+  </data>
+  <data name="Maske_verwerfen_Strg_D_oder_Esc_d8fce8b8" xml:space="preserve">
+    <value>Scarta la maschera (Ctrl+D o Esc)</value>
+  </data>
+  <data name="L_sst_den_Maskenrand_ber_die_angegebene_Anzahl_B_54f093a8" xml:space="preserve">
+    <value>Sfuma il bordo della maschera sul numero di pixel indicato (0 = bordo netto)</value>
+  </data>
+  <data name="Aus_der_gemalten_Maske_eine_Korrekturebene_erste_21dce517" xml:space="preserve">
+    <value>Crea un livello di regolazione dalla maschera dipinta</value>
+  </data>
+  <data name="Wie_weit_der_Verlauf_zwischen_voller_und_keiner__ed5c5e3b" xml:space="preserve">
+    <value>Quanto la sfumatura passa da effetto pieno a nullo. Piccolo = bordo netto, grande = morbido su tutto il percorso</value>
+  </data>
+  <data name="Verh_ltnis_der_beiden_Halbachsen_1_00_ist_ein_Kr_b5f6ec44" xml:space="preserve">
+    <value>Rapporto tra i due semiassi: 1,00 è un cerchio, sotto l’ellisse si appiattisce</value>
+  </data>
+  <data name="Tauscht_gedeckte_und_freie_Seite_beim_radialen_V_c26e878a" xml:space="preserve">
+    <value>Scambia il lato coperto con quello libero: in una sfumatura radiale la correzione agisce all’esterno anziché all’interno</value>
+  </data>
+  <data name="Breite_des_Wasserzeichens_in_Bildpunkten_379de9a6" xml:space="preserve">
+    <value>Larghezza della filigrana in pixel dell’immagine</value>
+  </data>
+  <data name="Bei_gesperrtem_Seitenverh_ltnis_ergibt_sich_die__befc24c8" xml:space="preserve">
+    <value>Con le proporzioni bloccate, l’altezza deriva dalla larghezza</value>
+  </data>
+  <data name="Die_H_he_folgt_der_Breite_im_Verh_ltnis_der_Vorl_deb82f5f" xml:space="preserve">
+    <value>L’altezza segue la larghezza secondo le proporzioni del modello. Disattivato: larghezza e altezza si impostano separatamente e la filigrana si deforma.</value>
+  </data>
+  <data name="Breite_des_Wasserzeichens_in_Bildpunkten_Die_H_h_8ea0860c" xml:space="preserve">
+    <value>Larghezza della filigrana in pixel dell’immagine. L’altezza segue le proporzioni del modello.</value>
+  </data>
+  <data name="Errechnet_aus_der_Breite_und_dem_Seitenverh_ltni_0fe6e266" xml:space="preserve">
+    <value>Calcolata dalla larghezza e dalle proporzioni del modello</value>
+  </data>
+  <data name="Aufnahmedaten_der_Quelle_Kamera_Zeit_Objektiv_in_95f34251" xml:space="preserve">
+    <value>Scrivere i dati di scatto dell’originale (fotocamera, ora, obiettivo) nel file di destinazione</value>
+  </data>
+  <data name="Anpassungen_kopieren_f31a9184" xml:space="preserve">
+    <value>Copia le regolazioni</value>
+  </data>
+  <data name="Anpassungen_einf_gen_1bf8d44d" xml:space="preserve">
+    <value>Incolla le regolazioni</value>
+  </data>
+  <data name="Anpassungen_kopiert_2702a48b" xml:space="preserve">
+    <value>Regolazioni copiate</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_7a30b501" xml:space="preserve">
+    <value>Regolazioni incollate</value>
+  </data>
+  <data name="Anpassen_Farbe_Details_und_Effekte_dieses_Bildes_e25c4fab" xml:space="preserve">
+    <value>Memorizza le impostazioni di Regola, Colore, Dettagli ed Effetti di questa immagine: ritaglio, oggetti e maschere restano fuori</value>
+  </data>
+  <data name="Die_gemerkten_Anpassungen_auf_dieses_Bild_anwend_ad37e4f4" xml:space="preserve">
+    <value>Applica a questa immagine le regolazioni memorizzate</value>
+  </data>
+  <data name="Diese_Auswahl_l_sst_sich_nicht_zur_ckschreiben_e_9871eda0" xml:space="preserve">
+    <value>Questa selezione non può essere riscritta: vengono creati file nuovi.</value>
+  </data>
+  <data name="RAWs_ohne_Bearbeitung_im_Stapel_entwickeln_c6f05b13" xml:space="preserve">
+    <value>Sviluppa i RAW non modificati nelle elaborazioni in serie</value>
+  </data>
+  <data name="Stapelfunktionen_wie_Bildgr_e_ndern_oder_Exporti_a431c120" xml:space="preserve">
+    <value>Le funzioni in serie come Modifica dimensioni o Esporta in sviluppano i RAW alla piena risoluzione del sensore. Disattivato, usano l’anteprima incorporata per i RAW non modificati: più veloce, ma più piccola. I RAW CON modifiche (.fpxmp) vengono sempre sviluppati e scritti con la loro ricetta, indipendentemente da questa impostazione.</value>
+  </data>
 </root>

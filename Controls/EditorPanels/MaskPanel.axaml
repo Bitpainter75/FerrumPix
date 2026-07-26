@@ -1,0 +1,177 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.MaskPanel">
+    <Expander Header="Maske" icons:ExpanderState.Key="mask">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                </StackPanel>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="8" Margin="0,8,0,0">
+
+            <!-- Die drei Arten stehen als BREITE Zeilen mit Text untereinander, nicht als
+                 Symbolreihe: sie schliessen einander aus und man wählt sie einmal pro Maske,
+                 nicht im Sekundentakt wie einen Pinselmodus. -->
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,7"
+                    Command="{Binding SetMaskModeCommand}" CommandParameter="Brush"
+                    Classes.active="{Binding IsMaskBrushMode}"
+                    ToolTip.Tip="Maske frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg" Width="16" Height="16" />
+                    <TextBlock Text="Pinsel" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,7"
+                    Command="{Binding SetMaskModeCommand}" CommandParameter="Linear"
+                    Classes.active="{Binding IsMaskLinearMode}"
+                    ToolTip.Tip="Im Bild ziehen: die Maske läuft vom Startpunkt zum Endpunkt aus. Umschalt rastet die Richtung">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg" Width="16" Height="16" />
+                    <TextBlock Text="Linearer Verlauf" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,7"
+                    Command="{Binding SetMaskModeCommand}" CommandParameter="Radial"
+                    Classes.active="{Binding IsMaskRadialMode}"
+                    ToolTip.Tip="Von der Mitte nach aussen ziehen. Mit „Umkehren“ wirkt die Maske aussen statt innen">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg" Width="16" Height="16" />
+                    <TextBlock Text="Radialer Verlauf" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+
+            <!-- Pinsel-Zweig -->
+            <StackPanel Spacing="8" IsVisible="{Binding IsMaskBrushMode}">
+                <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="New"
+                            Classes.active="{Binding IsSelectionCombineNew}"
+                            ToolTip.Tip="Neue Maske beginnen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Add"
+                            Classes.active="{Binding IsSelectionCombineAdd}"
+                            ToolTip.Tip="Zur Maske hinzufügen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-plus.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Subtract"
+                            Classes.active="{Binding IsSelectionCombineSubtract}"
+                            ToolTip.Tip="Von der Maske abziehen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-minus.svg" Width="16" Height="16" />
+                    </Button>
+                    <Border Width="1" Margin="4,4" Background="{DynamicResource FP.Border.Normal}" />
+                    <Button Classes="ghost" Padding="8,6"
+                            IsEnabled="{Binding HasActiveSelection}"
+                            Command="{Binding InvertSelectionCommand}"
+                            ToolTip.Tip="Maske umkehren">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            IsEnabled="{Binding HasActiveSelection}"
+                            Command="{Binding ClearSelectionCommand}"
+                            ToolTip.Tip="Maske verwerfen (Strg+D oder Esc)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg" Width="16" Height="16" />
+                    </Button>
+                </StackPanel>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Pinselgröße" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="500"
+                                       DefaultValue="24"
+                                       Value="{Binding BrushSize}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding BrushSize, Mode=TwoWay}"
+                                             Minimum="1" Maximum="500" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <!-- Beim Pinsel bleibt „Weiche Kante“ eine Strecke in Bildpixeln: sie wird in die
+                     Stempel gebacken (siehe SelectionMaskSoftBaked). Der Verlauf braucht dagegen
+                     einen Anteil und hat deshalb seinen eigenen Regler weiter unten. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Weiche Kante" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Lässt den Maskenrand über die angegebene Anzahl Bildpixel weich auslaufen (0 = harte Kante)" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
+                                       DefaultValue="0"
+                                       Value="{Binding SelectionFeather}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding SelectionFeather, Mode=TwoWay}"
+                                             Minimum="0" Maximum="200" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
+                        ToolTip.Tip="Aus der gemalten Maske eine Korrekturebene erstellen">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Neue Korrekturebene" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <!-- Verlaufs-Zweig -->
+            <StackPanel Spacing="8" IsVisible="{Binding ShowGradientControls}">
+                <Border Height="1" Background="{DynamicResource FP.Border.Normal}" />
+                <TextBlock Text="Im Bild ziehen, um den Verlauf aufzuspannen. Die Griffe bleiben danach greifbar."
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding !HasSelectedGradientMask}" />
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Wie weit der Verlauf zwischen voller und keiner Wirkung ausläuft. Klein = harte Kante, gross = sanft über die ganze Strecke" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="50"
+                                       Value="{Binding GradientFeatherPercent}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding GradientFeatherPercent, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding ShowRadialRatioControl}">
+                    <TextBlock Text="Stauchung" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Verhältnis der beiden Halbachsen: 1,00 ist ein Kreis, darunter wird die Ellipse flach" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0.05" Maximum="4"
+                                       DefaultValue="1"
+                                       Value="{Binding GradientRadiusRatio}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding GradientRadiusRatio, Mode=TwoWay}"
+                                             Minimum="0.05" Maximum="4" Increment="0.05"
+                                             FormatString="F2" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding HasSelectedGradientMask}">
+                    <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
+                                       DefaultValue="0"
+                                       Value="{Binding GradientAngleDegrees}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding GradientAngleDegrees, Mode=TwoWay}"
+                                             Minimum="0" Maximum="360" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <CheckBox Content="Wirkung umkehren"
+                          IsChecked="{Binding GradientInverted}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Tauscht gedeckte und freie Seite - beim radialen Verlauf wirkt die Korrektur dann aussen statt innen" />
+            </StackPanel>
+
+        </StackPanel>
+    </Expander>
+</UserControl>

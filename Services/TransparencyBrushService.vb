@@ -22,7 +22,7 @@ Namespace Services
         Private Shared ReadOnly _alphaCache As New Dictionary(Of String, Boolean)(PathIdentity.Comparer)
         Private Shared ReadOnly _alphaPending As New HashSet(Of String)(PathIdentity.Comparer)
         ''' Callbacks von Aufrufern, die auf eine BEREITS LAUFENDE Berechnung desselben Schlüssels
-        ''' warten (Audit 2026-07-22): der zweite Aufrufer (z.B. Editor, während der Viewer dieselbe
+        ''' warten: der zweite Aufrufer (z.B. Editor, während der Viewer dieselbe
         ''' Datei rechnet) bekam vorher weder Wert noch Benachrichtigung - sein Binding blieb auf
         ''' dem Default stehen, bis irgendein Zufalls-Re-Read kam.
         Private Shared ReadOnly _alphaWaiters As New Dictionary(Of String, List(Of Action))(PathIdentity.Comparer)
@@ -57,7 +57,7 @@ Namespace Services
         ''' Hintergrund, und onComputed wird anschließend auf dem UI-Thread aufgerufen (typisch:
         ''' RaisePropertyChanged des Brush-Getters).
         '''
-        ''' Hintergrund (Analyse 2026-07-16): Der frühere synchrone HasVisibleTransparency-Aufruf
+        ''' Hintergrund (Analyse): Der frühere synchrone HasVisibleTransparency-Aufruf
         ''' sass in Binding-Gettern von Viewer UND Editor - ein grosses PNG wurde dabei KOMPLETT
         ''' auf dem UI-Thread dekodiert und per GetPixel (Interop pro Pixel!) gescannt: sekundenlange
         ''' Haenger beim ersten Anzeigen. Verdaechtig nah am unbestaetigten "Viewer-Start-Haenger".</summary>

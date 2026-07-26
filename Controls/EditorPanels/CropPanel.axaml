@@ -82,7 +82,7 @@
             <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <NumericUpDown Classes="combo-like" Grid.Column="1"
+                <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding CropWidthPixels}" Minimum="1"
                                Maximum="50000" Increment="1" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
@@ -92,7 +92,7 @@
             <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <NumericUpDown Classes="combo-like" Grid.Column="1"
+                <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding CropHeightPixels}" Minimum="1"
                                Maximum="50000" Increment="1" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
@@ -126,11 +126,14 @@
                     <TextBlock Text="9:16" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </WrapPanel>
+            <!-- Bei RAW/PSD gibt es nichts zu bestätigen: der Ausschnitt liegt im Sidecar-Rezept
+                 und wirkt sofort, deshalb ist der Knopf dort ausgeblendet. -->
             <Button Classes="accent"
                     HorizontalAlignment="Stretch"
                     Padding="10,6"
                     Command="{Binding ApplyCropCommand}"
                     IsEnabled="{Binding HasCropChanges}"
+                    IsVisible="{Binding ShowApplyCropButton}"
                     ToolTip.Tip="Ausschnitt auf die Vorschau anwenden">
                 <StackPanel Orientation="Horizontal" Spacing="6"
                             HorizontalAlignment="Center">

@@ -27,23 +27,9 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <!-- Steht bewusst GANZ OBEN und außerhalb der Filterliste: „Auto" ist kein Look mit
-                 Stärkeregler, sondern misst das Bild und setzt die Grundregler (Belichtung, Kontrast,
-                 Lichter/Tiefen, Schwarz/Weiß, Dynamik, Weißabgleich). -->
-            <Button Classes="ghost"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    Padding="8,6" Margin="0,0,0,6"
-                    Classes.active="{Binding IsAutoAdjustApplied}"
-                    Command="{Binding AutoAdjustCommand}"
-                    ToolTip.Tip="Bild messen und die Grundregler automatisch einstellen (der Zurücksetzen-Pfeil oben nimmt es wieder heraus)">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
-                        Width="14" Height="14" />
-                    <TextBlock Text="Auto" FontSize="{DynamicResource FP.Font.Small}" />
-                </StackPanel>
-            </Button>
+            <!-- Der „Auto"-Knopf (Automatische Bildverbesserung) ist in den Anpassen-Bereich
+                 umgezogen (EditorView, vor dem Licht-Panel): er ist kein Look, sondern setzt
+                 die Grundregler - dort steht er neben den Reglern, die er bewegt. -->
             <!-- Die Auswahlliste ist entfallen: sie zeigte dieselben Filter ein zweites Mal. Auch der
                  Knopf „Keine" steht nicht mehr in der Liste - er war kein Filter, sondern ein
                  Zurücksetzer und damit doppelt zum Pfeil in der Kopfzeile (ResetFilterCommand).

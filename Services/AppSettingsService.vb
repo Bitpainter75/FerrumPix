@@ -28,6 +28,9 @@ Namespace Services
         Public Property WidthPixels As Double = 480
         Public Property HeightPixels As Double = 180
         Public Property Anchor As String = "BottomRight"
+        ''' Seitenverhaeltnis des Wasserzeichens gesperrt (nur bei Bild-Wasserzeichen sinnvoll).
+        ''' Gemerkt, damit der Stapel-Dialog die Hoehe aus der Breite ableiten kann statt zu raten.
+        Public Property LockAspect As Boolean = True
         Public Property RotationDegrees As Double = 0
         Public Property Opacity As Double = 100
         Public Property FontFamily As String = "Arial"
@@ -138,6 +141,11 @@ Namespace Services
         ''' Galerie-Thumbnails und Viewer, weil der Viewer teurer entwickelt.
         Public Property DevelopRawThumbnails As Boolean = False
         Public Property DevelopRawInViewer As Boolean = False
+        ''' RAWs OHNE .fpxmp-Rezept auch in den Stapelfunktionen voll entwickeln (Demosaic in
+        ''' Sensoraufloesung) statt ihre eingebettete JPEG-Vorschau zu nehmen. Mit Rezept wird
+        ''' IMMER entwickelt - dort waere die Vorschau schlicht das falsche Bild.
+        ''' Standard an: das ist das bisherige Verhalten. Aus ist der schnelle Weg.
+        Public Property DevelopRawInBatch As Boolean = True
         Public Property EditorInfoSidebarExpanded As Boolean = True
         ''' Ob das Ebenen-Panel im Editor zuletzt eingeblendet war - gemerkter Bedienzustand (wie die
         ''' Info-Leiste), kein Schalter in den Einstellungen. Standard aus: es ist ein Profi-Werkzeug.
@@ -149,17 +157,23 @@ Namespace Services
         ''' Gruppenname (siehe Controls.ExpanderState). Fehlt ein Schlüssel, gilt der XAML-Standard.
         Public Property EditorExpanderStates As New Dictionary(Of String, Boolean)()
         ''' „Originale überschreiben" im Filter-anwenden-Dialog - bleibt über Sitzungen erhalten
-        ''' (Nutzerwunsch 2026-07-17).
+        '''.
         Public Property BatchFilterOverwriteOriginals As Boolean = False
         ''' „Originale überschreiben" im Wasserzeichen-anwenden-Dialog - bleibt über Sitzungen erhalten
         ''' (analog zu Filter anwenden).
         Public Property BatchWatermarkOverwriteOriginals As Boolean = True
         ''' „Originale überschreiben" im Bildgröße-ändern-Dialog. Standard AN = bisheriges Verhalten;
-        ''' abgewählt entstehen Kopien mit Formatauswahl wie beim Filter-Dialog (Nutzerwunsch 2026-07-17).
+        ''' abgewählt entstehen Kopien mit Formatauswahl wie beim Filter-Dialog.
         Public Property BatchResizeOverwriteOriginals As Boolean = True
+
+        ''' Welche Sektionen im Dialog "Exportieren nach" zuletzt aktiv waren - der Sammel-Export
+        ''' wird meist mit derselben Zusammenstellung wiederholt.
+        Public Property ExportToUseFilter As Boolean = False
+        Public Property ExportToUseWatermark As Boolean = False
+        Public Property ExportToUseResize As Boolean = False
         ''' Abstand der EINRAST-Linien (Sicherheitsabstand) zu den Bildrändern in Prozent - die
-        ''' pinken Ziel-Linien, an denen Objekte beim Verschieben einrasten (Nutzerwunsch
-        ''' 2026-07-17, präzisiert: gemeint war diese Linie, nicht das Zuschneiden-Werkzeug).
+        ''' pinken Ziel-Linien, an denen Objekte beim Verschieben einrasten
+        ''' (präzisiert: gemeint war diese Linie, nicht das Zuschneiden-Werkzeug).
         ''' 0 = deaktiviert; Ränder und Mitte rasten immer. 4 = bisheriges festes Verhalten.
         Public Property EditorSnapMarginPercent As Integer = 4
         ''' Ob der Vorher/Nachher-Vergleich im Editor zuletzt eingeschaltet war - gemerkter Bedienzustand
@@ -185,10 +199,22 @@ Namespace Services
         Public Property LastBatchRenamePattern As String = "{name}_###"
         Public Property LastBatchRenameStart As Integer = 1
         Public Property LastBatchRenameStep As Integer = 1
+        ''' Muster fuer die ZIELDATEINAMEN der Stapelfunktionen (Exportieren nach, Konvertieren
+        ''' nach, Bildgroesse aendern, Filter/Wasserzeichen anwenden). Leer = Originalname behalten.
+        ''' Wird ueber Dialogoeffnungen hinweg gemerkt: wer einmal ein Muster festgelegt hat, will
+        ''' es beim naechsten Stapel meist wieder.
+        Public Property LastTargetNamePattern As String = ""
+        ''' Kopierte Bildanpassungen als Rezept-JSON (nur die Pixel-Anpassungen, keine Geometrie
+        ''' und keine Objekte). Liegt in den Einstellungen statt im Arbeitsspeicher, damit
+        ''' "Kopieren" in der einen Sitzung und "Einfuegen" in der naechsten funktioniert - genau
+        ''' dafuer ist die Funktion da. Leer = nichts kopiert.
+        Public Property CopiedAdjustments As String = ""
         Public Property LastBatchResizeWidth As Integer = 0
         Public Property LastBatchResizeHeight As Integer = 0
         Public Property LastBatchResizeScalePercent As Integer = 0
         Public Property LastBatchResizeLockAspect As Boolean = True
+        ''' "Nicht vergroessern" im Bildgroessen-/Export-Formular (Standard aus = bisheriges Verhalten).
+        Public Property LastBatchResizeNoUpscale As Boolean = False
         Public Property LastBatchResizeInterpolation As String = "Bilinear"
         Public Property LastWatermarkPresetName As String = ""
         Public Property EnableDiagnosticLogging As Boolean = False
@@ -254,13 +280,13 @@ Namespace Services
         Private Shared ReadOnly SettingsPath As String =
             Path.Combine(SettingsDirectory, "settings.json")
 
-        ''' Der zuletzt bekannte, bereits normalisierte Stand als JSON. Load() liest daraus statt von der
+        ''' Der zuletzt bekannte, bereits normalisierte Stand als JSON. Load liest daraus statt von der
         ''' Platte: die Einstellungen werden an 34 Stellen abgefragt, unter anderem aus Vorschaubild-Threads.
         Private Shared ReadOnly _cacheLock As New Object()
         Private Shared _cachedJson As String = Nothing
 
         ''' Geschrieben wird verzögert und zusammengefasst. Sonst löste jedes Häkchen im Dialog ein
-        ''' vollständiges Serialisieren samt Temporärdatei und Umbenennen aus. Flush() erzwingt das Schreiben -
+        ''' vollständiges Serialisieren samt Temporärdatei und Umbenennen aus. Flush erzwingt das Schreiben -
         ''' beim Programmende und immer dann, wenn ein Verlust der letzten Sekunde nicht hinnehmbar wäre.
         Private Const WriteDebounceMs As Integer = 1500
         Private Shared ReadOnly _writeLock As New Object()
@@ -287,7 +313,7 @@ Namespace Services
                 End SyncLock
 
                 ' Erst protokollieren, wenn _cachedJson steht: DiagnosticLogService.LogException fragt
-                ' seinerseits Load() nach EnableDiagnosticLogging. Aus ReadSettingsJson heraus zu
+                ' seinerseits Load nach EnableDiagnosticLogging. Aus ReadSettingsJson heraus zu
                 ' protokollieren liefe deshalb in eine Endlosrekursion - SyncLock ist reentrant und
                 ' hielte sie nicht auf.
                 If readError IsNot Nothing Then DiagnosticLogService.LogException("Settings.Read", readError)
@@ -340,7 +366,7 @@ Namespace Services
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Return settings
             Catch ex As JsonException
-                ' Kaputte Datei: der nächste Save() überschriebe sie mit Standardwerten. Vorher zur
+                ' Kaputte Datei: der nächste Save überschriebe sie mit Standardwerten. Vorher zur
                 ' Seite legen, damit Presets und gespeicherte Suchen von Hand zu retten sind.
                 BackupUnreadableSettings()
                 SyncLock _cacheLock
@@ -352,7 +378,7 @@ Namespace Services
             End Try
         End Function
 
-        ''' Liest die Datei roh. Protokolliert selbst nichts - siehe Load().
+        ''' Liest die Datei roh. Protokolliert selbst nichts - siehe Load.
         Private Shared Function ReadSettingsJson(ByRef readError As Exception) As String
             Try
                 If Not File.Exists(SettingsPath) Then Return ""
@@ -458,7 +484,7 @@ Namespace Services
             Try
                 Directory.CreateDirectory(SettingsDirectory)
                 ' Nicht direkt in settings.json schreiben: ein Absturz mitten im Schreiben hinterließe eine
-                ' abgeschnittene Datei. Load() würde die beim nächsten Start als unlesbar verwerfen - samt
+                ' abgeschnittene Datei. Load würde die beim nächsten Start als unlesbar verwerfen - samt
                 ' Wasserzeichen-Presets, gespeicherten Suchen und Theme. Erst vollständig danebenschreiben,
                 ' dann ersetzen.
                 Dim tempPath = SettingsPath & ".tmp"
@@ -472,7 +498,7 @@ Namespace Services
         End Sub
 
         ''' <summary>Ändert genau ein paar Felder und speichert. Ersetzt das fünfzehnmal kopierte
-        ''' Load()-ändern-Save()-Muster.</summary>
+        ''' Load-ändern-Save-Muster.</summary>
         Public Shared Sub Update(mutate As Action(Of AppSettings))
             If mutate Is Nothing Then Return
             Dim settings = Load()
@@ -740,6 +766,7 @@ Namespace Services
                     .WidthPixels = Math.Max(1, Math.Min(100000, preset.WidthPixels)),
                     .HeightPixels = Math.Max(1, Math.Min(100000, preset.HeightPixels)),
                     .Anchor = NormalizeAnnotationAnchorName(preset.Anchor),
+                    .LockAspect = preset.LockAspect,
                     .RotationDegrees = Math.Max(-180, Math.Min(180, preset.RotationDegrees)),
                     .Opacity = Math.Max(0, Math.Min(100, preset.Opacity)),
                     .FontFamily = If(preset.FontFamily, "Arial").Trim(),
@@ -877,6 +904,21 @@ Namespace Services
             Update(Sub(s) s.LastSaveAsTargetFolder = NormalizeFolderPath(folderPath))
         End Sub
 
+        ''' <summary>Merkt das Zieldateinamen-Muster. Leer ist ein gueltiger Wert (Originalname
+        ''' behalten) und wird deshalb NICHT auf einen Standard zurueckgebogen - anders als beim
+        ''' Stapel-Umbenennen, wo ohne Muster gar nichts passieren wuerde.</summary>
+        Public Shared Sub SaveLastTargetNamePattern(pattern As String)
+            Update(Sub(s) s.LastTargetNamePattern = NormalizeTargetNamePattern(pattern))
+        End Sub
+
+        Public Shared Function NormalizeTargetNamePattern(value As String) As String
+            Return If(value, "").Trim()
+        End Function
+
+        Public Shared Sub SaveCopiedAdjustments(recipeJson As String)
+            Update(Sub(s) s.CopiedAdjustments = If(recipeJson, "").Trim())
+        End Sub
+
         Public Shared Sub SaveLastBatchRenameSettings(pattern As String, start As Integer, stepValue As Integer)
             Update(Sub(s)
                        s.LastBatchRenamePattern = NormalizeBatchRenamePattern(pattern)
@@ -885,17 +927,27 @@ Namespace Services
                    End Sub)
         End Sub
 
+        ''' <summary>Merkt sich die aktiven Sektionen des "Exportieren nach"-Dialogs.</summary>
+        Public Shared Sub SaveExportToSections(useFilter As Boolean, useWatermark As Boolean, useResize As Boolean)
+            Update(Sub(s)
+                       s.ExportToUseFilter = useFilter
+                       s.ExportToUseWatermark = useWatermark
+                       s.ExportToUseResize = useResize
+                   End Sub)
+        End Sub
+
         Public Shared Sub SaveLastBatchRenamePattern(value As String)
             Dim settings = Load()
             SaveLastBatchRenameSettings(value, settings.LastBatchRenameStart, settings.LastBatchRenameStep)
         End Sub
 
-        Public Shared Sub SaveLastBatchResizeSettings(width As Integer, height As Integer, scalePercent As Integer, lockAspect As Boolean, interpolation As ResizeInterpolationMode)
+        Public Shared Sub SaveLastBatchResizeSettings(width As Integer, height As Integer, scalePercent As Integer, lockAspect As Boolean, interpolation As ResizeInterpolationMode, noUpscale As Boolean)
             Update(Sub(s)
                        s.LastBatchResizeWidth = NormalizeBatchResizeDimension(width)
                        s.LastBatchResizeHeight = NormalizeBatchResizeDimension(height)
                        s.LastBatchResizeScalePercent = NormalizeBatchResizeScalePercent(scalePercent)
                        s.LastBatchResizeLockAspect = lockAspect
+                       s.LastBatchResizeNoUpscale = noUpscale
                        s.LastBatchResizeInterpolation = interpolation.ToString()
                    End Sub)
         End Sub

@@ -245,7 +245,7 @@ Namespace Views
             ' den Startordner navigieren, sondern die Auswahl im passenden Baum wiederherstellen.
             ' Nicht an IsVirtualFolder haengen: ein ORDNER-Favorit oeffnet einen echten Ordner,
             ' waere damit durchgefallen und der Favoriten-Eintrag verlor beim Zurueckkommen seinen
-            ' Rahmen (Nutzerbefund 2026-07-19). Massgeblich ist allein, ob das ViewModel ein
+            ' Rahmen. Massgeblich ist allein, ob das ViewModel ein
             ' wiederherzustellendes Navigationsziel kennt.
             If vm.NavigationRestoreNode IsNot Nothing Then
                 _initialSelectionDone = True
@@ -691,7 +691,7 @@ Namespace Views
                 End If
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnVirtualTreeSelectionChanged", ex)
             End Try
         End Sub
@@ -713,7 +713,7 @@ Namespace Views
                 RestoreFolderTreeSelection(Me.FindControl(Of TreeView)("FolderTreeView"), vm)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnImmichNodePointerPressed", ex)
             End Try
         End Sub
@@ -780,7 +780,7 @@ Namespace Views
         ''' <summary>Knoten unter dem Zeiger. Laeuft erst den LOGISCHEN, dann den VISUELLEN Elternpfad
         ''' hoch: bei Inhalten aus einem ItemTemplate reisst die logische Kette ab, der Knoten waere sonst
         ''' je nach getroffenem Element mal auffindbar und mal nicht - genau daraus entstand die
-        ''' Abweichung zwischen Mauszeiger und tatsaechlichem Ablegen (Nutzerbefund 2026-07-19).</summary>
+        ''' Abweichung zwischen Mauszeiger und tatsaechlichem Ablegen.</summary>
         Private Function GetImmichDropNode(e As DragEventArgs) As VirtualNavigationNode
             Dim current = TryCast(e.Source, Control)
             While current IsNot Nothing
@@ -843,7 +843,7 @@ Namespace Views
                 vm.UploadToImmich(node, localPaths)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnImmichPasteClick", ex)
             End Try
         End Sub
@@ -872,7 +872,7 @@ Namespace Views
                 vm.UploadToImmich(node, paths)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnImmichUploadClick", ex)
             End Try
         End Sub
@@ -1353,7 +1353,7 @@ Namespace Views
                 Await PasteClipboardIntoFolder(targetFolder)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnContextPaste", ex)
             End Try
         End Sub
@@ -1382,6 +1382,17 @@ Namespace Views
                 _selectionAnchor = item
             End If
             vm?.BatchConvertSelectedCommand.Execute(Nothing)
+        End Sub
+
+        Public Sub OnContextExportTo(sender As Object, e As RoutedEventArgs)
+            Dim item = GetItemFromSender(sender)
+            Dim vm = GetVm()
+            If item IsNot Nothing AndAlso vm IsNot Nothing AndAlso
+               (vm.SelectedItems Is Nothing OrElse Not vm.SelectedItems.Contains(item)) Then
+                vm.SelectOnly(item)
+                _selectionAnchor = item
+            End If
+            vm?.ExportSelectedCommand.Execute(Nothing)
         End Sub
 
         Public Sub OnContextResize(sender As Object, e As RoutedEventArgs)
@@ -1450,7 +1461,7 @@ Namespace Views
                 Await PasteClipboardIntoFolder(GetVm()?.CurrentFolder)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnGalleryAreaPaste", ex)
             End Try
         End Sub
@@ -1526,7 +1537,7 @@ Namespace Views
                 Await PasteClipboardIntoFolder(path)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnFavoritePasteFolderClick", ex)
             End Try
         End Sub
@@ -1600,8 +1611,20 @@ Namespace Views
                                         vm IsNot Nothing AndAlso
                                         vm.SelectedItems IsNot Nothing AndAlso
                                         vm.SelectedItems.Any(Function(i) i IsNot Nothing AndAlso i.IsImage)
+            ' Bildgroesse/Wasserzeichen/Filter lesen JPG/PNG/WEBP/BMP/GIF - gefragt wird genau die
+            ' Funktion, die auch die Verarbeitung benutzt (IsBatchImageEditReadable). Eine eigene
+            ' Ausschlussliste hier lief auseinander: .tif/.heic blieben sichtbar und taten beim
+            ' Klick still nichts. Ob ZURUECKgeschrieben werden darf, entscheidet der Dialog
+            ' getrennt (IsBatchImageEditWritable - BMP/GIF haben keinen Encoder).
             Dim showResize = showImageBatchActions AndAlso
-                              vm.SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).All(Function(i) Not i.IsRawFile)
+                              vm.SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).
+                                  All(Function(i) GalleryViewModel.IsBatchImageEditReadable(i.FilePath))
+            Dim showApplyFilter = showResize
+            ' "Exportieren nach"/"Konvertieren nach" lesen JEDE Bildquelle (Render ueber
+            ' DecodeOriented bzw. das .fpx-Rezept) - nur Videos und SVG koennen sie nicht.
+            Dim showExport = showImageBatchActions AndAlso
+                              vm.SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).
+                                  Any(Function(i) GalleryViewModel.IsBatchExportable(i.FilePath))
             SetMenuItemVisible(menu, "GridContextOpenMenuItem", showSingleItemActions)
             SetMenuItemVisible(menu, "GridContextEditMenuItem", showSingleItemActions AndAlso item.CanEditFile AndAlso item.IsImage)
             SetMenuControlVisible(menu, "GridContextTopSeparator", showSingleItemActions)
@@ -1613,8 +1636,9 @@ Namespace Views
             SetMenuItemVisible(menu, "GridContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
             SetMenuItemVisible(menu, "GridContextResizeMenuItem", showResize)
             SetMenuItemVisible(menu, "GridContextApplyWatermarkMenuItem", showResize)
-            SetMenuItemVisible(menu, "GridContextApplyFilterMenuItem", showImageBatchActions)
-            SetMenuItemVisible(menu, "GridContextBatchConvertMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "GridContextApplyFilterMenuItem", showApplyFilter)
+            SetMenuItemVisible(menu, "GridContextBatchConvertMenuItem", showExport)
+            SetMenuItemVisible(menu, "GridContextExportToMenuItem", showExport)
             SetMenuItemVisible(menu, "GridContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "GridContextCreateCollageMenuItem", showCollage)
             SetMenuControlVisible(menu, "GridContextPathSeparator", showSingleItemActions)
@@ -1632,8 +1656,9 @@ Namespace Views
             SetMenuItemVisible(menu, "ListContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
             SetMenuItemVisible(menu, "ListContextResizeMenuItem", showResize)
             SetMenuItemVisible(menu, "ListContextApplyWatermarkMenuItem", showResize)
-            SetMenuItemVisible(menu, "ListContextApplyFilterMenuItem", showImageBatchActions)
-            SetMenuItemVisible(menu, "ListContextBatchConvertMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "ListContextApplyFilterMenuItem", showApplyFilter)
+            SetMenuItemVisible(menu, "ListContextBatchConvertMenuItem", showExport)
+            SetMenuItemVisible(menu, "ListContextExportToMenuItem", showExport)
             SetMenuItemVisible(menu, "ListContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "ListContextCreateCollageMenuItem", showCollage)
             SetMenuItemVisible(menu, "ListContextPrintMenuItem", showImageBatchActions)
@@ -1652,8 +1677,9 @@ Namespace Views
             SetMenuItemVisible(menu, "MenuContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
             SetMenuItemVisible(menu, "MenuContextResizeMenuItem", showResize)
             SetMenuItemVisible(menu, "MenuContextApplyWatermarkMenuItem", showResize)
-            SetMenuItemVisible(menu, "MenuContextApplyFilterMenuItem", showImageBatchActions)
-            SetMenuItemVisible(menu, "MenuContextBatchConvertMenuItem", showImageBatchActions)
+            SetMenuItemVisible(menu, "MenuContextApplyFilterMenuItem", showApplyFilter)
+            SetMenuItemVisible(menu, "MenuContextBatchConvertMenuItem", showExport)
+            SetMenuItemVisible(menu, "MenuContextExportToMenuItem", showExport)
             SetMenuItemVisible(menu, "MenuContextRemoveMetadataMenuItem", showImageBatchActions)
             SetMenuItemVisible(menu, "MenuContextCreateCollageMenuItem", showCollage)
             SetMenuItemVisible(menu, "MenuContextPrintMenuItem", showImageBatchActions)
@@ -1787,7 +1813,7 @@ Namespace Views
                 Await PasteClipboardIntoFolder(node.FullPath)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnContextPasteFolder", ex)
             End Try
         End Sub
@@ -1797,7 +1823,7 @@ Namespace Views
         ''' traegt danach nur noch deren echte Pfade. Ohne die Temp-Pruefung fiel so ein Drop in den
         ''' "intern = verschieben"-Zweig, und Verschieben ist auf Temp-Dateien nicht erlaubt
         ''' (FileOperationPolicy.CanMove verlangt einen Pfad im persoenlichen Ordner). Ergebnis:
-        ''' Mauszeiger "geht nicht" und Immich→Ordner ging gar nicht (Nutzerbefund 2026-07-19).</summary>
+        ''' Mauszeiger "geht nicht" und Immich→Ordner ging gar nicht.</summary>
         Private Shared Function PayloadHasImmich(payload As (Paths As List(Of String), IsInternal As Boolean)) As Boolean
             Return payload.Paths.Any(Function(p) ImmichService.IsImmichPseudoPath(p) OrElse
                                                  ImmichService.IsImmichTempPath(p))
@@ -1837,7 +1863,7 @@ Namespace Views
 
         ''' <summary>Hebt die Zeile unter dem Zeiger hervor, solange dort abgelegt werden darf.
         ''' Avalonia stellt unter X11 bei anwendungsinternem Ziehen KEINE effektabhaengigen Mauszeiger dar -
-        ''' gemessen 2026-07-19: Ziel, Nutzlast und Effekt stimmen (Move bzw. Copy, beides im erlaubten
+        ''' gemessen: Ziel, Nutzlast und Effekt stimmen (Move bzw. Copy, beides im erlaubten
         ''' Satz), der Zeiger zeigte trotzdem durchgehend "verboten", auch mit AllowDrop direkt am
         ''' getroffenen Element. Diese Rueckmeldung liegt dafuer vollstaendig in unserer Hand.</summary>
         Private _dropHighlightRow As Control
@@ -1879,7 +1905,7 @@ Namespace Views
                 e.Handled = True
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnFolderTreeDrop", ex)
             End Try
         End Sub
@@ -1899,7 +1925,7 @@ Namespace Views
                 e.Handled = True
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnItemDrop", ex)
             End Try
         End Sub
@@ -1937,7 +1963,7 @@ Namespace Views
                 e.Handled = True
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnGalleryAreaDrop", ex)
             End Try
         End Sub
@@ -2031,18 +2057,18 @@ Namespace Views
                         Return
                     Case Key.F
                         ' Strg+F bleibt die Suche; „Filter anwenden" liegt auf Strg+W
-                        ' (Nutzerwunsch 2026-07-17, Strg+F war schon belegt).
+                        ' (Strg+F war schon belegt).
                         FocusSearchBox()
                         e.Handled = True
                         Return
                     Case Key.W
-                        ' Strg+W: Filter anwenden (Nutzerwunsch 2026-07-17, vorher Strg+Umschalt+F).
+                        ' Strg+W: Filter anwenden (vorher Strg+Umschalt+F).
                         DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+W hasSelectedImage={vm.HasSelectedImage}")
                         If vm.HasSelectedImage Then vm.ApplyFilterSelectedCommand.Execute(Nothing)
                         e.Handled = True
                         Return
                     Case Key.D
-                        ' Strg+D: Konvertieren nach (Nutzerwunsch 2026-07-17).
+                        ' Strg+D: Konvertieren nach.
                         DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+D hasSelectedImage={vm.HasSelectedImage}")
                         If vm.HasSelectedImage Then vm.BatchConvertSelectedCommand.Execute(Nothing)
                         e.Handled = True
@@ -2162,7 +2188,7 @@ Namespace Views
                 Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, paths, cut)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.CopyPathsToClipboard", ex)
             End Try
         End Sub
@@ -2401,14 +2427,14 @@ Namespace Views
         End Sub
 
         ''' Selektiert und expandiert den Ordner im Baum. Bewusst OHNE Auto-Scrollen: das Nachziehen
-        ''' in die Mitte bei jeder Navigation stoerte (Nutzer-Feedback 2026-07-16) - nur das initiale
+        ''' in die Mitte bei jeder Navigation stoerte (Nutzer-Feedback) - nur das initiale
         ''' Anzeigen der TreeView stellt Sichtbarkeit her (RestoreFolderTreeSelection).
         ''' <summary>Gleicht die Baummarkierung an den bereits gewechselten Ordner an (laeuft ueber
         ''' CurrentFolder-PropertyChanged, also NACH der Navigation). Das ist ein Wiederherstellen,
         ''' keine Nutzer-Navigation - deshalb unter _restoringFolderTreeSelection, damit
         ''' OnFolderTreeSelectionChanged nicht erneut navigiert UND den Seitenleisten-Tab nicht auf
         ''' "Ordner" umreisst. Genau das passierte beim Klick auf einen Ordner-Favoriten: die Ansicht
-        ''' wechselte korrekt, aber der Tab sprang von Favoriten weg (Nutzerbefund 2026-07-19).</summary>
+        ''' wechselte korrekt, aber der Tab sprang von Favoriten weg.</summary>
         Private Sub SelectFolderInTree(folderPath As String)
             Dim vm = GetVm()
             Dim tree = Me.FindControl(Of TreeView)("FolderTreeView")
@@ -2474,7 +2500,7 @@ Namespace Views
             Dim viewportHeight = scrollViewer.Viewport.Height
             Dim itemHeight = container.Bounds.Height
             ' Bereits komplett sichtbar? Dann NICHT scrollen - es soll nur Sichtbarkeit
-            ' sichergestellt werden, kein Zwangs-Zentrieren (Nutzer-Feedback 2026-07-16).
+            ' sichergestellt werden, kein Zwangs-Zentrieren (Nutzer-Feedback).
             Dim currentOffset = scrollViewer.Offset.Y
             If topLeft.Value.Y >= currentOffset AndAlso
                topLeft.Value.Y + itemHeight <= currentOffset + viewportHeight Then

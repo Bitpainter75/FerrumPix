@@ -12,7 +12,7 @@ Namespace Views
         End Sub
 
         ''' Fügt den Platzhalter des geklickten Chips an der Cursorposition der Namensvorlage ein
-        ''' (Nutzerwunsch 2026-07-17: Klick-Auswahl statt Hilfetext) und setzt den Cursor dahinter.
+        ''' (Klick-Auswahl statt Hilfetext) und setzt den Cursor dahinter.
         Private Sub OnInsertPlaceholder(sender As Object, e As RoutedEventArgs)
             Dim chip = TryCast(sender, Button)
             Dim box = Me.FindControl(Of TextBox)("PatternTextBox")

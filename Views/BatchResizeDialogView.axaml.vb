@@ -11,40 +11,11 @@ Namespace Views
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
-            AddHandler Me.Loaded, AddressOf OnDialogLoaded
         End Sub
 
-        Private Sub OnPresetClick(sender As Object, e As RoutedEventArgs)
-            Dim button = TryCast(sender, Button)
-            Dim vm = TryCast(DataContext, MainWindowViewModel)
-            If button Is Nothing OrElse vm Is Nothing Then Return
-            vm.SetDialogBatchResizePreset(If(button.Tag, "").ToString())
-            e.Handled = True
-        End Sub
-
-        Private Sub OnDialogLoaded(sender As Object, e As RoutedEventArgs)
-            FocusWidthField()
-        End Sub
-
-        ''' "BatchResizeWidthTextBox" liegt in dieser UserControl-eigenen NameScope - ein Aufruf
-        ''' von außen (z.B. DialogOverlayView.FindControl) findet den Namen nicht, deshalb muss der
-        ''' Fokus über diese öffentliche Methode gesetzt werden, jedes Mal wenn der Dialog geöffnet wird.
+        ''' Delegiert in die eingebettete ResizeFormView - das Breitenfeld liegt in DEREN NameScope.
         Public Sub FocusWidthField()
-            Dim widthBox = Me.FindControl(Of TextBox)("BatchResizeWidthTextBox")
-            If widthBox Is Nothing Then Return
-
-            Dispatcher.UIThread.Post(
-                Sub()
-                    widthBox.Focus()
-                    widthBox.SelectAll()
-                End Sub,
-                DispatcherPriority.Input)
-            Dispatcher.UIThread.Post(
-                Sub()
-                    widthBox.Focus()
-                    widthBox.SelectAll()
-                End Sub,
-                DispatcherPriority.Background)
+            Me.FindControl(Of ResizeFormView)("ResizeForm")?.FocusWidthField()
         End Sub
 
     End Class

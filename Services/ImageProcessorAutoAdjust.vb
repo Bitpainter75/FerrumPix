@@ -70,6 +70,32 @@ Namespace Services
             End Function
         End Class
 
+        ''' <summary>Die Brücke fuer Stapelverarbeitung und Export: dekodiert die Datei, misst sie
+        ''' wie der Editor-Knopf "Automatische Bildverbesserung" und schreibt die gemessenen Werte
+        ''' als ABSOLUTE Reglerwerte in die uebergebenen Anpassungen. Bewusst pro Bild aufzurufen -
+        ''' die Messung des einen Bildes taugt nicht als Vorlage fuer ein anderes. Ohne Messung
+        ''' (Datei nicht lesbar, neutrales Bild) bleiben die Anpassungen unveraendert.</summary>
+        Public Shared Sub ApplyAutoAdjustmentsTo(adj As ImageAdjustments, sourcePath As String)
+            If adj Is Nothing OrElse String.IsNullOrWhiteSpace(sourcePath) Then Return
+            ' DecodeForOutput statt DecodeOriented: .fpx-Projekte muessen aus Basisbild + Rezept
+            ' gerendert werden - DecodeOriented reicht das ZIP an den Codec weiter und liefert
+            ' Nothing, die Messung waere fuer Projektdateien still ausgefallen.
+            Using bmp = DecodeForOutput(sourcePath)
+                If bmp Is Nothing Then Return
+                Dim r = AnalyzeAutoAdjustments(bmp)
+                If Not r.HasMeasurement OrElse r.IsNeutral() Then Return
+                adj.Exposure = r.Exposure
+                adj.Contrast = r.Contrast
+                adj.Highlights = r.Highlights
+                adj.ShadowsLevel = r.ShadowsLevel
+                adj.Whites = r.Whites
+                adj.Blacks = r.Blacks
+                adj.Vibrance = r.Vibrance
+                adj.Temperature = r.Temperature
+                adj.Tint = r.Tint
+            End Using
+        End Sub
+
         ''' <summary>Misst ein Bild und liefert die Reglerwerte der automatischen Bildverbesserung.
         ''' Rein lesend, deterministisch und ohne Seiteneffekte - genau deshalb prüfbar.</summary>
         Public Shared Function AnalyzeAutoAdjustments(source As SKBitmap) As AutoAdjustResult

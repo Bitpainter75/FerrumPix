@@ -18,7 +18,7 @@
         </Style>
         <!-- Personen/Orte klappen per Klick auf die Zeile auf/zu (OpenVirtualNavigationNode); der
              Standard-Chevron läge durch den Einzug-Trick (-34-Margin im Item-Template) mitten im
-             Knoten-Icon (Nutzer-Befund 2026-07-16). Unsichtbar UND nicht klickbar, damit der Klick
+             Knoten-Icon. Unsichtbar UND nicht klickbar, damit der Klick
              die Zeile trifft - der Platz bleibt erhalten, sonst verschöben sich die Einzüge. -->
         <Style Selector="TreeView#ImmichTreeView TreeViewItem /template/ ToggleButton">
             <Setter Property="Opacity" Value="0"/>
@@ -146,6 +146,8 @@
                     </Border>
 
                     <Button Grid.Column="1" Padding="10,7" Margin="0,0,8,0"
+                            Classes="filter-btn"
+                            Classes.active="{Binding HasActiveFilter}"
                             ToolTip.Tip="Filter">
                         <Button.Flyout>
                             <Flyout Placement="BottomEdgeAlignedRight" VerticalOffset="2">
@@ -701,8 +703,8 @@
                                       <!-- Das Element unter dem Zeiger ist der Border/ContentPresenter des
                                            TreeViewItem-Templates, nicht unsere Zeilenvorlage - es spannt die ganze
                                            Zeilenbreite darueber. Der Mauszeiger richtet sich nach diesem Element,
-                                           deshalb muss AllowDrop dort sitzen und nicht nur am TreeView (Messung
-                                           2026-07-19: quelle=Border/ContentPresenter, nie Grid). -->
+                                           deshalb muss AllowDrop dort sitzen und nicht nur am TreeView
+                                           (gemessen: quelle=Border/ContentPresenter, nie Grid). -->
                                       <Style Selector="TreeViewItem">
                                           <Setter Property="DragDrop.AllowDrop" Value="True"/>
                                       </Style>
@@ -830,8 +832,8 @@
                                       <!-- Das Element unter dem Zeiger ist der Border/ContentPresenter des
                                            TreeViewItem-Templates, nicht unsere Zeilenvorlage - es spannt die ganze
                                            Zeilenbreite darueber. Der Mauszeiger richtet sich nach diesem Element,
-                                           deshalb muss AllowDrop dort sitzen und nicht nur am TreeView (Messung
-                                           2026-07-19: quelle=Border/ContentPresenter, nie Grid). -->
+                                           deshalb muss AllowDrop dort sitzen und nicht nur am TreeView
+                                           (gemessen: quelle=Border/ContentPresenter, nie Grid). -->
                                       <Style Selector="TreeViewItem">
                                           <Setter Property="DragDrop.AllowDrop" Value="True"/>
                                       </Style>
@@ -849,7 +851,7 @@
                                           <!-- AllowDrop auch auf der Zeile selbst: die Ereignisse blubbern zwar zum
                                                TreeView hoch, aber der Mauszeiger richtet sich nach dem Element UNTER dem
                                                Zeiger - ohne die Angabe gilt die Zeile nicht als Ziel und es erscheint das
-                                               Verbotszeichen, obwohl der Drop laeuft (Messung 2026-07-19). Die Kacheln in
+                                               Verbotszeichen, obwohl der Drop laeuft (Messung). Die Kacheln in
                                                der Galerie machen es genauso. -->
                                           <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center"
                                                 HorizontalAlignment="Stretch" Background="Transparent" Margin="-34,3,0,3"
@@ -907,7 +909,7 @@
                                           Background="Transparent">
                                         <!-- Die Favoriten fuehren die Kontextmenues ihrer Ziele mit: je nach
                                              Art des Favoriten erscheinen die Ordner-, Immich- oder Such-Eintraege
-                                             (Nutzerwunsch 2026-07-19). Sie rufen dieselben Handler wie in den
+                                            . Sie rufen dieselben Handler wie in den
                                              Herkunftsbaeumen - "Aus Favoriten entfernen" steht bewusst getrennt
                                              darunter, damit es nicht mit "Loeschen" verwechselt wird. -->
                                         <Grid.ContextMenu>
@@ -1080,6 +1082,7 @@
                                             <MenuItem Name="GridContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
                                             <MenuItem Name="GridContextApplyFilterMenuItem" Header="Filter anwenden..." Click="OnContextApplyFilter"/>
                                             <MenuItem Name="GridContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
+                                            <MenuItem Name="GridContextExportToMenuItem" Header="Exportieren nach..." Click="OnContextExportTo"/>
                                             <MenuItem Name="GridContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
                                             <MenuItem Name="GridContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
                                             <MenuItem Name="GridContextPrintMenuItem" Header="Drucken..." Click="OnContextPrint" IsVisible="{Binding IsImage}"/>
@@ -1510,6 +1513,7 @@
                                             <MenuItem Name="ListContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
                                             <MenuItem Name="ListContextApplyFilterMenuItem" Header="Filter anwenden..." Click="OnContextApplyFilter"/>
                                             <MenuItem Name="ListContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
+                                            <MenuItem Name="ListContextExportToMenuItem" Header="Exportieren nach..." Click="OnContextExportTo"/>
                                             <MenuItem Name="ListContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
                                             <MenuItem Name="ListContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
                                             <MenuItem Name="ListContextPrintMenuItem" Header="Drucken..." Click="OnContextPrint"/>
@@ -1848,6 +1852,7 @@
                                 <MenuItem Name="MenuContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
                                 <MenuItem Name="MenuContextApplyFilterMenuItem" Header="Filter anwenden..." Click="OnContextApplyFilter"/>
                                 <MenuItem Name="MenuContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
+                                            <MenuItem Name="MenuContextExportToMenuItem" Header="Exportieren nach..." Click="OnContextExportTo"/>
                                 <MenuItem Name="MenuContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
                                 <MenuItem Name="MenuContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
                                 <MenuItem Name="MenuContextPrintMenuItem" Header="Drucken..." Click="OnContextPrint"/>
@@ -1857,8 +1862,8 @@
                                 <Separator Name="MenuContextDeleteSeparator"/>
                                 <MenuItem Name="MenuContextDeleteMenuItem" Header="Löschen" Click="OnContextDelete"/>
                                 <Separator IsVisible="{Binding IsImage}"/>
-                                <!-- Farbetiketten wie im Rechtsklick-Menü der Kacheln (Nutzerwunsch
-                                     2026-07-17: Footermenü == Kontextmenü). DataContext ist vor dem
+                                <!-- Farbetiketten wie im Rechtsklick-Menü der Kacheln
+                                     (Footermenü == Kontextmenü). DataContext ist vor dem
                                      Öffnen das ausgewählte Element (OnGalleryMenuButtonClick). -->
                                 <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,4,10,4" IsVisible="{Binding IsImage}">
                                     <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnContextSetColorLabel" ToolTip.Tip="Orange">

@@ -15,7 +15,7 @@ Imports MetadataExtractor.Formats.Exif
 Namespace Services
 
     ' Typisierte, für die Datenbank/Suche geeignete Teilmenge der EXIF-Daten - abgeleitet aus den
-    ' bereits von ReadExif() erzeugten formatierten Anzeige-Strings (kein zweites Einlesen der Datei).
+    ' bereits von ReadExif erzeugten formatierten Anzeige-Strings (kein zweites Einlesen der Datei).
     Public Class ExifSearchFields
         Public Property DateTaken As String = ""       ' EXIF-Rohformat "YYYY:MM:DD HH:MM:SS" - sortiert korrekt als Text
         Public Property DateModifiedExif As String = ""
@@ -108,7 +108,7 @@ Namespace Services
         End Class
 
         Private Shared ReadOnly _cacheLock As New Object()
-        ' XMP-Sidecars gehören oft FREMDEN Apps (Lightroom/darktable/digiKam). Deshalb atomar schreiben
+        ' XMP-Sidecars gehören oft FREMDEN Programmen. Deshalb atomar schreiben
         ' (temp + Move) und serialisiert, damit ein Abbruch mitten im Schreiben die fremde Datei nicht
         ' abgeschnitten/unlesbar zurücklässt und zwei Schreiber sich nicht überholen.
         Private Shared ReadOnly _sidecarWriteLock As New Object()
@@ -318,7 +318,7 @@ Namespace Services
                         Function(entry) Not String.IsNullOrEmpty(entry.Name) AndAlso predicate(entry))
                     If imageEntry Is Nothing Then Return Array.Empty(Of MetadataExtractor.Directory)()
 
-                    ' ZipArchiveEntry.Open() liefert auch fuer unkomprimierte Eintraege einen
+                    ' ZipArchiveEntry.Open liefert auch fuer unkomprimierte Eintraege einen
                     ' NICHT seekbaren Stream. MetadataExtractor startet mit FileTypeDetector,
                     ' der nach dem Lesen der Signatur zum Anfang zurueckspringt und deshalb sonst
                     ' ArgumentException wirft. ReadExifCore fing diese Ausnahme fuer den gesamten
@@ -696,7 +696,7 @@ Namespace Services
         ''' <summary>Sucht einen Tag über ALLE Verzeichnisse des angegebenen Typs und liefert den ersten
         ''' belegten Wert. RAW-Dateien (DNG/ARW/NEF) bringen mehrere "Exif SubIFD"-Verzeichnisse mit - neben
         ''' dem der Aufnahme noch je eines für Vorschaubild- und Rohbild-Ebene. Das zuvor verwendete
-        ''' FirstOrDefault() erwischte davon regelmäßig ein Ebenen-Verzeichnis ohne Aufnahmedaten, weshalb
+        ''' FirstOrDefault erwischte davon regelmäßig ein Ebenen-Verzeichnis ohne Aufnahmedaten, weshalb
         ''' Blende, ISO, Belichtungszeit und Objektiv bei RAWs leer blieben - und zwar nicht nur in der
         ''' Anzeige, sondern auch in Suche, Filter und Sortierung, die auf denselben Feldern arbeiten.</summary>
         Private Shared Function GetTagDescAcross(Of TDirectory As MetadataExtractor.Directory)(
@@ -776,8 +776,8 @@ Namespace Services
             If String.IsNullOrWhiteSpace(imagePath) Then Return False
 
             ' Eine VORHANDENE Sidecar unter beiden Namenskonventionen suchen ("foto.cr2.xmp" wie
-            ' darktable/digiKam, "foto.xmp" wie Adobe). Vorher stand hier nur ChangeExtension - eine
-            ' darktable-Sidecar wurde deshalb nie gefunden und die Bewertung lief ins Leere.
+            ' angehängt, "foto.xmp" ersetzt). Vorher stand hier nur ChangeExtension - eine
+            ' angehängte Beistelldatei wurde deshalb nie gefunden und die Bewertung lief ins Leere.
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
             If String.IsNullOrEmpty(sidecarPath) Then
                 ' Neu anlegen (nur wenn ausdrücklich erlaubt) in der Adobe-Form.

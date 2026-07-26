@@ -27,7 +27,7 @@ Namespace Services
     ''' im .fpx-Buendel eingebettet. Der Editor bietet den Sidecar-Speicherweg deshalb nur fuer
     ''' reine Entwicklungseinstellungen an.
     '''
-    ''' Der Sidecar ist NICHT abschaltbar (die Einstellung dafuer ist am 2026-07-20 entfallen): fuer
+    ''' Der Sidecar ist NICHT abschaltbar (die Einstellung dafuer ist entfallen): fuer
     ''' RAW und PSD ist er der EINZIGE Weg, eine Bearbeitung zu behalten, ohne die Quelldatei zu
     ''' zerstoeren - beide Formate koennen wir nicht schreiben. Ein Schalter dafuer hiess in der
     ''' Praxis "Bearbeitung stillschweigend wegwerfen", und er liess Viewer und Editor

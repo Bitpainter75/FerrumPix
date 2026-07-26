@@ -4301,4 +4301,244 @@
   <data name="Gruppe_entsperren_aaba907d" xml:space="preserve">
     <value>Gruppe entsperren</value>
   </data>
+  <data name="Farbmischer_weiche_Farbverteilung_experimentell_b4eb2b02" xml:space="preserve">
+    <value>Farbmischer: weiche Farbverteilung (experimentell)</value>
+  </data>
+  <data name="Verteilt_die_Wirkung_der_acht_Farbregler_nach_ei_0d4f80ed" xml:space="preserve">
+    <value>Verteilt die Wirkung der acht Farbregler nach einem alternativen Modell: breitere, weich überlappende Farbbereiche, und die Helligkeitsregler wirken umso stärker, je kräftiger die Farbe ist. Wirkt sofort auf ein geöffnetes Bild und lässt sich jederzeit zurückschalten.</value>
+  </data>
+  <data name="RAWs_beim_Entwickeln_automatisch_aufhellen_e01489cf" xml:space="preserve">
+    <value>RAWs beim Entwickeln automatisch aufhellen</value>
+  </data>
+  <data name="RAW_Entwicklung_262a99f9" xml:space="preserve">
+    <value>RAW-Entwicklung</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Betrac_baaac979" xml:space="preserve">
+    <value>Wie RAW-Dateien entwickelt und in Galerie, Betrachter und Editor angezeigt werden.</value>
+  </data>
+  <data name="Hellt_jedes_entwickelte_RAW_automatisch_auf_bis__39c16dfa" xml:space="preserve">
+    <value>Hellt jedes entwickelte RAW automatisch auf, bis die hellsten Bildteile fast weiß sind. Ausgeschaltet entwickelt FerrumPix wie Lightroom: die Tonlage der Aufnahme bleibt erhalten, und eine filmische Basiskurve gibt Mitten, Lichtern und Farben den vertrauten Charakter. Wirkt beim nächsten Öffnen bzw. Neuaufbau der Vorschau.</value>
+  </data>
+  <data name="Automatische_Bildverbesserung_4d6123c8" xml:space="preserve">
+    <value>Automatische Bildverbesserung</value>
+  </data>
+  <data name="Rechte_Maustaste_halten_und_ziehen_c94e797b" xml:space="preserve">
+    <value>Rechte Maustaste (halten und ziehen)</value>
+  </data>
+  <data name="Automatisch_95b51063" xml:space="preserve">
+    <value>Automatisch</value>
+  </data>
+  <data name="Automatische_Bildverbesserung_jedes_Bild_wird_ei_cf05d4b4" xml:space="preserve">
+    <value>Automatische Bildverbesserung: jedes Bild wird einzeln gemessen und die Grundregler werden passend gesetzt</value>
+  </data>
+  <data name="Bearbeitung_ba5ec78a" xml:space="preserve">
+    <value>Bearbeitung</value>
+  </data>
+  <data name="Look_b8db515e" xml:space="preserve">
+    <value>Look</value>
+  </data>
+  <data name="Kein_Look_cea142c2" xml:space="preserve">
+    <value>Kein Look</value>
+  </data>
+  <data name="Kein_Wasserzeichen_26d169c9" xml:space="preserve">
+    <value>Kein Wasserzeichen</value>
+  </data>
+  <data name="Metadaten_04dd4275" xml:space="preserve">
+    <value>Metadaten</value>
+  </data>
+  <data name="Datei_Metadaten_EXIF_bernehmen_aa709748" xml:space="preserve">
+    <value>Datei-Metadaten (EXIF) übernehmen</value>
+  </data>
+  <data name="Jedes_Bild_wird_einzeln_gemessen_und_die_Grundre_25829b43" xml:space="preserve">
+    <value>Jedes Bild wird einzeln gemessen und die Grundregler werden passend gesetzt</value>
+  </data>
+  <data name="Leer_Originalgr_e_23010adf" xml:space="preserve">
+    <value>Leer = Originalgröße</value>
+  </data>
+  <data name="Aufnahmedaten_der_Quelle_Kamera_Zeit_Objektiv_in_df8ac7ae" xml:space="preserve">
+    <value>Aufnahmedaten der Quelle (Kamera, Zeit, Objektiv) in die exportierte Datei schreiben</value>
+  </data>
+  <data name="name_leer_Originalname_behalten_539ded8c" xml:space="preserve">
+    <value>{name} (leer = Originalname behalten)</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_81d2ee85" xml:space="preserve">
+    <value>Muster wie beim Stapel-Umbenennen: {name}, ### (Zähler), {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Exportieren_nach_cd806b98" xml:space="preserve">
+    <value>Exportieren nach...</value>
+  </data>
+  <data name="Exportieren_nach_fdc8937b" xml:space="preserve">
+    <value>Exportieren nach</value>
+  </data>
+  <data name="Exportiere_f97bf5c3" xml:space="preserve">
+    <value>Exportiere…</value>
+  </data>
+  <data name="Stelle_den_Export_zusammen_die_Originale_bleiben_8304193a" xml:space="preserve">
+    <value>Stelle den Export zusammen - die Originale bleiben unangetastet.</value>
+  </data>
+  <data name="Neue_Zeile_mit_Strg_Enter_6ca57482" xml:space="preserve">
+    <value>Neue Zeile mit Strg+Enter</value>
+  </data>
+  <data name="Strg_Enter_b8f703dc" xml:space="preserve">
+    <value>Strg+Enter</value>
+  </data>
+  <data name="Neue_Zeile_im_Text_Objekt_Text_bricht_nie_automa_e8fc07cc" xml:space="preserve">
+    <value>Neue Zeile im Text-Objekt (Text bricht nie automatisch um)</value>
+  </data>
+  <data name="Neue_Zeile_mit_Strg_Enter_oder_Umschalt_Enter_fae9a32e" xml:space="preserve">
+    <value>Neue Zeile mit Strg+Enter oder Umschalt+Enter</value>
+  </data>
+  <data name="Strg_Enter_oder_Umschalt_Enter_08237fda" xml:space="preserve">
+    <value>Strg+Enter oder Umschalt+Enter</value>
+  </data>
+  <data name="Kein_Wasserzeichen_gespeichert_b079d262" xml:space="preserve">
+    <value>Kein Wasserzeichen gespeichert</value>
+  </data>
+  <data name="Jedes_Bild_beh_lt_sein_eigenes_Seitenverh_ltnis__5923eb7b" xml:space="preserve">
+    <value>Jedes Bild behält sein eigenes Seitenverhältnis: ein einzelner Wert begrenzt die längste Kante, zwei Werte sind der Kasten, in den eingepasst wird. Ohne Haken werden die Bilder exakt auf Breite × Höhe gestreckt.</value>
+  </data>
+  <data name="Leer_lassen_wenn_nur_die_andere_Kante_z_hlen_sol_c194dc1e" xml:space="preserve">
+    <value>Leer lassen, wenn nur die andere Kante zählen soll</value>
+  </data>
+  <data name="Nicht_vergr_ern_3a4b9ec8" xml:space="preserve">
+    <value>Nicht vergrößern</value>
+  </data>
+  <data name="Bilder_die_bereits_kleiner_als_die_Zielgr_e_sind_93914153" xml:space="preserve">
+    <value>Bilder, die bereits kleiner als die Zielgröße sind, bleiben unverändert - sonst würden sie hochgerechnet und täuschten Auflösung vor.</value>
+  </data>
+  <data name="Die_gew_hlte_Wasserzeichen_Vorlage_enth_lt_weder_19865bdd" xml:space="preserve">
+    <value>Die gewählte Wasserzeichen-Vorlage enthält weder Text noch Bild.</value>
+  </data>
+  <data name="von_445584ed" xml:space="preserve">
+    <value>von</value>
+  </data>
+  <data name="Datei_en_exportiert_8ffec299" xml:space="preserve">
+    <value>Datei(en) exportiert</value>
+  </data>
+  <data name="BMP_und_GIF_lassen_sich_nicht_zur_ckschreiben_es_5046f9e5" xml:space="preserve">
+    <value>BMP und GIF lassen sich nicht zurückschreiben - es entstehen neue Dateien.</value>
+  </data>
+  <data name="libheif_optional_b3984920" xml:space="preserve">
+    <value>libheif (optional)</value>
+  </data>
+  <data name="Lesen_von_HEIC_HEIF_AVIF_wird_nur_vom_System_gel_ebca6ebf" xml:space="preserve">
+    <value>Lesen von HEIC/HEIF/AVIF - wird nur vom System geladen, nicht mitgeliefert</value>
+  </data>
+  <data name="LGPL_3_0_278977ae" xml:space="preserve">
+    <value>LGPL-3.0</value>
+  </data>
+  <data name="libheif_wird_bewusst_NICHT_mitgeliefert_sondern__6db1660e" xml:space="preserve">
+    <value>libheif wird bewusst NICHT mitgeliefert, sondern nur vom System geladen: HEIC-Dateien sind meist HEVC-kodiert, und die Entscheidung über einen HEVC-Dekoder trifft die Distribution. Fehlt libheif, bleiben HEIC/AVIF-Dateien einfach ungeöffnet - alles andere arbeitet unverändert.</value>
+  </data>
+  <data name="TIFF_Dateien_lesen_5bf61045" xml:space="preserve">
+    <value>TIFF-Dateien lesen</value>
+  </data>
+  <data name="BSD_3_Clause_d6f9c69f" xml:space="preserve">
+    <value>BSD-3-Clause</value>
+  </data>
+  <data name="BitMiracle_LibTiff_NET_2_4_a3abc5f5" xml:space="preserve">
+    <value>BitMiracle.LibTiff.NET 2.4</value>
+  </data>
+  <data name="Maske_30ebc894" xml:space="preserve">
+    <value>Maske</value>
+  </data>
+  <data name="Linearer_Verlauf_f53727f3" xml:space="preserve">
+    <value>Linearer Verlauf</value>
+  </data>
+  <data name="Radialer_Verlauf_f756dcfa" xml:space="preserve">
+    <value>Radialer Verlauf</value>
+  </data>
+  <data name="Stauchung_809d8a8f" xml:space="preserve">
+    <value>Stauchung</value>
+  </data>
+  <data name="Wirkung_umkehren_37f97f10" xml:space="preserve">
+    <value>Wirkung umkehren</value>
+  </data>
+  <data name="Im_Bild_ziehen_um_den_Verlauf_aufzuspannen_Die_G_9cee402f" xml:space="preserve">
+    <value>Im Bild ziehen, um den Verlauf aufzuspannen. Die Griffe bleiben danach greifbar.</value>
+  </data>
+  <data name="Maske_frei_ins_Bild_malen_Hinzuf_gen_und_Abziehe_cbd0dead" xml:space="preserve">
+    <value>Maske frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter</value>
+  </data>
+  <data name="Im_Bild_ziehen_die_Maske_l_uft_vom_Startpunkt_zu_f6f82936" xml:space="preserve">
+    <value>Im Bild ziehen: die Maske läuft vom Startpunkt zum Endpunkt aus. Umschalt rastet die Richtung</value>
+  </data>
+  <data name="Von_der_Mitte_nach_aussen_ziehen_Mit_Umkehren_wi_cc5ca3fe" xml:space="preserve">
+    <value>Von der Mitte nach aussen ziehen. Mit „Umkehren“ wirkt die Maske aussen statt innen</value>
+  </data>
+  <data name="Neue_Maske_beginnen_8e8c0280" xml:space="preserve">
+    <value>Neue Maske beginnen</value>
+  </data>
+  <data name="Zur_Maske_hinzuf_gen_3350fe0d" xml:space="preserve">
+    <value>Zur Maske hinzufügen</value>
+  </data>
+  <data name="Von_der_Maske_abziehen_6538dcaf" xml:space="preserve">
+    <value>Von der Maske abziehen</value>
+  </data>
+  <data name="Maske_umkehren_6436cc9c" xml:space="preserve">
+    <value>Maske umkehren</value>
+  </data>
+  <data name="Maske_verwerfen_Strg_D_oder_Esc_d8fce8b8" xml:space="preserve">
+    <value>Maske verwerfen (Strg+D oder Esc)</value>
+  </data>
+  <data name="L_sst_den_Maskenrand_ber_die_angegebene_Anzahl_B_54f093a8" xml:space="preserve">
+    <value>Lässt den Maskenrand über die angegebene Anzahl Bildpixel weich auslaufen (0 = harte Kante)</value>
+  </data>
+  <data name="Aus_der_gemalten_Maske_eine_Korrekturebene_erste_21dce517" xml:space="preserve">
+    <value>Aus der gemalten Maske eine Korrekturebene erstellen</value>
+  </data>
+  <data name="Wie_weit_der_Verlauf_zwischen_voller_und_keiner__ed5c5e3b" xml:space="preserve">
+    <value>Wie weit der Verlauf zwischen voller und keiner Wirkung ausläuft. Klein = harte Kante, gross = sanft über die ganze Strecke</value>
+  </data>
+  <data name="Verh_ltnis_der_beiden_Halbachsen_1_00_ist_ein_Kr_b5f6ec44" xml:space="preserve">
+    <value>Verhältnis der beiden Halbachsen: 1,00 ist ein Kreis, darunter wird die Ellipse flach</value>
+  </data>
+  <data name="Tauscht_gedeckte_und_freie_Seite_beim_radialen_V_c26e878a" xml:space="preserve">
+    <value>Tauscht gedeckte und freie Seite - beim radialen Verlauf wirkt die Korrektur dann aussen statt innen</value>
+  </data>
+  <data name="Breite_des_Wasserzeichens_in_Bildpunkten_379de9a6" xml:space="preserve">
+    <value>Breite des Wasserzeichens in Bildpunkten</value>
+  </data>
+  <data name="Bei_gesperrtem_Seitenverh_ltnis_ergibt_sich_die__befc24c8" xml:space="preserve">
+    <value>Bei gesperrtem Seitenverhältnis ergibt sich die Höhe aus der Breite</value>
+  </data>
+  <data name="Die_H_he_folgt_der_Breite_im_Verh_ltnis_der_Vorl_deb82f5f" xml:space="preserve">
+    <value>Die Höhe folgt der Breite im Verhältnis der Vorlage. Aus: Breite und Höhe lassen sich getrennt setzen, das Wasserzeichen wird dabei verzerrt.</value>
+  </data>
+  <data name="Breite_des_Wasserzeichens_in_Bildpunkten_Die_H_h_8ea0860c" xml:space="preserve">
+    <value>Breite des Wasserzeichens in Bildpunkten. Die Höhe folgt dem Seitenverhältnis der Vorlage.</value>
+  </data>
+  <data name="Errechnet_aus_der_Breite_und_dem_Seitenverh_ltni_0fe6e266" xml:space="preserve">
+    <value>Errechnet aus der Breite und dem Seitenverhältnis der Vorlage</value>
+  </data>
+  <data name="Aufnahmedaten_der_Quelle_Kamera_Zeit_Objektiv_in_95f34251" xml:space="preserve">
+    <value>Aufnahmedaten der Quelle (Kamera, Zeit, Objektiv) in die Zieldatei schreiben</value>
+  </data>
+  <data name="Anpassungen_kopieren_f31a9184" xml:space="preserve">
+    <value>Anpassungen kopieren</value>
+  </data>
+  <data name="Anpassungen_einf_gen_1bf8d44d" xml:space="preserve">
+    <value>Anpassungen einfügen</value>
+  </data>
+  <data name="Anpassungen_kopiert_2702a48b" xml:space="preserve">
+    <value>Anpassungen kopiert</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_7a30b501" xml:space="preserve">
+    <value>Anpassungen eingefügt</value>
+  </data>
+  <data name="Anpassen_Farbe_Details_und_Effekte_dieses_Bildes_e25c4fab" xml:space="preserve">
+    <value>Anpassen, Farbe, Details und Effekte dieses Bildes merken - Zuschnitt, Objekte und Masken bleiben außen vor</value>
+  </data>
+  <data name="Die_gemerkten_Anpassungen_auf_dieses_Bild_anwend_ad37e4f4" xml:space="preserve">
+    <value>Die gemerkten Anpassungen auf dieses Bild anwenden</value>
+  </data>
+  <data name="Diese_Auswahl_l_sst_sich_nicht_zur_ckschreiben_e_9871eda0" xml:space="preserve">
+    <value>Diese Auswahl lässt sich nicht zurückschreiben - es entstehen neue Dateien.</value>
+  </data>
+  <data name="RAWs_ohne_Bearbeitung_im_Stapel_entwickeln_c6f05b13" xml:space="preserve">
+    <value>RAWs ohne Bearbeitung im Stapel entwickeln</value>
+  </data>
+  <data name="Stapelfunktionen_wie_Bildgr_e_ndern_oder_Exporti_a431c120" xml:space="preserve">
+    <value>Stapelfunktionen wie Bildgröße ändern oder Exportieren nach entwickeln RAWs in voller Sensorauflösung. Ausgeschaltet nehmen sie für unbearbeitete RAWs die eingebettete Vorschau – schneller, aber kleiner. RAWs MIT Bearbeitung (.fpxmp) werden unabhängig davon immer entwickelt und mit ihrem Rezept geschrieben.</value>
+  </data>
 </root>

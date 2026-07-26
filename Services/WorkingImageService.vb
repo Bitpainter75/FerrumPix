@@ -3,8 +3,7 @@ Imports SkiaSharp
 Namespace Services
 
     ''' <summary>
-    ''' Das ARBEITSBILD des Editors (Umbau 2026-07-17, Plan Stufen A-G, siehe
-    ''' EDITOR_RENDERING_NOTES.md): das voll aufgelöste Bild, in das Retusche,
+    ''' Das ARBEITSBILD des Editors: das voll aufgelöste Bild, in das Retusche,
     ''' Pinsel-/Radiererstriche und gerasterte Ebenen einmalig REGIONAL eingebacken werden,
     ''' statt sie bei jedem Render aus dem Rezept neu abzuspielen. Die Editor-Vorschau ist
     ''' eine Herunterskalierung dieses Bildes; Export/Zoom-Detail lesen es direkt.
@@ -48,8 +47,8 @@ Namespace Services
         Implements IDisposable
 
         ''' RAM-Deckel für Undo-Patches (Vorher-Ausschnitte). Beim Überschreiten fliegt der
-        ''' ÄLTESTE Patch - dessen Zug ist dann pixel-final (bewusste Nutzerentscheidung
-        ''' 2026-07-17: Undo-Tiefe gegen Speicher, wie die History-Grenze in Photoshop).
+        ''' ÄLTESTE Patch - dessen Zug ist dann pixel-final (bewusste Abwägung:
+        ''' Undo-Tiefe gegen Speicher, wie die Verlaufsgrenze in gängigen Bildbearbeitungen).
         ''' Feld statt Konstante: die Diagnose senkt den Deckel per Reflexion, um die
         ''' Verdrängung ohne Riesen-Bitmaps zu prüfen.
         Friend Shared _patchBudgetBytes As Long = 384L * 1024L * 1024L
@@ -79,7 +78,7 @@ Namespace Services
             ' JPEG & Co. dekodieren als AlphaType.Opaque. Der Radierer schreibt in so ein Bitmap
             ' zwar Alpha-Bytes (Anzeige und Composite-Render stimmen deshalb), aber der direkte
             ' PNG-Encode in EncodeFullPng verwirft sie wieder - die retouch.png der .fpx verlor
-            ' so die Radierer-Transparenz (Nutzer-Befund 2026-07-17, nur bei JPG-Basisbild).
+            ' so die Radierer-Transparenz (nur bei JPG-Basisbild).
             ' Das Arbeitsbild muss jederzeit Löcher können: hier einmalig auf Premul normalisieren.
             If fullBitmap.AlphaType = SKAlphaType.Opaque Then
                 ' Den FARBTYP erhalten und nur den Alphatyp normalisieren. Vorher stand hier hart
@@ -312,7 +311,7 @@ Namespace Services
                 Try
                     draw(_full)
                 Catch
-                    ' Wirft der Callback (Audit 2026-07-22), war das Arbeitsbild vorher TEILWEISE
+                    ' Wirft der Callback, war das Arbeitsbild vorher TEILWEISE
                     ' beschrieben, ohne dass Version/Vorschau nachzogen - Anzeige und Arbeitsbild
                     ' liefen still auseinander, und der Vorher-Patch leckte. Deshalb: Region aus
                     ' dem Vorher-Ausschnitt exakt zurücksetzen (Src-Blend inkl. Alpha), Patch

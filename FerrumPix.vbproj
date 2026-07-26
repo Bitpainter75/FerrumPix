@@ -5,10 +5,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>FerrumPix</RootNamespace>
     <AssemblyName>FerrumPix</AssemblyName>
-    <Version>0.9.12</Version>
-    <AssemblyVersion>0.9.12.0</AssemblyVersion>
-    <FileVersion>0.9.12.0</FileVersion>
-    <InformationalVersion>0.9.12</InformationalVersion>
+    <Version>0.9.13</Version>
+    <AssemblyVersion>0.9.13.0</AssemblyVersion>
+    <FileVersion>0.9.13.0</FileVersion>
+    <InformationalVersion>0.9.13</InformationalVersion>
     <Nullable>enable</Nullable>
     <PublishTrimmed>false</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
@@ -33,6 +33,9 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
+    <!-- TIFF lesen: SkiaSharp kann das Format nicht. Rein verwaltet (kein natives Beiwerk),
+         BSD-3-Clause und damit mit der GPL-3 der Anwendung vertraeglich. -->
+    <PackageReference Include="BitMiracle.LibTiff.NET" Version="2.4.660" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
     <PackageReference Include="Svg.Skia" Version="5.1.1" />
   </ItemGroup>

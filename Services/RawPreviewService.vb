@@ -14,7 +14,7 @@ Namespace Services
         ''' <summary>DIE kanonische Liste der RAW-Endungen - alle anderen Stellen (Galerie,
         ''' Betrachter, Transparenzpruefung, Diagnose) leiten davon ab, statt eigene Kopien zu
         ''' fuehren. Beim PSD-Einbau waren fuenf getrennte Listen zu pflegen, das driftet
-        ''' zwangslaeufig auseinander (2026-07-19).
+        ''' zwangslaeufig auseinander.
         ''' Der Umfang folgt dem, was LibRaw dekodieren kann; ohne LibRaw greift fuer alle
         ''' dieselbe eingebettete JPEG-Vorschau, die formatunabhaengig gesucht wird.
         ''' ".raw" ist mit dabei (Leica/Panasonic): die Endung ist generisch, eine gleichnamige
@@ -48,7 +48,7 @@ Namespace Services
         ''' Scanner (er sucht das GROESSTE eingebettete JPEG - fuer die Anzeige zaehlt Aufloesung),
         ''' sonst LibRaws Thumbnail-API. Der Rueckfall ist nicht theoretisch: Leica-DNGs betten kein
         ''' vom Scanner auffindbares JPEG ein, dort blieb die Anzeige sonst leer (gemessen
-        ''' 2026-07-19). Umgekehrte Reihenfolge als bei den Galerie-Kacheln, wo LibRaw zuerst
+        '''). Umgekehrte Reihenfolge als bei den Galerie-Kacheln, wo LibRaw zuerst
         ''' kommt - dort zaehlt Tempo, nicht Aufloesung.</summary>
         Public Shared Function ExtractPreviewWithFallback(filePath As String) As MemoryStream
             Dim scanned = ExtractPreview(filePath)
@@ -65,7 +65,7 @@ Namespace Services
             ' Bildschirmgroesse gezogen. Die Leica M8 legt als einzige Vorschau ein 320x240-TIFF ab
             ' (kein JPEG, der Scanner findet also nichts); LibRaws Thumb-API lieferte genau dieses
             ' Miniaturbild, und WEIL sie etwas lieferte, wurde nie entwickelt - der Betrachter zeigte
-            ' 320x240 formatfuellend hochskaliert (Nutzer-Befund 2026-07-20).
+            ' 320x240 formatfuellend hochskaliert.
             Dim developed = RawDecodeService.TryRenderPreviewPng(filePath)
             If developed IsNot Nothing AndAlso developed.Length > 0 Then
                 scanned?.Dispose()

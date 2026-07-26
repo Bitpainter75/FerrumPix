@@ -5,7 +5,7 @@ Imports SkiaSharp
 Namespace Services
 
     ''' <summary>
-    ''' Die verschmolzene Gleitkomma-Tonwertkette (Umbau 2026-07-20).
+    ''' Die verschmolzene Gleitkomma-Tonwertkette.
     '''
     ''' PROBLEM: In ProcessBitmapBase liefen acht Farbstufen NACHEINANDER, jede erzeugte ein neues
     ''' 8-Bit-Bitmap und rundete dabei. Der Verlust summiert sich - gemessen an einem Verlauf durch
@@ -24,7 +24,7 @@ Namespace Services
     ''' DREI REGELN, die den Umbau tragen:
     '''  1. KLEMMUNGEN BLEIBEN, exakt an den heutigen Stellen. Jede Altstufe klemmt implizit auf
     '''     [0,1], weil sie ein 8-Bit-Bitmap erzeugt; Skia klemmt zusaetzlich zwischen Farbmatrix und
-    '''     Tabelle (gemessen 2026-07-20). Sie wegzulassen aendert das Bild sichtbar - die
+    '''     Tabelle (gemessen). Sie wegzulassen aendert das Bild sichtbar - die
     '''     Kontrast-Presets mit negativem Offset und Saettigungsmatrizen ueber 1 laufen regelmaessig
     '''     aus dem Bereich.
     '''  2. ALPHA einheitlich korrekt: entpremultiplizieren, rechnen, premultiplizieren. Die alten
@@ -467,7 +467,7 @@ Namespace Services
                 End If
 
                 If includeTonal Then
-                    ' Grundton-Kaskade an Adobe PV2012 angenaehert (2026-07-24). ALT war fehlerhaft:
+                    ' Grundton-Kaskade an Adobe PV2012 angenaehert. ALT war fehlerhaft:
                     ' Lichter/Tiefen waren schmale Dreiecke um 0.75/0.25 -> die Extreme (reine Lichter,
                     ' tiefe Schatten) blieben UNBERUEHRT, die Wirkung staute sich auf den 1/4-/3/4-Ton
                     ' (Lichter=-100 zog 192->104, sichtbare Mitten-Delle). Schwarz/Weiss waren Rampen*0.4
@@ -481,12 +481,21 @@ Namespace Services
                     Dim wWhites = ToneSmoothFade((d0 - 0.5) / 0.5)    ' 0 bis d=0.5, 1 bei Weiss
                     Dim wShadows = ToneCosBump(d0, 0.28, 0.5)         ' breiter Bauch, deckt 0..0.78
                     Dim wHighlights = ToneCosBump(d0, 0.72, 0.5)      ' breiter Bauch, deckt 0.22..1
-                    Dim d = d0 _
-                        + (adj.Blacks / 100.0) * wBlacks * 0.28 _
+                    Dim lift = (adj.Blacks / 100.0) * wBlacks * 0.28 _
                         + (adj.ShadowsLevel / 100.0) * wShadows * 0.2 _
                         + (adj.Whites / 100.0) * wWhites * 0.28 _
                         + (adj.Highlights / 100.0) * wHighlights * 0.2
-                    v = Clamp(CSng(d), 0.0F, 1.0F)
+                    ' SCHWARZ BLEIBT FESTGENAGELT: eine positive Anhebung war bisher am
+                    ' Punkt d0=0 ein reiner OFFSET (wBlacks=1 dort) - Blacks +25 / Shadows +43 hoben
+                    ' reines Schwarz auf ~0.10, die dahinterliegende steile Kurvenzone machte 0.19
+                    ' daraus. Gemessen an echten Lightroom-Exporten desselben Presets bleibt Adobes
+                    ' Schwarzboden dagegen EXAKT am Fusspunkt der Tonwertkurve: positive Blacks/
+                    ' Shadows STRECKEN die Tiefen aus dem Schwarz heraus, sie verschieben es nicht.
+                    ' Deshalb laeuft eine positive Anhebung unter d0=0.1 glatt auf null aus. NUR die
+                    ' positive Richtung: negatives Absenken DARF bis in den Boden druecken
+                    ' (Schwarz-Crush), die Klemmung haelt f(0)=0 dort von selbst.
+                    If lift > 0.0 Then lift *= ToneSmoothFade(d0 / 0.1)
+                    v = Clamp(CSng(d0 + lift), 0.0F, 1.0F)
                 End If
 
                 If includeRgbCurve Then
@@ -543,7 +552,7 @@ Namespace Services
         ''' <summary>Geordnete 8x8-Bayer-Matrix, auf [-0.5, +0.5) normiert. Amplitude also genau
         ''' 1 LSB, Mittelwert 0 - der Rundungsfehler wird raeumlich verteilt statt aufaddiert.
         ''' Positionsbasiert und damit zeilenunabhaengig und deterministisch: Pflicht, weil die
-        ''' Kette unter Parallel.For laeuft und die Diagnose (Abschnitt C) Bitgleichheit prueft.</summary>
+        ''' Kette unter Parallel.For laeuft und wiederholte Laeufe bitgleich sein muessen.</summary>
         Private Shared ReadOnly DitherMatrix As Single() = BuildBayer8()
 
         Private Shared Function BuildBayer8() As Single()
@@ -629,6 +638,42 @@ Namespace Services
         ' 44,999998, das Pixel faellt von Gelb nach Orange und weicht um 27 Tonwerte ab.
         ' Der Gewinn dieser Stufe liegt ohnehin im Wegfall der BYTE-Zwischenstufe, nicht in Single.
 
+        ''' <summary>Kennlinie der HSL-Band-Regler für Sättigung und Luminanz. <paramref name="amount"/>
+        ''' ist der Reglerwert geteilt durch 100 und mit der Chroma gewichtet, liegt also in [-1, 1];
+        ''' <paramref name="value"/> ist S bzw. L in [0, 1]. Ergebnis bleibt ohne Klemmung in [0, 1].
+        '''
+        ''' NACH OBEN: <c>v · (1 + a·(1−v))</c> - multiplikativ am unteren Ende, auslaufend zum
+        ''' Endwert. Die Kennlinie hat hier zwei Fehler hinter sich, je einer pro Ende:
+        ''' 1. URSPRUENGLICH stand hier <c>v · (1+a)</c> mit Kappung auf 1 - das brannte Farben AUS
+        '''    (Luminanz +50: jedes Pixel ab L 0,67 wurde exakt Weiss, eine plattgedrueckte Flaeche
+        '''    ohne Binnenzeichnung; bei der Saettigung kippte mit der Kappung auch der Farbton).
+        ''' 2. Der ERSTE Fix interpolierte linear zum Endwert (<c>v + (1−v)·a</c>) - der hob dafuer
+        '''    SCHWARZ an: f(0) = a, ein dunkles sattes Pixel (L 0,05) sprang bei +28 auf 0,32.
+        '''    Gemessen am Konzertfoto-Vergleich: die Magenta/Purpur-Buehnenlichter hoben
+        '''    den ganzen dunklen Hintergrund an, waehrend Lightrooms Schwarzboden exakt am
+        '''    Kurven-Fusspunkt blieb - Adobes Regler nageln Schwarz fest.
+        ''' Die Parabel erfuellt beide Enden: f(0) = 0 (Schwarz bleibt Schwarz, unten wirkt sie wie
+        ''' die Multiplikation), f(1) = 1 mit Steigung 1−a (laeuft weich aus statt zu klemmen),
+        ''' monoton fuer |a| <= 1 (f' = 1 + a − 2av >= 1 − a >= 0). Kein gekappter Bereich, Verlaeufe
+        ''' bleiben ueberall unterscheidbar.
+        '''
+        ''' NACH UNTEN bleibt die Multiplikation gegen 0 (<c>v · (1+a)</c>). Sie kann nicht klemmen
+        ''' (amount >= -1) und war immer richtig. Beide Zweige treffen sich bei a = 0 im Wert; die
+        ''' Reglersteigung springt dort minimal (1·(1−v)-Faktor nur auf der Plusseite) - das liegt in
+        ''' der REGLER-Achse, das Bild bleibt fuer jede Reglerstellung stetig.
+        '''
+        ''' EICHUNG GEGEN ADOBE: ±100 bedeutet damit wie bei Adobe "volle Wirkung", der Import
+        ''' uebernimmt SaturationAdjustment*/LuminanceAdjustment*/GrayMixer* weiterhin 1:1 (nur der
+        ''' Farbton braucht HueImportScale).</summary>
+        Private Shared Function ApplyHslBandGain(value As Double, amount As Double) As Double
+            ' Die Parabel ist nur fuer |amount| <= 1 randtreu (f(1)=1). Der Preset-Import klemmt
+            ' auf +-100, eine handbearbeitete .fpx/.fpxmp kann aber mehr enthalten - dann liefe
+            ' das Ergebnis ueber 1 und HslToRgbF darueber aus dem Wertebereich.
+            If amount > 1.0 Then amount = 1.0 Else If amount < -1.0 Then amount = -1.0
+            If amount >= 0.0 Then Return value * (1.0 + amount * (1.0 - value))
+            Return value * (1.0 + amount)
+        End Function
+
         Private Shared Sub RgbToHslF(r As Double, g As Double, b As Double,
                                      ByRef h As Double, ByRef s As Double, ByRef l As Double)
             Dim maxV = Math.Max(r, Math.Max(g, b))
@@ -702,7 +747,7 @@ Namespace Services
         ''' <summary>Liest einen Pixel aus einem geliehenen Puffer GENAU so, wie SKBitmap.GetPixel es
         ''' liefert: entpremultipliziert.
         '''
-        ''' Gemessen 2026-07-20: gespeichert (100,50,25,128) gibt GetPixel als (199,100,50,128)
+        ''' Gemessen: gespeichert (100,50,25,128) gibt GetPixel als (199,100,50,128)
         ''' zurueck. Wer eine Stufe von GetPixel/SetPixel auf Rohpuffer umstellt und das uebersieht,
         ''' aendert das Bild bei jedem teiltransparenten Pixel - lautlos.</summary>
         Friend Shared Sub ReadUnpremultiplied(buf As Byte(), o As Integer, ri As Integer, gi As Integer, bi As Integer, ai As Integer,
@@ -745,10 +790,11 @@ Namespace Services
             Dim stride, ri, gi, bi, ai As Integer
             If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return source
 
-            ' 16-Bit-Quelle (echte RAW-Entwicklung): gelesen wird mit voller Praezision, geschrieben
-            ' immer 8 Bit. Der Gewinn liegt darin, dass die GANZE Farbkette auf den feinen Werten
-            ' rechnet und erst am Ende einmal quantisiert - gemessen tragen die 16 Bit im
-            ' Schattenbereich 23- bis 31-mal so viele unterscheidbare Stufen wie 8 Bit.
+            ' Quellen sind IMMER 8 Bit (Bgra8888/Rgba8888; TryBorrowRgbaLikeBuffer lehnt anderes ab
+            ' und die Kette laesst die Quelle dann unveraendert). Ein 16-Bit-Arbeitsbild wurde
+            ' gebaut, gemessen und wieder ausgebaut (siehe Rendering-Notizen Abschnitt 8) - der
+            ' Gewinn lag nicht in der Bittiefe der Quelle, sondern darin, dass diese Kette
+            ' ZWISCHENDURCH nicht mehr quantisiert.
             ' Premul oder nicht? Das entscheidet, ob RGB vor dem Rechnen durch Alpha geteilt werden
             ' muss. Vorher wurde IMMER geteilt und am Ende wieder multipliziert - bei einer
             ' Unpremul-Quelle (PSD mit Transparenz, ICO) ergab das gemessen (128,98,24) statt der
@@ -786,6 +832,9 @@ Namespace Services
             Dim cube = chain.CubeTable
             Dim cubeSize = chain.CubeSize
             Dim cubeStrength = chain.CubeStrength
+            ' Einmal ausserhalb der Pixelschleife entschieden (schleifeninvariant).
+            Dim hslBlockAktiv = lumCurve IsNot Nothing OrElse hslAdj IsNot Nothing OrElse
+                                splitAdj IsNot Nothing OrElse vibrance <> 0.0F
 
             ForEachRow(width, source.Height,
                 Sub(y)
@@ -846,7 +895,50 @@ Namespace Services
                         End If
 
                         ' --- 3. Verschmolzene Skalarkette (Ton + Tonwerte + RGB-/Kanalkurven) ---
+                        ' Die HSL-Saettigung VOR der Tonstufe festhalten: die per-Kanal-Kurven
+                        ' duerfen sie nach unten nicht druecken (Restore unten). Gemessen am
+                        ' Adobe-Referenz-Render (DCP-Basis, DNG-SDK-Reihenfolge) desselben Fotos:
+                        ' Lightrooms Grundabstimmung hebt die Tiefen mit KOMPRESSIVER Steigung
+                        ' (~0,6) und verdoppelt dabei trotzdem die Chroma - das geht nur, wenn die
+                        ' Tonstufen sich konstant-S verhalten (Chroma waechst mit der Hebung mit).
+                        ' Unsere per-Kanal-Anwendung skaliert die Chroma dagegen mit der Steigung
+                        ' und entsaettigte die Tiefen (0,059 gegen LRs 0,106 am Konzertfoto).
+                        ' NUR nach unten begrenzen: wo die Kurve die Saettigung ERHOEHT (S-Kurven-
+                        ' Kontrast in den Mitten), bleibt die per-Kanal-Wirkung erhalten. Und NUR
+                        ' fuer die TIEFEN (Gewicht 1 unter L 0,10, smoothstep auslaufend bis 0,25):
+                        ' der Vergleich traegt nur den Schatten-Lift als konstant-S; ein globaler
+                        ' Restore uebersaettigte gemessen die Mitten (Bin 0,2-0,3: 0,169 gegen LRs
+                        ' 0,067), wo Lightroom der per-Kanal-Senkung des Presets folgt.
+                        '
+                        ' CHROMA-TOR ist Pflicht: HSL-S ist in den Tiefen riesig,
+                        ' obwohl kaum Farbe da ist - ein fast schwarzes Pixel (4,0,0) hat S = 1,0.
+                        ' Ohne Tor haette der Restore aus einem einzelnen Sensor-LSB nach der
+                        ' Aufhellung gesaettigtes Rot gemacht ((61,0,0) statt (31,30,30)). Getort
+                        ' wird an der ECHTEN Chroma (max-min), die in HSL genau der Zaehler von S
+                        ' ist: dunkles Teal (10,25,25) hat 0,059 und kommt voll durch, ein LSB
+                        ' Rauschen 0,016 und bleibt draussen.
+                        Dim satVorTon As Double = 0.0
                         If sr IsNot Nothing Then
+                            ' S und L direkt aus max/min statt ueber RgbToHslF: der Farbton wird hier
+                            ' nicht gebraucht, und diese Stufe laeuft bei JEDER Tonbearbeitung.
+                            Dim vMax = If(rr > gg, If(rr > bb, rr, bb), If(gg > bb, gg, bb))
+                            Dim vMin = If(rr < gg, If(rr < bb, rr, bb), If(gg < bb, gg, bb))
+                            Dim lVor = (vMax + vMin) / 2.0
+                            Dim chromaVor = vMax - vMin
+                            If lVor < 0.25 AndAlso chromaVor > 0.02 Then
+                                Dim nenner = 1.0 - Math.Abs(2.0 * lVor - 1.0)
+                                If nenner > 0.00001 Then
+                                    satVorTon = chromaVor / nenner
+                                    Dim torC = Math.Min(1.0, (chromaVor - 0.02) / 0.04)
+                                    torC = torC * torC * (3.0 - 2.0 * torC)
+                                    Dim tFade = 1.0
+                                    If lVor > 0.1 Then
+                                        tFade = 1.0 - (lVor - 0.1) / 0.15
+                                        tFade = tFade * tFade * (3.0 - 2.0 * tFade)
+                                    End If
+                                    satVorTon *= torC * tFade
+                                End If
+                            End If
                             rr = SampleTable(sr, rr)
                             gg = SampleTable(sg, gg)
                             bb = SampleTable(sb, bb)
@@ -856,9 +948,12 @@ Namespace Services
                         ' Alle drei brauchen HSL. Der Roundtrip wird deshalb EINMAL gemacht statt
                         ' dreimal - in der alten Pipeline lief er pro Stufe erneut, jedes Mal ueber
                         ' Bytes und mit eigener Rundung.
-                        If lumCurve IsNot Nothing OrElse hslAdj IsNot Nothing OrElse splitAdj IsNot Nothing OrElse vibrance <> 0.0F Then
+                        If hslBlockAktiv Then
                             Dim h As Double, sat As Double, lum As Double
                             RgbToHslF(rr, gg, bb, h, sat, lum)
+
+                            ' Saettigungs-Restore der Tonstufe (siehe Kommentar an Stufe 3).
+                            If sat < satVorTon Then sat = satVorTon
 
                             If lumCurve IsNot Nothing Then
                                 lum = SampleTable(lumCurve, Clamp(CSng(lum), 0.0F, 1.0F))
@@ -876,18 +971,29 @@ Namespace Services
                             If hslAdj IsNot Nothing Then
                                 Dim hueShift As Single = 0, satShift As Single = 0, lumShift As Single = 0
                                 GetHslBandAdjustments(h, hslAdj, hueShift, satShift, lumShift)
-                                ' Bandwirkung mit der Chroma GEWICHTEN (Audit 2026-07-22): ein neutrales
-                                ' Grau hat keinen Farbton, bekam aber ueber h=0 die volle LUMINANZ des
-                                ' Rot-Bands ab (nur satShift war durch sat*x=0 automatisch neutral) -
-                                ' der Regler "Rot -> Luminanz" verschob damit alle Grauflaechen, und bei
+                                ' Bandwirkung mit der Chroma GEWICHTEN: ein neutrales Grau hat keinen
+                                ' Farbton, bekam aber ueber h=0 die volle LUMINANZ des Rot-Bands ab (nur
+                                ' satShift war durch sat*x=0 automatisch neutral) - der Regler
+                                ' "Rot -> Luminanz" verschob damit alle Grauflaechen, und bei
                                 ' fast-neutralen Pixeln entschied das Rauschen, welches Band greift
-                                ' (fleckige Flaechen). Ab 10 % Saettigung volle Wirkung; Smoothstep,
-                                ' damit die Schwelle keine sichtbare Kante zieht.
+                                ' (fleckige Flaechen). Smoothstep, damit die Schwelle keine Kante zieht.
+                                '
+                                ' ZWEI Tore statt einem: fuer FARBTON/SAETTIGUNG zaehlt die ECHTE
+                                ' CHROMA - HSL-S ist in Tiefen/Lichtern riesig, obwohl kaum Farbe da
+                                ' ist (dunkles Teal 10/25/25: S 0,43, Chroma 0,06), der Mischer
+                                ' entsaettigte dort voll. Dunkles Rauschen ist die Fehlerklasse dieses
+                                ' Tors: S rauscht dort gross, C bleibt klein. Die LUMINANZ behaelt das
+                                ' alte S-Tor: ein C-Tor hebelte gemessen die dunklen Luminanzbaender
+                                ' (Aqua -43) mit aus und kippte die Tonlage (P50 0,091 -> 0,110). In
+                                ' den Mitten ist C ~ S, dort aendert sich praktisch nichts.
+                                Dim chromaC = sat * (1.0 - Math.Abs(2.0 * lum - 1.0))
+                                Dim gateCs = Math.Min(1.0, chromaC / 0.2)
+                                gateCs = gateCs * gateCs * (3.0 - 2.0 * gateCs)
                                 Dim chromaW = Math.Min(1.0, sat / 0.1)
                                 chromaW = chromaW * chromaW * (3.0 - 2.0 * chromaW)
-                                h = (h + hueShift * chromaW + 360.0) Mod 360.0
-                                sat = Math.Max(0.0, Math.Min(1.0, sat * (1.0 + satShift * chromaW / 100.0)))
-                                lum = Math.Max(0.0, Math.Min(1.0, lum * (1.0 + lumShift * chromaW / 100.0)))
+                                h = (h + hueShift * gateCs + 360.0) Mod 360.0
+                                sat = ApplyHslBandGain(sat, satShift * gateCs / 100.0)
+                                lum = ApplyHslBandGain(lum, lumShift * chromaW / 100.0)
                             End If
 
                             ' --- Farbgradierung: Zonengewichte ---
@@ -947,6 +1053,18 @@ Namespace Services
                                 rr = Clamp(rr, 0.0F, 1.0F)
                                 gg = Clamp(gg, 0.0F, 1.0F)
                                 bb = Clamp(bb, 0.0F, 1.0F)
+                            End If
+                        ElseIf sr IsNot Nothing AndAlso satVorTon > 0.0 Then
+                            ' Saettigungs-Restore auch OHNE HSL-Stufen (reine Ton-Bearbeitung).
+                            ' Der HSL-Roundtrip laeuft nur fuer Pixel, die das Chroma-Tor oben
+                            ' ueberhaupt passiert haben - fuer alle anderen (die grosse Mehrheit)
+                            ' bleibt der Pfad bitgleich UND kostenfrei.
+                            Dim hN As Double, sN As Double, lN As Double
+                            RgbToHslF(rr, gg, bb, hN, sN, lN)
+                            If sN < satVorTon Then
+                                Dim wr As Double, wg As Double, wb As Double
+                                HslToRgbF(hN, satVorTon, lN, wr, wg, wb)
+                                rr = CSng(wr) : gg = CSng(wg) : bb = CSng(wb)
                             End If
                         End If
 

@@ -32,7 +32,7 @@
             <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <NumericUpDown Classes="combo-like" Grid.Column="1"
+                <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding ResizeWidth}" Minimum="0" Maximum="50000"
                                Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
@@ -42,7 +42,7 @@
             <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <NumericUpDown Classes="combo-like" Grid.Column="1"
+                <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding ResizeHeight}" Minimum="0" Maximum="50000"
                                Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
@@ -175,7 +175,7 @@
                     <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                         <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <NumericUpDown Classes="combo-like" Grid.Column="1"
+                        <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                        Value="{Binding CanvasWidth}" Minimum="0" Maximum="50000"
                                        Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                         <TextBlock Grid.Column="2" Text="px"
@@ -185,7 +185,7 @@
                     <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                         <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <NumericUpDown Classes="combo-like" Grid.Column="1"
+                        <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                        Value="{Binding CanvasHeight}" Minimum="0" Maximum="50000"
                                        Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                         <TextBlock Grid.Column="2" Text="px"

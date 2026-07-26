@@ -10,7 +10,7 @@ Namespace Services
     ''' - <see cref="LogAlways"/> (Ablaufspuren, HTTP-Antworten, Renderzeiten) schreibt NUR bei
     '''   eingeschaltetem EnableDiagnosticLogging - im Normalbetrieb soll keine Datei anwachsen.
     ''' - <see cref="LogException"/> schreibt IMMER. Eine unerwartete Ausnahme ist kein Ablauf,
-    '''   sondern ein Fehler: seit die Async-Einstiegspunkte sie abfangen (Audit A4), stürzt die App
+    '''   sondern ein Fehler: seitdem die Async-Einstiegspunkte sie abfangen, stürzt die App
     '''   nicht mehr ab - ohne diese Zeile wäre der Fehler dafür spurlos verschwunden. Die Datei ist
     '''   auf <see cref="MaxErrorLogBytes"/> gedeckelt und wird bei Überschreitung EINMAL rotiert,
     '''   damit daraus nichts Wachsendes wird.

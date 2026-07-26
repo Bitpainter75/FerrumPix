@@ -19,9 +19,9 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - Browse local photo folders with thumbnails, ratings, favorites, tags and saved searches.
 - View photos fullscreen with zoom, pan, filmstrip navigation, metadata and histogram.
 - Edit photos with crop, resize, rotate, color tools, tone curves, filters, text, shapes, symbols, retouch tools, paint tools and selections.
-- Run batch work from the gallery, including rename, convert, resize, watermark, metadata removal and filters.
+- Run batch work from the gallery, including rename, convert, resize, watermark, metadata removal, filters and *Export to*, which combines all of those into one dialog. Every photo format FerrumPix can open works as a source — RAW, PSD, `.fpx`, HEIC, TIFF, BMP and GIF included; formats that cannot be written back simply produce new files instead of offering *Overwrite originals*. A RAW with an `.fpxmp` recipe is developed and processed the way you edited it; whether RAWs without a recipe are developed too is a setting under *RAW development*.
 - Develop RAW files from the sensor data, with automatic sidecar files that keep the original untouched.
-- Work with common image and video formats, including Photoshop files (read-only).
+- Work with common image and video formats — JPEG, PNG, WEBP, BMP, GIF, RAW, and read-only HEIC/HEIF/AVIF, TIFF and Photoshop files.
 - Connect to a self-hosted Immich server for browsing, upload, download, editing and metadata sync.
 
 ## Gallery
@@ -55,7 +55,7 @@ Printing is available from the toolbar or with `Ctrl+P`, using the same dialog a
 The editor covers the most common photo work:
 
 - Create a blank image with `Ctrl+N`: presets for photo, screen and paper sizes, free width and height in mm, cm, inches or pixels at 72–600 dpi, and a white, transparent or coloured background.
-- Crop, resize, rotate, flip and canvas resize.
+- Crop, resize, rotate, flip and canvas resize. On files that keep their edits beside the untouched original — RAW and PSD via their sidecar, `.fpx` inside the bundle — the crop stays a recipe value: the crop tool shows the whole picture, every other tool shows the crop, and it can be widened again at any time. Writable formats such as JPEG and PNG keep the *Apply crop* step, since there the crop really is written into the file.
 - Exposure, brightness, contrast, highlights, shadows, tone curves and white balance.
 - Color tools with HSL, vibrance, saturation, colour grading (four colour wheels for shadows, midtones, highlights and global — double-click a wheel to reset it), camera calibration and colour noise reduction.
 - Automatic enhancement: *Auto* measures the photo and sets exposure, contrast, highlights, shadows, black and white point, vibrance and white balance to values that suit it. The sliders stay editable afterwards, and the filter group's reset button takes the automatic correction back out.
@@ -63,7 +63,9 @@ The editor covers the most common photo work:
 - Film negative conversion for scanned negatives.
 - Text, shapes, symbols, images, QR codes and watermarks. Text can be set bold or italic, spaced out, and placed along an arc, a circle or a wave.
 - Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools. The brush picker offers 13 variants — soft round, pencil, marker, grainy acrylic, sandpaper, smudge, spatter, charcoal, crayon, airbrush, calligraphy, stipple and watercolor.
-- Rectangle, ellipse, lasso and magic wand selections, plus a mask brush with an adjustable soft edge and add/subtract painting. Selections are shown as marching ants, masks as a red overlay.
+- Rectangle, ellipse, lasso and magic wand selections. Selections are shown as marching ants, masks as a red overlay.
+- A separate mask tool with a mask brush (adjustable soft edge, add/subtract painting) and two masks you drag onto the image: a linear gradient that runs a correction out along the drag direction, and a radial one that fades it from a centre, invertible so it acts outside instead of inside. Gradient masks are stored as their geometry, not as painted pixels, so their handles, transition width, angle and — for the radial one — its ellipse can be changed at any time.
+- Copy the adjustments of one image (Adjust, Colour, Details, Effects) and paste them onto another; crop, size, objects and masks are deliberately left out. The copy survives restarts.
 - Turn a selection or mask into a correction layer whose adjustment applies only inside it. The fill tool fills a selection layer with a solid colour or a linear/radial gradient; on a mask layer the fill's brightness grades how strongly the adjustment applies across the mask — and stays editable afterwards.
 - Per object editing with opacity, blend modes, shadows, glow and transform controls.
 - A toggleable Layers panel with the full object stack: per-layer visibility, opacity, blend mode, drag-and-drop reorder, rename (double-click or F2), rasterize (bake a layer into the image so retouching can work on its pixels) and delete, plus the base image as a hideable background layer. Selection and mask correction layers appear with their own name and icon, and every layer's actions are available from the footer or a right-click context menu. Object layers can be grouped (Ctrl+G): a group is one named, collapsible row with its own visibility switch, and picking any member selects the whole group so it moves, scales, rotates and flips as one.
@@ -76,6 +78,8 @@ RAW files are developed from the actual sensor data — full-resolution demosaic
 Slider edits on RAW files are remembered in a small `.fpxmp` sidecar file next to the RAW and re-applied the next time you open it. The RAW itself is never modified. Sidecars travel with the RAW when it is moved, copied, renamed or deleted in FerrumPix. If a RAW carries a Lightroom `.xmp` sidecar with develop settings, they are converted once into an `.fpxmp` recipe so the photo opens the way you left it elsewhere.
 
 Photoshop files (`.psd`/`.psb`) open in the gallery, viewer and editor. FerrumPix reads the flattened composite and never writes them back — *Save* is disabled, *Save as…* exports to the usual formats.
+
+HEIC/HEIF/AVIF (the format current phones photograph in) and TIFF open the same way, read-only. HEIC needs the system's `libheif`, which FerrumPix loads if it is there and does without if it is not — it is deliberately not bundled, because HEIC is usually HEVC-encoded and that decision belongs to the distribution. TIFF needs nothing extra: 8 and 16 bit, greyscale, palette, CMYK, LZW/Deflate/JPEG compression, striped and tiled files are covered (16-bit CMYK is not), and multi-page files show the first page. BMP and GIF (first frame) can be read and processed as well.
 
 Exporting to JPEG/PNG/WEBP writes the result into pixels; while the editor is open, changes can be undone and objects stay editable. Save as a `.fpx` project (or use *Save as* to a normal image) if the original file should stay untouched.
 

@@ -1,6 +1,9 @@
 Namespace ViewModels
 
     Public Class SaveAsDialogResult
+        ''' <summary>Datei-Metadaten (EXIF/XMP) der Quelle in die Zieldatei uebernehmen -
+        ''' der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs.</summary>
+        Public Property PreserveMetadata As Boolean = True
         Public Property BaseName As String
         Public Property Format As String
         Public Property JpgQuality As Integer
@@ -8,12 +11,16 @@ Namespace ViewModels
         Public Property Target As String = "Local"
         Public Property TargetFolder As String = ""
 
-        ''' Einzeloptionen (Nutzerwunsch 2026-07-17): welche Katalog-Metadaten auf die neue
+        ''' Einzeloptionen: welche Katalog-Metadaten auf die neue
         ''' Datei übernommen werden. Standard alles an = bisheriges Verhalten.
         Public Property CopyRating As Boolean = True
         Public Property CopyFavorite As Boolean = True
         Public Property CopyColorLabel As Boolean = True
         Public Property CopyKeywords As Boolean = True
+
+        ''' <summary>Dateinamen-Muster für Stapel-Ziele (leer = Originalname); nur von den
+        ''' Stapel-Dialogen befüllt, der Einzel-Speichern-Dialog hat sein eigenes Namensfeld.</summary>
+        Public Property NamePattern As String = ""
 
         Public ReadOnly Property MetaCopy As CatalogMetaCopyOptions
             Get

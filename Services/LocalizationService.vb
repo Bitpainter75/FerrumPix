@@ -81,7 +81,7 @@ Namespace Services
         End Function
 
         ''' Übersetzt einen Icon-Such-Tag (z.B. den aus dem SVG-Dateinamen abgeleiteten Namen "Stern")
-        ''' über die dedizierte IconTags-Ressource. Fällt wie T() auf den Ausgangstext zurück, wenn
+        ''' über die dedizierte IconTags-Ressource. Fällt wie T auf den Ausgangstext zurück, wenn
         ''' für den Tag noch keine Übersetzung gepflegt wurde.
         Public Shared Function Tag(text As String) As String
             If String.IsNullOrEmpty(text) Then Return text

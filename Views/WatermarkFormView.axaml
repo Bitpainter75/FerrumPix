@@ -1,0 +1,141 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FerrumPix.Views.WatermarkFormView">
+    <!-- Vorlage, Anker und Breite - geteilt zwischen dem Einzeldialog „Wasserzeichen anwenden"
+         und der Sektion im Export-Dialog. Alle Beschriftungsspalten hängen in der Gruppe
+         „DialogLabelColumn", damit die Eingabefelder auf derselben Linie beginnen wie in den
+         Nachbarformularen.
+
+         EINSTELLBAR ist hier nur die Breite; die Höhe läuft als Nur-Lese-Feld daneben mit. Ein
+         eigener Seitenverhältnis-Schalter fehlt bewusst: der steckt in der Wasserzeichen-Vorlage
+         selbst, und dieselbe Sache an zwei Stellen einstellbar zu machen hiesse, zwei Wahrheiten
+         zu pflegen. Die Größenzeile erscheint deshalb auch nur dort, wo sie eindeutig ist: bei
+         einem BILD-Wasserzeichen mit gesperrtem Verhältnis, wo die Höhe zwingend folgt. -->
+    <StackPanel Spacing="10">
+        <Grid ColumnSpacing="14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Wasserzeichen"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding DialogWatermarkPresetNames}"
+                      SelectedItem="{Binding DialogSelectedWatermarkPresetName, Mode=TwoWay}"
+                      PlaceholderText="Kein Wasserzeichen gespeichert"
+                      MinHeight="36"
+                      HorizontalAlignment="Stretch"/>
+        </Grid>
+
+        <Grid ColumnSpacing="14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Anker"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <Border Grid.Column="1"
+                    HorizontalAlignment="Left"
+                    BorderBrush="{DynamicResource FP.Border.Normal}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="8">
+                <Grid Width="84" Height="84" RowDefinitions="*,*,*" ColumnDefinitions="*,*,*">
+                    <Button Grid.Row="0" Grid.Column="0" Classes="anchor-dot" Command="{Binding SetDialogWatermarkAnchorCommand}" CommandParameter="TopLeft">
+                        <Grid>
+                            <Border Classes="anchor-dot-idle" />
+                            <Border Classes="anchor-dot-active" IsVisible="{Binding DialogWatermarkAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=TopLeft}" />
+                        </Grid>
+                    </Button>
+                    <Button Grid.Row="0" Grid.Column="1" Classes="anchor-dot" Command="{Binding SetDialogWatermarkAnchorCommand}" CommandParameter="Top">
+                        <Grid>
+                            <Border Classes="anchor-dot-idle" />
+                            <Border Classes="anchor-dot-active" IsVisible="{Binding DialogWatermarkAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Top}" />
+                        </Grid>
+                    </Button>
+                    <Button Grid.Row="0" Grid.Column="2" Classes="anchor-dot" Command="{Binding SetDialogWatermarkAnchorCommand}" CommandParameter="TopRight">
+                        <Grid>
+                            <Border Classes="anchor-dot-idle" />
+                            <Border Classes="anchor-dot-active" IsVisible="{Binding DialogWatermarkAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=TopRight}" />
+                        </Grid>
+                    </Button>
+                    <Button Grid.Row="1" Grid.Column="0" Classes="anchor-dot" Command="{Binding SetDialogWatermarkAnchorCommand}" CommandParameter="Left">
+                        <Grid>
+                            <Border Classes="anchor-dot-idle" />
+                            <Border Classes="anchor-dot-active" IsVisible="{Binding DialogWatermarkAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Left}" />
+                        </Grid>
+                    </Button>
+                    <Button Grid.Row="1" Grid.Column="1" Classes="anchor-dot" Command="{Binding SetDialogWatermarkAnchorCommand}" CommandParameter="Center">
+                        <Grid>
+                            <Border Classes="anchor-dot-idle" />
+                            <Border Classes="anchor-dot-active" IsVisible="{Binding DialogWatermarkAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Center}" />
+                        </Grid>
+                    </Button>
+                    <Button Grid.Row="1" Grid.Column="2" Classes="anchor-dot" Command="{Binding SetDialogWatermarkAnchorCommand}" CommandParameter="Right">
+                        <Grid>
+                            <Border Classes="anchor-dot-idle" />
+                            <Border Classes="anchor-dot-active" IsVisible="{Binding DialogWatermarkAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Right}" />
+                        </Grid>
+                    </Button>
+                    <Button Grid.Row="2" Grid.Column="0" Classes="anchor-dot" Command="{Binding SetDialogWatermarkAnchorCommand}" CommandParameter="BottomLeft">
+                        <Grid>
+                            <Border Classes="anchor-dot-idle" />
+                            <Border Classes="anchor-dot-active" IsVisible="{Binding DialogWatermarkAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BottomLeft}" />
+                        </Grid>
+                    </Button>
+                    <Button Grid.Row="2" Grid.Column="1" Classes="anchor-dot" Command="{Binding SetDialogWatermarkAnchorCommand}" CommandParameter="Bottom">
+                        <Grid>
+                            <Border Classes="anchor-dot-idle" />
+                            <Border Classes="anchor-dot-active" IsVisible="{Binding DialogWatermarkAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Bottom}" />
+                        </Grid>
+                    </Button>
+                    <Button Grid.Row="2" Grid.Column="2" Classes="anchor-dot" Command="{Binding SetDialogWatermarkAnchorCommand}" CommandParameter="BottomRight">
+                        <Grid>
+                            <Border Classes="anchor-dot-idle" />
+                            <Border Classes="anchor-dot-active" IsVisible="{Binding DialogWatermarkAnchor, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BottomRight}" />
+                        </Grid>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid ColumnSpacing="14" IsVisible="{Binding IsDialogWatermarkWidthVisible}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Größe"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBox Grid.Column="1"
+                     Classes="combo-like"
+                     Text="{Binding DialogWatermarkWidthText, Mode=TwoWay}"
+                     MinHeight="36"
+                     ToolTip.Tip="Breite des Wasserzeichens in Bildpunkten. Die Höhe folgt dem Seitenverhältnis der Vorlage."/>
+            <TextBlock Grid.Column="2" Text="×"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <!-- Nur Anzeige: die Höhe ergibt sich aus Breite und Seitenverhältnis der Vorlage.
+                 Als Feld statt als Fließtext, damit sie neben der Breite auf derselben Linie
+                 steht und als zusammengehörige Größenangabe lesbar bleibt - abgeblendet und
+                 nicht anfassbar, damit niemand darin zu tippen versucht. -->
+            <TextBox Grid.Column="3"
+                     Classes="combo-like"
+                     Text="{Binding DialogWatermarkHeightText, Mode=OneWay}"
+                     IsReadOnly="True"
+                     IsTabStop="False"
+                     Focusable="False"
+                     Opacity="0.6"
+                     MinHeight="36"
+                     ToolTip.Tip="Errechnet aus der Breite und dem Seitenverhältnis der Vorlage"/>
+            <TextBlock Grid.Column="4" Text="px"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+        </Grid>
+    </StackPanel>
+</UserControl>

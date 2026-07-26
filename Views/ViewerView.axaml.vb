@@ -136,7 +136,7 @@ Namespace Views
             If e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
                 Select Case e.Key
                     Case Key.Left
-                        ' Drehen liegt seit 2026-07-24 auf Strg+Pfeil (in Betrachter und Editor gleich),
+                        ' Drehen liegt auf Strg+Pfeil (in Betrachter und Editor gleich),
                         ' damit Strg+R wie in der Galerie „Bildgröße ändern" öffnet.
                         vm.RotateLeftCommand.Execute(Nothing)
                         e.Handled = True
@@ -213,7 +213,7 @@ Namespace Views
                 Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {vm.CurrentImagePath}, cut:=False)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerView.OnCopyPathClick", ex)
             End Try
         End Sub
@@ -518,7 +518,7 @@ Namespace Views
             ApplyVideoLayout()
             ' Wie die Galerie: ohne Fokus im eigenen Teilbaum sieht diese View KEINE Taste - beim
             ' Wechsel aus der Galerie waren Strg+L/R, Strg+I/E und die Pfeiltasten deshalb tot, bis
-            ' man ins Bild oder in den Filmstreifen geklickt hat (Nutzerbericht 2026-07-17).
+            ' man ins Bild oder in den Filmstreifen geklickt hat.
             Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
             Dispatcher.UIThread.Post(Sub()
                                          ApplyImageFitMode()
@@ -765,7 +765,7 @@ Namespace Views
                 vm.StartPendingVideoAutoplay()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerView.StartPendingVideoAutoplayAfterHostReady", ex)
             End Try
         End Sub

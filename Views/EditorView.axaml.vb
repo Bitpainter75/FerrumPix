@@ -76,6 +76,7 @@ Namespace Views
         Private _isRetouching As Boolean = False
         Private _lastRetouchPoint As Avalonia.Point
         Private _isSelectionDragging As Boolean = False
+        Private _isGradientDragging As Boolean = False
         Private _selectionStart As Avalonia.Point
         Private _selectionEnd As Avalonia.Point
         Private _isSelectionMoveDragging As Boolean = False
@@ -139,7 +140,7 @@ Namespace Views
         End Enum
 
         ''' <summary>Der Regler läuft von 0-100 und bildet logarithmisch auf den Zoombereich ab -
-        ''' derselbe Bereich wie im Betrachter (Nutzerwunsch 2026-07-25), damit dasselbe Bild in
+        ''' derselbe Bereich wie im Betrachter, damit dasselbe Bild in
         ''' beiden Ansichten gleich weit auf- und zugezogen werden kann.</summary>
         Private Const ZoomSliderMinPercent As Double = 5.0
         Private Const ZoomSliderMaxPercent As Double = 2000.0
@@ -309,7 +310,7 @@ Namespace Views
                 Await mainVm.OpenImageInEditor(path)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("EditorView.OnPlaceholderOpenImageClick", ex)
             End Try
         End Sub
@@ -356,7 +357,7 @@ Namespace Views
             If vm Is Nothing Then Return False
             ' Im AUSWAHL-Werkzeug bleibt das Rechteck die Pixelauswahl - AUSSER im Untermodus
             ' "Verschieben": dort zieht man heute nichts auf, also markiert ein Zug dort die Objekte,
-            ' die er berührt (Nutzerentscheidung 2026-07-25). Ein Klick ohne Zug hebt dort weiterhin
+            ' die er berührt. Ein Klick ohne Zug hebt dort weiterhin
             ' die Auswahl auf; das entscheidet erst das Loslassen (Zugschwelle).
             If vm.CurrentTool = EditorTool.Selection Then Return vm.SelectionMode = "Move"
             Dim erlaubt = vm.CurrentTool = EditorTool.Move OrElse
@@ -409,7 +410,7 @@ Namespace Views
                 ' Kein Zug, sondern ein KLICK ins Leere: Objektauswahl weg - und die Pixel-Auswahl bzw.
                 ' Maske gleich mit, wenn der Klick ausserhalb von ihr lag (auch ausserhalb des Bildes).
                 ' Vorher blieben Laufameisen und rotes Overlay stehen, obwohl man sichtbar daneben
-                ' geklickt hatte (Nutzerwunsch 2026-07-25).
+                ' geklickt hatte.
                 vm.SelectedAnnotationIndex = -1
                 If vm.HasActiveSelection Then
                     Dim bildRect = GetDisplayedImageRect(canvas, vm)
@@ -443,7 +444,7 @@ Namespace Views
         ''' <summary>Startet derselbe Druck, der ein Objekt auswählt, auch schon den Zieh-Vorgang?
         ''' Im VERSCHIEBEN-Werkzeug (und im gleichnamigen Untermodus des Auswahl-Werkzeugs) nicht: dort
         ''' ist der Klick primär AUSWAHL, verschoben wird erst, wenn der Druck in einem BEREITS
-        ''' markierten Objekt beginnt (Nutzerentscheidung 2026-07-25). Sonst würde jedes Antippen eines
+        ''' markierten Objekt beginnt. Sonst würde jedes Antippen eines
         ''' Objekts es sofort mitziehen, und eine Mehrfachauswahl liesse sich kaum aufbauen.
         ''' In den Objekt-Werkzeugen (Text/Einfügen) bleibt es bei „Auswählen und Ziehen in EINER
         ''' Geste" - dort war genau das ausdrücklich gewünscht.</summary>
@@ -516,7 +517,7 @@ Namespace Views
                 If Not String.IsNullOrWhiteSpace(path) Then vm.SetWatermarkImagePath(path)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("EditorView.OnWatermarkChooseImageClick", ex)
             End Try
         End Sub
@@ -704,7 +705,7 @@ Namespace Views
             If Not isInsideCanvas Then Return
             If e.Delta.Y = 0 Then Return
             Dim pointerPoint = e.GetCurrentPoint(canvas)
-            ' Das Mausrad über dem Bild zoomt jetzt IMMER (Nutzerwunsch) - vorher nur mit gedrückter
+            ' Das Mausrad über dem Bild zoomt jetzt IMMER - vorher nur mit gedrückter
             ' rechter Maustaste oder Strg. Die rechte Maustaste bleibt zusätzlich als Zoom-beim-Schwenken
             ' unterstützt (siehe Pan-Neuverankerung unten).
             Dim vm = TryCast(DataContext, EditorViewModel)
@@ -731,6 +732,8 @@ Namespace Views
                 Function() If(TryCast(DataContext, EditorViewModel) Is Nothing, -1, TryCast(DataContext, EditorViewModel).CurrentFilmstripIndex))
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnEditorKeyDownTunnel, RoutingStrategies.Tunnel)
+            ' Tunnel direkt auf dem Text-Overlay-Editor: siehe OnTextOverlayEditorKeyDown.
+            Me.FindControl(Of TextBox)("TextOverlayEditor")?.AddHandler(InputElement.KeyDownEvent, AddressOf OnTextOverlayEditorKeyDown, RoutingStrategies.Tunnel)
             AddHandler Loaded, Sub(s, e)
                 ' Die Symbolgalerie ("Formen und Symbole") enthält mehrere tausend SVGs. Sie werden hier
                 ' einmalig im Hintergrund geparst, damit das Aufklappen später nicht ruckelt.
@@ -784,12 +787,14 @@ Namespace Views
             If _currentVm IsNot Nothing Then
                 RemoveHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 RemoveHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
+                RemoveHandler _currentVm.FitToViewportRequested, AddressOf OnEditorFitToViewportRequested
                 RemoveHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
             End If
             _currentVm = TryCast(DataContext, EditorViewModel)
             If _currentVm IsNot Nothing Then
                 AddHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 AddHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
+                AddHandler _currentVm.FitToViewportRequested, AddressOf OnEditorFitToViewportRequested
                 AddHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
             End If
             _filmstripController.Reset()
@@ -825,6 +830,7 @@ Namespace Views
             If _currentVm IsNot Nothing Then
                 RemoveHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 RemoveHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
+                RemoveHandler _currentVm.FitToViewportRequested, AddressOf OnEditorFitToViewportRequested
                 RemoveHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
                 _currentVm = Nothing
             End If
@@ -858,12 +864,45 @@ Namespace Views
             ResetZoomForNewGeometry(TryCast(sender, EditorViewModel))
         End Sub
 
+        ''' Das Einpassen muss die Groesse der NEUEN Vorschau treffen. Beim Wechsel ins
+        ''' Zuschneide-Werkzeug wird sie erst asynchron gerendert (Sidecar-Bilder zeigen dort das
+        ''' ganze Bild statt des Ausschnitts) - deshalb einmal sofort und einmal, sobald das neue
+        ''' Vorschaubild da ist.
+        Private _fitAfterNextDisplayImage As Boolean = False
+
+        Private Sub OnEditorFitToViewportRequested(sender As Object, e As EventArgs)
+            FitImageIntoViewport()
+            _fitAfterNextDisplayImage = True
+        End Sub
+
+        ''' <summary>Passt das Bild in die Flaeche ein - aber NUR verkleinernd. Ein kleines Bild auf
+        ''' Bildschirmgroesse zu ziehen taeuscht Aufloesung vor; im Zuschneiden waere es zudem
+        ''' irrefuehrend, weil die Anfasser dann Pixel meinen, die es nicht gibt.</summary>
+        Private Sub FitImageIntoViewport()
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If canvas Is Nothing OrElse vm Is Nothing OrElse vm.DisplayImage Is Nothing Then Return
+            Dim cw = canvas.Bounds.Width, ch = canvas.Bounds.Height
+            Dim groesse = GetEffectiveDisplaySize(vm)
+            If cw <= 0 OrElse ch <= 0 OrElse groesse.Width <= 0 OrElse groesse.Height <= 0 Then Return
+            Dim fitPct = Math.Min(cw / groesse.Width, ch / groesse.Height) * 100.0
+            If fitPct >= 100.0 Then Return   ' passt bereits - Zoom des Nutzers nicht anfassen
+            vm.ActiveZoomPreset = ZoomPresetMode.Fit
+            _panX = 0
+            _panY = 0
+            SetZoom(ZoomToSlider(fitPct))
+        End Sub
+
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             Select Case e.PropertyName
                 Case NameOf(EditorViewModel.CurrentImage)
                     _sliderPosition = 0.5
                     ResetZoomForNewGeometry(TryCast(sender, EditorViewModel))
                 Case NameOf(EditorViewModel.DisplayImage)
+                    If _fitAfterNextDisplayImage Then
+                        _fitAfterNextDisplayImage = False
+                        FitImageIntoViewport()
+                    End If
                     UpdateSliderLayout()
                     HideBrushPreviewLineAfterBake()
                 Case NameOf(EditorViewModel.RetouchLivePatchImage),
@@ -881,6 +920,7 @@ Namespace Views
                     ' Terminiert: der Folge-Durchlauf trifft einen passenden Cache und loest nichts aus.
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.CurrentTool)
+                    If TryCast(sender, EditorViewModel)?.CurrentTool <> EditorTool.Crop Then _fitAfterNextDisplayImage = False
                     UpdateCropOverlayVisibility()
                     UpdateTextOverlayVisibility()
                     UpdateSelectionOverlayVisibility()
@@ -906,7 +946,8 @@ Namespace Views
                      NameOf(EditorViewModel.SelectionMaskEdgePointsY),
                      NameOf(EditorViewModel.SelectionShapeMode),
                      NameOf(EditorViewModel.SelectionShapePointsX),
-                     NameOf(EditorViewModel.SelectionShapePointsY)
+                     NameOf(EditorViewModel.SelectionShapePointsY),
+                     NameOf(EditorViewModel.GradientGeometry)
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.IsPickingColorFromImage)
                     Dim pickCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
@@ -1114,12 +1155,12 @@ Namespace Views
             ' direkt mit der Maus) - das ViewModel darf ihn dann nicht überschreiben. Beim DREHEN einer
             ' Mehrfachauswahl gibt es diese Führung aber nicht: die gemeinsame Box hat keine eigene
             ' Drehung, ihre Lage und Größe ergeben sich aus den mitgedrehten Mitgliedern. Ohne diese
-            ' Ausnahme blieb der Rahmen während des Drehens einfach stehen (Nutzer-Befund 2026-07-25).
+            ' Ausnahme blieb der Rahmen während des Drehens einfach stehen.
             ' Während eines Zuges führt die VIEW den Rahmen (sie schiebt bzw. dreht den Border direkt
             ' mit der Maus) - das ViewModel darf ihn dann nicht überschreiben. Beim Drehen einer
             ' Mehrfachauswahl passte ein Neueinpassen aus dem Modell den Rahmen bei JEDEM Winkel neu
             ' an die umschließende Box an; er sprang dadurch größer/kleiner, statt einfach mitzudrehen
-            ' (Nutzer-Befund 2026-07-25). Die Box setzt sich beim Loslassen wieder auf das Modell.
+            '. Die Box setzt sich beim Loslassen wieder auf das Modell.
             If Not _isTextDragging Then
                 PositionTextOverlayFromViewModel(ix, iy, iw, ih, scale)
                 ' Selbstheilung: eine ohne aktiven Zug sichtbare Einrast-Hilfslinie ist immer ein
@@ -1138,7 +1179,7 @@ Namespace Views
         ''' <summary>STUFE 3 (Zoom-Detail): meldet dem ViewModel den sichtbaren Bildausschnitt und ob
         ''' die Anzeige die Szenen-Aufloesung uebersteigt, und positioniert danach den vom ViewModel
         ''' gelieferten hochaufgeloesten Ausschnitt bildverankert ueber dem AfterImage. Waehrend
-        ''' Vorher/Nachher laeuft das Detail zweigleisig (Nutzerwunsch 2026-07-17): die Nachher-Seite
+        ''' Vorher/Nachher laeuft das Detail zweigleisig: die Nachher-Seite
         ''' wird rechts der Vergleichslinie geclippt, die Vorher-Seite (Original nur mit Geometrie)
         ''' links davon - beide Seiten werden beim Zoomen scharf.</summary>
         Private Sub UpdateZoomDetailOverlay(ix As Double, iy As Double, iw As Double, ih As Double,
@@ -1158,7 +1199,7 @@ Namespace Views
             ' Früher aktivieren (0,8 statt 1,02): so ist das hochaufgelöste Detail schon geladen,
             ' BEVOR die Anzeige die Szenen-Auflösung übersteigt - bei hochauflösenden Quellen
             ' (z. B. 5760×8640, Szene auf ~3840 gedeckelt) fing das Nachschärfen sonst spürbar
-            ' zu spät an (Nutzer-Befund 2026-07-17). Unterhalb 1,0 ist das Overlay optisch
+            ' zu spät an. Unterhalb 1,0 ist das Overlay optisch
             ' identisch zur Szene - der frühe Start ist reines Vorladen.
             Dim active = displayScale > 0.8 AndAlso visR > visL AndAlso visB > visT
 
@@ -1313,13 +1354,22 @@ Namespace Views
                     ' AUSSERHALB des Bildes ansetzen und ins Bild hineingezogen werden - SetSelectionRect
                     ' schneidet das Ergebnis ohnehin sauber auf das Bild zu. Dieser Klick darf deshalb hier
                     ' NICHT verschluckt werden: sonst löschte er nur die Auswahl und es entstanden nie
-                    ' Laufameisen bzw. gar keine Auswahl (Nutzer-Befund 2026-07-24). "Verschieben" und
+                    ' Laufameisen bzw. gar keine Auswahl. "Verschieben" und
                     ' "Zauberstab" haben außerhalb des Bildes keine Zieh-Geste und räumen weiterhin auf.
-                    Dim startsSelectionDragOutside = vm.CurrentTool = EditorTool.Selection AndAlso
-                                                     vm.SelectionMode <> "Move" AndAlso vm.SelectionMode <> "MagicWand"
+                    Dim startsSelectionDragOutside = (vm.CurrentTool = EditorTool.Selection AndAlso
+                                                      vm.SelectionMode <> "Move" AndAlso vm.SelectionMode <> "MagicWand") OrElse
+                                                     vm.CurrentTool = EditorTool.Mask
                     ' Dasselbe für das OBJEKT-Auswahlrechteck: es darf ausserhalb des Bildes ansetzen und
                     ' ins Bild hineingezogen werden - genau so umschliesst man Objekte, die am Bildrand
-                    ' liegen, ohne sie anzufassen (Nutzerwunsch 2026-07-25).
+                    ' liegen, ohne sie anzufassen.
+                    ' ZUSCHNEIDEN: der Rahmen liegt anfangs GENAU auf dem Bildrand, seine Anfasser
+                    ' ragen also zur Haelfte nach aussen. Ohne diese Ausnahme verschluckte der Zweig
+                    ' hier jeden Griff, der von aussen angefasst wurde - und weil der Rahmen im
+                    ' Normalfall am Rand steht, war das die AEUSSERE HAELFTE JEDES RANDGRIFFS. Das
+                    ' erklaert das Muster "mal geht es, mal nicht": innen liegende Rahmen liessen
+                    ' sich greifen, randbuendige nur von innen. Nicht die Griffgroesse war zu klein.
+                    Dim startsCropHandleOutside = vm.CurrentTool = EditorTool.Crop AndAlso
+                                                  GetCropDragMode(e.GetPosition(canvas)) <> CropDragMode.None
                     Dim startsObjectMarqueeOutside = AllowsObjectMarquee(vm)
                     If startsObjectMarqueeOutside Then
                         BeginObjectMarquee(e.GetPosition(canvas))
@@ -1327,7 +1377,7 @@ Namespace Views
                         e.Handled = True
                         Return
                     End If
-                    If Not startsSelectionDragOutside Then
+                    If Not startsSelectionDragOutside AndAlso Not startsCropHandleOutside Then
                         ClearEditorSelections(vm)
                         e.Handled = True
                         Return
@@ -1429,11 +1479,28 @@ Namespace Views
                 Return
             End If
 
-            If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Selection Then
+            If vm IsNot Nothing AndAlso (vm.CurrentTool = EditorTool.Selection OrElse vm.CurrentTool = EditorTool.Mask) Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
                 Dim rawPos = e.GetPosition(canvas)
                 Dim pos = ClampPointToRect(rawPos, imageRect)
+                ' VERLAUF: erst schauen, ob ein Griff des markierten Verlaufs gemeint ist - sonst
+                ' zieht jeder Klick einen neuen auf und der bestehende waere nur ueber die Regler
+                ' erreichbar.
+                If vm.CurrentTool = EditorTool.Mask AndAlso Not vm.IsMaskBrushMode Then
+                    Dim gxPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
+                    Dim gyPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
+                    Const gradientSlopPixels As Double = 12.0
+                    If Not vm.TryBeginGradientHandleDrag(gxPct, gyPct,
+                                                         gradientSlopPixels / imageRect.Width * 100.0,
+                                                         gradientSlopPixels / imageRect.Height * 100.0) Then
+                        vm.BeginGradientMaskDrag(gxPct, gyPct)
+                    End If
+                    _isGradientDragging = True
+                    e.Pointer.Capture(canvas)
+                    e.Handled = True
+                    Return
+                End If
                 If vm.SelectionMode = "Move" Then
                     Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                     Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
@@ -1498,7 +1565,7 @@ Namespace Views
                 ' im Verschieben-Modus oder bei "Neu". In Hinzufügen/Abziehen/Schnittmenge beginnt ein Klick
                 ' außerhalb eine WEITERE Region und darf die bestehende Auswahl/Maske NIE löschen - sonst
                 ' löscht ein Lasso im +-Modus, das außerhalb ansetzt, die vorhandene Auswahl statt sie zu
-                ' ergänzen (Nutzer-Befund 2026-07-24).
+                ' ergänzen.
                 _selectionClickOutsideActiveSelection = vm.HasActiveSelection AndAlso
                                                         vm.SelectionMode <> "MagicWand" AndAlso
                                                         Not clickedInsideSelection AndAlso
@@ -1562,8 +1629,9 @@ Namespace Views
                 Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                 Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
 
-                ' Alt+Klick setzt nur die Quelle des Stempels und beginnt keinen Zug - wie in Photoshop
-                ' und GIMP. Beim Verwischen gibt es keine Quelle, dort bleibt der Modifikator wirkungslos.
+                ' Alt+Klick setzt nur die Quelle des Stempels und beginnt keinen Zug - wie in
+                ' Bildbearbeitungen ueblich. Beim Verwischen gibt es keine Quelle, dort bleibt der
+                ' Modifikator wirkungslos.
                 If vm.IsCloneMode AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Alt) Then
                     vm.SetCloneSource(xPct, yPct)
                     UpdateCloneSourceMarker(pos, imageRect, vm)
@@ -1606,8 +1674,8 @@ Namespace Views
 
                     ' In Anpassungswerkzeugen (Anpassen/Farbe/Effekte/Rahmen/Filter) UND im
                     ' VERSCHIEBEN-Werkzeug hebt ein Klick in den freien Bereich - kein Objekt getroffen,
-                    ' außerhalb der Auswahl/Maske - die Auswahl UND Maske auf (Nutzerwunsch 2026-07-24,
-                    ' fürs Verschieben-Werkzeug nachgezogen 2026-07-25: Laufameisen bzw. rotes Overlay
+                    ' außerhalb der Auswahl/Maske - die Auswahl UND Maske auf (
+                    ' fürs Verschieben-Werkzeug nachgezogen: Laufameisen bzw. rotes Overlay
                     ' blieben dort stehen, obwohl man sichtbar daneben geklickt hatte).
                     If hitIndex < 0 AndAlso
                        (EditorViewModel.IsObjectAdjustTool(vm.CurrentTool) OrElse vm.CurrentTool = EditorTool.Move) AndAlso
@@ -1883,6 +1951,19 @@ Namespace Views
                 e.Handled = True
                 Return
             End If
+            If _isGradientDragging Then
+                Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If canvas Is Nothing OrElse vm Is Nothing Then Return
+                Dim imageRect = GetDisplayedImageRect(canvas, vm)
+                If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+                Dim gPos = ClampPointToRect(e.GetPosition(canvas), imageRect)
+                vm.UpdateGradientHandleDrag((gPos.X - imageRect.Left) / imageRect.Width * 100.0,
+                                            (gPos.Y - imageRect.Top) / imageRect.Height * 100.0,
+                                            e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+                e.Handled = True
+                Return
+            End If
             If _isSelectionDragging Then
                 Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 Dim vm = TryCast(DataContext, EditorViewModel)
@@ -1945,6 +2026,10 @@ Namespace Views
             If _isMaskBrushDrawing Then
                 CommitMaskBrushStroke()
                 _maskBrushPoints.Clear()
+            End If
+            If _isGradientDragging Then
+                TryCast(DataContext, EditorViewModel)?.EndGradientHandleDrag()
+                _isGradientDragging = False
             End If
             If _isSelectionMoveDragging Then
                 TryCast(DataContext, EditorViewModel)?.CommitSelectionMoveTransaction()
@@ -2094,7 +2179,7 @@ Namespace Views
         ''' die auch den angezeigten Cursorring bemisst, damit Ring und Wirkung nie auseinanderlaufen.
         ''' 0, wenn gerade kein Pixelwerkzeug aktiv ist.</summary>
         Private Function IsMaskBrushActive(vm As EditorViewModel) As Boolean
-            Return vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Selection AndAlso vm.IsBrushSelectionMode
+            Return vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Mask AndAlso vm.IsMaskBrushMode
         End Function
 
         Private Function BrushDiameterOnScreen(imageRect As Avalonia.Rect, vm As EditorViewModel) As Double
@@ -2114,7 +2199,7 @@ Namespace Views
         ''' Das entscheidet, ob ein Druck am Bildrand ein Strich ist oder ein Klick ins Leere. Vorher
         ''' zaehlte allein die Zeigerposition: wer mit grossem Pinsel bewusst am Rand ansetzte, dessen
         ''' Klick wurde komplett verworfen, obwohl der halbe Kreis ueber dem Bild lag - Pinsel und
-        ''' Retusche "machten dann nichts" (Nutzer-Befund 2026-07-20). Alle tieferen Ebenen klemmen
+        ''' Retusche "machten dann nichts". Alle tieferen Ebenen klemmen
         ''' den Punkt laengst sauber ins Bild (ClampPointToRect, AddRetouchSpot, DrawRetouchSpot);
         ''' sie wurden nur nie erreicht. Ein Klick weit weg vom Bild deselektiert weiterhin.</summary>
         Private Function BrushCircleTouchesImage(position As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel) As Boolean
@@ -2520,7 +2605,7 @@ Namespace Views
             ' das die Bild-Controls und die Overlays platziert. Vorher rundete nur die eine Seite: das
             ' Objekt-Overlay bekam seine Groesse aus dem GERUNDETEN Rechteck, der Zieh-Code rechnete sie
             ' gegen das UNGERUNDETE zurueck - pro Verschieben schrumpfte ein Objekt so um bis zu einen
-            ' halben Anzeigepixel, bei starker Verkleinerung also um ganze Bildpixel (Befund 2026-07-24:
+            ' halben Anzeigepixel, bei starker Verkleinerung also um ganze Bildpixel (Befund:
             ' 1000x1000 wurde nach dem Verschieben zu 1000x999).
             Dim iw = Math.Round(effectiveSize.Width * scale, MidpointRounding.AwayFromZero)
             Dim ih = Math.Round(effectiveSize.Height * scale, MidpointRounding.AwayFromZero)
@@ -2674,8 +2759,12 @@ Namespace Views
             ' ART der aktiven Auswahl (ActiveSelectionIsMask), NICHT das Werkzeug - so zeigt eine Masken-
             ' Ebene überall rot, eine Auswahl-Ebene überall Ameisen. Das rote Bild deckt den ganzen
             ' Anzeigebereich ab (BuildSelectionRedOverlayBitmap) und wird per Stretch=Fill gestreckt.
+            ' Ein Verlauf hat KEINE aktive Auswahl (er ist gerechnet, nicht gemalt) - trotzdem zeigt
+            ' er dieselbe rote Deckung. Deshalb reicht hier auch ein markierter Verlauf als Grund.
+            PositionGradientOverlay(ix, iy, iw, ih)
             If vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
-               vm.ActiveSelectionIsMask AndAlso vm.SelectionMaskPreviewImage IsNot Nothing Then
+               (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask) AndAlso
+               vm.SelectionMaskPreviewImage IsNot Nothing Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
                 If maskOverlay IsNot Nothing Then
                     maskOverlay.IsVisible = True
@@ -2718,13 +2807,38 @@ Namespace Views
             End If
         End Sub
 
+        ''' <summary>Legt Achse und Griffe des markierten Verlaufs über das Bild. Die Geometrie kommt
+        ''' in Anzeige-Prozent aus dem ViewModel und wird hier auf den dargestellten Bildbereich
+        ''' umgerechnet - damit sitzt sie bei jedem Zoom- und Panstand richtig.</summary>
+        Private Sub PositionGradientOverlay(ix As Double, iy As Double, iw As Double, ih As Double)
+            Dim overlay = Me.FindControl(Of GradientMaskOverlayControl)("GradientMaskOverlay")
+            If overlay Is Nothing Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim geo = If(vm Is Nothing, Nothing, vm.GradientGeometry)
+            If vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Mask OrElse geo Is Nothing OrElse
+               iw <= 0 OrElse ih <= 0 Then
+                overlay.IsVisible = False
+                overlay.GeometryValues = Nothing
+                Return
+            End If
+            overlay.GeometryValues = New Double() {geo(0) / 100.0 * iw, geo(1) / 100.0 * ih,
+                                                   geo(2) / 100.0 * iw, geo(3) / 100.0 * ih,
+                                                   geo(4), geo(5), geo(6), geo(7)}
+            Avalonia.Controls.Canvas.SetLeft(overlay, ix)
+            Avalonia.Controls.Canvas.SetTop(overlay, iy)
+            overlay.Width = iw
+            overlay.Height = ih
+            overlay.IsVisible = True
+            overlay.InvalidateVisual()
+        End Sub
+
         ''' <summary>Werkzeuge, in denen das Auswahl-Overlay (nur als Anzeige, nicht interaktiv) sichtbar
         ''' bleiben soll: das Auswahl-Werkzeug selbst UND die pixel-anpassenden Werkzeuge, deren Regler jetzt
         ''' nur innerhalb der Auswahl wirken - so sieht der Nutzer, warum sich nur ein Teil ändert. In
         ''' Geometrie-/Ebenen-Werkzeugen dagegen ausgeblendet (dort wird die Auswahl ohnehin verworfen).</summary>
         Private Shared Function IsSelectionScopeTool(tool As EditorTool) As Boolean
             Select Case tool
-                Case EditorTool.Selection, EditorTool.Adjust, EditorTool.Color, EditorTool.Filters, EditorTool.Effects
+                Case EditorTool.Selection, EditorTool.Mask, EditorTool.Adjust, EditorTool.Color, EditorTool.Filters, EditorTool.Effects
                     Return True
                 Case Else
                     Return False
@@ -2736,7 +2850,8 @@ Namespace Views
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
             Dim dragOverlay = Me.FindControl(Of SelectionOverlayControl)("SelectionDragOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim showSelection = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso vm.HasActiveSelection
+            Dim showSelection = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
+                                (vm.HasActiveSelection OrElse vm.HasSelectedGradientMask)
             If showSelection Then
                 If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = False
                 If overlay IsNot Nothing Then overlay.IsVisible = True
@@ -2761,6 +2876,8 @@ Namespace Views
         Private Sub HideCurrentSelectionOverlay()
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
+            Dim gradientOverlay = Me.FindControl(Of GradientMaskOverlayControl)("GradientMaskOverlay")
+            If gradientOverlay IsNot Nothing Then gradientOverlay.IsVisible = False
             If maskOverlay IsNot Nothing Then
                 maskOverlay.IsVisible = False
             End If
@@ -3001,7 +3118,7 @@ Namespace Views
             If overlay Is Nothing OrElse vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Crop Then Return
             ' Gegenstück zu SetCropPercentagesFromDisplay: die gespeicherten Source-Ränder für das
             ' gedrehte/gespiegelte Anzeigebild permutieren, sonst zeigt das Overlay-Rechteck eine
-            ' andere Region, als tatsächlich fällt (Audit 2026-07-22).
+            ' andere Region, als tatsächlich fällt.
             Dim margins = vm.GetPendingCropDisplayMargins()
             Dim left = ix + iw * margins.Left / 100.0
             Dim top = iy + ih * margins.Top / 100.0
@@ -3050,12 +3167,16 @@ Namespace Views
 
         Private Function GetCropDragMode(point As Avalonia.Point) As CropDragMode
             Dim rect = GetCropOverlayRect()
-            Const hitSlop As Double = 18
             If rect.Width < 8 OrElse rect.Height < 8 Then Return CropDragMode.None
-            Dim hitRect = rect.Inflate(hitSlop)
+
+            ' Fangbreite eines Griffs, gemessen ab der Rahmenkante nach BEIDEN Seiten.
+            Const handleSize As Double = 20
+            ' Das Vorab-Tor muss mindestens so weit reichen wie die Griffzone selbst, sonst schneidet
+            ' es sie an: mit 18 gegen 20 war ein Punkt 19 px ausserhalb einer Ecke bereits draussen,
+            ' obwohl die Eckpruefung darunter ihn angenommen haette.
+            Dim hitRect = rect.Inflate(handleSize)
             If Not hitRect.Contains(point) Then Return CropDragMode.None
 
-            Const handleSize As Double = 20
             Dim nearLeft = Math.Abs(point.X - rect.Left) <= handleSize
             Dim nearRight = Math.Abs(point.X - rect.Right) <= handleSize
             Dim nearTop = Math.Abs(point.Y - rect.Top) <= handleSize
@@ -3130,8 +3251,34 @@ Namespace Views
             Dim bottom = (rect.Bottom - bottomPx) / rect.Height * 100.0
             ' Der Rahmen liegt im ANZEIGE-Raum (per Rezept gedreht/gespiegelt) - das VM übersetzt in
             ' den Source-Raum der Pipeline. Vorher gingen die Anzeige-Prozente ungemappt in die
-            ' Source-Ränder, und auf gedrehten Bildern fiel die falsche Region (Audit 2026-07-22).
+            ' Source-Ränder, und auf gedrehten Bildern fiel die falsche Region.
             vm.SetCropPercentagesFromDisplay(left, top, right, bottom)
+        End Sub
+
+
+        ''' <summary>Neue Zeile NUR per Strg+Enter oder Umschalt+Enter (
+        ''' Umschalt-Variante nachgereicht): der Renderer bricht
+        ''' Text-Objekte nie automatisch um, ein unbedachtes Enter erzeugte sonst Zeilen, deren Box
+        ''' beim Verschieben Geist-Fragmente hinterliess. Sitzt als TUNNEL direkt auf der TextBox -
+        ''' er feuert damit vor deren eigener Enter-Behandlung, ein Bubble-Handler kam nie an.</summary>
+        Private Sub OnTextOverlayEditorKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Enter Then Return
+            Dim box = TryCast(sender, TextBox)
+            If box Is Nothing Then Return
+            If e.KeyModifiers.HasFlag(KeyModifiers.Control) OrElse e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                Dim text = If(box.Text, "")
+                Dim selStart = Math.Min(box.SelectionStart, box.SelectionEnd)
+                Dim selEnd = Math.Max(box.SelectionStart, box.SelectionEnd)
+                Dim caret = If(selEnd > selStart, selStart, Math.Max(0, Math.Min(box.CaretIndex, text.Length)))
+                If selEnd > selStart Then text = text.Remove(selStart, selEnd - selStart)
+                box.Text = text.Insert(caret, vbLf)
+                box.SelectionStart = caret + 1
+                box.SelectionEnd = caret + 1
+                box.CaretIndex = caret + 1
+            End If
+            ' In BEIDEN Faellen erledigt: Enter allein darf keine Zeile einfuegen (AcceptsReturn
+            ' ist nur fuer die mehrzeilige ANZEIGE an), Strg+Enter hat sie schon eingefuegt.
+            e.Handled = True
         End Sub
 
         Private Sub FocusTextOverlayEditor()
@@ -3173,10 +3320,10 @@ Namespace Views
             ' sein. Sie bleibt deshalb achsenparallel.
             overlay.RenderTransform = New RotateTransform(If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation))
             overlay.IsVisible = True
-            ' Der Selektionsrahmen folgt bewusst der Objekt-Konturfarbe (Nutzer-Entscheidung 2026-07-16:
+            ' Der Selektionsrahmen folgt bewusst der Objekt-Konturfarbe (
             ' "so wie frueher darstellen", nicht Akzentfarbe). Genau deshalb braucht er einen
             ' Gegenstrich in den Luecken: ein schwarz konturiertes Objekt auf dunklem Bild war sonst
-            ' gar nicht zu sehen (Nutzer-Befund 2026-07-25, Nachtaufnahme).
+            ' gar nicht zu sehen (Nachtaufnahme).
             If frame IsNot Nothing Then
                 Dim rahmenfarbe = ParseAvaloniaColor(vm.AnnotationStrokeColor, Colors.White)
                 frame.Stroke = New SolidColorBrush(rahmenfarbe)
@@ -3367,7 +3514,7 @@ Namespace Views
             Dim mode = If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None)
             If mode = TextDragMode.None Then Return
 
-            ' Doppelklick auf den Drehgriff stellt die Lage wieder gerade (Nutzerwunsch 2026-07-25).
+            ' Doppelklick auf den Drehgriff stellt die Lage wieder gerade.
             ' Muss VOR dem Zug-Start stehen: sonst begänne der zweite Druck einen neuen Rotier-Zug,
             ' der die soeben zurückgesetzte Drehung beim ersten Wackeln wieder überschriebe.
             If mode = TextDragMode.Rotate AndAlso e.ClickCount >= 2 Then
@@ -3385,7 +3532,7 @@ Namespace Views
             ' Placement-Edit (Ghost-Übergabe Szene->Overlay) NICHT hier starten, sondern erst
             ' bei echter Bewegung in OnTextOverlayPointerMoved: der reine Auswahl-Klick
             ' ("Auswahl + Ziehen in einer Geste") löste sonst bei jedem Maus-Selektieren die
-            ' komplette Übergabe aus - das kurze Flackern (Nutzer-Befund 2026-07-17).
+            ' komplette Übergabe aus - das kurze Flackern.
             _textDragPlacementStarted = False
             ' Smart Guides: Anrast-Ziele der ANDEREN Objekte einmal beim Zug-Start einsammeln
             ' (stabil und billig; die Objekte bewegen sich während des Zugs nicht). Der
@@ -3461,8 +3608,8 @@ Namespace Views
         ''' keine eigene Drehung, siehe PositionTextOverlayFromViewModel) - die Prüfung darf dann auch
         ''' nicht mit der Drehung des ANKER-Objekts rechnen. Sonst sucht sie die Anfasser an
         ''' verdrehten Stellen, der Griff geht ins Leere und der Druck gilt als Klick neben die
-        ''' Auswahl: das Aufziehen beginnt und die Auswahl ist beim Loslassen weg (Nutzer-Befund
-        ''' 2026-07-25 - „Anfasser nicht anfassbar, Selektionsbox verschwindet"). Genau nach einer
+        ''' Auswahl: das Aufziehen beginnt und die Auswahl ist beim Loslassen weg
+        ''' („Anfasser nicht anfassbar, Selektionsbox verschwindet"). Genau nach einer
         ''' Gruppendrehung trat das zuverlässig auf, weil danach jedes Mitglied gedreht ist.
         ''' </summary>
         ''' <summary>Eine GESPERRTE Auswahl bekommt keine Zug-Modi: kein Anfasser, kein Verschieben,
@@ -3496,7 +3643,7 @@ Namespace Views
             ' liegen die gezeichneten Griffe, die per Margin ueber den Rahmen hinausragen), nach INNEN
             ' reicht sie nur so weit wie der Griff selbst zu sehen ist (Kreise 12-14 px, Margin -7/-8,
             ' also gut 6 px ins Objekt). Frueher waren es 16 px nach innen: beim Greifen zum Verschieben
-            ' landete man dadurch staendig im Skalieren (Nutzer-Befund 2026-07-25). Zusaetzlich auf einen
+            ' landete man dadurch staendig im Skalieren. Zusaetzlich auf einen
             ' Anteil der Kantenlaenge gedeckelt, damit kleine Objekte eine greifbare Mitte behalten.
             Const handleInward As Double = 8
             Dim inwardX = Math.Min(handleInward, rect.Width * 0.25)
@@ -3669,7 +3816,7 @@ Namespace Views
                                           vm.IsWatermarkImageSource) AndAlso vm.AnnotationLockAspect
                 ' Text auf einem KREISPFAD verhaelt sich wie QR: hart 1:1. Der Kreisradius ist
                 ' min(Breite, Hoehe) - eine nicht-quadratische Box liesse den Selektionsrahmen weit
-                ' um den Text herum stehen (Nutzerbefund 2026-07-20).
+                ' um den Text herum stehen.
                 Dim isCircleText = EditorViewModel.IsCircleTextPath(vm.AnnotationTextPathKind)
                 Dim keepAspect = (e.KeyModifiers.HasFlag(KeyModifiers.Shift) OrElse
                                   isAspectLockedKind OrElse
@@ -3804,7 +3951,7 @@ Namespace Views
             ' Erfolg des Einrastens. Vorher blieb sie weg, sobald der Kandidat verworfen wurde
             ' (Mindestgröße, gleich danach die Seitenverhältnis-Sperre) - beim Skalieren also fast
             ' immer, obwohl man sichtbar an der Kante eines anderen Objekts stand
-            ' (Nutzer-Befund 2026-07-25).
+            '.
             Dim guideTarget As Double = 0
             Dim guideFound = False
             For Each target In GetSnapTargets(axisStart, axisLength, isVerticalLine)
@@ -3872,7 +4019,7 @@ Namespace Views
                 Yield axisStart + axisLength * pct / 100.0
             Next
             ' Sicherheitsabstand zu den Rändern (die pinken Einrast-Linien nahe der Kante) -
-            ' einstellbar und abschaltbar (Nutzerwunsch 2026-07-17, präzisiert: DIESE Linien
+            ' einstellbar und abschaltbar (präzisiert: DIESE Linien
             ' waren gemeint, nicht das Zuschneiden-Werkzeug).
             If _snapMarginPercent > 0 Then
                 Yield axisStart + axisLength * _snapMarginPercent / 100.0
@@ -4015,7 +4162,7 @@ Namespace Views
             ' die Properties synchron, Bounds folgt erst im nächsten Layout-Pass. Beim
             ' "Auswahl + Ziehen in EINER Geste" startete der Drag sonst mit der Größe der
             ' VORHERIGEN Selektion und schrieb sie beim ersten Move ins neue Objekt
-            ' (Nutzer-Befund 2026-07-17: Bild sprang auf QR-Code-Größe).
+            ' (Bild sprang auf QR-Code-Größe).
             Dim width = If(Double.IsNaN(overlay.Width), overlay.Bounds.Width, overlay.Width)
             Dim height = If(Double.IsNaN(overlay.Height), overlay.Bounds.Height, overlay.Height)
             Return New Avalonia.Rect(left, top, Math.Max(0, width), Math.Max(0, height))
@@ -4277,15 +4424,15 @@ Namespace Views
                         End If
                     Case Key.R
                         ' Strg+R ist überall „Bildgröße": in Galerie und Betrachter der Overlay-Dialog,
-                        ' hier das Werkzeug mit seinem Panel (Nutzerwunsch 2026-07-24). Gedreht wird
+                        ' hier das Werkzeug mit seinem Panel. Gedreht wird
                         ' jetzt mit Strg+Pfeil, das Drehen-Werkzeug braucht das Kürzel also nicht mehr.
                         If Not isTextInputFocused Then
                             vm.CurrentTool = EditorTool.Resize
                             e.Handled = True
                         End If
                     Case Key.Left
-                        ' Strg+Pfeil dreht - dieselben Kuerzel wie im Betrachter (Nutzerwunsch
-                        ' 2026-07-24). Ohne Strg verschieben die Pfeile weiterhin das Objekt.
+                        ' Strg+Pfeil dreht - dieselben Kuerzel wie im Betrachter
+                        '. Ohne Strg verschieben die Pfeile weiterhin das Objekt.
                         If Not isInputControlFocused Then
                             vm.RotateLeftCommand.Execute(Nothing)
                             e.Handled = True
@@ -4307,8 +4454,8 @@ Namespace Views
                         End If
                     Case Key.G
                         ' Strg+G gehört ALLEIN dem Gruppieren, Strg+Umschalt+G dem Aufheben. Eine
-                        ' Doppelbelegung derselben Taste wäre nicht vorhersagbar (Nutzerentscheidung
-                        ' 2026-07-25); das Objekt-Werkzeug liegt dafür jetzt auf Strg+M.
+                        ' Doppelbelegung derselben Taste wäre nicht vorhersagbar
+                        '; das Objekt-Werkzeug liegt dafür jetzt auf Strg+M.
                         If Not isTextInputFocused Then
                             If e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
                                 If vm.CanUngroupSelectedAnnotations Then

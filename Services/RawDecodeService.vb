@@ -22,6 +22,10 @@ Namespace Services
     ''' der Assembly ist bereits durch MpvInterop belegt (nur EINER erlaubt), und so bleibt die
     ''' Verfügbarkeit sauber prüfbar. Entwickelt wird mit Kamera-Weißabgleich (cam_mul als
     ''' user_mul - libraw hat keinen C-API-Setter für use_camera_wb), sRGB, 8 Bit.
+    ''' LibRaws automatische Aufhellung bleibt an (Histogramm-Stretch bis 1 % Clipping) - sie ist
+    ''' das, was eine Entwicklung ohne weiteres Zutun brauchbar aussehen laesst.
+    ''' Ein 16-Bit-Zweig mit Dither-Quantisierung ist gebaut und STILLGELEGT (siehe
+    ''' DecodeOutputBits) - er bringt gemessen zu wenig fuer den doppelten Zwischenpuffer.
     '''
     ''' MRU-1-Cache: der Editor ruft DecodeOriented beim Öffnen mehrfach (Arbeitsbild,
     ''' Vergleichsquelle, Export), das Demosaic eines 45-MP-RAW kostet aber Sekunden. Der letzte
@@ -383,6 +387,21 @@ Namespace Services
             End SyncLock
         End Sub
 
+        ''' <summary>Ausgabetiefe, die von LibRaw angefordert wird - der Schalter fuer den
+        ''' 16-Bit-Zweig. DERZEIT 8: der Zweig ist STILLGELEGT, nicht entfernt.
+        '''
+        ''' Auf 16 gestellt dekodiert LibRaw mit voller Tiefe und Convert16 quantisiert mit
+        ''' Bayer-Dither statt durch Abschneiden. Gemessen bringt das wenig: an der dunkelsten
+        ''' 64x64-Kachel eines Konzert-RAW 481 statt 459 unterscheidbare Farbwerte (+5 %),
+        ''' Chroma-Median unveraendert - Sensorrauschen dithert dort bereits selbst. Spuerbar
+        ''' waere es nur auf rauscharmen dunklen Flaechen. Dagegen steht LibRaws doppelt so
+        ''' grosser Zwischenpuffer (20 MP: 121 statt 60 MB, bei 45 MP 270 statt 135).
+        '''
+        ''' Der 16-Bit-Zweig in DecodeCore und Convert16 bleiben deshalb lauffaehig stehen; die
+        ''' Diagnose ruft Convert16 direkt auf, damit er nicht unbemerkt verrottet. Umschalten
+        ''' ist genau diese eine Zahl.</summary>
+        Private Const DecodeOutputBits As Integer = 8
+
         Private Shared Function DecodeCore(path As String) As SKBitmap
             Dim handle = _init(0UI)
             If handle = IntPtr.Zero Then Return Nothing
@@ -395,7 +414,7 @@ Namespace Services
                 If _openFile(handle, pathPtr) <> 0 Then Return Nothing
                 If _unpack(handle) <> 0 Then Return Nothing
 
-                _setOutputBps(handle, 8)
+                _setOutputBps(handle, DecodeOutputBits)
                 _setOutputColor(handle, 1) ' sRGB
                 ' Kamera-Weißabgleich: die As-Shot-Multiplikatoren als user_mul setzen (die C-API
                 ' hat keinen use_camera_wb-Setter). Ohne gültige cam_mul bleibt der Standard.
@@ -418,26 +437,28 @@ Namespace Services
                 Dim colors = CInt(CUShort(Marshal.ReadInt16(image, 8)))
                 Dim bits = CInt(CUShort(Marshal.ReadInt16(image, 10)))
                 Dim dataSize = Marshal.ReadInt32(image, 12)
-                If imageType <> 2 OrElse colors <> 3 OrElse bits <> 8 Then Return Nothing ' 2 = Bitmap
+                ' 2 = Bitmap. Erwartet werden 16 Bit (output_bps oben); eine exotische libraw,
+                ' die trotzdem 8 Bit liefert, wird unveraendert umgepackt.
+                If imageType <> 2 OrElse colors <> 3 OrElse (bits <> 8 AndAlso bits <> 16) Then Return Nothing
                 Dim pixelCount = CheckedPixelCount(width, height)
-                If pixelCount <= 0 OrElse dataSize < pixelCount * 3L Then Return Nothing
-
-                Dim rgb(dataSize - 1) As Byte
-                Marshal.Copy(image + 16, rgb, 0, dataSize)
+                If pixelCount <= 0 OrElse pixelCount > Integer.MaxValue \ 4 Then Return Nothing
+                If dataSize < pixelCount * 3L * (bits \ 8) Then Return Nothing
 
                 Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
                 Try
-                    If pixelCount > Integer.MaxValue \ 4 Then
-                        bitmap.Dispose()
-                        Return Nothing
-                    End If
                     Dim pixels(CInt(pixelCount * 4L - 1)) As Byte
-                    For i = 0 To CInt(pixelCount - 1)
-                        pixels(i * 4) = rgb(i * 3 + 2)      ' B
-                        pixels(i * 4 + 1) = rgb(i * 3 + 1)  ' G
-                        pixels(i * 4 + 2) = rgb(i * 3)      ' R
-                        pixels(i * 4 + 3) = 255
-                    Next
+                    If bits = 16 Then
+                        Convert16(image + 16, width, height, pixels)
+                    Else
+                        Dim rgb(dataSize - 1) As Byte
+                        Marshal.Copy(image + 16, rgb, 0, dataSize)
+                        For i = 0 To CInt(pixelCount - 1)
+                            pixels(i * 4) = rgb(i * 3 + 2)      ' B
+                            pixels(i * 4 + 1) = rgb(i * 3 + 1)  ' G
+                            pixels(i * 4 + 2) = rgb(i * 3)      ' R
+                            pixels(i * 4 + 3) = 255
+                        Next
+                    End If
                     Marshal.Copy(pixels, 0, bitmap.GetPixels(), pixels.Length)
                     Return bitmap
                 Catch
@@ -452,6 +473,85 @@ Namespace Services
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
         End Function
+
+
+        ''' <summary>Dither-Schwellen fuer die 16-nach-8-Quantisierung: geordnete 8x8-Bayer-Matrix
+        ''' (dieselbe rekursive Konstruktion wie in der Punktoperationskette, dort privat), als
+        ''' Integer-Schwelle T skaliert, sodass out = (v*255 + T) \ 65535 mittelwerttreu
+        ''' quantisiert. Positionsbasiert und damit deterministisch - derselbe Decode liefert
+        ''' bitgleiche Ergebnisse, was der Vorschau-Cache voraussetzt.</summary>
+        Private Shared ReadOnly DitherSchwellen As Integer() = BaueDitherSchwellen()
+
+        Private Shared Function BaueDitherSchwellen() As Integer()
+            ' Rekursive Bayer-Konstruktion: M(2n) = [4M(n), 4M(n)+2; 4M(n)+3, 4M(n)+1]
+            Dim m = New Integer() {0, 2, 3, 1}
+            Dim size = 2
+            While size < 8
+                Dim n2 = size * 2
+                Dim dst = New Integer(n2 * n2 - 1) {}
+                For y = 0 To size - 1
+                    For x = 0 To size - 1
+                        Dim v = m(y * size + x) * 4
+                        dst(y * n2 + x) = v
+                        dst(y * n2 + (x + size)) = v + 2
+                        dst((y + size) * n2 + x) = v + 3
+                        dst((y + size) * n2 + (x + size)) = v + 1
+                    Next
+                Next
+                m = dst
+                size = n2
+            End While
+            Dim schwellen = New Integer(63) {}
+            For i = 0 To 63
+                ' T = ((2*m+1)/128) * 65535: Schwellenmitte je Zelle, Mittelwert exakt 0,5 LSB.
+                schwellen(i) = ((2 * m(i) + 1) * 65535) \ 128
+            Next
+            Return schwellen
+        End Function
+
+        ''' <summary>Packt LibRaws 16-Bit-Ausgabe nach Bgra8888 und quantisiert dabei mit
+        ''' Bayer-Dither statt durch Abschneiden.
+        '''
+        ''' DERZEIT NICHT AKTIV (DecodeOutputBits = 8), aber lauffaehig gehalten - die Diagnose
+        ''' ruft die Methode direkt auf.
+        '''
+        ''' WARUM ueberhaupt: gemessen tragen dunkle Flaechen eines Konzertfotos nur 1-3 Byte
+        ''' Kanalabstand. Beim direkten 8-Bit-Decode faellt dieser Rest beim Runden weg, BEVOR
+        ''' irgendein Regler ihn anheben kann - eine Aufhellung der Tiefen zieht dann graue statt
+        ''' farbiger Flaechen hoch. Mit Dither bleibt der Sub-Byte-Anteil als raeumliches Muster
+        ''' erhalten; die ohnehin laufende Farbrauschreduzierung mittelt ihn wieder heraus.
+        ''' Der Preis ist LibRaws doppelt so grosser Zwischenpuffer (45 MP: 270 statt 135 MB),
+        ''' der unmittelbar nach dem Umpacken wieder freigegeben wird.
+        '''
+        ''' Zeilenweise aus dem nativen Puffer kopiert, damit kein zweiter Vollbild-Puffer
+        ''' entsteht.</summary>
+        Private Shared Sub Convert16(data As IntPtr, width As Integer, height As Integer, pixels As Byte())
+            Dim schwellen = DitherSchwellen
+            Dim rowShorts(width * 3 - 1) As Short
+            Dim rowBytes = width * 6
+            For y = 0 To height - 1
+                Marshal.Copy(data + CLng(y) * rowBytes, rowShorts, 0, width * 3)
+                Dim d = y * width * 4
+                Dim ditherRow = (y And 7) << 3
+                For x = 0 To width - 1
+                    ' And &HFFFF hebt die Short-Werte vorzeichenfrei nach Integer (VB hat kein
+                    ' UShort-Marshalling ueber Marshal.Copy).
+                    Dim r = rowShorts(x * 3) And &HFFFF
+                    Dim g = rowShorts(x * 3 + 1) And &HFFFF
+                    Dim b = rowShorts(x * 3 + 2) And &HFFFF
+                    ' DIESELBE Schwelle fuer alle drei Kanaele eines Pixels (wie in der
+                    ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
+                    ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
+                    ' CByte kann nicht ueberlaufen.
+                    Dim t = schwellen(ditherRow Or (x And 7))
+                    pixels(d) = CByte((b * 255 + t) \ 65535)
+                    pixels(d + 1) = CByte((g * 255 + t) \ 65535)
+                    pixels(d + 2) = CByte((r * 255 + t) \ 65535)
+                    pixels(d + 3) = 255
+                    d += 4
+                Next
+            Next
+        End Sub
 
         Private Shared Function CheckedPixelCount(width As Integer, height As Integer) As Long
             If width <= 0 OrElse height <= 0 Then Return 0

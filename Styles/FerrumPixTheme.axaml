@@ -207,6 +207,31 @@
     <Style Selector="Button.accent icons|SvgIcon">
         <Setter Property="IconBrush" Value="White"/>
     </Style>
+    <!-- Filter-Knopf der Galerie: traegt die Akzentfarbe, solange ein Filter greift (Favoriten,
+         Bewertung, Farbetikett oder Dateityp). Ohne das war ein aktiver Filter nur an einem
+         kleinen Punkt hinter der Beschriftung zu erkennen - man suchte die fehlenden Bilder im
+         Ordner statt im Filter. Die Setter stehen doppelt (Button UND ContentPresenter): der
+         :pointerover-Zustand der Basis-Schaltflaeche setzt Hintergrund und Rahmen direkt am
+         ContentPresenter und wuerde den Akzent beim Ueberfahren sonst wieder ueberschreiben. -->
+    <Style Selector="Button.filter-btn.active">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.filter-btn.active /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.filter-btn.active:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent.Light}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent.Light}"/>
+    </Style>
+    <Style Selector="Button.filter-btn.active icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
     <Style Selector="Button.ghost">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
@@ -901,7 +926,7 @@
 
     <!-- MEHRFACHauswahl: die ListBox markiert nur EINE Zeile. Alle weiteren markierten Ebenen sehen
          deshalb über diese Klasse genauso aus wie die ausgewählte - sonst wirkte eine funktionierende
-         Mehrfachauswahl, als hätte sie nicht gegriffen (Nutzer-Befund 2026-07-25). -->
+         Mehrfachauswahl, als hätte sie nicht gegriffen. -->
     <Style Selector="Border.layers-panel-row.multi-selected">
         <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
     </Style>
@@ -1037,7 +1062,7 @@
              Tooltip-Popups ab, wodurch das letzte Zeichen abgeschnitten wurde ("Anpassen" -> "Anpasse").
              Der Puffer fällt optisch nicht auf und deckt die Rundung in jeder Skalierung ab. -->
         <Setter Property="Padding" Value="8,4,14,4"/>
-        <!-- Krumme Skalierung, Teil 2 (Analyse 2026-07-16): Der feste Padding-Puffer reichte nicht
+        <!-- Krumme Skalierung, Teil 2: Der feste Padding-Puffer reichte nicht
              für alle Textlängen - die Layout-Rundung arbeitet bei fraktionalen Faktoren in
              Gerätepixel-Schritten (1,72 => 0,58-DIP-Raster) und kann die Textbreite ABRUNDEN,
              der Fehler wächst mit der Zeichenzahl. Ohne Layout-Rundung bekommt der Text exakt
@@ -1214,7 +1239,7 @@
          sie zurücksetzen. Zwei Ausnahmen tragen eine eigene Klasse:
          "group-action" = Teil des Gruppeninhalts (z.B. Tauschen und Pipette im Farbmischer),
          "group-reset"  = der Zurücksetzer oben rechts, der NUR seine eigene Gruppe zurücksetzt.
-         Die Zurücksetzer waren bis 2026-07-21 mit ausgeblendet - zurückgesetzt wurde zentral über
+         Die Zurücksetzer waren bis mit ausgeblendet - zurückgesetzt wurde zentral über
          einen Knopf in der Panel-Kopfzeile. Das ist zurückgenommen: jede Gruppe setzt sich selbst
          zurück, und dafür muss ihr Knopf auch sichtbar sein. -->
     <Style Selector="Border.adjustment-group Button.icon-btn:not(.group-action):not(.group-reset)">
@@ -1377,11 +1402,18 @@
     <Style Selector="ComboBox /template/ ToggleButton#DropDownButton:pressed /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
     </Style>
+    <!-- Die Ausklappliste ist NIE schmaler als das Feld selbst:
+         MinWidth auf Popup UND Rahmen - das Popup allein garantiert nur den Platz, der Rahmen
+         darin durfte sonst auf die (schmaleren) Einträge zusammenfallen. -->
+    <Style Selector="ComboBox /template/ Popup#PART_Popup">
+        <Setter Property="MinWidth" Value="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}"/>
+    </Style>
     <Style Selector="ComboBox /template/ Popup#PART_Popup Border#PopupBorder">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="MinWidth" Value="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}"/>
     </Style>
     <Style Selector="ComboBox /template/ Popup#PART_Popup ScrollViewer">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>

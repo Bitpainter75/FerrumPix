@@ -9,7 +9,7 @@ Namespace Views
     ''' einen Eintrag setzt zwar den Wert, schließt das Flyout aber NICHT von selbst - anders als bei
     ''' einer echten ComboBox. In den Overlay-Dialogen blieb die Liste dadurch offen über dem Feld
     ''' stehen; der neue Wert war verdeckt, und der Dialog wirkte, als ließe sich nichts auswählen
-    ''' (Nutzer-Befund 2026-07-18: „bei Speichern unter kann ich PDF nicht auswählen").
+    ''' („bei Speichern unter kann ich PDF nicht auswählen").
     ''' Deshalb ein gemeinsamer Helfer statt drei Einzellösungen.</summary>
     Friend Module FlyoutHelpers
 
@@ -31,6 +31,22 @@ Namespace Views
             Dim presenter = control.FindLogicalAncestorOfType(Of FlyoutPresenter)()
             Dim host = TryCast(presenter?.Parent, Popup)
             If host IsNot Nothing Then host.IsOpen = False
+        End Sub
+
+        ''' <summary>Sorgt dafuer, dass die Ausklappliste eines Button+Flyout-Auswahlfelds NIE
+        ''' schmaler ist als der Knopf selbst (wie bei echten ComboBoxen
+        ''' ueber den Theme-Stil). Eine $parent-Bindung traegt hier nicht zuverlaessig ueber die
+        ''' Flyout-Grenze - deshalb wird die Breite beim OEFFNEN gesetzt, wenn der Knopf fertig
+        ''' vermessen ist.</summary>
+        Friend Sub MatchFlyoutWidthToButton(button As Button)
+            Dim flyout = TryCast(button?.Flyout, Flyout)
+            If flyout Is Nothing Then Return
+            AddHandler flyout.Opening, Sub()
+                                           Dim content = TryCast(flyout.Content, Control)
+                                           If content IsNot Nothing AndAlso button.Bounds.Width > 0 Then
+                                               content.MinWidth = button.Bounds.Width
+                                           End If
+                                       End Sub
         End Sub
 
     End Module

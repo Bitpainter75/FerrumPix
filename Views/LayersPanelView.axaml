@@ -302,7 +302,7 @@
                                        Width="16" Height="16" />
                     </Button>
                     <!-- Nur sichtbar, wenn die Auswahl WIRKLICH in einer Gruppe liegt - sonst steht
-                         ein Knopf da, der nichts zu tun hat (Nutzerwunsch 2026-07-25). -->
+                         ein Knopf da, der nichts zu tun hat. -->
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding UngroupSelectedAnnotationsCommand}"
                             IsVisible="{Binding CanUngroupSelectedAnnotations}"

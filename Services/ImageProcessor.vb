@@ -702,7 +702,7 @@ Namespace Services
         ''' <summary>GESPERRT: keine geometrischen Änderungen mehr an diesem Objekt - kein Verschieben,
         ''' Skalieren, Drehen oder Spiegeln, weder per Maus noch über die Regler, und auch nicht als
         ''' Teil einer Gruppen-Transformation. Auswählen, Sichtbarkeit und Aussehen bleiben möglich;
-        ''' der Renderer kennt die Sperre gar nicht (Nutzerwunsch 2026-07-25).</summary>
+        ''' der Renderer kennt die Sperre gar nicht.</summary>
         Public Property IsLocked As Boolean
             Get
                 Return _isLocked
@@ -1050,12 +1050,67 @@ Namespace Services
         Public Property FeatherPixels As Single
         Public Property Inverted As Boolean
 
+        ''' <summary>Art der Maske. Leer = GEMALTE Maske, deren Alphawerte in PngBase64 liegen
+        ''' (Rechteck, Ellipse, Lasso, Zauberstab, Masken-Pinsel). "Linear" und "Radial" =
+        ''' VERLAUF, der NICHT gebacken wird, sondern bei jedem Render aus seiner Geometrie
+        ''' entsteht. Das ist der ganze Unterschied und der Grund fuer den eigenen Typ: ein
+        ''' gebackener Verlauf liesse sich hinterher weder drehen noch in der Weichheit aendern,
+        ''' ohne die Maske neu zu malen. UMGEKEHRT (aussen statt innen, unten statt oben) ist
+        ''' kein eigener Typ, sondern das vorhandene <see cref="Inverted"/>.</summary>
+        Public Property Kind As String = ""
+
+        ''' <summary>Geometrie des Verlaufs, in Prozent der QUELLBILD-Maße (wie alle
+        ''' Geometrie-Angaben im Rezept).
+        ''' LINEAR: Start = volle Deckung, Ende = keine. Der ABSTAND der beiden ist die Weichheit,
+        ''' ihre Richtung der Winkel; ausserhalb gilt der jeweilige Endwert, der Verlauf reicht
+        ''' also immer ueber das ganze Bild.
+        ''' RADIAL: Start = MITTELPUNKT, Ende = ein Punkt auf dem Rand. Der Abstand ist damit der
+        ''' Radius und die Richtung die Drehung der Ellipse.</summary>
+        Public Property GradientStartXPercent As Double
+        Public Property GradientStartYPercent As Double
+        Public Property GradientEndXPercent As Double
+        Public Property GradientEndYPercent As Double
+
+        ''' <summary>NUR RADIAL: Verhaeltnis der zweiten zur ersten Halbachse. 1 = Kreis, kleiner =
+        ''' quer gestaucht, groesser = laengs gestreckt. Damit laesst sich die Flaeche an ein
+        ''' Gesicht oder einen Himmelsausschnitt anpassen, ohne einen zweiten Griff zu brauchen.</summary>
+        Public Property GradientRadiusRatio As Double = 1.0
+
+        ''' <summary>NUR RADIAL: wie viel des Radius der weiche Uebergang einnimmt, in Prozent.
+        ''' 0 = harte Kante, 100 = vom Mittelpunkt an abfallend. Beim linearen Verlauf braucht es
+        ''' das nicht - dort IST der Abstand der beiden Punkte die Weichheit.</summary>
+        Public Property GradientFeatherPercent As Double = 50.0
+
+        ''' <summary>True fuer beide Verlaufsarten - sie teilen sich Speicherung, Renderweg und
+        ''' Cache-Schluessel.</summary>
+        Public ReadOnly Property IsGradient As Boolean
+            Get
+                Return IsLinearGradient OrElse IsRadialGradient
+            End Get
+        End Property
+
+        Public ReadOnly Property IsLinearGradient As Boolean
+            Get
+                Return String.Equals(Kind, "Linear", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsRadialGradient As Boolean
+            Get
+                Return String.Equals(Kind, "Radial", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
         Public Function Clone() As ImageMask
             Return New ImageMask With {
                 .Id = Id, .Name = Name,
                 .SourceWidthPixels = SourceWidthPixels, .SourceHeightPixels = SourceHeightPixels,
                 .Left = Left, .Top = Top, .Right = Right, .Bottom = Bottom,
-                .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted
+                .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted,
+                .Kind = Kind,
+                .GradientStartXPercent = GradientStartXPercent, .GradientStartYPercent = GradientStartYPercent,
+                .GradientEndXPercent = GradientEndXPercent, .GradientEndYPercent = GradientEndYPercent,
+                .GradientRadiusRatio = GradientRadiusRatio, .GradientFeatherPercent = GradientFeatherPercent
             }
         End Function
     End Class
@@ -1131,7 +1186,7 @@ Namespace Services
     ''' schreiben ihren Wert in jedes Mitglied, statt die Gruppe als Ganzes zu komponieren. Damit bleibt
     ''' der Renderer unberührt (keine zusätzliche bildgroße Ebene je Gruppe). Preis: bei überlappenden
     ''' Mitgliedern stapelt sich Deckkraft an den Überlappungen, anders als bei einer echten
-    ''' Photoshop-Gruppe (Entscheidung 2026-07-25).</summary>
+    ''' Photoshop-Gruppe (Entscheidung).</summary>
     Public Class AnnotationGroup
         Public Property Id As String = Guid.NewGuid().ToString("N")
         Public Property Name As String = ""
@@ -1304,7 +1359,7 @@ Namespace Services
         Public Property MagentaSaturation As Single = 0
         Public Property MagentaLuminance As Single = 0
         ''' <summary>Farbgradierung: vier Zonen (Schatten/Mitten/Lichter/Global) mit je Farbton (0-360),
-        ''' Sättigung (0-100) und Luminanz (±100). Die Schatten- und Lichter-Felder hießen bis 2026-07-21
+        ''' Sättigung (0-100) und Luminanz (±100). Die Schatten- und Lichter-Felder hießen bis
         ''' SplitToning*: Split-Toning ist die Zweizonen-Variante desselben Werkzeugs, und Adobe hat es
         ''' ab Lightroom 2020 genauso in die Farbgradierung überführt (crs:SplitToning* wird beim Import
         ''' weiterhin gelesen, siehe LightroomPresetService).</summary>
@@ -1338,6 +1393,25 @@ Namespace Services
         Public Property ResizeWidth As Integer = 0
         Public Property ResizeHeight As Integer = 0
         Public Property LockResizeAspect As Boolean = True
+
+        ''' <summary>Zielmasse als KASTEN lesen statt als exakte Groesse (Stapel/Export): das Bild
+        ''' wird verhaeltniswahrend eingepasst, ein einzelner Wert begrenzt die laengste Kante.
+        ''' Der EDITOR setzt das bewusst NICHT: dort haengen beide Felder am Arbeitsmass VOR dem
+        ''' Ausrichten - mit Einpassen kaeme bei erweiterter Leinwand etwas anderes heraus, als
+        ''' das Panel anzeigt (4000x3000 + 5 Grad ergab 1908x1500 statt
+        ''' 2000x1500). Ausserdem ist "laengste Kante" beim Einzelbild ueberraschend.</summary>
+        Public Property ResizeFitInsideBox As Boolean = False
+
+        ''' <summary>Prozentuale Zielgroesse (&gt;0) statt fester Masse. Wird auf dem TATSAECHLICH
+        ''' dekodierten Bild gerechnet - die Masse vorab aus der Datei zu schaetzen ging fuer
+        ''' RAW/PSD/.fpx schief (SKCodec kennt sie nicht) und bei EXIF-gedrehten JPEGs lag es um
+        ''' die Drehung daneben.</summary>
+        Public Property ResizeScalePercent As Double = 0
+
+        ''' <summary>Kein Hochskalieren: ist das Bild bereits kleiner als die Zielmasse, bleibt es
+        ''' unveraendert (wie "Don't Enlarge" in Export-Dialogen bzw. das Suffix "&gt;" bei
+        ''' ImageMagick). Verhindert vorgetaeuschte Aufloesung in gemischten Stapeln.</summary>
+        Public Property NoResizeUpscale As Boolean = False
         Public Property ResizeInterpolation As ResizeInterpolationMode = ResizeInterpolationMode.Bilinear
         Public Property CanvasWidth As Integer = 0
         Public Property CanvasHeight As Integer = 0
@@ -1357,7 +1431,7 @@ Namespace Services
         ''' <summary>Masken werden einmal gespeichert und können von mehreren lokalen Korrekturen benutzt werden.</summary>
         Public Property Masks As New System.Collections.Generic.List(Of ImageMask)()
         Public Property MaskedAdjustmentLayers As New System.Collections.Generic.List(Of MaskedAdjustmentLayer)()
-        ''' <summary>Versionszähler des ARBEITSBILDS (Umbau 2026-07-17): geht in den Base-Cache-Key
+        ''' <summary>Versionszähler des ARBEITSBILDS: geht in den Base-Cache-Key
         ''' ein und verwirft Pipeline-Caches nach jedem eingebackenen Commit. Kein Bestandteil des
         ''' Rezepts im inhaltlichen Sinn (reiner Cache-Stempel), schadet aber serialisiert nicht.</summary>
         Public Property WorkingImageVersion As Long = 0
@@ -1441,7 +1515,7 @@ Namespace Services
             "WorkingImageVersion", "WorkingImageHasTransparency",
             "RotationDegrees", "StraightenDegrees", "StraightenExpandCanvas", "FlipHorizontal", "FlipVertical",
             "CropLeftPercent", "CropTopPercent", "CropRightPercent", "CropBottomPercent",
-            "ResizeWidth", "ResizeHeight", "LockResizeAspect", "ResizeInterpolation",
+            "ResizeWidth", "ResizeHeight", "LockResizeAspect", "ResizeFitInsideBox", "ResizeScalePercent", "NoResizeUpscale", "ResizeInterpolation",
             "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
             "BorderSize", "BorderColor", "BorderCornerRadius", "BorderEffect",
             "RetouchSpots", "Annotations", "AnnotationGroups", "RasterPaintStrokes", "Masks", "MaskedAdjustmentLayers",
@@ -1473,6 +1547,28 @@ Namespace Services
             If other Is Nothing Then Return
             For Each p In PixelAdjustmentProperties()
                 p.SetValue(Me, p.GetValue(other))
+            Next
+        End Sub
+
+        ''' <summary>Legt die Pixel-Anpassungen aus <paramref name="look"/> UEBER die eigenen -
+        ''' aber nur die, die vom neutralen Standard abweichen. Alles, was der Look nicht anfasst,
+        ''' bleibt so, wie es hier steht.
+        '''
+        ''' Gebraucht von den Stapelfunktionen: liegt neben einer RAW-Datei ein .fpxmp-Rezept, ist
+        ''' DAS die Grundlage, und der Stapelschritt (ein Filter, ein Preset) kommt oben drauf.
+        ''' Wuerde stattdessen der ganze Look kopiert, loeschte er mit seinen Nullwerten die
+        ''' Bearbeitung des Nutzers - eine entwickelte RAW kaeme flach aus dem Stapel zurueck.
+        '''
+        ''' Die Kehrseite, bewusst in Kauf genommen: ein Look, der einen Regler ABSICHTLICH auf
+        ''' null stellt, setzt sich gegen ein Rezept mit Wert dort nicht durch. Ein Look ist eine
+        ''' Zutat, kein Zuruecksetzen - dafuer gibt es den Zuruecksetzen-Pfeil.</summary>
+        Public Sub MergeNonDefaultPixelAdjustmentsFrom(look As ImageAdjustments)
+            If look Is Nothing Then Return
+            Dim neutral = New ImageAdjustments()
+            For Each p In PixelAdjustmentProperties()
+                Dim wert = p.GetValue(look)
+                Dim standard = p.GetValue(neutral)
+                If Not Equals(wert, standard) Then p.SetValue(Me, wert)
             Next
         End Sub
 
@@ -1654,6 +1750,9 @@ Namespace Services
                 .ResizeWidth = ResizeWidth,
                 .ResizeHeight = ResizeHeight,
                 .LockResizeAspect = LockResizeAspect,
+                .ResizeFitInsideBox = ResizeFitInsideBox,
+                .ResizeScalePercent = ResizeScalePercent,
+                .NoResizeUpscale = NoResizeUpscale,
                 .ResizeInterpolation = ResizeInterpolation,
                 .CanvasWidth = CanvasWidth,
                 .CanvasHeight = CanvasHeight,
@@ -1747,7 +1846,7 @@ Namespace Services
         End Function
     End Module
 
-    ' Partial: die Gleitkomma-Tonwertkette liegt in ImageProcessorPointOps.vb (Umbau 2026-07-20).
+    ' Partial: die Gleitkomma-Tonwertkette liegt in ImageProcessorPointOps.vb.
     Partial Public Class ImageProcessor
 
         Private Const FastPngCompressionQuality As Integer = 60
@@ -1832,6 +1931,18 @@ Namespace Services
             If IcoPreviewService.IsSupportedIco(path) Then Return IcoPreviewService.ExtractPreview(path)
             ' PSD/PSB nur-lesend: das zusammengesetzte Gesamtbild als PNG (siehe PsdPreviewService).
             If PsdPreviewService.IsSupportedPsd(path) Then Return PsdPreviewService.ExtractPreview(path)
+            ' HEIC/HEIF/AVIF kann SkiaSharp nicht - libheif liefert es als PNG herein (nur lesend,
+            ' siehe HeifDecodeService). Fehlt die Bibliothek, faellt es auf den normalen Datei-
+            ' Strom zurueck; der Decode scheitert dann wie bisher sichtbar statt still falsch.
+            If HeifDecodeService.IsSupportedHeif(path) AndAlso HeifDecodeService.IsAvailable Then
+                Dim heif = HeifDecodeService.ExtractPreview(path)
+                If heif IsNot Nothing Then Return heif
+            End If
+            ' TIFF kann SkiaSharp ebenfalls nicht - LibTiff.NET liefert es als PNG herein.
+            If TiffPreviewService.IsSupportedTiff(path) Then
+                Dim tiff = TiffPreviewService.ExtractPreview(path)
+                If tiff IsNot Nothing Then Return tiff
+            End If
             Return File.OpenRead(path)
         End Function
 
@@ -1846,11 +1957,15 @@ Namespace Services
 
         ''' <summary>Friend statt Private, damit PrintService dieselbe Dekodier-Route benutzt -
         ''' sie ist die einzige, die RAW/ICO/WebP und die EXIF-Orientierung korrekt behandelt.</summary>
-Friend Shared Function DecodeOriented(path As String) As SKBitmap
+        ''' <param name="developRaw">False = eine RAW-Quelle NICHT entwickeln, sondern ihre
+        ''' eingebettete JPEG-Vorschau nehmen. Fuer Stapellaeufe, in denen Geschwindigkeit vor
+        ''' Aufloesung geht (Einstellung "RAWs ohne Rezept im Stapel entwickeln"). Auf alles
+        ''' andere hat der Schalter keine Wirkung.</param>
+        Friend Shared Function DecodeOriented(path As String, Optional developRaw As Boolean = True) As SKBitmap
             ' Echte RAW-Entwicklung, wenn das System-libraw da ist: voll aufgelöstes Demosaic mit
             ' Kamera-Weißabgleich statt der eingebetteten JPEG-Vorschau. Liefert der Decode nichts
             ' (defekte Datei, exotisches Format), greift darunter der bisherige Vorschau-Weg.
-            If RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
+            If developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
                 Dim developed = RawDecodeService.TryDecode(path)
                 If developed IsNot Nothing Then Return developed
             ElseIf Not RawPreviewService.IsSupportedRaw(path) Then
@@ -1890,7 +2005,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             End Using
         End Function
 
-        ''' TEMPORÄR (Untersuchung #7 Vorher/Nachher dunkler): protokolliert den Farbraum des rohen
+        ''' TEMPORÄR ( Vorher/Nachher dunkler): protokolliert den Farbraum des rohen
         ''' Datei-Decodes und ob eine Farbkonvertierung nach sRGB den Mittelpixel ändert. So lässt sich
         ''' hart bestätigen, ob die Skia-Pipeline (farbraumlose Zwischen-Bitmaps) gegenüber dem
         ''' Avalonia-Decoder (New Bitmap) einen Helligkeits-/Farbversatz erzeugt. Nach der Auswertung
@@ -2069,7 +2184,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
         ''' <summary>STUFE 2: Szenen-Vollrender als SKBitmap UEBER den Base-Cache (GetOrComputeBaseLocked) -
         ''' im Gegensatz zu RenderPreviewSkBitmap/ProcessBitmap, die den Cache UMGEHEN. Ohne das Waermen
         ''' schlagen ALLE nachfolgenden Region-Renders (TryRenderAnnotationsPatchSkOnCachedBase) dauerhaft
-        ''' mit cacheMissOrBusy fehl (Log-Befund 2026-07-16). Liefert immer ein eigenes Bitmap
+        ''' mit cacheMissOrBusy fehl (Log-Befund). Liefert immer ein eigenes Bitmap
         ''' (Aufrufer disposed).</summary>
         Public Shared Function RenderSceneSkCached(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If source Is Nothing Then Return Nothing
@@ -2443,7 +2558,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                     Next
                 End If
                 If Not bounds.HasValue Then Return SKRectI.Empty
-                ' Muss die RENDER-Reichweite von DrawBrushStrokeWithEffects spiegeln (Audit 2026-07-22):
+                ' Muss die RENDER-Reichweite von DrawBrushStrokeWithEffects spiegeln:
                 ' dort pad = strokeWidth + |shadowDx| + |shadowDy| + 3*max(shadowSigma, glowSigma) + 4.
                 ' Der alte Pauschalwert Max(4, strokeWidth*2) war kleiner als die Glow-Reichweite
                 ' (glowSigma bis 0,8*strokeWidth => 3 Sigma = 2,4*strokeWidth ZUSAETZLICH zum Strich) -
@@ -2835,7 +2950,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             End Using
         End Function
 
-        ''' <summary>Voll aufgelöster Decode für das ARBEITSBILD (Umbau 2026-07-17): öffentlicher
+        ''' <summary>Voll aufgelöster Decode für das ARBEITSBILD: öffentlicher
         ''' Zugang zum universellen Decode-Chokepoint (RAW/ICO-Sonderfälle + EXIF-Orientierung).
         ''' Der Aufrufer übernimmt den Besitz des Bitmaps.</summary>
         Public Shared Function DecodeWorkingImage(path As String) As SKBitmap
@@ -2927,8 +3042,18 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             Return result
         End Function
 
-        ' Gibt die Bildabmessungen zurück
+        ''' <summary>Bildabmessungen aus den Kopfdaten, ohne vollstaendiges Dekodieren. (0,0), wenn
+        ''' das Format unbekannt ist - Aufrufer MUESSEN das abfangen, statt mit 0 weiterzurechnen.</summary>
         Public Shared Function GetImageSize(imagePath As String) As (Width As Integer, Height As Integer)
+            ' HEIC/HEIF/AVIF kennt SKCodec nicht - dort antwortet libheif aus dem Container.
+            If HeifDecodeService.IsSupportedHeif(imagePath) AndAlso HeifDecodeService.IsAvailable Then
+                Dim heifSize = HeifDecodeService.TryGetSize(imagePath)
+                If heifSize.Width > 0 AndAlso heifSize.Height > 0 Then Return heifSize
+            End If
+            If TiffPreviewService.IsSupportedTiff(imagePath) Then
+                Dim tiffSize = TiffPreviewService.TryGetSize(imagePath)
+                If tiffSize.Width > 0 AndAlso tiffSize.Height > 0 Then Return tiffSize
+            End If
             Try
                 Using codec = SKCodec.Create(imagePath)
                     If codec IsNot Nothing Then
@@ -2947,7 +3072,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
 
 
         Private Shared Function ToneTransfer(x As Single, exposureGain As Single, contrast As Single, brightness As Single) As Single
-            ' Belichtung in LINEARLICHT (2026-07-24): frueher x*exposureGain im Gamma-Raum - das
+            ' Belichtung in LINEARLICHT: frueher x*exposureGain im Gamma-Raum - das
             ' staucht die Lichter brutal (gemessen: +50 zog 64->218). Belichtung ist physikalisch ein
             ' linearer Faktor: sRGB dekodieren, multiplizieren, wieder kodieren. Ergebnis darf >1 sein
             ' (Ueberstrahlung), die weiche Schulter (SoftShoulder/rolloff) faengt es danach ab.
@@ -2997,7 +3122,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
         ' ARBEITSBILD (Stufe E): Retusche ist KEIN Pipeline-Schritt mehr - sie steckt bereits im
         ' Eingangsbild (Arbeitsbild); die Pipeline beginnt direkt mit der Geometrie.
         ''' <summary>Schaltet zwischen der alten Stufenkette und der verschmolzenen
-        ''' Gleitkomma-Kette um. Waehrend der Migration (Phase 2) laufen beide nebeneinander, damit
+        ''' Gleitkomma-Kette um. Waehrend der Umstellung laufen beide nebeneinander, damit
         ''' der Aequivalenztest der Diagnose sie vergleichen kann.</summary>
         Private Shared Function ProcessBitmapBase(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim processed As SKBitmap = CloneBitmap(source)
@@ -3259,21 +3384,67 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                                                               Optional fillLayer As MaskedAdjustmentLayer = Nothing) As SKBitmap
             If maskData Is Nothing OrElse pipelineInputWidth <= 0 OrElse pipelineInputHeight <= 0 OrElse
                targetW <= 0 OrElse targetH <= 0 OrElse
-               maskData.SourceWidthPixels <= 0 OrElse maskData.SourceHeightPixels <= 0 OrElse
-               maskData.Right <= maskData.Left OrElse maskData.Bottom <= maskData.Top OrElse
-               String.IsNullOrWhiteSpace(maskData.PngBase64) Then Return Nothing
+               maskData.SourceWidthPixels <= 0 OrElse maskData.SourceHeightPixels <= 0 Then Return Nothing
+            ' Ein VERLAUF traegt weder PNG noch Bounding-Box - er wird gleich gerechnet.
+            If Not maskData.IsGradient AndAlso
+               (maskData.Right <= maskData.Left OrElse maskData.Bottom <= maskData.Top OrElse
+                String.IsNullOrWhiteSpace(maskData.PngBase64)) Then Return Nothing
             Try
-                Dim raw = Convert.FromBase64String(maskData.PngBase64)
-                Using decoded = SKBitmap.Decode(raw)
-                    If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return Nothing
-                    Dim dStride = decoded.RowBytes
-                    Dim dBuf = New Byte(dStride * decoded.Height - 1) {}
-                    Marshal.Copy(decoded.GetPixels(), dBuf, 0, dBuf.Length)
+                ' Beim Verlauf gibt es nichts zu dekodieren; die Deckung entsteht pro Pixel aus der
+                ' Projektion auf die Verlaufsachse (siehe unten). Das spart bei 45 MP rund 45 MB
+                ' Zwischenpuffer und haelt den Verlauf ausserdem verlustfrei aenderbar.
+                Dim raw = If(maskData.IsGradient, Nothing, Convert.FromBase64String(maskData.PngBase64))
+                Using decoded = If(raw Is Nothing, Nothing, SKBitmap.Decode(raw))
+                    If Not maskData.IsGradient AndAlso (decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8) Then Return Nothing
+                    Dim dStride = If(decoded Is Nothing, 0, decoded.RowBytes)
+                    Dim dBuf As Byte() = Nothing
+                    If decoded IsNot Nothing Then
+                        dBuf = New Byte(dStride * decoded.Height - 1) {}
+                        Marshal.Copy(decoded.GetPixels(), dBuf, 0, dBuf.Length)
+                    End If
+
+                    ' Verlaufsachse EINMAL vorbereiten: Start- und Endpunkt in Quellpixeln, dazu
+                    ' der Kehrwert des Achsenquadrats fuer die Projektion je Pixel.
+                    Dim gx0, gy0, gAchseX, gAchseY, gInvLen2 As Double
+                    Dim gRadius, gEx, gEy, gRatio, gInnen As Double
+                    If maskData.IsGradient Then
+                        gx0 = maskData.GradientStartXPercent / 100.0 * maskData.SourceWidthPixels
+                        gy0 = maskData.GradientStartYPercent / 100.0 * maskData.SourceHeightPixels
+                        gAchseX = maskData.GradientEndXPercent / 100.0 * maskData.SourceWidthPixels - gx0
+                        gAchseY = maskData.GradientEndYPercent / 100.0 * maskData.SourceHeightPixels - gy0
+                        Dim len2 = gAchseX * gAchseX + gAchseY * gAchseY
+                        ' Beide Punkte aufeinander = keine Achse bzw. kein Radius: dann waere die
+                        ' Maske ueberall halb gedeckt statt eines Verlaufs. Lieber gar keine Maske.
+                        If len2 < 0.000001 Then Return Nothing
+                        gInvLen2 = 1.0 / len2
+                        If maskData.IsLinearGradient Then
+                            ' Der Regler "Weiche Kante" bekommt beim linearen Verlauf eine
+                            ' Bedeutung, statt wirkungslos zu bleiben: er staucht den Uebergang um
+                            ' die MITTE der Achse zusammen. 100 % = voller Weg zwischen den beiden
+                            ' Punkten (Standard), 0 % = harte Kante genau in der Mitte. Ein Weichzeichner
+                            ' waere hier der falsche Weg - die Rampe ist schon glatt, und Blur kostet
+                            ' bei 45 MP echte Zeit, ohne etwas zu aendern.
+                            gInnen = Math.Max(0.02, Math.Min(1.0, maskData.GradientFeatherPercent / 100.0))
+                        End If
+                        If maskData.IsRadialGradient Then
+                            ' Radial: die Achse ist die erste Halbachse. Ihre Richtung ist zugleich
+                            ' die Drehung der Ellipse, deshalb wird jeder Punkt in dieses gedrehte
+                            ' System gerechnet und die zweite Achse ueber das Verhaeltnis skaliert.
+                            gRadius = Math.Sqrt(len2)
+                            gEx = gAchseX / gRadius
+                            gEy = gAchseY / gRadius
+                            gRatio = Math.Max(0.05, maskData.GradientRadiusRatio)
+                            ' Innerer Anteil mit voller Deckung; der Rest ist der weiche Uebergang.
+                            gInnen = Math.Max(0.0, Math.Min(1.0, 1.0 - maskData.GradientFeatherPercent / 100.0))
+                        End If
+                    End If
 
                     ' MASKEN-Ebene mit deklarativer Füllung: die LUMINANZ der Füllung stuft die Maskenform ab
                     ' (Schwarz→0, Weiß→voll, Verlauf→Rampe), bevor sie durch die Geometrie läuft. So bestimmt
                     ' die Füllung, WIE STARK die Anpassung je Bereich wirkt - ohne die Maskenform zu verlieren.
-                    If fillLayer IsNot Nothing AndAlso fillLayer.HasFill() Then
+                    ' decoded ist bei einem Verlauf Nothing - eine Fuellung hat dort nichts zu
+                    ' stufen, die Rampe IST schon die Abstufung.
+                    If decoded IsNot Nothing AndAlso fillLayer IsNot Nothing AndAlso fillLayer.HasFill() Then
                         Dim lum = ComputeFillLuminance(decoded.Width, decoded.Height, fillLayer.FillKind,
                             fillLayer.FillColor, fillLayer.FillColor2, CSng(fillLayer.FillAngle), fillLayer.FillInverted)
                         If lum IsNot Nothing Then
@@ -3293,12 +3464,49 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                     Dim iStride = inputMask.RowBytes
                     Dim iBuf = New Byte(iStride * pipelineInputHeight - 1) {}
                     For y = 0 To pipelineInputHeight - 1
-                        Dim sy = CInt(Math.Floor((y + 0.5) * maskData.SourceHeightPixels / pipelineInputHeight)) - maskData.Top
+                        Dim syQuelle = CInt(Math.Floor((y + 0.5) * maskData.SourceHeightPixels / pipelineInputHeight))
+                        Dim sy = syQuelle - maskData.Top
                         Dim iRow = y * iStride
                         For x = 0 To pipelineInputWidth - 1
                             Dim sx = CInt(Math.Floor((x + 0.5) * maskData.SourceWidthPixels / pipelineInputWidth)) - maskData.Left
                             Dim alpha = 0
-                            If sx >= 0 AndAlso sy >= 0 AndAlso sx < decoded.Width AndAlso sy < decoded.Height Then
+                            If maskData.IsRadialGradient Then
+                                ' Abstand im gedrehten Ellipsensystem: 0 = Mittelpunkt, 1 = Rand.
+                                Dim dx = sx + maskData.Left - gx0
+                                Dim dy = syQuelle - gy0
+                                Dim laengs = (dx * gEx + dy * gEy) / gRadius
+                                Dim quer = (-dx * gEy + dy * gEx) / (gRadius * gRatio)
+                                Dim d = Math.Sqrt(laengs * laengs + quer * quer)
+                                If d <= gInnen Then
+                                    alpha = 255
+                                ElseIf d >= 1.0 Then
+                                    alpha = 0
+                                Else
+                                    Dim t2 = (d - gInnen) / Math.Max(0.000001, 1.0 - gInnen)
+                                    Dim s2 = t2 * t2 * (3.0 - 2.0 * t2)
+                                    alpha = CInt(Math.Round((1.0 - s2) * 255.0))
+                                End If
+                            ElseIf maskData.IsGradient Then
+                                ' Projektion des Pixels auf die Verlaufsachse: t = 0 am Startpunkt
+                                ' (volle Deckung), t = 1 am Endpunkt (keine). Ausserhalb wird
+                                ' geklemmt, der Verlauf gilt also fuer das GANZE Bild.
+                                Dim t = ((sx + maskData.Left - gx0) * gAchseX + (syQuelle - gy0) * gAchseY) * gInvLen2
+                                ' Weichheit um die Mitte: t=0,5 bleibt der Wendepunkt, gInnen ist die
+                                ' Breite des Uebergangs (siehe oben).
+                                t = 0.5 + (t - 0.5) / gInnen
+                                If t <= 0.0 Then
+                                    alpha = 255
+                                ElseIf t >= 1.0 Then
+                                    alpha = 0
+                                Else
+                                    ' Smoothstep statt linear: eine lineare Rampe zeigt an ihren
+                                    ' beiden Enden eine sichtbare Kante (Mach-Band), gerade in
+                                    ' Himmelsflaechen. Der weiche Ein- und Ausstieg ist das, was
+                                    ' einen Verlaufsfilter unauffaellig macht.
+                                    Dim s = t * t * (3.0 - 2.0 * t)
+                                    alpha = CInt(Math.Round((1.0 - s) * 255.0))
+                                End If
+                            ElseIf sx >= 0 AndAlso sy >= 0 AndAlso sx < decoded.Width AndAlso sy < decoded.Height Then
                                 alpha = dBuf(sy * dStride + sx)
                             End If
                             If maskData.Inverted Then alpha = 255 - alpha
@@ -3307,7 +3515,9 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                     Next
                     Marshal.Copy(iBuf, 0, inputMask.GetPixels(), iBuf.Length)
 
-                    If maskData.FeatherPixels > 0.05F Then
+                    ' Verlaeufe sind bereits glatt - ihr Weichheits-Regler sitzt in der Geometrie
+                    ' (GradientFeatherPercent), nicht in einem nachgeschalteten Weichzeichner.
+                    If maskData.FeatherPixels > 0.05F AndAlso Not maskData.IsGradient Then
                         Dim initialScale = (pipelineInputWidth / CSng(maskData.SourceWidthPixels) +
                                             pipelineInputHeight / CSng(maskData.SourceHeightPixels)) / 2.0F
                         Dim blurred = BlurAlphaMask(inputMask, maskData.FeatherPixels * initialScale)
@@ -3425,7 +3635,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
 
         ''' <summary>Bildet einen Punkt des unbeschnittenen SourceSpace durch dieselbe Geometriekette
         ''' wie der Renderer ab. False bedeutet: Der Punkt wurde vom Crop entfernt.
-        ''' Public seit Audit 2026-07-22: der Editor braucht dieselbe VOLLSTÄNDIGE Abbildung für
+        ''' Public, weil der Editor dieselbe VOLLSTÄNDIGE Abbildung braucht für
         ''' Pinsel-/Retusche-Overlays - die Mapper-Kurzform (nur Drehung/Flip) saß nach
         ''' angewendetem Crop/Resize/Canvas daneben.</summary>
         Public Shared Function TrySourcePointToGeometryOutput(sourceX As Double, sourceY As Double,
@@ -3493,7 +3703,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             Return True
         End Function
 
-        ''' <summary>EXAKTE Inverse von <see cref="TrySourcePointToGeometryOutput"/> (Audit 2026-07-22):
+        ''' <summary>EXAKTE Inverse von <see cref="TrySourcePointToGeometryOutput"/>:
         ''' bildet einen Punkt des AUSGABE-Raums (Anzeigebild nach Crop/Vierteldrehung/Begradigung/
         ''' Resize/Canvas) zurück auf den unbeschnittenen SourceSpace. Jede Stufe wird in umgekehrter
         ''' Reihenfolge mit den IDENTISCHEN Maß-Formeln (inkl. Rundungen) abgelöst, damit Hin- und
@@ -3995,7 +4205,7 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
             Dim aStride As Integer, bStride As Integer
             Dim aBuf As Byte() = Nothing, bBuf As Byte() = Nothing
             If Not TryBorrowBgraBuffer(adjusted, aBuf, aStride) OrElse Not TryBorrowBgraBuffer(baseline, bBuf, bStride) Then
-                ' Fallback-Richtung BASELINE, nicht adjusted (Audit 2026-07-22): eine Kopie von
+                ' Fallback-Richtung BASELINE, nicht adjusted: eine Kopie von
                 ' adjusted machte die auswahl-skopierte Anpassung still GLOBAL - exakt der Bruch
                 ' der Garantie aus ProcessBitmapBase ("darf niemals still auf eine globale
                 ' Anpassung zurueckfallen"; der Masken-Decode-Fehlerfall dort nimmt ebenfalls die
@@ -4096,11 +4306,12 @@ Friend Shared Function DecodeOriented(path As String) As SKBitmap
                     adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
                     SelectionMaskFingerprint(adj.SelectionMaskPngBase64), adj.SelectionFeatherPixels
                 }.Select(AddressOf KeyPart)), "")
-            ' JEDES Feld, das ProcessBitmapBase liest, MUSS hier stehen (Audit 2026-07-22): die
+            ' JEDES Feld, das ProcessBitmapBase liest, MUSS hier stehen: die
             ' Untergruppen-Regler SharpenRadius/SharpenDetail, NoiseReductionDetail, GrainSize/
             ' GrainFrequency und VignetteStyle fehlten - wer NUR so einen Regler bewegte, bekam
             ' das gecachte alte Bild zurueck ("Regler macht nix"), und Patch-Renderer
-            ' komponierten auf veralteter Basis.
+            ' komponierten auf veralteter Basis. Das gilt auch fuer APP-WEITE Render-Schalter,
+            ' nicht nur adj-Felder - wer einen einfuehrt, muss ihn hier eintragen.
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
@@ -4128,7 +4339,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.ColorGradeBalance, adj.ColorGradeBlending,
                 adj.RotationDegrees, adj.StraightenDegrees, adj.StraightenExpandCanvas, adj.FlipHorizontal, adj.FlipVertical,
                 adj.CropLeftPercent, adj.CropTopPercent, adj.CropRightPercent, adj.CropBottomPercent,
-                adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeInterpolation,
+                adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeFitInsideBox, adj.ResizeScalePercent, adj.NoResizeUpscale, adj.ResizeInterpolation,
                 adj.CanvasWidth, adj.CanvasHeight, adj.LockCanvasAspect, adj.CanvasAnchor, adj.CanvasBackgroundColor,
                 adj.FilterPreset, adj.FilterStrength, adj.LutPath, adj.LutStrength,
                 adj.SelectionScopeEnabled, selectionScopeKey,
@@ -4138,12 +4349,18 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             }.Select(AddressOf KeyPart))
         End Function
 
+        ' Verlaufsmasken tragen ihre Geometrie statt eines PNG - sie MUSS in den Schluessel,
+        ' sonst bliebe die Vorschau beim Ziehen der Griffe stehen (der Cache gaebe die alte
+        ' Basis zurueck, und das Werkzeug "macht nichts").
         Private Shared Function PersistentMasksFingerprint(adj As ImageAdjustments) As String
             Dim masks = If(adj.Masks, New List(Of ImageMask)()).
                 Where(Function(m) m IsNot Nothing).
                 Select(Function(m) String.Join(":", m.Id, m.SourceWidthPixels, m.SourceHeightPixels,
                                                m.Left, m.Top, m.Right, m.Bottom, m.FeatherPixels,
-                                               m.Inverted, SelectionMaskFingerprint(m.PngBase64)))
+                                               m.Inverted, SelectionMaskFingerprint(m.PngBase64),
+                                               m.Kind, KeyPart(m.GradientStartXPercent), KeyPart(m.GradientStartYPercent),
+                                               KeyPart(m.GradientEndXPercent), KeyPart(m.GradientEndYPercent),
+                                               KeyPart(m.GradientRadiusRatio), KeyPart(m.GradientFeatherPercent)))
             ' Ebenen IM OBJEKTSTAPEL gehören NICHT in den Basis-Schlüssel: die Basis-Stufe überspringt
             ' sie (ApplyMaskedAdjustmentLayers ohne onlyStackedAboveId), sie wirken erst im
             ' Objektdurchlauf. Stünden sie hier, würde jede Änderung an ihnen den Basis-Cache
@@ -4159,13 +4376,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                            ' liest ApplyMaskedAdjustmentLayers (Art der Füll-Wirkung bzw. Farbe/Verlauf).
                            ' Ohne sie lieferte der Basis-Cache nach einem erneuten Füllen dasselbe Bild
                            ' zurück - die ERSTE Füllung blieb sichtbar und liess sich nie ersetzen
-                           ' (Nutzer-Befund 2026-07-24; exakt die im Kopf von ComputeBaseKey beschriebene
+                           ' (exakt die im Kopf von ComputeBaseKey beschriebene
                            ' Fehlerklasse "Regler macht nix").
                            ' Die Sichtbarkeit der GRUPPE gehört mit hinein: liegt die Korrektur in einer
                            ' Gruppe, entscheidet deren Auge mit darüber, ob sie gerendert wird
                            ' (IsMaskedLayerRenderVisible). Ohne sie war der Schlüssel vor und nach dem
                            ' Umschalten identisch - der Vollrender bekam die gecachte Basis zurück und
-                           ' die Korrektur blieb sichtbar (Audit A2).
+                           ' die Korrektur blieb sichtbar.
                            Dim gruppeSichtbar = adj.IsMaskedLayerRenderVisible(l)
                            Return String.Join(":", l.Id, l.MaskId, l.IsVisible, gruppeSichtbar, l.Opacity, l.GroupId,
                                               l.StackAboveAnnotationId,
@@ -4344,7 +4561,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Const HealingSearchMargin As Integer = HealingSearchBaseMargin + HealingPatchRadius + 8
         Private Const HealingMaxNativeExtent As Integer = 1200
 
-        ''' ARBEITSBILD-Umbau Stufe E (2026-07-17): Das Rezept-Replay der Retusche ist entfernt.
+        ''' ARBEITSBILD-Umbau Stufe E: Das Rezept-Replay der Retusche ist entfernt.
         ''' Retusche wird beim Commit REGIONAL in Vollauflösung ins Arbeitsbild eingebacken
         ''' (EditorViewModel.CommitRetouchStroke -> WorkingImageService.CommitRegion ->
         ''' ApplyRetouchSpotsInPlace). Damit entfielen: ApplyRetouch, der Retusche-Stufen-Cache
@@ -5885,7 +6102,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' 24 Winkel pro Ring - der Teiler unten. "0 To 31" wiederholte die Winkel von
                 ' i=0..7 exakt (i Mod 24) und rechnete pro Ring 8 von 32 Kandidaten samt
                 ' Statistik/Randbewertung doppelt: ~33 % verschenkte Suchzeit ohne jede Wirkung
-                ' aufs Ergebnis, ein Duplikat gewinnt nie gegen sich selbst (Audit 2026-07-22).
+                ' aufs Ergebnis, ein Duplikat gewinnt nie gegen sich selbst.
                 For i = 0 To 23
                     Dim angle = (Math.PI * 2.0 * i) / 24.0
                     Dim sampleCenterX = cx + CSng(Math.Cos(angle) * distance)
@@ -6345,10 +6562,55 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function ApplyResize(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim targetWidth = adj.ResizeWidth
             Dim targetHeight = adj.ResizeHeight
+
+            ' Prozentuale Zielgroesse auf dem TATSAECHLICHEN Bild - siehe ResizeScalePercent.
+            If adj.ResizeScalePercent > 0 AndAlso source.Width > 0 AndAlso source.Height > 0 Then
+                targetWidth = Math.Max(1, CInt(Math.Round(source.Width * adj.ResizeScalePercent / 100.0)))
+                targetHeight = Math.Max(1, CInt(Math.Round(source.Height * adj.ResizeScalePercent / 100.0)))
+            End If
+
             If targetWidth <= 0 AndAlso targetHeight <= 0 Then Return source
+
+            ' KASTEN-Modus (nur Stapel/Export, siehe ResizeFitInsideBox): das Bild wird NICHT
+            ' verzerrt, die Zielwerte sind eine Schranke statt eines exakten Masses:
+            '   * nur EIN Wert  -> er begrenzt die LAENGSTE Kante, unabhaengig von der Ausrichtung
+            '     (ein gemischter Stapel kommt so einheitlich heraus statt in zwei Groessen);
+            '   * BEIDE Werte   -> das Bild wird in diesen Kasten EINGEPASST (kleinerer Faktor).
+            ' Ohne den Modus gelten die Werte exakt (Editor: die zweite Kante haengt dort ohnehin
+            ' am Seitenverhaeltnis, und der Nutzer sieht die Zahlen im Panel).
+            If adj.ResizeFitInsideBox AndAlso adj.LockResizeAspect AndAlso source.Width > 0 AndAlso source.Height > 0 Then
+                If targetWidth <= 0 Xor targetHeight <= 0 Then
+                    Dim laengste = Math.Max(targetWidth, targetHeight)
+                    If source.Width >= source.Height Then
+                        targetWidth = laengste
+                        targetHeight = 0
+                    Else
+                        targetHeight = laengste
+                        targetWidth = 0
+                    End If
+                Else
+                    Dim faktor = Math.Min(targetWidth / CDbl(source.Width), targetHeight / CDbl(source.Height))
+                    targetWidth = Math.Max(1, CInt(Math.Round(source.Width * faktor)))
+                    targetHeight = Math.Max(1, CInt(Math.Round(source.Height * faktor)))
+                End If
+            End If
 
             If targetWidth <= 0 Then targetWidth = CInt(Math.Round(source.Width * (targetHeight / CDbl(source.Height))))
             If targetHeight <= 0 Then targetHeight = CInt(Math.Round(source.Height * (targetWidth / CDbl(source.Width))))
+
+            ' "Nicht vergroessern": ein Bild, das schon kleiner ist als das Ziel, bleibt wie es ist.
+            ' Mit gehaltenem Seitenverhaeltnis wird EINHEITLICH herunterskaliert (ein gemeinsamer
+            ' Faktor), sonst wuerde die Deckelung je Achse das Bild doch wieder verzerren.
+            If adj.NoResizeUpscale AndAlso source.Width > 0 AndAlso source.Height > 0 Then
+                If adj.LockResizeAspect Then   ' einheitlicher Faktor, sonst verzerrt die Deckelung
+                    Dim deckel = Math.Min(1.0, Math.Min(targetWidth / CDbl(source.Width), targetHeight / CDbl(source.Height)))
+                    targetWidth = Math.Max(1, CInt(Math.Round(source.Width * deckel)))
+                    targetHeight = Math.Max(1, CInt(Math.Round(source.Height * deckel)))
+                Else
+                    targetWidth = Math.Min(targetWidth, source.Width)
+                    targetHeight = Math.Min(targetHeight, source.Height)
+                End If
+            End If
 
             targetWidth = Math.Max(1, targetWidth)
             targetHeight = Math.Max(1, targetHeight)
@@ -6652,7 +6914,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' Pixel groß, zeichnete bisher aber JEDES Objekt des Dokuments - bei 36 eingefügten
                 ' Bildern hieß das 36 Decodes und Skalierungen für einen 400x400-Fleck (gemessen 550 ms
                 ' statt ~20 ms; der Zug wirkte dadurch zäh und die Ghost-Übergabe kam nicht durch,
-                ' Nutzer-Log 2026-07-25). QuickReject prüft gegen den aktuellen Clip des Canvas und ist
+                '). QuickReject prüft gegen den aktuellen Clip des Canvas und ist
                 ' selbst praktisch kostenlos.
                 Dim eigenRect = ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, renderAnnotation)
                 If Not eigenRect.IsEmpty Then
@@ -6913,7 +7175,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                         ' Pfad-Parameter durchreichen wie beim normalen Text: der Renderer kann
                         ' das laengst, hier wurden sie nur nicht weitergegeben - das Wasserzeichen
-                        ' blieb dadurch immer gerade (Nutzerbefund 2026-07-20).
+                        ' blieb dadurch immer gerade.
                         DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic)
                     End If
                 Case Else
@@ -6948,8 +7210,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Objekt - und dessen Kontrast steckt fast ganz in der ersten Reglerhaelfte (Deckung 254 bei
         ''' Regler 10, 177 bei 50, danach nur noch 161/153). Groesseres Sigma verteilt den Schatten
         ''' dann bloss breiter, statt ihn sichtbar zu veraendern. Mit 0.075 liegt das alte Verhalten
-        ''' bei Regler 50 am Ende des Reglers, und der ganze Weg ist nutzbar (Nutzerbefund
-        ''' 2026-07-19: "macht nur bis zur Haelfte Sinn, danach ist der Schatten quasi weg").</summary>
+        ''' bei Regler 50 am Ende des Reglers, und der ganze Weg ist nutzbar
+        ''' ("macht nur bis zur Haelfte Sinn, danach ist der Schatten quasi weg").</summary>
         Private Const ShadowBlurSigmaFactor As Single = 0.075F
 
         Private Const MaxGlowDilatePx As Single = 12.0F
@@ -6987,7 +7249,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' Text an Pfad: die Glyphen ragen bis zu einer Schrifthoehe ueber das
                 ' Layout-Rechteck hinaus. Ohne den Zusatzrand beschneidet der Masken-Ausschnitt
                 ' die Silhouette - Schatten/Gluehen fehlten an den Enden des gebogenen Textes
-                ' bzw. brachen hart ab (Nutzerbefund 2026-07-19).
+                ' bzw. brachen hart ab.
                 If Not String.IsNullOrWhiteSpace(annotation.TextPathKind) Then
                     pad += annotation.FontSizePixels * ComputeTextPathFitRatio(annotation) * 1.2F
                 End If
@@ -7134,8 +7396,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' die Schwelle macht daraus wieder eine scharfe Kontur - der klassische Weg, weil Skias
         ''' Dilate/Erode ein RECHTECKIGES Strukturelement nutzen und damit eckig blieben.
         ''' Vorher zeichnete der Schalter ein abgerundetes Rechteck der Bounding-Box, warf also die
-        ''' Objektform weg - bei Text oder Ellipse wurde der Schatten zum Kasten (Nutzerbefund
-        ''' 2026-07-19). Nothing = kein Rundungsbedarf, der Aufrufer nimmt dann die Originalmaske.</summary>
+        ''' Objektform weg - bei Text oder Ellipse wurde der Schatten zum Kasten
+        '''. Nothing = kein Rundungsbedarf, der Aufrufer nimmt dann die Originalmaske.</summary>
         Private Shared Function BuildRoundedSilhouette(mask As SKBitmap, cornerRadius As Single) As SKBitmap
             If mask Is Nothing OrElse cornerRadius < 0.5F Then Return Nothing
             ' Der Gauss rundet mit etwa dem doppelten Sigma - so trifft der Regler die gewuenschte Ecke.
@@ -7201,8 +7463,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' Routine laeuft - Regel "Objektinhalt nur aus GENAU EINEM Renderpfad").
             ' warpGlyphs:=False ist entscheidend: mit dem Standard (True) VERBIEGT Skia jede
             ' Buchstabenkontur entlang der Kruemmung (innen gestaucht, aussen gedehnt) - bei
-            ' grosser Schrift auf enger Kurve wirkte der Text stark verzerrt (Nutzerbefund
-            ' 2026-07-19). False platziert die Glyphen STARR und rotiert sie nur zur Tangente,
+            ' grosser Schrift auf enger Kurve wirkte der Text stark verzerrt
+            '. False platziert die Glyphen STARR und rotiert sie nur zur Tangente,
             ' wie Illustrator/Photoshop es tun.
             Dim path As SKPath = Nothing
             If Not String.IsNullOrWhiteSpace(textPathKind) Then
@@ -7309,7 +7571,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         End Sub
 
         ''' <summary>Faktor, um den die Schrift eines Pfadtextes skaliert wird, damit ALLE Buchstaben
-        ''' auf den Pfad passen (Nutzerbefund 2026-07-19: beim Kreis fielen ueberzaehlige Buchstaben
+        ''' auf den Pfad passen (beim Kreis fielen ueberzaehlige Buchstaben
         ''' einfach weg). Kreis: Text laeuft immer genau einmal um den Umfang - waechst UND schrumpft
         ''' (kleine Fuge, damit Ende und Anfang nicht kollidieren). Bogen/Welle: nur schrumpfen bei
         ''' Ueberlaenge, sonst bleibt der Groessen-Regler das Mass. Skalenunabhaengig (Pfadlaenge und
@@ -7342,7 +7604,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             If annotation.TextPathKind.StartsWith("Circle", StringComparison.OrdinalIgnoreCase) Then
                                 ' Wachstum gedeckelt: Glyphenhoehe hoechstens der HALBE Radius -
                                 ' beim vollen Radius sprengten zwei Riesenbuchstaben Box und Kreis
-                                ' (visuell verifiziert 2026-07-19).
+                                ' (visuell verifiziert).
                                 Dim maxGrow = Math.Max(1.0F, Math.Min(rect.Width, rect.Height) * 0.25F / Math.Max(1.0F, annotation.FontSizePixels))
                                 Return Math.Max(0.02F, Math.Min(maxGrow, measure.Length * 0.97F / textWidth))
                             End If
@@ -7372,7 +7634,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Case "circle", "circleinverted"
                     ' Radius aus min(Breite, Hoehe): ein Kreis bleibt ein Kreis. Ihn ueber das
                     ' Rechteck zu strecken ergaebe bei breiten Objekten eine flache Ellipse - also
-                    ' faktisch einen Bogen (2026-07-20 ausprobiert und wieder verworfen).
+                    ' faktisch einen Bogen (ausprobiert und wieder verworfen).
                     Dim radius = Math.Min(rect.Width, rect.Height) / 2.0F
                     Dim cx = rect.MidX, cy = rect.MidY
                     Dim inverted = normalized = "circleinverted"
@@ -8372,7 +8634,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim embossOff = Math.Max(1.0F, strokeWidth * 0.03F)
 
             Dim bristles = Math.Max(6, CInt(strokeWidth / 1.4F))
-            ' PERF (Nutzer-Befund 17.07.: "CPU hängt ~2 min nach großem Klecks-Strich"): früher trug
+            ' PERF ("CPU hängt ~2 min nach großem Klecks-Strich"): früher trug
             ' jede Borste (×3 beim Impasto) einen eigenen MaskFilter-Blur - Skia rastert und blurt
             ' dafür JE ZEICHNUNG eine Maske in Strichregion-Größe; bei ~160 Borsten in Vollauflösung
             ' waren das Hunderte Blur-Durchläufe über eine Riesenregion (Minuten im Einback-Commit).
@@ -8821,26 +9083,22 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Using
         End Sub
 
+        ''' <summary>Zeichnet Textzeilen eines Text-Objekts. KEIN automatischer Umbruch an der
+        ''' Boxbreite mehr: die Auswahlbox wird aus den EXPLIZITEN Zeilen
+        ''' gemessen (EstimateTextAnnotationSizePercent) - ein Breiten-Umbruch hier zeichnete dann
+        ''' hoeher als die Box, und beim Verschieben blieben Fragmente des alten Stands stehen
+        ''' (Geist ausserhalb des uebergebenen Rechtecks). Neue Zeilen entstehen ausschliesslich
+        ''' ueber echte Zeilenumbrueche im Text (Strg+Enter in den Eingabefeldern).
+        ''' <paramref name="maxWidth"/> bleibt in der Signatur, weil die Aufrufer sie fuer Formen
+        ''' weiterreichen - fuer Text ist sie bewusst ohne Wirkung.</summary>
         Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint, Optional spacing As Single = 0)
             If String.IsNullOrEmpty(text) Then Return
             Dim lineHeight = GetLineHeight(font.Metrics)
             Dim baseline = y + fontSize
 
-            For Each paragraph In text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
-                Dim current = ""
-                For Each word In paragraph.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
-                    Dim candidate = If(String.IsNullOrEmpty(current), word, current & " " & word)
-                    If current.Length > 0 AndAlso MeasureTextSpaced(font, candidate, spacing) > maxWidth Then
-                        DrawTextSpaced(canvas, current, x, baseline, font, paint, spacing)
-                        baseline += lineHeight
-                        current = word
-                    Else
-                        current = candidate
-                    End If
-                Next
-
-                If current.Length > 0 Then
-                    DrawTextSpaced(canvas, current, x, baseline, font, paint, spacing)
+            For Each line In text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
+                If line.Length > 0 Then
+                    DrawTextSpaced(canvas, line, x, baseline, font, paint, spacing)
                 End If
                 baseline += lineHeight
             Next
@@ -8867,7 +9125,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         '''     -a  1+4a  -a
         '''      0   -a    0
         '''
-        ''' Lief bis 2026-07-20 ueber SKImageFilter.CreateMatrixConvolution. Skias CPU-Faltung ist
+        ''' Lief bis ueber SKImageFilter.CreateMatrixConvolution. Skias CPU-Faltung ist
         ''' dafuer pathologisch langsam: gemessen 8,6 s bei 6,3 MP - fuer fuenf Multiplikationen je
         ''' Pixel. Zum Vergleich braucht die gesamte verschmolzene Farbkette 17 ms.
         '''
@@ -9033,7 +9291,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim rw = If(normalized = 90 OrElse normalized = 270, sh, sw)
             Dim rh = If(normalized = 90 OrElse normalized = 270, sw, sh)
 
-            ' Farbtyp/Alpha der Quelle DURCHREICHEN (Audit 2026-07-22): das war die einzige Stufe der
+            ' Farbtyp/Alpha der Quelle DURCHREICHEN: das war die einzige Stufe der
             ' Geometriekette ohne (Crop, Straighten, Resize, Canvas tun es alle) - nach Drehung/Flip
             ' lief die Pipeline im Plattform-Default-Format. Auf Plattformen, deren N32 nicht
             ' Bgra8888 ist, fielen danach alle Bgra-only-Pfade still um (Auswahl-Composite,
@@ -9117,7 +9375,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         ''' <summary>True, wenn SaveImage das Ziel-FORMAT dieser Endung tatsächlich erzeugen kann
         ''' (JPEG/PNG/WEBP/PDF). Alles andere lehnt SaveImage ab, statt still JPEG-Bytes unter
-        ''' fremder Endung zu schreiben (Audit 2026-07-22) - Aufrufer nutzen die Funktion, um
+        ''' fremder Endung zu schreiben - Aufrufer nutzen die Funktion, um
         ''' in-place-Speichern/Umschreiben vorab auszuschließen und auf "Speichern unter" zu lenken.</summary>
         Public Shared Function CanEncodeToTargetExtension(path As String) As Boolean
             Select Case IO.Path.GetExtension(If(path, "")).ToLowerInvariant()
@@ -9133,7 +9391,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' wird disposed). Aufrufer übergeben einen Klon (WorkingImageService.CloneFull).
         Public Shared Function SaveImage(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer,
                                          Optional preserveMetadata As Boolean = True,
-                                         Optional workingFull As SKBitmap = Nothing) As Boolean
+                                         Optional workingFull As SKBitmap = Nothing,
+                                         Optional developRaw As Boolean = True) As Boolean
             ' Zentraler Schutz: Bearbeitung einer RAW-Quelle wirkt nur auf deren eingebettete
             ' JPEG-Vorschau (siehe OpenSourceStream/DecodeOriented) - ein Speichern-in-place würde
             ' hier fälschlich die RAW-Rohdaten JPEG-kodiert über die Original-RAW-Datei schreiben.
@@ -9145,18 +9404,20 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' (".foto.ferrumpix-rotate-1234.cr2") und kopierte sie erst danach über die Quelle -
             ' der Pfadvergleich sah zwei verschiedene Dateien, und die Formatwahl unten machte aus
             ' ".cr2" mangels eigenem Zweig ein JPEG. Ergebnis: die Original-RAW war unwiederbringlich
-            ' durch ihre eigene eingebettete Vorschau ersetzt (Nutzer-Befund 2026-07-20). Ein Ziel
+            ' durch ihre eigene eingebettete Vorschau ersetzt. Ein Ziel
             ' mit RAW-/PSD-Endung ist IMMER falsch - wir können diese Formate nicht schreiben.
-            If RawPreviewService.IsSupportedRaw(targetPath) OrElse PsdPreviewService.IsSupportedPsd(targetPath) Then
+            If RawPreviewService.IsSupportedRaw(targetPath) OrElse PsdPreviewService.IsSupportedPsd(targetPath) OrElse
+               HeifDecodeService.IsSupportedHeif(targetPath) OrElse TiffPreviewService.IsSupportedTiff(targetPath) Then
                 workingFull?.Dispose()
                 Return False
             End If
-            If (RawPreviewService.IsSupportedRaw(sourcePath) OrElse PsdPreviewService.IsSupportedPsd(sourcePath)) AndAlso
+            If (RawPreviewService.IsSupportedRaw(sourcePath) OrElse PsdPreviewService.IsSupportedPsd(sourcePath) OrElse
+                HeifDecodeService.IsSupportedHeif(sourcePath) OrElse TiffPreviewService.IsSupportedTiff(sourcePath)) AndAlso
                PathIdentity.AreSame(sourcePath, targetPath) Then
                 workingFull?.Dispose()
                 Return False
             End If
-            ' Dieselbe Fehlerklasse eine Formatstufe weiter (Audit 2026-07-22): die Formatwahl unten
+            ' Dieselbe Fehlerklasse eine Formatstufe weiter: die Formatwahl unten
             ' kennt nur PNG/WEBP/PDF und faellt sonst auf JPEG zurueck. Ein Ziel ".tiff"/".bmp"/
             ' ".gif"/".heic"/... bekam damit still JPEG-Bytes unter fremder Endung - beim
             ' in-place-Speichern wurde das Original verlustbehaftet konvertiert UND falsch
@@ -9171,7 +9432,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' .fpx-Projekte beim echten Speichern/Konvertieren immer aus Basisbild + Rezept rendern.
                 ' composite.png ist nur ein schnelles Anzeige-/Thumbnail-Bild und kann bewusst verkleinert sein.
                 Dim isFpxSource = FpxService.IsFpx(sourcePath)
-                Using original = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeOriented(sourcePath)))
+                Using original = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeOriented(sourcePath, developRaw)))
                     If original Is Nothing Then Return False
 
                     Dim ext = IO.Path.GetExtension(targetPath).ToLowerInvariant()
@@ -9183,7 +9444,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Using processed = ProcessBitmap(original, adj)
                         ' JPEG und PDF kennen kein Alpha: transparente Bereiche (Radierer-Löcher,
                         ' ausgeblendeter Hintergrund) liefen beim Encode auf SCHWARZ
-                        ' (Nutzer-Befund 2026-07-17). Auf WEISS flatten - wie Photoshop.
+                        '. Auf WEISS flatten - wie Photoshop.
                         Dim toEncode = processed
                         If isPdf OrElse format = SKEncodedImageFormat.Jpeg Then
                             toEncode = FlattenAlphaToWhite(processed)
@@ -9237,7 +9498,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Try
                 ' Gebackenes Arbeitsbild (voll aufgelöstes retouch.png) als Pipeline-Eingang -
                 ' Pinsel-/Radiererstriche stehen seit Stufe D NUR noch dort, nicht mehr im Rezept.
-                ' Ein Vorschauauflösungs-Altbestand (Seed 2026-07-17) wird ignoriert (Maße-Check).
+                ' Ein Vorschauauflösungs-Altbestand (Seed) wird ignoriert (Maße-Check).
                 Dim inputPath = loaded.BaseImagePath
                 If Not String.IsNullOrWhiteSpace(loaded.RetouchStagePath) AndAlso File.Exists(loaded.RetouchStagePath) Then
                     Dim baseSize = GetOrientedImageSize(loaded.BaseImagePath)
@@ -9290,11 +9551,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' `File.Open(..., FileMode.Create)` kürzt das Ziel SOFORT auf 0 Byte. Bricht das Encodieren
         ''' danach ab - voller Datenträger, Encoder-Ausnahme, abgezogenes Netzlaufwerk, Absturz -,
         ''' ist das Original weg und an seiner Stelle liegt ein Torso. Beim Speichern ÜBER das
-        ''' Original (nicht "Speichern unter") ist das ein Datenverlust ohne Rückweg (Audit A1).
+        ''' Original (nicht "Speichern unter") ist das ein Datenverlust ohne Rückweg.
         ''' `FpxService` macht es seit jeher so; hier gilt derselbe Weg für alle Bild-Schreibpfade.
         '''
         ''' Die Nachbardatei liegt bewusst im ZIELVERZEICHNIS - `File.Move` ist nur innerhalb
-        ''' desselben Dateisystems ein Umhängen und damit unteilbar; über `Path.GetTempPath()` wäre
+        ''' desselben Dateisystems ein Umhängen und damit unteilbar; über `Path.GetTempPath` wäre
         ''' es wieder ein Kopieren mit denselben Abbruchstellen.
         ''' </summary>
         Friend Shared Function WriteFileAtomic(targetPath As String, writer As Action(Of Stream)) As Boolean
@@ -10152,8 +10413,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         ' Bgra8888 (Unpremul): 0=B, 1=G, 2=R, 3=A. Deckung = Luminanz (Rec.601) × EIGEN-ALPHA.
                         ' Der Alpha-Anteil MUSS mitzählen: die Standard-Füllfarbe ist "#00FFFFFF" (transparentes
                         ' WEISS). Ohne Alpha ergäbe sie Luminanz 255 = überall volle Deckung, ein Verlauf von
-                        ' "transparent" nach Weiß wäre also flach und stufte gar nichts ab (Nutzer-Befund
-                        ' 2026-07-24: "auf der Maske wirkt die Füllung nicht als Deckungsverlauf").
+                        ' "transparent" nach Weiß wäre also flach und stufte gar nichts ab
+                        ' ("auf der Maske wirkt die Füllung nicht als Deckungsverlauf").
                         Dim l = fillBuf(o + 2) * 0.299 + fillBuf(o + 1) * 0.587 + fillBuf(o) * 0.114
                         lum(lRow + x) = CByte(Math.Round(l * fillBuf(o + 3) / 255.0))
                     Next
@@ -10358,7 +10619,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnet.</summary>
         ''' <summary>Bildet eine gespeicherte Maske im QUELLRAUM auf ein neues Rechteck ab - dieselbe
         ''' Abbildung, die eine Gruppen-Transformation auf ihre Objekte anwendet. Ohne das bliebe die
-        ''' Korrektur einer mitbewegten Ebene an Ort und Größe stehen (Nutzer-Befund 2026-07-25).
+        ''' Korrektur einer mitbewegten Ebene an Ort und Größe stehen.
         ''' Die Maske wird dafür neu gerastert - das kostet etwas Kantenschärfe, ist aber die einzige
         ''' Möglichkeit, solange die Ursprungsform nicht als Geometrie aufbewahrt wird.</summary>
         ''' <summary>
@@ -10573,11 +10834,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' und Details bleiben stehen, Farbflecken verschwinden. Chroma vertraegt deutlich mehr
         ''' Glaettung als Helligkeit, daher ein groesseres Sigma als bei ApplyNoiseReduction.
         '''
-        ''' ZWEI DURCHGAENGE (Messung 2026-07-25): der feine Pass allein (Sigma bis 2,5 px) loescht
-        ''' pixelweises Farbrauschen restlos aus - genau das prueft die Diagnose seit 2026-07-20.
+        ''' ZWEI DURCHGAENGE (Messung): der feine Pass allein (Sigma bis 2,5 px) loescht
+        ''' pixelweises Farbrauschen restlos aus - genau das prueft die Diagnose seit.
         ''' Das Farbrauschen eines hochgezogenen Nachthimmels ist aber TIEFFREQUENT: Flecken von
         ''' 5 bis 15 px. Davon liessen 2,5 px gemessen 61 bis 78 Prozent stehen, der Regler war fuer
-        ''' den eigentlichen Anwendungsfall wirkungslos (Nutzer-Befund 2026-07-25, Nachtaufnahme).
+        ''' den eigentlichen Anwendungsfall wirkungslos (Nachtaufnahme).
         ''' Der grobe Pass setzt darum auf dem feinen auf; kaskadiert wirken beide wie ein Radius
         ''' von Wurzel(fein^2 + grob^2), ohne dass der feine Anteil unten am Regler seine Wirkung
         ''' verliert.</summary>
@@ -10588,7 +10849,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' Vorher steuerte NUR das Sigma - und weil schon rund 2 Pixel pixelweises Farbrauschen
             ' vollstaendig ausloeschen, war der Regler ab etwa 30 wirkungslos: gemessen aenderten 50
             ' und 100 dieselben 53 bzw. 54 % der Pixel bei maximal 7 bzw. 6 Tonwerten. Der halbe
-            ' Reglerweg tat also sichtbar nichts (gemeldet 2026-07-20 als "macht nix").
+            ' Reglerweg tat also sichtbar nichts (gemeldet als "macht nix").
             Dim sigma = 0.5F + amount * 2.0F
             Dim blurred = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Using filter = SKImageFilter.CreateBlur(sigma, sigma)
@@ -10892,12 +11153,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' zwischen beiden Reglern ist ausschließlich blurSigma (Frequenzband) und strengthMultiplier.
         ''' <summary>Lokaler Kontrast (Unschaerfemaske) - Grundlage von Klarheit und Struktur.
         '''
-        ''' Lief bis 2026-07-20 ueber GetPixel/SetPixel, also mit einem P/Invoke JE PIXEL. Gemessen
+        ''' Lief bis ueber GetPixel/SetPixel, also mit einem P/Invoke JE PIXEL. Gemessen
         ''' kostete Klarheit dadurch 4,3 s bei 6,3 MP - waehrend die gesamte verschmolzene Farbkette
         ''' 17 ms braucht. Jetzt ueber geliehene Puffer und ForEachRow, wie der Rest der Pipeline.
         '''
         ''' WICHTIG fuer die Bitgleichheit: GetPixel ENTpremultipliziert und SetPixel premultipliziert
-        ''' wieder (gemessen 2026-07-20: gespeichert (100,50,25,128) liefert GetPixel (199,100,50,128)).
+        ''' wieder (gemessen: gespeichert (100,50,25,128) liefert GetPixel (199,100,50,128)).
         ''' Ein naiver Umbau auf Rohbytes wuerde deshalb bei teiltransparenten Pixeln ANDERE Ergebnisse
         ''' liefern. Das Verhalten ist unten exakt nachgebildet.</summary>
         Private Shared Function ApplyLocalContrast(source As SKBitmap, blurSigma As Single, amount As Single, strengthMultiplier As Single) As SKBitmap
@@ -10995,7 +11256,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return ApplyLocalContrast(source, 3.6F, clamped, 2.4F)
         End Function
 
-        ''' <summary>Dunst. Lief bis 2026-07-20 ueber GetPixel/SetPixel (P/Invoke je Pixel, gemessen
+        ''' <summary>Dunst. Lief bis ueber GetPixel/SetPixel (P/Invoke je Pixel, gemessen
         ''' 4,3 s bei 6,3 MP); jetzt ueber geliehene Puffer. Die Alpha-Semantik von GetPixel/SetPixel
         ''' ist ueber ReadUnpremultiplied/WritePremultiplied exakt nachgebildet.</summary>
         Private Shared Function ApplyHaze(source As SKBitmap, amount As Single) As SKBitmap
@@ -11038,7 +11299,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         End Function
 
         ''' <summary>Leuchten. Wie ApplyHaze von GetPixel/SetPixel auf Puffer umgestellt
-        ''' (2026-07-20, gemessen 4,5 s bei 6,3 MP).</summary>
+        ''' (gemessen 4,5 s bei 6,3 MP).</summary>
         Private Shared Function ApplyImageGlow(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
@@ -11086,7 +11347,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' <summary>Staub/Kratzer, Richtung wie bei den Nachbarn im Panel (positiv = den benannten
         ''' Effekt HINZUFUEGEN): positiv streut Staubkoerner und wenige fast senkrechte Kratzer wie
         ''' auf gescanntem Film, negativ ENTFERNT Stoerungen per Medianfilter (vorher war es genau
-        ''' umgekehrt und die zufaelligen Querstriche sahen nach nichts aus - Nutzerbefund 2026-07-19).</summary>
+        ''' umgekehrt und die zufaelligen Querstriche sahen nach nichts aus -).</summary>
         Private Shared Function ApplyDustScratches(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
@@ -11355,7 +11616,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' das Nachbarband übergeblendet.
         '''
         ''' Vorher wählte diese Funktion hart per Select Case. Das machte das Ergebnis genau auf einer
-        ''' Grenze unstetig: gemessen 2026-07-20 ergaben (255,191,0) und (255,192,0) - ein Tonwert
+        ''' Grenze unstetig: gemessen ergaben (255,191,0) und (255,192,0) - ein Tonwert
         ''' Unterschied im Grünkanal, Farbton 44,94 gegen 45,18 - einen Sprung von 153 Tonwerten,
         ''' sobald die Nachbarbänder verschieden eingestellt waren. Im Bild war das eine sichtbare
         ''' harte Kante quer durch jeden weichen Farbverlauf, der eine Bandgrenze kreuzt (Himmel,
@@ -11404,7 +11665,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' verschmolzene Punktoperationskette. Nothing heißt "keine Matrix": unbekanntes Preset oder
         ''' "weich" (das ist ein Weichzeichner, kein Farbfilter).
         ''' Skia liest die 5. Matrixspalte (Offset) in der Skala 0..1, NICHT 0..255 - gemessen
-        ''' 2026-07-20: Offset 0.1 auf Grau 100 ergibt 126, also +25.5 Tonwerte. Die Offsets unten
+        ''': Offset 0.1 auf Grau 100 ergibt 126, also +25.5 Tonwerte. Die Offsets unten
         ''' sind aber als TONWERTE gemeint. Ohne die Division waren fuenf Presets unbrauchbar:
         ''' "Fade"/"Vintage" lieferten reines Weiss, "Kontrast" reines Schwarz, "Warm"/"Kuehl"
         ''' knallorange bzw. knallblau. Die Zahlen bleiben in Tonwerten lesbar, geteilt wird hier.
@@ -11420,7 +11681,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         0, 0, 0, 1, 0
                     }
                 Case "warm"
-                    ' Werte 2026-07-20 angezogen: bei 50 % Standardstaerke war der Look zuvor
+                    ' Werte angezogen: bei 50 % Standardstaerke war der Look zuvor
                     ' praktisch unsichtbar (Kanalshift 12) - siehe Kommentar an DefaultFilterStrength.
                     matrix = New Single() {
                         1.12F, 0.02F, 0, 0, 8.0F / 255.0F,
@@ -11436,7 +11697,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         0, 0, 0, 1, 0
                     }
                 Case "fade"
-                    ' Werte 2026-07-20 angezogen (vorher Kanalshift 10, unsichtbar): ein "Fade"
+                    ' Werte angezogen (vorher Kanalshift 10, unsichtbar): ein "Fade"
                     ' lebt vom angehobenen Schwarzpunkt - Koeffizienten runter, Offset deutlich rauf.
                     matrix = New Single() {
                         0.80F, 0.04F, 0.04F, 0, 30.0F / 255.0F,
@@ -11459,7 +11720,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         0, 0, 0, 1, 0
                     }
                 Case "matt"
-                    ' Werte 2026-07-20 angezogen (vorher Kanalshift 15). Matt = flacher Kontrast mit
+                    ' Werte angezogen (vorher Kanalshift 15). Matt = flacher Kontrast mit
                     ' leicht warmem Grundton, deutlicher abgesetzt von "Fade" (neutral).
                     matrix = New Single() {
                         0.84F, 0.06F, 0.04F, 0, 26.0F / 255.0F,
@@ -11468,7 +11729,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         0, 0, 0, 1, 0
                     }
                 Case "cross"
-                    ' Werte 2026-07-20 angezogen (vorher Kanalshift 15). Kreuzentwicklung lebt von
+                    ' Werte angezogen (vorher Kanalshift 15). Kreuzentwicklung lebt von
                     ' GEGENLAEUFIGEN Kanaelen: Lichter ins Gruengelbe, Schatten ins Blaue.
                     matrix = New Single() {
                         1.22F, 0, 0, 0, -16.0F / 255.0F,
@@ -11607,7 +11868,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Try
 
             If size < 2 OrElse values.Count <> size * size * size * 3 Then
-                ' Fehlschlag NEGATIV cachen (Audit 2026-07-22): ohne Eintrag wurde eine defekte
+                ' Fehlschlag NEGATIV cachen: ohne Eintrag wurde eine defekte
                 ' .cube-Datei beim Ziehen am LUT-Stärke-Regler mit JEDEM Vorschau-Frame neu
                 ' geparst. TryGetValue liefert für den Nothing-Eintrag True -> Aufrufer sehen
                 ' weiterhin "keine LUT". Gilt (wie der Positiv-Cache) bis zum Programmende -
@@ -11720,7 +11981,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                                     ' PREMUL-Bytes gerechnet entstand bei Teiltransparenz (Radierer-
                                                                     ' Loecher) Farbe > Alpha - ungueltiges Premul, zu starke
                                                                     ' Aufhellung, und der GetPixel-Fallback unten rechnete anders
-                                                                    ' (Audit 2026-07-22). Der Zielweiss-Wert im Premul-Raum ist
+                                                                    '. Der Zielweiss-Wert im Premul-Raum ist
                                                                     ' schlicht das Alpha selbst: v + (a-v)*mix. Bei a=255 bitgleich
                                                                     ' zur alten Formel; Abdunkeln (Multiplikation) ist premul-korrekt.
                                                                     Dim aA = CSng(srcBuf(o + 3))
@@ -11760,10 +12021,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
-        ''' <summary>Koernung. Von GetPixel/SetPixel auf Puffer umgestellt (2026-07-20, gemessen
+        ''' <summary>Koernung. Von GetPixel/SetPixel auf Puffer umgestellt (gemessen
         ''' 4,3 s bei 6,3 MP).
         ''' BEWUSST SERIELL: der Zufallsstrom haengt an der Durchlaufreihenfolge. Parallel wuerde das
-        ''' Korn bei jedem Lauf anders fallen - die Diagnose prueft Bitgleichheit (Abschnitt C), und
+        ''' Korn bei jedem Lauf anders fallen - wiederholte Laeufe muessen bitgleich sein, und
         ''' ein Bild, das sich beim zweiten Rendern aendert, waere auch fuer den Nutzer falsch.
         ''' Der Gewinn kommt allein aus dem Wegfall des P/Invoke je Pixel.</summary>
         ''' <summary>Körnung. Ohne Größe/Frequenz (beide 0) das bisherige feine 1-px-Korn, bitgenau
@@ -11808,8 +12069,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Amplituden-Modulation, die das Korn fleckig macht (manche Bereiche stärker, manche schwächer)
         ''' - sichtbar bei JEDER Größe, auch 0, und unabhängig von der Korn-Skala. BEWUSST SERIELL wie
         ''' <see cref="ApplyGrainFine"/>: erst das Zellraster, dann das grobe Modulationsraster - der
-        ''' Zufallsstrom hängt an der Reihenfolge, damit Vorschau und Backen bitgleich bleiben (Diagnose
-        ''' Abschnitt C).</summary>
+        ''' Zufallsstrom hängt an der Reihenfolge, damit Vorschau und Backen bitgleich bleiben.</summary>
         Private Shared Function ApplyGrainTextured(source As SKBitmap, amount As Single, sizeAmount As Single, freqAmount As Single) As SKBitmap
             Dim strength = Clamp(amount, 0, 1)
             If strength <= 0 Then Return source
@@ -11872,7 +12132,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
-        ''' <summary>Rauschen hinzufuegen. Von GetPixel/SetPixel auf Puffer umgestellt (2026-07-20).
+        ''' <summary>Rauschen hinzufuegen. Von GetPixel/SetPixel auf Puffer umgestellt.
         ''' Seriell aus demselben Grund wie ApplyGrain: der Zufallsstrom haengt an der Reihenfolge.</summary>
         Private Shared Function ApplyAddNoise(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, 0, 1)
@@ -12166,7 +12426,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' NICHT ueber einen PNG-Umweg, wie es hier frueher stand: SKImage.FromBitmap liefert
             ' fuer manche Farbtypen (etwa Rgba16161616) schlicht Nothing, und der Encode lief danach
             ' in eine NullReferenceException. Das riss beim Oeffnen jeder RAW-Datei die Anwendung um,
-            ' solange das Arbeitsbild 16 Bit trug (2026-07-20). Der 16-Bit-Weg ist inzwischen wieder
+            ' solange das Arbeitsbild 16 Bit trug. Der 16-Bit-Weg ist inzwischen wieder
             ' ausgebaut, die Konvertierung hier bleibt aber der robustere Weg fuer alles Unerwartete.
             '
             ' Bewusst OHNE Try/Catch um den Aufruf: ein erster Anlauf fing hier breit ab und gab im

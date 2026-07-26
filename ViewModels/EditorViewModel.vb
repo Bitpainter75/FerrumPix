@@ -78,6 +78,7 @@ Namespace ViewModels
         Private _retouchLivePatchImage As Bitmap
         Private _selectedAnnotationOverlayMetrics As ImageProcessor.AnnotationOverlayRender
         Private _currentTool As EditorTool = EditorTool.Crop
+        Private _maskMode As String = "Brush"
         Private _brightness As Double = 0
         Private _contrast As Double = 0
         Private _saturation As Double = 0
@@ -307,7 +308,7 @@ Namespace ViewModels
         Private _cropRight As Double = 0
         Private _cropBottom As Double = 0
         ' _appliedCropXxx spiegelt den zuletzt per "Zuschneiden anwenden" bestätigten Ausschnitt wider.
-        ' GetCurrentAdjustments() (Vorschau/Speichern) liest ausschließlich diese Werte, damit ein noch
+        ' GetCurrentAdjustments (Vorschau/Speichern) liest ausschließlich diese Werte, damit ein noch
         ' nicht bestätigter Zuschnitt (nur _cropXxx) nicht durch eine unabhängige Vorschau-Aktualisierung
         ' (z.B. beim Hinzufügen einer Text-Ebene) versehentlich mit gebacken wird.
         Private _appliedCropLeft As Double = 0
@@ -324,7 +325,7 @@ Namespace ViewModels
         Private _canvasAnchor As String = "Center"
         Private _canvasBackgroundColor As String = "#FF000000"
         ' Analog zu _appliedCropXxx: die zuletzt per "<Werkzeug> anwenden" bestätigten Werte.
-        ' GetCurrentAdjustments() (kanonisch, forPreview:=False) liest ausschließlich diese Felder -
+        ' GetCurrentAdjustments (kanonisch, forPreview:=False) liest ausschließlich diese Felder -
         ' die Live-Felder oben (_resizeWidth usw.) treiben nur die Live-Vorschau
         ' (GetCurrentAdjustments(forPreview:=True)) und die Eingabefelder selbst. Ohne diese Trennung
         ' wurde jede Änderung sofort wirksam (auch beim Verlassen des Werkzeugs ohne "Anwenden").
@@ -443,7 +444,7 @@ Namespace ViewModels
         ' Auswahl/Maske eine eigene Ebene bekommt und nicht die vorige mitfüllt.
         Private _selectionPromotedLayerId As String = ""
         ' Art der aktuell aktiven Auswahl: False = AUSWAHL (Laufameisen), True = MASKE (rotes Overlay).
-        ' Bestimmt die Overlay-Darstellung UNABHÄNGIG vom Werkzeug (Nutzerwunsch: Auswahl vs. Maske getrennt).
+        ' Bestimmt die Overlay-Darstellung UNABHÄNGIG vom Werkzeug (Auswahl vs. Maske getrennt).
         Private _activeSelectionIsMask As Boolean = False
         Private _selectionShapeMode As String = "Rectangle"
         Private _selectionShapePointsX As Double() = Nothing
@@ -467,7 +468,7 @@ Namespace ViewModels
         ' Ebenenstapel. Der Renderer wandelt diese Daten nur intern in seine bestehende Zeichenroutine um.
         Private ReadOnly _pixelEditLayer As New PixelEditLayer()
 
-        ' ARBEITSBILD (Umbau 2026-07-17): voll aufgelöstes Bild, aus dem die Vorschau
+        ' ARBEITSBILD: voll aufgelöstes Bild, aus dem die Vorschau
         ' abgeleitet wird; Retusche/Striche/gerasterte Ebenen werden regional eingebacken.
         ' Besitz: der Service hält das Voll-Bitmap, das Vorschau-Bitmap gehört
         ' weiter der _previewSource-/Stale-Mechanik (siehe WorkingImageService-Kopf).
@@ -548,13 +549,13 @@ Namespace ViewModels
         ' merkt sich den Stand seines Snapshots und LEGT DIE REGION NACH, wenn das Modell sich
         ' waehrend des Renders bewegt hat. Ohne das konnte ein Patch, der noch die alte Lage zeigte,
         ' als letzter geschrieben werden - das Objekt blieb dann sichtbar an seiner Startstelle
-        ' stehen ("Kopie beim Verschieben", sporadisch, Diagnose-Wettlauf 2026-07-25). Verworfen wird
+        ' stehen ("Kopie beim Verschieben", sporadisch, Diagnose-Wettlauf). Verworfen wird
         ' der Patch bewusst NICHT: waehrend eines Zuges ist ein Zwischenstand besser als ein Loch.
         Private _annotationModelVersion As Long = 0
         ' Masken-Nachführung bei GRUPPEN-Zügen: das Umrechnen einer Maske ist teuer (PNG dekodieren,
         ' neu rastern, PNG kodieren - auf dem UI-Thread). Pro Mausbewegung ausgeführt legte es die
         ' Oberfläche lahm: das Drehen einer Gruppe ruckelte, der Rahmen sprang und das Bild blieb an
-        ' der alten Stelle stehen (Nutzer-Befund 2026-07-25). Während des Zuges wird deshalb nur
+        ' der alten Stelle stehen. Während des Zuges wird deshalb nur
         ' MITGESCHRIEBEN, gerechnet wird EINMAL beim Loslassen.
         Private _groupDragBoxAtStart As (X As Double, Y As Double, Width As Double, Height As Double)? = Nothing
         Private _groupDragRotationTotal As Double = 0
@@ -600,7 +601,7 @@ Namespace ViewModels
         Private _zoomDetailVisBottom As Double
         Private _zoomDetailTimer As DispatcherTimer = Nothing  ' Debounce fuer den teuren Detail-Render
         Private _zoomDetailExtracting As Boolean = False        ' Guard gegen synchrones PropertyChanged-Reentry
-        ' Vorher/Nachher im Zoom (Nutzerwunsch 2026-07-17): zweites Detail der Vorher-Seite aus dem
+        ' Vorher/Nachher im Zoom: zweites Detail der Vorher-Seite aus dem
         ' ORIGINAL-Decode (nur Geometrie, keine Farb-Pipeline) - die View clippt beide Details an der
         ' Vergleichslinie. Vorher-Detail nur, wenn die Maße zur Nachher-Detail-Szene passen.
         Private _zoomDetailWantBefore As Boolean = False       ' View meldet: Vergleich sichtbar
@@ -718,8 +719,8 @@ Namespace ViewModels
         ' fragile Overlay-Hybrid-Architektur existierte nur, um diese langsamen Patches zu umgehen.
         ' Jetzt adaptiv an der längsten Monitorkante (min 2560, Fallback 3072): scharf in der
         ' Fit-Ansicht, ~10x schnellere Pipeline. Detail-Zoom über der Vorschau-Auflösung wird
-        ' übergangsweise weicher, bis der Viewport-1:1-Region-Render kommt (Stufe 3, siehe
-        ' EDITOR_RENDERING_NOTES.md). Export/Speichern rendern unverändert in voller Quellauflösung.
+        ' übergangsweise weicher, bis ein Viewport-1:1-Region-Render umgesetzt ist.
+        ' Export/Speichern rendern unverändert in voller Quellauflösung.
         Private Shared _previewMaxDimensionResolved As Integer = 0
 
         Private Shared ReadOnly Property PreviewMaxDimension As Integer
@@ -908,11 +909,11 @@ Namespace ViewModels
                     ' auch bei der rechten Maustaste).
                     ' Die Menge bleibt NUR beim Rechtsklick erhalten (Kontextmenü). Ein normaler
                     ' Klick auf eine Zeile grenzt bewusst auf dieses eine Objekt ein - sonst käme man
-                    ' in einer Gruppe nie an ein einzelnes Mitglied (Nutzer-Befund 2026-07-25).
+                    ' in einer Gruppe nie an ein einzelnes Mitglied.
                     Dim keepSet = _preserveMultiSelectionOnNextRowChange AndAlso
                                   IsAnnotationSelected(_annotations(annotationIndex)) AndAlso HasMultiAnnotationSelection
                     ' Beim Ankerwechsel MUSS der bisherige Anker in die Zusatzliste - er ist Teil der
-                    ' Auswahl und stünde sonst als einziger nicht mehr darin (Nutzer-Befund: nach
+                    ' Auswahl und stünde sonst als einziger nicht mehr darin (nach
                     ' Umschalt+Klick verlor die zuerst markierte Ebene beim Rechtsklick ihre Markierung).
                     Dim keptExtras = If(keepSet, _extraSelectedAnnotations.ToList(), New List(Of ImageAnnotation)())
                     Dim previousAnchor As ImageAnnotation = Nothing
@@ -969,11 +970,22 @@ Namespace ViewModels
                         LoadLayerMaskIntoSelection(picked)
                         ' Eine Korrektur lebt von ihrer Maske - wer sie im Panel anklickt, will an genau
                         ' die heran. Das Werkzeug wechselt deshalb auf AUSWAHL, damit Rechteck, Lasso,
-                        ' Zauberstab und Masken-Pinsel sofort greifen (Nutzerwunsch 2026-07-25). Bei
+                        ' Zauberstab und Masken-Pinsel sofort greifen. Bei
                         ' Mehrfachauswahl bleibt das Werkzeug, wie es ist - dort geht es um die Menge,
                         ' nicht um eine bestimmte Maske.
-                        If SelectedAdjustmentLayers.Count <= 1 AndAlso _currentTool <> EditorTool.Selection Then
-                            CurrentTool = EditorTool.Selection
+                        ' Eine Verlaufsmaske hat weder Ameisen noch malbare Form - fuer sie ist das
+                        ' MASKEN-Werkzeug zustaendig, das ihre Griffe und Regler zeigt. Alles andere
+                        ' bleibt beim Auswahl-Werkzeug.
+                        Dim istVerlauf = _imageMasks.Any(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId AndAlso m.IsGradient)
+                        Dim zielWerkzeug = If(istVerlauf, EditorTool.Mask, EditorTool.Selection)
+                        If SelectedAdjustmentLayers.Count <= 1 AndAlso _currentTool <> zielWerkzeug Then
+                            CurrentTool = zielWerkzeug
+                        End If
+                        If istVerlauf Then
+                            Dim verlauf = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId)
+                            MaskMode = If(verlauf IsNot Nothing AndAlso verlauf.IsRadialGradient, "Radial", "Linear")
+                            PublishGradientOverlay(verlauf)
+                            RaiseGradientPropertiesChanged()
                         End If
                     End If
                 ElseIf _hasActiveSelection Then
@@ -1354,7 +1366,7 @@ Namespace ViewModels
         ''' Overlay das bereits in der Szene gerenderte Objekt doppeln (Schatten doppelt deckend usw.).</summary>
         ''' Ghost nach Drag-Ende STEHEN LASSEN, bis der Szene-Render mit dem Objekt gelandet ist
         ''' (Region-Renders brauchen je nach Effekten 300-700 ms) - sonst fehlt das Objekt für
-        ''' diese Spanne im Bild: das "Flackern nach dem Verschieben" (Nutzer-Befund 2026-07-17).
+        ''' diese Spanne im Bild: das "Flackern nach dem Verschieben".
         Private _placementGhostLinger As Boolean = False
 
         ''' <summary>Der Ghost darf waehrend eines Zuges erst sichtbar werden, wenn die Szene ihre Kopie
@@ -1615,7 +1627,7 @@ Namespace ViewModels
         ''' <summary>Nimmt die automatische Bildverbesserung wieder heraus - Regler für Regler und nur
         ''' dort, wo der Wert seit dem Knopfdruck UNVERÄNDERT ist. Was der Nutzer danach selbst
         ''' nachgezogen hat, gehört ihm und bleibt stehen; ohne diesen Vergleich wäre der kleine
-        ''' Zurücksetzen-Pfeil wieder das, was er bis 2026-07-21 war: ein Knopf, der stillschweigend
+        ''' Zurücksetzen-Pfeil wieder das, was er vorher war: ein Knopf, der stillschweigend
         ''' fremde Bearbeitung verwirft.</summary>
         Private Sub RevertAutoAdjustInternal()
             If Not _autoAdjustActive OrElse _autoAdjustBefore Is Nothing OrElse _autoAdjustApplied Is Nothing Then
@@ -1721,6 +1733,7 @@ Namespace ViewModels
                 .WidthPixels = p.WidthPixels,
                 .HeightPixels = p.HeightPixels,
                 .Anchor = p.Anchor,
+                .LockAspect = p.LockAspect,
                 .RotationDegrees = p.RotationDegrees,
                 .Opacity = p.Opacity,
                 .FontFamily = p.FontFamily,
@@ -1860,6 +1873,7 @@ Namespace ViewModels
             existing.WidthPixels = AnnotationWidthPixels
             existing.HeightPixels = AnnotationHeightPixels
             existing.Anchor = NormalizeAnnotationAnchor(_annotationAnchor)
+            existing.LockAspect = _annotationLockAspect
             existing.RotationDegrees = _annotationRotation
             existing.Opacity = _annotationOpacity
             existing.FontFamily = _annotationFontFamily
@@ -1977,8 +1991,8 @@ Namespace ViewModels
 
         ''' <summary>Bei Text auf einem KREISPFAD ist der gemessene Textkasten die falsche Box: er
         ''' ist breit und flach, der Kreis nutzt davon aber nur min(Breite, Hoehe) - der
-        ''' Selektionsrahmen stand dadurch weit um einen kleinen Kreis herum (Nutzerbefund
-        ''' 2026-07-20, zweimal gemeldet).
+        ''' Selektionsrahmen stand dadurch weit um einen kleinen Kreis herum
+        ''' (zweimal gemeldet).
         ''' Stattdessen eine QUADRATISCHE Box, deren Umfang zum Text passt: der Text laeuft einmal
         ''' herum, also Durchmesser = Textbreite / Pi. Damit umschliesst der Rahmen den Kreis, und
         ''' die Groesse folgt weiterhin der Schrift - genau wie beim geraden Text.
@@ -1991,7 +2005,7 @@ Namespace ViewModels
         ''' davor mit dem Textkasten überschreibt. Genau daran ist es vorher gescheitert: die
         ''' Mittelpunkt-Korrektur unten rechnete gegen den flachen Textkasten statt gegen den
         ''' vorherigen KREIS, und weil sie bei jedem Tastendruck erneut lief, wanderte das Objekt mit
-        ''' jedem Zeichen ein Stück nach rechts unten (Nutzerbefund 2026-07-21).</summary>
+        ''' jedem Zeichen ein Stück nach rechts unten.</summary>
         Private Sub FitBoxToCircleTextPath(alteBreite As Double, alteHoehe As Double)
             If Not IsCircleTextPath(_annotationTextPathKind) Then Return
             Dim ziel = ComputeCircleTextBoxPercent(_annotationWidthPercent)
@@ -2231,7 +2245,7 @@ Namespace ViewModels
         ''' immer den richtigen Wert - gemeldet wurde die Änderung aber nie. Die Anzeige blieb
         ''' dadurch auf dem Stand des zuletzt geladenen Objekts stehen: Kopfzeile "Bild" statt
         ''' "Gruppe 1", dazu Quelle, Kontur und Seitenverhältnis, obwohl fünf Ebenen markiert waren
-        ''' (Nutzer-Befund 2026-07-25). Wer hier eine neue auswahlabhängige Eigenschaft baut, trägt
+        '''. Wer hier eine neue auswahlabhängige Eigenschaft baut, trägt
         ''' sie in diese Liste ein - sonst wiederholt sich genau dieser Fehler.
         ''' </summary>
         Private Sub RaiseSelectionScopedPanelChanged()
@@ -2537,7 +2551,7 @@ Namespace ViewModels
         ''' <summary>Schatten/Glühen (und andere objekt-eigene Blöcke) nur bei EINZELauswahl zeigen.</summary>
         ''' <summary>Position und Größe im Panel beschreiben bei einer Mehrfachauswahl die GEMEINSAME
         ''' Box, nicht den Anker: sonst zeigte das Panel die Maße des zuletzt angeklickten Objekts, und
-        ''' eine Eingabe änderte auch nur dieses (Nutzer-Befund 2026-07-25). Eingaben laufen über
+        ''' eine Eingabe änderte auch nur dieses. Eingaben laufen über
         ''' SetSelectionBoxRect und wirken damit auf alle markierten Objekte.</summary>
         Private Function SelectionBoxComponent(index As Integer) As Double
             Dim box = GetSelectionBoxDisplayRectPercent()
@@ -2589,12 +2603,12 @@ Namespace ViewModels
                 ' Zeit, als eine Korrektur nicht in eine Gruppe durfte; seit sie es darf (sie ist oft
                 ' genau für eines der Objekte gemacht), sperrte sie das Gruppieren nur noch aus:
                 ' sobald eine Korrektur mit markiert war, ging weder Knopf noch Kontextmenü
-                ' (Nutzer-Befund 2026-07-25).
+                '.
                 Dim objekte = SelectedAnnotationCount
                 Dim korrekturen = SelectedAdjustmentLayers.Count
                 If objekte + korrekturen < 2 Then Return False
                 ' Steht die Auswahl schon AUF oder IN einer Gruppe, gibt es nichts mehr zu gruppieren -
-                ' der Knopf wird dann ausgeblendet (Nutzerwunsch 2026-07-25).
+                ' der Knopf wird dann ausgeblendet.
                 If _selectedLayerRow IsNot Nothing AndAlso _selectedLayerRow.IsGroupHeader Then Return False
                 Dim gruppen = SelectedAnnotations.Select(Function(a) If(a?.GroupId, "")).
                               Concat(SelectedAdjustmentLayers.Select(Function(l) If(l?.GroupId, ""))).ToList()
@@ -3222,6 +3236,11 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImageRaw))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImagePsd))
+                ' Der Dateityp entscheidet, ob das Zuschneiden bestaetigt werden muss.
+                Me.RaisePropertyChanged(NameOf(IsCurrentImageSidecarFormat))
+                Me.RaisePropertyChanged(NameOf(IsCurrentDocumentFpx))
+                Me.RaisePropertyChanged(NameOf(UsesLiveCrop))
+                Me.RaisePropertyChanged(NameOf(ShowApplyCropButton))
                 Me.RaisePropertyChanged(NameOf(CanSaveSidecar))
                 Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
@@ -3496,6 +3515,7 @@ Namespace ViewModels
                        _currentTool <> EditorTool.Transform AndAlso
                        _currentTool <> EditorTool.Move AndAlso
                        _currentTool <> EditorTool.Selection AndAlso
+                       _currentTool <> EditorTool.Mask AndAlso
                        _currentTool <> EditorTool.Text AndAlso
                        _currentTool <> EditorTool.Draw AndAlso
                        _currentTool <> EditorTool.Retouch AndAlso
@@ -3543,15 +3563,31 @@ Namespace ViewModels
                 ' sichtbar).
                 ' Zurück ins AUSWAHL-Werkzeug mit bestehender Auswahl oder Maske: dann will man sie
                 ' benutzen, nicht sofort eine neue aufziehen - also den Untermodus VERSCHIEBEN
-                ' aktivieren (Nutzerwunsch 2026-07-25). Ohne aktive Auswahl bleibt der zuletzt gewählte
+                ' aktivieren. Ohne aktive Auswahl bleibt der zuletzt gewählte
                 ' Modus stehen, und wer innerhalb des Werkzeugs den Modus umschaltet, wird nicht
                 ' zurückgeworfen - der Zweig läuft nur beim WECHSEL in das Werkzeug.
-                If value = EditorTool.Selection AndAlso previousTool <> EditorTool.Selection AndAlso
-                   _hasActiveSelection Then
-                    SelectionMode = "Move"
+                If value = EditorTool.Selection AndAlso previousTool <> EditorTool.Selection Then
+                    ' Der Pinsel wohnt im MASKEN-Werkzeug. Käme man von dort mit "Brush" zurück, stünde
+                    ' das Auswahlwerkzeug in einem Modus, den es gar nicht mehr anbietet.
+                    If String.Equals(_selectionMode, "Brush", StringComparison.Ordinal) Then SelectionMode = "Rectangle"
+                    If _hasActiveSelection Then SelectionMode = "Move"
+                End If
+                ' Ins Masken-Werkzeug: den gewählten Untermodus wirklich scharfstellen. MaskMode wirkt
+                ' sonst nur beim Umschalten, und beim ersten Betreten stünde die Auswahl noch auf
+                ' Rechteck - der Pinsel malte dann nicht.
+                If value = EditorTool.Mask AndAlso previousTool <> EditorTool.Mask AndAlso IsMaskBrushMode Then
+                    SelectionMode = "Brush"
                 End If
                 If value = EditorTool.Retouch AndAlso previousTool <> EditorTool.Retouch AndAlso Not IsRepairMode Then
                     BeginRetouchLiveBuffersAsync()
+                End If
+                ' Sidecar-Bilder zeigen im Zuschneide-Werkzeug das GANZE Bild und sonst nur den
+                ' Ausschnitt - beim Betreten wie beim Verlassen wechselt also die Anzeigegroesse.
+                If (value = EditorTool.Crop) <> (previousTool = EditorTool.Crop) Then NotifyLiveCropDisplayChanged()
+                ' Ins Zuschneiden: das Bild einpassen, sonst zieht man an Anfassern, die neben der
+                ' Flaeche liegen. Gilt fuer JEDEN Dateityp.
+                If value = EditorTool.Crop AndAlso previousTool <> EditorTool.Crop Then
+                    RaiseEvent FitToViewportRequested(Me, EventArgs.Empty)
                 End If
             End Set
         End Property
@@ -3563,7 +3599,7 @@ Namespace ViewModels
             Get
                 ' Bei einer Mehrfachauswahl beschreibt der Kopf die AUSWAHL, nicht das zuletzt
                 ' angeklickte Objekt - sonst stünde dort z.B. "Bild", obwohl fünf Objekte markiert
-                ' sind (Nutzer-Befund 2026-07-25). Eine Gruppe nennt sich beim Namen.
+                ' sind. Eine Gruppe nennt sich beim Namen.
                 If HasMultiAnnotationSelection Then
                     Dim grp = SelectedAnnotationsGroup()
                     If grp IsNot Nothing Then Return If(String.IsNullOrWhiteSpace(grp.Name), LocalizationService.T("Gruppe"), grp.Name)
@@ -3580,6 +3616,7 @@ Namespace ViewModels
                     Case EditorTool.Transform : Return "Transformieren"
                     Case EditorTool.Move : Return "Verschieben"
                     Case EditorTool.Selection : Return "Auswahl"
+                    Case EditorTool.Mask : Return "Maske"
                     Case EditorTool.Retouch : Return If(_isCloneMode, "Stempel", If(_isRepairMode, "Reparaturpinsel", "Verwischen"))
                     Case EditorTool.Draw : Return If(_isEraserMode, "Radiergummi", "Pinsel")
                     Case EditorTool.Geometry, EditorTool.Insert : Return "Formen und Symbole"
@@ -3601,6 +3638,7 @@ Namespace ViewModels
                 Select Case _currentTool
                     Case EditorTool.Move : Return base & "pointer.svg"
                     Case EditorTool.Selection : Return base & "rectangle.svg"
+                    Case EditorTool.Mask : Return base & "mask.svg"
                     Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", If(_isRepairMode, "bandage.svg", "blur.svg"))
                     Case EditorTool.Draw : Return base & If(_isEraserMode, "eraser.svg", "brush.svg")
                     Case EditorTool.Geometry, EditorTool.Insert : Return base & "shape.svg"
@@ -3685,6 +3723,74 @@ Namespace ViewModels
         Public ReadOnly Property ShowSelectionAdjustments As Boolean
             Get
                 Return _currentTool = EditorTool.Selection
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowMaskAdjustments As Boolean
+            Get
+                Return _currentTool = EditorTool.Mask
+            End Get
+        End Property
+
+        ''' <summary>Modus des Masken-Werkzeugs: "Brush", "Linear" oder "Radial".</summary>
+        Public Property MaskMode As String
+            Get
+                Return _maskMode
+            End Get
+            Set(value As String)
+                Dim normalized = If(String.IsNullOrWhiteSpace(value), "Brush", value.Trim())
+                If String.Equals(_maskMode, normalized, StringComparison.Ordinal) Then Return
+                _maskMode = normalized
+                Me.RaisePropertyChanged(NameOf(MaskMode))
+                Me.RaisePropertyChanged(NameOf(IsMaskBrushMode))
+                Me.RaisePropertyChanged(NameOf(IsMaskLinearMode))
+                Me.RaisePropertyChanged(NameOf(IsMaskRadialMode))
+                Me.RaisePropertyChanged(NameOf(ShowGradientControls))
+                ' Der Masken-Pinsel benutzt weiterhin die Auswahl-Maschinerie (Alpha8-Stempel in die
+                ' Auswahlmaske); die Verlaeufe legen dagegen sofort eine parametrische Maske an.
+                If String.Equals(normalized, "Brush", StringComparison.Ordinal) Then
+                    SelectionMode = "Brush"
+                End If
+            End Set
+        End Property
+
+        Public ReadOnly Property IsMaskBrushMode As Boolean
+            Get
+                Return String.Equals(_maskMode, "Brush", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsMaskLinearMode As Boolean
+            Get
+                Return String.Equals(_maskMode, "Linear", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsMaskRadialMode As Boolean
+            Get
+                Return String.Equals(_maskMode, "Radial", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Die Verlaufsmaske der gerade markierten Korrekturebene - oder Nothing, wenn
+        ''' keine markiert ist oder ihre Maske gemalt statt gerechnet wird. Ueber sie laeuft das
+        ''' NACHTRAEGLICHE Aendern: eine Ebene im Ebenen-Panel anklicken, und Griffe wie Regler
+        ''' arbeiten wieder auf genau diesem Verlauf.</summary>
+        Public ReadOnly Property SelectedGradientMask As ImageMask
+            Get
+                If String.IsNullOrEmpty(_selectedMaskedAdjustmentLayerId) Then Return Nothing
+                Dim layer = _maskedAdjustmentLayers.FirstOrDefault(
+                    Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+                If layer Is Nothing OrElse String.IsNullOrEmpty(layer.MaskId) Then Return Nothing
+                Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
+                Return If(mask IsNot Nothing AndAlso mask.IsGradient, mask, Nothing)
+            End Get
+        End Property
+
+        ''' <summary>Weichheit, Umkehren und Stauchung gelten nur fuer Verlaufsmasken.</summary>
+        Public ReadOnly Property ShowGradientControls As Boolean
+            Get
+                Return IsMaskLinearMode OrElse IsMaskRadialMode OrElse SelectedGradientMask IsNot Nothing
             End Get
         End Property
 
@@ -4919,7 +5025,7 @@ Namespace ViewModels
             End Get
         End Property
 
-        ' Key -> deutscher Ausgangs-Anzeigename (wird über LocalizationService.T() übersetzt).
+        ' Key -> deutscher Ausgangs-Anzeigename (wird über LocalizationService.T übersetzt).
         ' Reihenfolge = Reihenfolge im Picker.
         Private Shared ReadOnly _brushPresetLabels As (Key As String, Label As String)() = {
             ("soft", "Rund weich"),
@@ -5643,7 +5749,7 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Solange die Pixel-Ebene ausgeblendet ist, sind Pinsel, Radiergummi, Verwischen,
-        ''' Stempel und Reparaturpinsel gesperrt (Nutzerentscheidung 2026-07-19, wie das Malen auf einer
+        ''' Stempel und Reparaturpinsel gesperrt (wie das Malen auf einer
         ''' unsichtbaren Ebene in ueblichen Bildbearbeitungen). Sonst liefen die Commits in ein
         ''' Arbeitsbild, das gerade gar nicht angezeigt wird.
         ''' Dieselbe Sperre greift, solange nur die eingebettete RAW-Vorschau steht und die echte
@@ -5913,7 +6019,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMinimum))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMaximum))
                 RaiseAnnotationPositionControlProperties()
-                SyncSelectedAnnotation()
+                ' Zieht die Hoehe mit, wenn das Seitenverhaeltnis gesperrt ist - dabei laeuft
+                ' SyncSelectedAnnotation bereits ueber den Hoehen-Setter.
+                If Not TryCoupleAnnotationAspect(vonBreite:=True) Then SyncSelectedAnnotation()
             End Set
         End Property
 
@@ -5945,7 +6053,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMinimum))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMaximum))
                 RaiseAnnotationPositionControlProperties()
-                SyncSelectedAnnotation()
+                If Not TryCoupleAnnotationAspect(vonBreite:=False) Then SyncSelectedAnnotation()
             End Set
         End Property
 
@@ -6109,7 +6217,7 @@ Namespace ViewModels
         ''' <summary>Die Pfad-Zeile gilt fuer alles, was Text zeichnet - also auch fuer das
         ''' Wasserzeichen. Frueher war sie dort ausgeblendet, weil die Zeichenstelle die
         ''' Pfad-Parameter nicht durchreichte; der Renderer selbst konnte es immer schon
-        ''' (Nutzerbefund 2026-07-20).
+        '''.
         ''' Ein Wasserzeichen mit BILD hat keinen Text und damit auch keinen Pfad.</summary>
         Public ReadOnly Property ShowTextPathRow As Boolean
             Get
@@ -6149,7 +6257,7 @@ Namespace ViewModels
             AnnotationTextPathKind = If(String.Equals(kind, "None", StringComparison.OrdinalIgnoreCase), "", If(kind, ""))
             ' Ein Kreis braucht eine quadratische Box, sonst steht der Selektionsrahmen weit um den
             ' Text herum: der Radius ist min(Breite, Hoehe), eine breite Textbox laesst also den
-            ' groessten Teil des Rahmens leer (Nutzerbefund 2026-07-20, mit Bild).
+            ' groessten Teil des Rahmens leer (mit Bild).
             ' Die Alternative - den Kreis ueber das Rechteck strecken - ergaebe bei breiten Objekten
             ' eine flache Ellipse und damit faktisch einen Bogen; ausprobiert und verworfen.
             ' Box sofort an den Kreis anpassen. MakeAnnotationBoxSquare reicht dafuer NICHT:
@@ -6417,7 +6525,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        ' Auswahlrechteck des Auswahlwerkzeugs (Phase 4) - Prozent-vom-Bild wie beim Crop, aber als
+        ' Auswahlrechteck des Auswahlwerkzeugs - Prozent-vom-Bild wie beim Crop, aber als
         ' eigenständiges Rechteck (X/Y/Breite/Höhe) statt Rand-Abstände. HasActiveSelection steuert
         ' Sichtbarkeit des Overlays und Aktivierung von "Kopieren"/"Füllen" in der UI.
         Public Property HasActiveSelection As Boolean
@@ -6958,7 +7066,7 @@ Namespace ViewModels
 
             ' Trägt die Ebene dieser Auswahl eine Füllung, zeigt das rote Overlay die tatsächliche
             ' DECKUNG (Maske × Füll-Luminanz) statt nur der Maskenform - so sieht man den Deckungsverlauf,
-            ' mit dem die Anpassung abgestuft wird (Nutzerwunsch 2026-07-24).
+            ' mit dem die Anpassung abgestuft wird.
             Dim fillLayer = ActiveFillLayerForSelection()
             Dim maskForOverlay = _selectionMask
             Dim ownsMaskForOverlay = False
@@ -6988,7 +7096,7 @@ Namespace ViewModels
                         ' KEINE Kantenglättung: das rote Rechteck oben wird ohne AA gerastert. Zeichnete man
                         ' die DstIn-Maske MIT AA, deckten beide nicht exakt dieselben Pixel ab - am Rand des
                         ' Maskenrechtecks blieb eine dünne Reihe voll roter Pixel stehen ("ganz feiner roter
-                        ' Rahmen", Nutzer-Befund 2026-07-24). Die weiche Kante der Maske kommt ohnehin aus
+                        ' Rahmen"). Die weiche Kante der Maske kommt ohnehin aus
                         ' ihren Alpha-Werten (plus SamplingHigh), nicht aus der Kantenglättung des Rechtecks.
                         Using maskPaint = New SKPaint With {.BlendMode = SKBlendMode.DstIn, .IsAntialias = False}
                             ImageProcessor.DrawBitmapSampled(canvas, maskForOverlay, src, dst, ImageProcessor.SamplingHigh, maskPaint)
@@ -7116,6 +7224,471 @@ Namespace ViewModels
             Return CSng(Math.Max(0.0, _selectionFeather))
         End Function
 
+        ' ============================ VERLAUFSMASKEN ============================
+        ' Ein Verlauf wird NICHT gemalt, sondern gerechnet: gespeichert sind nur zwei Punkte, ein
+        ' Achsenverhältnis und die Weichheit (siehe ImageMask.Kind). Deshalb bleibt er beliebig oft
+        ' änderbar, kostet kein PNG im Projekt und ist bei 45 MP genauso schnell wie bei 2 MP.
+        ' Die Punkte liegen im QUELLRAUM (Prozent), nicht im Anzeigeraum - sonst wanderte der Verlauf,
+        ' sobald später zugeschnitten oder gedreht wird.
+
+        Private _gradientDragMaskId As String = ""
+        Private _gradientDragActive As Boolean = False
+
+        ''' <summary>Rechnet einen Punkt der ANZEIGE (Prozent) in Quellraum-Prozent um. Nothing, wenn
+        ''' der Punkt neben dem Bildinhalt liegt (Canvas-Rand, leere Begradigungs-Ecke).</summary>
+        Private Function DisplayPercentToSourcePercent(xPercent As Double, yPercent As Double) As SKPoint?
+            Dim baseWidth = GetBaseWidth(), baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return Nothing
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
+            Dim adj = BuildAppliedGeometryAdjustments()
+            Dim quelle As SKPoint
+            If Not ImageProcessor.TryGeometryOutputToSourcePoint(
+                displaySize.Width * xPercent / 100.0, displaySize.Height * yPercent / 100.0,
+                baseWidth, baseHeight, adj, quelle) Then Return Nothing
+            Return New SKPoint(CSng(quelle.X / baseWidth * 100.0), CSng(quelle.Y / baseHeight * 100.0))
+        End Function
+
+        ''' <summary>Gegenrichtung: Quellraum-Prozent zurück in Anzeige-Prozent, für die Griffe.</summary>
+        Public Function SourcePercentToDisplayPercent(xPercent As Double, yPercent As Double) As SKPoint?
+            Dim baseWidth = GetBaseWidth(), baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return Nothing
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
+            Dim adj = BuildAppliedGeometryAdjustments()
+            Dim ziel As SKPoint
+            If Not ImageProcessor.TrySourcePointToGeometryOutput(
+                baseWidth * xPercent / 100.0, baseHeight * yPercent / 100.0,
+                baseWidth, baseHeight, adj, ziel) Then Return Nothing
+            Return New SKPoint(CSng(ziel.X / displaySize.Width * 100.0), CSng(ziel.Y / displaySize.Height * 100.0))
+        End Function
+
+        ''' <summary>Beginnt einen neuen Verlauf am Druckpunkt. Legt Maske UND Korrekturebene sofort an,
+        ''' damit der Zug schon live zu sehen ist; ein Zug ohne Weg wird in EndGradientMaskDrag wieder
+        ''' verworfen.</summary>
+        Public Sub BeginGradientMaskDrag(xPercent As Double, yPercent As Double)
+            If Not IsMaskLinearMode AndAlso Not IsMaskRadialMode Then Return
+            Dim baseWidth = GetBaseWidth(), baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return
+            Dim start = DisplayPercentToSourcePercent(xPercent, yPercent)
+            If Not start.HasValue Then Return
+            PushUndo()
+            ' Eine laufende Pixelauswahl hat mit dem Verlauf nichts zu tun und würde sonst als
+            ' zweite, konkurrierende Maske weiterleben.
+            If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+            Dim art = If(IsMaskRadialMode, "Radial", "Linear")
+            Dim maske As New ImageMask With {
+                .Name = LocalizationService.T(If(art = "Radial", "Radialer Verlauf", "Linearer Verlauf")) & " " & (_imageMasks.Count + 1).ToString(),
+                .Kind = art,
+                .SourceWidthPixels = baseWidth,
+                .SourceHeightPixels = baseHeight,
+                .GradientStartXPercent = start.Value.X,
+                .GradientStartYPercent = start.Value.Y,
+                .GradientEndXPercent = start.Value.X,
+                .GradientEndYPercent = start.Value.Y,
+                .GradientRadiusRatio = 1.0,
+                .GradientFeatherPercent = _gradientFeatherPercent,
+                .Inverted = _gradientInverted
+            }
+            _imageMasks.Add(maske)
+            Dim ebene As New MaskedAdjustmentLayer With {
+                .Name = maske.Name,
+                .MaskId = maske.Id,
+                .Adjustments = New ImageAdjustments(),
+                .IsMaskLayer = True
+            }
+            PlaceNewCorrectionLayerInBaseImage(ebene)
+            _maskedAdjustmentLayers.Add(ebene)
+            _selectedMaskedAdjustmentLayerId = ebene.Id
+            _gradientDragMaskId = maske.Id
+            _gradientDragActive = True
+            _gradientHandle = -1
+        End Sub
+
+        ''' <summary>Zieht den Endpunkt mit. Mit gedrückter Umschalttaste rastet die Achse auf
+        ''' 15-Grad-Schritte - so bekommt man einen exakt waagerechten Horizontverlauf.</summary>
+        Public Sub UpdateGradientMaskDrag(xPercent As Double, yPercent As Double, rasten As Boolean)
+            If Not _gradientDragActive Then Return
+            Dim maske = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _gradientDragMaskId)
+            If maske Is Nothing Then Return
+            Dim ende = DisplayPercentToSourcePercent(xPercent, yPercent)
+            If Not ende.HasValue Then Return
+            Dim ex As Double = ende.Value.X, ey As Double = ende.Value.Y
+            If rasten Then
+                ' Rasten muss in PIXELN rechnen, nicht in Prozent: bei 3:2 wäre ein "45-Grad"-Zug
+                ' in Prozent in Wahrheit 34 Grad.
+                Dim dx = (ex - maske.GradientStartXPercent) / 100.0 * maske.SourceWidthPixels
+                Dim dy = (ey - maske.GradientStartYPercent) / 100.0 * maske.SourceHeightPixels
+                Dim laenge = Math.Sqrt(dx * dx + dy * dy)
+                If laenge > 0.0001 Then
+                    Dim winkel = Math.Round(Math.Atan2(dy, dx) / (Math.PI / 12.0)) * (Math.PI / 12.0)
+                    ex = maske.GradientStartXPercent + Math.Cos(winkel) * laenge / maske.SourceWidthPixels * 100.0
+                    ey = maske.GradientStartYPercent + Math.Sin(winkel) * laenge / maske.SourceHeightPixels * 100.0
+                End If
+            End If
+            maske.GradientEndXPercent = ex
+            maske.GradientEndYPercent = ey
+            PublishGradientOverlay(maske)
+            RaiseGradientPropertiesChanged()
+        End Sub
+
+        ''' <summary>Schliesst den Zug ab. Ein blosser Klick (kein Weg) lässt keine leere Ebene zurück.</summary>
+        Public Sub EndGradientMaskDrag()
+            If Not _gradientDragActive Then Return
+            _gradientDragActive = False
+            Dim maske = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _gradientDragMaskId)
+            _gradientDragMaskId = ""
+            If maske Is Nothing Then Return
+            Dim dx = (maske.GradientEndXPercent - maske.GradientStartXPercent) / 100.0 * maske.SourceWidthPixels
+            Dim dy = (maske.GradientEndYPercent - maske.GradientStartYPercent) / 100.0 * maske.SourceHeightPixels
+            If Math.Sqrt(dx * dx + dy * dy) < 4.0 Then
+                RemoveGradientMaskAndLayer(maske)
+                RebuildLayerRows()
+                RaiseGradientPropertiesChanged()
+                Return
+            End If
+            RebuildLayerRows()
+            AddHistoryEntry(If(maske.IsRadialGradient, "Radialer Verlauf", "Linearer Verlauf"))
+            SchedulePreviewUpdate()
+            RaiseGradientPropertiesChanged()
+        End Sub
+
+        Private Sub RemoveGradientMaskAndLayer(maske As ImageMask)
+            If maske Is Nothing Then Return
+            Dim ebenen = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing AndAlso l.MaskId = maske.Id).ToList()
+            For Each l In ebenen
+                _maskedAdjustmentLayers.Remove(l)
+                If _selectedMaskedAdjustmentLayerId = l.Id Then _selectedMaskedAdjustmentLayerId = ""
+            Next
+            _imageMasks.Remove(maske)
+            SetSelectionMaskPreviewImage(Nothing)
+        End Sub
+
+        ' --- Regler des Masken-Werkzeugs -------------------------------------------------
+        ' Die Felder halten die VOREINSTELLUNG für den nächsten Verlauf. Ist gerade ein Verlauf
+        ' markiert, schreiben die Setter zusätzlich direkt in ihn - genau das macht ihn nachträglich
+        ' änderbar, ohne ihn neu ziehen zu müssen.
+
+        Private _gradientFeatherPercent As Double = 50.0
+        Private _gradientInverted As Boolean = False
+        Private _gradientRadiusRatio As Double = 1.0
+
+        Public Property GradientFeatherPercent As Double
+            Get
+                Dim m = SelectedGradientMask
+                Return If(m IsNot Nothing, m.GradientFeatherPercent, _gradientFeatherPercent)
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                _gradientFeatherPercent = v
+                Dim m = SelectedGradientMask
+                If m IsNot Nothing AndAlso Math.Abs(m.GradientFeatherPercent - v) > 0.0001 Then
+                    m.GradientFeatherPercent = v
+                    PublishGradientOverlay(m)
+                    SchedulePreviewUpdate()
+                End If
+                Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
+            End Set
+        End Property
+
+        ''' <summary>Stauchung der zweiten Halbachse beim radialen Verlauf: 1 = Kreis, kleiner = flach.</summary>
+        Public Property GradientRadiusRatio As Double
+            Get
+                Dim m = SelectedGradientMask
+                Return If(m IsNot Nothing, m.GradientRadiusRatio, _gradientRadiusRatio)
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.05, Math.Min(4.0, value))
+                _gradientRadiusRatio = v
+                Dim m = SelectedGradientMask
+                If m IsNot Nothing AndAlso Math.Abs(m.GradientRadiusRatio - v) > 0.0001 Then
+                    m.GradientRadiusRatio = v
+                    PublishGradientOverlay(m)
+                    SchedulePreviewUpdate()
+                End If
+                Me.RaisePropertyChanged(NameOf(GradientRadiusRatio))
+            End Set
+        End Property
+
+        Public Property GradientInverted As Boolean
+            Get
+                Dim m = SelectedGradientMask
+                Return If(m IsNot Nothing, m.Inverted, _gradientInverted)
+            End Get
+            Set(value As Boolean)
+                _gradientInverted = value
+                Dim m = SelectedGradientMask
+                If m IsNot Nothing AndAlso m.Inverted <> value Then
+                    m.Inverted = value
+                    PublishGradientOverlay(m)
+                    SchedulePreviewUpdate()
+                End If
+                Me.RaisePropertyChanged(NameOf(GradientInverted))
+            End Set
+        End Property
+
+        ''' <summary>Winkel der Verlaufsachse in Grad, gerechnet in PIXELN (nicht in Prozent, sonst
+        ''' verzerrt das Seitenverhältnis die Anzeige). Schreibbar: der Verlauf dreht sich dann um
+        ''' seinen Startpunkt, die Länge bleibt.</summary>
+        Public Property GradientAngleDegrees As Double
+            Get
+                Dim m = SelectedGradientMask
+                If m Is Nothing Then Return 0
+                Dim dx = (m.GradientEndXPercent - m.GradientStartXPercent) / 100.0 * m.SourceWidthPixels
+                Dim dy = (m.GradientEndYPercent - m.GradientStartYPercent) / 100.0 * m.SourceHeightPixels
+                Dim grad = Math.Atan2(dy, dx) * 180.0 / Math.PI
+                If grad < 0 Then grad += 360.0
+                Return Math.Round(grad)
+            End Get
+            Set(value As Double)
+                Dim m = SelectedGradientMask
+                If m Is Nothing OrElse m.SourceWidthPixels <= 0 OrElse m.SourceHeightPixels <= 0 Then Return
+                Dim dx = (m.GradientEndXPercent - m.GradientStartXPercent) / 100.0 * m.SourceWidthPixels
+                Dim dy = (m.GradientEndYPercent - m.GradientStartYPercent) / 100.0 * m.SourceHeightPixels
+                Dim laenge = Math.Sqrt(dx * dx + dy * dy)
+                If laenge < 0.0001 Then Return
+                Dim rad = value * Math.PI / 180.0
+                m.GradientEndXPercent = m.GradientStartXPercent + Math.Cos(rad) * laenge / m.SourceWidthPixels * 100.0
+                m.GradientEndYPercent = m.GradientStartYPercent + Math.Sin(rad) * laenge / m.SourceHeightPixels * 100.0
+                PublishGradientOverlay(m)
+                SchedulePreviewUpdate()
+                Me.RaisePropertyChanged(NameOf(GradientAngleDegrees))
+            End Set
+        End Property
+
+        Private Sub RaiseGradientPropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(SelectedGradientMask))
+            Me.RaisePropertyChanged(NameOf(HasSelectedGradientMask))
+            Me.RaisePropertyChanged(NameOf(ShowGradientControls))
+            Me.RaisePropertyChanged(NameOf(ShowRadialRatioControl))
+            Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
+            Me.RaisePropertyChanged(NameOf(GradientRadiusRatio))
+            Me.RaisePropertyChanged(NameOf(GradientInverted))
+            Me.RaisePropertyChanged(NameOf(GradientAngleDegrees))
+            Me.RaisePropertyChanged(NameOf(GradientGeometry))
+        End Sub
+
+        Public ReadOnly Property HasSelectedGradientMask As Boolean
+            Get
+                Return SelectedGradientMask IsNot Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowRadialRatioControl As Boolean
+            Get
+                Dim m = SelectedGradientMask
+                If m IsNot Nothing Then Return m.IsRadialGradient
+                Return IsMaskRadialMode
+            End Get
+        End Property
+
+        ''' <summary>Die Achse des markierten Verlaufs in ANZEIGE-Prozent - alles, was das Overlay für
+        ''' seine Griffe braucht. Nothing, wenn gerade kein Verlauf markiert ist.</summary>
+        Public ReadOnly Property GradientGeometry As Double()
+            Get
+                Dim m = SelectedGradientMask
+                If m Is Nothing Then Return Nothing
+                Dim a = SourcePercentToDisplayPercent(m.GradientStartXPercent, m.GradientStartYPercent)
+                Dim b = SourcePercentToDisplayPercent(m.GradientEndXPercent, m.GradientEndYPercent)
+                If Not a.HasValue OrElse Not b.HasValue Then Return Nothing
+                Return New Double() {a.Value.X, a.Value.Y, b.Value.X, b.Value.Y,
+                                     m.GradientRadiusRatio, m.GradientFeatherPercent,
+                                     If(m.IsRadialGradient, 1.0, 0.0), If(m.Inverted, 1.0, 0.0)}
+            End Get
+        End Property
+
+        ''' <summary>Zeichnet die Deckung des Verlaufs als rotes Overlay - dasselbe Bild, das auch der
+        ''' Masken-Pinsel benutzt. Über Skia-Verläufe statt pro Pixel: die Vorschau ist ein Bruchteil
+        ''' der Bildgrösse, ein eigener Rechenweg wäre nur eine zweite Fehlerquelle.</summary>
+        Private Sub PublishGradientOverlay(maske As ImageMask)
+            SetSelectionMaskPreviewImage(BuildGradientRedOverlayBitmap(maske))
+        End Sub
+
+        Private Function BuildGradientRedOverlayBitmap(maske As ImageMask) As Bitmap
+            If maske Is Nothing OrElse Not maske.IsGradient Then Return Nothing
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Dim bw = displaySize.Width, bh = displaySize.Height
+            If bw <= 0 OrElse bh <= 0 Then Return Nothing
+            Dim a = SourcePercentToDisplayPercent(maske.GradientStartXPercent, maske.GradientStartYPercent)
+            Dim b = SourcePercentToDisplayPercent(maske.GradientEndXPercent, maske.GradientEndYPercent)
+            If Not a.HasValue OrElse Not b.HasValue Then Return Nothing
+
+            Dim ovScale = Math.Min(1.0, MaskBrushOverlayMaxEdge / CDbl(Math.Max(bw, bh)))
+            Dim ow = Math.Max(1, CInt(Math.Round(bw * ovScale)))
+            Dim oh = Math.Max(1, CInt(Math.Round(bh * ovScale)))
+            Dim p0 = New SKPoint(CSng(a.Value.X / 100.0 * ow), CSng(a.Value.Y / 100.0 * oh))
+            Dim p1 = New SKPoint(CSng(b.Value.X / 100.0 * ow), CSng(b.Value.Y / 100.0 * oh))
+            Dim dx = p1.X - p0.X, dy = p1.Y - p0.Y
+            Dim radius = CSng(Math.Sqrt(dx * dx + dy * dy))
+            If radius < 0.5 Then Return Nothing
+
+            Dim voll = New SKColor(255, 0, 0, 128)
+            Dim leer = New SKColor(255, 0, 0, 0)
+            ' Smoothstep in fünf Stützstellen nachbilden - eine reine Zweipunkt-Rampe zeigt an ihren
+            ' Enden dieselben Kanten, die der Renderer bewusst vermeidet.
+            Dim stufen = New Single() {0.0F, 0.25F, 0.5F, 0.75F, 1.0F}
+            Dim farben(stufen.Length - 1) As SKColor
+            For i = 0 To stufen.Length - 1
+                Dim t = stufen(i)
+                Dim s = t * t * (3.0 - 2.0 * t)
+                Dim deckung = CByte(Math.Round((1.0 - s) * 128.0))
+                farben(i) = New SKColor(255, 0, 0, deckung)
+            Next
+            If maske.Inverted Then Array.Reverse(farben)
+
+            Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(overlay)
+                    canvas.Clear(SKColors.Transparent)
+                    Using paint = New SKPaint With {.Style = SKPaintStyle.Fill, .IsAntialias = True}
+                        If maske.IsRadialGradient Then
+                            Dim innen = CSng(Math.Max(0.0, Math.Min(0.98, 1.0 - maske.GradientFeatherPercent / 100.0)))
+                            Dim pos(stufen.Length - 1) As Single
+                            For i = 0 To stufen.Length - 1
+                                pos(i) = innen + (1.0F - innen) * stufen(i)
+                            Next
+                            ' Die Ellipse entsteht durch Drehen und Stauchen des Kreises - genau die
+                            ' Umrechnung, die der Renderer pro Pixel macht, hier einmal als Matrix.
+                            Dim winkel = CSng(Math.Atan2(dy, dx) * 180.0 / Math.PI)
+                            Dim m = SKMatrix.CreateScale(1.0F, CSng(Math.Max(0.05, maske.GradientRadiusRatio)), p0.X, p0.Y)
+                            m = m.PostConcat(SKMatrix.CreateRotationDegrees(winkel, p0.X, p0.Y))
+                            paint.Shader = SKShader.CreateRadialGradient(p0, radius, farben, pos, SKShaderTileMode.Clamp, m)
+                        Else
+                            Dim breite = CSng(Math.Max(0.02, Math.Min(1.0, maske.GradientFeatherPercent / 100.0)))
+                            Dim pos(stufen.Length - 1) As Single
+                            For i = 0 To stufen.Length - 1
+                                pos(i) = 0.5F + (stufen(i) - 0.5F) * breite
+                            Next
+                            paint.Shader = SKShader.CreateLinearGradient(p0, p1, farben, pos, SKShaderTileMode.Clamp)
+                        End If
+                        canvas.DrawRect(New SKRect(0, 0, ow, oh), paint)
+                        paint.Shader?.Dispose()
+                    End Using
+                End Using
+                Return ImageProcessor.ToAvaloniaBitmap(overlay)
+            End Using
+        End Function
+
+        ' --- Griffe eines bestehenden Verlaufs -------------------------------------------
+        ' 0 = Startpunkt, 1 = Endpunkt, 2 = ganzer Verlauf verschieben. Ohne Griffe müsste man
+        ' jeden Verlauf neu ziehen, statt ihn zu korrigieren - das ist der eigentliche Gewinn
+        ' gegenüber einer eingebrannten Maske.
+        Private _gradientHandle As Integer = -1
+        Private _gradientMoveRefX As Double
+        Private _gradientMoveRefY As Double
+        Private _gradientMoveStart As SKPoint
+        Private _gradientMoveEnd As SKPoint
+
+        ''' <summary>Prüft, ob der Druckpunkt (Anzeige-Prozent) einen Griff des markierten Verlaufs
+        ''' trifft, und beginnt dann dessen Zug. False = kein Griff, der Aufrufer zieht einen neuen
+        ''' Verlauf auf.</summary>
+        Public Function TryBeginGradientHandleDrag(xPercent As Double, yPercent As Double,
+                                                   slopXPercent As Double, slopYPercent As Double) As Boolean
+            Dim maske = SelectedGradientMask
+            If maske Is Nothing Then Return False
+            Dim geo = GradientGeometry
+            If geo Is Nothing Then Return False
+            Dim griff = -1
+            If Math.Abs(xPercent - geo(2)) <= slopXPercent AndAlso Math.Abs(yPercent - geo(3)) <= slopYPercent Then
+                griff = 1
+            ElseIf Math.Abs(xPercent - geo(0)) <= slopXPercent AndAlso Math.Abs(yPercent - geo(1)) <= slopYPercent Then
+                ' Der Startpunkt gewinnt NICHT gegen den Endpunkt: bei einem ganz kurzen Verlauf
+                ' liegen beide fast aufeinander, und der Endpunkt ist der, den man dann meint.
+                griff = 0
+            ElseIf IstAufVerlaufsachse(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
+                griff = 2
+            End If
+            If griff < 0 Then Return False
+            PushUndo()
+            _gradientDragMaskId = maske.Id
+            _gradientDragActive = True
+            _gradientHandle = griff
+            _gradientMoveRefX = xPercent
+            _gradientMoveRefY = yPercent
+            _gradientMoveStart = New SKPoint(CSng(maske.GradientStartXPercent), CSng(maske.GradientStartYPercent))
+            _gradientMoveEnd = New SKPoint(CSng(maske.GradientEndXPercent), CSng(maske.GradientEndYPercent))
+            Return True
+        End Function
+
+        ''' <summary>Liegt der Punkt auf der Verbindungslinie der beiden Griffe? Dann fasst man den
+        ''' Verlauf als Ganzes an.</summary>
+        Private Shared Function IstAufVerlaufsachse(geo As Double(), xPercent As Double, yPercent As Double,
+                                                    slopXPercent As Double, slopYPercent As Double) As Boolean
+            Dim ax = geo(0), ay = geo(1), bx = geo(2), by = geo(3)
+            Dim dx = bx - ax, dy = by - ay
+            Dim len2 = dx * dx + dy * dy
+            If len2 < 0.000001 Then Return False
+            Dim t = ((xPercent - ax) * dx + (yPercent - ay) * dy) / len2
+            If t < 0.0 OrElse t > 1.0 Then Return False
+            Dim px = ax + dx * t, py = ay + dy * t
+            ' Die Toleranz ist in X und Y verschieden gross (Prozent auf verschiedenen Kanten),
+            ' deshalb wird der Abstand vor dem Vergleich auf sie normiert.
+            Dim nx = (xPercent - px) / Math.Max(0.0001, slopXPercent)
+            Dim ny = (yPercent - py) / Math.Max(0.0001, slopYPercent)
+            Return nx * nx + ny * ny <= 1.0
+        End Function
+
+        ''' <summary>Zieht den angefassten Griff. Ohne Griff (frisch aufgezogener Verlauf) wandert der
+        ''' Endpunkt - das ist derselbe Weg wie beim Aufziehen.</summary>
+        Public Sub UpdateGradientHandleDrag(xPercent As Double, yPercent As Double, rasten As Boolean)
+            If Not _gradientDragActive Then Return
+            If _gradientHandle < 0 Then
+                UpdateGradientMaskDrag(xPercent, yPercent, rasten)
+                Return
+            End If
+            Dim maske = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _gradientDragMaskId)
+            If maske Is Nothing Then Return
+            If _gradientHandle = 2 Then
+                ' Ganzer Verlauf: der Versatz wird im ANZEIGERAUM gemessen und für beide Punkte
+                ' einzeln in den Quellraum gerechnet - sonst liefe er bei gedrehtem Bild schief.
+                Dim aNeu = DisplayVersatzAufQuelle(_gradientMoveStart, xPercent - _gradientMoveRefX, yPercent - _gradientMoveRefY)
+                Dim bNeu = DisplayVersatzAufQuelle(_gradientMoveEnd, xPercent - _gradientMoveRefX, yPercent - _gradientMoveRefY)
+                If Not aNeu.HasValue OrElse Not bNeu.HasValue Then Return
+                maske.GradientStartXPercent = aNeu.Value.X
+                maske.GradientStartYPercent = aNeu.Value.Y
+                maske.GradientEndXPercent = bNeu.Value.X
+                maske.GradientEndYPercent = bNeu.Value.Y
+            Else
+                Dim quelle = DisplayPercentToSourcePercent(xPercent, yPercent)
+                If Not quelle.HasValue Then Return
+                If _gradientHandle = 0 Then
+                    maske.GradientStartXPercent = quelle.Value.X
+                    maske.GradientStartYPercent = quelle.Value.Y
+                Else
+                    maske.GradientEndXPercent = quelle.Value.X
+                    maske.GradientEndYPercent = quelle.Value.Y
+                End If
+            End If
+            PublishGradientOverlay(maske)
+            ' Beim Korrigieren traegt die Ebene schon eine Anpassung - ohne Neurechnung saehe man
+            ' nur das rote Overlay wandern, nicht die Wirkung. Der Aufruf ist entprellt.
+            SchedulePreviewUpdate()
+            RaiseGradientPropertiesChanged()
+        End Sub
+
+        ''' <summary>Verschiebt einen Quellraum-Punkt um einen Versatz, der in ANZEIGE-Prozent
+        ''' angegeben ist. Nothing, wenn das Ziel neben dem Bildinhalt landet.</summary>
+        Private Function DisplayVersatzAufQuelle(quellPunkt As SKPoint, dxPercent As Double, dyPercent As Double) As SKPoint?
+            Dim anzeige = SourcePercentToDisplayPercent(quellPunkt.X, quellPunkt.Y)
+            If Not anzeige.HasValue Then Return Nothing
+            Return DisplayPercentToSourcePercent(anzeige.Value.X + dxPercent, anzeige.Value.Y + dyPercent)
+        End Function
+
+        ''' <summary>Beendet einen Griff-Zug. Anders als beim Aufziehen bleibt der Verlauf hier immer
+        ''' erhalten - er bestand ja schon.</summary>
+        Public Sub EndGradientHandleDrag()
+            If Not _gradientDragActive Then Return
+            If _gradientHandle < 0 Then
+                EndGradientMaskDrag()
+                Return
+            End If
+            _gradientDragActive = False
+            _gradientHandle = -1
+            _gradientDragMaskId = ""
+            AddHistoryEntry("Verlauf geändert")
+            SchedulePreviewUpdate()
+            RaiseGradientPropertiesChanged()
+        End Sub
+
         ''' <summary>Lädt die Maske einer Anpassungsebene in die editierbare Auswahlmaske (Anzeigeraum),
         ''' schaltet in den Masken-Pinsel und zeigt sie als rotes Overlay. Ab jetzt bearbeitet der Pinsel
         ''' die harte Form dieser Ebenen-Maske; die "Weiche Kante" steuert mask.FeatherPixels.</summary>
@@ -7125,6 +7698,13 @@ Namespace ViewModels
             If layer Is Nothing Then Return
             Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
             If mask Is Nothing Then Return
+            ' Ein Verlauf ist gerechnet, nicht gemalt: er wird NICHT in die Auswahlmaske geladen (das
+            ' machte aus zwei Punkten ein PNG und nahm ihm die Aenderbarkeit). Eine noch laufende
+            ' Pixelauswahl muss trotzdem weg, sonst laegen zwei Masken gleichzeitig auf dem Bild.
+            If mask.IsGradient Then
+                If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+                Return
+            End If
             Dim adj = BuildAdjustmentsFromFields()
             Dim rectPx As SKRectI
             Dim bmp = ImageProcessor.BuildSelectionMaskFromLayerMask(mask, adj, rectPx)
@@ -7239,8 +7819,8 @@ Namespace ViewModels
             End If
             ' KEINE Dauerbindung von _editingLayerMaskId mehr setzen: die verhinderte zwar Dubletten beim
             ' späteren Anpassen, band aber die Auswahl PERMANENT an diese Ebene - legte man danach eine neue
-            ' (Masken-)Ebene an und füllte sie, landete die Füllung wieder auf DIESER Ebene (Nutzer-Befund
-            ' 2026-07-24). Die Dubletten-Vermeidung übernimmt die Masken-Deduplizierung oben und in
+            ' (Masken-)Ebene an und füllte sie, landete die Füllung wieder auf DIESER Ebene
+            '. Die Dubletten-Vermeidung übernimmt die Masken-Deduplizierung oben und in
             ' RefreshSelectionAdjustMode (gleiche Auswahl → gleiche SourceSpace-Maske → gleiche Ebene).
             ' _editingLayerMaskId wird NUR noch von LoadLayerMaskIntoSelection gesetzt (bewusstes Auswählen
             ' einer Ebene im Panel), sodass Füllung/Anpassung dann gezielt DIESE Ebene treffen.
@@ -7390,7 +7970,7 @@ Namespace ViewModels
             ' bekommt eine EIGENE Ebene, statt die zuvor erzeugte mitzufüllen.
             InvalidateSelectionLayerLink()
             Dim combineMode = If(_hasActiveSelection, _selectionCombineMode, "New")
-            ' AUSWAHL und MASKE strikt trennen (Nutzerwunsch 2026-07-24): wechselt die ART des Kandidaten
+            ' AUSWAHL und MASKE strikt trennen: wechselt die ART des Kandidaten
             ' gegenüber der aktiven Auswahl (Laufameisen ↔ gemalte Maske), wird NICHT kombiniert, sondern
             ' eine NEUE Auswahl begonnen. Sonst verrechnete Add/Subtract eine Geometrie-Auswahl mit einem
             ' Pinselstrich zu EINER Mischauswahl - und die daraus erzeugte Ebene wäre weder sauber
@@ -7400,7 +7980,7 @@ Namespace ViewModels
             ' nächste Form beginnt eine NEUE Auswahl, statt sich mit ihr zu vereinigen. Ohne das blieb der
             ' (beim Masken-Pinsel automatisch vorbelegte) "Hinzufügen"-Modus hängen, die zweite Maske war
             ' "alte ∪ neuer Strich" und deckte damit auch die Fläche der ERSTEN Ebene ab - deren Füllung
-            ' bzw. das rote Overlay erschien dort mit (Nutzer-Befund: "die erste Auswahl-Ebene wird auch
+            ' bzw. das rote Overlay erschien dort mit ("die erste Auswahl-Ebene wird auch
             ' gefüllt" / "vorhandene Auswahl-Ebenen werden rot"). Der gewählte Kombinationsmodus bleibt
             ' unangetastet; er gilt weiter innerhalb EINER noch nicht promoteten Auswahl.
             ' AUSNAHME: eine bewusst im Panel gewählte Ebenen-Maske wird weiter bearbeitet (Add/Subtract).
@@ -7408,7 +7988,7 @@ Namespace ViewModels
             ' "Neu" ersetzt die Auswahl vollständig → sie ist NICHT mehr die editierbare Kopie einer
             ' Ebenen-Maske. Ohne dieses Lösen blieb die Bindung an die zuletzt im Panel gewählte Ebene
             ' bestehen und JEDE weitere Füllung landete wieder dort - verschiedene Auswahl-/Masken-Ebenen
-            ' liessen sich nicht unterschiedlich füllen (Nutzer-Befund 2026-07-24). Bei Hinzufügen/
+            ' liessen sich nicht unterschiedlich füllen. Bei Hinzufügen/
             ' Abziehen bleibt die Bindung erhalten, damit der Masken-Pinsel weiter in die Ebene schreibt.
             If combineMode = "New" Then _editingLayerMaskId = ""
 
@@ -7484,7 +8064,7 @@ Namespace ViewModels
 
         Private Shared Function CreateSolidMask(width As Integer, height As Integer) As SKBitmap
             Dim mask = New SKBitmap(width, height, SKColorType.Alpha8, SKAlphaType.Premul)
-            ' Nicht über Enumerable.Repeat(...).ToArray(): das baute bei einer bildgroßen Maske (24 MP) ein
+            ' Nicht über Enumerable.Repeat(...).ToArray: das baute bei einer bildgroßen Maske (24 MP) ein
             ' 24-MB-Array über einen Iterator auf. Erase füllt den Puffer direkt.
             mask.Erase(New SKColor(0, 0, 0, 255))
             Return mask
@@ -8492,6 +9072,48 @@ Namespace ViewModels
             RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
         End Sub
 
+        ''' Laeuft gerade eine gekoppelte Groessenaenderung? Ohne die Sperre riefe der Setter der
+        ''' einen Kante den der anderen, und der wieder den ersten - Endlosschleife.
+        Private _annotationAspectSyncing As Boolean = False
+
+        ''' <summary>Zieht bei aktiver Seitenverhaeltnis-Sperre die jeweils ANDERE Kante mit.
+        '''
+        ''' Die Sperre wirkte bisher nur beim Ziehen an den Anfassern; ueber die Regler im
+        ''' Anpassungspanel liess sich dasselbe Objekt trotz gesetztem Haken verzerren - die
+        ''' Checkbox sagte also etwas anderes als das Verhalten. Bezugsgroesse ist das
+        ''' Seitenverhaeltnis der BILDDATEI (dieselbe Quelle wie SnapAnnotationBoxToImageAspect),
+        ''' damit Rahmen und eingepasstes Bild deckungsgleich bleiben.
+        '''
+        ''' <paramref name="vonBreite"/> True = die Breite wurde gesetzt, die Hoehe folgt.</summary>
+        Private Function TryCoupleAnnotationAspect(vonBreite As Boolean) As Boolean
+            If _annotationAspectSyncing Then Return False
+            If Not _annotationLockAspect OrElse Not ShowAnnotationAspectLock Then Return False
+            Dim path = SelectedAnnotationImagePath
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Dim size = ImageProcessor.GetImageSize(path)
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return False
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return False
+
+            ' Ueber PIXEL rechnen, nicht ueber Prozent: die beiden Prozentachsen beziehen sich auf
+            ' verschiedene Kantenlaengen, ein Verhaeltnis in Prozent waere um das Bildformat verzerrt.
+            Dim imageAspect = size.Width / CDbl(size.Height)
+            _annotationAspectSyncing = True
+            Try
+                If vonBreite Then
+                    Dim breitePx = displaySize.Width * _annotationWidthPercent / 100.0
+                    AnnotationHeightPercent = breitePx / imageAspect / displaySize.Height * 100.0
+                Else
+                    Dim hoehePx = displaySize.Height * _annotationHeightPercent / 100.0
+                    AnnotationWidthPercent = hoehePx * imageAspect / displaySize.Width * 100.0
+                End If
+            Finally
+                _annotationAspectSyncing = False
+            End Try
+            RaiseAnnotationSizeChanged()
+            Return True
+        End Function
+
         Private Sub RaiseAnnotationSizeChanged()
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
@@ -8521,7 +9143,7 @@ Namespace ViewModels
 
         ''' <summary>Anzeige-Rechtecke (Prozent des Bildes) aller sichtbaren, NICHT selektierten
         ''' Objekte - die Anrast-Ziele der Ausricht-Hilfslinien beim Verschieben (Smart Guides:
-        ''' Objekte passgenau an bereits gesetzten ausrichten, Nutzerwunsch 2026-07-17).
+        ''' Objekte passgenau an bereits gesetzten ausrichten).
         ''' Verankerte Wasserzeichen bleiben außen vor: ihre effektive Lage folgt dem Anker,
         ''' nicht den gespeicherten XPixels.</summary>
         Public Function GetAnnotationSnapRectsPercent() As List(Of Avalonia.Rect)
@@ -8616,11 +9238,12 @@ Namespace ViewModels
         ''' Ausgabemaße (ComputeGeometryOutputSize) und die vollständige Punktabbildung
         ''' (TrySourcePointToGeometryOutput / TryGeometryOutputToSourcePoint). Vorher baute jede
         ''' Stelle ihr eigenes Teil-Rezept, und die Pinsel-/Retusche-Abbildung ließ Crop/Resize/
-        ''' Canvas schlicht weg (Audit 2026-07-22).</summary>
+        ''' Canvas schlicht weg.</summary>
         Private Function BuildAppliedGeometryAdjustments() As ImageAdjustments
+            Dim crop = EffectiveCrop(fuerAnzeige:=True)
             Return New ImageAdjustments With {
-                .CropLeftPercent = CSng(_appliedCropLeft), .CropTopPercent = CSng(_appliedCropTop),
-                .CropRightPercent = CSng(_appliedCropRight), .CropBottomPercent = CSng(_appliedCropBottom),
+                .CropLeftPercent = CSng(crop.Left), .CropTopPercent = CSng(crop.Top),
+                .CropRightPercent = CSng(crop.Right), .CropBottomPercent = CSng(crop.Bottom),
                 .RotationDegrees = _appliedRotationDegrees,
                 .FlipHorizontal = _appliedFlipH, .FlipVertical = _appliedFlipV,
                 .StraightenDegrees = CSng(_appliedStraightenDegrees),
@@ -8715,7 +9338,7 @@ Namespace ViewModels
         ' Die vier Pixel-Eigenschaften lesen bewusst die PROZENT-EIGENSCHAFTEN, nicht deren Felder:
         ' nur die Eigenschaft kennt den Mehrfachauswahl-Zweig (SelectionBoxComponent). Über das Feld
         ' zeigten Lage und Größe die Werte des zuletzt angeklickten Objekts statt die der gemeinsamen
-        ' Box (Nutzer-Befund 2026-07-25).
+        ' Box.
         Public Property AnnotationXPixels As Integer
             Get
                 Return CInt(Math.Round(DisplayPercentXToPixels(AnnotationXPercent)))
@@ -8765,7 +9388,7 @@ Namespace ViewModels
         '''
         ''' Ohne diese Fallunterscheidung drehte der Regler immer das Bild - auch bei markiertem Objekt,
         ''' während die 90°-Knöpfe daneben längst aufs Objekt wirkten. Man markierte ein Objekt, zog am
-        ''' Regler und das ganze Bild kippte (Nutzerbefund 2026-07-21). Die 90°-Knöpfe und dieser Regler
+        ''' Regler und das ganze Bild kippte. Die 90°-Knöpfe und dieser Regler
         ''' müssen dasselbe Ziel haben.</summary>
         Public Property StraightenDegrees As Double
             Get
@@ -9605,7 +10228,7 @@ Namespace ViewModels
                 ' Solange ein Region-Commit in der Hintergrund-Queue läuft, ist Undo gesperrt:
                 ' der Undo-Eintrag des laufenden Zugs hat seinen Pixel-Patch noch nicht - ein
                 ' Undo JETZT stellte nur die Regler zurück, die Pixel kämen danach trotzdem an
-                ' (Nutzerwunsch 2026-07-17: keine Aktionen, solange das Bild nicht final ist).
+                ' (keine Aktionen, solange das Bild nicht final ist).
                 Return _undoStack.Count > 0 AndAlso _pendingWorkingCommits = 0
             End Get
         End Property
@@ -9671,14 +10294,14 @@ Namespace ViewModels
         ''' sinnvoll, wenn es das Quell-Asset ersetzen darf - siehe SavesBackToImmich.
         Public ReadOnly Property CanSaveInPlace As Boolean
             Get
-                ' Immich-RAW/PSD (Audit 2026-07-22): das Server-Original zu ERSETZEN hieße, die RAW
+                ' Immich-RAW/PSD: das Server-Original zu ERSETZEN hieße, die RAW
                 ' durch einen Render zu zerstören, und eine .fpxmp neben der Temp-Kopie ginge mit
                 ' ihr verloren - für diese Kombination bleibt nur "Speichern unter" (neues Asset).
                 ' Vorher lief der Pfad in SaveImage gegen den RAW-Ziel-Guard und scheiterte immer
                 ' kommentarlos mit "Speichern fehlgeschlagen".
                 If SavesBackToImmich AndAlso IsCurrentImageSidecarFormat Then Return False
                 ' Formate, die SaveImage nicht erzeugen kann (.tiff/.bmp/.gif/.heic/...), bekamen
-                ' beim in-place-Speichern still JPEG-Bytes unter der alten Endung (Audit 2026-07-22).
+                ' beim in-place-Speichern still JPEG-Bytes unter der alten Endung.
                 ' SaveImage lehnt das jetzt zentral ab; hier lenkt der deaktivierte Knopf auf
                 ' "Speichern unter" (SaveImageAsync(Not CanSaveInPlace) macht das automatisch).
                 ' Ausnahmen: Sidecar-Formate (Rezept-Weg), .fpx-Projekte (FpxService) und
@@ -9718,6 +10341,71 @@ Namespace ViewModels
         ''' _cropLeft.._cropBottom sind der noch nicht angewendete Beschnitt, gemessen am aktuell
         ''' ANGEZEIGTEN (also bereits beschnittenen) Bild. Ein offener Beschnitt liegt genau dann vor,
         ''' wenn eine der vier Kanten von Null abweicht.
+        ' ===================== ZUSCHNEIDEN: LIVE oder BESTAETIGT =====================
+        ' JPG/PNG & Co. werden beim Speichern NEU GESCHRIEBEN - der Zuschnitt ist dort ein Schritt,
+        ' den man bewusst anwendet ("Zuschneiden anwenden") und der danach im Bild steckt.
+        ' RAW und PSD koennen wir nicht schreiben; ihre Bearbeitung lebt im .fpxmp-Sidecar und wird
+        ' bei JEDER Anzeige neu gerechnet. Dort ist ein "Anwenden" sinnlos: der Ausschnitt ist ein
+        ' Rezeptwert wie jeder Regler und bleibt beliebig oft aenderbar.
+        '
+        ' Daraus folgt die Darstellung, die man von RAW-Entwicklern kennt: IM Zuschneide-Werkzeug
+        ' bleibt das ganze Bild sichtbar (sonst koennte man den Ausschnitt nie wieder vergroessern,
+        ' weil das Weggeschnittene gar nicht mehr auf dem Schirm ist), in JEDEM ANDEREN Werkzeug
+        ' zeigt die Vorschau nur noch den Ausschnitt.
+
+        ''' <summary>True = der Zuschnitt wirkt sofort und bleibt aenderbar.
+        ''' False = der Zuschnitt wird erst mit "Zuschneiden anwenden" uebernommen.
+        '''
+        ''' Gilt fuer alle Dokumente, die ihr REZEPT neben dem unbeschnittenen Ursprungsbild
+        ''' aufbewahren: RAW und PSD ueber die .fpxmp-Begleitdatei, .fpx ueber das Buendel selbst
+        ''' (Basisbild + Rezept in EINER Datei). In allen drei Faellen ist der Ausschnitt eine Zahl
+        ''' im Rezept, kein Schnitt in Pixeln - er laesst sich beliebig oft wieder aufziehen.</summary>
+        Public ReadOnly Property UsesLiveCrop As Boolean
+            Get
+                Return IsCurrentImageSidecarFormat OrElse IsCurrentDocumentFpx
+            End Get
+        End Property
+
+        ''' <summary>Ein .fpx-Buendel ist offen - entweder frisch geladen (_currentFpxPath) oder als
+        ''' Datei mit dieser Endung.</summary>
+        Public ReadOnly Property IsCurrentDocumentFpx As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_currentFpxPath) OrElse FpxService.IsFpx(_currentImagePath)
+            End Get
+        End Property
+
+        ''' <summary>Der Knopf "Zuschneiden anwenden" - nur dort, wo es etwas zu bestaetigen gibt.</summary>
+        Public ReadOnly Property ShowApplyCropButton As Boolean
+            Get
+                Return Not UsesLiveCrop
+            End Get
+        End Property
+
+        ''' <summary>Der Zuschnitt, mit dem gerechnet werden soll.
+        '''
+        ''' <paramref name="fuerAnzeige"/> True = was der Nutzer JETZT sehen soll. Nur dann wird im
+        ''' Zuschneide-Werkzeug eines Sidecar-Bildes auf null zurueckgegangen (ganzes Bild sichtbar);
+        ''' fuer das Speichern und fuer die Maskengeometrie gilt immer der echte Ausschnitt.</summary>
+        Private Function EffectiveCrop(fuerAnzeige As Boolean) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
+            If Not UsesLiveCrop Then
+                Return (_appliedCropLeft, _appliedCropTop, _appliedCropRight, _appliedCropBottom)
+            End If
+            If fuerAnzeige AndAlso _currentTool = EditorTool.Crop Then Return (0.0, 0.0, 0.0, 0.0)
+            Return (_cropLeft, _cropTop, _cropRight, _cropBottom)
+        End Function
+
+        ''' <summary>Beim Betreten und Verlassen des Zuschneide-Werkzeugs aendert sich bei einem
+        ''' Sidecar-Bild die ANGEZEIGTE Bildgroesse (ganzes Bild gegen Ausschnitt). Vorschau und
+        ''' Zoom muessen das mitbekommen, sonst bliebe ein Bild in der alten Groesse stehen.</summary>
+        Private Sub NotifyLiveCropDisplayChanged()
+            If Not UsesLiveCrop Then Return
+            If Math.Abs(_cropLeft) < 0.0001 AndAlso Math.Abs(_cropTop) < 0.0001 AndAlso
+               Math.Abs(_cropRight) < 0.0001 AndAlso Math.Abs(_cropBottom) < 0.0001 Then Return
+            RaiseDisplayImageGeometryProperties()
+            SchedulePreviewUpdate(markDirty:=False)
+            RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
+        End Sub
+
         Public ReadOnly Property HasCropChanges As Boolean
             Get
                 Return _cropLeft > 0.0001 OrElse _cropTop > 0.0001 OrElse
@@ -9800,6 +10488,63 @@ Namespace ViewModels
         Public ReadOnly Property RotateRightCommand As ICommand
         Public ReadOnly Property FlipHorizontalCommand As ICommand
         Public ReadOnly Property FlipVerticalCommand As ICommand
+        ' ===================== ANPASSUNGEN KOPIEREN / EINFUEGEN =====================
+        ' Uebertraegt die Reglerstellungen aus Anpassen, Farbe, Details und Effekte von einem Bild
+        ' auf ein anderes - der uebliche Weg, eine Serie einheitlich zu entwickeln.
+        '
+        ' Kopiert werden GENAU die Pixel-Anpassungen (ExtractPixelAdjustments, per Reflexion ueber
+        ' alle nicht-strukturellen Eigenschaften). Damit ist die Liste automatisch vollstaendig:
+        ' ein spaeter ergaenzter Regler ist ohne Zutun mit dabei. Bewusst NICHT dabei ist alles
+        ' Strukturelle - Zuschnitt, Drehung, Bildgroesse, Objekte, Masken und Korrekturebenen.
+        ' Sie beschreiben DIESES Bild und waeren auf einem anderen sinnlos bis schaedlich (eine
+        ' Maske aus einem Hochformat auf ein Querformat gelegt trifft irgendetwas).
+
+        Public ReadOnly Property CopyAdjustmentsCommand As ICommand
+        Public ReadOnly Property PasteAdjustmentsCommand As ICommand
+
+        ''' <summary>Liegt etwas zum Einfuegen bereit? Steuert den Knopf; die Ablage ueberlebt den
+        ''' Programmstart, deshalb wird sie gelesen statt gemerkt.</summary>
+        Public ReadOnly Property CanPasteAdjustments As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(AppSettingsService.Load().CopiedAdjustments)
+            End Get
+        End Property
+
+        Public Sub CopyCurrentAdjustments()
+            If Not HasDocument Then Return
+            Dim recipe = FpxService.SerializeAdjustments(GetCurrentAdjustments().ExtractPixelAdjustments())
+            If String.IsNullOrWhiteSpace(recipe) Then Return
+            AppSettingsService.SaveCopiedAdjustments(recipe)
+            Me.RaisePropertyChanged(NameOf(CanPasteAdjustments))
+            StatusText = LocalizationService.T("Anpassungen kopiert")
+        End Sub
+
+        Public Sub PasteCopiedAdjustments()
+            If Not HasDocument Then Return
+            Dim gespeichert As ImageAdjustments = Nothing
+            Try
+                gespeichert = FpxService.DeserializeAdjustments(AppSettingsService.Load().CopiedAdjustments)
+            Catch
+                ' Beschaedigte Ablage (von Hand editierte Einstellungsdatei): lieber nichts tun als
+                ' mit halb gelesenen Werten ins Bild gehen.
+                gespeichert = Nothing
+            End Try
+            If gespeichert Is Nothing Then Return
+
+            PushUndo()
+            ' Auf dem AKTUELLEN Stand aufsetzen und nur die Pixel-Anpassungen ersetzen: Geometrie,
+            ' Objekte und Masken dieses Bildes bleiben damit unangetastet.
+            Dim ziel = GetCurrentAdjustments()
+            ziel.CopyPixelAdjustmentsFrom(gespeichert)
+            ApplyAdjustments(ziel)
+            _hasChanges = True
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            RaiseResetButtonStateChanged()
+            AddHistoryEntry("Anpassungen eingefügt")
+            SchedulePreviewUpdate()
+            StatusText = LocalizationService.T("Anpassungen eingefügt")
+        End Sub
+
         Public ReadOnly Property ApplyCropCommand As ICommand
         Public ReadOnly Property ApplyResizeCommand As ICommand
         Public ReadOnly Property ApplyCanvasCommand As ICommand
@@ -9810,6 +10555,11 @@ Namespace ViewModels
         ''' Zuschneiden). Die View passt daraufhin Zoom und Schwenk neu ein - genauso wie beim Laden
         ''' eines anderen Bildes.
         Public Event ImageGeometryChanged As EventHandler
+
+        ''' <summary>Bitte das Bild in die Flaeche einpassen (nur verkleinern, nie hochskalieren).
+        ''' Ausgeloest beim Wechsel ins Zuschneide-Werkzeug: dort braucht man den ganzen Rahmen
+        ''' samt Anfassern auf dem Schirm, und zwar unabhaengig vom vorher gewaehlten Zoom.</summary>
+        Public Event FitToViewportRequested As EventHandler
 
         Public ReadOnly Property ClearCloneSourceCommand As ICommand
         Public ReadOnly Property ResetResizeCommand As ICommand
@@ -9844,6 +10594,7 @@ Namespace ViewModels
         Public ReadOnly Property CreateAdjustmentLayerFromSelectionCommand As ICommand
         Public ReadOnly Property FillSelectionCommand As ICommand
         Public ReadOnly Property SetSelectionModeCommand As ICommand
+        Public ReadOnly Property SetMaskModeCommand As ICommand
         Public ReadOnly Property SetSelectionCombineModeCommand As ICommand
         Public ReadOnly Property SetAnnotationTextPathKindCommand As ICommand
         Public ReadOnly Property SetAnnotationFillKindCommand As ICommand
@@ -10019,6 +10770,8 @@ Namespace ViewModels
             FlipVerticalCommand = ReactiveCommand.Create(Async Function() As Task
                                                              Await DoFlipVAsync()
                                                          End Function)
+            CopyAdjustmentsCommand = ReactiveCommand.Create(Sub() CopyCurrentAdjustments())
+            PasteAdjustmentsCommand = ReactiveCommand.Create(Sub() PasteCopiedAdjustments())
             ApplyCropCommand = ReactiveCommand.Create(Async Function() As Task
                                                           Await ApplyCropAsync()
                                                       End Function)
@@ -10144,6 +10897,7 @@ Namespace ViewModels
             CreateAdjustmentLayerFromSelectionCommand = ReactiveCommand.Create(Sub() CreateAdjustmentLayerFromSelection())
             FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
             SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
+            SetMaskModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) MaskMode = mode)
             SetSelectionCombineModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionCombineMode(mode))
             SetAnnotationAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) AnnotationAnchor = anchor)
             SetAnnotationFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationFillKind(kind))
@@ -10395,7 +11149,7 @@ Namespace ViewModels
             End If
 
             ' Galerie-Einstieg: zurück in die Galerie, auf dem zuletzt bearbeiteten Bild -
-            ' nicht in den Viewer (Nutzerwunsch 2026-07-17).
+            ' nicht in den Viewer.
             If _entryMode = AppMode.Gallery Then
                 If Not String.IsNullOrEmpty(_currentImagePath) Then _mainVm.Gallery?.SelectItemByPath(_currentImagePath)
                 _mainVm.CurrentMode = AppMode.Gallery
@@ -10567,12 +11321,17 @@ Namespace ViewModels
             CleanupCurrentNewDocTempDir()
             CleanupCurrentSelectionAssetTempDir()
             _currentFpxPath = newFpxPath
+            ' Der CurrentImagePath-Setter meldet die Zuschneide-Art mit, sieht _currentFpxPath aber
+            ' noch nicht (das steht erst hier). Beim .fpx-Laden also nachmelden.
+            Me.RaisePropertyChanged(NameOf(IsCurrentDocumentFpx))
+            Me.RaisePropertyChanged(NameOf(UsesLiveCrop))
+            Me.RaisePropertyChanged(NameOf(ShowApplyCropButton))
             _renderSourcePathOverride = newRenderSourcePathOverride
             _currentFpxTempDir = newFpxTempDir
             _forceSaveAsOnly = newForceSaveAsOnly
             _workingImageOverridePath = newWorkingOverridePath
             _workingImageOverrideHasAlpha = newWorkingOverrideHasAlpha
-            ' Immich-Kontext gehoert zum ALTEN Bild (Audit 2026-07-22): der SERVER-Dateiname des
+            ' Immich-Kontext gehoert zum ALTEN Bild: der SERVER-Dateiname des
             ' vorherigen Assets darf nie am naechsten Bild kleben (SaveBackToImmich haette unter
             ' fremdem Namen hochgeladen). Die Album-Zuordnung bleibt nur, solange die Navigation
             ' innerhalb von Immich-Temp-Kopien bleibt (Filmstreifen eines Albums); beim Wechsel
@@ -10615,7 +11374,7 @@ Namespace ViewModels
                 Await UpdatePreviewAsync()
             End If
             LoadLibraryMeta(path)
-            ' Filmstreifen-Navigation auf eine Immich-Temp-Kopie (Audit 2026-07-22): Server-Metadaten
+            ' Filmstreifen-Navigation auf eine Immich-Temp-Kopie: Server-Metadaten
             ' nachladen - insbesondere den ECHTEN Original-Dateinamen, den SaveBackToImmich beim
             ' Asset-Ersetzen braucht. OpenImageAsync tat das schon, dieser Pfad nicht: der Name des
             ' VORHERIGEN Bildes blieb stehen (oben deshalb auf Nothing zurückgesetzt).
@@ -10630,7 +11389,7 @@ Namespace ViewModels
                 ' PreparePreviewSource leitet CurrentImage bereits aus dem Arbeitsbild ab - ein
                 ' zweiter Decode derselben Datei entfaellt damit im Normalfall.
                 ' Der Rueckfall bleibt trotzdem stehen: die beiden Wege koennen divergieren. Genau
-                ' das war der PSD-Befund vom 2026-07-19 - die Render-Pipeline konnte das Format,
+                ' das war der PSD-Befund vom - die Render-Pipeline konnte das Format,
                 ' der Anzeigeweg nicht. Hier ist es die Gegenrichtung, aber dasselbe Risiko.
                 If CurrentImage Is Nothing Then
                     ' applySidecarRotation:=False - der Editor wendet die Sidecar-Drehung schon als Teil des
@@ -10786,7 +11545,7 @@ Namespace ViewModels
                 ' PreparePreviewSource leitet CurrentImage bereits aus dem Arbeitsbild ab - ein
                 ' zweiter Decode derselben Datei entfaellt damit im Normalfall.
                 ' Der Rueckfall bleibt trotzdem stehen: die beiden Wege koennen divergieren. Genau
-                ' das war der PSD-Befund vom 2026-07-19 - die Render-Pipeline konnte das Format,
+                ' das war der PSD-Befund vom - die Render-Pipeline konnte das Format,
                 ' der Anzeigeweg nicht. Hier ist es die Gegenrichtung, aber dasselbe Risiko.
                 If CurrentImage Is Nothing Then
                     ' applySidecarRotation:=False - der Editor wendet die Sidecar-Drehung schon als Teil des
@@ -11022,7 +11781,7 @@ Namespace ViewModels
         ''' <paramref name="markDirty"/>: False für reine ANZEIGE-Auslöser (Vorher/Nachher-Vergleich
         ''' einschalten, auch implizit beim Werkzeugwechsel mit aktivem Auto-Vergleich). Die setzten
         ''' bisher _hasChanges - wer nur umschaltete, bekam beim Verlassen den "Ungespeichert?"-Dialog,
-        ''' und "Speichern" re-kodierte dann ein unbearbeitetes JPEG in-place (Audit 2026-07-22).
+        ''' und "Speichern" re-kodierte dann ein unbearbeitetes JPEG in-place.
         Private Sub SchedulePreviewUpdate(Optional markDirty As Boolean = True)
             If markDirty AndAlso Not _suppressPreviewDirty Then
                 _hasChanges = True
@@ -11117,7 +11876,7 @@ Namespace ViewModels
             ' OnPreviewTimerTick sechsmal vergeblich, gab auf und meldete "Vorschau bereit" - die
             ' Szene behielt den alten Stand. Sichtbar wurde das beim Verschieben einer Gruppe mit
             ' Korrektur: die Objekte blieben stehen, nur der Auswahlrahmen stand an der neuen Stelle
-            ' (Nutzer-Befund 2026-07-25).
+            '.
             If RequiresFullRenderForStackedCorrections(CandidateAnnotationDirtyRect()) Then
                 _annotationCompositePreviewPending = False
                 _annotationCompositePreviewRetries = 0
@@ -11236,7 +11995,7 @@ Namespace ViewModels
             End If
             ' WÄHREND EINES ZUGES bleiben eingehängte Korrekturen draussen. Sie zwingen sonst zum
             ' Vollrender, und der ist zu langsam für eine Live-Darstellung: beim Drehen einer Gruppe
-            ' sah man bis zum Loslassen gar nichts (Nutzer-Befund 2026-07-25). Ohne sie läuft der
+            ' sah man bis zum Loslassen gar nichts. Ohne sie läuft der
             ' schnelle Region-Patch, die Objekte folgen der Maus - und der Commit rendert danach
             ' EINMAL voll, womit die Korrekturen zurück sind.
             If _annotationPlacementEditActive AndAlso adj.MaskedAdjustmentLayers IsNot Nothing Then
@@ -11941,7 +12700,7 @@ Namespace ViewModels
         ''' das ganze Dokument. Der Normalfall ist aber die Korrektur am Bild, nicht über den
         ''' Objekten. Deshalb: unten anlegen (schneller Weg bleibt erhalten), und wer sie über ein
         ''' Objekt legen will, zieht sie im Ebenenpanel dorthin und zahlt den Vollrender bewusst
-        ''' (Nutzerentscheidung 2026-07-25).
+        '''.
         ''' </summary>
         ''' <summary>Hängt irgendeine Korrektur IM Objektstapel?</summary>
         Private Function HasStackedCorrections() As Boolean
@@ -11963,7 +12722,7 @@ Namespace ViewModels
         '''
         ''' Deshalb entscheidet die MASKENLAGE, nicht die bloße Existenz: vorher rendert jede
         ''' Objektänderung im ganzen Dokument voll, sobald irgendwo eine eingehängte Korrektur lag -
-        ''' auch hundert Pixel daneben (Audit O2). Ohne Region (leeres Rect) bleibt es beim
+        ''' auch hundert Pixel daneben. Ohne Region (leeres Rect) bleibt es beim
         ''' konservativen Vollrender; ebenso, wenn die Maske fehlt oder sich nicht abbilden lässt.
         ''' </summary>
         Private Function RequiresFullRenderForStackedCorrections(Optional dirtyRect As SKRectI = Nothing) As Boolean
@@ -11995,7 +12754,7 @@ Namespace ViewModels
 
         Private Sub RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
             ' Die Region ZUERST bestimmen: nur mit ihr kann die Weiche entscheiden, ob eine
-            ' eingehängte Korrektur diesen Bereich überhaupt berührt (Audit O2).
+            ' eingehängte Korrektur diesen Bereich überhaupt berührt.
             If RequiresFullRenderForStackedCorrections(CandidateAnnotationDirtyRect()) Then
                 SchedulePreviewUpdate()
                 Return
@@ -12072,7 +12831,7 @@ Namespace ViewModels
             ' Hingen Korrekturen im Objektstapel, lief der ganze Zug ohne sie (Live-Darstellung).
             ' Jetzt nachziehen - aber NUR, wenn die bewegte Region eine solche Korrektur überhaupt
             ' berührt. Vorher genügte ihre bloße Existenz, und jedes Loslassen kostete einen
-            ' Vollrender: im Nutzer-Log 1,1 bis 2,2 Sekunden, in denen der Basis-Cache gesperrt war und
+            ' Vollrender: gemessen 1,1 bis 2,2 Sekunden, in denen der Basis-Cache gesperrt war und
             ' kein Region-Patch mehr durchkam (daher der leere Rahmen beim nächsten Zug).
             Dim endRegion = CandidateAnnotationDirtyRect()
             If HasStackedCorrections() AndAlso RequiresFullRenderForStackedCorrections(endRegion) Then
@@ -12098,7 +12857,7 @@ Namespace ViewModels
             _annotationPlacementEditActive = True
             ' EIN Mauszug = EIN Undo-Schritt. Ohne das legt jede Bewegung nach Ablauf des
             ' Sammelfensters (CaptureUndoState) einen weiteren Eintrag an - ein längeres Verschieben,
-            ' Drehen oder Skalieren erzeugte dutzende (Nutzer-Befund 2026-07-25). Der Schnappschuss
+            ' Drehen oder Skalieren erzeugte dutzende. Der Schnappschuss
             ' entsteht VOR der ersten Änderung, danach ist das Aufzeichnen bis zum Loslassen still.
             PushUndo()
             _suppressUndoCapture = True
@@ -12127,7 +12886,7 @@ Namespace ViewModels
             End If
             ' KOMPLETT ASYNCHRON: weder Ghost-Render (Effekte: 100-300 ms) noch das Herausloesen aus der
             ' Szene duerfen den Drag-Start blockieren. Ein SYNCHRONER Loesch-Render an dieser Stelle hat
-            ' den Zug-Start sichtbar verzoegert (Nutzer-Befund 2026-07-25): die Region wird bei einem
+            ' den Zug-Start sichtbar verzoegert: die Region wird bei einem
             ' Objekt mit Mischmodus ueber SceneBlendCompositeRequiredRect auf den Composite-Bereich
             ' aufgezogen, das ist im Zweifel das halbe Bild. Bis der Loesch-Render landet, zeigt die
             ' SZENE das Objekt weiter an der alten Stelle - und genau solange bleibt der Ghost unsichtbar
@@ -12158,8 +12917,8 @@ Namespace ViewModels
             ' SCHNELLWEG für den Normalfall: ein Objekt OHNE Mischmodus braucht nur seine eigene
             ' Region. Das ist ein Patch auf dem gewärmten Basis-Cache (~20 ms) - er macht den Ghost
             ' SOFORT sichtbar, statt auf den Hintergrund-Worker zu warten. Genau dieses Warten war die
-            ' „erst sehr zeitversetzt sichtbare" Live-Ansicht im Auswahlrahmen (Nutzer-Befund
-            ' 2026-07-25); scheiterte der Patch (belegter Cache), landete die Freigabe sogar erst nach
+            ' „erst sehr zeitversetzt sichtbare" Live-Ansicht im Auswahlrahmen
+            '; scheiterte der Patch (belegter Cache), landete die Freigabe sogar erst nach
             ' einem eingeplanten Nachrender.
             '
             ' Für Objekte MIT Mischmodus bleibt es beim asynchronen Weg: dort zieht
@@ -12201,7 +12960,7 @@ Namespace ViewModels
         ''' Der Ghost bleibt unsichtbar, solange die Szene ihre Kopie noch hat. Scheitert das Räumen am
         ''' Anfang (belegter Basis-Cache), hing die Live-Ansicht bisher am Hintergrund-Worker - und
         ''' wenn der seinerseits in den Rückfall lief, stand der ganze Zug über: Rahmen leer, Objekt an
-        ''' der alten Stelle (Nutzer-Befund 2026-07-25). Ein erneuter Versuch je Bewegung kostet nichts,
+        ''' der alten Stelle. Ein erneuter Versuch je Bewegung kostet nichts,
         ''' sobald der Cache wieder frei ist, und heilt genau diesen Fall.
         ''' </summary>
         Private Sub RetryPlacementSceneCopyRemovalIfNeeded()
@@ -12330,7 +13089,7 @@ Namespace ViewModels
         ''' Wrapper um NotifyAnnotationOverlayStateChanged, der Aufrufe unterdrückt, solange
         ''' _overlayNotifySuppressDepth > 0 - siehe Kommentar am Feld. Aufrufer, die mehrere
         ''' zusammengehörige Statements klammern wollen, erhöhen/verringern die Tiefe und rufen
-        ''' NotifyAnnotationOverlayStateChanged() danach genau einmal direkt auf.
+        ''' NotifyAnnotationOverlayStateChanged danach genau einmal direkt auf.
         Private Sub RequestOverlayStateNotify()
             If _overlayNotifySuppressDepth > 0 Then Return
             NotifyAnnotationOverlayStateChanged()
@@ -12389,7 +13148,7 @@ Namespace ViewModels
         '''
         ''' Bei einer .fpx mit voll aufgelöstem retouch.png ist DAS BÜNDEL-Arbeitsbild der Decode
         ''' (Striche/Retusche bereits eingebacken); ein Vorschauauflösungs-Altbestand
-        ''' (Seed 2026-07-17) fällt über die Maße-Prüfung sauber auf das Basisbild zurück.</summary>
+        ''' (Seed) fällt über die Maße-Prüfung sauber auf das Basisbild zurück.</summary>
         Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String) As (Full As SKBitmap, Baked As Boolean)
             Dim fullDecode As SKBitmap = Nothing
             Dim bakedFromFpx = False
@@ -12465,7 +13224,7 @@ Namespace ViewModels
             ' gedeckelte Auflösung ~1 s). Ohne ihn bleibt der Cache kalt, bis der Nutzer die erste
             ' Anpassung macht - und ALLE Patch-Pfade (Blend, Malen, Objekt-Move) schlagen bis dahin
             ' still mit cacheMissOrBusy fehl, weil der Annotation-Pfad bewusst nie zum Full-Render
-            ' eskaliert (Log-Befund 2026-07-16).
+            ' eskaliert (Log-Befund).
             If scheduleInitialRender Then ScheduleToolPreviewUpdate()
             Return True
         End Function
@@ -12884,7 +13643,7 @@ Namespace ViewModels
                 Await UpdatePreviewAsync()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("EditorViewModel.UpdatePreview", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -13006,7 +13765,7 @@ Namespace ViewModels
             ' Blendet DIESE Aufnahme das gezogene Objekt aus? Nur dann darf ihr Ergebnis später die
             ' Ghost-Übergabe melden. Ein Vollrender, der VOR dem Zug gestartet wurde, trägt das Objekt
             ' noch an der alten Stelle - meldete er trotzdem die Übergabe, stand das Objekt doppelt da:
-            ' Ghost am Zeiger UND Kopie an der Startstelle (Nutzer-Befund 2026-07-25).
+            ' Ghost am Zeiger UND Kopie an der Startstelle.
             Dim aufnahmeOhneGezogenes = _annotationPlacementEditActive AndAlso Not HasMultiAnnotationSelection
             ' Und lässt die Aufnahme die eingehängten Korrekturen weg (Live-Darstellung während eines
             ' Zuges, siehe GetSceneAdjustments)? Dann gilt dasselbe.
@@ -13059,7 +13818,7 @@ Namespace ViewModels
                 ' (bzw. die eingehängten Korrekturen) AUSBLENDET. Gilt die Ausblendung beim Anwenden
                 ' nicht mehr - der Zug ist vorbei -, fehlt im Ergebnis genau das, was jetzt sichtbar
                 ' sein müsste. Angewendet verschwand das Objekt für ein bis zwei Sekunden, bis der
-                ' nächste Render kam (Nutzer-Befund 2026-07-25). Also verwerfen und neu rendern -
+                ' nächste Render kam. Also verwerfen und neu rendern -
                 ' dasselbe, was der Region-Worker über placementExclusionStale längst tut.
                 If (aufnahmeOhneGezogenes OrElse aufnahmeOhneKorrekturen) AndAlso Not _annotationPlacementEditActive Then
                     result.Dispose()
@@ -13151,7 +13910,7 @@ Namespace ViewModels
                 ' Ein neu angelegtes Dokument wurde nie „bearbeitet" - es heißt schlicht „Unbenannt".
                 ' Ohne diesen Fall schlüge die Anwendung „Unbenannt_bearbeitet" vor.
                 Dim proposedName = If(_isNewDocument, name, name & "_bearbeitet")
-                ' FPX als Standard-Vorschlag (Nutzerwunsch 2026-07-17): das Projektformat erhält
+                ' FPX als Standard-Vorschlag: das Projektformat erhält
                 ' Regler + Objekte editierbar - der Export in JPG/PNG/WEBP bleibt eine bewusste Wahl.
                 ' NormalizeSaveAsFormat fällt auf JPG zurück, falls FPX deaktiviert ist.
                 Dim initialFormat = If(FpxService.Enabled, "FPX", "JPG")
@@ -13199,7 +13958,7 @@ Namespace ViewModels
                     ' Nicht-destruktiv als .fpx-Bündel sichern: das gerenderte Komposit (für die Anzeige) plus
                     ' das Rezept + Basisbild + Objekt-Assets. Das lebende Bild bleibt als Quelle unangetastet.
                     Dim sourcePath = RenderSourcePath
-                    ' SELBSTHEILUNG (Nutzer-Befund 2026-07-17 „Basisbild fehlt" bei fpx→fpx): ist das
+                    ' SELBSTHEILUNG ( „Basisbild fehlt" bei fpx→fpx): ist das
                     ' entpackte Basisbild des offenen Projekts verschwunden, das aktuelle Bündel frisch
                     ' entpacken statt mit FileNotFound zu scheitern - und den Hergang loggen, damit die
                     ' eigentliche Ursache (wer räumt den Temp-Ordner ab?) greifbar wird.
@@ -13269,7 +14028,7 @@ Namespace ViewModels
                 End If
                 If ok AndAlso saveToImmich Then
                     ' Ziel Immich: Mit "Vorhandene Assets aktualisieren" UND einer Immich-Quelle wird
-                    ' das Quell-Asset ERSETZT (Nutzerentscheidung 2026-07-16: das Setting steuert
+                    ' das Quell-Asset ERSETZT (das Setting steuert
                     ' beim Speichern-unter, ob ein neues Asset entsteht oder das Original
                     ' ueberschrieben wird); ohne Immich-Quelle oder mit ausgeschaltetem Setting
                     ' entsteht wie bisher ein neues Asset.
@@ -13315,7 +14074,7 @@ Namespace ViewModels
                     _hasChanges = False
                     If saveAs Then
                         ' Katalog-Metadaten zur neuen Datei übernehmen - das Original behält seine.
-                        ' Was mitwandert, bestimmen die Einzeloptionen des Dialogs (2026-07-17).
+                        ' Was mitwandert, bestimmen die Einzeloptionen des Dialogs.
                         Dim metaSource = If(Not String.IsNullOrEmpty(_currentFpxPath), _currentFpxPath, _currentImagePath)
                         LibraryService.Instance.CopyEntryMeta(metaSource, targetPath,
                                                               saveAsResult.CopyRating, saveAsResult.CopyFavorite,
@@ -13327,11 +14086,11 @@ Namespace ViewModels
                         _mainVm.Viewer.ReloadCurrentImageFromDisk()
                     End If
                     ' Ein PDF ist ein AUSGABEformat, keine Arbeitsdatei: der Editor kann es nicht
-                    ' dekodieren, der Wechsel endete in einem leeren Editor (Nutzer-Befund 2026-07-18).
+                    ' dekodieren, der Wechsel endete in einem leeren Editor.
                     ' Deshalb bleibt nach „Speichern unter → PDF" das aktuelle Bild geöffnet.
                     Dim savedAsPdf = saveAsResult IsNot Nothing AndAlso saveAsResult.IsPdf
                     If saveAs AndAlso Not savedAsPdf AndAlso Not String.Equals(targetPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
-                        ' Nutzerwunsch 2026-07-17: nach „Speichern unter" arbeitet der Editor auf der
+                        ' nach „Speichern unter" arbeitet der Editor auf der
                         ' GESPEICHERTEN Datei weiter (.fpx bzw. exportiertes Bild), nicht mehr auf dem
                         ' Ursprungsbild. _hasChanges ist False, der Wechsel fragt also nicht nach.
                         Dim statusAfterSave = StatusText
@@ -13372,7 +14131,7 @@ Namespace ViewModels
             ' Den Dateinamens-STAMM behalten: Immich zeigt ihn als Originalnamen des Assets an.
             ' Die ENDUNG bleibt nur, wenn SaveImage das Format wirklich erzeugen kann - ein
             ' .heic/.tiff/.gif-Asset wurde sonst durch JPEG-Bytes unter fremder Endung ersetzt
-            ' (Audit 2026-07-22; SaveImage lehnt solche Ziele inzwischen zentral ab). Der Ersatz
+            ' (SaveImage lehnt solche Ziele inzwischen zentral ab). Der Ersatz
             ' ist dann ehrlich als .jpg etikettiert.
             Dim renderExt = If(ImageProcessor.CanEncodeToTargetExtension(sourcePath),
                                IO.Path.GetExtension(sourcePath), ".jpg")
@@ -13450,7 +14209,7 @@ Namespace ViewModels
         ''' nicht als selbstaendiges Projekt mit eingebetteten Assets gesichert. In all diesen Faellen
         ''' bleibt deshalb nur "Speichern unter" (vorzugsweise .fpx oder ein gebackenes Ausgabeformat).
         ''' Geschrieben wird AUSSCHLIESSLICH ueber die Speichern-Funktion, nie nebenbei beim
-        ''' Verlassen (Nutzerentscheidung 2026-07-19: Dateien entstehen nur durch bewusstes
+        ''' Verlassen (Dateien entstehen nur durch bewusstes
         ''' Speichern).</summary>
         Public ReadOnly Property CanSaveSidecar As Boolean
             Get
@@ -13529,7 +14288,7 @@ Namespace ViewModels
                 Dim objectValues = adj.ExtractPixelAdjustments()
                 Dim werte = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
                 ' Die Regler beschreiben die ganze Auswahl: bei einer Mehrfachauswahl bekommt JEDES
-                ' markierte Objekt dieselben Werte, nicht nur der Anker (Nutzer-Befund 2026-07-25).
+                ' markierte Objekt dieselben Werte, nicht nur der Anker.
                 For Each i In ObjectAdjustTargetIndices()
                     If i >= 0 AndAlso i < adj.Annotations.Count Then
                         adj.Annotations(i).Adjustments = If(werte Is Nothing, Nothing, werte.Clone())
@@ -13651,10 +14410,10 @@ Namespace ViewModels
                 .StraightenExpandCanvas = If(forPreview, _straightenExpandCanvas, _appliedStraightenExpandCanvas),
                 .FlipHorizontal = If(forPreview, _flipH, _appliedFlipH),
                 .FlipVertical = If(forPreview, _flipV, _appliedFlipV),
-                .CropLeftPercent = CSng(_appliedCropLeft),
-                .CropTopPercent = CSng(_appliedCropTop),
-                .CropRightPercent = CSng(_appliedCropRight),
-                .CropBottomPercent = CSng(_appliedCropBottom),
+                .CropLeftPercent = CSng(EffectiveCrop(forPreview).Left),
+                .CropTopPercent = CSng(EffectiveCrop(forPreview).Top),
+                .CropRightPercent = CSng(EffectiveCrop(forPreview).Right),
+                .CropBottomPercent = CSng(EffectiveCrop(forPreview).Bottom),
                 .ResizeWidth = If(forPreview, _resizeWidth, _appliedResizeWidth),
                 .ResizeHeight = If(forPreview, _resizeHeight, _appliedResizeHeight),
                 .LockResizeAspect = _lockResizeAspect,
@@ -13790,7 +14549,10 @@ Namespace ViewModels
             Dim reverted = False
             Select Case previousTool
                 Case EditorTool.Crop
-                    If HasCropChanges Then
+                    ' NUR wo es ein "Bestätigen" gibt. Bei RAW/PSD/.fpx IST der offene Beschnitt der
+                    ' Beschnitt (UsesLiveCrop) - ihn beim Werkzeugwechsel zu verwerfen hiesse, ihn
+                    ' genau in dem Moment wegzuwerfen, in dem er sichtbar werden soll.
+                    If HasCropChanges AndAlso Not UsesLiveCrop Then
                         ' Nicht bestätigter Beschnitt wird verworfen: der offene Beschnitt geht auf Null
                         ' zurück, der bereits angewendete bleibt unangetastet.
                         SetCropValues(0, 0, 0, 0)
@@ -14068,16 +14830,31 @@ Namespace ViewModels
             _appliedStraightenExpandCanvas = adj.StraightenExpandCanvas
             _appliedFlipH = adj.FlipHorizontal
             _appliedFlipV = adj.FlipVertical
-            ' Der geladene Beschnitt ist bereits angewendet; der offene Beschnitt startet leer, sonst
-            ' läge das Auswahlrechteck sofort wieder im Maßstab des unbeschnittenen Originals.
-            _cropLeft = 0
-            _cropTop = 0
-            _cropRight = 0
-            _cropBottom = 0
-            _appliedCropLeft = adj.CropLeftPercent
-            _appliedCropTop = adj.CropTopPercent
-            _appliedCropRight = adj.CropRightPercent
-            _appliedCropBottom = adj.CropBottomPercent
+            ' WOHIN der geladene Beschnitt gehoert, haengt an der Dokumentart:
+            ' - schreibbare Formate: er ist bereits angewendet, der offene Beschnitt startet leer,
+            '   sonst laege das Auswahlrechteck sofort wieder im Massstab des Originals.
+            ' - RAW/PSD/.fpx (UsesLiveCrop): es GIBT keinen angewendeten Stand, der Wert ist der
+            '   lebende Ausschnitt. Landete er in _appliedCrop*, waere ein gespeicherter Zuschnitt
+            '   nach dem Laden unsichtbar und beim naechsten Speichern verloren.
+            If UsesLiveCrop Then
+                _cropLeft = adj.CropLeftPercent
+                _cropTop = adj.CropTopPercent
+                _cropRight = adj.CropRightPercent
+                _cropBottom = adj.CropBottomPercent
+                _appliedCropLeft = 0
+                _appliedCropTop = 0
+                _appliedCropRight = 0
+                _appliedCropBottom = 0
+            Else
+                _cropLeft = 0
+                _cropTop = 0
+                _cropRight = 0
+                _cropBottom = 0
+                _appliedCropLeft = adj.CropLeftPercent
+                _appliedCropTop = adj.CropTopPercent
+                _appliedCropRight = adj.CropRightPercent
+                _appliedCropBottom = adj.CropBottomPercent
+            End If
             _resizeWidth = adj.ResizeWidth
             _resizeHeight = adj.ResizeHeight
             _appliedResizeWidth = adj.ResizeWidth
@@ -14364,7 +15141,7 @@ Namespace ViewModels
             _borderSize = 0
             _borderColor = "#FFFFFFFF"
             _clarity = 0
-            ' VOLLSTAENDIGKEIT (Audit 2026-07-22): diese Felder fehlten hier und ueberlebten damit
+            ' VOLLSTAENDIGKEIT: diese Felder fehlten hier und ueberlebten damit
             ' den Bildwechsel - Bild B erbte Dunst/Staub/Kalibrierung/Vignettenform/Weissabgleich
             ' von Bild A, bei _hasChanges=False also ohne jede Warnung. Beide Oeffnen-Pfade
             ' (OpenImageAsync/LoadImageContent) laufen NUR ueber diese Funktion; ApplyAdjustments
@@ -14450,7 +15227,7 @@ Namespace ViewModels
             ' die Panel-Hervorhebungen des VORIGEN Bildes stehen: FilterPanel haengt an
             ' LastAppliedFilterPresetName, LightroomPreset-/LutPresetPanel an IsLastApplied (aus
             ' _lastAppliedLightroomPresetPath/_lastAppliedLutPresetPath) - die Pixelwerte oben wurden
-            ' zwar neutralisiert, die Auswahl-Markierung folgte aber nicht (Nutzer-Befund 2026-07-24).
+            ' zwar neutralisiert, die Auswahl-Markierung folgte aber nicht.
             ClearLastAppliedLook()
             _retouchSpots.Clear()
             _annotations.Clear()
@@ -14740,6 +15517,14 @@ Namespace ViewModels
                 SyncResizeHeightFromWidth()
             End If
             RaiseCropPropertiesChanged()
+            ' Ohne "Anwenden"-Knopf ist die Reglerbewegung selbst die Aenderung - sie muss das
+            ' Dokument als ungespeichert markieren, sonst ginge der Ausschnitt beim Verlassen
+            ' kommentarlos verloren.
+            If UsesLiveCrop Then
+                _hasChanges = True
+                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                RaiseResetButtonStateChanged()
+            End If
         End Sub
 
         Private Sub RaiseCropPropertiesChanged()
@@ -14786,9 +15571,11 @@ Namespace ViewModels
                 Using paint = New SKPaint With {.IsAntialias = True}
                 ' Die Kästchengröße muss zu dem passen, was DrawWrappedText tatsächlich zeichnet, sonst
                 ' steht der Auswahlrahmen sichtbar weiter außen als der Text. Dort gilt: Grundlinie der
-                ' ersten Zeile auf rect.Top + fontSize, Zeilenabstand aus den Schriftmetriken, Umbruch
-                ' sobald die VORSCHUBBREITE (MeasureText ohne Bounds, nicht die engere Tintenbreite)
-                ' rect.Width überschreitet.
+                ' ersten Zeile auf rect.Top + fontSize, Zeilenabstand aus den Schriftmetriken, und
+                ' NUR explizite Zeilenumbrüche zählen - der Renderer bricht seit nicht
+                ' mehr an der Boxbreite um (Messung und Zeichnung sprechen dieselben Zeilen, sonst
+                ' liefen umgebrochene Zeilen unter der Box heraus und hinterließen beim Verschieben
+                ' Geist-Fragmente). Gemessen wird die VORSCHUBBREITE (MeasureText ohne Bounds).
                 Dim maxLineWidth As Single = 0
                 Dim lineCount As Integer = 0
                 For Each line In content.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
@@ -14811,7 +15598,8 @@ Namespace ViewModels
                 ' Bis zur vollen Bildbreite/-höhe: ein Deckel unterhalb davon (früher 60%) hätte das
                 ' Rechteck vom Text abgekoppelt, sobald der Text groß wird - und genau dann stimmen
                 ' Mitte und rechte Kante des Rahmens nicht mehr mit dem Text überein. Läuft eine Zeile
-                ' über die Bildbreite hinaus, greift bei dieser Breite der Umbruch in DrawWrappedText.
+                ' über die Bildbreite hinaus, wird sie schlicht an der Bildkante abgeschnitten -
+                ' bewusst kein Umbruch (siehe DrawWrappedText).
                 Return (Math.Max(MinTextAnnotationWidthPercent, Math.Min(100.0, widthPercent)),
                         Math.Max(MinTextAnnotationHeightPercent, Math.Min(100.0, heightPercent)))
                 End Using
@@ -14994,7 +15782,7 @@ Namespace ViewModels
 
             ' Die Vorgabe ("16:9") meint das ANGEZEIGTE Seitenverhältnis. Gerechnet wird hier aber im
             ' Source-Raster, dessen Achsen bei 90°/270° vertauscht sind - dort mit dem Kehrwert
-            ' rechnen, sonst ergab "16:9" auf gedrehten Bildern 9:16 am Bildschirm (Audit 2026-07-22).
+            ' rechnen, sonst ergab "16:9" auf gedrehten Bildern 9:16 am Bildschirm.
             ' Mittig bleibt mittig: die zentrierten Ränder überstehen jede Dreh-/Spiegel-Permutation.
             Dim q = ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
             If q = 90 OrElse q = 270 Then targetAspect = 1.0 / targetAspect
@@ -15474,7 +16262,7 @@ Namespace ViewModels
 
         ''' True, wenn neben Drehung/Flip weitere ANGEWENDETE Geometrie aktiv ist (Crop, freie
         ''' Begradigung, Resize, Canvas) - dann ist die Anzeige-Szene nicht mehr die skalierte
-        ''' Basis, und Abkürzungen wie die Strich-Sofortbrücke müssen aussetzen (Audit 2026-07-22).
+        ''' Basis, und Abkürzungen wie die Strich-Sofortbrücke müssen aussetzen.
         Private Function HasAppliedNonRotationGeometry() As Boolean
             Return _appliedCropLeft > 0 OrElse _appliedCropTop > 0 OrElse
                    _appliedCropRight > 0 OrElse _appliedCropBottom > 0 OrElse
@@ -15499,10 +16287,10 @@ Namespace ViewModels
             If _sceneSk Is Nothing OrElse baseW <= 0 OrElse baseH <= 0 Then Return
             ' Die Sofort-Brücke zeichnet den Strich in ARBEITSBILD-Koordinaten direkt in die ANZEIGE-
             ' Szene, die aber per Rezept gedreht ist - bei 90/180/270 säße der Strich für den Sekunden-
-            ' bruchteil bis zum Voll-Render an der falschen Stelle (Nutzerbefund). Deshalb bei Drehung die
+            ' bruchteil bis zum Voll-Render an der falschen Stelle. Deshalb bei Drehung die
             ' Brücke überspringen: der Strich erscheint dann minimal später, aber sofort korrekt platziert.
             ' Gleiches gilt für Flip UND jede angewendete Crop-/Begradigungs-/Resize-/Canvas-Geometrie
-            ' (Audit 2026-07-22): ScaleRectBetweenSpaces setzt "Szene = skalierte Basis" voraus, was
+            ': ScaleRectBetweenSpaces setzt "Szene = skalierte Basis" voraus, was
             ' dann nicht mehr stimmt - der Strich erschiene gespiegelt/versetzt.
             If (((_appliedRotationDegrees Mod 360) + 360) Mod 360) <> 0 OrElse
                _appliedFlipH OrElse _appliedFlipV OrElse HasAppliedNonRotationGeometry() Then Return
@@ -15740,8 +16528,8 @@ Namespace ViewModels
             If row.IsGroupHeader Then
                 ' OBJEKTE ZUERST: eine Gruppe darf beides enthalten. Wurde sie wegen einer einzigen
                 ' Korrektur darin als Korrektur-Gruppe eingestuft, war sie praktisch unverschiebbar -
-                ' CanDropLayerOn ließ sie weder auf Objektzeilen noch auf andere Gruppen (Nutzer-Befund
-                ' 2026-07-25). Die Korrekturen einer Objektgruppe hängen ohnehin per
+                ' CanDropLayerOn ließ sie weder auf Objektzeilen noch auf andere Gruppen
+                '. Die Korrekturen einer Objektgruppe hängen ohnehin per
                 ' StackAboveAnnotationId an ihrem Objekt und wandern mit ihm.
                 If AnnotationsInGroup(row.Group.Id).Count > 0 Then Return False
                 If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, row.Group.Id, StringComparison.Ordinal)) Then Return True
@@ -16048,7 +16836,7 @@ Namespace ViewModels
         ''' Kennung, der Objektdurchlauf wendet sie nur nach dem Objekt mit passender Id an - das es
         ''' nicht mehr gibt. Die Ebene stand weiter im Panel und wirkte nirgends, und
         ''' <c>RequiresFullRenderForStackedCorrections</c> zwang das Dokument dauerhaft zum Vollrender
-        ''' für nichts (Audit A3).
+        ''' für nichts.
         '''
         ''' Neuer Anker ist das nächste Objekt UNTER dem entfernten (das selbst bleibt), sonst das
         ''' Basisbild. Damit wirkt die Korrektur weiter auf genau das, was unter ihr liegt - beim
@@ -16114,7 +16902,7 @@ Namespace ViewModels
             If Not CanUsePixelTools Then Return
             If _rasterizeInFlight Then Return
             ' Eine GRUPPE bzw. Mehrfachauswahl wird als Ganzes gebacken - in EINEM Region-Commit und
-            ' EINEM Undo-Schritt, in Z-Reihenfolge von hinten nach vorn (Nutzerwunsch 2026-07-25).
+            ' EINEM Undo-Schritt, in Z-Reihenfolge von hinten nach vorn.
             Dim targets = SelectedAnnotations.Where(Function(a) a IsNot Nothing).
                 OrderBy(Function(a) _annotations.IndexOf(a)).ToList()
             If targets.Count = 0 Then Return
@@ -16157,7 +16945,7 @@ Namespace ViewModels
                     If undoEntry IsNot Nothing Then undoEntry.Patch = patch
                     ' Objekt aus dem Stapel nehmen - OHNE eigenen Undo-Push (der kam oben) - und
                     ' die Anzeige in EINEM Schritt auf den gebackenen Stand ziehen.
-                    ' Eingehängte Korrekturen vorher umhängen, sonst zeigen sie ins Leere (Audit A3).
+                    ' Eingehängte Korrekturen vorher umhängen, sonst zeigen sie ins Leere.
                     ReanchorStackedCorrectionsBeforeRemoval(targets)
                     For Each a In targets
                         _annotations.Remove(a)
@@ -16463,7 +17251,7 @@ Namespace ViewModels
             ' die gewählte Ebene auflösen, sonst liefe es in den Promote-Zweig (neue Maske).
             ' Wurde DIESE Auswahl bereits promotet (z. B. durch Füllen), MUSS die Anpassung genau auf jener
             ' Ebene landen - sonst entstünde eine zweite Ebene OHNE die Füllung, und die Füllung könnte die
-            ' Anpassung nicht abstufen (Nutzer-Befund: "auf der Maske wirkt die Füllung nicht als
+            ' Anpassung nicht abstufen ("auf der Maske wirkt die Füllung nicht als
             ' Deckungsverlauf"). Die Verknüpfung wird bei jeder Auswahländerung ungültig.
             Dim linkedExisting As MaskedAdjustmentLayer = Nothing
             If _selectionPromotedLayerId <> "" Then
@@ -16872,7 +17660,7 @@ Namespace ViewModels
             End If
             ' MEHRFACHAUSWAHL: kein Ghost. Er zeigte das ANKER-Objekt, und die Anzeige streckt ihn per
             ' Stretch=Fill auf die gemeinsame Box - das letzte markierte Objekt erschien dadurch
-            ' verzerrt über der ganzen Auswahl (Nutzer-Befund 2026-07-25). Live dargestellt wird bei
+            ' verzerrt über der ganzen Auswahl. Live dargestellt wird bei
             ' mehreren Objekten ohnehin die Szene selbst.
             If HasMultiAnnotationSelection Then
                 SetSelectedAnnotationOverlay(Nothing)
@@ -16935,12 +17723,12 @@ Namespace ViewModels
         Private Shared Function NormalizeAvaloniaColor(value As String, fallback As String) As String
             If String.IsNullOrWhiteSpace(value) Then Return fallback
             Try
-                ' Color.ToString() liefert für Farben, die exakt einer benannten CSS-Farbe entsprechen
+                ' Color.ToString liefert für Farben, die exakt einer benannten CSS-Farbe entsprechen
                 ' (z.B. "Transparent" für #00FFFFFF, "White", "Black", ...), den Namen statt Hex zurück.
                 ' ImageProcessor.ParseColor versteht aber nur Hex-Werte und würde bei so einem Namen
                 ' (kein gültiges Hex) still auf ihren Fallback (z.B. Weiß) zurückfallen - "Transparent"
                 ' wurde dadurch beim Backen als Weiß statt durchsichtig gerendert. Deshalb hier immer
-                ' explizit als #AARRGGBB-Hex formatieren statt Color.ToString() zu vertrauen.
+                ' explizit als #AARRGGBB-Hex formatieren statt Color.ToString zu vertrauen.
                 Dim c = Avalonia.Media.Color.Parse(value.Trim())
                 Return $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}"
             Catch
@@ -17031,7 +17819,7 @@ Namespace ViewModels
         ''' rückwärts also erst die Flips ablösen, dann die Rand-Permutation der Drehung.
         ''' Prozent-Ränder überstehen den Achsentausch verlustfrei (Anzeige-Breite = Source-Höhe bei
         ''' 90°/270°). OHNE diese Umrechnung entfernte der Beschnitt auf gedrehten Bildern die
-        ''' falsche Bildregion (Audit 2026-07-22: Anzeige-links = Source-unten bei 90° im UZS).</summary>
+        ''' falsche Bildregion (Anzeige-links = Source-unten bei 90° im UZS).</summary>
         Private Function DisplayCropMarginsToSource(left As Double, top As Double,
                                                     right As Double, bottom As Double) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
             If _appliedFlipH Then
@@ -17132,7 +17920,7 @@ Namespace ViewModels
             If baseWidth <= 0 OrElse baseHeight <= 0 OrElse displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (xPercent, yPercent)
             Dim displayX = xPercent / 100.0 * displaySize.Width
             Dim displayY = yPercent / 100.0 * displaySize.Height
-            ' VOLLSTÄNDIGE Rückabbildung (Audit 2026-07-22): die frühere Mapper-Kurzform kannte nur
+            ' VOLLSTÄNDIGE Rückabbildung: die frühere Mapper-Kurzform kannte nur
             ' Drehung/Flip - nach angewendetem Crop/Resize/Canvas wurde die Anzeige-Koordinate als
             ' Source-Koordinate interpretiert und der Strich saß verschoben/falsch skaliert im
             ' Arbeitsbild (destruktiv!). NaN = Punkt liegt außerhalb des Bildinhalts (Canvas-Rand,
@@ -17168,7 +17956,7 @@ Namespace ViewModels
         Private Function TransformWorkingPixelToDisplayPixel(x As Double, y As Double,
                                                              baseWidth As Integer, baseHeight As Integer,
                                                              displayWidth As Integer, displayHeight As Integer) As (X As Double, Y As Double)
-            ' VOLLSTÄNDIGE Vorwärtsabbildung (Audit 2026-07-22, Gegenstück zu
+            ' VOLLSTÄNDIGE Vorwärtsabbildung (Gegenstück zu
             ' DisplayPercentToWorkingImagePercent): mit der Mapper-Kurzform stand das Overlay
             ' eines Retusche-Punkts nach angewendetem Crop/Resize/Canvas neben der gebackenen
             ' Stelle. Vom Crop entfernte Punkte wandern weit nach außen - das Overlay zeigt sie
@@ -17269,7 +18057,7 @@ Namespace ViewModels
             End If
 
             _retouchSpots.Add(spot)
-            ' Retusche hat das Dokument bisher nicht als geändert markiert: UpdatePreview() setzt
+            ' Retusche hat das Dokument bisher nicht als geändert markiert: UpdatePreview setzt
             ' _hasChanges nicht, und AddRetouchSpot lief nie über SchedulePreviewUpdate. Wer nur
             ' retuschierte und den Editor verließ, wurde nicht gefragt und verlor die Arbeit.
             _hasChanges = True
@@ -17951,7 +18739,7 @@ Namespace ViewModels
         ''' <summary>Setzt NUR die Regler der Filter-Gruppe zurück (Preset und Stärke), so wie jeder
         ''' Gruppen-Zurücksetzer oben rechts nur seine eigene Gruppe anfasst.
         '''
-        ''' Bis 2026-07-21 hing der Knopf am weit greifenden <see cref="ResetFilterInternal"/> und
+        ''' Bis hing der Knopf am weit greifenden <see cref="ResetFilterInternal"/> und
         ''' räumte damit auch Licht, Farbe, Details, Effekte, HSL, Farbgradierung und Kurven weg. Die
         ''' Begründung dafür war, dass Lightroom-Presets und LUTs im selben Bereich angewendet werden
         ''' - nur sah man dem kleinen Pfeil in der Ecke nicht an, dass er die ganze Bearbeitung
@@ -18311,6 +19099,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsRepairMode))
             Me.RaisePropertyChanged(NameOf(RetouchHintText))
             Me.RaisePropertyChanged(NameOf(ShowSelectionAdjustments))
+            Me.RaisePropertyChanged(NameOf(ShowMaskAdjustments))
+            Me.RaisePropertyChanged(NameOf(ShowGradientControls))
             Me.RaisePropertyChanged(NameOf(ShowDrawControls))
             Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
             Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
@@ -18937,6 +19727,11 @@ Namespace ViewModels
         Frame
         Move
         Selection
+        ''' <summary>MASKEN: Pinsel und Verlaeufe. Bewusst getrennt vom Auswahlwerkzeug - eine
+        ''' Auswahl ist fluechtig (Laufameisen, zum Kopieren/Fuellen), eine Maske gehoert dauerhaft
+        ''' zu einer Korrekturebene (rotes Overlay). Der Code trennt beides ueber IsMaskLayer
+        ''' laengst; das Werkzeug macht es jetzt auch fuer den Nutzer sichtbar.</summary>
+        Mask
     End Enum
 
     Public Enum LayersPanelTab

@@ -27,6 +27,7 @@ Namespace ViewModels
         Private _createXmpSidecarIfMissing As Boolean = False
         Private _developRawThumbnails As Boolean = False
         Private _developRawInViewer As Boolean = False
+        Private _developRawInBatch As Boolean = True
         Private _thumbnailCacheEnabled As Boolean = True
         Private _viewerOpenFitToWindow As Boolean = True
         Private _viewerFitBehavior As String = "Always"
@@ -335,6 +336,22 @@ Namespace ViewModels
                 If _developRawInViewer = value Then Return
                 Me.RaiseAndSetIfChanged(_developRawInViewer, value)
                 SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>RAWs OHNE .fpxmp-Rezept auch in den Stapelfunktionen voll entwickeln. Mit
+        ''' Rezept wird immer entwickelt - dort waere die eingebettete Vorschau das falsche Bild.
+        ''' Der Schalter wirkt beim naechsten Stapellauf; laufende Ablaeufe lesen ihn nicht neu.</summary>
+        Public Property DevelopRawInBatch As Boolean
+            Get
+                Return _developRawInBatch
+            End Get
+            Set(value As Boolean)
+                If _developRawInBatch = value Then Return
+                Me.RaiseAndSetIfChanged(_developRawInBatch, value)
+                Dim settings = AppSettingsService.Load()
+                settings.DevelopRawInBatch = value
+                AppSettingsService.Save(settings)
             End Set
         End Property
 
@@ -1321,6 +1338,7 @@ Namespace ViewModels
             _createXmpSidecarIfMissing = _appSettings.CreateXmpSidecarIfMissing
             _developRawThumbnails = _appSettings.DevelopRawThumbnails
             _developRawInViewer = _appSettings.DevelopRawInViewer
+            _developRawInBatch = _appSettings.DevelopRawInBatch
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
             _thumbnailQuality = _appSettings.ThumbnailQuality
             _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)

@@ -86,7 +86,7 @@ Namespace Services
 
         ''' Zielauflösung der eingebetteten Bilder. Skia legt Bitmaps UNKOMPRIMIERT ins PDF - ohne
         ''' diese Begrenzung wurde eine 5-seitige A4-Datei aus normalen Kamerabildern 113 MB groß
-        ''' (gemessen 2026-07-18). 300 dpi ist Fotodruckqualität; mehr löst kein Drucker auf.
+        ''' (gemessen). 300 dpi ist Fotodruckqualität; mehr löst kein Drucker auf.
         Private Const TargetDpi As Double = 300
         ''' Qualität der ins PDF eingebetteten JPEGs. Skia übernimmt bereits komprimierte Daten
         ''' unverändert, statt sie roh abzulegen - das ist der eigentliche Größenhebel.

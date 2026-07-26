@@ -10,7 +10,7 @@ Namespace Services
     ''' <summary>Liest die Katalogdaten aus einer XMP-Beistelldatei: Bewertung, Farbetikett, Stichworte.
     '''
     ''' Warum das nötig ist: <see cref="ExifService"/> kommt nur an XMP heran, das IM Bild steckt. RAW-
-    ''' Dateien tragen praktisch nie eingebettetes XMP - Lightroom, darktable und digiKam legen alles in
+    ''' Dateien tragen praktisch nie eingebettetes XMP - die verbreiteten Verwaltungsprogramme legen alles in
     ''' eine Nachbardatei. Ohne diesen Dienst ist eine über Jahre gepflegte Sammlung für uns unsichtbar.
     '''
     ''' Bewusst NUR lesend: geschrieben wird weiterhin allein die Bewertung, und nur in eine bereits
@@ -37,7 +37,7 @@ Namespace Services
         ''' <summary>Der Pfad der Beistelldatei zu <paramref name="imagePath"/>, oder Nothing.
         '''
         ''' Zwei Konventionen sind im Umlauf und beide sind verbreitet: Adobe ERSETZT die Endung
-        ''' ("foto.cr2" -> "foto.xmp"), darktable/digiKam/exiftool HÄNGEN AN ("foto.cr2.xmp"). Wer nur
+        ''' ("foto.cr2" -> "foto.xmp"), andere HÄNGEN AN ("foto.cr2.xmp"). Wer nur
         ''' <c>Path.ChangeExtension</c> benutzt, findet die halbe Welt nicht. Angehängt wird zuerst
         ''' geprüft, weil diese Form eindeutig zur Bilddatei gehört - "foto.xmp" könnte daneben auch zu
         ''' "foto.jpg" gehören, wenn beide im selben Ordner liegen.</summary>

@@ -22,7 +22,7 @@ Namespace Controls
         ''' Versatz zog die beiden auch noch verschieden weit. Statt sich zu ergaenzen liefen sie
         ''' gegeneinander: mal lagen beide uebereinander, mal war ein Stueck Kontur GAR NICHT
         ''' gezeichnet. Auf hellem Bild fiel das kaum auf, auf schwarzem war die Auswahl streckenweise
-        ''' unsichtbar (Nutzer-Befund 2026-07-25, Nachtaufnahme). Auch das Laufen war betroffen:
+        ''' unsichtbar (Nachtaufnahme). Auch das Laufen war betroffen:
         ''' pro Takt wanderte Schwarz 2,6 px, Weiss nur 1,4 px.
         ''' Deshalb: gleiche Breite fuer beide, und die Pixelwerte hier einmal durch sie geteilt.</summary>
         Private Shared Function MakeDashStyle(offsetPixels As Double) As DashStyle

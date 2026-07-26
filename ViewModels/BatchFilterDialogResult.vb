@@ -4,10 +4,16 @@ Namespace ViewModels
 
     ''' <summary>Auswahl aus dem Dialog "Filter anwenden" (Galerie, Stapelverarbeitung).</summary>
     Public Class BatchFilterDialogResult
+        ''' <summary>Datei-Metadaten (EXIF/XMP) der Quelle in die Zieldatei uebernehmen -
+        ''' der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs.</summary>
+        Public Property PreserveMetadata As Boolean = True
 
         Public Const SourceFilter As String = "Filter"
         Public Const SourceLightroom As String = "Lightroom"
         Public Const SourceLut As String = "Lut"
+        ''' <summary>Automatische Bildverbesserung: keine Vorgabe-Datei, sondern die Messung des
+        ''' Editors ("Auto") - die Reglerwerte werden PRO BILD gemessen, nicht aus einer Vorlage.</summary>
+        Public Const SourceAuto As String = "Auto"
 
         ''' <summary>Woher der Look kommt: eingebauter Filter, Lightroom-Preset (.xmp) oder LUT (.cube).</summary>
         Public Property SourceKind As String = SourceFilter
@@ -39,6 +45,9 @@ Namespace ViewModels
         Public Property CopyFavorite As Boolean = True
         Public Property CopyColorLabel As Boolean = True
         Public Property CopyKeywords As Boolean = True
+
+        ''' <summary>Dateinamen-Muster für die Zieldateien (leer = Originalname behalten).</summary>
+        Public Property NamePattern As String = ""
 
         Public ReadOnly Property MetaCopy As CatalogMetaCopyOptions
             Get

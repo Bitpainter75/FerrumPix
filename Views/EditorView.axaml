@@ -310,6 +310,18 @@
                             <TextBlock Text="Auswahl" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Maske"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Mask"
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Mask}"
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Mask}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
+                                           Width="18" Height="18" />
+                            <TextBlock Text="Maske" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                        </StackPanel>
+                    </Button>
 
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Text"
@@ -555,7 +567,7 @@
                                 Background="{DynamicResource FP.Accent}"
                                 Opacity="0.9" />
                         <!-- Unsichtbare, breite Griffzone über der 2-px-Trennlinie: die Linie selbst
-                             ist praktisch nicht greifbar (Nutzerwunsch 2026-07-17: Linie ziehen +
+                             ist praktisch nicht greifbar (Linie ziehen +
                              Größenänderungs-Cursor wie bei den Hilfslinien). -->
                         <Border x:Name="SliderDividerHit"
                                 Width="14"
@@ -673,6 +685,10 @@
                                Stretch="Fill"
                                IsHitTestVisible="False"
                                IsVisible="False" />
+                        <icons:GradientMaskOverlayControl x:Name="GradientMaskOverlay"
+                                                          StrokeBrush="{DynamicResource FP.Accent}"
+                                                          IsHitTestVisible="False"
+                                                          IsVisible="False" />
                         <icons:SelectionOverlayControl x:Name="SelectionOverlay"
                                                        FillBrush="{Binding SelectionFillPreviewBrush}"
                                                        StrokeBrush="{DynamicResource FP.Accent}"
@@ -718,11 +734,14 @@
                                        Stretch="Fill"
                                        IsHitTestVisible="False"
                                        IsVisible="{Binding ShowSelectedSvgOverlay}" />
+                                <!-- Kein AcceptsReturn/Wrap: neue Zeile nur per Strg+Enter (Handler im
+                                     Code-Behind), damit die Anzeige exakt den Zeilen des Renderers
+                                     entspricht - der bricht nicht automatisch um. -->
                                 <TextBox x:Name="TextOverlayEditor"
                                          Classes="overlay-editor"
                                          Text="{Binding AnnotationText}"
                                          AcceptsReturn="True"
-                                         TextWrapping="Wrap"
+                                         TextWrapping="NoWrap"
                                          Background="Transparent"
                                          BorderThickness="0"
                                          Padding="0"
@@ -862,12 +881,77 @@
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowMaskAdjustments}">
+                                <panels:MaskPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowCropAdjustments}">
                                 <panels:CropPanel />
                             </Border>
 
                             <panels:ResizePanel Margin="0,7,0,0"
                                                 IsVisible="{Binding ShowResizeAdjustments}" />
+
+                            <!-- AUTOMATISCHE BILDVERBESSERUNG - bewusst im Anpassen-Bereich (nicht
+                                 bei den Filtern): sie ist kein Look, sondern misst das Bild und
+                                 setzt die Grundregler (Belichtung, Kontrast, Lichter/Tiefen,
+                                 Schwarz/Weiß, Dynamik, Weißabgleich). -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowLightAdjustments}">
+                                <Button Classes="ghost"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Padding="8,6"
+                                        Classes.active="{Binding IsAutoAdjustApplied}"
+                                        Command="{Binding AutoAdjustCommand}"
+                                        ToolTip.Tip="Bild messen und die Grundregler automatisch einstellen (der Zurücksetzen-Pfeil oben nimmt es wieder heraus)">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <icons:SvgIcon
+                                            Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
+                                            Width="14" Height="14" />
+                                        <TextBlock Text="Automatische Bildverbesserung" FontSize="{DynamicResource FP.Font.Small}" />
+                                    </StackPanel>
+                                </Button>
+                            </Border>
+
+                            <!-- Reglerstellungen von Bild zu Bild übertragen - der übliche Weg,
+                                 eine Serie einheitlich zu entwickeln. Steht bewusst unter der
+                                 automatischen Verbesserung: beide setzen die Regler in einem
+                                 Rutsch, nur einmal gemessen und einmal übernommen. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowLightAdjustments}">
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <Button Classes="ghost"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
+                                            Padding="8,6"
+                                            Command="{Binding CopyAdjustmentsCommand}"
+                                            ToolTip.Tip="Anpassen, Farbe, Details und Effekte dieses Bildes merken - Zuschnitt, Objekte und Masken bleiben außen vor">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <icons:SvgIcon
+                                                Source="avares://FerrumPix/Assets/Icons/outline/clipboard-copy.svg"
+                                                Width="14" Height="14" />
+                                            <TextBlock Text="Kopieren" FontSize="{DynamicResource FP.Font.Small}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="1"
+                                            Classes="ghost"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
+                                            Padding="8,6"
+                                            IsEnabled="{Binding CanPasteAdjustments}"
+                                            Command="{Binding PasteAdjustmentsCommand}"
+                                            ToolTip.Tip="Die gemerkten Anpassungen auf dieses Bild anwenden">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <icons:SvgIcon
+                                                Source="avares://FerrumPix/Assets/Icons/outline/clipboard.svg"
+                                                Width="14" Height="14" />
+                                            <TextBlock Text="Einfügen" FontSize="{DynamicResource FP.Font.Small}" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowLightAdjustments}">
@@ -1061,7 +1145,7 @@
                         <!-- KEIN StatusText hier: die Fußzeile ist die linke Spalte eines *,Auto,*-Rasters
                              und wächst mit dem Text, bis sie die mittig zentrierten Zoom-Bedienelemente
                              überdeckt („Gespeichert als <langer Dateiname>"). Der Status steht ohnehin
-                             oben in der Werkzeugleiste (Nutzer-Befund 2026-07-18). -->
+                             oben in der Werkzeugleiste. -->
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                     </StackPanel>

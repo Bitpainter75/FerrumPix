@@ -236,8 +236,8 @@ Namespace Services
         End Function
 
         ''' <summary>Übernimmt Bewertung, Favorit, Farbetikett und Stichworte eines Eintrags auf
-        ''' eine NEUE Datei - für „Speichern unter" und „Konvertieren nach" (Nutzerwunsch
-        ''' 2026-07-17): das Katalog-Wissen wandert zur Kopie mit, das Original behält seins.
+        ''' eine NEUE Datei - für „Speichern unter" und „Konvertieren nach"
+        ''': das Katalog-Wissen wandert zur Kopie mit, das Original behält seins.
         ''' Die Flags kommen aus den Einzeloptionen des Speichern-unter-/Konvertieren-Dialogs.</summary>
         Public Sub CopyEntryMeta(sourcePath As String, targetPath As String,
                                  Optional copyRating As Boolean = True,

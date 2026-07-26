@@ -98,11 +98,11 @@ Namespace Services
                 End If
             Next
 
-            ' HINWEIS (2026-07-16): Ein frueheres transitives Wachsen des Patch (damit jedes beruehrte
+            ' HINWEIS: Ein frueheres transitives Wachsen des Patch (damit jedes beruehrte
             ' Objekt VOLL enthalten ist und kein Kanten-Versatz entsteht) liess den Patch bei sich
             ' kettenden Objekten riesig werden (gemessen 5021x3495 ~17,5 MP, ~2 s/Render, staendig) und
             ' machte den Blend praktisch unbrauchbar. Der Patch bleibt deshalb auf die Blend-Abhaengigkeits-
-            ' bereiche begrenzt. Die Versatz-Frage (Phase 2) wird spaeter BEGRENZT/gezielt geloest.
+            ' bereiche begrenzt. Die Versatz-Frage wird spaeter BEGRENZT/gezielt geloest.
             Return (requiresComposite, rect)
         End Function
     End Class

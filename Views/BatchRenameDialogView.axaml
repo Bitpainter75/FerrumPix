@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Views.BatchRenameDialogView">
 
     <Grid RowDefinitions="Auto,*"
@@ -13,7 +14,7 @@
                 <TextBox Name="PatternTextBox"
                          Text="{Binding DialogBatchRenamePattern, Mode=TwoWay}"
                          MinHeight="36"/>
-                <!-- Platzhalter als Klick-Auswahl statt Hilfetext (Nutzerwunsch 2026-07-17):
+                <!-- Platzhalter als Klick-Auswahl statt Hilfetext:
                      ein Klick fügt den Platzhalter an der Cursorposition der Vorlage ein. -->
                 <WrapPanel Name="PlaceholderChips" ItemSpacing="4" LineSpacing="4">
                     <Button Classes="ghost" Padding="8,3" Content="###" Tag="###" Click="OnInsertPlaceholder" ToolTip.Tip="Laufende Nummer (Stellen = Anzahl #)"/>
@@ -32,7 +33,7 @@
                 <TextBlock Text="Startwert"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Body}"/>
-                <NumericUpDown Classes="combo-like"
+                <icons:SliderValueUpDown Classes="combo-like"
                                Value="{Binding DialogBatchRenameStart, Mode=TwoWay}"
                                Minimum="0"
                                Maximum="999999"
@@ -43,7 +44,7 @@
                 <TextBlock Text="Schrittweite"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Body}"/>
-                <NumericUpDown Classes="combo-like"
+                <icons:SliderValueUpDown Classes="combo-like"
                                Value="{Binding DialogBatchRenameStep, Mode=TwoWay}"
                                Minimum="1"
                                Maximum="999999"

@@ -10,7 +10,7 @@ Namespace Services
     ''' Das native FerrumPix-Projektformat <c>.fpx</c>: ein ZIP-Bündel, das die Bearbeitung
     ''' festhält, damit man sie später weiterbearbeiten kann. Regler und Objekt-Ebenen bleiben
     ''' voll editierbar; Retusche/Pinselstriche/gerasterte Ebenen sind seit dem
-    ''' ARBEITSBILD-Umbau (2026-07-17) beim Wiederöffnen ENDGÜLTIG eingebacken.
+    ''' ARBEITSBILD-Umbau beim Wiederöffnen ENDGÜLTIG eingebacken.
     '''
     ''' Aufbau des Bündels:
     '''   recipe.json    - Regler-Anpassungen + Objekt-Ebenenstapel (ImageAdjustments; Spot-/
@@ -29,7 +29,7 @@ Namespace Services
     ''' </summary>
     Public Class FpxService
 
-        ''' Feature-Schalter: mit 0.9.4 aktiviert (2026-07-16). Während des Rendering-Umbaus war das
+        ''' Feature-Schalter: mit 0.9.4 aktiviert. Während des Rendering-Umbaus war das
         ''' Format ausgeknipst; die Diagnose-Round-Trips (Rezept, Composite, Assets) laufen nur bei
         ''' Enabled=True mit - nach dem Aktivieren also immer.
         Public Shared ReadOnly Enabled As Boolean = True
@@ -234,7 +234,7 @@ Namespace Services
                         e.ExtractToFile(assetPath, True)
                     Next
 
-                    ' Retusche-Stufe (optional, erst seit 2026-07-17 im Bündel) mit entpacken.
+                    ' Retusche-Stufe (optional, erst in neueren Bündeln) mit entpacken.
                     Dim retouchPath = ""
                     Dim retouchZip = zip.GetEntry(RetouchEntry)
                     If retouchZip IsNot Nothing Then

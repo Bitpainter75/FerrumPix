@@ -206,7 +206,7 @@ Namespace Services
             ObservePropertyLocked(PropMute, "mute", MpvInterop.MpvFormat.Flag)
             SetPropertyStringLocked("mute", If(_isMuted, "yes", "no"))
 
-            ' Klick aufs Video toggelt Wiedergabe/Pause (Nutzerwunsch 2026-07-16): Das Video sitzt in
+            ' Klick aufs Video toggelt Wiedergabe/Pause: Das Video sitzt in
             ' einem NativeControlHost - Avalonia-Pointer-Events erreichen es NIE, das native
             ' mpv-Fenster schluckt sie. Deshalb bindet mpv selbst die linke Maustaste; alle uebrigen
             ' Default-Bindings bleiben aus (input-default-bindings=no). Der Pause-Status fliesst

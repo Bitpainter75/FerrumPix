@@ -207,7 +207,7 @@ Namespace ViewModels
 
         ''' <summary>Ab welcher Kachelbreite Metadaten-Abzeichen und Dateidatum noch sinnvoll
         ''' hineinpassen. Darunter überlagern die 32-px-Abzeichen das halbe Bild und das Datum wird auf
-        ''' wenige Zeichen abgeschnitten - dann bleiben beide weg (Nutzerwunsch 2026-07-25).
+        ''' wenige Zeichen abgeschnitten - dann bleiben beide weg.
         ''' Der Regler geht von 140 bis 520; 200 liegt knapp über den kleinsten Stufen.</summary>
         Public Const TileDetailsMinWidth As Double = 200
 
@@ -236,7 +236,7 @@ Namespace ViewModels
         ' (FP.Font.Body 12), Zeilenhöhe rund das 1,35-fache der Schriftgröße.
         ' Stand hier vorübergehend 92, während das XAML bei 68 blieb: die Karte endete dadurch 24 px
         ' über der Unterkante ihres Slots - sichtbar als großer Abstand unter jeder Kachel, und die
-        ' virtualisierte Scroll-Rechnung driftete mit der Scrolltiefe (Nutzer-Befund 2026-07-25).
+        ' virtualisierte Scroll-Rechnung driftete mit der Scrolltiefe.
         Private Const GridItemLabelRowHeight As Double = 59
         Private Const GridItemCardBorderHeight As Double = 4
         Private Const GridItemCardMarginHeight As Double = 10
@@ -1074,6 +1074,7 @@ Namespace ViewModels
         Public ReadOnly Property ApplyWatermarkSelectedCommand As ICommand
         Public ReadOnly Property PrintSelectedCommand As ICommand
         Public ReadOnly Property BatchConvertSelectedCommand As ICommand
+        Public ReadOnly Property ExportSelectedCommand As ICommand
         Public ReadOnly Property ApplyFilterSelectedCommand As ICommand
         Public ReadOnly Property RemoveMetadataSelectedCommand As ICommand
         Public ReadOnly Property IncreaseThumbnailSizeCommand As ICommand
@@ -1296,6 +1297,7 @@ Namespace ViewModels
             ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
             ApplyWatermarkSelectedCommand = ReactiveCommand.Create(Sub() ApplyWatermarkSelected())
             BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() BatchConvertSelected())
+            ExportSelectedCommand = ReactiveCommand.Create(Sub() ExportSelected())
             PrintSelectedCommand = ReactiveCommand.CreateFromTask(Function() PrintSelectedAsync())
             ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() ApplyFilterSelected())
             RemoveMetadataSelectedCommand = ReactiveCommand.Create(Sub() RemoveMetadataSelected())
@@ -1455,7 +1457,7 @@ Namespace ViewModels
         '''
         ''' Vorher liefen diese Aufrufe als "Dim ignored = ..." ins Leere: die Kachel zeigte Sterne oder
         ''' Herz als gespeichert an, während der Server 403 oder 500 gemeldet hatte - beim Stapelsetzen
-        ''' gleich für viele Fotos (Audit A5). Der Dienst selbst wirft nicht (er fängt intern und liefert
+        ''' gleich für viele Fotos. Der Dienst selbst wirft nicht (er fängt intern und liefert
         ''' False); das Try/Catch hier deckt nur den Rest ab.
         ''' </summary>
         Private Async Sub SchreibeNachImmich(vorgang As Func(Of Task(Of Boolean)), zuruecknehmen As Action)
@@ -1483,7 +1485,7 @@ Namespace ViewModels
             Dim currentRating = SelectedRating
             Dim targetRating = If(currentRating = rating, 0, rating)
             ' Alte Werte VOR dem Setzen sichern - nur damit kann ein abgelehnter Immich-Schreibvorgang
-            ' die Kachel wieder auf ihren echten Stand zurückdrehen (Audit A5).
+            ' die Kachel wieder auf ihren echten Stand zurückdrehen.
             Dim vorherProItem = images.ToDictionary(Function(i) i, Function(i) i.Rating)
             For Each item In images
                 item.Rating = targetRating
@@ -1652,7 +1654,7 @@ Namespace ViewModels
         ''' zu verschwinden - sonst wundert man sich, wo der Favorit hin ist.</summary>
         Public Sub RefreshFavorites()
             FavoritesTree.Clear()
-            ' Nach Namen sortiert (Nutzerwunsch 2026-07-19) - kulturabhaengig, damit Umlaute dort
+            ' Nach Namen sortiert - kulturabhaengig, damit Umlaute dort
             ' stehen, wo man sie sucht. Die gespeicherte Reihenfolge bleibt davon unberuehrt.
             For Each fav In FavoritesService.Load().
                     OrderBy(Function(f) If(f.Name, ""), StringComparer.CurrentCultureIgnoreCase)
@@ -1954,7 +1956,7 @@ Namespace ViewModels
                 StatusText = String.Format(LocalizationService.T("Album {0} angelegt"), name.Trim())
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.CreateImmichAlbum", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -1975,7 +1977,7 @@ Namespace ViewModels
                 StatusText = String.Format(LocalizationService.T("Album umbenannt: {0}"), name.Trim())
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.RenameImmichAlbum", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -2013,7 +2015,7 @@ Namespace ViewModels
                 StatusText = String.Format(LocalizationService.T("Album gelöscht: {0}"), node.Name)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.DeleteImmichAlbum", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -2191,7 +2193,7 @@ Namespace ViewModels
             Const SafetyCap As Integer = 100000
             Dim total As Integer = 0
 
-            ' LOKALER KATALOG (Nutzerwunsch 2026-07-16, 30k-Bibliothek): "Alle Fotos" zeigte bei
+            ' LOKALER KATALOG (30k-Bibliothek): "Alle Fotos" zeigte bei
             ' jedem Öffnen erst nach dem kompletten Server-Streaming etwas an. Jetzt kommt SOFORT
             ' der zuletzt gespeicherte Katalog aus der Index-DB; der Server-Abgleich läuft danach
             ' im Hintergrund weiter (neue Assets kommen dazu - Dedup über die Pseudo-Pfade -,
@@ -2511,7 +2513,7 @@ Namespace ViewModels
                 OpenSavedSearch(newNode)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.EditVirtualSearchNode", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -3423,7 +3425,7 @@ Namespace ViewModels
 
         ''' <summary>
         ''' Freier Speicherplatz des Laufwerks, auf dem der aktuelle Ordner liegt. Läuft im Hintergrund:
-        ''' DriveInfo.GetDrives() zählt unter Linux jeden Mountpoint auf, und ein toter NFS-Mount blockiert
+        ''' DriveInfo.GetDrives zählt unter Linux jeden Mountpoint auf, und ein toter NFS-Mount blockiert
         ''' bereits in IsReady. Aufgerufen wird die Methode nicht nur beim Ordnerwechsel, sondern über
         ''' SyncFolderItems nach jeder Dateioperation und jedem Watcher-Ereignis.
         ''' </summary>
@@ -3924,7 +3926,7 @@ Namespace ViewModels
         ''' gespeicherten Metadaten. Trägt Elemente, deren Katalogeintrag fehlt oder veraltet ist, in
         ''' <paramref name="itemsNeedingMetaRefresh"/> ein.</summary>
         ''' Schlägt beide Namensformen in der einmalig eingelesenen Ordnerliste nach - "foto.cr2.xmp"
-        ''' (darktable/digiKam) und "foto.xmp" (Adobe). Leer, wenn es keine Beistelldatei gibt.
+        ''' (angehängt) und "foto.xmp" (ersetzt). Leer, wenn es keine Beistelldatei gibt.
         Private Shared Function LookupSidecarStamp(stamps As Dictionary(Of String, String),
                                                    eigeneRezepte As Dictionary(Of String, String),
                                                    imagePath As String) As String
@@ -4437,7 +4439,7 @@ Namespace ViewModels
                 End If
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.OpenSelectedInViewer", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -4455,7 +4457,7 @@ Namespace ViewModels
                                                 cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.OpenSelectedInEditor", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -4984,7 +4986,7 @@ Namespace ViewModels
                 CollagePreviewImage = preview
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.RefreshCollagePreviewAsync", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -5031,7 +5033,7 @@ Namespace ViewModels
                 If ok Then SyncFolderItems()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.CreateCollage", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -5193,7 +5195,77 @@ Namespace ViewModels
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Duplizieren fehlgeschlagen"), errorMessage)
         End Function
 
+        ''' <summary>Der Ausgangspunkt einer Stapel-Bearbeitung fuer EINE Quelle.
+        '''
+        ''' Liegt neben einer RAW- oder PSD-Datei ein .fpxmp-Rezept, IST das die Grundlage: der
+        ''' Stapel setzt dann auf der Bearbeitung auf, die im Editor entstanden ist, statt sie
+        ''' stillschweigend zu verwerfen. Ein entwickeltes RAW kam sonst flach aus dem Stapel
+        ''' zurueck, obwohl es im Editor und in der Galerie entwickelt aussieht.
+        '''
+        ''' .fpx bleibt aussen vor: dort rendert SaveImage das Buendel bereits aus Basisbild und
+        ''' Rezept - ein zweites Mal angewandt kaeme die Bearbeitung doppelt.</summary>
+        Private Shared Function BatchBaseAdjustments(sourcePath As String) As ImageAdjustments
+            If RawSidecarService.IsSidecarFormat(sourcePath) AndAlso RawSidecarService.Exists(sourcePath) Then
+                Dim rezept = RawSidecarService.TryRead(sourcePath)
+                If rezept IsNot Nothing Then Return rezept
+            End If
+            Return New ImageAdjustments()
+        End Function
+
+        ''' <summary>Darf diese Quelle im Stapel voll entwickelt werden? Mit Rezept IMMER - die
+        ''' eingebettete Vorschau waere dort schlicht das falsche Bild. Ohne Rezept entscheidet die
+        ''' Einstellung; da geht es um Geschwindigkeit gegen Aufloesung.</summary>
+        Private Shared Function BatchDevelopsRaw(sourcePath As String) As Boolean
+            If Not RawPreviewService.IsSupportedRaw(sourcePath) Then Return True
+            If RawSidecarService.Exists(sourcePath) Then Return True
+            Return AppSettingsService.Load().DevelopRawInBatch
+        End Function
+
         Private Shared ReadOnly BatchConvertExcludedExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".svg"}
+        ''' <summary>Kann die Stapel-Bildbearbeitung (Groesse/Wasserzeichen/Filter) diese Datei
+        ''' schreiben? Die Menuesichtbarkeit MUSS dieselbe Frage stellen wie
+        ''' GetSelectedBatchEditableImageItems - sonst stehen Eintraege da, die beim Klick still
+        ''' nichts tun (.tif/.bmp/.heic waren sichtbar, der Dialog erschien nie).</summary>
+        Public Shared Function IsBatchImageEditReadable(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            If BatchImageEditReadableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant()) Then Return True
+            ' RAW, PSD und .fpx sind LESBARE Quellen wie jede andere - SaveImage rendert sie
+            ' (RAW ueber die eingebettete Vorschau, PSD ueber das Gesamtbild, .fpx aus Basisbild +
+            ' Rezept). Nur ZURUECKschreiben kann man sie nicht, und genau das entscheidet
+            ' IsBatchImageEditWritable weiter unten - dort wird "Originale ueberschreiben"
+            ' gesperrt. Die Endungen kommen aus den zustaendigen Diensten statt aus einer zweiten
+            ' Liste hier: eine neu unterstuetzte RAW-Endung soll nicht an zwei Stellen gepflegt
+            ' werden muessen.
+            Return RawPreviewService.IsSupportedRaw(path) OrElse
+                   PsdPreviewService.IsSupportedPsd(path) OrElse
+                   FpxService.IsFpx(path)
+        End Function
+
+        Public Shared Function IsBatchImageEditWritable(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Return BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
+        End Function
+
+        ''' <summary>Kann "Exportieren nach"/"Konvertieren nach" diese Datei lesen? (Videos und SVG
+        ''' nicht - deren Eintraege blieben sonst wirkungslos sichtbar.)</summary>
+        Public Shared Function IsBatchExportable(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Return Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
+        End Function
+
+        ''' <summary>Formate, die die Stapel-Bildbearbeitung als QUELLE lesen kann. BMP/GIF (Skia)
+        ''' und HEIC/HEIF/AVIF (libheif) sind dabei, obwohl sie sich nicht zurueckschreiben lassen -
+        ''' dafuer entstehen NEUE Dateien im gewaehlten Zielformat. GIF liefert das erste Einzelbild.
+        ''' HEIC steht hier ohne Verfuegbarkeitspruefung: ohne libheif scheitert der Decode sichtbar,
+        ''' statt dass der Menuepunkt je nach System verschwindet.</summary>
+        Private Shared ReadOnly BatchImageEditReadableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif",
+                                                                                ".heic", ".heif", ".hif", ".avif",
+                                                                                ".tif", ".tiff"}
+
+        ''' <summary>Formate, die sich AN ORT UND STELLE ueberschreiben lassen - dafuer braucht es
+        ''' einen Encoder fuer genau dieses Format (siehe ImageProcessor.CanEncodeToTargetExtension).
+        ''' Skia hat keinen BMP-/GIF-Encoder, deshalb ist "Originale ueberschreiben" fuer solche
+        ''' Auswahlen gesperrt statt still wirkungslos.</summary>
         Private Shared ReadOnly BatchImageEditWritableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
 
         Private Async Sub ResizeSelected()
@@ -5201,7 +5273,7 @@ Namespace ViewModels
                 Await ResizeImageItemsAsync(GetSelectedBatchEditableImageItems())
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.ResizeSelected", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -5218,29 +5290,37 @@ Namespace ViewModels
             ' In einer Suchliste oder in Immich gibt es keinen echten Ordner - dann greift die Vorgabe des
             ' Dialogs (zuletzt genutzter Exportordner).
             Dim folderHint = If(_isVirtualFolder, "", If(_currentFolder, ""))
-            Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint)
+            ' Ueberschreiben nur anbieten, wenn JEDE Quelle ihr eigenes Format auch schreiben kann
+            ' (BMP/GIF koennen es nicht - dort entstehen neue Dateien).
+            Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
+            Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar)
             If resize Is Nothing Then Return
 
             StatusText = LocalizationService.T("Ändere Bildgröße...")
-            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
+            ' Der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs entscheidet je Lauf; die
+            ' Einstellung ist nur noch die Vorbelegung.
+            Dim preserveMetadata = resize.PreserveMetadata
             ' Beim Überschreiben behält die Datei ihr Format - dort bleibt die bisherige feste Qualität;
             ' bei Kopien zählt die Formatauswahl des Dialogs.
             Dim jpgQuality = If(resize.Overwrite, 95, resize.JpgQuality)
             Dim writer = Function(source As String, target As String)
-                             Dim width = resize.Width
-                             Dim height = resize.Height
-                             If resize.ScalePercent > 0 Then
-                                 Dim size = ImageProcessor.GetImageSize(source)
-                                 width = Math.Max(1, CInt(Math.Round(size.Width * resize.ScalePercent / 100.0)))
-                                 height = Math.Max(1, CInt(Math.Round(size.Height * resize.ScalePercent / 100.0)))
-                             End If
-                             Dim adj = New ImageAdjustments With {
-                                 .ResizeWidth = width,
-                                 .ResizeHeight = height,
-                                 .LockResizeAspect = resize.LockAspect,
-                                 .ResizeInterpolation = resize.Interpolation
-                             }
-                             Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata)
+                             ' Prozent NICHT vorab aus der Datei schaetzen: SKCodec kennt die Masse
+                             ' von RAW/PSD/.fpx nicht (das ergab stumm die Originalgroesse, und ohne
+                             ' Null-Wache sogar ein 1x1-Bild) und liegt bei EXIF-gedrehten JPEGs um
+                             ' die Drehung daneben. Die Engine rechnet es auf dem fertig dekodierten
+                             ' Bild.
+                             ' Auf dem .fpxmp-Rezept aufsetzen, falls es eines gibt - die
+                             ' Groessenfelder gehoeren dem Stapel und ueberschreiben es dort.
+                             Dim adj = BatchBaseAdjustments(source)
+                             adj.ResizeWidth = resize.Width
+                             adj.ResizeHeight = resize.Height
+                             adj.ResizeScalePercent = resize.ScalePercent
+                             adj.ResizeFitInsideBox = True
+                             adj.LockResizeAspect = resize.LockAspect
+                             adj.NoResizeUpscale = resize.NoUpscale
+                             adj.ResizeInterpolation = resize.Interpolation
+                             Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
+                                                             developRaw:=BatchDevelopsRaw(source))
                          End Function
 
             Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
@@ -5263,16 +5343,15 @@ Namespace ViewModels
                 Return
             End If
 
-            ' Als Kopie mit Formatauswahl (Nutzerwunsch 2026-07-17) - gleicher Ablauf wie beim
+            ' Als Kopie mit Formatauswahl - gleicher Ablauf wie beim
             ' Stapel-Filter: neue Dateien in den Zielordner oder als neues Asset nach Immich.
-            Dim suffix = resize.FileNameSuffix
             If String.Equals(resize.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured Then
                 changedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
                                                                          Function(source) resize.Extension,
-                                                                         uploadedAssetIds, suffix, skipSameExtension:=False).ConfigureAwait(True)
+                                                                         uploadedAssetIds, "", skipSameExtension:=False).ConfigureAwait(True)
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) resize.Extension,
-                                                                   uploadedAssetIds, suffix).ConfigureAwait(True)
+                                                                   uploadedAssetIds, "").ConfigureAwait(True)
                 StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
                 If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
@@ -5294,13 +5373,15 @@ Namespace ViewModels
                 Return
             End If
 
+            Dim nameBuilder = CreateNameBuilder(resize.NamePattern)
             changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
                                                                      Function(source) resize.Extension,
-                                                                     suffix, skipSameExtension:=False,
-                                                                     metaCopy:=resize.MetaCopy).ConfigureAwait(True)
+                                                                     "", skipSameExtension:=False,
+                                                                     metaCopy:=resize.MetaCopy,
+                                                                     nameBuilder:=nameBuilder).ConfigureAwait(True)
             uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
                                                                        Function(source) resize.Extension,
-                                                                       suffix).ConfigureAwait(True)
+                                                                       "", nameBuilder).ConfigureAwait(True)
 
             StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
@@ -5316,7 +5397,8 @@ Namespace ViewModels
             ' In einer Suchliste oder in Immich gibt es keinen echten Ordner - dann greift die Vorgabe des
             ' Dialogs (zuletzt genutzter Exportordner).
             Dim folderHint = If(_isVirtualFolder, "", If(_currentFolder, ""))
-            Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint)
+            Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
+            Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint, ueberschreibbar)
             If result Is Nothing Then Return
 
             Dim adjustmentsTemplate = BuildBatchFilterAdjustments(result)
@@ -5326,10 +5408,23 @@ Namespace ViewModels
             End If
 
             StatusText = LocalizationService.T("Wende Filter an...")
-            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
+            ' Der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs entscheidet je Lauf; die
+            ' Einstellung ist nur noch die Vorbelegung.
+            Dim preserveMetadata = result.PreserveMetadata
             ' Jedes Bild bekommt seinen eigenen Klon: ApplyAdjustments schreibt Quellmaße hinein, ein
-            ' geteiltes Objekt würde sie über die Dateien hinweg vermischen.
-            Dim writer = Function(source As String, target As String) ImageProcessor.SaveImage(source, target, adjustmentsTemplate.Clone(), result.JpgQuality, preserveMetadata)
+            ' geteiltes Objekt würde sie über die Dateien hinweg vermischen. Bei der automatischen
+            ' Bildverbesserung wird zusätzlich PRO BILD gemessen - eine gemeinsame Vorlage gäbe allen
+            ' Bildern die Korrektur des ersten.
+            Dim isAutoEnhance = String.Equals(result.SourceKind, BatchFilterDialogResult.SourceAuto, StringComparison.OrdinalIgnoreCase)
+            Dim writer = Function(source As String, target As String)
+                             ' Rezept als Grundlage, der Look kommt oben drauf - und zwar nur mit
+                             ' den Reglern, die er wirklich setzt (siehe MergeNonDefault...).
+                             Dim adj = BatchBaseAdjustments(source)
+                             adj.MergeNonDefaultPixelAdjustmentsFrom(adjustmentsTemplate)
+                             If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
+                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
+                                                             developRaw:=BatchDevelopsRaw(source))
+                         End Function
 
             Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
             Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
@@ -5380,13 +5475,15 @@ Namespace ViewModels
                 Return
             End If
 
+            Dim nameBuilder = CreateNameBuilder(result.NamePattern)
             changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
                                                                      Function(source) result.Extension,
                                                                      suffix, skipSameExtension:=False,
-                                                                     metaCopy:=result.MetaCopy).ConfigureAwait(True)
+                                                                     metaCopy:=result.MetaCopy,
+                                                                     nameBuilder:=nameBuilder).ConfigureAwait(True)
             uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
                                                                        Function(source) result.Extension,
-                                                                       suffix).ConfigureAwait(True)
+                                                                       suffix, nameBuilder).ConfigureAwait(True)
 
             StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) gefiltert"
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
@@ -5406,6 +5503,11 @@ Namespace ViewModels
                         .LutPath = result.PresetPath,
                         .LutStrength = result.Strength
                     }
+
+                Case BatchFilterDialogResult.SourceAuto
+                    ' Neutraler Startzustand: die eigentlichen Reglerwerte misst der Writer PRO BILD
+                    ' (ImageProcessor.ApplyAutoAdjustmentsTo) - eine gemeinsame Vorlage gibt es nicht.
+                    Return New ImageAdjustments()
 
                 Case Else
                     If String.IsNullOrWhiteSpace(result.DisplayName) Then Return Nothing
@@ -5429,7 +5531,7 @@ Namespace ViewModels
                 RefreshAfterBatchFileRewrite(targets)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess (Audit A4).
+                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.RemoveMetadataSelected", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
@@ -5439,7 +5541,8 @@ Namespace ViewModels
             Dim targetItems = GetSelectedBatchEditableImageItems()
             If targetItems.Count = 0 Then Return
 
-            Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync()
+            Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
+            Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync(ueberschreibbar)
             If result Is Nothing OrElse result.Preset Is Nothing Then Return
 
             Dim annotation = CreateWatermarkAnnotation(result.Preset)
@@ -5449,11 +5552,17 @@ Namespace ViewModels
             End If
 
             StatusText = LocalizationService.T("Wende Wasserzeichen an...")
-            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
+            Dim nameBuilder = CreateNameBuilder(result.NamePattern)
+            ' Der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs entscheidet je Lauf; die
+            ' Einstellung ist nur noch die Vorbelegung.
+            Dim preserveMetadata = result.PreserveMetadata
             Dim writer = Function(source As String, target As String)
-                             Dim adj = New ImageAdjustments()
+                             ' Das Wasserzeichen kommt ZUSAETZLICH auf die vorhandene Bearbeitung -
+                             ' Objekte aus dem Rezept bleiben stehen.
+                             Dim adj = BatchBaseAdjustments(source)
                              adj.Annotations.Add(annotation.Clone())
-                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata)
+                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
+                                                             developRaw:=BatchDevelopsRaw(source))
                          End Function
             Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
             Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
@@ -5476,10 +5585,11 @@ Namespace ViewModels
             If String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured Then
                 changedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
                                                                          Function(source) result.Extension,
-                                                                         uploadedAssetIds, "", skipSameExtension:=False).ConfigureAwait(True)
+                                                                         uploadedAssetIds, "", skipSameExtension:=False,
+                                                                         nameBuilder:=nameBuilder).ConfigureAwait(True)
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) result.Extension,
-                                                                   uploadedAssetIds).ConfigureAwait(True)
+                                                                   uploadedAssetIds, nameBuilder:=nameBuilder).ConfigureAwait(True)
                 StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) mit Wasserzeichen versehen"
                 If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
@@ -5504,9 +5614,11 @@ Namespace ViewModels
             changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
                                                                      Function(source) result.Extension,
                                                                      "", skipSameExtension:=False,
-                                                                     metaCopy:=result.MetaCopy).ConfigureAwait(True)
+                                                                     metaCopy:=result.MetaCopy,
+                                                                     nameBuilder:=nameBuilder).ConfigureAwait(True)
             uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
-                                                                       Function(source) result.Extension).ConfigureAwait(True)
+                                                                       Function(source) result.Extension,
+                                                                       nameBuilder:=nameBuilder).ConfigureAwait(True)
 
             StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) mit Wasserzeichen versehen"
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
@@ -5518,6 +5630,8 @@ Namespace ViewModels
             Dim imagePath = If(preset.ImagePath, "").Trim()
             If String.IsNullOrWhiteSpace(text) AndAlso String.IsNullOrWhiteSpace(imagePath) Then Return Nothing
 
+            ' LockAspect steuert nicht nur das Ziehen, sondern auch das ZEICHNEN: ohne Sperre
+            ' wird das Bild auf die Box gestreckt statt uniform eingepasst.
             Return New ImageAnnotation With {
                 .Kind = "Watermark",
                 .Text = If(String.IsNullOrWhiteSpace(text), "FerrumPix", text),
@@ -5534,6 +5648,7 @@ Namespace ViewModels
                 .Opacity = CSng(Math.Max(0, Math.Min(100, preset.Opacity))),
                 .RotationDegrees = CSng(Math.Max(-180, Math.Min(180, preset.RotationDegrees))),
                 .Anchor = AppSettingsService.NormalizeAnnotationAnchorName(preset.Anchor),
+                .LockAspect = preset.LockAspect,
                 .IsVisible = True,
                 .FillKind = "Solid",
                 .FillColor2 = AppSettingsService.NormalizeHexColor(preset.FillColor, "#FFFFFFFF")
@@ -5542,14 +5657,14 @@ Namespace ViewModels
 
         Private Function GetSelectedEditableImagePaths() As List(Of String)
             Return GetSelectedPaths().
-                Where(Function(p) File.Exists(p) AndAlso BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(p).ToLowerInvariant())).
+                Where(Function(p) File.Exists(p) AndAlso IsBatchImageEditReadable(p)).
                 ToList()
         End Function
 
         Private Function GetSelectedBatchEditableImageItems() As List(Of ImageItem)
             Return GetSelectedImageItems().
                 Where(Function(i) i IsNot Nothing AndAlso i.CanEditFile).
-                Where(Function(i) BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
+                Where(Function(i) IsBatchImageEditReadable(i.FilePath)).
                 ToList()
         End Function
 
@@ -5598,10 +5713,23 @@ Namespace ViewModels
         End Function
 
         Private Shared Function CreateImmichBatchOutputPath(sourcePath As String, requestedExtension As String,
-                                                            Optional nameSuffix As String = "") As String
+                                                            Optional nameSuffix As String = "",
+                                                            Optional nameBuilder As Func(Of String, String) = Nothing) As String
             Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(sourcePath), requestedExtension)
             If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
             If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
+
+            ' MIT Namensmuster: der gewuenschte Name muss EXAKT so hochgeladen werden - Immich
+            ' uebernimmt den Dateinamen als Assetnamen. Die Eindeutigkeit der Temp-Datei kommt
+            ' dann aus einem eigenen Unterordner statt aus einem Anhang im Namen (wie beim
+            ' Ersetzen, siehe CreateImmichReplaceOutputPath). Ohne Muster bleibt alles wie bisher.
+            Dim gebauterName As String = Nothing
+            If nameBuilder IsNot Nothing Then gebauterName = nameBuilder(sourcePath)
+            If Not String.IsNullOrWhiteSpace(gebauterName) Then
+                Dim eigenerOrdner = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichBatch", Guid.NewGuid().ToString("N"))
+                Directory.CreateDirectory(eigenerOrdner)
+                Return IO.Path.Combine(eigenerOrdner, gebauterName & ext)
+            End If
 
             Dim dir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichBatch")
             Directory.CreateDirectory(dir)
@@ -5613,6 +5741,18 @@ Namespace ViewModels
         ''' Originalnamen des Assets, also muss er der alte bleiben - weder der Guid-Name aus
         ''' CreateImmichBatchOutputPath noch ein Filtersuffix haben in einer aktualisierten Bibliothek etwas
         ''' verloren. Eindeutigkeit stellt stattdessen ein eigener Unterordner je Bild her.</summary>
+        ''' <summary>Raeumt den je Datei angelegten Temp-Unterordner weg - aber nur den, nicht den
+        ''' gemeinsamen "ImmichBatch"-Ordner (dort koennen parallele Laeufe noch Dateien haben).</summary>
+        Private Shared Sub LoescheLeerenTempOrdner(ordner As String)
+            If String.IsNullOrEmpty(ordner) OrElse Not Directory.Exists(ordner) Then Return
+            If String.Equals(IO.Path.GetFileName(ordner), "ImmichBatch", StringComparison.OrdinalIgnoreCase) Then Return
+            If Directory.EnumerateFileSystemEntries(ordner).Any() Then Return
+            Try
+                Directory.Delete(ordner)
+            Catch
+            End Try
+        End Sub
+
         Private Shared Function CreateImmichReplaceOutputPath(item As ImageItem, requestedExtension As String) As String
             Dim originalName = If(String.IsNullOrWhiteSpace(item.ImmichOriginalFileName), item.ImmichAssetId, item.ImmichOriginalFileName)
             Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(originalName), requestedExtension)
@@ -5627,14 +5767,35 @@ Namespace ViewModels
 
         ''' <param name="nameSuffix">Wird an den Dateinamen angehängt ("foto" + "_Vintage" -> "foto_Vintage").
         ''' Leer lassen, wenn der Name unverändert bleiben soll.</param>
+        ''' <summary>Baut aus dem Dialog-Muster den Namensstamm-Erzeuger fuer die Stapel-Schleifen
+        ''' (Nothing bei leerem Muster - dann bleibt der Originalname). Der Zaehler laeuft ueber den
+        ''' ganzen Stapel; ungueltige Zeichen aus Platzhaltern (Kameranamen) werden entfernt.</summary>
+        Private Function CreateNameBuilder(namePattern As String) As Func(Of String, String)
+            If String.IsNullOrWhiteSpace(namePattern) Then Return Nothing
+            Dim counter = 0
+            Dim invalid = IO.Path.GetInvalidFileNameChars()
+            Return Function(sourcePath)
+                       counter += 1
+                       Dim name = _mainVm.ExpandTargetNamePattern(namePattern, sourcePath, counter)
+                       Return New String(name.Where(Function(c) Array.IndexOf(invalid, c) < 0).ToArray())
+                   End Function
+        End Function
+
+        ''' <param name="nameBuilder">Liefert den kompletten Namensstamm fuer eine Quelle (Muster
+        ''' aus dem Dialog, siehe ExpandTargetNamePattern); Nothing = Originalname + Suffix.</param>
         Private Shared Function CreateBatchTargetFolderPath(sourcePath As String, targetFolder As String, requestedExtension As String,
-                                                            Optional nameSuffix As String = "") As String
+                                                            Optional nameSuffix As String = "",
+                                                            Optional nameBuilder As Func(Of String, String) = Nothing) As String
             Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(sourcePath), requestedExtension)
             If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
             If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
 
-            Dim stem = If(String.IsNullOrWhiteSpace(IO.Path.GetFileNameWithoutExtension(sourcePath)), "ferrumpix-export", IO.Path.GetFileNameWithoutExtension(sourcePath))
-            Return MakeUniqueFilePath(IO.Path.Combine(targetFolder, stem & If(nameSuffix, "") & ext))
+            Dim stem As String = Nothing
+            If nameBuilder IsNot Nothing Then stem = nameBuilder(sourcePath)
+            If String.IsNullOrWhiteSpace(stem) Then
+                stem = If(String.IsNullOrWhiteSpace(IO.Path.GetFileNameWithoutExtension(sourcePath)), "ferrumpix-export", IO.Path.GetFileNameWithoutExtension(sourcePath)) & If(nameSuffix, "")
+            End If
+            Return MakeUniqueFilePath(IO.Path.Combine(targetFolder, stem & ext))
         End Function
 
         ''' <param name="uploadedAssetIds">Sammelt die IDs der Assets, die danach in der Ansicht stehen sollen -
@@ -5643,7 +5804,8 @@ Namespace ViewModels
                                                             writer As Func(Of String, String, Boolean),
                                                             outputExtension As Func(Of String, String),
                                                             Optional uploadedAssetIds As List(Of String) = Nothing,
-                                                            Optional nameSuffix As String = "") As Task(Of Integer)
+                                                            Optional nameSuffix As String = "",
+                                                            Optional nameBuilder As Func(Of String, String) = Nothing) As Task(Of Integer)
             Dim uploadedCount = 0
             Dim errorMessage As String = Nothing
             Dim albumId = CurrentImmichAlbumIdForUpload()
@@ -5659,7 +5821,7 @@ Namespace ViewModels
 
                     Dim outputPath = If(updateExisting,
                                         CreateImmichReplaceOutputPath(item, outputExtension(source)),
-                                        CreateImmichBatchOutputPath(source, outputExtension(source), nameSuffix))
+                                        CreateImmichBatchOutputPath(source, outputExtension(source), nameSuffix, nameBuilder))
                     Try
                         Dim ok = Await Task.Run(Function() writer(source, outputPath))
                         If Not ok OrElse Not File.Exists(outputPath) Then Continue For
@@ -5679,9 +5841,9 @@ Namespace ViewModels
                     Finally
                         Try
                             If File.Exists(outputPath) Then File.Delete(outputPath)
-                            ' Ersetzte Assets bekommen einen eigenen Unterordner (Namensgleichheit), der mit weg muss.
-                            Dim outputDir = IO.Path.GetDirectoryName(outputPath)
-                            If updateExisting AndAlso Directory.Exists(outputDir) AndAlso Not Directory.EnumerateFileSystemEntries(outputDir).Any() Then Directory.Delete(outputDir)
+                            ' Ersetzte Assets UND Uploads mit Namensmuster bekommen einen eigenen
+                            ' Unterordner (Namensgleichheit), der mit weg muss.
+                            LoescheLeerenTempOrdner(IO.Path.GetDirectoryName(outputPath))
                         Catch
                         End Try
                     End Try
@@ -5698,7 +5860,8 @@ Namespace ViewModels
                                                                     targetFolder As String,
                                                                     writer As Func(Of String, String, Boolean),
                                                                     outputExtension As Func(Of String, String),
-                                                                    Optional nameSuffix As String = "") As Task(Of Integer)
+                                                                    Optional nameSuffix As String = "",
+                                                                    Optional nameBuilder As Func(Of String, String) = Nothing) As Task(Of Integer)
             Dim savedCount = 0
             Dim errorMessage As String = Nothing
 
@@ -5708,7 +5871,7 @@ Namespace ViewModels
                     Dim source = Await EnsureLocalPathForBatchAsync(item)
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
 
-                    Dim target = CreateBatchTargetFolderPath(source, targetFolder, outputExtension(source), nameSuffix)
+                    Dim target = CreateBatchTargetFolderPath(source, targetFolder, outputExtension(source), nameSuffix, nameBuilder)
                     Dim ok = Await Task.Run(Function() writer(source, target))
                     If ok AndAlso File.Exists(target) Then savedCount += 1
                 Next
@@ -5731,7 +5894,8 @@ Namespace ViewModels
                                                                    outputExtension As Func(Of String, String),
                                                                    Optional nameSuffix As String = "",
                                                                    Optional skipSameExtension As Boolean = True,
-                                                                   Optional metaCopy As CatalogMetaCopyOptions = Nothing) As Task(Of Integer)
+                                                                   Optional metaCopy As CatalogMetaCopyOptions = Nothing,
+                                                                   Optional nameBuilder As Func(Of String, String) = Nothing) As Task(Of Integer)
             Dim savedCount = 0
             Dim errorMessage As String = Nothing
 
@@ -5743,11 +5907,11 @@ Namespace ViewModels
                         Dim targetExt = outputExtension(item.FilePath)
                         If skipSameExtension AndAlso String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
 
-                        Dim target = CreateBatchTargetFolderPath(item.FilePath, targetFolder, targetExt, nameSuffix)
+                        Dim target = CreateBatchTargetFolderPath(item.FilePath, targetFolder, targetExt, nameSuffix, nameBuilder)
                         If writer(item.FilePath, target) AndAlso File.Exists(target) Then
                             savedCount += 1
                             ' Katalog-Metadaten (Bewertung/Favorit/Etikett/Stichworte) wandern zur
-                            ' Kopie mit - das Original behält seine (Nutzerwunsch 2026-07-17).
+                            ' Kopie mit - das Original behält seine.
                             LibraryService.Instance.CopyEntryMeta(item.FilePath, target,
                                                                   If(metaCopy Is Nothing, True, metaCopy.CopyRating),
                                                                   If(metaCopy Is Nothing, True, metaCopy.CopyFavorite),
@@ -5769,7 +5933,8 @@ Namespace ViewModels
                                                                    outputExtension As Func(Of String, String),
                                                                    Optional uploadedAssetIds As List(Of String) = Nothing,
                                                                    Optional nameSuffix As String = "",
-                                                                   Optional skipSameExtension As Boolean = True) As Task(Of Integer)
+                                                                   Optional skipSameExtension As Boolean = True,
+                                                                   Optional nameBuilder As Func(Of String, String) = Nothing) As Task(Of Integer)
             Dim uploadedCount = 0
             Dim errorMessage As String = Nothing
             Dim albumId = CurrentImmichAlbumIdForUpload()
@@ -5781,7 +5946,7 @@ Namespace ViewModels
                     Dim targetExt = outputExtension(item.FilePath)
                     If skipSameExtension AndAlso String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
 
-                    Dim outputPath = CreateImmichBatchOutputPath(item.FilePath, targetExt, nameSuffix)
+                    Dim outputPath = CreateImmichBatchOutputPath(item.FilePath, targetExt, nameSuffix, nameBuilder)
                     Try
                         Dim ok = Await Task.Run(Function() writer(item.FilePath, outputPath))
                         If Not ok OrElse Not File.Exists(outputPath) Then Continue For
@@ -5795,6 +5960,7 @@ Namespace ViewModels
                     Finally
                         Try
                             If File.Exists(outputPath) Then File.Delete(outputPath)
+                            LoescheLeerenTempOrdner(IO.Path.GetDirectoryName(outputPath))
                         Catch
                         End Try
                     End Try
@@ -5863,6 +6029,171 @@ Namespace ViewModels
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Sub
 
+        ''' <summary>„Exportieren nach": der Sammel-Export der Galerie. Wie „Konvertieren nach",
+        ''' aber mit Namensmuster, Look/Auto-Verbesserung, Wasserzeichen, Bildgröße und
+        ''' Metadaten-Wahl in einem Durchgang. Funktioniert auch auf RAW/PSD-Quellen (der Decode
+        ''' läuft über DecodeOriented); Originale werden NIE überschrieben - Ziel ist immer eine
+        ''' neue Datei, vorhandene Namen bekommen automatisch einen Zähler.</summary>
+        ''' Async Sub: eine durchgereichte Ausnahme landet beim Dispatcher und beendet den Prozess
+        ''' (siehe ResizeSelected/RemoveMetadataSelected) - deshalb der aeussere Schutz.
+        Private Async Sub ExportSelected()
+            ' Await darf in VB nicht im Catch stehen - die Meldung deshalb danach.
+            Dim fehler As String = Nothing
+            Try
+                Await ExportSelectedAsync()
+            Catch ex As Exception
+                DiagnosticLogService.LogAlways("Gallery.ExportTo", "failed: " & ex.ToString())
+                fehler = ex.Message
+            End Try
+            If fehler IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Exportieren nach"), fehler)
+        End Sub
+
+        Private Async Function ExportSelectedAsync() As Task
+            Dim targetItems = GetSelectedImageItems().
+                Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
+                Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
+                ToList()
+            DiagnosticLogService.LogAlways("Gallery.ExportTo", $"selected={GetSelectedImageItems().Count} exportable={targetItems.Count}")
+            If targetItems.Count = 0 Then Return
+
+            Dim folderHint = If(_isVirtualFolder, "", If(_currentFolder, ""))
+            Dim samplePath = targetItems.Select(Function(i) i.FilePath).
+                FirstOrDefault(Function(pth) Not String.IsNullOrEmpty(pth) AndAlso File.Exists(pth))
+            Dim result = Await _mainVm.ShowExportToAsync(targetItems.Count, folderHint, samplePath)
+            If result Is Nothing Then Return
+
+            ' Die Vorlage trägt alles Bild-UNabhängige (Look, Größe, Wasserzeichen); die
+            ' automatische Bildverbesserung misst dagegen PRO BILD im Writer.
+            Dim vorlage As ImageAdjustments
+            Select Case result.LookKind
+                Case BatchFilterDialogResult.SourceLightroom
+                    vorlage = LightroomPresetService.LoadLook(result.LookPath)
+                Case BatchFilterDialogResult.SourceLut
+                    vorlage = If(File.Exists(result.LookPath),
+                                 New ImageAdjustments With {.LutPath = result.LookPath, .LutStrength = result.LookStrength},
+                                 Nothing)
+                Case BatchFilterDialogResult.SourceFilter
+                    vorlage = New ImageAdjustments With {.FilterPreset = result.LookName, .FilterStrength = result.LookStrength}
+                Case BatchFilterDialogResult.SourceAuto
+                    ' Die Auto-Verbesserung kommt als result.AutoEnhance herein (der Dialog setzt
+                    ' dann KEIN LookKind) - dieser Zweig ist nur das Sicherheitsnetz, falls sich
+                    ' die Zuordnung im Dialog je aendert.
+                    vorlage = New ImageAdjustments()
+                Case Else
+                    vorlage = New ImageAdjustments()
+            End Select
+            If vorlage Is Nothing Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Exportieren nach"), LocalizationService.T("Die gewählte Vorgabe konnte nicht gelesen werden."))
+                Return
+            End If
+            If result.ResizeScalePercent > 0 Then
+                ' Prozentuale Skalierung: die Zielmasse haengen am EINZELNEN Bild, deshalb erst im
+                ' Writer (unten) je Quelle ausgerechnet.
+                vorlage.LockResizeAspect = result.LockAspect
+                vorlage.NoResizeUpscale = result.NoUpscale
+                vorlage.ResizeInterpolation = result.ResizeInterpolation
+            ElseIf result.ResizeWidth > 0 OrElse result.ResizeHeight > 0 Then
+                vorlage.ResizeWidth = result.ResizeWidth
+                vorlage.ResizeHeight = result.ResizeHeight
+                vorlage.LockResizeAspect = result.LockAspect
+                vorlage.NoResizeUpscale = result.NoUpscale
+                vorlage.ResizeInterpolation = result.ResizeInterpolation
+            End If
+            If Not String.IsNullOrEmpty(result.WatermarkPresetName) Then
+                ' Die Lauf-Kopie aus dem Dialog traegt Anker und Breite dieses Laufs; nur wenn sie
+                ' fehlt (aelteres Ergebnis), wird die gespeicherte Vorlage nachgeschlagen.
+                Dim preset = If(result.WatermarkPreset,
+                                AppSettingsService.Load().WatermarkPresets.
+                                    FirstOrDefault(Function(pr) String.Equals(pr.Name, result.WatermarkPresetName, StringComparison.OrdinalIgnoreCase)))
+                ' Eine Vorgabe OHNE Text und ohne Bild ist speicherbar (nur der Name ist Pflicht) -
+                ' CreateWatermarkAnnotation liefert dafuer Nothing, und ein Nothing in Annotations
+                ' liess Clone je Bild mit NullReference auffliegen: kein einziges Bild kam an.
+                Dim annotation = If(preset Is Nothing, Nothing, CreateWatermarkAnnotation(preset))
+                If annotation Is Nothing Then
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Exportieren nach"),
+                                                   LocalizationService.T("Die gewählte Wasserzeichen-Vorlage enthält weder Text noch Bild."))
+                    Return
+                End If
+                vorlage.Annotations.Add(annotation)
+            End If
+
+            StatusText = LocalizationService.T("Exportiere…")
+            Dim writer = Function(source As String, target As String)
+                             ' Wie beim Filter: Rezept als Grundlage, die Export-Vorlage darueber.
+                             ' Groesse und Objekte gehoeren dem Export und werden gesetzt statt
+                             ' zusammengefuehrt.
+                             Dim adj = BatchBaseAdjustments(source)
+                             adj.MergeNonDefaultPixelAdjustmentsFrom(vorlage)
+                             adj.ResizeWidth = vorlage.ResizeWidth
+                             adj.ResizeHeight = vorlage.ResizeHeight
+                             adj.ResizeScalePercent = vorlage.ResizeScalePercent
+                             adj.ResizeFitInsideBox = vorlage.ResizeFitInsideBox
+                             adj.LockResizeAspect = vorlage.LockResizeAspect
+                             adj.NoResizeUpscale = vorlage.NoResizeUpscale
+                             adj.ResizeInterpolation = vorlage.ResizeInterpolation
+                             If vorlage.Annotations IsNot Nothing Then
+                                 For Each objekt In vorlage.Annotations
+                                     If objekt IsNot Nothing Then adj.Annotations.Add(objekt.Clone())
+                                 Next
+                             End If
+                             If result.AutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
+                             If result.ResizeScalePercent > 0 Then
+                                 Dim size = ImageProcessor.GetImageSize(source)
+                                 If size.Width > 0 AndAlso size.Height > 0 Then
+                                     adj.ResizeWidth = Math.Max(1, CInt(Math.Round(size.Width * result.ResizeScalePercent / 100.0)))
+                                     adj.ResizeHeight = Math.Max(1, CInt(Math.Round(size.Height * result.ResizeScalePercent / 100.0)))
+                                 End If
+                             End If
+                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
+                                                             developRaw:=BatchDevelopsRaw(source))
+                         End Function
+            Dim nameBuilder = CreateNameBuilder(result.NamePattern)
+
+            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
+            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
+            Dim exportedCount = 0
+            Dim uploadedCount = 0
+            Dim uploadedAssetIds As New List(Of String)()
+            Dim saveToImmich = String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured
+
+            If saveToImmich Then
+                exportedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
+                    Function(source) result.Extension, uploadedAssetIds, skipSameExtension:=False,
+                    nameBuilder:=nameBuilder).ConfigureAwait(True)
+                uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
+                    Function(source) result.Extension, uploadedAssetIds, nameBuilder:=nameBuilder).ConfigureAwait(True)
+            Else
+                Dim targetFolder = If(result.TargetFolder, "").Trim()
+                If String.IsNullOrWhiteSpace(targetFolder) Then
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Exportieren nach"), LocalizationService.T("Kein Zielordner angegeben."))
+                    Return
+                End If
+                Dim createFolderError As String = Nothing
+                Try
+                    Directory.CreateDirectory(targetFolder)
+                Catch ex As Exception
+                    createFolderError = ex.Message
+                End Try
+                If createFolderError IsNot Nothing Then
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Exportieren nach"), createFolderError)
+                    Return
+                End If
+
+                exportedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
+                                                                          Function(source) result.Extension,
+                                                                          "", skipSameExtension:=False,
+                                                                          metaCopy:=result.MetaCopy,
+                                                                          nameBuilder:=nameBuilder).ConfigureAwait(True)
+                uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
+                                                                           Function(source) result.Extension,
+                                                                           "", nameBuilder).ConfigureAwait(True)
+            End If
+
+            If saveToImmich AndAlso uploadedAssetIds.Count > 0 Then Await RefreshImmichViewAsync()
+            StatusText = $"{exportedCount + uploadedCount} {LocalizationService.T("von")} {targetItems.Count} {LocalizationService.T("Datei(en) exportiert")}"
+            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
+        End Function
+
         Private Async Sub BatchConvertSelected()
             Dim targetItems = GetSelectedImageItems().
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
@@ -5876,7 +6207,9 @@ Namespace ViewModels
 
             StatusText = LocalizationService.T("Konvertiere…")
             Dim convertedCount = 0
-            Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, AppSettingsService.Load().PreserveMetadataOnSave)
+            ' Der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs entscheidet je Lauf; die
+            ' Einstellung ist nur noch die Vorbelegung.
+            Dim preserveMetadata = result.PreserveMetadata
             Dim uploadedCount = 0
             Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
             Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
@@ -5915,13 +6248,15 @@ Namespace ViewModels
                     Return
                 End If
 
+                Dim nameBuilder = CreateNameBuilder(result.NamePattern)
                 convertedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems,
                     targetFolder,
                     Function(source, target)
                         Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
                     End Function,
                     Function(source) result.Extension,
-                    metaCopy:=result.MetaCopy).ConfigureAwait(True)
+                    metaCopy:=result.MetaCopy,
+                    nameBuilder:=nameBuilder).ConfigureAwait(True)
 
                 uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems,
                     targetFolder,

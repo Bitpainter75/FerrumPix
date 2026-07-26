@@ -16,212 +16,253 @@
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="22">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
-                <TextBlock Text="{Binding DialogTitle}"
-                           FontSize="{DynamicResource FP.Font.Heading}"
-                           FontWeight="SemiBold"/>
-                <TextBlock Grid.Row="1"
-                           Text="{Binding DialogMessage}"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           TextWrapping="Wrap"
-                           Margin="0,10,0,0"
-                           LineHeight="18"/>
-
-                <views:FileConflictDialogView Grid.Row="2"
-                                              Margin="0,18,0,0"
-                                              IsVisible="{Binding DialogShowsFileConflict}"/>
-
-                <!-- Einfache Texteingabe -->
-                <TextBox x:Name="DialogInputBox"
-                         Grid.Row="2"
-                         Text="{Binding DialogInputText, Mode=TwoWay}"
-                         IsVisible="{Binding DialogShowsInput}"
-                         Margin="0,18,0,0"
-                         MinHeight="36"/>
-
-                <views:SearchDialogView Grid.Row="3"
-                                        Margin="0,16,0,0"
-                                        IsVisible="{Binding DialogShowsSearch}"/>
-
-                <views:BatchResizeDialogView x:Name="BatchResizeDialog"
-                                             Grid.Row="3"
-                                             Margin="0,16,0,0"
-                                             IsVisible="{Binding DialogShowsBatchResize}"/>
-
-                <StackPanel Grid.Row="3"
-                            Margin="0,16,0,0"
-                            Spacing="8"
-                            IsVisible="{Binding DialogShowsWatermarkPreset}">
-                    <TextBlock Text="Wasserzeichen"
-                               Foreground="{DynamicResource FP.Text.Secondary}"/>
-                    <ComboBox ItemsSource="{Binding DialogWatermarkPresetNames}"
-                              SelectedItem="{Binding DialogSelectedWatermarkPresetName, Mode=TwoWay}"
-                              MinHeight="36"
-                              HorizontalAlignment="Stretch"/>
-                    <CheckBox Content="Originale überschreiben"
-                              IsChecked="{Binding DialogBatchWatermarkOverwrite, Mode=TwoWay}"
-                              ToolTip.Tip="Schreibt das Wasserzeichen direkt in die Bilddateien. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
-                </StackPanel>
-
-                <views:BatchFilterDialogView Grid.Row="3"
-                                             Margin="0,16,0,0"
-                                             IsVisible="{Binding DialogShowsBatchFilter}"/>
-
-                <!-- Speichern unter. Eigene Zeile, weil der Stapel-Filter diesen Block ZUSAMMEN mit
-                     seiner eigenen Auswahl (Zeile 3) zeigt - alle anderen Dialoge belegen nur eine der
-                     beiden Zeilen, und leere Auto-Zeilen fallen auf null Höhe zusammen. -->
-                <StackPanel Grid.Row="4"
-                            Spacing="14"
-                            Margin="0,14,0,0"
-                            IsVisible="{Binding DialogShowsSaveAsOptions}">
-                    <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
-                          ColumnSpacing="14"
-                          RowSpacing="12">
-                        <TextBlock Text="Format"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
-                        <Button Grid.Column="1"
-                                Classes="dropdown-btn"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch">
-                            <Button.Flyout>
-                                <Flyout Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
-                                    <ItemsControl ItemsSource="{Binding DialogFormatOptions}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Button Classes="dropdown-item"
-                                                        HorizontalAlignment="Stretch"
-                                                        HorizontalContentAlignment="Stretch"
-                                                        Click="OnDialogFormatOptionClick">
-                                                    <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
-                                                </Button>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Flyout>
-                            </Button.Flyout>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="{Binding DialogSelectedFormat}"
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <icons:SvgIcon Grid.Column="1"
-                                               Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
-                                               Width="14"
-                                               Height="14"
-                                               Margin="10,0,0,0"
-                                               VerticalAlignment="Center"/>
-                            </Grid>
-                        </Button>
-
+            <Grid RowDefinitions="*,Auto" Grid.IsSharedSizeScope="True">
+                <!-- Der Rumpf scrollt, der Knopfbalken bleibt stehen: mit mehreren
+                     aufgeklappten Sektionen (Export-Dialog) wuchs die Karte sonst ueber den
+                     Bildschirm hinaus und "Anwenden" war nicht mehr erreichbar. -->
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                        <TextBlock Text="{Binding DialogTitle}"
+                                   FontSize="{DynamicResource FP.Font.Heading}"
+                                   FontWeight="SemiBold"/>
                         <TextBlock Grid.Row="1"
-                                   Text="JPG-Qualität"
-                                   VerticalAlignment="Center"
+                                   Text="{Binding DialogMessage}"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
-                                   IsVisible="{Binding IsDialogJpgQualityVisible}"/>
-                        <Grid Grid.Row="1"
-                              Grid.Column="1"
-                              ColumnDefinitions="*,Auto"
-                              ColumnSpacing="12"
-                              IsVisible="{Binding IsDialogJpgQualityVisible}">
-                            <icons:RoundSlider Minimum="1"
-                                               Maximum="100"
-                                               Value="{Binding DialogJpgQuality, Mode=TwoWay}"
-                                               VerticalAlignment="Center"
-                                               Height="28"
-                                               MinHeight="0"
-                                               Width="220"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding DialogJpgQuality, StringFormat={}{0}%}"
-                                       MinWidth="42"
-                                       TextAlignment="Right"
-                                       VerticalAlignment="Center"
-                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
-                        </Grid>
+                                   TextWrapping="Wrap"
+                                   Margin="0,10,0,0"
+                                   LineHeight="18"/>
 
-                        <TextBlock Grid.Row="2" Text="Ziel"
-                                   VerticalAlignment="Center"
-                                   IsVisible="{Binding IsSaveAsImmichAvailable}"
-                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
-                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8"
-                                    IsVisible="{Binding IsSaveAsImmichAvailable}">
-                            <Button Classes="segmented"
-                                    Classes.active="{Binding IsSaveAsTargetLocal}"
-                                    Click="OnDialogSaveTargetClick"
-                                    Tag="Local">Ordner</Button>
-                            <Button Classes="segmented"
-                                    Classes.active="{Binding IsSaveAsTargetImmich}"
-                                    Click="OnDialogSaveTargetClick"
-                                    Tag="Immich">Immich</Button>
+                        <views:FileConflictDialogView Grid.Row="2"
+                                                      Margin="0,18,0,0"
+                                                      IsVisible="{Binding DialogShowsFileConflict}"/>
+
+                        <!-- Einfache Texteingabe -->
+                        <TextBox x:Name="DialogInputBox"
+                                 Grid.Row="2"
+                                 Text="{Binding DialogInputText, Mode=TwoWay}"
+                                 IsVisible="{Binding DialogShowsInput}"
+                                 Margin="0,18,0,0"
+                                 MinHeight="36"/>
+
+                        <views:SearchDialogView Grid.Row="3"
+                                                Margin="0,16,0,0"
+                                                IsVisible="{Binding DialogShowsSearch}"/>
+
+                        <views:BatchResizeDialogView x:Name="BatchResizeDialog"
+                                                     Grid.Row="3"
+                                                     Margin="0,16,0,0"
+                                                     IsVisible="{Binding DialogShowsBatchResize}"/>
+
+                        <StackPanel Grid.Row="3"
+                                    Margin="0,16,0,0"
+                                    Spacing="8"
+                                    IsVisible="{Binding DialogShowsWatermarkPreset}">
+                            <views:WatermarkFormView />
+                            <TextBlock Text="{Binding DialogBatchOverwriteUnavailableHint}"
+                                       IsVisible="{Binding !IsDialogBatchOverwriteAvailable}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"/>
+                            <CheckBox Content="Originale überschreiben"
+                                      IsVisible="{Binding IsDialogBatchOverwriteAvailable}"
+                                      IsChecked="{Binding DialogBatchWatermarkOverwrite, Mode=TwoWay}"
+                                      ToolTip.Tip="Schreibt das Wasserzeichen direkt in die Bilddateien. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
                         </StackPanel>
 
-                        <TextBlock Grid.Row="3"
-                                   Text="Zielordner"
-                                   VerticalAlignment="Center"
-                                   IsVisible="{Binding IsSaveAsTargetFolderVisible}"
-                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
-                        <Grid Grid.Row="3"
-                              Grid.Column="1"
-                              ColumnDefinitions="*,Auto"
-                              ColumnSpacing="8"
-                              IsVisible="{Binding IsSaveAsTargetFolderVisible}">
-                            <TextBox Text="{Binding DialogSaveAsTargetFolder, Mode=TwoWay}"
-                                     MinHeight="36"/>
-                            <Button Grid.Column="1"
-                                    Classes="icon-btn"
-                                    Width="38"
-                                    Height="36"
-                                    Click="OnBrowseSaveTargetFolderClick"
-                                    ToolTip.Tip="Ordner wählen">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg"
-                                               Width="18"
-                                               Height="18"/>
-                            </Button>
-                        </Grid>
+                        <views:BatchFilterDialogView Grid.Row="3"
+                                                     Margin="0,16,0,0"
+                                                     IsVisible="{Binding DialogShowsBatchFilter}"/>
 
-                        <!-- Einzeloptionen (Nutzerwunsch 2026-07-17): welche Katalog-Metadaten die
-                             neue Datei übernimmt - Akzent = aktiv, Klick schaltet um. -->
-                        <TextBlock Grid.Row="4"
-                                   Text="Übernehmen"
-                                   VerticalAlignment="Center"
-                                   IsVisible="{Binding DialogShowsSaveAsMetaOptions}"
-                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
-                        <Border Grid.Row="4"
-                                Grid.Column="1"
-                                BorderBrush="{DynamicResource FP.Border.Normal}"
-                                BorderThickness="1"
-                                CornerRadius="7"
-                                Padding="8,6"
-                                HorizontalAlignment="Left"
-                                IsVisible="{Binding DialogShowsSaveAsMetaOptions}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Classes="segmented"
-                                        Classes.active="{Binding DialogSaveAsCopyRating}"
-                                        Click="OnDialogMetaCopyToggleClick"
-                                        Tag="Rating">Bewertung</Button>
-                                <Button Classes="segmented"
-                                        Classes.active="{Binding DialogSaveAsCopyFavorite}"
-                                        Click="OnDialogMetaCopyToggleClick"
-                                        Tag="Favorite">Favorit</Button>
-                                <Button Classes="segmented"
-                                        Classes.active="{Binding DialogSaveAsCopyColorLabel}"
-                                        Click="OnDialogMetaCopyToggleClick"
-                                        Tag="Label">Etikett</Button>
-                                <Button Classes="segmented"
-                                        Classes.active="{Binding DialogSaveAsCopyKeywords}"
-                                        Click="OnDialogMetaCopyToggleClick"
-                                        Tag="Keywords">Stichworte</Button>
-                            </StackPanel>
-                        </Border>
+                        <views:ExportToDialogView Grid.Row="3"
+                                                  Margin="0,16,0,0"
+                                                  IsVisible="{Binding DialogShowsExportTo}"/>
+
+                        <!-- Speichern unter. Eigene Zeile, weil der Stapel-Filter diesen Block ZUSAMMEN mit
+                             seiner eigenen Auswahl (Zeile 3) zeigt - alle anderen Dialoge belegen nur eine der
+                             beiden Zeilen, und leere Auto-Zeilen fallen auf null Höhe zusammen. -->
+                        <StackPanel Grid.Row="4"
+                                    Spacing="14"
+                                    Margin="0,14,0,0"
+                                    IsVisible="{Binding DialogShowsSaveAsOptions}">
+                            <!-- Die Labelspalte teilt ihre Breite mit den dialogeigenen Sektionen
+                                 (SharedSizeGroup): Eingabefelder beider Bereiche beginnen auf derselben
+                                 Linie, egal welches Label das längste ist. -->
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                                  ColumnSpacing="14"
+                                  RowSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Format"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <Button Grid.Column="1"
+                                        x:Name="DialogFormatDropDownButton"
+                                        Classes="dropdown-btn"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch">
+                                    <Button.Flyout>
+                                        <Flyout Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
+                                            <ItemsControl ItemsSource="{Binding DialogFormatOptions}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Classes="dropdown-item"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Stretch"
+                                                                Click="OnDialogFormatOptionClick">
+                                                            <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding DialogSelectedFormat}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <icons:SvgIcon Grid.Column="1"
+                                                       Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
+                                                       Width="14"
+                                                       Height="14"
+                                                       Margin="10,0,0,0"
+                                                       VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+
+                                <TextBlock Grid.Row="1"
+                                           Text="JPG-Qualität"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           IsVisible="{Binding IsDialogJpgQualityVisible}"/>
+                                <Grid Grid.Row="1"
+                                      Grid.Column="1"
+                                      ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="12"
+                                      IsVisible="{Binding IsDialogJpgQualityVisible}">
+                                    <icons:RoundSlider Minimum="1"
+                                                       Maximum="100"
+                                                       Value="{Binding DialogJpgQuality, Mode=TwoWay}"
+                                                       VerticalAlignment="Center"
+                                                       Height="28"
+                                                       MinHeight="0"
+                                                       Width="220"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding DialogJpgQuality, StringFormat={}{0}%}"
+                                               MinWidth="42"
+                                               TextAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                </Grid>
+
+                                <TextBlock Grid.Row="2" Text="Ziel"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding IsSaveAsImmichAvailable}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                            IsVisible="{Binding IsSaveAsImmichAvailable}">
+                                    <Button Classes="segmented"
+                                            Classes.active="{Binding IsSaveAsTargetLocal}"
+                                            Click="OnDialogSaveTargetClick"
+                                            Tag="Local">Ordner</Button>
+                                    <Button Classes="segmented"
+                                            Classes.active="{Binding IsSaveAsTargetImmich}"
+                                            Click="OnDialogSaveTargetClick"
+                                            Tag="Immich">Immich</Button>
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="3"
+                                           Text="Zielordner"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding IsSaveAsTargetFolderVisible}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <Grid Grid.Row="3"
+                                      Grid.Column="1"
+                                      ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="8"
+                                      IsVisible="{Binding IsSaveAsTargetFolderVisible}">
+                                    <TextBox Text="{Binding DialogSaveAsTargetFolder, Mode=TwoWay}"
+                                             MinHeight="36"/>
+                                    <Button Grid.Column="1"
+                                            Classes="icon-btn"
+                                            Width="38"
+                                            Height="36"
+                                            Click="OnBrowseSaveTargetFolderClick"
+                                            ToolTip.Tip="Ordner wählen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg"
+                                                       Width="18"
+                                                       Height="18"/>
+                                    </Button>
+                                </Grid>
+
+                                <!-- Zieldateinamen-Muster (nur Stapel-Dialoge): dieselben Platzhalter wie
+                                     beim Stapel-Umbenennen; leer = Originalname bleibt. -->
+                                <TextBlock Grid.Row="4"
+                                           Text="Dateiname"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding IsDialogNamePatternVisible}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <TextBox Grid.Row="4"
+                                         Grid.Column="1"
+                                         Text="{Binding DialogTargetNamePattern, Mode=TwoWay}"
+                                         PlaceholderText="{}{name} (leer = Originalname behalten)"
+                                         IsVisible="{Binding IsDialogNamePatternVisible}"
+                                         ToolTip.Tip="Muster wie beim Stapel-Umbenennen: {name}, ### (Zähler), {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}"
+                                         MinHeight="36"/>
+
+                                <!-- Einzeloptionen: welche Katalog-Metadaten die
+                                     neue Datei übernimmt - Akzent = aktiv, Klick schaltet um. -->
+                                <TextBlock Grid.Row="5"
+                                           Text="Übernehmen"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding DialogShowsSaveAsMetaOptions}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <Border Grid.Row="5"
+                                        Grid.Column="1"
+                                        BorderBrush="{DynamicResource FP.Border.Normal}"
+                                        BorderThickness="1"
+                                        CornerRadius="7"
+                                        Padding="8,6"
+                                        HorizontalAlignment="Left"
+                                        IsVisible="{Binding DialogShowsSaveAsMetaOptions}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Classes="segmented"
+                                                Classes.active="{Binding DialogSaveAsCopyRating}"
+                                                Click="OnDialogMetaCopyToggleClick"
+                                                Tag="Rating">Bewertung</Button>
+                                        <Button Classes="segmented"
+                                                Classes.active="{Binding DialogSaveAsCopyFavorite}"
+                                                Click="OnDialogMetaCopyToggleClick"
+                                                Tag="Favorite">Favorit</Button>
+                                        <Button Classes="segmented"
+                                                Classes.active="{Binding DialogSaveAsCopyColorLabel}"
+                                                Click="OnDialogMetaCopyToggleClick"
+                                                Tag="Label">Etikett</Button>
+                                        <Button Classes="segmented"
+                                                Classes.active="{Binding DialogSaveAsCopyKeywords}"
+                                                Click="OnDialogMetaCopyToggleClick"
+                                                Tag="Keywords">Stichworte</Button>
+                                        <Button Classes="segmented"
+                                                Classes.active="{Binding DialogSaveAsPreserveExif}"
+                                                Click="OnDialogMetaCopyToggleClick"
+                                                ToolTip.Tip="Aufnahmedaten der Quelle (Kamera, Zeit, Objektiv) in die Zieldatei schreiben"
+                                                Tag="Exif">EXIF</Button>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+
+                        <views:BatchRenameDialogView Grid.Row="3"
+                                                     Margin="0,16,0,0"
+                                                     IsVisible="{Binding DialogShowsBatchRename}"/>
+
                     </Grid>
-                </StackPanel>
-
-                <views:BatchRenameDialogView Grid.Row="3"
-                                             Margin="0,16,0,0"
-                                             IsVisible="{Binding DialogShowsBatchRename}"/>
+                </ScrollViewer>
 
                 <!-- Aktionsbuttons -->
-                <StackPanel Grid.Row="5"
+                <StackPanel Grid.Row="1"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             Spacing="10"
@@ -243,7 +284,7 @@
                     </Button>
                 </StackPanel>
 
-                <Grid Grid.Row="5"
+                <Grid Grid.Row="1"
                       ColumnDefinitions="Auto,*,Auto"
                       Margin="0,22,0,0"
                       IsVisible="{Binding DialogShowsFileConflict}">

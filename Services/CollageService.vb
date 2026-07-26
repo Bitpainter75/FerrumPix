@@ -60,7 +60,7 @@ Namespace Services
                                    SKEncodedImageFormat.Jpeg))
                 Using image = SKImage.FromBitmap(surfaceBitmap)
                     Using data = image.Encode(format, Math.Max(1, Math.Min(100, options.Quality)))
-                        ' Atomar schreiben (Audit A1): eine bestehende Collage bleibt heil,
+                        ' Atomar schreiben: eine bestehende Collage bleibt heil,
                         ' wenn das Schreiben abbricht.
                         ImageProcessor.WriteFileAtomic(options.OutputPath, Sub(fs) data.SaveTo(fs))
                     End Using
