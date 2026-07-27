@@ -4649,4 +4649,7 @@
   <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
     <value>Réinitialiser tous les curseurs — annule l’amélioration automatique et tout réglage appliqué</value>
   </data>
+  <data name="Als_neues_Immich_Asset_gespeichert_das_Original__673386eb" xml:space="preserve">
+    <value>Enregistré comme nouvel élément Immich, l'original reste : </value>
+  </data>
 </root>

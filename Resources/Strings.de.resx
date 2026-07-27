@@ -4649,4 +4649,7 @@
   <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
     <value>Alle Regler zurücksetzen - nimmt die automatische Bildverbesserung und eine angewendete Anpassung wieder heraus</value>
   </data>
+  <data name="Als_neues_Immich_Asset_gespeichert_das_Original__673386eb" xml:space="preserve">
+    <value>Als neues Immich-Asset gespeichert, das Original bleibt: </value>
+  </data>
 </root>

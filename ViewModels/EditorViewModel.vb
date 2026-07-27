@@ -10793,6 +10793,16 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
         End Sub
 
+        ''' <summary>Meldung nach dem Ersetzen eines Immich-Assets. Blieb das Original stehen (weil
+        ''' sich das Format geändert hat oder Alben/Metadaten nicht mitkamen), MUSS der Nutzer das
+        ''' erfahren — sonst hält er ein RAW für ersetzt, das noch da ist, und sein Album hängt
+        ''' weiterhin am alten Asset.</summary>
+        Private Shared Function ImmichStatusNachErsetzen() As String
+            Dim hinweis = ImmichService.LastReplaceWarning
+            If String.IsNullOrEmpty(hinweis) Then Return LocalizationService.T("Immich-Asset aktualisiert")
+            Return LocalizationService.T("Als neues Immich-Asset gespeichert, das Original bleibt: ") & hinweis
+        End Function
+
         ''' <summary>Asset-ID, falls das aktuelle Bild eine Immich-Temp-Kopie ist (Dateiname-Stamm = UUID),
         ''' sonst Nothing. Damit landen Stichwort-Änderungen im Editor beim richtigen Immich-Asset.</summary>
         Private Function CurrentImmichAssetId() As String
@@ -14721,7 +14731,7 @@ Namespace ViewModels
                         ' Auf das ERGEBNIS umschalten (wie beim direkten Speichern): die alte
                         ' Temp-Kopie zeigt ein Asset, das es auf dem Server nicht mehr gibt.
                         Await SwitchToReplacedImmichAssetAsync(newAssetId, IO.Path.GetFileName(targetPath))
-                        StatusText = LocalizationService.T("Immich-Asset aktualisiert")
+                        StatusText = ImmichStatusNachErsetzen()
                         Return True
                     End If
 
@@ -14836,7 +14846,7 @@ Namespace ViewModels
                 ClearPreviewSource()
                 ' Mit dem Namen des ERGEBNISSES weiterarbeiten (kann die Endung gewechselt haben).
                 Await SwitchToReplacedImmichAssetAsync(newAssetId, resultFileName)
-                StatusText = LocalizationService.T("Immich-Asset aktualisiert")
+                StatusText = ImmichStatusNachErsetzen()
                 Return True
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.SaveBackToImmich", ex)

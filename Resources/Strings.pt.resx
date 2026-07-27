@@ -4648,4 +4648,7 @@
   <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
     <value>Repor todos os controlos — desfaz a melhoria automática e qualquer ajuste aplicado</value>
   </data>
+  <data name="Als_neues_Immich_Asset_gespeichert_das_Original__673386eb" xml:space="preserve">
+    <value>Guardado como novo recurso do Immich, o original permanece: </value>
+  </data>
 </root>

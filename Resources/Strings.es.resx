@@ -4649,4 +4649,7 @@
   <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
     <value>Restablecer todos los controles: deshace la mejora automática y cualquier ajuste aplicado</value>
   </data>
+  <data name="Als_neues_Immich_Asset_gespeichert_das_Original__673386eb" xml:space="preserve">
+    <value>Guardado como un nuevo recurso de Immich; el original permanece: </value>
+  </data>
 </root>

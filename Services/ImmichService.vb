@@ -373,13 +373,30 @@ Namespace Services
         ''' Beschreibung/Bewertung/Stichwörter nachziehen und das alte Asset in den Papierkorb legen. Die
         ''' Asset-ID ändert sich dabei zwangsläufig - Aufrufer müssen mit der zurückgegebenen ID
         ''' weiterarbeiten und dürfen die übergebene nicht weiterverwenden.</summary>
+        ''' <summary>Warum das Original beim letzten Ersetzen STEHEN GEBLIEBEN ist; leer heißt
+        ''' „sauber ersetzt". Unmittelbar nach <see cref="ReplaceAssetAsync"/> zu lesen — Ersetzen
+        ''' wird immer vom Nutzer angestoßen und läuft nacheinander, auch im Stapel.</summary>
+        Public Shared Property LastReplaceWarning As String = ""
+
         Public Shared Async Function ReplaceAssetAsync(assetId As String, filePath As String, Optional cancellationToken As CancellationToken = Nothing) As Task(Of String)
+            LastReplaceWarning = ""
             If Not IsConfigured OrElse String.IsNullOrWhiteSpace(assetId) OrElse String.IsNullOrWhiteSpace(filePath) OrElse Not File.Exists(filePath) Then Return Nothing
+
+            ' Den Serverzustand des Originals EINMAL holen: er liefert den Dateinamen für die
+            ' Formatprüfung, das Aufnahmedatum für den Upload und danach Beschreibung/Bewertung/
+            ' Stichwörter für das neue Asset.
+            Dim source = Await GetAssetDetailRawAsync(assetId, cancellationToken).ConfigureAwait(False)
+            Dim quellEndung = NormalisierteEndung(source?.OriginalFileName)
+            Dim zielEndung = NormalisierteEndung(filePath)
+            Dim formatBleibt = quellEndung.Length = 0 OrElse quellEndung = zielEndung
 
             ' Unbekannte Version (0) wie eine alte behandeln: der Legacy-Aufruf beantwortet die Frage selbst
             ' - auf einem v3-Server läuft er ins Leere und wir nehmen den Weg darunter.
+            ' NUR bei gleichem Format: dieser Weg ersetzt AN ORT UND STELLE, ohne Papierkorb. Ein RAW
+            ' damit gegen ein JPEG zu tauschen wäre unwiderruflich. Bei Formatwechsel fällt der
+            ' Aufruf deshalb durch auf den Weg darunter, der ein ZWEITES Asset anlegt.
             Dim major = Await GetServerMajorVersionAsync(cancellationToken).ConfigureAwait(False)
-            If major < 3 Then
+            If major < 3 AndAlso formatBleibt Then
                 If Await ReplaceOriginalLegacyAsync(assetId, filePath, cancellationToken).ConfigureAwait(False) Then
                     InvalidateAssetCaches(assetId)
                     Await RefreshAssetDetailCacheAsync(assetId, "nach ReplaceAsset (bis v2)", cancellationToken).ConfigureAwait(False)
@@ -387,24 +404,66 @@ Namespace Services
                 End If
             End If
 
-            ' Den Serverzustand des Originals EINMAL holen: er liefert das Aufnahmedatum für den Upload und
-            ' gleich darauf Beschreibung/Bewertung/Stichwörter für das neue Asset.
-            Dim source = Await GetAssetDetailRawAsync(assetId, cancellationToken).ConfigureAwait(False)
-
             Dim newAssetId = Await UploadAssetAsync(filePath, cancellationToken, fileCreatedAtIso:=source?.FileCreatedAt).ConfigureAwait(False)
             If String.IsNullOrEmpty(newAssetId) Then Return Nothing
             ' Immich dedupliziert per Prüfsumme: ist die "neue" Datei byteweise die alte, kommt dieselbe
             ' ID zurück. Dann gibt es nichts zu kopieren und erst recht nichts zu löschen.
             If String.Equals(newAssetId, assetId, StringComparison.Ordinal) Then Return assetId
 
-            Await CopyAssetLinksAsync(assetId, newAssetId, cancellationToken).ConfigureAwait(False)
-            Await CopyAssetMetadataAsync(source, newAssetId, cancellationToken).ConfigureAwait(False)
+            Dim linksOk = Await CopyAssetLinksAsync(assetId, newAssetId, cancellationToken).ConfigureAwait(False)
+            Dim metaOk = Await CopyAssetMetadataAsync(source, newAssetId, cancellationToken).ConfigureAwait(False)
+
+            ' Das Original verschwindet NUR, wenn der Ersatz wirklich vollstaendig ist. Vorher wurde
+            ' hier bedingungslos geloescht - beide Kopierschritte liefern ein Ergebnis, das niemand
+            ' ausgewertet hat. Zwei Wege fuehren dazu, dass das Original stehen bleibt:
+            '
+            ' 1. FORMAT. Aendert sich die Endung, ist das kein Ersatz, sondern eine zweite Fassung.
+            '    Das trifft vor allem RAW und HEIC: die kann FerrumPix nicht zurueckschreiben, der
+            '    Aufrufer rendert dann ein JPEG. Ein RAW gegen ein JPEG zu tauschen und das RAW in
+            '    den Papierkorb zu legen waere genau die Falle, die der lokale Speicherweg am
+            '    ZIEL-FORMAT laengst verbietet - der Immich-Weg hatte diese Sperre nicht.
+            ' 2. BUCHHALTUNG. Scheitert das Kopieren von Alben/Stapel/geteilten Links oder von
+            '    Beschreibung/Bewertung/Stichwoertern (403, 500), traegt das neue Asset sie nicht.
+            '    Dann ist das alte die einzige Stelle, an der sie noch stehen.
+            Dim grund = OriginalBleibtGrund(source?.OriginalFileName, filePath, linksOk, metaOk)
+            If grund IsNot Nothing Then
+                LastReplaceWarning = grund
+                DiagnosticLogService.LogAlways("Immich.ReplaceAsset",
+                    $"Original {assetId} BLEIBT (neu: {newAssetId}) — {grund}")
+                Return newAssetId
+            End If
+
             ' Immer in den Immich-Papierkorb (force=False), nie endgültig: das Original einer Bearbeitung
             ' unwiederbringlich zu löschen wäre eine Falle, die niemand erwartet.
             If Not Await DeleteAssetsAsync({assetId}, force:=False, cancellationToken:=cancellationToken).ConfigureAwait(False) Then
                 DiagnosticLogService.LogAlways("Immich.ReplaceAsset", $"Neues Asset {newAssetId} liegt, altes {assetId} ließ sich nicht löschen")
             End If
             Return newAssetId
+        End Function
+
+        ''' <summary>Der Grund, warum das Original NICHT gelöscht werden darf — Nothing heißt
+        ''' „sauber ersetzt, löschen erlaubt". Eigene Funktion, damit die Regel geprüft werden kann,
+        ''' ohne einen Server zu brauchen: die Entscheidung selbst hängt an nichts Netzwerkigem.</summary>
+        Friend Shared Function OriginalBleibtGrund(quellName As String, zielPfad As String,
+                                                   linksOk As Boolean, metaOk As Boolean) As String
+            Dim quellEndung = NormalisierteEndung(quellName)
+            Dim zielEndung = NormalisierteEndung(zielPfad)
+            ' Unbekannte Quelle: nicht raten. Ohne Namen ist ein Formatwechsel nicht feststellbar,
+            ' und dann entscheidet allein die Buchhaltung.
+            If quellEndung.Length > 0 AndAlso quellEndung <> zielEndung Then
+                Return $"Format {quellEndung} → {zielEndung}"
+            End If
+            If Not linksOk Then Return "Alben/Stapel/Links nicht übernommen"
+            If Not metaOk Then Return "Beschreibung/Bewertung/Stichwörter nicht übernommen"
+            Return Nothing
+        End Function
+
+        ''' <summary>Endung klein und ohne Punkt; .jpeg zaehlt als .jpg, sonst gaelte ein reiner
+        ''' Schreibweisenwechsel als Formatwechsel.</summary>
+        Private Shared Function NormalisierteEndung(pfadOderName As String) As String
+            If String.IsNullOrWhiteSpace(pfadOderName) Then Return ""
+            Dim e = IO.Path.GetExtension(pfadOderName).TrimStart("."c).ToLowerInvariant()
+            Return If(e = "jpeg", "jpg", e)
         End Function
 
         ''' <summary>Der Ein-Aufruf-Weg bis Immich v2. False, wenn der Server den Endpunkt nicht (mehr) kennt.</summary>

@@ -4649,4 +4649,7 @@
   <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
     <value>Azzera tutti i cursori: annulla il miglioramento automatico e qualsiasi regolazione applicata</value>
   </data>
+  <data name="Als_neues_Immich_Asset_gespeichert_das_Original__673386eb" xml:space="preserve">
+    <value>Salvato come nuovo asset Immich, l'originale resta: </value>
+  </data>
 </root>

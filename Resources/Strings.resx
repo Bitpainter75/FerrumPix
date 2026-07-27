@@ -4650,4 +4650,7 @@
   <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
     <value>Reset every slider — takes back the automatic enhancement and any adjustment you applied</value>
   </data>
+  <data name="Als_neues_Immich_Asset_gespeichert_das_Original__673386eb" xml:space="preserve">
+    <value>Saved as a new Immich asset, the original stays: </value>
+  </data>
 </root>
