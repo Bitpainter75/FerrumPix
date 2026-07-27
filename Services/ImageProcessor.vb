@@ -4688,10 +4688,62 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ' Weiche Kante der Retusche-Scheibe: bis 55% des Radius voll deckend, danach linear auslaufend.
         ' Entspricht der früheren Formel edge = (radius - d) / (radius * 0.45).
         Private Shared ReadOnly RetouchFeatherStops As Single() = {0.0F, 0.55F, 1.0F}
-        Private Const HealingPatchRadius As Integer = 6
+        ''' <summary>Radius der Patches, mit denen die Reparatur fuellt - MIT DER AUFLOESUNG
+        ''' SKALIERT, nicht mehr fest. Er war fest 6 und damit auf allem oberhalb einer Web-Groesse
+        ''' zu klein: ein Patch muss ungefaehr EINE STRUKTURPERIODE ueberspannen, sonst kann die
+        ''' Quellensuche gar nicht unterscheiden, ob ein Treffer phasenrichtig sitzt, und ein
+        ''' Fenstergitter zerfaellt zu Matsch.
+        '''
+        ''' Der Teiler kommt aus einem Kontrollversuch mit DEMSELBEN Motiv in zwei Aufloesungen
+        ''' (echtes 50-MP-Foto einer Hochhausfassade, einmal nativ 5784x8660, einmal auf 800x1198
+        ''' verkleinert), jeweils gegen das unbeschaedigte Original gemessen: nativ liegt das
+        ''' Optimum bei Radius 40 (Fehler 15,7, Kontrast 16,0 gegen 16,7 im Original; Radius 24
+        ''' liefert nur 11,8 Kontrast, also sichtbar Matsch), verkleinert bei Radius 6 (Fehler
+        ''' 14,3; Radius 40 gibt dort 19,7). Optimum-Verhaeltnis 6,7 bei Aufloesungsverhaeltnis 7,2
+        ''' - also linear. 8660/40 und 1198/6 ergeben 217 und 200; 210 liegt dazwischen.
+        '''
+        ''' Grenzen: unter 4 traegt ein Patch keine Struktur mehr. Die Obergrenze 40 ist NICHT nur
+        ''' der gemessene Bestwert, sie haelt auch HealingSearchMargin bei 188 - mit 64 waere der
+        ''' Suchrand 212, und das ist gemessen KEIN freier Zugewinn: am 50-MP-Foto verschlechterte
+        ''' der groessere Rand den Kontrast im reparierten Bereich von 16,0 auf 17,8 (er findet
+        ''' weiter entfernte, schlechter passende Quellen), waehrend er am 800-px-Bild half. Wer die
+        ''' Obergrenze anhebt, muss den Suchrand getrennt davon festhalten und beides neu messen.
+        ''' Laufzeit ist ueber den ganzen Bereich unauffaellig (3,0 s an 50 MP): groessere Patches
+        ''' heissen weniger Kopien und weniger Suchen.
+        '''
+        ''' Gerechnet wird auf dem ARBEITSBILD, nicht auf der Datei: grosse Regionen werden vorher
+        ''' auf HealingMaxNativeExtent normalisiert, und dort sind die Strukturen entsprechend
+        ''' kleiner. Ein fester Wert waere dort wieder zu gross.
+        '''
+        ''' VORSICHT bei Gegenbeispielen aus SYNTHETISCHEN Testbildern: eine kuenstliche Fassade mit
+        ''' 76 px Fensterabstand in einem 5,6-MP-Bild braucht Radius 64 und widerspricht der Regel -
+        ''' sie hat aber ein Strukturmass, das in echten Fotos so nicht vorkommt. Der eigentliche
+        ''' Vorhersagewert ist die Strukturperiode; die Aufloesung ist ihr praktischer Stellvertreter
+        ''' und fuer dasselbe Motiv exakt richtig. Wer es besser will, misst die Periode aus der
+        ''' Umgebung der Reparaturstelle (Autokorrelation) statt zu schaetzen.</summary>
+        Private Const HealingPatchRadiusDivisor As Integer = 210
+        Private Const HealingPatchRadiusMin As Integer = 4
+        Private Const HealingPatchRadiusMax As Integer = 40
         Private Const HealingSearchBaseMargin As Integer = 140
-        Private Const HealingSearchMargin As Integer = HealingSearchBaseMargin + HealingPatchRadius + 8
+        ''' <summary>Kontextrand fuer die Quellensuche. Rechnet mit dem GROESSTEN moeglichen Patch,
+        ''' damit der Rand nie zu knapp wird - er kostet nur etwas mehr kopierten Kontext.</summary>
+        Private Const HealingSearchMargin As Integer = HealingSearchBaseMargin + HealingPatchRadiusMax + 8
         Private Const HealingMaxNativeExtent As Integer = 1200
+
+        ''' <summary>Patch-Radius zur Bildkante, in der gerechnet wird.</summary>
+        Private Shared Function HealingPatchRadiusFor(resolutionLongEdge As Integer) As Integer
+            Return CInt(Clamp(CSng(resolutionLongEdge) / HealingPatchRadiusDivisor,
+                              HealingPatchRadiusMin, HealingPatchRadiusMax))
+        End Function
+
+        ''' <summary>Die durchgereichte Bildkante, oder - wenn keine gesetzt ist - die des Bildes
+        ''' selbst. NICHT die des Arbeitsausschnitts: der ist Region plus Suchrand und waere auf
+        ''' einem 50-MP-Foto nur rund 1100 px breit, der Radius damit um das Achtfache zu klein.</summary>
+        Private Shared Function EffectiveHealingLongEdge(result As SKBitmap, resolutionLongEdge As Integer) As Integer
+            If resolutionLongEdge > 0 Then Return resolutionLongEdge
+            If result Is Nothing Then Return 0
+            Return Math.Max(result.Width, result.Height)
+        End Function
 
         ''' ARBEITSBILD-Umbau Stufe E: Das Rezept-Replay der Retusche ist entfernt.
         ''' Retusche wird beim Commit REGIONAL in Vollauflösung ins Arbeitsbild eingebacken
@@ -5108,14 +5160,20 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Using
         End Sub
 
+        ''' <paramref name="resolutionLongEdge"/>: laengste Kante des BILDES in der Aufloesung, in
+        ''' der hier gerechnet wird - daran haengt der Patch-Radius. 0 heisst "aus result ableiten"
+        ''' und gilt fuer den nativen Weg, wo result das ganze Bild ist. Der skalierte Weg reicht den
+        ''' heruntergerechneten Wert durch, weil sein result nur ein verkleinerter Ausschnitt ist.
         Private Shared Function DrawInpaintedHealingRegion(result As SKBitmap, defectMask As SKBitmap, blendMask As SKBitmap,
-                                                           targetLeft As Integer, targetTop As Integer) As Boolean
+                                                           targetLeft As Integer, targetTop As Integer,
+                                                           Optional resolutionLongEdge As Integer = 0) As Boolean
             If result Is Nothing OrElse defectMask Is Nothing OrElse blendMask Is Nothing OrElse
                defectMask.Width <= 0 OrElse defectMask.Height <= 0 OrElse
                defectMask.Width <> blendMask.Width OrElse defectMask.Height <> blendMask.Height Then Return False
 
             If Math.Max(defectMask.Width, defectMask.Height) > HealingMaxNativeExtent Then
-                Return DrawScaledInpaintedHealingRegion(result, defectMask, blendMask, targetLeft, targetTop)
+                Return DrawScaledInpaintedHealingRegion(result, defectMask, blendMask, targetLeft, targetTop,
+                                                       EffectiveHealingLongEdge(result, resolutionLongEdge))
             End If
 
             Dim width = defectMask.Width
@@ -5163,7 +5221,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Dim localTargetLeft = targetLeft - workLeft
                 Dim localTargetTop = targetTop - workTop
 
-                If DrawPatchBasedInpaintedHealingRegion(result, work, maskAlpha, blendAlpha,
+                If DrawPatchBasedInpaintedHealingRegion(EffectiveHealingLongEdge(result, resolutionLongEdge),
+                                                       result, work, maskAlpha, blendAlpha,
                                                          localTargetLeft, localTargetTop, width, height,
                                                          workLeft, workTop) Then
                     Return True
@@ -5255,7 +5314,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                                  defectMask As SKBitmap,
                                                                  blendMask As SKBitmap,
                                                                  targetLeft As Integer,
-                                                                 targetTop As Integer) As Boolean
+                                                                 targetTop As Integer,
+                                                                 resolutionLongEdge As Integer) As Boolean
             Dim scale = HealingMaxNativeExtent / CDbl(Math.Max(defectMask.Width, defectMask.Height))
             If scale <= 0.0 OrElse scale >= 1.0 Then Return False
 
@@ -5306,7 +5366,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             fullBlendCanvas.Clear(SKColors.White)
                         End Using
                         If Not DrawInpaintedHealingRegion(scaledContext, scaledDefect, scaledFullBlend,
-                                                         scaledTargetLeft, scaledTargetTop) Then Return False
+                                                         scaledTargetLeft, scaledTargetTop,
+                                                         Math.Max(1, CInt(resolutionLongEdge * scale))) Then Return False
 
                         Using resultCanvas = New SKCanvas(result)
                             Dim bounds = New SKRect(targetLeft, targetTop,
@@ -5333,7 +5394,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return True
         End Function
 
-        Private Shared Function DrawPatchBasedInpaintedHealingRegion(result As SKBitmap, work As SKBitmap,
+        Private Shared Function DrawPatchBasedInpaintedHealingRegion(resolutionLongEdge As Integer,
+                                                                     result As SKBitmap, work As SKBitmap,
                                                                      maskAlpha As Byte(), blendAlpha As Byte(),
                                                                      targetLeft As Integer, targetTop As Integer,
                                                                      width As Integer, height As Integer,
@@ -5352,7 +5414,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim repairExtent = Math.Max(width, height)
             ' BEFUND: groessere Patches (Radius 6) tragen mehr Struktur pro Kopie und brauchen
             ' weniger Suchen - bezahlbar, seit die Kandidaten vorberechnet sind.
-            Dim patchRadius = HealingPatchRadius
+            Dim patchRadius = HealingPatchRadiusFor(resolutionLongEdge)
             Dim maxPasses = Math.Min(repairExtent + patchRadius * 2, 160)
             Dim maxPatchCopiesPerPass = If(repairExtent > 360, 72, If(repairExtent > 240, 96, If(repairExtent > 120, 96, 64)))
             Dim repaired = 0
@@ -5599,6 +5661,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                CByte(sb \ weightSum), CByte(sa \ weightSum))
         End Function
 
+        ''' <summary>Reihenfolge der Fuellfront: die Pixel mit den meisten bekannten Nachbarn zuerst.
+        '''
+        ''' GEPRUEFT UND VERWORFEN: ein zusaetzlicher STRUKTUR-Term nach Art der Isophoten-Prioritaet
+        ''' (Helligkeitsgradient ueber die bekannten Nachbarn, Anteil entlang der Frontnormalen,
+        ''' multiplikativ auf die Nachbarzahl). Er sollte den reproduzierten Fehler an einer Grenze
+        ''' zwischen zwei Bereichen beheben (Horizont Himmel/Wiese: die Linie bricht ein, Himmel
+        ''' blutet nach unten). Gemessen brachte er dort nur 22,6 -> 19,7 px Abweichung bei
+        ''' unveraendertem Maximum, also keine Loesung, und am 50-MP-Foto zog er den Kontrast im
+        ''' reparierten Bereich von 16,0 auf 17,5 weg vom Original (16,7). Auch eine strikte
+        ''' Prioritaetsreihenfolge (Kopierbudget je Durchgang von 96 auf 6) blieb bei 18,9 px.
+        ''' Der Grund liegt tiefer: eine Reihenfolge nuetzt wenig, solange die Patch-BEWERTUNG nur
+        ''' den bekannten Teil des Zielfensters sieht - am oberen Rand ist der bekannt Teil reiner
+        ''' Himmel, also gewinnt ein reiner Himmel-Patch und wird nach unten kopiert.</summary>
         Private Shared Sub OrderHealingBoundaryByKnownNeighbors(boundary As List(Of Integer), known As Boolean(),
                                                                 width As Integer, height As Integer)
             If boundary Is Nothing OrElse boundary.Count < 2 Then Return
@@ -5869,10 +5944,18 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim copied = 0
             Dim targetX = targetLeft + mx
             Dim targetY = targetTop + my
-            ' BEFUND: weicher Ueberlappungsrand gegen Kachelnaehte - im aeusseren Ring des
-            ' Patches werden BEREITS GEFUELLTE Zielpixel 50/50 gemischt statt uebersprungen.
+            ' UEBERLAPPUNG: bereits gefuellte Zielpixel werden mit einem STETIGEN Gewicht
+            ' ueberblendet, das von der Patch-Mitte (voll) zum Patch-Rand (null) ausläuft.
             ' Ungefuellte bekommen weiterhin die volle Kopie (kein Durchbluten des Defekts).
-            Dim featherInnerSq = Math.Max(1.0F, (patchRadius - 1.5F) * (patchRadius - 1.5F))
+            '
+            ' BEFUND, der dazu gefuehrt hat: vorher blieben gefuellte Pixel INNERHALB von
+            ' Radius-1,5 unangetastet und nur der aeussere Ring wurde hart 50/50 gemischt - also
+            ' genau umgekehrt zur Verlaesslichkeit (die Patch-Mitte traegt die beste Struktur, der
+            ' Rand die schlechteste) und mit ZWEI Stufen im Verlauf statt einer Rampe. Die Naehte
+            ' daraus sammeln sich dort, wo zuletzt gefuellt wird: auf der MITTELLINIE des Zuges.
+            ' Gemessen an einem 120x2000-Zug ueber Wolkentextur lag die Hochfrequenz dort bei 2,23
+            ' gegen 1,27 in der Nachbarschaft - sichtbar als unsaubere Bahn in der Zugmitte.
+            Dim featherRadius = Math.Max(1.0F, CSng(patchRadius))
 
             For oy = -patchRadius To patchRadius
                 Dim oySq = oy * oy
@@ -5893,13 +5976,17 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     If x < 0 OrElse x >= work.Width OrElse px < 0 OrElse px >= work.Width Then Continue For
 
                     If known(index) Then
-                        If distSq >= featherInnerSq Then
+                        Dim w = 1.0F - CSng(Math.Sqrt(distSq)) / featherRadius
+                        If w > 0.0F Then
+                            ' Smoothstep: am Patch-Rand laeuft auch die ABLEITUNG auf null aus,
+                            ' sonst bleibt dort eine sichtbare Knickkante stehen.
+                            w = w * w * (3.0F - 2.0F * w)
                             Dim existing = work.GetPixel(x, y)
                             Dim incoming = work.GetPixel(px, py)
                             Dim blended = New SKColor(
-                                CByte((CInt(existing.Red) + CInt(incoming.Red)) \ 2),
-                                CByte((CInt(existing.Green) + CInt(incoming.Green)) \ 2),
-                                CByte((CInt(existing.Blue) + CInt(incoming.Blue)) \ 2),
+                                BlendByte(existing.Red, incoming.Red, w),
+                                BlendByte(existing.Green, incoming.Green, w),
+                                BlendByte(existing.Blue, incoming.Blue, w),
                                 existing.Alpha)
                             work.SetPixel(x, y, blended)
                             If pixels IsNot Nothing AndAlso pixels.Contains(x, y) Then pixels.SetColor(x, y, blended)
@@ -11006,15 +11093,30 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Der grobe Pass setzt darum auf dem feinen auf; kaskadiert wirken beide wie ein Radius
         ''' von Wurzel(fein^2 + grob^2), ohne dass der feine Anteil unten am Regler seine Wirkung
         ''' verliert.</summary>
+        ''' <summary>Wie schnell der FEINE Durchgang mit dem Regler hochlaeuft. Er war frueher
+        ''' linear an den Reglerwert gekoppelt: bei 25 wurden 25 Prozent geglaettete Chroma mit
+        ''' 1,0 px Radius beigemischt. Gemessen an einem Konzert-RAW liess das vom Farbrauschen
+        ''' 3,26 von 4,39 stehen, waehrend Lightroom beim GLEICHEN Wert auf 1,25 kommt - unsere 25
+        ''' wirkten wie deren 5. Feines Pixelrauschen ist aber bei kleinem Radius erledigt oder gar
+        ''' nicht; ein Regler, der es erst bei Vollausschlag wegnimmt, ist falsch geeicht.
+        ''' Der feine Durchgang (Radius UND Beimischung) ist deshalb bei 42 voll ausgefahren -
+        ''' damit trifft 25, Lightrooms Standardwert fuer RAWs, auch bei uns dessen Wirkung.
+        ''' Der obere Reglerbereich bleibt nicht tot: der GROBE Durchgang skaliert weiterhin mit
+        ''' dem rohen Reglerwert ueber die ganze Strecke, und nur er erreicht die tieffrequenten
+        ''' Farbflecken (siehe CoarseChromaSigma).</summary>
+        Private Const ChromaFineGain As Single = 3.2F
+
         Private Shared Function ApplyColorNoiseReduction(source As SKBitmap, amount As Single) As SKBitmap
             amount = Clamp(amount, 0, 1)
-            ' Feiner Pass wie bisher: Sigma waechst bis 2,5 Pixel, und die Staerke blendet zusaetzlich
-            ' zwischen Original-Chroma und geglaetteter Chroma ueber.
-            ' Vorher steuerte NUR das Sigma - und weil schon rund 2 Pixel pixelweises Farbrauschen
-            ' vollstaendig ausloeschen, war der Regler ab etwa 30 wirkungslos: gemessen aenderten 50
-            ' und 100 dieselben 53 bzw. 54 % der Pixel bei maximal 7 bzw. 6 Tonwerten. Der halbe
-            ' Reglerweg tat also sichtbar nichts (gemeldet als "macht nix").
-            Dim sigma = 0.5F + amount * 2.0F
+            Dim fein = Clamp(amount * ChromaFineGain, 0, 1)
+            ' Feiner Pass: Sigma waechst bis 2,5 Pixel, und dieselbe Staerke blendet zwischen
+            ' Original-Chroma und geglaetteter Chroma ueber. BEIDES haengt an fein, nicht am rohen
+            ' Reglerwert - sonst waere der untere Reglerbereich zu schwach (siehe ChromaFineGain).
+            ' Historie, damit es nicht rueckwaerts repariert wird: als NUR das Sigma gesteuert wurde,
+            ' war der Regler ab etwa 30 wirkungslos (50 und 100 aenderten dieselben 53 bzw. 54 % der
+            ' Pixel um maximal 7 bzw. 6 Tonwerte) - deshalb kam die Ueberblendung dazu. Sie linear an
+            ' den Reglerwert zu haengen war dann die Uebertreibung in die andere Richtung.
+            Dim sigma = 0.5F + fein * 2.0F
             Dim blurred = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Using filter = SKImageFilter.CreateBlur(sigma, sigma)
                 Using paint = New SKPaint With {.ImageFilter = filter}
@@ -11086,7 +11188,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                             End If
                                                             Dim chroma = (Math.Abs(CInt(srcBuf(si + 2)) - lumaSrc) + Math.Abs(CInt(srcBuf(si)) - lumaSrc)) / 2.0
                                                             Dim schutz = 1.0 - Math.Max(0.0, Math.Min(1.0, (chroma - schutzVon) / (schutzBis - schutzVon)))
-                                                            Dim wirkung = amount * schutz
+                                                            Dim wirkung = fein * schutz
                                                             Dim lumaMix = (299 * mix2 + 587 * mix1 + 114 * mix0) / 1000.0
                                                             Dim delta = lumaSrc - lumaMix
                                                             ' Chroma aus dem Blur, Luminanz vom Original - und beides
@@ -11688,6 +11790,14 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         End Function
 
 
+        ''' <summary>Catmull-Rom durch die Kurvenpunkte. GEPRUEFT UND VERWORFEN: Adobes DNG-SDK
+        ''' interpoliert Tonkurven mit einem NATUERLICHEN kubischen Spline, der an derselben
+        ''' Kennlinie systematisch hoeher laeuft (Rot-Kurve des Testpresets bei x=20: 7,7 gegen
+        ''' unsere 6,5). Ein A/B mit ausgetauschter Interpolation, sonst identischer Kette, ergab
+        ''' auf der besseren Basis eine GROESSERE Abweichung zu Lightroom (8,25 -> 9,39 am einen
+        ''' Motiv, 8,08 -> 9,30 am anderen) und nur auf der heutigen Basis eine kleinere
+        ''' (16,85 -> 15,93). Widerspruechlich, also nicht umgestellt - erst wenn ein Lightroom-
+        ''' Export OHNE Preset vorliegt, laesst sich das sauber entscheiden.</summary>
         Friend Shared Function EvaluateCurveSpline(points As List(Of (X As Double, Y As Double)), x As Double) As Double
             Dim n = points.Count
             If n = 0 Then Return x
