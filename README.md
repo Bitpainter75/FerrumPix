@@ -63,7 +63,7 @@ The editor covers the most common photo work:
 - Exposure, brightness, contrast, highlights, shadows, tone curves and white balance.
 - Color tools with HSL, vibrance, saturation, colour grading (four colour wheels for shadows, midtones, highlights and global — double-click a wheel to reset it), camera calibration and colour noise reduction.
 - Automatic enhancement: *Auto* measures the photo and sets exposure, contrast, highlights, shadows, black and white point, vibrance and white balance to values that suit it. The sliders stay editable afterwards, and the filter group's reset button takes the automatic correction back out.
-- Filters, LUT files and Lightroom `.xmp` preset import, including the newer colour-grading keys and black-and-white presets.
+- Filters, LUT files and XMP preset import (`.xmp`, as written by Lightroom and Camera Raw), including the newer colour-grading keys and black-and-white presets.
 - Film negative conversion for scanned negatives.
 - Text, shapes, symbols, images, QR codes and watermarks. Text can be set bold or italic, spaced out, and placed along an arc, a circle or a wave.
 - Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools. The brush picker offers 13 variants — soft round, pencil, marker, grainy acrylic, sandpaper, smudge, spatter, charcoal, crayon, airbrush, calligraphy, stipple and watercolor.

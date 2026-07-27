@@ -1058,7 +1058,7 @@
                             <!-- TONWERTKURVE (ausklappbar) -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowFilterAdjustments}">
-                                <panels:LightroomPresetPanel />
+                                <panels:XmpPresetPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"

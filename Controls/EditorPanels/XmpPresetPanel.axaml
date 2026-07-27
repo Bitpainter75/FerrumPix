@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
-             x:Class="FerrumPix.Controls.EditorPanels.LightroomPresetPanel">
-    <Expander Header="Lightroom-Preset" icons:ExpanderState.Key="lightroom-preset">
+             x:Class="FerrumPix.Controls.EditorPanels.XmpPresetPanel">
+    <Expander Header="XMP-Preset" icons:ExpanderState.Key="lightroom-preset">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">

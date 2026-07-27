@@ -36,11 +36,11 @@ Namespace Views
                 If topLevel Is Nothing Then Return
 
                 Dim isLut = vm.IsDialogFilterSourceLut
-                Dim fileType = New FilePickerFileType(If(isLut, "LUT (*.cube)", "Lightroom-Preset (*.xmp)")) With {
+                Dim fileType = New FilePickerFileType(If(isLut, "LUT (*.cube)", "XMP-Preset (*.xmp)")) With {
                     .Patterns = If(isLut, New String() {"*.cube"}, New String() {"*.xmp"})
                 }
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
-                    .Title = LocalizationService.T(If(isLut, "LUT wählen", "Lightroom-Preset wählen")),
+                    .Title = LocalizationService.T(If(isLut, "LUT wählen", "XMP-Preset wählen")),
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {fileType}
                 })

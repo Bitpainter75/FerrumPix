@@ -9,7 +9,7 @@ Imports FerrumPix.ViewModels
 
 Namespace Controls.EditorPanels
 
-    Public Class LightroomPresetPanel
+    Public Class XmpPresetPanel
         Inherits UserControl
 
         Public Sub New()
@@ -23,10 +23,10 @@ Namespace Controls.EditorPanels
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
-                    .Title = LocalizationService.T("Lightroom-Preset laden"),
+                    .Title = LocalizationService.T("XMP-Preset laden"),
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
-                        New FilePickerFileType("Lightroom XMP") With {
+                        New FilePickerFileType("XMP-Preset") With {
                             .Patterns = New String() {"*.xmp"}
                         }
                     }
@@ -46,7 +46,7 @@ Namespace Controls.EditorPanels
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
-                    .Title = LocalizationService.T("Ordner mit Lightroom-Presets wählen"),
+                    .Title = LocalizationService.T("Ordner mit XMP-Presets wählen"),
                     .AllowMultiple = False
                 })
                 Dim folder = folders?.FirstOrDefault()
@@ -68,7 +68,7 @@ Namespace Controls.EditorPanels
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
                 ' und beendet den Prozess.
-                DiagnosticLogService.LogException("LightroomPresetPanel.OnApplySavedLightroomPresetClick", ex)
+                DiagnosticLogService.LogException("XmpPresetPanel.OnApplySavedLightroomPresetClick", ex)
             End Try
         End Sub
 

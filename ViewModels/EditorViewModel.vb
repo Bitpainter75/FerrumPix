@@ -18184,8 +18184,16 @@ Namespace ViewModels
                     _annotationAnchor = NormalizeAnnotationAnchor(a.Anchor)
                     AnnotationIsVisible = a.IsVisible
                     Dim displayRect = StoredAnnotationRectToDisplayPercent(a)
-                    _annotationXPercent = displayRect.X
-                    _annotationYPercent = displayRect.Y
+                    ' Ein verankertes Wasserzeichen wird im Editor ueber ABSTAENDE zum Anker bedient:
+                    ' so beschriften und klemmen die Regler ("Abst. X", -50..50), so schreibt das Ziehen
+                    ' zurueck, und so loest der Auswahlrahmen wieder auf. StoredAnnotationRectToDisplay-
+                    ' Percent liefert dagegen die bereits AUFGELOESTE Lage (samt Drehung, Spiegelung und
+                    ' Beschnitt). Ohne diese Ruecknahme stand die aufgeloeste Lage im Abstands-Puffer und
+                    ' wurde ein zweites Mal gespiegelt: bei Anker unten rechts sass der Rahmen oben links.
+                    Dim editorPos = ComputeAnnotationOffsetPercent(a.Kind, displayRect.X, displayRect.Y,
+                                                                   displayRect.Width, displayRect.Height, _annotationAnchor)
+                    _annotationXPercent = editorPos.X
+                    _annotationYPercent = editorPos.Y
                     _annotationWidthPercent = displayRect.Width
                     _annotationHeightPercent = displayRect.Height
                     AnnotationFillKind = a.FillKind
@@ -18305,7 +18313,12 @@ Namespace ViewModels
             a.Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             a.IsVisible = _annotationIsVisible
             If geometrieFrei Then
-                Dim storedRect = DisplayAnnotationRectToStoredPercent(normalizedKind, _annotationXPercent, _annotationYPercent,
+                ' Gegenstueck zum Laden: der Puffer traegt beim verankerten Wasserzeichen den ABSTAND,
+                ' DisplayAnnotationRectToStoredPercent erwartet die Lage. Einmal aufloesen, dann geht
+                ' der Rueckweg (inkl. Drehung/Spiegelung/Beschnitt) ueber dieselbe Renderer-Formel.
+                Dim editorPos = ComputeAnnotationOriginPercent(normalizedKind, _annotationXPercent, _annotationYPercent,
+                                                              _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
+                Dim storedRect = DisplayAnnotationRectToStoredPercent(normalizedKind, editorPos.X, editorPos.Y,
                                                                       _annotationWidthPercent, _annotationHeightPercent)
                 a.XPixels = CSng(PercentXToPixels(storedRect.X))
                 a.YPixels = CSng(PercentYToPixels(storedRect.Y))
@@ -20080,10 +20093,10 @@ Namespace ViewModels
 
                 RaiseExtendedAdjustmentProperties()
                 SetLastAppliedLightroomPreset(xmpPath)
-                StatusText = LocalizationService.T("Lightroom-Preset angewendet")
+                StatusText = LocalizationService.T("XMP-Preset angewendet")
                 SchedulePreviewForCurrentTarget()
             Catch ex As Exception
-                StatusText = LocalizationService.T("Lightroom-Preset konnte nicht geladen werden: ") & ex.Message
+                StatusText = LocalizationService.T("XMP-Preset konnte nicht geladen werden: ") & ex.Message
             End Try
         End Sub
 

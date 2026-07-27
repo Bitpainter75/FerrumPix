@@ -2217,14 +2217,14 @@
   <data name="Lichtwinkel_d9e9e055" xml:space="preserve">
     <value>Light angle</value>
   </data>
-  <data name="Lightroom_Preset_cd7e484e" xml:space="preserve">
-    <value>Lightroom preset</value>
+  <data name="XMP_Preset_60e2af23" xml:space="preserve">
+    <value>XMP preset</value>
   </data>
-  <data name="Lightroom_Preset_angewendet_e4e1914a" xml:space="preserve">
-    <value>Lightroom preset applied</value>
+  <data name="XMP_Preset_angewendet_b8682929" xml:space="preserve">
+    <value>XMP preset applied</value>
   </data>
-  <data name="Lightroom_Preset_konnte_nicht_geladen_werden_4e8bbdf4" xml:space="preserve">
-    <value>Lightroom preset could not be loaded: </value>
+  <data name="XMP_Preset_konnte_nicht_geladen_werden_4f03b261" xml:space="preserve">
+    <value>XMP preset could not be loaded: </value>
   </data>
   <data name="Lineale_5d516e97" xml:space="preserve">
     <value>Rulers</value>
@@ -2676,8 +2676,8 @@
   <data name="Anwenden_b18093c4" xml:space="preserve">
     <value>Apply</value>
   </data>
-  <data name="Lightroom_xmp_e98c9654" xml:space="preserve">
-    <value>Lightroom (.xmp)</value>
+  <data name="XMP_Preset_xmp_0485da08" xml:space="preserve">
+    <value>XMP preset (.xmp)</value>
   </data>
   <data name="Vorgabe_894dedf4" xml:space="preserve">
     <value>Preset</value>
@@ -2691,8 +2691,8 @@
   <data name="LUT_w_hlen_0025fa8e" xml:space="preserve">
     <value>Choose LUT</value>
   </data>
-  <data name="Lightroom_Preset_w_hlen_2390b675" xml:space="preserve">
-    <value>Choose Lightroom preset</value>
+  <data name="XMP_Preset_w_hlen_c80609bb" xml:space="preserve">
+    <value>Choose XMP preset</value>
   </data>
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>Overwrite originals</value>
@@ -3294,8 +3294,8 @@
   <data name="Wasserzeichen_Bild_ausw_hlen_75101908" xml:space="preserve">
     <value>Choose watermark image</value>
   </data>
-  <data name="Lightroom_Preset_laden_3bd63d09" xml:space="preserve">
-    <value>Load Lightroom preset</value>
+  <data name="XMP_Preset_laden_be6ec5aa" xml:space="preserve">
+    <value>Load XMP preset</value>
   </data>
   <data name="Bilder_Videos_29a7f050" xml:space="preserve">
     <value>Images &amp; videos</value>
@@ -3303,8 +3303,8 @@
   <data name="Bilder_Videos_zum_Hochladen_w_hlen_bc013d24" xml:space="preserve">
     <value>Choose images/videos to upload</value>
   </data>
-  <data name="Ordner_mit_Lightroom_Presets_w_hlen_11dc24cb" xml:space="preserve">
-    <value>Choose folder with Lightroom presets</value>
+  <data name="Ordner_mit_XMP_Presets_w_hlen_16a76477" xml:space="preserve">
+    <value>Choose folder with XMP presets</value>
   </data>
   <data name="Ordner_mit_LUTs_w_hlen_98a5a3f5" xml:space="preserve">
     <value>Choose folder with LUTs</value>

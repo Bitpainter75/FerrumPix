@@ -24,7 +24,7 @@
                 <Button Classes="segmented" Margin="0,0,8,6"
                         Classes.active="{Binding IsDialogFilterSourceLightroom}"
                         Click="OnFilterSourceClick"
-                        Tag="Lightroom">Lightroom (.xmp)</Button>
+                        Tag="Lightroom">XMP-Preset (.xmp)</Button>
                 <Button Classes="segmented" Margin="0,0,8,6"
                         Classes.active="{Binding IsDialogFilterSourceLut}"
                         Click="OnFilterSourceClick"

@@ -549,10 +549,10 @@ Namespace Views
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
-                    .Title = LocalizationService.T("Lightroom-Preset laden"),
+                    .Title = LocalizationService.T("XMP-Preset laden"),
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
-                        New FilePickerFileType("Lightroom XMP") With {
+                        New FilePickerFileType("XMP-Preset") With {
                             .Patterns = New String() {"*.xmp"}
                         }
                     }
