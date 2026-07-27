@@ -3649,7 +3649,14 @@ Namespace ViewModels
                 End If
                 ' Sidecar-Bilder zeigen im Zuschneide-Werkzeug das GANZE Bild und sonst nur den
                 ' Ausschnitt - beim Betreten wie beim Verlassen wechselt also die Anzeigegroesse.
-                If (value = EditorTool.Crop) <> (previousTool = EditorTool.Crop) Then NotifyLiveCropDisplayChanged()
+                If (value = EditorTool.Crop) <> (previousTool = EditorTool.Crop) Then
+                    NotifyLiveCropDisplayChanged()
+                    ' Beim VERLASSEN wechselt die Anzeige vom ganzen Bild auf den Ausschnitt, also auf
+                    ' eine andere Groesse. Ohne dieses Signal behielt die Ansicht den Zoom des ganzen
+                    ' Bildes bei, und der Ausschnitt blieb klein stehen. Der Zoom-MODUS entscheidet
+                    ' dann, was passiert - ein selbst gewaehlter Zoom bleibt also erhalten.
+                    If value <> EditorTool.Crop Then RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
+                End If
                 ' Ins Zuschneiden: das Bild einpassen, sonst zieht man an Anfassern, die neben der
                 ' Flaeche liegen. Gilt fuer JEDEN Dateityp.
                 If value = EditorTool.Crop AndAlso previousTool <> EditorTool.Crop Then
@@ -18004,6 +18011,36 @@ Namespace ViewModels
             If Not _activeSelectionIsMask AndAlso SelectedGradientMask Is Nothing Then Return
             VerbergeMaskenOverlay()
         End Sub
+
+        ''' <summary>Der Zoom, mit dem ein Bild in die Bearbeitungsflaeche passt - in Prozent.
+        ''' <paramref name="nurVerkleinern"/> entspricht der Einstellung "nur verkleinern": ein Bild,
+        ''' das kleiner als die Flaeche ist, wird dann NICHT hochskaliert.
+        ''' Eigene Funktion, damit die Regel geprueft werden kann - die beiden Aufrufer liegen in der
+        ''' View, und die erreicht der Pruefstand nicht. Genau diese Regel war zweimal defekt: einmal
+        ''' wirkte die Einstellung erst nach erneutem Oeffnen, einmal passte eine Groessenaenderung
+        ''' der Flaeche nicht neu ein.</summary>
+        Friend Shared Function EinpassenProzent(flaecheBreite As Double, flaecheHoehe As Double,
+                                                bildBreite As Double, bildHoehe As Double,
+                                                nurVerkleinern As Boolean) As Double
+            If flaecheBreite <= 0 OrElse flaecheHoehe <= 0 OrElse bildBreite <= 0 OrElse bildHoehe <= 0 Then Return 0
+            Dim prozent = Math.Min(flaecheBreite / bildBreite, flaecheHoehe / bildHoehe) * 100.0
+            If nurVerkleinern Then prozent = Math.Min(prozent, 100.0)
+            Return prozent
+        End Function
+
+        ''' <summary>Der Zoom fuer ein bewusst ausgeloestes Einpassen (Zuschneiden betreten, Werkzeug
+        ''' verlassen) - oder 0 fuer "Zoom des Nutzers nicht anfassen".
+        ''' Nicht angefasst wird nur in einem Fall: die Einstellung steht auf "nur verkleinern" UND das
+        ''' Bild passt ohnehin schon hinein. Steht sie auf "immer einpassen", wird auch vergroessert -
+        ''' genau das fehlte, weshalb ein zugeschnittenes Bild klein stehen blieb.</summary>
+        Friend Shared Function EinpassenZiel(flaecheBreite As Double, flaecheHoehe As Double,
+                                             bildBreite As Double, bildHoehe As Double,
+                                             nurVerkleinern As Boolean) As Double
+            Dim prozent = EinpassenProzent(flaecheBreite, flaecheHoehe, bildBreite, bildHoehe, False)
+            If prozent <= 0 Then Return 0
+            If nurVerkleinern AndAlso prozent >= 100.0 Then Return 0
+            Return prozent
+        End Function
 
         Private Shared Function IsLayerTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Text OrElse tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse

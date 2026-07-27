@@ -240,8 +240,7 @@ Namespace Views
             vm.ActiveZoomPreset = ZoomPresetMode.Fit
             _panX = 0
             _panY = 0
-            Dim fitPct = Math.Min(cw / imgW, ch / imgH) * 100.0
-            If IsOnlyWhenLargerFitBehavior() Then fitPct = Math.Min(fitPct, 100.0)
+            Dim fitPct = EditorViewModel.EinpassenProzent(cw, ch, imgW, imgH, IsOnlyWhenLargerFitBehavior())
             SetZoom(ZoomToSlider(fitPct))
         End Sub
 
@@ -897,18 +896,19 @@ Namespace Views
             _fitAfterNextDisplayImage = True
         End Sub
 
-        ''' <summary>Passt das Bild in die Flaeche ein - aber NUR verkleinernd. Ein kleines Bild auf
-        ''' Bildschirmgroesse zu ziehen taeuscht Aufloesung vor; im Zuschneiden waere es zudem
-        ''' irrefuehrend, weil die Anfasser dann Pixel meinen, die es nicht gibt.</summary>
+        ''' <summary>Passt das Bild in die Flaeche ein. Ob ein Bild, das bereits hineinpasst, dabei
+        ''' VERGROESSERT wird, entscheidet die Einstellung "nur verkleinern" - nicht diese Funktion.
+        ''' Vorher stand die Regel hier fest verdrahtet auf "nur verkleinern", weshalb ein zugeschnittenes
+        ''' Bild trotz eingeschaltetem Einpassen klein stehen blieb.</summary>
         Private Sub FitImageIntoViewport()
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If canvas Is Nothing OrElse vm Is Nothing OrElse vm.DisplayImage Is Nothing Then Return
-            Dim cw = canvas.Bounds.Width, ch = canvas.Bounds.Height
             Dim groesse = GetEffectiveDisplaySize(vm)
-            If cw <= 0 OrElse ch <= 0 OrElse groesse.Width <= 0 OrElse groesse.Height <= 0 Then Return
-            Dim fitPct = Math.Min(cw / groesse.Width, ch / groesse.Height) * 100.0
-            If fitPct >= 100.0 Then Return   ' passt bereits - Zoom des Nutzers nicht anfassen
+            Dim fitPct = EditorViewModel.EinpassenZiel(canvas.Bounds.Width, canvas.Bounds.Height,
+                                                       groesse.Width, groesse.Height,
+                                                       IsOnlyWhenLargerFitBehavior())
+            If fitPct <= 0 Then Return   ' Zoom des Nutzers nicht anfassen
             vm.ActiveZoomPreset = ZoomPresetMode.Fit
             _panX = 0
             _panY = 0
@@ -1070,8 +1070,7 @@ Namespace Views
             If Not _zoomInitialized Then
                 _panX = 0
                 _panY = 0
-                Dim fitPct = Math.Min(cw / imgW, ch / imgH) * 100.0
-                If IsOnlyWhenLargerFitBehavior() Then fitPct = Math.Min(fitPct, 100.0)
+                Dim fitPct = EditorViewModel.EinpassenProzent(cw, ch, imgW, imgH, IsOnlyWhenLargerFitBehavior())
                 _zoomSliderValue = ZoomToSlider(fitPct)
                 _ignoreSliderChange = True
                 Dim zs = Me.FindControl(Of RoundSlider)("EditorZoomSlider")
