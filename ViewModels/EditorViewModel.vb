@@ -869,6 +869,13 @@ Namespace ViewModels
                 If _suppressLayerRowSelectionSync OrElse Object.ReferenceEquals(value, _selectedLayerRow) Then Return
                 Dim annotationIndex = If(value?.Annotation Is Nothing, -1, _annotations.IndexOf(value.Annotation))
                 Dim adjustmentId = If(value?.AdjustmentLayer Is Nothing, "", value.AdjustmentLayer.Id)
+                ' Das Merk-Flag gilt fuer GENAU DIESEN Wechsel: hier lesen und sofort abraeumen.
+                ' Vorher wurde es erst am Ende des Setters zurueckgesetzt - der Gruppenzweig steigt
+                ' aber mit Return aus und erreichte die Stelle nie. Danach galt es fuer den NAECHSTEN
+                ' Klick weiter, und eine Ebene ausserhalb der Gruppe kam zur alten Auswahl HINZU,
+                ' statt sie zu ersetzen.
+                Dim mengeBehalten = _preserveMultiSelectionOnNextRowChange
+                _preserveMultiSelectionOnNextRowChange = False
                 If IsSelectionAdjustModeActive() AndAlso adjustmentId <> _selectionAdjustLayerId Then
                     ' Zielwechsel immer aus einem kanonischen globalen Reglerstand beginnen. Ein
                     ' Objekt darf nicht versehentlich die gerade sichtbaren Werte der lokalen
@@ -911,7 +918,7 @@ Namespace ViewModels
                     ' Die Menge bleibt NUR beim Rechtsklick erhalten (Kontextmenü). Ein normaler
                     ' Klick auf eine Zeile grenzt bewusst auf dieses eine Objekt ein - sonst käme man
                     ' in einer Gruppe nie an ein einzelnes Mitglied.
-                    Dim keepSet = _preserveMultiSelectionOnNextRowChange AndAlso
+                    Dim keepSet = mengeBehalten AndAlso
                                   IsAnnotationSelected(_annotations(annotationIndex)) AndAlso HasMultiAnnotationSelection
                     ' Beim Ankerwechsel MUSS der bisherige Anker in die Zusatzliste - er ist Teil der
                     ' Auswahl und stünde sonst als einziger nicht mehr darin (nach
@@ -922,6 +929,14 @@ Namespace ViewModels
                         previousAnchor = _annotations(_selectedAnnotationIndex)
                     End If
                     _selectedMaskedAdjustmentLayerId = ""
+                    ' Auch die ZUSATZliste der Korrekturebenen raeumen: sonst blieben Mitglieder einer
+                    ' zuvor markierten Gruppe weiter markiert, waehrend nur noch das Objekt gemeint ist.
+                    ' Die fuehrende Ebene oben zu loeschen genuegt nicht - genau daran blieben nach dem
+                    ' Klick auf ein Textobjekt zwei Verlaufsebenen orange stehen.
+                    If _extraSelectedAdjustmentLayers.Count > 0 Then
+                        _extraSelectedAdjustmentLayers.Clear()
+                        RaiseMultiSelectionChanged()
+                    End If
                     SelectedAnnotationIndex = annotationIndex
                     If keepSet Then
                         Dim newAnchor = _annotations(annotationIndex)
@@ -939,14 +954,17 @@ Namespace ViewModels
                 ElseIf Not String.IsNullOrWhiteSpace(adjustmentId) Then
                     ' Dieselbe Regel für Korrekturebenen: eine bereits mitmarkierte Zeile behält die Menge -
                     ' inklusive der bisherigen Hauptebene, die dabei in die Zusatzliste rückt.
-                    Dim keepLayerSet = _preserveMultiSelectionOnNextRowChange AndAlso
+                    Dim keepLayerSet = mengeBehalten AndAlso
                                        value?.AdjustmentLayer IsNot Nothing AndAlso
                                        IsAdjustmentLayerSelected(value.AdjustmentLayer) AndAlso
                                        SelectedAdjustmentLayers.Count > 1
                     If keepLayerSet Then
                         Dim previousPrimary = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+                        ' Ueber die ID pruefen, nicht ueber die Referenz: ApplyAdjustments ersetzt die
+                        ' Ebenenliste durch Klone, ein Contains ueber Objekte findet den Vorgaenger
+                        ' danach nicht mehr und er landete doppelt in der Liste.
                         If previousPrimary IsNot Nothing AndAlso previousPrimary.Id <> adjustmentId AndAlso
-                           Not _extraSelectedAdjustmentLayers.Contains(previousPrimary) Then
+                           Not _extraSelectedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = previousPrimary.Id) Then
                             _extraSelectedAdjustmentLayers.Add(previousPrimary)
                         End If
                         _extraSelectedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.Id = adjustmentId)
@@ -954,6 +972,12 @@ Namespace ViewModels
                         _extraSelectedAdjustmentLayers.Clear()
                     End If
                     _selectedMaskedAdjustmentLayerId = adjustmentId
+                    ' Spiegelfall zum Objekt-Zweig: eine Korrekturebene zu waehlen raeumt die
+                    ' MEHRFACHauswahl der Objekte, sonst blieben dort Zeilen markiert stehen.
+                    If _extraSelectedAnnotations.Count > 0 Then
+                        _extraSelectedAnnotations.Clear()
+                        RaiseMultiSelectionChanged()
+                    End If
                     SelectedAnnotationIndex = -1
                     _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) r.AdjustmentLayer IsNot Nothing AndAlso r.AdjustmentLayer.Id = adjustmentId)
                 Else
@@ -961,6 +985,11 @@ Namespace ViewModels
                     SelectedAnnotationIndex = -1
                     _selectedLayerRow = Nothing
                 End If
+                ' Kein scharfgestellter Platzierungstyp mehr: SelectedAnnotationIndex = -1 raeumt ihn
+                ' NICHT ab (das passiert nur beim Markieren eines Objekts). Wer vom Text-Werkzeug auf
+                ' eine Masken- oder Auswahlebene klickt, behielt sonst den Akzentrahmen auf "Text" -
+                ' und der naechste Klick ins Bild haette dort ein Textobjekt gesetzt.
+                PendingInsertKind = ""
                 RaiseLayerPanelSelectionChanged()
                 ' Nur die Auswahl/Maske DER gewählten Ebene aktiv: vorige Selektion im Bild verwerfen und
                 ' die dieser Ebene laden (Auswahl-Ebene -> Ameisen, Masken-Ebene -> rot). Objekt/Nichts
@@ -989,11 +1018,16 @@ Namespace ViewModels
                             RaiseGradientPropertiesChanged()
                         End If
                     End If
-                ElseIf _hasActiveSelection Then
-                    ClearSelection(captureUndo:=False)
+                Else
+                    ' Kein Ebenen-Ziel mehr (Objekt oder nichts gewaehlt). Eine laufende Pixelauswahl
+                    ' raeumt ClearSelection ab - ein VERLAUF hat aber gar keine aktive Auswahl, sein
+                    ' rotes Overlay haengt allein an der markierten Ebene. Ohne die zwei Zeilen bleibt
+                    ' es stehen, und die Maske sieht aus, als waere sie noch gewaehlt.
+                    If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+                    RaiseGradientPropertiesChanged()
+                    PublishMaskBrushOverlay()
                 End If
                 RefreshSelectionAdjustMode()
-                _preserveMultiSelectionOnNextRowChange = False
             End Set
         End Property
 
@@ -2491,33 +2525,56 @@ Namespace ViewModels
 
         Private ReadOnly _extraSelectedAdjustmentLayers As New List(Of MaskedAdjustmentLayer)()
 
+        ''' <summary>Die markierten Korrekturebenen - die fuehrende zuerst, dann die per Strg oder
+        ''' Gruppe dazugenommenen.
+        '''
+        ''' Aufgeloest wird ueber die ID, NICHT ueber die Objektgleichheit. Das ist der Unterschied
+        ''' zwischen "geht" und "geht nicht": ApplyAdjustments ersetzt _maskedAdjustmentLayers durch
+        ''' frische KLONE (Undo, Werkzeugwechsel, Anpassungsmodus-Wechsel). Die Zusatzliste zeigte
+        ''' danach auf die alten Objekte, ein Contains ueber Referenzen fand sie nicht mehr - und die
+        ''' Mehrfachauswahl war still auf eine Ebene zusammengeschrumpft, obwohl das Panel weiter
+        ''' zwei markierte Zeilen zeigte. Symptom: eine Anpassung auf mehreren Masken wirkte nur auf
+        ''' einer. Gemessen im Diagnoseprotokoll mit "extra=1 ausgewaehlt=1".</summary>
         Public ReadOnly Property SelectedAdjustmentLayers As IReadOnlyList(Of MaskedAdjustmentLayer)
             Get
                 Dim result As New List(Of MaskedAdjustmentLayer)()
                 Dim primary = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
                 If primary IsNot Nothing Then result.Add(primary)
                 For Each l In _extraSelectedAdjustmentLayers
-                    If l IsNot Nothing AndAlso _maskedAdjustmentLayers.Contains(l) AndAlso Not result.Contains(l) Then result.Add(l)
+                    If l Is Nothing Then Continue For
+                    Dim aktuell = _maskedAdjustmentLayers.FirstOrDefault(Function(x) x IsNot Nothing AndAlso x.Id = l.Id)
+                    If aktuell IsNot Nothing AndAlso Not result.Any(Function(r) r.Id = aktuell.Id) Then result.Add(aktuell)
                 Next
                 Return result
             End Get
         End Property
 
+        ''' <summary>Ebenfalls ueber die ID - aus demselben Grund wie oben.</summary>
         Public Function IsAdjustmentLayerSelected(layer As MaskedAdjustmentLayer) As Boolean
             If layer Is Nothing Then Return False
-            Return SelectedAdjustmentLayers.Contains(layer)
+            Return SelectedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = layer.Id)
         End Function
 
-        ''' <summary>Strg+Klick auf eine Korrekturebene: dazu oder weg.</summary>
+        ''' <summary>Strg+Klick auf eine Korrekturebene: dazu oder weg.
+        '''
+        ''' Durchgehend ueber die ID, nie ueber die Objektgleichheit: ApplyAdjustments ersetzt
+        ''' _maskedAdjustmentLayers durch frische Klone und raeumt dabei - anders als bei den
+        ''' Objekten - die Zusatzliste NICHT ab. Eine Pruefung ueber Referenzen findet die Eintraege
+        ''' danach nicht mehr, und der Strg-Klick haette sie weder entfernen noch als "schon
+        ''' markiert" erkennen koennen.</summary>
         Public Sub ToggleAdjustmentLayerInSelection(layer As MaskedAdjustmentLayer)
-            If layer Is Nothing OrElse Not _maskedAdjustmentLayers.Contains(layer) Then Return
+            If layer Is Nothing Then Return
+            If Not _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = layer.Id) Then Return
             If IsAdjustmentLayerSelected(layer) Then
                 If _selectedMaskedAdjustmentLayerId = layer.Id Then
-                    Dim nextPrimary = _extraSelectedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso _maskedAdjustmentLayers.Contains(l))
-                    _extraSelectedAdjustmentLayers.Remove(nextPrimary)
+                    Dim nextPrimary = _extraSelectedAdjustmentLayers.FirstOrDefault(
+                        Function(l) l IsNot Nothing AndAlso _maskedAdjustmentLayers.Any(Function(x) x IsNot Nothing AndAlso x.Id = l.Id))
+                    If nextPrimary IsNot Nothing Then
+                        _extraSelectedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.Id = nextPrimary.Id)
+                    End If
                     _selectedMaskedAdjustmentLayerId = If(nextPrimary Is Nothing, "", nextPrimary.Id)
                 Else
-                    _extraSelectedAdjustmentLayers.Remove(layer)
+                    _extraSelectedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.Id = layer.Id)
                 End If
             Else
                 If String.IsNullOrWhiteSpace(_selectedMaskedAdjustmentLayerId) Then
@@ -11115,6 +11172,7 @@ Namespace ViewModels
         Public ReadOnly Property TogglePixelLayerVisibilityCommand As ICommand
         Public ReadOnly Property ToggleBackgroundVisibilityCommand As ICommand
         Public ReadOnly Property ToggleGlobalAdjustmentsVisibilityCommand As ICommand
+        Public ReadOnly Property ResetPixelAdjustmentsCommand As ICommand
         Public ReadOnly Property ResetCurrentToolCommand As ICommand
         Public ReadOnly Property ResetLightCommand As ICommand
         Public ReadOnly Property ResetColorCommand As ICommand
@@ -11390,6 +11448,14 @@ Namespace ViewModels
             ToggleBackgroundVisibilityCommand = ReactiveCommand.Create(Sub() ToggleBackgroundVisibility())
             ToggleGlobalAdjustmentsVisibilityCommand = ReactiveCommand.Create(Sub() ToggleGlobalAdjustmentsVisibility())
             TogglePixelLayerVisibilityCommand = ReactiveCommand.Create(Sub() TogglePixelLayerVisibility())
+            ResetPixelAdjustmentsCommand = ReactiveCommand.Create(Sub()
+                                                                      If Not HasDocument Then Return
+                                                                      PushUndo()
+                                                                      ResetPixelAdjustmentsInternal()
+                                                                      _hasChanges = True
+                                                                      Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                                                                      AddHistoryEntry("Anpassungen zurückgesetzt")
+                                                                  End Sub)
             ResetCurrentToolCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo()
                                                                  ResetCurrentToolInternal()
@@ -14908,8 +14974,13 @@ Namespace ViewModels
 
             If IsSelectionAdjustModeActive() Then
                 Dim localValues = adj.ExtractPixelAdjustments()
-                Dim layer = adj.MaskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectionAdjustLayerId)
-                If layer IsNot Nothing Then layer.Adjustments = localValues
+                ' Auf JEDE ausgewaehlte Ebene, nicht nur die fuehrende: das hier ist der Weg, aus dem
+                ' die VORSCHAU entsteht. Schreibt er nur eine, sieht der Nutzer die Anpassung einer
+                ' Gruppe nur auf einer Maske - unabhaengig davon, was der Abschluss spaeter tut.
+                For Each zielId In AnpassungszieleIds()
+                    Dim layer = adj.MaskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = zielId)
+                    If layer IsNot Nothing Then layer.Adjustments = localValues.Clone()
+                Next
                 adj.CopyPixelAdjustmentsFrom(_selectionImagePixelAdjustments)
             End If
             Return adj
@@ -15510,7 +15581,6 @@ Namespace ViewModels
                     If grp IsNot Nothing Then _annotationGroups.Add(grp.Clone())
                 Next
             End If
-            DropOrphanedAnnotationGroups()
             _imageMasks.Clear()
             If adj.Masks IsNot Nothing Then
                 For Each mask In adj.Masks
@@ -15523,6 +15593,13 @@ Namespace ViewModels
                     If layer IsNot Nothing Then _maskedAdjustmentLayers.Add(layer.Clone())
                 Next
             End If
+            ' ERST JETZT aufraeumen - eine Gruppe zaehlt Objekte UND Korrekturebenen als Mitglieder.
+            ' Der Aufruf stand vorher VOR dem Wiederherstellen der Korrekturebenen: eine Gruppe aus
+            ' reinen Masken-/Auswahlebenen hatte zu dem Zeitpunkt noch keine Mitglieder und wurde als
+            ' verwaist geloescht. Beim Laden einer .fpx verschwand sie damit aus dem Ebenen-Panel,
+            ' waehrend die Ebenen ihre GroupId behielten - das Kontextmenue bot weiter
+            ' "Gruppierung aufheben" an.
+            DropOrphanedAnnotationGroups()
             RebuildLayerRows()
             ClearSelectionMask()
             ' Transienter Masken-Bearbeitungszustand gehört NICHT in den Undo-Snapshot: nach dem
@@ -17833,6 +17910,28 @@ Namespace ViewModels
             Return New List(Of Integer) From {_objectAdjustIndex}
         End Function
 
+        ''' <summary>Die Korrekturebenen, die die laufende Anpassung bekommen - bei einer Gruppe
+        ''' bzw. Mehrfachauswahl alle, sonst die eine.
+        '''
+        ''' Aufgeloest wird JEDES MAL neu und nicht beim Scharfstellen gemerkt: RefreshSelectionAdjustMode
+        ''' steigt frueh aus, wenn der Modus schon auf derselben fuehrenden Ebene laeuft - genau der
+        ''' Fall beim Markieren einer Gruppe. Ein Merken dort liefe nie.
+        '''
+        ''' Steht die fuehrende Ebene nicht mehr in der Auswahl, gilt nur sie: sonst schriebe ein
+        ''' Abschluss die Werte auf voellig fremde Ebenen.</summary>
+        Private Function AnpassungszieleIds() As List(Of String)
+            Dim ziele As New List(Of String)()
+            If String.IsNullOrWhiteSpace(_selectionAdjustLayerId) Then Return ziele
+            Dim ausgewaehlt = SelectedAdjustmentLayers
+            If ausgewaehlt.Any(Function(l) l IsNot Nothing AndAlso l.Id = _selectionAdjustLayerId) Then
+                For Each l In ausgewaehlt
+                    If l IsNot Nothing AndAlso Not ziele.Contains(l.Id) Then ziele.Add(l.Id)
+                Next
+            End If
+            If ziele.Count = 0 Then ziele.Add(_selectionAdjustLayerId)
+            Return ziele
+        End Function
+
         Private Function IsObjectAdjustModeActive() As Boolean
             Return _objectAdjustIndex >= 0 AndAlso _imagePixelAdjustments IsNot Nothing
         End Function
@@ -17853,8 +17952,18 @@ Namespace ViewModels
                 ' aber weiter mit dem Pinsel bearbeitbar bleiben. Geräumt wird erst beim Deselektieren.
                 If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
                 Dim localValues = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
-                Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectionAdjustLayerId)
-                If layer IsNot Nothing Then layer.Adjustments = localValues
+                ' Auf JEDE ausgewaehlte Ebene schreiben, nicht nur auf die fuehrende - sonst bekaeme
+                ' bei einer Gruppe nur eine Maske die Anpassung. Die Ziele werden HIER aufgeloest und
+                ' nicht beim Scharfstellen gemerkt: RefreshSelectionAdjustMode steigt frueh aus, wenn
+                ' der Modus schon auf derselben fuehrenden Ebene laeuft - ein Merken dort liefe bei
+                ' genau dem Fall nie. Beim Abschluss steht die Auswahl noch (der Wechsel auf eine
+                ' andere Zeile committet VOR dem Umsetzen der Auswahl).
+                ' Jede Ebene bekommt eine EIGENE Kopie: ein gemeinsames Objekt haette spaeter jede
+                ' Aenderung an einer Ebene auf allen mitgezogen.
+                For Each zielId In AnpassungszieleIds()
+                    Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = zielId)
+                    If layer IsNot Nothing Then layer.Adjustments = localValues.Clone()
+                Next
 
                 Dim restored = BuildAdjustmentsFromFields()
                 restored.CopyPixelAdjustmentsFrom(_selectionImagePixelAdjustments)
@@ -19275,6 +19384,30 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ColorGradeGlobalSaturation))
             Me.RaisePropertyChanged(NameOf(ColorGradeGlobalLuminance))
             Me.RaisePropertyChanged(NameOf(ColorGradeBlending))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Nimmt ALLE Reglerwerte zurueck, die eine gespeicherte Anpassung bzw. die
+        ''' automatische Bildverbesserung setzt - Anpassen, Farbe, Details, Effekte, Kurve, Filter.
+        '''
+        ''' Bewusst aus den vorhandenen Gruppen-Resets zusammengesetzt statt neu geschrieben: so
+        ''' bleibt jeder Regler an genau EINER Stelle definiert. Und bewusst NICHT
+        ''' ResetAdjustmentsInternal - das baut zusaetzlich das Arbeitsbild neu auf und wirft
+        ''' gebackene Retusche und Pinselstriche weg. Wer die Bildverbesserung zuruecknehmen will,
+        ''' will nicht seine Retusche verlieren.</summary>
+        Private Sub ResetPixelAdjustmentsInternal()
+            ClearAutoAdjustState()
+            ResetLightInternal()
+            ResetCurvePoints()
+            ResetNegativeInternal()
+            ResetColorInternal()
+            ResetHslInternal()
+            ResetColorGradingInternal()
+            ResetCalibrationInternal()
+            ResetDetailInternal()
+            ResetEffectsInternal()
+            ResetFilterInternal()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub

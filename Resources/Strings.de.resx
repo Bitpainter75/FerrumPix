@@ -4646,4 +4646,7 @@
   <data name="Aus_der_Auswahl_direkt_eine_Auswahlebene_erstell_920a69ad" xml:space="preserve">
     <value>Aus der Auswahl direkt eine Auswahlebene erstellen (ohne erst eine Anpassung ändern zu müssen)</value>
   </data>
+  <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
+    <value>Alle Regler zurücksetzen - nimmt die automatische Bildverbesserung und eine angewendete Anpassung wieder heraus</value>
+  </data>
 </root>

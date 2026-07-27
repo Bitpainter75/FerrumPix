@@ -4647,4 +4647,7 @@
   <data name="Aus_der_Auswahl_direkt_eine_Auswahlebene_erstell_920a69ad" xml:space="preserve">
     <value>Turn the selection straight into a selection layer (without having to change a setting first)</value>
   </data>
+  <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
+    <value>Reset every slider — takes back the automatic enhancement and any adjustment you applied</value>
+  </data>
 </root>

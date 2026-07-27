@@ -4646,4 +4646,7 @@
   <data name="Aus_der_Auswahl_direkt_eine_Auswahlebene_erstell_920a69ad" xml:space="preserve">
     <value>Trasforma la selezione direttamente in un livello selezione (senza dover prima cambiare un’impostazione)</value>
   </data>
+  <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
+    <value>Azzera tutti i cursori: annulla il miglioramento automatico e qualsiasi regolazione applicata</value>
+  </data>
 </root>

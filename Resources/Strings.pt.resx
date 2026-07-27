@@ -4645,4 +4645,7 @@
   <data name="Aus_der_Auswahl_direkt_eine_Auswahlebene_erstell_920a69ad" xml:space="preserve">
     <value>Transformar a seleção diretamente numa camada de seleção (sem ter de alterar primeiro um ajuste)</value>
   </data>
+  <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
+    <value>Repor todos os controlos — desfaz a melhoria automática e qualquer ajuste aplicado</value>
+  </data>
 </root>

@@ -4646,4 +4646,7 @@
   <data name="Aus_der_Auswahl_direkt_eine_Auswahlebene_erstell_920a69ad" xml:space="preserve">
     <value>Transformer la sélection directement en calque de sélection (sans devoir d’abord modifier un réglage)</value>
   </data>
+  <data name="Alle_Regler_zur_cksetzen_nimmt_die_automatische__d7ff53ed" xml:space="preserve">
+    <value>Réinitialiser tous les curseurs — annule l’amélioration automatique et tout réglage appliqué</value>
+  </data>
 </root>

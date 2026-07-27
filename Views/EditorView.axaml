@@ -919,13 +919,32 @@
                                 <Expander Header="Anpassungen" icons:ExpanderState.Key="adjust-presets">
                                     <Expander.HeaderTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Spacing="8"
-                                                        VerticalAlignment="Center">
-                                                <icons:SvgIcon
-                                                    Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
-                                                    Width="14" Height="14" />
-                                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                                            </StackPanel>
+                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8"
+                                                            VerticalAlignment="Center">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
+                                                        Width="14" Height="14" />
+                                                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <!-- Zuruecksetzen wie in jeder anderen Gruppe. Es nimmt die
+                                                     REGLER zurueck (Anpassen, Farbe, Details, Effekte,
+                                                     Kurve, Filter) - also alles, was die automatische
+                                                     Bildverbesserung oder eine gespeicherte Anpassung
+                                                     setzt. Zuschnitt, Objekte, Masken und gebackene
+                                                     Retusche bleiben stehen. -->
+                                                <Button Grid.Column="1"
+                                                        Classes="icon-btn group-reset"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Padding="0"
+                                                        Command="{Binding DataContext.ResetPixelAdjustmentsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        ToolTip.Tip="Alle Regler zurücksetzen - nimmt die automatische Bildverbesserung und eine angewendete Anpassung wieder heraus">
+                                                    <icons:SvgIcon
+                                                        Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                                        Width="14" Height="14" />
+                                                </Button>
+                                            </Grid>
                                         </DataTemplate>
                                     </Expander.HeaderTemplate>
                                     <StackPanel Spacing="6" Margin="0,8,0,0">
