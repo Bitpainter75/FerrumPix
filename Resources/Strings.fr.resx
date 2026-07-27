@@ -4652,4 +4652,16 @@
   <data name="Als_neues_Immich_Asset_gespeichert_das_Original__673386eb" xml:space="preserve">
     <value>Enregistré comme nouvel élément Immich, l'original reste : </value>
   </data>
+  <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
+    <value>Adapter la luminosité de base au modèle d’appareil</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
+    <value>Les fichiers RAW de différents appareils sortent du capteur avec des luminosités différentes. Activé, FerrumPix harmonise cela grâce à des valeurs de référence pour plus de 200 modèles, afin que la même scène soit développée avec la même clarté quel que soit l’appareil.</value>
+  </data>
+  <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
+    <value>Comparer</value>
+  </data>
+  <data name="Bild_anheften_das_n_chste_Bild_wird_daneben_zum__e44dba37" xml:space="preserve">
+    <value>Épingler l’image — la suivante s’affiche à côté pour comparaison</value>
+  </data>
 </root>

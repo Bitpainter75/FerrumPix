@@ -4652,4 +4652,16 @@
   <data name="Als_neues_Immich_Asset_gespeichert_das_Original__673386eb" xml:space="preserve">
     <value>Als neues Immich-Asset gespeichert, das Original bleibt: </value>
   </data>
+  <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
+    <value>Grundhelligkeit an das Kameramodell anpassen</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
+    <value>RAW-Dateien verschiedener Kameras kommen unterschiedlich hell aus dem Sensor. Eingeschaltet gleicht FerrumPix das anhand von Referenzwerten für über 200 Kameramodelle an, damit dieselbe Aufnahme mit verschiedenen Kameras gleich hell entwickelt wird.</value>
+  </data>
+  <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
+    <value>Vergleichen</value>
+  </data>
+  <data name="Bild_anheften_das_n_chste_Bild_wird_daneben_zum__e44dba37" xml:space="preserve">
+    <value>Bild anheften – das nächste Bild wird daneben zum Vergleich gezeigt</value>
+  </data>
 </root>

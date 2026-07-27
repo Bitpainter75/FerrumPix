@@ -4420,6 +4420,25 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Zwei markierte Bilder nebeneinander oeffnen. Uebergibt DIESELBE Pfadliste und
+        ''' denselben Cache-Skopus wie das Einzeloeffnen - sonst baut der Betrachter den Ordner aus
+        ''' dem linken Bild neu auf, und aus einer Suchliste heraus stuende ploetzlich ein ganz
+        ''' anderer Filmstreifen da.</summary>
+        Public Sub CompareSelectedInViewer()
+            Try
+                Dim gewaehlt = Items.Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso
+                                                       i.IsSelected AndAlso Not String.IsNullOrEmpty(i.FilePath)).ToList()
+                If gewaehlt.Count <> 2 Then Return
+                If gewaehlt.Any(Function(i) i.IsImmichAsset) Then Return
+                _mainVm.OpenCompareInViewer(gewaehlt(0).FilePath, gewaehlt(1).FilePath,
+                                            Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
+                                            cacheScopeId:=CurrentThumbnailCacheScopeId,
+                                            cacheScopeName:=CurrentThumbnailCacheScopeName)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryViewModel.CompareSelectedInViewer", ex)
+            End Try
+        End Sub
+
         Public Async Sub OpenSelectedInViewer()
             Try
                 Dim selectedMedia = Items.Where(Function(i) i IsNot Nothing AndAlso (i.IsImage OrElse i.IsVideoFile) AndAlso i.IsSelected).ToList()

@@ -93,8 +93,15 @@ Namespace Views
             If Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
             Dim vm = GetVm()
             If vm Is Nothing Then Return
+            ' Auch im Vergleich der normale Weg: LoadPathAt entscheidet dort, dass die RECHTE
+            ' Flaeche weiterblaettert. Ein zweiter Sonderfall hier waere eine Gabelung, die beim
+            ' naechsten Umbau auseinanderlaeuft.
             vm.NavigateToItem(item)
             Me.Focus()
+        End Sub
+
+        Public Sub OnTogglePinClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.TogglePin()
         End Sub
 
         Public Sub OnToggleFilmstripClick(sender As Object, e As RoutedEventArgs)
@@ -186,6 +193,10 @@ Namespace Views
                 Case Key.Escape, Key.Back
                     If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen Then
                         mainVm.ExitFullscreen()
+                    ElseIf vm.IsCompareMode Then
+                        ' Erst den Vergleich verlassen, dann erst die Galerie - sonst springt man
+                        ' aus zwei Zustaenden auf einmal heraus.
+                        vm.ExitCompare()
                     Else
                         vm.BackToGalleryCommand.Execute(Nothing)
                     End If
@@ -240,6 +251,30 @@ Namespace Views
             If vm Is Nothing Then Return
             If IsWithinInfoSidebar(e.Source) Then Return
 
+            ' Im Vergleich zoomt das Rad BEIDE Flaechen: sie teilen sich ZoomLevel, es genuegt also,
+            ' den Wert zu aendern. Ohne diesen Zweig griffe der Handler auf die versteckte
+            ' Einzelbildflaeche zu und das Rad wuerde die Vergleichsflaeche nur scrollen.
+            If vm.IsCompareMode Then
+                If e.GetCurrentPoint(Me).Properties.IsRightButtonPressed OrElse
+                   e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+                    _suppressNextImageContextMenu = True
+                    Dim unterMaus = VergleichsflaecheUnter(e)
+                    If unterMaus IsNot Nothing Then
+                        ZoomVergleichAnPunkt(unterMaus, e.GetPosition(unterMaus), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+                    Else
+                        vm.ActiveZoomPreset = ZoomPresetMode.Manual
+                        vm.ZoomLevel = Math.Max(0.05, vm.ZoomLevel) * If(e.Delta.Y > 0, 1.25, 1.0 / 1.25)
+                    End If
+                Else
+                    ' Wie in der Einzelansicht blaettert das blanke Rad weiter - im Vergleich trifft
+                    ' das die RECHTE Flaeche (die Weiche sitzt in LoadPathAt), die linke bleibt als
+                    ' Bezug stehen.
+                    vm.NavigateByWheel(e.Delta.Y)
+                End If
+                e.Handled = True
+                Return
+            End If
+
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
             Dim rightButtonZoom = scrollViewer IsNot Nothing AndAlso e.GetCurrentPoint(scrollViewer).Properties.IsRightButtonPressed
 
@@ -261,6 +296,54 @@ Namespace Views
             End If
             e.Handled = True
         End Sub
+
+        ''' <summary>Zoomen im Vergleich, verankert am Punkt unter der Maus - wie in der Einzelansicht.
+        ''' Ohne das springt die Ansicht beim Zoomen weg, weil nur der Zoomwert steigt und der
+        ''' Ausschnitt stehen bleibt. Verankert wird an der Flaeche, ueber der die Maus steht; die
+        ''' andere folgt ueber die Ausschnitt-Spiegelung.
+        ''' Der Offset wird ZWEIMAL gesetzt: einmal sofort und einmal nach dem Layout-Durchlauf - vor
+        ''' dem Neu-Vermessen der Bilder kennt der ScrollViewer seinen neuen Umfang noch nicht.</summary>
+        Private Sub ZoomVergleichAnPunkt(quelle As ScrollViewer, punkt As Point, faktor As Double)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse quelle Is Nothing OrElse faktor <= 0 Then Return
+
+            Dim alterZoom = Math.Max(0.05, vm.ZoomLevel)
+            Dim bildX = (quelle.Offset.X + punkt.X) / alterZoom
+            Dim bildY = (quelle.Offset.Y + punkt.Y) / alterZoom
+
+            vm.ActiveZoomPreset = ZoomPresetMode.Manual
+            vm.ZoomLevel = alterZoom * faktor
+            ApplyCompareFitMode()
+
+            Dim setzeOffset =
+                Sub()
+                    Dim neuerZoom = Math.Max(0.05, vm.ZoomLevel)
+                    Dim ziel = New Vector(bildX * neuerZoom - punkt.X, bildY * neuerZoom - punkt.Y)
+                    quelle.Offset = New Vector(
+                        Math.Min(Math.Max(ziel.X, 0), Math.Max(0, quelle.Extent.Width - quelle.Viewport.Width)),
+                        Math.Min(Math.Max(ziel.Y, 0), Math.Max(0, quelle.Extent.Height - quelle.Viewport.Height)))
+                    ' Beim Ziehen mit gedrueckter Taste ist die gemerkte Basis nach dem Zoomen
+                    ' veraltet - ohne Neu-Verankern springt die Ansicht beim Weiterziehen zurueck.
+                    If _compareZiehtScroll IsNot Nothing Then
+                        _compareZiehtVon = punkt
+                        _compareZiehtOffset = quelle.Offset
+                    End If
+                End Sub
+            setzeOffset()
+            Dispatcher.UIThread.Post(setzeOffset, DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Die Vergleichsflaeche unter dem Mauszeiger. Verankert wird dort, wo die Maus
+        ''' steht - nicht an der fokussierten Flaeche: man zoomt auf das, worauf man zeigt.</summary>
+        Private Function VergleichsflaecheUnter(e As PointerEventArgs) As ScrollViewer
+            For Each flaechenName In {"CompareLeftScroll", "CompareRightScroll"}
+                Dim sv = Me.FindControl(Of ScrollViewer)(flaechenName)
+                If sv Is Nothing Then Continue For
+                Dim p = e.GetPosition(sv)
+                If p.X >= 0 AndAlso p.Y >= 0 AndAlso p.X <= sv.Bounds.Width AndAlso p.Y <= sv.Bounds.Height Then Return sv
+            Next
+            Return Nothing
+        End Function
 
         Private Sub ZoomImageAtViewportPoint(viewportPoint As Point, factor As Double)
             Dim vm = GetVm()
@@ -511,8 +594,116 @@ Namespace Views
         ''' Das ViewerViewModel lebt über die ganze Sitzung, diese View wird bei jedem Moduswechsel neu
         ''' gebaut. Beim Verwerfen feuert kein DataContextChanged, deshalb hängt das Abo am Entfernen aus
         ''' dem visuellen Baum - sonst bliebe je Betrachter-Besuch eine tote View am ViewModel.
+        ' ── Vergleichsmodus: Fokus, gemeinsamer Zoom, gespiegelter Ausschnitt ────
+
+        ''' <summary>Sperre gegen Rueckkopplung beim Spiegeln des Ausschnitts: das Setzen der einen
+        ''' Flaeche loest deren ScrollChanged aus, das sonst sofort wieder zurueckschriebe.</summary>
+        Private _spiegeltAusschnitt As Boolean
+
+        Private Sub OnComparePanePressed(sender As Object, e As PointerPressedEventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
+            Dim sv = TryCast(sender, ScrollViewer)
+            If sv Is Nothing Then Return
+            vm.FocusedComparePane = If(TryCast(sv.Tag, String) = "1", 1, 0)
+            ' Verschoben wird mit LINKER oder RECHTER Taste - im Einzelbild zieht die rechte, und
+            ' der Vergleich soll sich nicht anders anfuehlen. Rechts+Mausrad bleibt Zoomen, das
+            ' laeuft ueber den Rad-Handler und beisst sich damit nicht.
+            Dim eigenschaften = e.GetCurrentPoint(sv).Properties
+            If Not eigenschaften.IsLeftButtonPressed AndAlso Not eigenschaften.IsRightButtonPressed Then Return
+            _compareZiehtScroll = sv
+            _compareZiehtVon = e.GetPosition(sv)
+            _compareZiehtOffset = sv.Offset
+            e.Pointer.Capture(sv)
+        End Sub
+
+        ''' <summary>Ziehen mit der Maus im Vergleich. Ein ScrollViewer kann das von sich aus nicht -
+        ''' die einzelne Bildflaeche hat dafuer eigene Zeiger-Handler, und der Vergleich braucht sie
+        ''' genauso. Der gespiegelte Ausschnitt folgt von selbst ueber ScrollChanged.</summary>
+        Private _compareZiehtVon As Point
+        Private _compareZiehtOffset As Vector
+        Private _compareZiehtScroll As ScrollViewer
+
+        Private Sub OnComparePaneMoved(sender As Object, e As PointerEventArgs)
+            If _compareZiehtScroll Is Nothing Then Return
+            Dim jetzt = e.GetPosition(_compareZiehtScroll)
+            Dim dx = jetzt.X - _compareZiehtVon.X
+            Dim dy = jetzt.Y - _compareZiehtVon.Y
+            Dim maxX = Math.Max(0, _compareZiehtScroll.Extent.Width - _compareZiehtScroll.Viewport.Width)
+            Dim maxY = Math.Max(0, _compareZiehtScroll.Extent.Height - _compareZiehtScroll.Viewport.Height)
+            _compareZiehtScroll.Offset = New Vector(
+                Math.Min(Math.Max(_compareZiehtOffset.X - dx, 0), maxX),
+                Math.Min(Math.Max(_compareZiehtOffset.Y - dy, 0), maxY))
+            e.Handled = True
+        End Sub
+
+        Private Sub OnComparePaneReleased(sender As Object, e As RoutedEventArgs)
+            _compareZiehtScroll = Nothing
+        End Sub
+
+
+        Private Sub VerbindeVergleichsflaechen()
+            Dim links = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")
+            Dim rechts = Me.FindControl(Of ScrollViewer)("CompareRightScroll")
+            If links Is Nothing OrElse rechts Is Nothing Then Return
+            RemoveHandler links.ScrollChanged, AddressOf OnCompareScrollChanged
+            RemoveHandler rechts.ScrollChanged, AddressOf OnCompareScrollChanged
+            AddHandler links.ScrollChanged, AddressOf OnCompareScrollChanged
+            AddHandler rechts.ScrollChanged, AddressOf OnCompareScrollChanged
+        End Sub
+
+        ''' <summary>Der Ausschnitt wird als PIXEL-Offset gespiegelt, nicht als Anteil: zwei Aufnahmen
+        ''' derselben Szene liegen damit exakt uebereinander, und genau dafuer ist der Vergleich da.
+        ''' Bei sehr verschiedenen Bildgroessen laeuft es auseinander - das ist der bewusste Preis.</summary>
+        Private Sub OnCompareScrollChanged(sender As Object, e As ScrollChangedEventArgs)
+            If _spiegeltAusschnitt Then Return
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
+            Dim quelle = TryCast(sender, ScrollViewer)
+            If quelle Is Nothing Then Return
+            Dim links = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")
+            Dim rechts = Me.FindControl(Of ScrollViewer)("CompareRightScroll")
+            Dim ziel = If(ReferenceEquals(quelle, links), rechts, links)
+            If ziel Is Nothing Then Return
+            Dim neu = New Vector(
+                Math.Min(Math.Max(quelle.Offset.X, 0), Math.Max(0, ziel.Extent.Width - ziel.Viewport.Width)),
+                Math.Min(Math.Max(quelle.Offset.Y, 0), Math.Max(0, ziel.Extent.Height - ziel.Viewport.Height)))
+            If Math.Abs(ziel.Offset.X - neu.X) < 0.5 AndAlso Math.Abs(ziel.Offset.Y - neu.Y) < 0.5 Then Return
+            _spiegeltAusschnitt = True
+            Try
+                ziel.Offset = neu
+            Finally
+                _spiegeltAusschnitt = False
+            End Try
+        End Sub
+
+        ''' <summary>Beide Vergleichsbilder auf denselben Zoom bringen - dieselbe Rechnung wie fuer
+        ''' die einzelne Flaeche (Bildgroesse mal ZoomLevel), damit ein Wert fuer beide gilt.</summary>
+        Private Sub ApplyCompareFitMode()
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
+            Dim zoom = Math.Max(0.05, vm.ZoomLevel)
+
+            Dim setze = Sub(bildName As String, quelle As Avalonia.Media.Imaging.Bitmap)
+                            Dim bild = Me.FindControl(Of Image)(bildName)
+                            If bild Is Nothing Then Return
+                            If quelle Is Nothing Then
+                                bild.Width = Double.NaN
+                                bild.Height = Double.NaN
+                                Return
+                            End If
+                            bild.Width = Math.Round(quelle.Size.Width * zoom, MidpointRounding.AwayFromZero)
+                            bild.Height = Math.Round(quelle.Size.Height * zoom, MidpointRounding.AwayFromZero)
+                            bild.MaxWidth = Double.PositiveInfinity
+                            bild.MaxHeight = Double.PositiveInfinity
+                        End Sub
+            setze("CompareLeftImage", vm.CompareLeftImage)
+            setze("CompareRightImage", vm.CompareRightImage)
+        End Sub
+
         Protected Overrides Sub OnAttachedToVisualTree(e As VisualTreeAttachmentEventArgs)
             MyBase.OnAttachedToVisualTree(e)
+            VerbindeVergleichsflaechen()
             _isAttached = True
             RebindViewModel()
             ApplyVideoLayout()
@@ -566,6 +757,15 @@ Namespace Views
                e.PropertyName = NameOf(ViewerViewModel.RotationAngle) Then
                 ApplyImageFitMode()
                 ApplyFullscreenImageMode()
+            End If
+
+            ' Der Vergleich teilt sich denselben ZoomLevel - beide Flaechen muessen also bei jeder
+            ' Zoomaenderung und bei jedem neu geladenen Vergleichsbild neu bemessen werden.
+            If e.PropertyName = NameOf(ViewerViewModel.ZoomLevel) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.IsCompareMode) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.CompareLeftImage) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.CompareRightImage) Then
+                ApplyCompareFitMode()
             End If
 
             If e.PropertyName = NameOf(ViewerViewModel.IsFullscreenMode) Then

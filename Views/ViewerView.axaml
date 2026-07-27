@@ -43,14 +43,27 @@
                                Width="20" Height="20"/>
                     </Button>
 
+                    <!-- Anheften: das aktuelle Bild festhalten, das naechste kommt daneben. Der
+                         bequeme Weg in den Vergleich, ohne den Umweg ueber die Galerie. -->
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            Classes.active="{Binding IsImagePinned}"
+                            IsEnabled="{Binding CanPinForCompare}"
+                            Click="OnTogglePinClick"
+                            ToolTip.Tip="Bild anheften – das nächste Bild wird daneben zum Vergleich gezeigt">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pin.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding RotateLeftCommand}"
+                            IsEnabled="{Binding IsSingleImageMode}"
                             ToolTip.Tip="Bild nach links drehen (Strg+Pfeil links)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
                                Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding RotateRightCommand}"
+                            IsEnabled="{Binding IsSingleImageMode}"
                             ToolTip.Tip="Bild nach rechts drehen (Strg+Pfeil rechts)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise-2.svg"
                                Width="20" Height="20"/>
@@ -141,7 +154,7 @@
                                   HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Auto"
                                   SizeChanged="OnImageViewportSizeChanged"
-                                  IsVisible="{Binding CurrentImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                  IsVisible="{Binding IsSingleImageVisible}">
                         <Panel>
                             <Border Name="MainImageBackgroundBorder"
                                     HorizontalAlignment="Center"
@@ -189,6 +202,43 @@
                             </Canvas>
                         </Panel>
                     </ScrollViewer>
+
+                    <!-- Vergleichsbuehne: zwei Flaechen, EIN Zoom (beide rechnen mit vm.ZoomLevel),
+                         Ausschnitt gespiegelt (Code-behind). Die fokussierte Flaeche traegt den
+                         Akzentrahmen, und das Infopanel zeigt ihre Daten. -->
+                    <Grid Name="CompareStage" ColumnDefinitions="*,6,*" IsVisible="{Binding IsCompareMode}">
+                        <Border Grid.Column="0" BorderThickness="2" CornerRadius="3"
+                                BorderBrush="{DynamicResource FP.Accent}"
+                                IsVisible="{Binding IsCompareLeftFocused}" ZIndex="1"
+                                IsHitTestVisible="False" />
+                        <ScrollViewer Grid.Column="0" Name="CompareLeftScroll"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto"
+                                      PointerPressed="OnComparePanePressed" Tag="0"
+                                      PointerMoved="OnComparePaneMoved"
+                                      PointerReleased="OnComparePaneReleased"
+                                      PointerCaptureLost="OnComparePaneReleased">
+                            <Image Name="CompareLeftImage" Source="{Binding CompareLeftImage}"
+                                   Stretch="Uniform"
+                                   RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        </ScrollViewer>
+
+                        <Border Grid.Column="2" BorderThickness="2" CornerRadius="3"
+                                BorderBrush="{DynamicResource FP.Accent}"
+                                IsVisible="{Binding IsCompareRightFocused}" ZIndex="1"
+                                IsHitTestVisible="False" />
+                        <ScrollViewer Grid.Column="2" Name="CompareRightScroll"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto"
+                                      PointerPressed="OnComparePanePressed" Tag="1"
+                                      PointerMoved="OnComparePaneMoved"
+                                      PointerReleased="OnComparePaneReleased"
+                                      PointerCaptureLost="OnComparePaneReleased">
+                            <Image Name="CompareRightImage" Source="{Binding CompareRightImage}"
+                                   Stretch="Uniform"
+                                   RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        </ScrollViewer>
+                    </Grid>
 
                 </Grid>
             </Border>

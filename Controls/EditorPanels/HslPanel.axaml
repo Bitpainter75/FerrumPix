@@ -28,6 +28,7 @@
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
             <icons:HslWheelPicker SelectedBand="{Binding SelectedHslBand, Mode=TwoWay}"
+                                  AdjustedBands="{Binding AdjustedHslBands}"
                                   Width="150" Height="150"
                                   HorizontalAlignment="Center" />
             <TextBlock Text="{Binding SelectedHslBandLabel}"

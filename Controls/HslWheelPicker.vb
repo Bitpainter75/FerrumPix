@@ -25,8 +25,24 @@ Namespace Controls
         ' Segment-Winkel unten) - so sieht das Rad wie ein normaler Farbkreis aus.
         Private Shared ReadOnly BandDisplayHue As Double() = {0, 30, 60, 120, 180, 240, 275, 315}
 
+        ''' <summary>Die Baender, die vom Standard abweichen - als Liste, damit die Bindung an eine
+        ''' einfache Zeichenkette geht. Sie werden mit einem Punkt markiert: das Rad zeigt immer nur
+        ''' EIN Band, ohne Markierung bliebe unsichtbar, wo sonst noch etwas eingestellt ist.</summary>
+        Public Shared ReadOnly AdjustedBandsProperty As StyledProperty(Of String) =
+            AvaloniaProperty.Register(Of HslWheelPicker, String)(NameOf(AdjustedBands), "")
+
+        Public Property AdjustedBands As String
+            Get
+                Return GetValue(AdjustedBandsProperty)
+            End Get
+            Set(value As String)
+                SetValue(AdjustedBandsProperty, If(value, ""))
+            End Set
+        End Property
+
         Shared Sub New()
             AffectsRender(Of HslWheelPicker)(SelectedBandProperty)
+            AffectsRender(Of HslWheelPicker)(AdjustedBandsProperty)
         End Sub
 
         Public Sub New()
@@ -70,8 +86,30 @@ Namespace Controls
                 Dim fillBrush = New SolidColorBrush(bandColor)
                 Dim pen = If(isSelected, New Pen(New SolidColorBrush(Colors.White), 2), Nothing)
                 context.DrawGeometry(fillBrush, pen, geometry)
+
+                ' Markierung fuer ein bearbeitetes Band: ein Punkt in der Mitte des Segments, weiss
+                ' mit dunklem Rand - damit er auf hellen wie auf dunklen Segmentfarben steht.
+                If IstBearbeitet(BandOrder(i)) Then
+                    Dim mitteRad = (segmentStartDeg + 22.5) * Math.PI / 180.0
+                    Dim ringRadius = (innerRadius + outerRadius) / 2.0
+                    Dim punkt = New Point(center.X + ringRadius * Math.Cos(mitteRad),
+                                          center.Y + ringRadius * Math.Sin(mitteRad))
+                    Dim r = Math.Max(2.0, outerRadius * 0.055)
+                    context.DrawEllipse(New SolidColorBrush(Colors.White),
+                                        New Pen(New SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), 1),
+                                        punkt, r, r)
+                End If
             Next
         End Sub
+
+        Private Function IstBearbeitet(band As String) As Boolean
+            Dim liste = AdjustedBands
+            If String.IsNullOrEmpty(liste) Then Return False
+            For Each teil In liste.Split(","c)
+                If String.Equals(teil.Trim(), band, StringComparison.OrdinalIgnoreCase) Then Return True
+            Next
+            Return False
+        End Function
 
         Private Shared Function BuildWedgeGeometry(center As Point, innerRadius As Double, outerRadius As Double, startDeg As Double, endDeg As Double) As StreamGeometry
             Dim geometry = New StreamGeometry()

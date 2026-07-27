@@ -115,6 +115,7 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_currentImagePath, value)
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
+                Me.RaisePropertyChanged(NameOf(CanPinForCompare))
                 ' Der Ladehinweis hängt auch vom Dateityp ab. Beim Wechsel darf der alte
                 ' Zustand nicht kurz für eine XMP/FPXMP-Begleitdatei weitergelten.
                 Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
@@ -167,6 +168,7 @@ Namespace ViewModels
                 Dim previous = _currentImage
                 Me.RaiseAndSetIfChanged(_currentImage, value)
                 Me.RaisePropertyChanged(NameOf(HasNoMedia))
+                Me.RaisePropertyChanged(NameOf(IsSingleImageVisible))
                 Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
@@ -970,10 +972,285 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ' ── Anheften: erst ein Bild festhalten, das naechste kommt daneben ───────
+
+        Private _pinnedPath As String = ""
+
+        ''' <summary>Ist ein Bild angeheftet? Solange das gilt, oeffnet das NAECHSTE angesteuerte Bild
+        ''' den Vergleich - angeheftet links, neu rechts. Der bequeme Weg neben dem Kontextmenue der
+        ''' Galerie: man sieht ein Bild, haelt es fest und blaettert weiter.</summary>
+        Public ReadOnly Property IsImagePinned As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_pinnedPath)
+            End Get
+        End Property
+
+        ''' <summary>Anheften geht nur bei ECHTEN Dateien. Immich-Elemente sind Pseudo-Pfade und
+        ''' laden ueber einen eigenen Weg - der Vergleich kann sie (noch) nicht, also darf der Knopf
+        ''' auch nicht so tun. Ein Klick, der nichts tut, ist schlimmer als ein grauer Knopf.</summary>
+        Public ReadOnly Property CanPinForCompare As Boolean
+            Get
+                ' Nicht nur das Sitzungsmerkmal pruefen: in einer GEMISCHTEN Suchliste (lokale und
+                ' Immich-Elemente nebeneinander) steht es auf lokal, waehrend gerade ein
+                ' Immich-Element angezeigt wird. Die Existenz der Datei ist das ehrliche Kriterium -
+                ' der Vergleich laedt genau darueber.
+                If _isImmichSession Then Return False
+                If String.IsNullOrEmpty(_currentImagePath) Then Return False
+                Return File.Exists(_currentImagePath)
+            End Get
+        End Property
+
+        Public ReadOnly Property PinnedFileName As String
+            Get
+                Return IO.Path.GetFileName(If(_pinnedPath, ""))
+            End Get
+        End Property
+
+        ''' <summary>Anheften ein- und ausschalten. Ausschalten beendet einen laufenden Vergleich -
+        ''' sonst bliebe eine Buehne stehen, deren Bezugsbild niemand mehr festhaelt.</summary>
+        Public Sub TogglePin()
+            If IsImagePinned Then
+                ' ExitCompare loest die Heftung mit; laeuft ausnahmsweise kein Vergleich (etwa nach
+                ' einem Fehlschlag beim Laden), bleibt sie sonst haengen - deshalb beides.
+                _pinnedPath = ""
+                ExitCompare()
+            Else
+                Dim pfad = If(_isCompareMode, _compareLeftPath, _currentImagePath)
+                If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
+                ' Sofort in die geteilte Ansicht, zunaechst mit demselben Bild auf beiden Seiten:
+                ' das Anheften wird damit unmittelbar sichtbar, statt erst beim naechsten Blaettern.
+                AktiviereVergleich(pfad, pfad)
+                Return
+            End If
+            Me.RaisePropertyChanged(NameOf(IsImagePinned))
+            Me.RaisePropertyChanged(NameOf(PinnedFileName))
+        End Sub
+
+        ' ── Vergleichsmodus ──────────────────────────────────────────────────────
+
+        Private _isCompareMode As Boolean
+        Private _compareLeftImage As Bitmap
+        Private _compareRightImage As Bitmap
+        Private _compareLeftPath As String = ""
+        Private _compareRightPath As String = ""
+        Private _focusedComparePane As Integer
+
+        ''' <summary>Zwei Bilder nebeneinander mit GETEILTEM Zoom und gespiegeltem Ausschnitt.
+        ''' Die beiden Flaechen haengen an eigenen Eigenschaften (links/rechts) und NICHT an
+        ''' CurrentImage: sonst wuerde ein Fokuswechsel die Bilder vertauschen, statt nur die Daten
+        ''' im Infopanel umzuschalten. Der Filmstreifen bleibt bedienbar: ein Klick darauf setzt die
+        ''' RECHTE Flaeche, so haelt man links eine Referenz fest und blaettert rechts durch die
+        ''' Kandidaten.</summary>
+        Public Property IsCompareMode As Boolean
+            Get
+                Return _isCompareMode
+            End Get
+            Private Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isCompareMode, value)
+                Me.RaisePropertyChanged(NameOf(IsSingleImageMode))
+                Me.RaisePropertyChanged(NameOf(IsSingleImageVisible))
+            End Set
+        End Property
+
+        ''' <summary>True im normalen Einzelbild-Betrieb - die vorhandene, einzelne Bildflaeche
+        ''' haengt daran.</summary>
+        Public ReadOnly Property IsSingleImageMode As Boolean
+            Get
+                Return Not _isCompareMode
+            End Get
+        End Property
+
+        ''' <summary>Sichtbarkeit der EINZELNEN Bildflaeche: nur ohne Vergleich und nur mit Bild.
+        ''' Als eigene Eigenschaft, weil eine Bindung zwei Bedingungen nicht ohne Umweg verknuepft.</summary>
+        Public ReadOnly Property IsSingleImageVisible As Boolean
+            Get
+                Return Not _isCompareMode AndAlso _currentImage IsNot Nothing
+            End Get
+        End Property
+
+        Public Property CompareLeftImage As Bitmap
+            Get
+                Return _compareLeftImage
+            End Get
+            Private Set(value As Bitmap)
+                Dim alt = _compareLeftImage
+                Me.RaiseAndSetIfChanged(_compareLeftImage, value)
+                If alt IsNot Nothing AndAlso Not ReferenceEquals(alt, value) Then alt.Dispose()
+            End Set
+        End Property
+
+        Public Property CompareRightImage As Bitmap
+            Get
+                Return _compareRightImage
+            End Get
+            Private Set(value As Bitmap)
+                Dim alt = _compareRightImage
+                Me.RaiseAndSetIfChanged(_compareRightImage, value)
+                If alt IsNot Nothing AndAlso Not ReferenceEquals(alt, value) Then alt.Dispose()
+            End Set
+        End Property
+
+        Public ReadOnly Property CompareLeftFileName As String
+            Get
+                Return IO.Path.GetFileName(If(_compareLeftPath, ""))
+            End Get
+        End Property
+
+        Public ReadOnly Property CompareRightFileName As String
+            Get
+                Return IO.Path.GetFileName(If(_compareRightPath, ""))
+            End Get
+        End Property
+
+        ''' <summary>Welche Flaeche den Fokus hat (0 = links, 1 = rechts). Der Rahmen haengt daran,
+        ''' und das Infopanel zeigt die Daten GENAU dieser Flaeche.</summary>
+        Public Property FocusedComparePane As Integer
+            Get
+                Return _focusedComparePane
+            End Get
+            Set(value As Integer)
+                Dim v = If(value = 1, 1, 0)
+                If _focusedComparePane = v Then Return
+                Me.RaiseAndSetIfChanged(_focusedComparePane, v)
+                Me.RaisePropertyChanged(NameOf(IsCompareLeftFocused))
+                Me.RaisePropertyChanged(NameOf(IsCompareRightFocused))
+                ZeigeDatenDerFokussiertenFlaeche()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsCompareLeftFocused As Boolean
+            Get
+                Return _focusedComparePane = 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightFocused As Boolean
+            Get
+                Return _focusedComparePane = 1
+            End Get
+        End Property
+
+        ''' <summary>Infopanel, Dateiname und Pfad auf die fokussierte Flaeche umstellen - ohne die
+        ''' Flaechen selbst anzufassen. BeginInfoPanelSwitch ist dafuer die einzige Stelle; wer hier
+        ''' stattdessen das Bild neu laedt, vertauscht die Flaechen.</summary>
+        Private Sub ZeigeDatenDerFokussiertenFlaeche()
+            Dim pfad = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
+            If String.IsNullOrEmpty(pfad) Then Return
+            _currentImagePath = pfad
+            CurrentImagePath = pfad
+            CurrentFileName = IO.Path.GetFileName(pfad)
+            BeginInfoPanelSwitch(pfad)
+        End Sub
+
+        ''' <summary>Zwei Bilder zum Vergleich oeffnen. Das LINKE gilt als das aktuelle - Ordner-
+        ''' kontext und Infopanel bauen darauf auf wie beim normalen Oeffnen.</summary>
+        Public Sub OpenCompare(leftPath As String, rightPath As String,
+                               Optional allPaths As List(Of String) = Nothing,
+                               Optional cacheScopeId As String = Nothing,
+                               Optional cacheScopeName As String = Nothing)
+            If String.IsNullOrWhiteSpace(leftPath) OrElse String.IsNullOrWhiteSpace(rightPath) Then Return
+            If Not File.Exists(leftPath) OrElse Not File.Exists(rightPath) Then Return
+
+            OpenImage(leftPath, allPaths, cacheScopeId, cacheScopeName)
+            AktiviereVergleich(leftPath, rightPath)
+        End Sub
+
+        ''' <summary>Den Vergleich einschalten, ohne das Bild neu zu oeffnen. Das linke Bild gilt dabei
+        ''' als angeheftet - egal ob der Vergleich ueber den Knopf oder ueber die Galerie begann. So
+        ''' ist der Knopf der EINE sichtbare Zustand fuer "Vergleich laeuft", und Loesen fuehrt in
+        ''' beiden Faellen zurueck zur Einzelansicht.</summary>
+        Private Sub AktiviereVergleich(leftPath As String, rightPath As String)
+            _compareLeftPath = leftPath
+            _compareRightPath = rightPath
+            _focusedComparePane = 0
+            _pinnedPath = leftPath
+            IsCompareMode = True
+            For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
+                           NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
+                           NameOf(IsImagePinned), NameOf(PinnedFileName)}
+                Me.RaisePropertyChanged(n)
+            Next
+            LadeVergleichsbilder()
+        End Sub
+
+        ''' <summary>Die rechte Flaeche auf ein anderes Bild setzen - der Weg des Filmstreifens.
+        ''' Die linke bleibt stehen, damit sie als Bezug taugt.</summary>
+        Public Sub SetCompareRight(path As String)
+            If Not _isCompareMode OrElse String.IsNullOrWhiteSpace(path) Then Return
+            If Not File.Exists(path) Then Return
+            If String.Equals(path, _compareRightPath, StringComparison.OrdinalIgnoreCase) Then Return
+            _compareRightPath = path
+            Me.RaisePropertyChanged(NameOf(CompareRightFileName))
+            LadeVergleichsbilder(nurRechts:=True)
+            ' Steht der Fokus rechts, muss auch das Infopanel mit.
+            If _focusedComparePane = 1 Then ZeigeDatenDerFokussiertenFlaeche()
+        End Sub
+
+        ''' <summary>Vergleich beenden. Standardmaessig springt die Einzelansicht auf das Bild, das
+        ''' gerade den Fokus hatte - man schaute es an, also soll es stehen bleiben. Beim normalen
+        ''' Oeffnen eines anderen Bildes entfaellt das, sonst laedt der Betrachter zwei nacheinander.</summary>
+        Public Sub ExitCompare(Optional zurueckZumFokus As Boolean = True)
+            If Not _isCompareMode Then Return
+            Dim fokusPfad = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
+            IsCompareMode = False
+            CompareLeftImage = Nothing
+            CompareRightImage = Nothing
+            _compareRightPath = ""
+            _focusedComparePane = 0
+            ' Die Heftung MUSS hier mit fallen: sie ist derselbe Zustand wie der Vergleich, nur
+            ' sichtbar gemacht. Blieb sie stehen, sprang der naechste Bildwechsel unvermittelt
+            ' zurueck in den Vergleich - und zwar mit dem Ordner des alten angehefteten Bildes,
+            ' weil dessen Neuoeffnen den Filmstreifen mitzieht.
+            _pinnedPath = ""
+            For Each n In {NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
+                           NameOf(IsImagePinned), NameOf(PinnedFileName)}
+                Me.RaisePropertyChanged(n)
+            Next
+            If Not zurueckZumFokus OrElse String.IsNullOrEmpty(fokusPfad) Then Return
+            Dim idx = _folderPaths.FindIndex(Function(pf) String.Equals(pf, fokusPfad, StringComparison.OrdinalIgnoreCase))
+            If idx >= 0 Then LoadPathAt(idx)
+        End Sub
+
+        ''' <summary>Zaehler gegen ueberholende Ladevorgaenge: blaettert man schnell, laufen mehrere
+        ''' Decodes gleichzeitig, und ein langsamer frueherer wuerde sonst das neuere Bild
+        ''' ueberschreiben.</summary>
+        Private _vergleichLadeZaehler As Integer
+
+        ''' <summary>Die Vergleichsbilder laden. <paramref name="nurRechts"/> beim Weiterblaettern:
+        ''' das linke ist die festgehaltene Referenz und aendert sich dabei NICHT - es mitzuladen
+        ''' hiess, bei jedem Tastendruck ein RAW ein zweites Mal zu entwickeln.</summary>
+        Private Async Sub LadeVergleichsbilder(Optional nurRechts As Boolean = False)
+            _vergleichLadeZaehler += 1
+            Dim marke = _vergleichLadeZaehler
+            Dim links = _compareLeftPath, rechts = _compareRightPath
+            Try
+                If Not nurRechts Then
+                    Dim a = Await Task.Run(Function() DecodeViewerBitmap(links))
+                    If Not _isCompareMode OrElse marke <> _vergleichLadeZaehler Then
+                        a?.Dispose()
+                        Return
+                    End If
+                    CompareLeftImage = a
+                End If
+                Dim b = Await Task.Run(Function() DecodeViewerBitmap(rechts))
+                If Not _isCompareMode OrElse marke <> _vergleichLadeZaehler Then
+                    b?.Dispose()
+                    Return
+                End If
+                CompareRightImage = b
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.Vergleich", ex)
+            End Try
+        End Sub
+
         Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             _isImmichSession = False
             _immichSourceAlbumId = Nothing
             If Not File.Exists(imagePath) Then Return
+            ' Ein normales Oeffnen beendet einen laufenden Vergleich - sonst zeigt der Betrachter
+            ' beim naechsten Bild aus der Galerie weiter die alten zwei Flaechen. OpenCompare ruft
+            ' diese Methode zuerst und setzt den Modus danach wieder.
+            ExitCompare(zurueckZumFokus:=False)
 
             ' Scope nur wirksam, wenn eine explizite Pfadliste (z.B. Suchliste) übergeben wurde; beim
             ' Öffnen aus einem echten Ordner (allPaths=Nothing) gilt der normale ordnerbasierte Cache.
@@ -1892,6 +2169,23 @@ Namespace ViewModels
 
         Private Sub LoadPathAt(idx As Integer)
             If idx < 0 OrElse idx >= _folderPaths.Count Then Return
+            ' Im Vergleich blaettert JEDE Navigation die rechte Flaeche weiter - Pfeiltasten, Mausrad
+            ' und Filmstreifen laufen alle hier durch. Ohne diese Weiche wechselte nur das versteckte
+            ' Einzelbild samt Infopanel, waehrend die beiden sichtbaren Flaechen stehen blieben.
+            ' Angeheftet, aber noch kein Vergleich: das naechste Bild oeffnet ihn - angeheftet links,
+            ' neu rechts. Dasselbe Bild nochmal anzusteuern tut nichts.
+            If Not _isCompareMode AndAlso IsImagePinned AndAlso
+               Not String.Equals(_folderPaths(idx), _pinnedPath, StringComparison.OrdinalIgnoreCase) Then
+                OpenCompare(_pinnedPath, _folderPaths(idx))
+                Return
+            End If
+            If _isCompareMode Then
+                SetCompareRight(_folderPaths(idx))
+                _currentIndex = idx
+                Me.RaisePropertyChanged(NameOf(PositionText))
+                Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
+                Return
+            End If
             If _isImmichSession Then
                 LoadImmichAt(idx)
                 Return

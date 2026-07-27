@@ -274,6 +274,29 @@ Namespace ViewModels
             Return Await Viewer.ConfirmPendingRotationAsync(actionDescription)
         End Function
 
+        ''' <summary>Zwei Bilder im Betrachter nebeneinander vergleichen. Derselbe Weg wie beim
+        ''' normalen Oeffnen, nur mit zwei Pfaden - inklusive der Rueckfragen, die ein ungespeichertes
+        ''' Rezept oder eine offene Drehung sonst still verwerfen wuerden.</summary>
+        Public Async Sub OpenCompareInViewer(leftPath As String, rightPath As String,
+                                             Optional allPaths As System.Collections.Generic.List(Of String) = Nothing,
+                                             Optional cacheScopeId As String = Nothing,
+                                             Optional cacheScopeName As String = Nothing)
+            Try
+                If String.IsNullOrWhiteSpace(leftPath) OrElse String.IsNullOrWhiteSpace(rightPath) Then Return
+                If CurrentMode = AppMode.Editor Then
+                    If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
+                End If
+                If CurrentMode = AppMode.Viewer AndAlso Viewer IsNot Nothing AndAlso
+                   Not String.Equals(Viewer.CurrentImagePath, leftPath, StringComparison.OrdinalIgnoreCase) Then
+                    If Not Await ConfirmViewerLeaveAsync("ein anderes Bild öffnest") Then Return
+                End If
+                Viewer.OpenCompare(leftPath, rightPath, allPaths, cacheScopeId, cacheScopeName)
+                CurrentMode = AppMode.Viewer
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MainWindowViewModel.OpenCompareInViewer", ex)
+            End Try
+        End Sub
+
         Public Async Sub OpenImageInViewer(imagePath As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional bypassEditorPrompt As Boolean = False, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             Try
                 If CurrentMode = AppMode.Editor AndAlso Not bypassEditorPrompt Then

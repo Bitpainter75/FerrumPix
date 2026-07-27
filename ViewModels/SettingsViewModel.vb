@@ -363,6 +363,23 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Kamera-Referenzwerte fuer die RAW-Grundhelligkeit benutzen. Wirkt beim naechsten
+        ''' Oeffnen bzw. Neuaufbau einer Vorschau - der Decode-Zwischenspeicher traegt den Wert im
+        ''' Schluessel und faellt beim Umschalten von selbst weg.</summary>
+        Public Property UseCameraBaselineTable As Boolean
+            Get
+                Return _useCameraBaselineTable
+            End Get
+            Set(value As Boolean)
+                If _useCameraBaselineTable = value Then Return
+                Me.RaiseAndSetIfChanged(_useCameraBaselineTable, value)
+                Dim settings = AppSettingsService.Load()
+                settings.UseCameraBaselineTable = value
+                AppSettingsService.Save(settings)
+            End Set
+        End Property
+        Private _useCameraBaselineTable As Boolean
+
         ''' Wie viele bereits geladene Vorschaubilder maximal dauerhaft im Arbeitsspeicher gehalten
         ''' werden (siehe ImageItem.MaxResidentThumbnails) - wirkt sofort, auch ohne "Übernehmen".
         Public Property ThumbnailMemoryCacheCapacity As Integer
@@ -1515,6 +1532,7 @@ Namespace ViewModels
             _developRawThumbnails = _appSettings.DevelopRawThumbnails
             _developRawInViewer = _appSettings.DevelopRawInViewer
             _developRawInBatch = _appSettings.DevelopRawInBatch
+            _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
             _thumbnailQuality = _appSettings.ThumbnailQuality
             _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)

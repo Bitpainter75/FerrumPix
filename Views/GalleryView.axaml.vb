@@ -1306,6 +1306,12 @@ Namespace Views
             OpenGalleryItem(If(item, vm.SelectedItem))
         End Sub
 
+        ''' <summary>Zwei markierte Bilder nebeneinander im Betrachter oeffnen. Genau ZWEI - bei einem
+        ''' gibt es nichts zu vergleichen, bei mehr waere die Buehne nicht mehr lesbar.</summary>
+        Public Sub OnContextCompare(sender As Object, e As RoutedEventArgs)
+            GetVm()?.CompareSelectedInViewer()
+        End Sub
+
         Public Sub OnContextEdit(sender As Object, e As RoutedEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not IsSingleGallerySelection(vm) Then Return
@@ -1647,6 +1653,16 @@ Namespace Views
             Dim showExport = showImageBatchActions AndAlso
                               vm.SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).
                                   Any(Function(i) GalleryViewModel.IsBatchExportable(i.FilePath))
+            ' Vergleichen braucht GENAU zwei markierte Bilder - bei einem gibt es nichts zu
+            ' vergleichen, bei mehr waere die Buehne nicht mehr lesbar. Sonst gar nicht erst zeigen.
+            Dim showCompare = vm IsNot Nothing AndAlso vm.SelectedItems IsNot Nothing AndAlso
+                              vm.SelectedItems.Count = 2 AndAlso
+                              vm.SelectedItems.All(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso
+                                                               Not i.IsImmichAsset AndAlso
+                                                               Not String.IsNullOrEmpty(i.FilePath))
+            SetMenuItemVisible(menu, "GridContextCompareMenuItem", showCompare)
+            SetMenuItemVisible(menu, "ListContextCompareMenuItem", showCompare)
+            SetMenuItemVisible(menu, "MenuContextCompareMenuItem", showCompare)
             SetMenuItemVisible(menu, "GridContextOpenMenuItem", showSingleItemActions)
             SetMenuItemVisible(menu, "GridContextEditMenuItem", showSingleItemActions AndAlso item.CanEditFile AndAlso item.IsImage)
             SetMenuControlVisible(menu, "GridContextTopSeparator", showSingleItemActions)

@@ -816,8 +816,28 @@ Namespace Views
         ''' wo er vorher war (Galerie/Viewer), und keins der Editor-Kürzel griff, bis man zufällig einen
         ''' fokussierbaren Regler oder ein Filmstreifen-Bild angeklickt hatte. Galerie und Viewer holen
         ''' sich den Fokus aus demselben Grund beim Anhängen.</summary>
+        ''' <summary>Das Einpassen-Verhalten aus den Einstellungen wurde bisher NUR beim ersten Laden
+        ''' und beim Druck auf "Einpassen" ausgewertet - beim Umschalten passierte am offenen Bild
+        ''' nichts, und der Schalter wirkte wie kaputt. Jetzt zieht die Ansicht sofort nach, aber NUR
+        ''' wenn gerade wirklich eingepasst ist: wer hineingezoomt hat, will nicht herausgerissen
+        ''' werden.</summary>
+        Private Sub OnSettingsPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
+            If e.PropertyName <> NameOf(SettingsViewModel.EditorFitBehavior) Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing OrElse vm.ActiveZoomPreset <> ZoomPresetMode.Fit Then Return
+            OnZoomFitClick(Nothing, Nothing)
+        End Sub
+
+        Private Sub VerbindeEinstellungen()
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            If mainVm?.Settings Is Nothing Then Return
+            RemoveHandler mainVm.Settings.PropertyChanged, AddressOf OnSettingsPropertyChanged
+            AddHandler mainVm.Settings.PropertyChanged, AddressOf OnSettingsPropertyChanged
+        End Sub
+
         Protected Overrides Sub OnAttachedToVisualTree(e As Avalonia.VisualTreeAttachmentEventArgs)
             MyBase.OnAttachedToVisualTree(e)
+            VerbindeEinstellungen()
             Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
         End Sub
 
@@ -996,6 +1016,14 @@ Namespace Views
 
         Private Sub OnPreviewCanvasSizeChanged(sender As Object, e As SizeChangedEventArgs)
             UpdateSliderLayout()
+            ' Aendert sich die Flaeche (Fenstergroesse, ein- oder ausgeklapptes Panel), muss bei
+            ' aktivem "Einpassen" neu eingepasst werden. Ohne das behauptet der Regler weiter
+            ' "Einpassen", waehrend der alte Zoom stehen bleibt - und erst ein erneuter Klick auf
+            ' Einpassen brachte es in Ordnung.
+            ' Keine Rueckkopplung: der Zoom aendert die Groesse des BILDES, nicht die der Flaeche.
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing OrElse vm.ActiveZoomPreset <> ZoomPresetMode.Fit Then Return
+            OnZoomFitClick(Nothing, Nothing)
         End Sub
 
         ''' Für Zoom-Fit/Anzeige wird - wenn das Seitenverhältnis übereinstimmt (also nicht beschnitten/

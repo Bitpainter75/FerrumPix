@@ -3423,6 +3423,28 @@ Namespace Services
             Dim masksById = adj.Masks.Where(Function(m) m IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(m.Id)).
                                      GroupBy(Function(m) m.Id, StringComparer.Ordinal).
                                      ToDictionary(Function(g) g.Key, Function(g) g.First(), StringComparer.Ordinal)
+            ' Ebenen mit DERSELBEN Anpassung wirken GEMEINSAM, nicht nacheinander. Sonst trifft die
+            ' Anpassung jeden Pixel, den zwei Masken gemeinsam abdecken, zweimal - wer eine Gruppe
+            ' oder eine Mehrfachauswahl von Maskenebenen anpasst, bekommt in der Ueberschneidung die
+            ' doppelte Wirkung. Zusammengefasst wird ueber den Fingerabdruck der Pixelwerte: das ist
+            ' genau das, was eine gemeinsame Anpassung hinterlaesst, und es bleibt nach dem Abwaehlen
+            ' und nach dem Neuladen gleich (eine Mehrfachauswahl selbst ist fluechtig und stuende
+            ' beim naechsten Oeffnen nicht mehr zur Verfuegung).
+            ' Bei DISJUNKTEN Masken aendert das Zusammenfassen nichts - jeder Pixel wird ohnehin nur
+            ' einmal getroffen -, es greift also genau dort, wo sich etwas ueberschneidet.
+            ' Zusammengefasst wird nur INNERHALB EINER GRUPPE. Gleiche Werte allein reichen NICHT:
+            ' mehrere Korrekturen duerfen dieselbe Maske mit verschiedenen Deckkraeften tragen und
+            ' sollen sich dann ausdruecklich aufaddieren (eigene Pruefung). Die Gruppe ist die
+            ' ausdrueckliche Aussage "das gehoert zusammen" - und sie ueberlebt das Abwaehlen und
+            ' das Neuladen, anders als eine Mehrfachauswahl.
+            Dim gemeinsam = adj.MaskedAdjustmentLayers.
+                Where(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.GroupId) AndAlso
+                                  l.Adjustments IsNot Nothing AndAlso l.Adjustments.HasPixelAdjustments()).
+                GroupBy(Function(l) l.GroupId & "|" & PixelAdjustmentsFingerprint(l.Adjustments), StringComparer.Ordinal).
+                Where(Function(g) g.Count() > 1).
+                ToDictionary(Function(g) g.Key, Function(g) g.ToList(), StringComparer.Ordinal)
+            Dim erledigt As New HashSet(Of String)(StringComparer.Ordinal)
+
             For Each layer In adj.MaskedAdjustmentLayers
                 If Not adj.IsMaskedLayerRenderVisible(layer) Then Continue For
                 Dim stackedAbove = If(layer.StackAboveAnnotationId, "")
@@ -3450,9 +3472,31 @@ Namespace Services
                                                           If(modulateFill, layer, Nothing))
                     If mask Is Nothing Then Continue For
                     If hasAdj Then
-                        Using adjusted = ApplyPixelAdjustmentStages(processed, layer.Adjustments.ExtractPixelAdjustments())
-                            processed = ReplaceBitmap(processed, CompositeSelectionScoped(processed, adjusted, mask))
-                        End Using
+                        ' Teilt diese Ebene ihre Anpassung mit anderen, wird EINMAL ueber die
+                        ' Vereinigung aller ihrer Masken angewendet - an der Stelle der ERSTEN
+                        ' Ebene der Gruppe, damit die Reihenfolge gegenueber anderen Korrekturen
+                        ' erhalten bleibt.
+                        Dim schluessel = If(layer.GroupId, "") & "|" & PixelAdjustmentsFingerprint(layer.Adjustments)
+                        Dim geschwister As List(Of MaskedAdjustmentLayer) = Nothing
+                        If gemeinsam.TryGetValue(schluessel, geschwister) Then
+                            If erledigt.Contains(schluessel) Then Continue For
+                            erledigt.Add(schluessel)
+                        End If
+                        Dim wirkmaske = mask
+                        Dim eigene As SKBitmap = Nothing
+                        Try
+                            If geschwister IsNot Nothing Then
+                                eigene = VereinigeWirkmasken(geschwister, layer, mask, adj, masksById,
+                                                             pipelineInputWidth, pipelineInputHeight,
+                                                             processed.Width, processed.Height, onlyStackedAboveId)
+                                If eigene IsNot Nothing Then wirkmaske = eigene
+                            End If
+                            Using adjusted = ApplyPixelAdjustmentStages(processed, layer.Adjustments.ExtractPixelAdjustments())
+                                processed = ReplaceBitmap(processed, CompositeSelectionScoped(processed, adjusted, wirkmaske))
+                            End Using
+                        Finally
+                            eigene?.Dispose()
+                        End Try
                     End If
                     ' Sichtbare Füllung nur, wenn die Füllung NICHT bereits eine Anpassung abstuft.
                     If hasFill AndAlso Not layer.IsMaskLayer AndAlso Not hasAdj Then
@@ -3539,6 +3583,80 @@ Namespace Services
 
         ''' <summary>Projiziert eine SourceSpace-Maske durch exakt dieselbe Geometriekette wie das Bild:
         ''' Preview-Skalierung, Crop, Quarter-Turn/Flip, Begradigung, Resize und Canvas-Offset.</summary>
+        ''' <summary>Fingerabdruck NUR der Pixelwerte einer Anpassung. Zwei Ebenen, die gemeinsam
+        ''' angepasst wurden, tragen danach denselben - und genau daran werden sie beim Rendern
+        ''' wieder zusammengefuehrt.</summary>
+        Private Shared Function PixelAdjustmentsFingerprint(adjustments As ImageAdjustments) As String
+            If adjustments Is Nothing Then Return ""
+            Try
+                Return System.Text.Json.JsonSerializer.Serialize(adjustments.ExtractPixelAdjustments())
+            Catch
+                ' Nicht serialisierbar: dann lieber NICHT zusammenfassen (jede Ebene bekommt einen
+                ' eigenen Schluessel) - das ist das bisherige Verhalten und nie schlechter als falsch.
+                Return Guid.NewGuid().ToString("N")
+            End Try
+        End Function
+
+        ''' <summary>Die Wirkmasken aller Geschwister mit derselben Anpassung zu EINER vereinigen
+        ''' (je Pixel das Maximum). Liefert Nothing, wenn es nichts zu vereinigen gibt - dann bleibt
+        ''' die Maske der ersten Ebene unveraendert in Gebrauch.
+        '''
+        ''' Maximum, nicht Addition: die Deckung eines Pixels soll die STAERKSTE der beteiligten
+        ''' Masken sein. Zwei Masken mit je 60 % ergeben 60 %, nicht 120 % - sonst waere die
+        ''' Ueberschneidung wieder ein Sonderfall, nur ein leiserer.</summary>
+        Private Shared Function VereinigeWirkmasken(geschwister As List(Of MaskedAdjustmentLayer),
+                                                    ersteEbene As MaskedAdjustmentLayer,
+                                                    ersteMaske As SKBitmap,
+                                                    adj As ImageAdjustments,
+                                                    masksById As Dictionary(Of String, ImageMask),
+                                                    pipelineInputWidth As Integer, pipelineInputHeight As Integer,
+                                                    zielBreite As Integer, zielHoehe As Integer,
+                                                    onlyStackedAboveId As String) As SKBitmap
+            Dim ergebnis As SKBitmap = Nothing
+            For Each g In geschwister
+                If g Is Nothing OrElse ReferenceEquals(g, ersteEbene) Then Continue For
+                If Not adj.IsMaskedLayerRenderVisible(g) Then Continue For
+                ' Dieselbe Skopus-Weiche wie in der Hauptschleife: eine Ebene aus dem Objektstapel
+                ' darf den Basisdurchlauf nicht mitfaerben und umgekehrt.
+                Dim stacked = If(g.StackAboveAnnotationId, "")
+                If onlyStackedAboveId Is Nothing Then
+                    If stacked.Length > 0 Then Continue For
+                ElseIf Not String.Equals(stacked, onlyStackedAboveId, StringComparison.Ordinal) Then
+                    Continue For
+                End If
+                Dim md As ImageMask = Nothing
+                If Not masksById.TryGetValue(If(g.MaskId, ""), md) Then Continue For
+                Dim modFill = g.HasFill() AndAlso (g.IsMaskLayer OrElse
+                                                   (g.Adjustments IsNot Nothing AndAlso g.Adjustments.HasPixelAdjustments()))
+                Using m = BuildPersistentMaskForOutput(md, adj, pipelineInputWidth, pipelineInputHeight,
+                                                       zielBreite, zielHoehe, g.Opacity, If(modFill, g, Nothing))
+                    If m Is Nothing Then Continue For
+                    If m.Width <> ersteMaske.Width OrElse m.Height <> ersteMaske.Height Then Continue For
+                    If ergebnis Is Nothing Then ergebnis = CloneBitmap(ersteMaske)
+                    MaskeMaximum(ergebnis, m)
+                End Using
+            Next
+            Return ergebnis
+        End Function
+
+        ''' <summary>Je Pixel das Maximum aus zwei gleich grossen Alpha8-Masken, in die erste.</summary>
+        Private Shared Sub MaskeMaximum(ziel As SKBitmap, quelle As SKBitmap)
+            If ziel Is Nothing OrElse quelle Is Nothing Then Return
+            If ziel.Width <> quelle.Width OrElse ziel.Height <> quelle.Height Then Return
+            If ziel.GetPixels() = IntPtr.Zero OrElse quelle.GetPixels() = IntPtr.Zero Then Return
+            Dim zStride As Integer, qStride As Integer
+            Dim zb = ReadMaskBytes(ziel, zStride)
+            Dim qb = ReadMaskBytes(quelle, qStride)
+            Dim breite = Math.Min(zStride, qStride)
+            For y = 0 To ziel.Height - 1
+                Dim zo = y * zStride, qo = y * qStride
+                For x = 0 To breite - 1
+                    If qb(qo + x) > zb(zo + x) Then zb(zo + x) = qb(qo + x)
+                Next
+            Next
+            Marshal.Copy(zb, 0, ziel.GetPixels(), zb.Length)
+        End Sub
+
         Private Shared Function BuildPersistentMaskForOutput(maskData As ImageMask, geometry As ImageAdjustments,
                                                               pipelineInputWidth As Integer, pipelineInputHeight As Integer,
                                                               targetW As Integer, targetH As Integer,

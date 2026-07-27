@@ -48,6 +48,8 @@ Several photos can also be laid out as a collage from the same menus, with a cho
 
 The viewer opens photos and videos quickly and keeps navigation simple. It supports fullscreen mode, zoom, pan, slideshow, filmstrip navigation, ratings, favorites, tags and deletion.
 
+Two photos can be put side by side: pick two in the gallery and choose *Compare*, or pin the photo you are looking at with the pin button in the toolbar. One zoom applies to both halves and dragging one moves the other with it, so you are always looking at the same part of both pictures — which is what makes a comparison worth anything. Clicking a half gives it the focus and switches the info panel to that photo's data, without the pictures swapping places. With a photo pinned, the filmstrip, the arrow keys and the mouse wheel page the other side onward while the pinned one stays put, so a series of near-identical shots can be worked through against a fixed reference.
+
 Video files use `libmpv` for inline playback and thumbnails. Linux packages use the system `libmpv`; Windows packages bundle the mpv runtime with FerrumPix.
 
 Printing is available from the toolbar or with `Ctrl+P`, using the same dialog as the gallery.
@@ -77,7 +79,9 @@ The editor covers the most common photo work:
 
 ### RAW and Photoshop files
 
-RAW files are developed from the actual sensor data — full-resolution demosaic, camera white balance, sRGB — instead of editing the embedded JPEG preview. The status bar shows whether you are working on *RAW developed* or *RAW preview*. LibRaw comes with the packages: Linux packages depend on the system library, the Flatpak builds it in, and Windows releases bundle it.
+RAW files are developed from the actual sensor data — full-resolution demosaic, camera white balance, sRGB — instead of editing the embedded JPEG preview. The status bar shows whether you are working on *RAW developed* or *RAW preview*.
+
+The development starts from a fixed, film-like base curve rather than stretching every photo until its brightest parts are almost white. A dim stage stays dim and a bright beach stays bright: the photo keeps the exposure it was taken with, and midtones and colours land close to what other raw developers show for the same file. Coloured speckle is taken out at the one moment where the sensor's own pattern is still known, before the colour information is reconstructed — after that step it has already been smeared across neighbouring pixels and is much harder to remove. DNG files that merely wrap an already-developed picture, as produced by some converters and scanners, are recognised and passed through untouched instead of being given a second tone curve. LibRaw comes with the packages: Linux packages depend on the system library, the Flatpak builds it in, and Windows releases bundle it.
 
 Slider edits on RAW files are remembered in a small `.fpxmp` sidecar file next to the RAW and re-applied the next time you open it. The RAW itself is never modified. Sidecars travel with the RAW when it is moved, copied, renamed or deleted in FerrumPix. If a RAW carries a Lightroom `.xmp` sidecar with develop settings, they are converted once into an `.fpxmp` recipe so the photo opens the way you left it elsewhere.
 
@@ -173,6 +177,8 @@ Permission names come from the Immich server source and apply to reasonably rece
 Settings cover theme, accent color, language, thumbnail quality, export quality, metadata handling, video support, UI scale, font scale, cache cleanup and Immich connection details.
 
 The editor and the save dialogs can be set up to match how you work: a default target format that is preselected in *Save as…*, *Export to* and the batch dialogs (`.fpx` included, where the dialog offers it), which tool the editor opens with, the order of the three groups in its left tool bar, and how an image is fitted into the editing area — the last one separately from the viewer, since a small photo you want to see full-screen is often the one you want at its real size while editing.
+
+Raw files from different cameras leave the sensor at different brightness. A switch adapts the base brightness to the camera model using reference values for over 200 models, so the same scene develops equally bright whichever camera took it. It is off by default — the values are measured rather than supplied by the manufacturers — and unknown models are left exactly as they are.
 
 The last two sections are reference material: a full list of keyboard and mouse shortcuts for gallery, viewer and editor, and a *Technology* section listing everything FerrumPix is built on, with a link to each project and to its licence text.
 

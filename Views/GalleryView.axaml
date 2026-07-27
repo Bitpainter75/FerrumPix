@@ -1071,6 +1071,7 @@
                                     <Border.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Name="GridContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
+                                            <MenuItem Name="GridContextCompareMenuItem" Header="Vergleichen" Click="OnContextCompare"/>
                                             <MenuItem Name="GridContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
                                             <Separator Name="GridContextTopSeparator"/>
                                             <MenuItem Name="GridContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
@@ -1503,6 +1504,7 @@
                                     <Border.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Name="ListContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
+                                            <MenuItem Name="ListContextCompareMenuItem" Header="Vergleichen" Click="OnContextCompare"/>
                                             <MenuItem Name="ListContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
                                             <Separator Name="ListContextTopSeparator"/>
                                             <MenuItem Name="ListContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
@@ -1880,6 +1882,7 @@
                         <Button.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Name="MenuContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
+                                <MenuItem Name="MenuContextCompareMenuItem" Header="Vergleichen" Click="OnContextCompare"/>
                                 <MenuItem Name="MenuContextEditMenuItem" Header="Anpassen" Click="OnContextEdit"/>
                                 <Separator Name="MenuContextTopSeparator"/>
                                 <MenuItem Name="MenuContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>

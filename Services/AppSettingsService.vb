@@ -165,6 +165,13 @@ Namespace Services
         ''' IMMER entwickelt - dort waere die Vorschau schlicht das falsche Bild.
         ''' Standard an: das ist das bisherige Verhalten. Aus ist der schnelle Weg.
         Public Property DevelopRawInBatch As Boolean = True
+
+        ''' <summary>Kamera-Referenzwerte fuer die Grundbelichtung benutzen (CameraBaselineTable).
+        ''' Standard AUS: die Werte gleichen die Kameramodelle UNTEREINANDER an, ihre absolute Lage
+        ''' haengt aber an einer einzigen Kamera mit echtem Referenzexport - und die ist selbst
+        ''' untypisch. Bis ein zweiter Referenzexport vorliegt, ist das eine Wahl des Nutzers und
+        ''' keine Vorgabe. Siehe Audits/OFFENE_PUNKTE.md.</summary>
+        Public Property UseCameraBaselineTable As Boolean = False
         Public Property EditorInfoSidebarExpanded As Boolean = True
         ''' Ob das Ebenen-Panel im Editor zuletzt eingeblendet war - gemerkter Bedienzustand (wie die
         ''' Info-Leiste), kein Schalter in den Einstellungen. Standard aus: es ist ein Profi-Werkzeug.

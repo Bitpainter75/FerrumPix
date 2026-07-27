@@ -335,6 +335,10 @@ Namespace Services
         Private Shared ReadOnly _cacheLock As New Object()
         Private Shared _cachedPath As String = ""
         Private Shared _cachedWriteTimeUtc As DateTime
+        ''' <summary>Die Grundbelichtung, mit der der zwischengespeicherte Decode gerechnet wurde.
+        ''' Sie gehoert in den Schluessel: schaltet der Nutzer die Kamera-Referenzwerte um, ist der
+        ''' alte Decode veraltet, obwohl Pfad und Aenderungszeit gleich bleiben.</summary>
+        Private Shared _cachedGrundbelichtung As Double = Double.NaN
         Private Shared _cachedBitmap As SKBitmap
 
         ''' <summary>Voll aufgelöster, fertig entwickelter Decode (Besitz beim Aufrufer) oder Nothing.
@@ -343,10 +347,12 @@ Namespace Services
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
             Try
                 Dim writeTime = File.GetLastWriteTimeUtc(path)
+                Dim grundEv = GrundbelichtungFuerDatei(path)
                 SyncLock _cacheLock
                     If _cachedBitmap IsNot Nothing AndAlso
                        String.Equals(_cachedPath, path, StringComparison.Ordinal) AndAlso
-                       _cachedWriteTimeUtc = writeTime Then
+                       _cachedWriteTimeUtc = writeTime AndAlso
+                       _cachedGrundbelichtung = grundEv Then
                         Return _cachedBitmap.Copy()
                     End If
                 End SyncLock
@@ -355,10 +361,10 @@ Namespace Services
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
                 Dim decoded As SKBitmap
                 If _reentrant Then
-                    decoded = DecodeCore(path)
+                    decoded = DecodeCore(path, grundEv)
                 Else
                     SyncLock _nativeLock
-                        decoded = DecodeCore(path)
+                        decoded = DecodeCore(path, grundEv)
                     End SyncLock
                 End If
                 If decoded Is Nothing Then Return Nothing
@@ -367,6 +373,7 @@ Namespace Services
                     _cachedBitmap?.Dispose()
                     _cachedBitmap = decoded
                     _cachedPath = path
+                    _cachedGrundbelichtung = grundEv
                     _cachedWriteTimeUtc = writeTime
                     Return _cachedBitmap.Copy()
                 End SyncLock
@@ -399,6 +406,7 @@ Namespace Services
                 _cachedBitmap?.Dispose()
                 _cachedBitmap = Nothing
                 _cachedPath = ""
+                _cachedGrundbelichtung = Double.NaN
             End SyncLock
         End Sub
 
@@ -417,7 +425,7 @@ Namespace Services
         ''' ist genau diese eine Zahl.</summary>
         Private Const DecodeOutputBits As Integer = 16
 
-        Private Shared Function DecodeCore(path As String) As SKBitmap
+        Private Shared Function DecodeCore(path As String, grundEv As Double) As SKBitmap
             Dim handle = _init(0UI)
             If handle = IntPtr.Zero Then Return Nothing
             Dim pathPtr As IntPtr = IntPtr.Zero
@@ -439,7 +447,17 @@ Namespace Services
                 ' Fehlen die Schalter (exotische libraw), bleibt es beim alten Verhalten: dann
                 ' liefert LibRaw gamma-kodierte Daten und die Tabellen unten passen nicht - darum
                 ' faellt der Decode in diesem Fall auf 8 Bit zurueck.
-                Dim linearMoeglich = _setNoAutoBright IsNot Nothing AndAlso _setGamma IsNot Nothing
+                ' AUSNAHME: eine DNG-Huelle um ein bereits fertig gerendertes RGB-Bild. Solche
+                ' Dateien entstehen beim Umwandeln aus JPEG oder aus manchen Scannern; sie tragen
+                ' PhotometricInterpretation = 2 (RGB) statt eines Sensormusters. Ihre Werte sind
+                ' schon tonwertkorrigiert - unsere Basisstufe legte eine ZWEITE Tonkurve darueber
+                ' und riss das Bild auf: gemessen 0,7 Blendenstufen zu hell und 14 % ausgefressene
+                ' Pixel gegen 0,4 % in der eingebetteten Vorschau. Fuer sie bleibt es bei LibRaws
+                ' eigener Gamma-Ausgabe, nur ohne Histogramm-Stretch.
+                Dim bereitsGerendert = IstFertigGerendertesRgb(path)
+                Dim linearMoeglich = Not bereitsGerendert AndAlso
+                                     _setNoAutoBright IsNot Nothing AndAlso _setGamma IsNot Nothing
+                If bereitsGerendert AndAlso _setNoAutoBright IsNot Nothing Then _setNoAutoBright(handle, 1)
                 If linearMoeglich Then
                     _setNoAutoBright(handle, 1)
                     _setGamma(handle, 0, 1.0F) ' Gamma-Kurve neutral: 1/1 = linear
@@ -488,7 +506,24 @@ Namespace Services
                 Try
                     Dim pixels(CInt(pixelCount * 4L - 1)) As Byte
                     If bits = 16 Then
-                        Convert16(image + 16, width, height, pixels)
+                        ' Farbquerfehler: STILLGELEGT, nicht entfernt. Die Mechanik ist belegt
+                        ' (synthetisches Bild mit bekanntem Fehler: 78 % entfernt, siehe Pruefstand),
+                        ' aber die SCHAETZUNG traegt auf echten Bildinhalten nicht - am Referenzfoto
+                        ' bleiben 89 % des Farbsaums stehen. Zwei Vermutungen sind widerlegt
+                        ' (Gamma-Skala statt linear, Schwelle auf die staerksten Kanten). Solange sie
+                        ' nur ein Neuntel entfernt, kostet sie Decode-Zeit fuer nichts Sichtbares.
+                        ' Umschalten ist genau diese eine Konstante; die Pruefung ruft Convert16
+                        ' direkt und haelt den Zweig lauffaehig.
+                        Dim v As (Rot As Double, Blau As Double) = (1.0, 1.0)
+                        If FarbquerfehlerAktiv Then v = SchaetzeFarbquerfehler(image + 16, width, height)
+                        Dim ecke = Math.Sqrt(CDbl(width) * width + CDbl(height) * height) / 2.0
+                        Dim vRot = If(Math.Abs(v.Rot - 1.0) * ecke >= FarbquerfehlerSchwelle, v.Rot, 1.0)
+                        Dim vBlau = If(Math.Abs(v.Blau - 1.0) * ecke >= FarbquerfehlerSchwelle, v.Blau, 1.0)
+                        If vRot <> 1.0 OrElse vBlau <> 1.0 Then
+                            DiagnosticLogService.LogAlways("Raw.Farbquerfehler",
+                                $"Rot {(v.Rot - 1.0) * ecke:F2} px, Blau {(v.Blau - 1.0) * ecke:F2} px an der Ecke")
+                        End If
+                        Convert16(image + 16, width, height, pixels, vRot, vBlau, grundEv)
                     Else
                         Dim rgb(dataSize - 1) As Byte
                         Marshal.Copy(image + 16, rgb, 0, dataSize)
@@ -613,16 +648,32 @@ Namespace Services
         ''' <summary>Tabelle LINEAR (0..65535) -> Belichtungsrampe + ACR3-Tonkurve, wieder linear
         ''' in 0..65535. Einmal gebaut statt pro Pixel gerechnet: die Kurve wird je Pixel ZWEIMAL
         ''' gebraucht (hellster und dunkelster Kanal).</summary>
-        Private Shared ReadOnly TonTabelle As Integer() = BaueTonTabelle()
+        ''' <summary>Tontabellen je Grundbelichtung. Frueher gab es genau EINE, weil die
+        ''' Grundbelichtung eine Konstante war; mit den Kamera-Referenzwerten gibt es je Kamera eine.
+        ''' Der Aufbau kostet 65536 Schritte, in der Praxis liegen aber nur eine Handvoll Werte an -
+        ''' deshalb ein kleiner Speicher statt Neuaufbau je Bild.</summary>
+        Private Shared ReadOnly TonTabellen As New Dictionary(Of Integer, Integer())
+        Private Shared ReadOnly TonTabellenLock As New Object()
+
+        Friend Shared Function TonTabelleFuer(ev As Double) As Integer()
+            Dim k = CInt(Math.Round(ev * 1000.0))
+            SyncLock TonTabellenLock
+                Dim vorhanden As Integer() = Nothing
+                If TonTabellen.TryGetValue(k, vorhanden) Then Return vorhanden
+                Dim neu2 = BaueTonTabelle(k / 1000.0)
+                TonTabellen(k) = neu2
+                Return neu2
+            End SyncLock
+        End Function
 
         ''' <summary>Tabelle LINEAR (0..65535) -> sRGB-kodiert (0..65535). Getrennt von der
         ''' Tonkurve, weil der mittlere Kanal ZWISCHEN den beiden anderen interpoliert wird - und
         ''' zwar linear, vor der Gamma-Kodierung.</summary>
         Private Shared ReadOnly GammaTabelle As Integer() = BaueGammaTabelle()
 
-        Private Shared Function BaueTonTabelle() As Integer()
+        Private Shared Function BaueTonTabelle(ev As Double) As Integer()
             Dim t(65535) As Integer
-            Dim weiss = 1.0 / (2.0 ^ GrundbelichtungEv)
+            Dim weiss = 1.0 / (2.0 ^ ev)
             Dim steigung = 1.0 / (weiss - SchwarzAbzug)
             ' Weicher Fuss wie im DNG-SDK: eine quadratische Anlaufstrecke um den Schwarzpunkt,
             ' sonst entstuende dort eine sichtbare Kante.
@@ -668,22 +719,83 @@ Namespace Services
         '''
         ''' Der Dither benutzt DIESELBE Schwelle fuer alle drei Kanaele eines Pixels: kanalweise
         ''' verschiedene Schwellen faerben neutrale Flaechen ein.</summary>
-        Private Shared Sub Convert16(data As IntPtr, width As Integer, height As Integer, pixels As Byte())
+        Private Shared Sub Convert16(data As IntPtr, width As Integer, height As Integer, pixels As Byte(),
+                                     Optional vRot As Double = 1.0, Optional vBlau As Double = 1.0,
+                                     Optional grundbelichtungEvWert As Double = GrundbelichtungEv)
             Dim schwellen = DitherSchwellen
-            Dim ton = TonTabelle
+            Dim ton = TonTabelleFuer(grundbelichtungEvWert)
             Dim gamma = GammaTabelle
-            Dim rowShorts(width * 3 - 1) As Short
             Dim rowBytes = width * 6
+
+            ' Farbquerfehler: Rot und Blau sitzen radial verschoben. Korrigiert wird beim Umsetzen -
+            ' ein eigener Durchgang ueber 20 MP waere ein zweites Mal Speicherbandbreite fuer nichts.
+            ' Ein Feature, das an dieser Stelle sitzt, rechnet ausserdem im LINEAREN 16-Bit-Raum;
+            ' nach der Gamma-Kodierung zu interpolieren zieht Kanten schief.
+            Dim korrigiert = Math.Abs(vRot - 1.0) > 0.0000001 OrElse Math.Abs(vBlau - 1.0) > 0.0000001
+            Dim cx = (width - 1) / 2.0, cy = (height - 1) / 2.0
+            ' ACHTUNG Konvention: vRot/vBlau sind der GEMESSENE Fehler - der Faktor, mit dem der
+            ' Kanal abgetastet erscheint. Korrigiert wird mit dem KEHRWERT. Multiplizieren statt
+            ' dividieren verdoppelt den Farbsaum, statt ihn zu entfernen; genau daran ist die erste
+            ' Fassung gescheitert, und am echten Bild war der Unterschied zu klein, um es zu merken.
+            Dim kRot = 1.0 / vRot, kBlau = 1.0 / vBlau
+            ' Die Abbildung ist SEPARIERBAR (x haengt nur von x ab), also einmal vorrechnen.
+            Dim x0R(width - 1), x0B(width - 1) As Integer
+            Dim fxR(width - 1), fxB(width - 1) As Double
+            If korrigiert Then
+                For x = 0 To width - 1
+                    Dim sxr = Math.Min(Math.Max(cx + (x - cx) * kRot, 0.0), width - 1.001)
+                    x0R(x) = CInt(Math.Floor(sxr)) : fxR(x) = sxr - x0R(x)
+                    Dim sxb = Math.Min(Math.Max(cx + (x - cx) * kBlau, 0.0), width - 1.001)
+                    x0B(x) = CInt(Math.Floor(sxb)) : fxB(x) = sxb - x0B(x)
+                Next
+            End If
+
+            ' Zeilenring: Gruen kommt aus der eigenen Zeile, Rot und Blau aus benachbarten. Die
+            ' Verschiebung ist klein, deshalb reichen wenige Zeilen - und es bleibt bei EINER
+            ' Kopie je Quellzeile statt einer je Zugriff.
+            Const RingGroesse = 8
+            Dim ring(RingGroesse - 1)() As Short
+            Dim ringZeile(RingGroesse - 1) As Integer
+            For i = 0 To RingGroesse - 1
+                ReDim ring(i)(width * 3 - 1) : ringZeile(i) = -1
+            Next
+            Dim HoleZeile = Function(zy As Integer) As Short()
+                                Dim yy = Math.Min(Math.Max(zy, 0), height - 1)
+                                Dim slot = yy Mod RingGroesse
+                                If ringZeile(slot) <> yy Then
+                                    Marshal.Copy(data + CLng(yy) * rowBytes, ring(slot), 0, width * 3)
+                                    ringZeile(slot) = yy
+                                End If
+                                Return ring(slot)
+                            End Function
+
             For y = 0 To height - 1
-                Marshal.Copy(data + CLng(y) * rowBytes, rowShorts, 0, width * 3)
+                Dim rowShorts = HoleZeile(y)
+                Dim zR0 As Short() = Nothing, zR1 As Short() = Nothing
+                Dim zB0 As Short() = Nothing, zB1 As Short() = Nothing
+                Dim fyR = 0.0, fyB = 0.0
+                If korrigiert Then
+                    Dim syr = Math.Min(Math.Max(cy + (y - cy) * kRot, 0.0), height - 1.001)
+                    Dim y0r = CInt(Math.Floor(syr)) : fyR = syr - y0r
+                    zR0 = HoleZeile(y0r) : zR1 = HoleZeile(y0r + 1)
+                    Dim syb = Math.Min(Math.Max(cy + (y - cy) * kBlau, 0.0), height - 1.001)
+                    Dim y0b = CInt(Math.Floor(syb)) : fyB = syb - y0b
+                    zB0 = HoleZeile(y0b) : zB1 = HoleZeile(y0b + 1)
+                End If
                 Dim d = y * width * 4
                 Dim ditherRow = (y And 7) << 3
                 For x = 0 To width - 1
                     ' And &HFFFF hebt die Short-Werte vorzeichenfrei nach Integer (VB hat kein
                     ' UShort-Marshalling ueber Marshal.Copy).
-                    Dim r = rowShorts(x * 3) And &HFFFF
                     Dim g = rowShorts(x * 3 + 1) And &HFFFF
-                    Dim b = rowShorts(x * 3 + 2) And &HFFFF
+                    Dim r As Integer, b As Integer
+                    If korrigiert Then
+                        r = BilinearKanal(zR0, zR1, fyR, x0R(x), fxR(x), 0, width)
+                        b = BilinearKanal(zB0, zB1, fyB, x0B(x), fxB(x), 2, width)
+                    Else
+                        r = rowShorts(x * 3) And &HFFFF
+                        b = rowShorts(x * 3 + 2) And &HFFFF
+                    End If
                     ' DIESELBE Schwelle fuer alle drei Kanaele eines Pixels (wie in der
                     ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
                     ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
@@ -711,6 +823,188 @@ Namespace Services
                 Next
             Next
         End Sub
+
+        ''' <summary>Ein Kanal bilinear aus zwei Quellzeilen. Die Randspalte wird geklemmt statt
+        ''' gespiegelt - beim Farbquerfehler geht es um Bruchteile eines Pixels, da ist Klemmen
+        ''' unsichtbar und billiger.</summary>
+        Private Shared Function BilinearKanal(z0 As Short(), z1 As Short(), fy As Double,
+                                              x0 As Integer, fx As Double, kanal As Integer,
+                                              width As Integer) As Integer
+            Dim x1 = Math.Min(x0 + 1, width - 1)
+            Dim o0 = x0 * 3 + kanal, o1 = x1 * 3 + kanal
+            Dim oben = (z0(o0) And &HFFFF) * (1.0 - fx) + (z0(o1) And &HFFFF) * fx
+            Dim unten = (z1(o0) And &HFFFF) * (1.0 - fx) + (z1(o1) And &HFFFF) * fx
+            Dim v = oben * (1.0 - fy) + unten * fy
+            Return CInt(Math.Min(Math.Max(v, 0.0), 65535.0))
+        End Function
+
+        ''' <summary>Unterhalb dieser Verschiebung an der Bildecke (in Pixeln) wird NICHT korrigiert:
+        ''' das Umsampeln kostet Zeit und weicht Kanten minimal auf, ein Zehntelpixel Farbsaum sieht
+        ''' dagegen niemand. Gute Objektive liegen darunter.</summary>
+        Private Const FarbquerfehlerSchwelle As Double = 0.15
+
+        ''' <summary>Solange die Schaetzung auf echten Fotos nur ein Neuntel des Farbsaums findet,
+        ''' bleibt die Korrektur aus. Siehe Begruendung an der Aufrufstelle und in
+        ''' Audits/OFFENE_PUNKTE.md.</summary>
+        Private Const FarbquerfehlerAktiv As Boolean = False
+
+        ''' <summary>Lateraler Farbquerfehler: Rot und Blau sind gegenueber Gruen radial verschoben,
+        ''' und zwar LINEAR mit dem Abstand zur Bildmitte. Geschaetzt wird der Skalierungsfaktor je
+        ''' Kanal aus dem Bild selbst — keine Objektivdatenbank, kein Modellabgleich, funktioniert
+        ''' also auch mit Objektiven, die nirgends verzeichnet sind.
+        '''
+        ''' Verfahren: an radialen Kanten die Verschiebung nach Lucas-Kanade in EINER Richtung. Mit
+        ''' d(r) = (v-1)*r folgt v-1 = Summe(gu*r*diff) / Summe(gu^2*r^2), gewichtet also von selbst
+        ''' mit der Kantenstaerke — eine Schwelle braucht es nicht. Der Hochpass (Wert minus lokaler
+        ''' Mittelwert) entfernt den Helligkeitsunterschied zwischen den Kanaelen; ohne ihn misst man
+        ''' Farbe statt Versatz.</summary>
+        Private Shared Function SchaetzeFarbquerfehler(data As IntPtr, width As Integer, height As Integer) _
+                As (Rot As Double, Blau As Double)
+            Const Rand = 3
+            If width < 64 OrElse height < 64 Then Return (1.0, 1.0)
+            ' Schrittweite nach Bildgroesse: ein 20-MP-RAW braucht keine 20 Mio. Stichproben, ein
+            ' kleines Bild darf aber nicht unter die Mindestzahl fallen.
+            Dim Schritt = Math.Max(2, Math.Min(8, width \ 400))
+
+            Dim cx = (width - 1) / 2.0, cy = (height - 1) / 2.0
+            Dim halbW = Math.Max(1.0, cx), halbH = Math.Max(1.0, cy)
+            Dim rowBytes = width * 6
+            ' Geschaetzt wird in der GAMMA-Skala, nicht linear. Linear haengt die Kantenamplitude
+            ' an der Helligkeit: helle Kanten dominieren die Gewichtung, und der eine globale
+            ' Amplitudenausgleich zwischen den Kanaelen passt dann nur fuer eine Helligkeitsklasse.
+            ' Am echten Foto hat das die Schaetzung um den Faktor zehn zu klein gemacht (11 % des
+            ' Fehlers entfernt statt 78 % im synthetischen Test) - am synthetischen Bild mit EINEM
+            ' Helligkeitspaar faellt genau das nicht auf.
+            Dim gam = GammaTabelle
+            ' Fuenf Zeilen im Ring: der 5x5-Mittelwert braucht y-2..y+2.
+            Dim ring(4)() As Short
+            For i = 0 To 4 : ReDim ring(i)(width * 3 - 1) : Next
+            Dim ringZeile(4) As Integer
+            For i = 0 To 4 : ringZeile(i) = -1 : Next
+
+            Dim HoleZeile = Function(y As Integer) As Short()
+                                Dim slot = ((y Mod 5) + 5) Mod 5
+                                If ringZeile(slot) <> y Then
+                                    Marshal.Copy(data + CLng(y) * rowBytes, ring(slot), 0, width * 3)
+                                    ringZeile(slot) = y
+                                End If
+                                Return ring(slot)
+                            End Function
+
+            ' Gesammelte Stichproben: Hochpasswerte, radiale Ableitung von Gruen, Radius.
+            Dim kap = ((height - 2 * Rand) \ Schritt + 1) * ((width - 2 * Rand) \ Schritt + 1)
+            Dim hg(kap - 1), hr(kap - 1), hb(kap - 1), gu(kap - 1), rad(kap - 1) As Double
+            Dim n = 0
+
+            For y = Rand To height - Rand - 1 Step Schritt
+                Dim zm2 = HoleZeile(y - 2), zm1 = HoleZeile(y - 1), z0 = HoleZeile(y)
+                Dim zp1 = HoleZeile(y + 1), zp2 = HoleZeile(y + 2)
+                Dim dy = y - cy
+                For x = Rand To width - Rand - 1 Step Schritt
+                    Dim dx = x - cx
+                    Dim rn = Math.Sqrt((dx / halbW) ^ 2 + (dy / halbH) ^ 2)
+                    If rn < 0.3 Then Continue For      ' in der Mitte ist der Effekt per Definition 0
+                    Dim r = Math.Sqrt(dx * dx + dy * dy)
+                    Dim ux = dx / r, uy = dy / r
+
+                    ' 5x5-Mittelwert je Kanal (dieselben 25 Bildpunkte fuer alle drei).
+                    Dim sR = 0.0, sG = 0.0, sB = 0.0
+                    For Each z In {zm2, zm1, z0, zp1, zp2}
+                        For k = -2 To 2
+                            Dim o = (x + k) * 3
+                            sR += gam(z(o) And &HFFFF) : sG += gam(z(o + 1) And &HFFFF) : sB += gam(z(o + 2) And &HFFFF)
+                        Next
+                    Next
+                    Dim o0 = x * 3
+                    hr(n) = gam(z0(o0) And &HFFFF) - sR / 25.0
+                    hg(n) = gam(z0(o0 + 1) And &HFFFF) - sG / 25.0
+                    hb(n) = gam(z0(o0 + 2) And &HFFFF) - sB / 25.0
+                    ' Ableitung von Gruen entlang der radialen Richtung. Der Hochpass aendert sie
+                    ' kaum (der geglaettete Anteil variiert langsam), deshalb direkt am Rohwert.
+                    Dim gx = (gam(z0((x + 1) * 3 + 1) And &HFFFF) - gam(z0((x - 1) * 3 + 1) And &HFFFF)) / 2.0
+                    Dim gy = (gam(zp1(o0 + 1) And &HFFFF) - gam(zm1(o0 + 1) And &HFFFF)) / 2.0
+                    gu(n) = gx * ux + gy * uy
+                    rad(n) = r
+                    n += 1
+                Next
+            Next
+            If n < 1000 Then Return (1.0, 1.0)
+
+            ' Kantenamplitude angleichen, sonst misst man den Helligkeitsunterschied der Kanaele.
+            Dim eG = 0.0, eR = 0.0, eB = 0.0
+            For i = 0 To n - 1
+                eG += hg(i) * hg(i) : eR += hr(i) * hr(i) : eB += hb(i) * hb(i)
+            Next
+            Dim sr2 = If(eR > 0, Math.Sqrt(eG / eR), 1.0)
+            Dim sb2 = If(eB > 0, Math.Sqrt(eG / eB), 1.0)
+
+            ' NUR die staerksten radialen Kanten auswerten. An einer farbigen Flaeche ist die
+            ' Differenz zwischen den Kanaelen Farbe, nicht Versatz - und sie haengt mit der
+            ' Kantenrichtung zusammen, mittelt sich also NICHT heraus, sondern zieht die Schaetzung
+            ' systematisch gegen null. Mit allen Punkten wurden am echten Foto nur 10 % des
+            ' Farbsaums entfernt, mit dieser Schwelle deutlich mehr; am synthetischen Graubild
+            ' faellt der Unterschied nicht auf, weil es dort keine Farbe gibt.
+            Dim sortiert(n - 1) As Double
+            For i = 0 To n - 1 : sortiert(i) = Math.Abs(gu(i)) : Next
+            Array.Sort(sortiert)
+            Dim schwelle = sortiert(CInt(Math.Floor((n - 1) * 0.9)))
+
+            Dim numR = 0.0, numB = 0.0, den = 0.0
+            For i = 0 To n - 1
+                If Math.Abs(gu(i)) < schwelle Then Continue For
+                Dim w = gu(i) * rad(i)
+                numR += w * (hr(i) * sr2 - hg(i))
+                numB += w * (hb(i) * sb2 - hg(i))
+                den += w * w
+            Next
+            If den <= 0 Then Return (1.0, 1.0)
+            Return (1.0 + numR / den, 1.0 + numB / den)
+        End Function
+
+        ''' <summary>Traegt die Datei ein bereits fertig gerendertes RGB-Bild statt Sensordaten?
+        ''' Erkannt an PhotometricInterpretation = 2 (RGB). Ein echtes Sensor-RAW steht dort auf
+        ''' 32803 (Farbfilter-Muster), ein lineares DNG auf 34892 - beide sind linear und gehoeren
+        ''' durch unsere Basisstufe. Nur die RGB-Variante ist schon fertig.
+        ''' Faellt das Lesen aus, gilt die Datei als normal - lieber die Basisstufe anwenden als
+        ''' bei jedem unlesbaren Header darauf zu verzichten.</summary>
+        Private Shared Function IstFertigGerendertesRgb(path As String) As Boolean
+            Try
+                If Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return False
+                Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                For Each d In verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifDirectoryBase)()
+                    ' Ausgeschrieben, weil MetadataExtractor das als Erweiterungsmethode anbietet
+                    ' und diese Datei den Namensraum nicht importiert.
+                    Dim wert As Integer
+                    If MetadataExtractor.DirectoryExtensions.TryGetInt32(
+                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagPhotometricInterpretation, wert) Then
+                        ' Bei einer DNG-Huelle um ein RGB-Bild steht 2 im Hauptbild; ein Sensormuster
+                        ' (32803) oder LinearRaw (34892) gaebe es dort gar nicht.
+                        If wert = 2 Then Return True
+                    End If
+                Next
+                Return False
+            Catch
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Die Grundbelichtung fuer DIESE Datei. Ohne die Einstellung bleibt es beim
+        ''' festen Wert; mit ihr entscheidet das Kameramodell aus den EXIF-Daten. Ein unbekanntes
+        ''' Modell oder eine unlesbare Datei fuehrt IMMER auf den festen Wert zurueck - nie raten.</summary>
+        Private Shared Function GrundbelichtungFuerDatei(path As String) As Double
+            Try
+                If Not AppSettingsService.Load().UseCameraBaselineTable Then Return GrundbelichtungEv
+                Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
+                If ifd0 Is Nothing Then Return GrundbelichtungEv
+                Return CameraBaselineTable.GrundbelichtungFuer(
+                    ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake),
+                    ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel),
+                    GrundbelichtungEv)
+            Catch
+                Return GrundbelichtungEv
+            End Try
+        End Function
 
         Private Shared Function CheckedPixelCount(width As Integer, height As Integer) As Long
             If width <= 0 OrElse height <= 0 Then Return 0

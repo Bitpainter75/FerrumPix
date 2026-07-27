@@ -30,26 +30,61 @@
             <StackPanel Orientation="Horizontal" Spacing="14">
                 <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Rgb" Classes.active="{Binding IsCurveChannelRgb}">
-                    <TextBlock Text="RGB" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="RGB" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
+                        <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade
+                             ein anderer angezeigt wird. -->
+                        <Ellipse Width="5" Height="5" VerticalAlignment="Center"
+                                 Fill="{DynamicResource FP.Accent}"
+                                 IsVisible="{Binding IsCurveRgbEdited}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Red" Classes.active="{Binding IsCurveChannelRed}">
-                    <TextBlock Text="R" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="R" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
+                        <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade
+                             ein anderer angezeigt wird. -->
+                        <Ellipse Width="5" Height="5" VerticalAlignment="Center"
+                                 Fill="{DynamicResource FP.Accent}"
+                                 IsVisible="{Binding IsCurveRedEdited}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Green"
                         Classes.active="{Binding IsCurveChannelGreen}">
-                    <TextBlock Text="G" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="G" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
+                        <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade
+                             ein anderer angezeigt wird. -->
+                        <Ellipse Width="5" Height="5" VerticalAlignment="Center"
+                                 Fill="{DynamicResource FP.Accent}"
+                                 IsVisible="{Binding IsCurveGreenEdited}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Blue"
                         Classes.active="{Binding IsCurveChannelBlue}">
-                    <TextBlock Text="B" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="B" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
+                        <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade
+                             ein anderer angezeigt wird. -->
+                        <Ellipse Width="5" Height="5" VerticalAlignment="Center"
+                                 Fill="{DynamicResource FP.Accent}"
+                                 IsVisible="{Binding IsCurveBlueEdited}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Luminance"
                         Classes.active="{Binding IsCurveChannelLuminance}">
-                    <TextBlock Text="L" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="L" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
+                        <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade
+                             ein anderer angezeigt wird. -->
+                        <Ellipse Width="5" Height="5" VerticalAlignment="Center"
+                                 Fill="{DynamicResource FP.Accent}"
+                                 IsVisible="{Binding IsCurveLuminanceEdited}" />
+                    </StackPanel>
                 </Button>
             </StackPanel>
             <icons:CurveEditor Height="180"

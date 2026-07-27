@@ -3596,6 +3596,9 @@ Namespace ViewModels
                     ' AddBrushStroke) - auch zwischen zwei Ebenen-Werkzeugen (Draw -> Text usw.), wo
                     ' SelectedAnnotationIndex sonst unverändert bliebe.
                     _pixelEditLayer.ResetActiveStroke()
+                    ' Objekt-, Retusche-, Pinsel- und Transformwerkzeuge verdecken mit dem roten
+                    ' Overlay genau das, woran man arbeitet - dort verschwindet es sofort.
+                    If VerdecktDasMaskenOverlay(value) Then VerbergeMaskenOverlay()
                 End If
                 If Not IsLayerTool(value) Then SelectedAnnotationIndex = -1
                 If Not CanShowBeforeAfter AndAlso _showBeforeImage Then
@@ -3614,6 +3617,11 @@ Namespace ViewModels
                 ' Werkzeugwechsel kann das Ziel der Regler umschalten (Objekt <-> Bild).
                 RefreshObjectAdjustMode()
                 RefreshSelectionAdjustMode()
+                ' NACH dem Umschalten das Overlay nachziehen: RefreshSelectionAdjustMode laedt die
+                ' Maske der markierten Ebene, und SetSelectionMaskData loescht dabei die Anzeige und
+                ' baut nur die Ameisenlinie neu auf - das rote Overlay bliebe sonst weg. In den
+                ' Werkzeugen, die es ohnehin verdecken, wird bewusst NICHT veroeffentlicht.
+                If Not VerdecktDasMaskenOverlay(value) Then PublishMaskBrushOverlay(nurWennSichtbar:=True)
                 RequestOverlayStateNotify()
                 ' STEMPEL-LIVE: Live-Puffer (Ziel + Sample, 2 Pipeline-Renders)
                 ' schon beim Werkzeugwechsel asynchron vorwaermen - erst beim ersten Spot gebaut,
@@ -4559,6 +4567,52 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Traegt dieser Kanal eine Kurve, die von der Diagonalen abweicht? Der Editor zeigt
+        ''' immer nur EINEN Kanal; ohne Markierung am Umschalter sieht man nicht, in welchem anderen
+        ''' etwas eingestellt ist - bei einem importierten Preset ist das der Normalfall.
+        ''' Zwei Punkte in den Ecken sind die neutrale Kurve.</summary>
+        Private Shared Function KurveWirkt(punkte As ObservableCollection(Of Avalonia.Point)) As Boolean
+            If punkte Is Nothing OrElse punkte.Count = 0 Then Return False
+            If punkte.Count > 2 Then Return True
+            For Each pt In punkte
+                ' Ein Eckpunkt darf auf (0,0) bzw. (1,1) liegen; alles andere ist eine Aenderung.
+                Dim aufDiagonale = Math.Abs(pt.X - pt.Y) < 0.002
+                Dim inEcke = (pt.X < 0.002 OrElse pt.X > 0.998)
+                If Not (aufDiagonale AndAlso inEcke) Then Return True
+            Next
+            Return False
+        End Function
+
+        Public ReadOnly Property IsCurveRgbEdited As Boolean
+            Get
+                Return KurveWirkt(_curveRgbPoints)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurveRedEdited As Boolean
+            Get
+                Return KurveWirkt(_curveRedPoints)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurveGreenEdited As Boolean
+            Get
+                Return KurveWirkt(_curveGreenPoints)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurveBlueEdited As Boolean
+            Get
+                Return KurveWirkt(_curveBluePoints)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurveLuminanceEdited As Boolean
+            Get
+                Return KurveWirkt(_curveLuminancePoints)
+            End Get
+        End Property
+
         Public ReadOnly Property IsCurveChannelRgb As Boolean
             Get
                 Return _selectedCurveChannel = CurveChannel.Rgb
@@ -4873,6 +4927,36 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ActiveHslLuminance))
             End Set
         End Property
+
+        ''' <summary>Welche der acht Farbbaender vom Standard abweichen, als Liste fuer das Farbrad.
+        ''' Das Rad zeigt immer nur EIN Band; ohne diese Markierung sieht man nicht, wo sonst noch
+        ''' etwas eingestellt ist - bei einem importierten Preset ist das der Normalfall.</summary>
+        Public ReadOnly Property AdjustedHslBands As String
+            Get
+                Dim werte = {
+                    ("Red", RedHue, RedSaturation, RedLuminance),
+                    ("Orange", OrangeHue, OrangeSaturation, OrangeLuminance),
+                    ("Yellow", YellowHue, YellowSaturation, YellowLuminance),
+                    ("Green", GreenHue, GreenSaturation, GreenLuminance),
+                    ("Aqua", AquaHue, AquaSaturation, AquaLuminance),
+                    ("Blue", BlueHue, BlueSaturation, BlueLuminance),
+                    ("Purple", PurpleHue, PurpleSaturation, PurpleLuminance),
+                    ("Magenta", MagentaHue, MagentaSaturation, MagentaLuminance)}
+                Dim treffer As New List(Of String)
+                For Each w In werte
+                    If BandIstBearbeitet(w.Item2, w.Item3, w.Item4) Then treffer.Add(w.Item1)
+                Next
+                Return String.Join(",", treffer)
+            End Get
+        End Property
+
+        ''' <summary>Gilt ein Farbband als bearbeitet? Schwelle statt Gleichheit: die Regler liefern
+        ''' Double, und ein importiertes Preset kann 0,0001 hinterlassen, ohne dass jemand etwas
+        ''' eingestellt hat - eine Markierung dafuer waere irrefuehrend. Eigene Funktion, damit die
+        ''' Schwelle geprueft werden kann; die Eigenschaft daruem herum braucht eine Instanz.</summary>
+        Friend Shared Function BandIstBearbeitet(farbton As Double, saettigung As Double, luminanz As Double) As Boolean
+            Return Math.Abs(farbton) > 0.001 OrElse Math.Abs(saettigung) > 0.001 OrElse Math.Abs(luminanz) > 0.001
+        End Function
 
         Public ReadOnly Property SelectedHslBandLabel As String
             Get
@@ -7121,6 +7205,24 @@ Namespace ViewModels
         ''' auf eine gedeckelte Overlay-Auflösung heruntergerechnet, plus optional den laufenden Strich als
         ''' Live-Vorschau (Subtrahieren stanzt via DstOut). Rückgabe deckt das ganze Anzeigebild ab und wird
         ''' vom View auf das Bildrechteck gestreckt. Nothing, wenn nichts zu zeigen ist.</summary>
+        ''' <summary>Die rot eingefaerbte COMMITTETE Maske in Overlay-Aufloesung, waehrend ein Strich
+        ''' laeuft. Sie aendert sich innerhalb eines Strichs nicht - vorher wurde sie trotzdem bei
+        ''' JEDER Mausbewegung neu skaliert (hochwertige Abtastung ueber die ganze Flaeche), und das
+        ''' war der Hauptposten der CPU-Last beim Malen. Jetzt einmal je Strich, danach nur noch
+        ''' kopieren und den Strich daraufzeichnen.
+        ''' Lebensdauer bewusst NUR der Strich: solange er laeuft, kann die committete Maske sich
+        ''' nicht aendern, und die Frage nach einer Ungueltigkeitsregel stellt sich gar nicht.</summary>
+        Private _maskOverlayBasis As SKBitmap
+        Private _maskOverlayBasisBreite As Integer
+        Private _maskOverlayBasisHoehe As Integer
+
+        Private Sub VerwirfMaskenOverlayBasis()
+            _maskOverlayBasis?.Dispose()
+            _maskOverlayBasis = Nothing
+            _maskOverlayBasisBreite = 0
+            _maskOverlayBasisHoehe = 0
+        End Sub
+
         Private Function BuildSelectionRedOverlayBitmap(livePts As List(Of SKPoint), eraseMode As Boolean) As Bitmap
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width, bh = selectionSize.Height
@@ -7147,14 +7249,24 @@ Namespace ViewModels
                 End If
             End If
 
+            ' Waehrend eines Strichs die eingefaerbte Maske einmal bauen und danach nur kopieren.
+            Dim liveStrich = livePts IsNot Nothing AndAlso livePts.Count > 0
+            If Not liveStrich Then VerwirfMaskenOverlayBasis()
+            Dim basisTaugt = liveStrich AndAlso _maskOverlayBasis IsNot Nothing AndAlso
+                             _maskOverlayBasisBreite = ow AndAlso _maskOverlayBasisHoehe = oh
+
             Try
             Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
                 Using canvas = New SKCanvas(overlay)
                     canvas.Clear(SKColors.Transparent)
+                    If basisTaugt Then
+                        ' Fertige Basis uebernehmen - das teure Neuskalieren der Maske entfaellt.
+                        canvas.DrawBitmap(_maskOverlayBasis, 0, 0)
+                    End If
                     ' Committete Maske rot einfärben: erst Rot in der Maskenregion auslegen, dann per DstIn
                     ' auf die Maskendeckung beschränken. Rein alphabasiert - unabhängig davon, wie eine
                     ' Alpha8-Quelle beim direkten Zeichnen eingefärbt würde.
-                    If maskForOverlay IsNot Nothing Then
+                    If maskForOverlay IsNot Nothing AndAlso Not basisTaugt Then
                         Dim src = New SKRect(0, 0, maskForOverlay.Width, maskForOverlay.Height)
                         Dim dst = New SKRect(CSng(_selectionMaskRect.Left * ovScale), CSng(_selectionMaskRect.Top * ovScale),
                                              CSng(_selectionMaskRect.Right * ovScale), CSng(_selectionMaskRect.Bottom * ovScale))
@@ -7170,8 +7282,16 @@ Namespace ViewModels
                             ImageProcessor.DrawBitmapSampled(canvas, maskForOverlay, src, dst, ImageProcessor.SamplingHigh, maskPaint)
                         End Using
                     End If
+                    ' Basis fuer die naechsten Bewegungen desselben Strichs festhalten - VOR dem
+                    ' Zeichnen des Strichs, sonst waere er beim naechsten Mal doppelt drin.
+                    If liveStrich AndAlso Not basisTaugt Then
+                        VerwirfMaskenOverlayBasis()
+                        _maskOverlayBasis = overlay.Copy()
+                        _maskOverlayBasisBreite = ow
+                        _maskOverlayBasisHoehe = oh
+                    End If
                     ' Laufender Strich (Live): auf Overlay-Auflösung skaliert.
-                    If livePts IsNot Nothing AndAlso livePts.Count > 0 Then
+                    If liveStrich Then
                         Dim scaled As New List(Of SKPoint)(livePts.Count)
                         For Each p In livePts
                             scaled.Add(New SKPoint(CSng(p.X * ovScale), CSng(p.Y * ovScale)))
@@ -15163,6 +15283,7 @@ Namespace ViewModels
             field = value
             Me.RaisePropertyChanged(propertyName)
             RaiseResetButtonStateChanged()
+            VerbergeMaskenOverlayNachAenderung()
             If HasSelectedAnnotation AndAlso IsObjectAdjustTool(_currentTool) Then
                 RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
             Else
@@ -15181,6 +15302,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ActiveHslHue))
                 Me.RaisePropertyChanged(NameOf(ActiveHslSaturation))
                 Me.RaisePropertyChanged(NameOf(ActiveHslLuminance))
+                Me.RaisePropertyChanged(NameOf(AdjustedHslBands))
             End If
             Return changed
         End Function
@@ -17852,6 +17974,37 @@ Namespace ViewModels
         ''' <summary>Werkzeuge, in denen ein markiertes Objekt markiert BLEIBT. Das Drehen-Werkzeug gehört
         ''' dazu, seit seine vier Knöpfe (90° links/rechts, Spiegeln) auf das markierte Objekt wirken - würde
         ''' der Wechsel dorthin die Markierung aufheben, gäbe es nie ein Objekt zu drehen.</summary>
+        ''' <summary>Werkzeuge, in denen das rote Masken-Overlay SOFORT verschwindet: dort arbeitet man
+        ''' am Bild oder an einem Objekt, und eine rote Flaeche darueber verdeckt genau das, was man
+        ''' beurteilen will. Anpassungswerkzeuge gehoeren NICHT dazu - dort bleibt es stehen, bis der
+        ''' erste Regler bewegt wird (siehe VerbergeMaskenOverlayNachAenderung).</summary>
+        Private Shared Function VerdecktDasMaskenOverlay(tool As EditorTool) As Boolean
+            Return tool = EditorTool.Insert OrElse tool = EditorTool.Text OrElse
+                   tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse
+                   tool = EditorTool.Retouch OrElse tool = EditorTool.Transform
+        End Function
+
+        ''' <summary>Das rote Overlay ausblenden - eine Stelle fuer alle Anlaesse. Die Maske selbst
+        ''' bleibt unangetastet; nur ihre Anzeige verschwindet, bis ein Zustandswechsel sie wieder
+        ''' veroeffentlicht (PublishMaskBrushOverlay).</summary>
+        Private Sub VerbergeMaskenOverlay()
+            ' Auch die Strich-Basis fallen lassen: sie ist bis zu 1600x1600 gross und wird ohne
+            ' sichtbares Overlay nicht gebraucht.
+            VerwirfMaskenOverlayBasis()
+            If _selectionMaskPreviewImage Is Nothing Then Return
+            SetSelectionMaskPreviewImage(Nothing)
+        End Sub
+
+        ''' <summary>Nach der ERSTEN Reglerbewegung in einem Anpassungswerkzeug verschwindet das rote
+        ''' Overlay: bis dahin zeigt es, WO die Anpassung wirkt, danach verdeckt es die Wirkung, die
+        ''' man gerade beurteilen will. Gilt nur bei markierter Maskenebene - ohne sie gibt es nichts
+        ''' auszublenden.</summary>
+        Private Sub VerbergeMaskenOverlayNachAenderung()
+            If Not IsObjectAdjustTool(_currentTool) Then Return
+            If Not _activeSelectionIsMask AndAlso SelectedGradientMask Is Nothing Then Return
+            VerbergeMaskenOverlay()
+        End Sub
+
         Private Shared Function IsLayerTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Text OrElse tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse
                    tool = EditorTool.Insert OrElse tool = EditorTool.Move OrElse
@@ -19785,7 +19938,17 @@ Namespace ViewModels
             If _suppressCurvePointsChanged Then Return
             CaptureUndoState("Tonwertkurve")
             RaiseResetButtonStateChanged()
+            RaiseCurveEditedMarkers()
             SchedulePreviewForCurrentTarget()
+        End Sub
+
+        ''' <summary>Die Markierungen am Kanalumschalter nachziehen. Eigene Methode, damit jeder Weg,
+        ''' der Kurvenpunkte aendert (Bedienen, Rueckgaengig, Preset, Laden), dieselbe Stelle ruft.</summary>
+        Private Sub RaiseCurveEditedMarkers()
+            For Each n In {NameOf(IsCurveRgbEdited), NameOf(IsCurveRedEdited), NameOf(IsCurveGreenEdited),
+                           NameOf(IsCurveBlueEdited), NameOf(IsCurveLuminanceEdited)}
+                Me.RaisePropertyChanged(n)
+            Next
         End Sub
 
         Private Sub RaiseCurveChannelStateChanged()
@@ -19859,6 +20022,9 @@ Namespace ViewModels
                 NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(PurpleLuminance),
                 NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance),
                 NameOf(ActiveHslHue), NameOf(ActiveHslSaturation), NameOf(ActiveHslLuminance),
+                NameOf(AdjustedHslBands),
+                NameOf(IsCurveRgbEdited), NameOf(IsCurveRedEdited), NameOf(IsCurveGreenEdited),
+                NameOf(IsCurveBlueEdited), NameOf(IsCurveLuminanceEdited),
                 NameOf(ColorGradeShadowHue), NameOf(ColorGradeShadowSaturation),
                 NameOf(ColorGradeHighlightHue), NameOf(ColorGradeHighlightSaturation), NameOf(ColorGradeBalance),
                 NameOf(ColorGradeShadowLuminance), NameOf(ColorGradeMidtoneHue), NameOf(ColorGradeMidtoneSaturation), NameOf(ColorGradeMidtoneLuminance), NameOf(ColorGradeHighlightLuminance), NameOf(ColorGradeGlobalHue), NameOf(ColorGradeGlobalSaturation), NameOf(ColorGradeGlobalLuminance), NameOf(ColorGradeBlending),
