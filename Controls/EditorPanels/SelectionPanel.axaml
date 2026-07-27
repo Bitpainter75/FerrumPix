@@ -133,11 +133,11 @@
                 Padding="10,6"
                 IsEnabled="{Binding HasActiveSelection}"
                 Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
-                ToolTip.Tip="Aus der Auswahl direkt eine maskierte Korrekturebene erstellen (ohne erst eine Anpassung ändern zu müssen)">
+                ToolTip.Tip="Aus der Auswahl direkt eine Auswahlebene erstellen (ohne erst eine Anpassung ändern zu müssen)">
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
                                Width="16" Height="16" />
-                <TextBlock Text="Neue Korrekturebene" />
+                <TextBlock Text="Neue Auswahlebene" />
             </StackPanel>
         </Button>
 

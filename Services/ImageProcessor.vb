@@ -1099,6 +1099,34 @@ Namespace Services
         ''' das nicht - dort IST der Abstand der beiden Punkte die Weichheit.</summary>
         Public Property GradientFeatherPercent As Double = 50.0
 
+        ''' <summary>PINSEL-KORREKTUR eines Verlaufs: zwei Alpha8-Raster im QUELLRAUM, die nach dem
+        ''' gerechneten Verlauf verrechnet werden (<c>Deckung = Verlauf + Hinzu - Weg</c>, geklemmt).
+        ''' Damit laesst sich ein Verlauf mit dem Maskenpinsel nachbessern - Dach aus dem
+        ''' Himmelsverlauf herausnehmen, eine Ecke dazunehmen -, OHNE dass der Verlauf seine
+        ''' Aenderbarkeit verliert: seine Geometrie bleibt Geometrie, die Korrektur liegt daneben.
+        ''' Deshalb zwei getrennte Raster statt eines vorzeichenbehafteten: beide Richtungen bleiben
+        ''' unabhaengig voneinander uebermalbar, und ein leeres Raster kostet nichts.
+        '''
+        ''' Beide teilen sich EIN Rechteck (die Vereinigung des Bemalten) - getrennte Rechtecke
+        ''' waeren zwei weitere Feldergruppen fuer einen Fall, den es praktisch nicht gibt.
+        ''' Bei einer GEMALTEN Maske bleiben diese Felder leer; dort verrechnet der Pinsel direkt
+        ''' die Maske selbst (siehe WriteSelectionMaskBackToLayer im EditorViewModel).</summary>
+        Public Property BrushAddPngBase64 As String = ""
+        Public Property BrushSubtractPngBase64 As String = ""
+        Public Property BrushLeft As Integer
+        Public Property BrushTop As Integer
+        Public Property BrushRight As Integer
+        Public Property BrushBottom As Integer
+
+        ''' <summary>True, wenn ein Verlauf eine Pinselkorrektur traegt.</summary>
+        Public ReadOnly Property HasBrushCorrection As Boolean
+            Get
+                Return BrushRight > BrushLeft AndAlso BrushBottom > BrushTop AndAlso
+                       (Not String.IsNullOrWhiteSpace(BrushAddPngBase64) OrElse
+                        Not String.IsNullOrWhiteSpace(BrushSubtractPngBase64))
+            End Get
+        End Property
+
         ''' <summary>True fuer beide Verlaufsarten - sie teilen sich Speicherung, Renderweg und
         ''' Cache-Schluessel.</summary>
         Public ReadOnly Property IsGradient As Boolean
@@ -1128,7 +1156,9 @@ Namespace Services
                 .Kind = Kind,
                 .GradientStartXPercent = GradientStartXPercent, .GradientStartYPercent = GradientStartYPercent,
                 .GradientEndXPercent = GradientEndXPercent, .GradientEndYPercent = GradientEndYPercent,
-                .GradientRadiusRatio = GradientRadiusRatio, .GradientFeatherPercent = GradientFeatherPercent
+                .GradientRadiusRatio = GradientRadiusRatio, .GradientFeatherPercent = GradientFeatherPercent,
+                .BrushAddPngBase64 = BrushAddPngBase64, .BrushSubtractPngBase64 = BrushSubtractPngBase64,
+                .BrushLeft = BrushLeft, .BrushTop = BrushTop, .BrushRight = BrushRight, .BrushBottom = BrushBottom
             }
         End Function
     End Class
@@ -3526,6 +3556,17 @@ Namespace Services
                 ' Projektion auf die Verlaufsachse (siehe unten). Das spart bei 45 MP rund 45 MB
                 ' Zwischenpuffer und haelt den Verlauf ausserdem verlustfrei aenderbar.
                 Dim raw = If(maskData.IsGradient, Nothing, Convert.FromBase64String(maskData.PngBase64))
+                ' Pinselkorrektur eines Verlaufs: die beiden Raster einmal auspacken, danach kostet
+                ' der Zugriff je Pixel nur noch einen Indexzugriff.
+                Dim korrHinzu As Byte() = Nothing, korrWeg As Byte() = Nothing
+                Dim korrBreite = 0, korrHoehe = 0
+                If maskData.IsGradient AndAlso maskData.HasBrushCorrection Then
+                    korrBreite = maskData.BrushRight - maskData.BrushLeft
+                    korrHoehe = maskData.BrushBottom - maskData.BrushTop
+                    korrHinzu = DecodeAlphaRaster(maskData.BrushAddPngBase64, korrBreite, korrHoehe)
+                    korrWeg = DecodeAlphaRaster(maskData.BrushSubtractPngBase64, korrBreite, korrHoehe)
+                    If korrHinzu Is Nothing AndAlso korrWeg Is Nothing Then korrBreite = 0
+                End If
                 Using decoded = If(raw Is Nothing, Nothing, SKBitmap.Decode(raw))
                     If Not maskData.IsGradient AndAlso (decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8) Then Return Nothing
                     Dim dStride = If(decoded Is Nothing, 0, decoded.RowBytes)
@@ -3640,6 +3681,23 @@ Namespace Services
                                 End If
                             ElseIf sx >= 0 AndAlso sy >= 0 AndAlso sx < decoded.Width AndAlso sy < decoded.Height Then
                                 alpha = dBuf(sy * dStride + sx)
+                            End If
+                            ' Pinselkorrektur NACH dem Verlauf und VOR dem Umkehren: "Umkehren"
+                            ' soll das fertige Ergebnis spiegeln, nicht nur den Verlaufsanteil -
+                            ' sonst kaeme ein weggepinselter Bereich beim Umkehren zurueck.
+                            If korrBreite > 0 Then
+                                Dim kx = sx + maskData.Left - maskData.BrushLeft
+                                Dim ky = syQuelle - maskData.BrushTop
+                                If kx >= 0 AndAlso ky >= 0 AndAlso kx < korrBreite AndAlso ky < korrHoehe Then
+                                    Dim ki = ky * korrBreite + kx
+                                    If korrHinzu IsNot Nothing Then alpha += korrHinzu(ki)
+                                    If korrWeg IsNot Nothing Then alpha -= korrWeg(ki)
+                                    If alpha < 0 Then
+                                        alpha = 0
+                                    ElseIf alpha > 255 Then
+                                        alpha = 255
+                                    End If
+                                End If
                             End If
                             If maskData.Inverted Then alpha = 255 - alpha
                             iBuf(iRow + x) = CByte(alpha)
@@ -3942,8 +4000,231 @@ Namespace Services
         End Function
 
         ''' <summary>Friert die momentan aktive OutputSpace-Auswahl als persistente SourceSpace-Maske ein.</summary>
+        ''' <summary>Packt ein Alpha8-PNG in einen dichten Bytepuffer der erwarteten Groesse aus.
+        ''' Nothing bei leerem String, unlesbaren Daten, falschem Farbtyp oder abweichender Groesse -
+        ''' ein stiller Rueckfall auf halbe Deckung waere hier schlimmer als gar keine Korrektur.</summary>
+        Private Shared Function DecodeAlphaRaster(base64 As String, breite As Integer, hoehe As Integer) As Byte()
+            If String.IsNullOrWhiteSpace(base64) OrElse breite <= 0 OrElse hoehe <= 0 Then Return Nothing
+            Try
+                Using bmp = SKBitmap.Decode(Convert.FromBase64String(base64))
+                    If bmp Is Nothing OrElse bmp.ColorType <> SKColorType.Alpha8 Then Return Nothing
+                    If bmp.Width <> breite OrElse bmp.Height <> hoehe Then Return Nothing
+                    Dim stride = bmp.RowBytes
+                    Dim quelle = New Byte(stride * hoehe - 1) {}
+                    Marshal.Copy(bmp.GetPixels(), quelle, 0, quelle.Length)
+                    If stride = breite Then Return quelle
+                    Dim dicht = New Byte(breite * hoehe - 1) {}
+                    For y = 0 To hoehe - 1
+                        Buffer.BlockCopy(quelle, y * stride, dicht, y * breite, breite)
+                    Next
+                    Return dicht
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        Private Shared Function EncodeAlphaRaster(puffer As Byte(), breite As Integer, hoehe As Integer) As String
+            If puffer Is Nothing OrElse breite <= 0 OrElse hoehe <= 0 Then Return ""
+            Dim leer = True
+            For i = 0 To puffer.Length - 1
+                If puffer(i) <> 0 Then
+                    leer = False
+                    Exit For
+                End If
+            Next
+            If leer Then Return ""
+            Using bmp = New SKBitmap(breite, hoehe, SKColorType.Alpha8, SKAlphaType.Premul)
+                Dim stride = bmp.RowBytes
+                Dim ziel = New Byte(stride * hoehe - 1) {}
+                For y = 0 To hoehe - 1
+                    Buffer.BlockCopy(puffer, y * breite, ziel, y * stride, breite)
+                Next
+                Marshal.Copy(ziel, 0, bmp.GetPixels(), ziel.Length)
+                Using image = SKImage.FromBitmap(bmp)
+                    Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
+                        Return Convert.ToBase64String(data.ToArray())
+                    End Using
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Verrechnet einen Pinselstrich (als Quellraum-Maske, wie ihn
+        ''' CreateSourceMaskFromSelection liefert) in die Pinselkorrektur eines VERLAUFS.
+        '''
+        ''' <paramref name="abziehen"/> steuert, in welches der beiden Raster der Strich geht. Beide
+        ''' werden mit MAXIMUM verrechnet, nicht addiert: zweimal ueber dieselbe Stelle zu streichen
+        ''' soll sie nicht "doppelt" wegnehmen (das gaebe sichtbare Stufen an Ueberlappungen), sondern
+        ''' dasselbe Ergebnis liefern wie einmal. Ein Strich in die eine Richtung LOESCHT ausserdem
+        ''' die Gegenrichtung an denselben Stellen - sonst liesse sich ein versehentliches Abziehen
+        ''' nie wieder zurueckholen, weil beide Raster gegeneinander stehen blieben.
+        '''
+        ''' Gerechnet wird nur auf der VEREINIGUNG der bemalten Rechtecke, nicht auf dem ganzen Bild:
+        ''' bei 50 MP waeren das sonst zwei Puffer von je 50 MB pro Strich.</summary>
+        ''' <summary>EINE Stelle, an der ein Maskenpinsel-Strich sein Ziel kennt. Die drei Fälle -
+        ''' gemalte Maske, Verlauf mit Pinselkorrektur, kein Ziel - standen vorher als If-Zweige im
+        ''' EditorViewModel verstreut, und genau dort ist derselbe Fehler dreimal passiert (Commit,
+        ''' Abbruch und Live-Vorschau riefen den Auswahl-Weg, obwohl das Ziel ein Verlauf war).
+        '''
+        ''' Hier unten statt im ViewModel, weil das ViewModel headless nicht instanziierbar ist (sein
+        ''' einziger Konstruktor verlangt das MainWindowViewModel) - alle Prüfungen dort können nur
+        ''' Quelltext abgleichen. In der Engine sind es echte Verhaltensprüfungen.
+        '''
+        ''' <paramref name="strich"/> ist der Strich als Quellraum-Maske, wie ihn
+        ''' CreateSourceMaskFromSelection liefert.
+        '''
+        ''' STAND: die Anwendung ruft das bisher NUR fuer Verlaufsmasken. Striche auf eine gemalte
+        ''' Ebenen-Maske laufen weiterhin ueber die Auswahl (ApplySelectionCandidate ->
+        ''' WriteSelectionMaskBackToLayer), weil deren Raster zugleich die Quelle des roten Overlays
+        ''' ist. MergePaintedMaskStroke ist der vorbereitete Weg dorthin und wird heute nur von der
+        ''' Diagnose gefahren - siehe Audits/MASK_TOOL_DECOUPLING_PLAN.md, Schritt 4.</summary>
+        Public Shared Function ApplyMaskBrushStroke(ziel As ImageMask, strich As ImageMask,
+                                                    abziehen As Boolean) As Boolean
+            If ziel Is Nothing OrElse strich Is Nothing Then Return False
+            If ziel.IsGradient Then Return MergeGradientBrushCorrection(ziel, strich, abziehen)
+            Return MergePaintedMaskStroke(ziel, strich, abziehen)
+        End Function
+
+        ''' <summary>Strich in eine GEMALTE Maske einrechnen: hinzufügen nimmt das Maximum, abziehen
+        ''' zieht ab. Das Rechteck wächst beim Hinzufügen mit; beim Abziehen bleibt es stehen, statt
+        ''' es teuer neu zu vermessen - ein zu großes Rechteck mit Nullen kostet nur etwas Speicher,
+        ''' ein zu kleines würde Maskenteile abschneiden.</summary>
+        Public Shared Function MergePaintedMaskStroke(mask As ImageMask, strich As ImageMask,
+                                                      abziehen As Boolean) As Boolean
+            If mask Is Nothing OrElse strich Is Nothing OrElse mask.IsGradient Then Return False
+            If strich.Right <= strich.Left OrElse strich.Bottom <= strich.Top Then Return False
+            Dim sBreite = strich.Right - strich.Left, sHoehe = strich.Bottom - strich.Top
+            Dim sPuffer = DecodeAlphaRaster(strich.PngBase64, sBreite, sHoehe)
+            If sPuffer Is Nothing Then Return False
+
+            Dim altBreite = mask.Right - mask.Left, altHoehe = mask.Bottom - mask.Top
+            Dim altPuffer As Byte() = Nothing
+            If altBreite > 0 AndAlso altHoehe > 0 Then altPuffer = DecodeAlphaRaster(mask.PngBase64, altBreite, altHoehe)
+
+            ' Ohne bisherige Maske ist ein ABZIEHEN gegenstandslos - sonst entstünde aus dem ersten
+            ' Radiergummi-Strich eine leere Maske, die als "es gibt eine Maske" gilt.
+            If altPuffer Is Nothing Then
+                If abziehen Then Return False
+                mask.SourceWidthPixels = strich.SourceWidthPixels
+                mask.SourceHeightPixels = strich.SourceHeightPixels
+                mask.Left = strich.Left : mask.Top = strich.Top
+                mask.Right = strich.Right : mask.Bottom = strich.Bottom
+                mask.PngBase64 = strich.PngBase64
+                Return True
+            End If
+
+            Dim links = If(abziehen, mask.Left, Math.Min(mask.Left, strich.Left))
+            Dim oben = If(abziehen, mask.Top, Math.Min(mask.Top, strich.Top))
+            Dim rechts = If(abziehen, mask.Right, Math.Max(mask.Right, strich.Right))
+            Dim unten = If(abziehen, mask.Bottom, Math.Max(mask.Bottom, strich.Bottom))
+            Dim breite = rechts - links, hoehe = unten - oben
+            If breite <= 0 OrElse hoehe <= 0 Then Return False
+
+            Dim ziel = New Byte(breite * hoehe - 1) {}
+            Dim dx0 = mask.Left - links, dy0 = mask.Top - oben
+            For y = 0 To altHoehe - 1
+                Buffer.BlockCopy(altPuffer, y * altBreite, ziel, (y + dy0) * breite + dx0, altBreite)
+            Next
+
+            Dim sx0 = strich.Left - links, sy0 = strich.Top - oben
+            For y = 0 To sHoehe - 1
+                Dim zy = y + sy0
+                If zy < 0 OrElse zy >= hoehe Then Continue For
+                Dim sRow = y * sBreite, zRow = zy * breite
+                For x = 0 To sBreite - 1
+                    Dim zx = x + sx0
+                    If zx < 0 OrElse zx >= breite Then Continue For
+                    Dim v = sPuffer(sRow + x)
+                    If v = 0 Then Continue For
+                    Dim i = zRow + zx
+                    If abziehen Then
+                        ziel(i) = CByte(Math.Max(0, CInt(ziel(i)) - CInt(v)))
+                    ElseIf v > ziel(i) Then
+                        ziel(i) = v
+                    End If
+                Next
+            Next
+
+            Dim kodiert = EncodeAlphaRaster(ziel, breite, hoehe)
+            If String.IsNullOrEmpty(kodiert) Then
+                ' Alles weggeradiert: die Maske ist leer, nicht "unverändert".
+                mask.PngBase64 = ""
+                mask.Left = 0 : mask.Top = 0 : mask.Right = 0 : mask.Bottom = 0
+                Return True
+            End If
+            mask.Left = links : mask.Top = oben : mask.Right = rechts : mask.Bottom = unten
+            mask.PngBase64 = kodiert
+            Return True
+        End Function
+
+        Public Shared Function MergeGradientBrushCorrection(mask As ImageMask, strich As ImageMask,
+                                                            abziehen As Boolean) As Boolean
+            If mask Is Nothing OrElse strich Is Nothing OrElse Not mask.IsGradient Then Return False
+            If strich.Right <= strich.Left OrElse strich.Bottom <= strich.Top Then Return False
+            Dim sBreite = strich.Right - strich.Left, sHoehe = strich.Bottom - strich.Top
+            Dim sPuffer = DecodeAlphaRaster(strich.PngBase64, sBreite, sHoehe)
+            If sPuffer Is Nothing Then Return False
+
+            Dim altBreite = mask.BrushRight - mask.BrushLeft, altHoehe = mask.BrushBottom - mask.BrushTop
+            Dim altHinzu As Byte() = Nothing, altWeg As Byte() = Nothing
+            If mask.HasBrushCorrection Then
+                altHinzu = DecodeAlphaRaster(mask.BrushAddPngBase64, altBreite, altHoehe)
+                altWeg = DecodeAlphaRaster(mask.BrushSubtractPngBase64, altBreite, altHoehe)
+            End If
+            Dim hatAlt = altHinzu IsNot Nothing OrElse altWeg IsNot Nothing
+
+            Dim links = If(hatAlt, Math.Min(mask.BrushLeft, strich.Left), strich.Left)
+            Dim oben = If(hatAlt, Math.Min(mask.BrushTop, strich.Top), strich.Top)
+            Dim rechts = If(hatAlt, Math.Max(mask.BrushRight, strich.Right), strich.Right)
+            Dim unten = If(hatAlt, Math.Max(mask.BrushBottom, strich.Bottom), strich.Bottom)
+            Dim breite = rechts - links, hoehe = unten - oben
+            If breite <= 0 OrElse hoehe <= 0 Then Return False
+
+            Dim hinzu = New Byte(breite * hoehe - 1) {}
+            Dim weg = New Byte(breite * hoehe - 1) {}
+            If hatAlt Then
+                Dim dx = mask.BrushLeft - links, dy = mask.BrushTop - oben
+                For y = 0 To altHoehe - 1
+                    If altHinzu IsNot Nothing Then Buffer.BlockCopy(altHinzu, y * altBreite, hinzu, (y + dy) * breite + dx, altBreite)
+                    If altWeg IsNot Nothing Then Buffer.BlockCopy(altWeg, y * altBreite, weg, (y + dy) * breite + dx, altBreite)
+                Next
+            End If
+
+            Dim zielHin = If(abziehen, weg, hinzu)
+            Dim gegen = If(abziehen, hinzu, weg)
+            Dim sx0 = strich.Left - links, sy0 = strich.Top - oben
+            For y = 0 To sHoehe - 1
+                Dim sRow = y * sBreite, zRow = (y + sy0) * breite + sx0
+                For x = 0 To sBreite - 1
+                    Dim v = sPuffer(sRow + x)
+                    If v = 0 Then Continue For
+                    Dim i = zRow + x
+                    If v > zielHin(i) Then zielHin(i) = v
+                    ' Gegenrichtung an dieser Stelle zuruecknehmen (siehe Zusammenfassung).
+                    Dim rest = CInt(gegen(i)) - CInt(v)
+                    gegen(i) = CByte(Math.Max(0, rest))
+                Next
+            Next
+
+            mask.BrushLeft = links
+            mask.BrushTop = oben
+            mask.BrushRight = rechts
+            mask.BrushBottom = unten
+            mask.BrushAddPngBase64 = EncodeAlphaRaster(hinzu, breite, hoehe)
+            mask.BrushSubtractPngBase64 = EncodeAlphaRaster(weg, breite, hoehe)
+            If String.IsNullOrEmpty(mask.BrushAddPngBase64) AndAlso String.IsNullOrEmpty(mask.BrushSubtractPngBase64) Then
+                mask.BrushLeft = 0 : mask.BrushTop = 0 : mask.BrushRight = 0 : mask.BrushBottom = 0
+            End If
+            Return True
+        End Function
+
+        ''' <paramref name="displayBounds"/>: wenn gesetzt, wird NUR der Quellbereich abgetastet, der
+        ''' auf dieses Anzeige-Rechteck abbilden kann - fuer einen Pinselstempel ist das ein Fleck
+        ''' statt des ganzen Bildes. Gemessen kostete der volle Durchlauf bei 20 MP 2,3 Sekunden JE
+        ''' STRICH; mit Grenze ist er vernachlaessigbar. Ohne den Parameter bleibt alles wie bisher.
         Public Shared Function CreateSourceMaskFromSelection(adj As ImageAdjustments,
-                                                             Optional name As String = "Auswahlmaske") As ImageMask
+                                                             Optional name As String = "Auswahlmaske",
+                                                             Optional displayBounds As SKRectI? = Nothing) As ImageMask
             If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return Nothing
             Dim displaySize = ComputeGeometryOutputSize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
             Dim decoded As SKBitmap = Nothing
@@ -3961,8 +4242,37 @@ Namespace Services
                 Dim sourceW = adj.SourceWidthPixels, sourceH = adj.SourceHeightPixels
                 Dim full = New Byte(sourceW * sourceH - 1) {}
                 Dim left = sourceW, top = sourceH, right = 0, bottom = 0
-                For sy = 0 To sourceH - 1
-                    For sx = 0 To sourceW - 1
+                ' Abtastgrenzen: die vier Ecken des Anzeige-Rechtecks in den Quellraum zuruecklegen und
+                ' deren Huelle nehmen. Die Abbildung ist affin (Drehung/Begradigung/Spiegelung/Zuschnitt),
+                ' die Ecken spannen sie also auf; ein paar Pixel Rand fangen Rundung ab.
+                Dim vonY = 0, bisY = sourceH - 1, vonX = 0, bisX = sourceW - 1
+                If displayBounds.HasValue Then
+                    Dim db = displayBounds.Value
+                    Dim minSx = Double.MaxValue, minSy = Double.MaxValue
+                    Dim maxSx = Double.MinValue, maxSy = Double.MinValue
+                    Dim ecken = {(CDbl(db.Left), CDbl(db.Top)), (CDbl(db.Right), CDbl(db.Top)),
+                                 (CDbl(db.Left), CDbl(db.Bottom)), (CDbl(db.Right), CDbl(db.Bottom))}
+                    Dim alleGetroffen = True
+                    For Each ecke In ecken
+                        Dim sp As SKPoint
+                        If Not TryGeometryOutputToSourcePoint(ecke.Item1, ecke.Item2, sourceW, sourceH, adj, sp) Then
+                            alleGetroffen = False
+                            Exit For
+                        End If
+                        minSx = Math.Min(minSx, sp.X) : maxSx = Math.Max(maxSx, sp.X)
+                        minSy = Math.Min(minSy, sp.Y) : maxSy = Math.Max(maxSy, sp.Y)
+                    Next
+                    ' Faellt eine Ecke aus dem Bild, wird nicht begrenzt - lieber langsam als
+                    ' abgeschnitten.
+                    If alleGetroffen Then
+                        vonX = Math.Max(0, CInt(Math.Floor(minSx)) - 2)
+                        vonY = Math.Max(0, CInt(Math.Floor(minSy)) - 2)
+                        bisX = Math.Min(sourceW - 1, CInt(Math.Ceiling(maxSx)) + 2)
+                        bisY = Math.Min(sourceH - 1, CInt(Math.Ceiling(maxSy)) + 2)
+                    End If
+                End If
+                For sy = vonY To bisY
+                    For sx = vonX To bisX
                         Dim dp As SKPoint
                         If Not TrySourcePointToGeometryOutput(sx + 0.5, sy + 0.5, sourceW, sourceH, adj, dp) Then Continue For
                         Dim dx = CInt(Math.Floor(dp.X)), dy = CInt(Math.Floor(dp.Y))
@@ -4484,6 +4794,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ' Verlaufsmasken tragen ihre Geometrie statt eines PNG - sie MUSS in den Schluessel,
         ' sonst bliebe die Vorschau beim Ziehen der Griffe stehen (der Cache gaebe die alte
         ' Basis zurueck, und das Werkzeug "macht nichts").
+        ''' Die Pinselkorrektur eines Verlaufs gehoert MIT in den Fingerabdruck - ohne sie bliebe die
+        ''' Vorschau beim Malen stehen, weil der Cache den unkorrigierten Verlauf zurueckgaebe.
         Private Shared Function PersistentMasksFingerprint(adj As ImageAdjustments) As String
             Dim masks = If(adj.Masks, New List(Of ImageMask)()).
                 Where(Function(m) m IsNot Nothing).
@@ -4492,7 +4804,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                m.Inverted, SelectionMaskFingerprint(m.PngBase64),
                                                m.Kind, KeyPart(m.GradientStartXPercent), KeyPart(m.GradientStartYPercent),
                                                KeyPart(m.GradientEndXPercent), KeyPart(m.GradientEndYPercent),
-                                               KeyPart(m.GradientRadiusRatio), KeyPart(m.GradientFeatherPercent)))
+                                               KeyPart(m.GradientRadiusRatio), KeyPart(m.GradientFeatherPercent),
+                                               m.BrushLeft, m.BrushTop, m.BrushRight, m.BrushBottom,
+                                               SelectionMaskFingerprint(m.BrushAddPngBase64),
+                                               SelectionMaskFingerprint(m.BrushSubtractPngBase64)))
             ' Ebenen IM OBJEKTSTAPEL gehören NICHT in den Basis-Schlüssel: die Basis-Stufe überspringt
             ' sie (ApplyMaskedAdjustmentLayers ohne onlyStackedAboveId), sie wirken erst im
             ' Objektdurchlauf. Stünden sie hier, würde jede Änderung an ihnen den Basis-Cache

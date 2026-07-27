@@ -1020,6 +1020,7 @@
                 <ScrollViewer x:Name="GalleryGridScrollViewer"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
+                              PointerPressed="OnGalleryAreaPointerPressed"
                               IsVisible="{Binding IsGridView}"
                               ContextRequested="OnGalleryAreaContextRequested"
                               DragDrop.AllowDrop="True"
@@ -1453,6 +1454,7 @@
                 <ScrollViewer x:Name="GalleryListScrollViewer"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
+                              PointerPressed="OnGalleryAreaPointerPressed"
                               IsVisible="{Binding IsListView}"
                               ContextRequested="OnGalleryAreaContextRequested"
                               DragDrop.AllowDrop="True"
@@ -1559,7 +1561,7 @@
                                             </StackPanel>
                                         </ContextMenu>
                                     </Border.ContextMenu>
-                                    <Grid ColumnDefinitions="76,*,150,90,90,28" Height="72">
+                                    <Grid ColumnDefinitions="76,*,150,90,90,Auto,Auto,28" Height="72">
                                         <Border Grid.Column="0"
                                                 Width="56"
                                                 Height="56"
@@ -1609,55 +1611,6 @@
                                                                    Classes="badge-glyph"
                                                                    IsVisible="{Binding IsSelected}"/>
                                                 </Button>
-                                                <StackPanel Classes="gallery-rating-actions compact gallery-toggle-badge"
-                                                            Classes.badge-always="{Binding DataContext.RatingBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                            Orientation="Horizontal"
-                                                            HorizontalAlignment="Left"
-                                                            VerticalAlignment="Bottom"
-                                                            Margin="4,0,0,4"
-                                                            Spacing="0"
-                                                            IsVisible="{Binding IsImage}">
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
-                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
-                                                            Tag="1"
-                                                            Click="OnHoverSetRatingClick">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                       Classes="rating-star"
-                                                                       Width="12" Height="12" />
-                                                    </Button>
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
-                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
-                                                            Tag="2"
-                                                            Click="OnHoverSetRatingClick">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                       Classes="rating-star"
-                                                                       Width="12" Height="12" />
-                                                    </Button>
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
-                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
-                                                            Tag="3"
-                                                            Click="OnHoverSetRatingClick">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                       Classes="rating-star"
-                                                                       Width="12" Height="12" />
-                                                    </Button>
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
-                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
-                                                            Tag="4"
-                                                            Click="OnHoverSetRatingClick">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                       Classes="rating-star"
-                                                                       Width="12" Height="12" />
-                                                    </Button>
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
-                                                            Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
-                                                            Tag="5"
-                                                            Click="OnHoverSetRatingClick">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                       Classes="rating-star"
-                                                                       Width="12" Height="12" />
-                                                    </Button>
-                                                </StackPanel>
                                             </Grid>
                                         </Border>
                                         <StackPanel Grid.Column="1"
@@ -1757,7 +1710,94 @@
                                                    HorizontalAlignment="Right"
                                                    VerticalAlignment="Center"
                                                    Margin="0,0,14,0"/>
-                                        <Button Grid.Column="5"
+                                        <StackPanel Grid.Column="5"
+                                                    Classes="gallery-hover-actions"
+                                                    Orientation="Horizontal"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,12,0"
+                                                    Spacing="5">
+                                            <Button Classes="gallery-overlay-btn"
+                                                    Width="26" Height="26" Padding="0"
+                                                    IsVisible="{Binding IsImage}"
+                                                    Click="OnHoverOpenViewerClick"
+                                                    ToolTip.Tip="Anzeigen">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                                                               Width="15" Height="15" IconBrush="White"/>
+                                            </Button>
+                                            <Button Classes="gallery-overlay-btn"
+                                                    Width="26" Height="26" Padding="0"
+                                                    IsVisible="{Binding CanEditFile}"
+                                                    Click="OnHoverOpenEditorClick"
+                                                    ToolTip.Tip="Anpassen">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg"
+                                                               Width="15" Height="15" IconBrush="White"/>
+                                            </Button>
+                                            <Button Classes="gallery-overlay-btn danger"
+                                                    Width="26" Height="26" Padding="0"
+                                                    IsVisible="{Binding CanFileOperationDelete}"
+                                                    Click="OnHoverDeleteClick"
+                                                    ToolTip.Tip="Löschen">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                                               Width="16" Height="16" IconBrush="White"/>
+                                            </Button>
+                                        </StackPanel>
+                                        <!-- Sterne und Aktionen liegen in der LISTE in der Zeile, nicht auf dem Bild: auf 56 px
+                                             Kantenlaenge verdecken sie das Motiv fast vollstaendig. Auf dem Bild bleibt nur der
+                                             Auswahlkreis. Sichtbarkeit wie gehabt ueber gallery-toggle-badge (versteckt / bei
+                                             Zeilen-Mausover / dauerhaft) - die Regeln haengen an Border.thumb-card, das die
+                                             Listenzeile ebenfalls traegt. -->
+                                        <StackPanel Grid.Column="6"
+                                                    Classes="gallery-rating-actions compact gallery-toggle-badge"
+                                                    Classes.badge-always="{Binding DataContext.RatingBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    Orientation="Horizontal"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,10,0"
+                                                    Spacing="0"
+                                                    IsVisible="{Binding IsImage}">
+                                            <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                                    Tag="1"
+                                                    Click="OnHoverSetRatingClick">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                               Classes="rating-star"
+                                                               Width="14" Height="14" />
+                                            </Button>
+                                            <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                                    Tag="2"
+                                                    Click="OnHoverSetRatingClick">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                               Classes="rating-star"
+                                                               Width="14" Height="14" />
+                                            </Button>
+                                            <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                                    Tag="3"
+                                                    Click="OnHoverSetRatingClick">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                               Classes="rating-star"
+                                                               Width="14" Height="14" />
+                                            </Button>
+                                            <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                                    Tag="4"
+                                                    Click="OnHoverSetRatingClick">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                               Classes="rating-star"
+                                                               Width="14" Height="14" />
+                                            </Button>
+                                            <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                                    Tag="5"
+                                                    Click="OnHoverSetRatingClick">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                               Classes="rating-star"
+                                                               Width="14" Height="14" />
+                                            </Button>
+                                        </StackPanel>
+                                        <Button Grid.Column="7"
                                                 Classes="favorite-btn gallery-toggle-badge"
                                                 Classes.badge-always="{Binding DataContext.FavoriteBadgeAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 Background="Transparent"

@@ -3747,6 +3747,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsMaskLinearMode))
                 Me.RaisePropertyChanged(NameOf(IsMaskRadialMode))
                 Me.RaisePropertyChanged(NameOf(ShowGradientControls))
+            Me.RaisePropertyChanged(NameOf(IsRefiningGradientMask))
                 ' Der Masken-Pinsel benutzt weiterhin die Auswahl-Maschinerie (Alpha8-Stempel in die
                 ' Auswahlmaske); die Verlaeufe legen dagegen sofort eine parametrische Maske an.
                 If String.Equals(normalized, "Brush", StringComparison.Ordinal) Then
@@ -3785,6 +3786,15 @@ Namespace ViewModels
                 If layer Is Nothing OrElse String.IsNullOrEmpty(layer.MaskId) Then Return Nothing
                 Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
                 Return If(mask IsNot Nothing AndAlso mask.IsGradient, mask, Nothing)
+            End Get
+        End Property
+
+        ''' <summary>True, wenn ein Pinselstrich gerade die gewaehlte VERLAUFSMASKE nachbessert
+        ''' statt eine neue Auswahl anzulegen. Steuert den Hinweis im Masken-Panel - ohne ihn sieht
+        ''' der Nutzer nicht, worauf sein Strich wirkt.</summary>
+        Public ReadOnly Property IsRefiningGradientMask As Boolean
+            Get
+                Return IsMaskBrushMode AndAlso SelectedGradientMask IsNot Nothing
             End Get
         End Property
 
@@ -7158,20 +7168,55 @@ Namespace ViewModels
         ''' Live-Vorschau während des Strichs: committete Maske + laufender Strich in Rot.
         Public Sub RefreshMaskBrushLivePreview(xsPercent As Double(), ysPercent As Double())
             If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length = 0 OrElse xsPercent.Length <> ysPercent.Length Then
-                PublishSelectionRedOverlay()
+                PublishMaskBrushOverlay()
                 Return
             End If
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
             SetActiveSelectionIsMask(True)   ' laufender Masken-Strich = rotes Overlay
-            Dim eraseMode = _hasActiveSelection AndAlso _selectionCombineMode = "Subtract"
-            SetSelectionMaskPreviewImage(BuildSelectionRedOverlayBitmap(MaskBrushDisplayPoints(xsPercent, ysPercent, bw, bh), eraseMode))
+            ' Beim Nachbessern eines VERLAUFS gibt es keine aktive Auswahl - der Abzieh-Modus muss
+            ' trotzdem als Radiergummi angezeigt werden, sonst sieht der Strich aus, als füge er hinzu.
+            Dim verlauf = SelectedGradientMask
+            Dim eraseMode = (_hasActiveSelection OrElse verlauf IsNot Nothing) AndAlso
+                            _selectionCombineMode = "Subtract"
+            Dim pts = MaskBrushDisplayPoints(xsPercent, ysPercent, bw, bh)
+            ' Der Verlauf zeichnet sein Overlay selbst (Geometrie + Pinselkorrektur); der Strich kommt
+            ' obendrauf. Ueber BuildSelectionRedOverlayBitmap ginge nur der Strich allein durch.
+            PublishMaskBrushOverlay(pts, eraseMode)
+        End Sub
+
+        ''' <summary>DIE Stelle, an der das rote Overlay des Maskenpinsels entsteht - egal ob das
+        ''' Ziel ein Verlauf oder eine gemalte Maske ist.
+        '''
+        ''' <paramref name="nurWennSichtbar"/> fuer Aufrufer, die NICHT aus dem Pinselweg kommen
+        ''' (Undo/Redo): die View zeigt das rote Overlay nur bei einer Masken-Auswahl oder einem
+        ''' markierten Verlauf. Ohne diese Bremse baute jedes Rueckgaengig im AUSWAHL-Werkzeug ein
+        ''' bis zu 1600 px grosses Bitmap, das niemand zu sehen bekommt.
+        '''
+        ''' Vorher stand diese Fallunterscheidung dreimal da (Commit, Abbruch, Live-Vorschau), und
+        ''' dreimal ist derselbe Fehler passiert: der Auswahl-Weg wurde gerufen, obwohl das Ziel ein
+        ''' Verlauf war - mangels aktiver Auswahl LOESCHTE das Overlay, statt es zu zeichnen. Wer
+        ''' hier einen vierten Aufrufer anlegt, ruft diese Methode, nicht die Zweige darunter.</summary>
+        Private Sub PublishMaskBrushOverlay(Optional livePts As List(Of SKPoint) = Nothing,
+                                            Optional eraseMode As Boolean = False,
+                                            Optional nurWennSichtbar As Boolean = False)
+            Dim verlauf = SelectedGradientMask
+            If nurWennSichtbar AndAlso verlauf Is Nothing AndAlso Not _activeSelectionIsMask Then Return
+            If verlauf IsNot Nothing Then
+                PublishGradientOverlay(verlauf, livePts, eraseMode)
+                Return
+            End If
+            If livePts IsNot Nothing AndAlso livePts.Count > 0 Then
+                SetSelectionMaskPreviewImage(BuildSelectionRedOverlayBitmap(livePts, eraseMode))
+                Return
+            End If
+            PublishSelectionRedOverlay()
         End Sub
 
         ''' Live-Vorschau verwerfen (Strich abgebrochen): zurück auf die committete Maske.
         Public Sub CancelMaskBrushStroke()
-            PublishSelectionRedOverlay()
+            PublishMaskBrushOverlay()
         End Sub
 
         ''' <summary>Commit eines Masken-Pinselstrichs: aus den Strichpunkten (Display-Prozent) einen weichen
@@ -7179,7 +7224,7 @@ Namespace ViewModels
         ''' (erster Strich ohne aktive Auswahl = "New"). Danach ist die Maske weich-gebacken.</summary>
         Public Sub CommitMaskBrushStroke(xsPercent As Double(), ysPercent As Double())
             If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length = 0 OrElse xsPercent.Length <> ysPercent.Length Then
-                PublishSelectionRedOverlay()
+                PublishMaskBrushOverlay()
                 Return
             End If
             Dim selectionSize = GetAnnotationDisplayPixelSize()
@@ -7198,28 +7243,74 @@ Namespace ViewModels
             Dim rectPx = New SKRectI(Math.Max(0, minX - margin), Math.Max(0, minY - margin),
                                      Math.Min(bw, maxX + margin), Math.Min(bh, maxY + margin))
             If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then
-                PublishSelectionRedOverlay()
+                PublishMaskBrushOverlay()
                 Return
             End If
 
+            ' EIN Ablauf fuer beide Ziele: Rueckgaengig-Punkt, Stempel, Overlay und Vorschau standen
+            ' vorher zweimal da - einmal fuer den Verlauf, einmal fuer die gemalte Maske. Zwei Kopien
+            ' derselben Kette sind genau die Bauform, in der hier schon dreimal derselbe Fehler
+            ' entstanden ist. Der Unterschied ist jetzt eine einzige Verzweigung: WOHIN der Strich
+            ' geht. Alles davor und danach ist gemeinsam.
             PushUndo()
             Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx)
                 If stamp IsNot Nothing Then
-                    ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing, isMask:=True)
-                    ' Freistehende Auswahl: weiche Kante ist in die Alpha-Werte gebacken. Ebenen-Maske:
-                    ' harte Form (Feather kommt beim Rendern über mask.FeatherPixels) - nicht baken.
-                    _selectionMaskSoftBaked = (_editingLayerMaskId = "")
+                    Dim verlauf = SelectedGradientMask
+                    If verlauf IsNot Nothing Then
+                        ' Ein Verlauf wird gerechnet, nicht gemalt - er darf nie in die Auswahlmaske
+                        ' geladen werden (das machte aus zwei Punkten ein PNG und naehme ihm die
+                        ' Aenderbarkeit). Der Strich geht in den Quellraum und von dort in seine
+                        ' Pinselkorrektur; WELCHES Ziel gemeint ist, entscheidet die Engine.
+                        Dim strich = BuildSourceMaskFromStamp(stamp, rectPx, verlauf.Name)
+                        If strich IsNot Nothing Then
+                            ImageProcessor.ApplyMaskBrushStroke(verlauf, strich, _selectionCombineMode = "Subtract")
+                        End If
+                    Else
+                        ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing, isMask:=True)
+                        ' Freistehende Auswahl: weiche Kante ist in die Alpha-Werte gebacken. Ebenen-Maske:
+                        ' harte Form (Feather kommt beim Rendern über mask.FeatherPixels) - nicht baken.
+                        _selectionMaskSoftBaked = (_editingLayerMaskId = "")
+                        ' Beim Bearbeiten einer Ebenen-Maske jeden Strich in die Ebene zurueckschreiben,
+                        ' damit die Anpassung der Ebene der neuen Maskenform sofort folgt.
+                        If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
+                    End If
                 End If
             End Using
-            ' Beim Bearbeiten einer Ebenen-Maske jeden Strich in die Ebene zurückschreiben, damit die
-            ' Anpassung der Ebene der neuen Maskenform sofort folgt.
-            If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
-            PublishSelectionRedOverlay()
+            PublishMaskBrushOverlay()
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Projiziert einen Pinselstempel aus dem ANZEIGE-Raum in den Quellraum - über
+        ''' denselben Weg wie eine committete Auswahl, damit Zuschnitt, Drehung und Begradigung
+        ''' identisch behandelt werden. Dafür bekommt eine Kopie des Rezepts den Stempel als
+        ''' Auswahlmaske untergeschoben; das echte Rezept bleibt unberührt (eine Verlaufskorrektur
+        ''' darf die laufende Auswahl des Nutzers nicht anfassen).</summary>
+        Private Function BuildSourceMaskFromStamp(stamp As SKBitmap, rectPx As SKRectI, name As String) As ImageMask
+            If stamp Is Nothing OrElse rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return Nothing
+            Try
+                Using image = SKImage.FromBitmap(stamp)
+                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                        Dim adj = BuildAdjustmentsFromFields()
+                        adj.SelectionMaskPngBase64 = Convert.ToBase64String(data.ToArray())
+                        adj.SelectionMaskLeft = rectPx.Left
+                        adj.SelectionMaskTop = rectPx.Top
+                        adj.SelectionFeatherPixels = 0
+                        ' Nur den Stempelbereich abtasten statt das ganze Bild - bei 20 MP sind das
+                        ' gemessen 2,3 Sekunden Unterschied JE STRICH.
+                        Return ImageProcessor.CreateSourceMaskFromSelection(adj, name, rectPx)
+                    End Using
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
         ''' Strich-Randweichheit: freistehend aus dem "Weiche Kante"-Regler (in die Maske gebacken); beim
         ''' Bearbeiten einer Ebenen-Maske 0 (harte Form, Feather wirkt beim Rendern über die Ebene).
+        ''' Beim Nachbessern eines VERLAUFS gilt der Regler-Wert: dort gibt es keine Ebenen-Maske im
+        ''' Sinne von _editingLayerMaskId (LoadLayerMaskIntoSelection steigt für Verläufe früh aus),
+        ''' und die Korrekturraster tragen ihre weiche Kante selbst - der Verlauf hat keinen
+        ''' nachgeschalteten Weichzeichner, der sie liefern könnte.
         Private Function MaskBrushStrokeSoftness() As Single
             If _editingLayerMaskId <> "" Then Return 0.0F
             Return CSng(Math.Max(0.0, _selectionFeather))
@@ -7234,6 +7325,13 @@ Namespace ViewModels
 
         Private _gradientDragMaskId As String = ""
         Private _gradientDragActive As Boolean = False
+        Private _gradientSlopX As Double = 0.0
+        Private _gradientSlopY As Double = 0.0
+        ''' <summary>Rechteck der Pinselkorrektur bei Beginn des Verschiebens. Die Korrektur muss
+        ''' MITWANDERN, sonst bleibt ein weggepinselter Bereich stehen, waehrend der Verlauf
+        ''' darunter wegzieht. Absolut gemerkt statt schrittweise verschoben: jeder Zug rechnet
+        ''' vom Startpunkt aus, ein Aufaddieren wuerde sich ueber die Bewegung aufschaukeln.</summary>
+        Private _gradientMoveBrush As SKRectI = SKRectI.Empty
 
         ''' <summary>Rechnet einen Punkt der ANZEIGE (Prozent) in Quellraum-Prozent um. Nothing, wenn
         ''' der Punkt neben dem Bildinhalt liegt (Canvas-Rand, leere Begradigungs-Ecke).</summary>
@@ -7461,6 +7559,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectedGradientMask))
             Me.RaisePropertyChanged(NameOf(HasSelectedGradientMask))
             Me.RaisePropertyChanged(NameOf(ShowGradientControls))
+            Me.RaisePropertyChanged(NameOf(IsRefiningGradientMask))
             Me.RaisePropertyChanged(NameOf(ShowRadialRatioControl))
             Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
             Me.RaisePropertyChanged(NameOf(GradientRadiusRatio))
@@ -7501,11 +7600,147 @@ Namespace ViewModels
         ''' <summary>Zeichnet die Deckung des Verlaufs als rotes Overlay - dasselbe Bild, das auch der
         ''' Masken-Pinsel benutzt. Über Skia-Verläufe statt pro Pixel: die Vorschau ist ein Bruchteil
         ''' der Bildgrösse, ein eigener Rechenweg wäre nur eine zweite Fehlerquelle.</summary>
-        Private Sub PublishGradientOverlay(maske As ImageMask)
-            SetSelectionMaskPreviewImage(BuildGradientRedOverlayBitmap(maske))
+        Private Sub PublishGradientOverlay(maske As ImageMask,
+                                           Optional livePts As List(Of SKPoint) = Nothing,
+                                           Optional eraseMode As Boolean = False)
+            SetSelectionMaskPreviewImage(BuildGradientRedOverlayBitmap(maske, livePts, eraseMode))
         End Sub
 
-        Private Function BuildGradientRedOverlayBitmap(maske As ImageMask) As Bitmap
+        ''' Zwischenspeicher der projizierten Pinselkorrektur (siehe ApplyBrushCorrectionToOverlay).
+        ''' Sitzungszustand, gehoert NICHT ins Rezept.
+        Private _korrCacheKey As String = ""
+        Private _korrCacheHinzu As Byte()
+        Private _korrCacheWeg As Byte()
+        Private _korrCacheQuelleLinks As Integer = Integer.MinValue
+        Private _korrCacheQuelleOben As Integer = Integer.MinValue
+
+        ''' <summary>Rechnet die PINSELKORREKTUR eines Verlaufs ins rote Overlay ein. Ohne das zeigt
+        ''' das Overlay nur die Geometrie - man malt und sieht nichts, obwohl das Bild sich ändert.
+        '''
+        ''' Die Korrekturraster liegen im QUELLRAUM, das Overlay im Anzeigeraum. Statt die Projektion
+        ''' hier ein zweites Mal zu schreiben, wird jedes Raster kurz als GEMALTE Maske verpackt und
+        ''' durch <see cref="ImageProcessor.BuildSelectionMaskFromLayerMask"/> geschickt - denselben
+        ''' Weg, über den eine Ebenen-Maske zum Bearbeiten in den Anzeigeraum kommt. Zuschnitt,
+        ''' Drehung und Begradigung stimmen damit automatisch.</summary>
+        Private Sub ApplyBrushCorrectionToOverlay(overlay As SKBitmap, maske As ImageMask,
+                                                  displayWidth As Integer, displayHeight As Integer)
+            If overlay Is Nothing OrElse maske Is Nothing OrElse Not maske.HasBrushCorrection Then Return
+            If displayWidth <= 0 OrElse displayHeight <= 0 Then Return
+            Dim adj = BuildAdjustmentsFromFields()
+
+            ' ZWISCHENSPEICHER, kein Luxus: die Projektion laeuft ueber die GANZE Anzeigeflaeche mit
+            ' einer Matrixrechnung je Pixel - gemessen 454 ms bei 3 MP, und sie wuerde ZWEIMAL pro
+            ' Mausbewegung laufen. Waehrend eines Strichs aendert sich die committete Korrektur aber
+            ' gar nicht; nur der laufende Strich kommt oben drauf. Der Schluessel enthaelt alles, was
+            ' das Ergebnis bestimmt - Raster, Rechteck, Overlay- und Anzeigegroesse und die Geometrie.
+            ' Die LAGE des Korrekturrechtecks steht bewusst NICHT im Schluessel, nur seine Groesse:
+            ' beim Verschieben der Maske aendert sich allein der Ursprung, und dann waere jeder
+            ' Zwischenschritt ein Fehlschlag - 218 ms je Mausbewegung. Ein reiner Versatz laesst sich
+            ' im Anzeigeraum nachziehen (eine affine Abbildung macht aus einer Verschiebung wieder
+            ' eine Verschiebung), deshalb wird das Ergebnis unten nur verschoben abgetastet.
+            Dim schluessel = String.Join("|", maske.Id,
+                                         maske.BrushRight - maske.BrushLeft, maske.BrushBottom - maske.BrushTop,
+                                         maske.BrushAddPngBase64.GetHashCode(),
+                                         maske.BrushSubtractPngBase64.GetHashCode(),
+                                         overlay.Width, overlay.Height, displayWidth, displayHeight,
+                                         adj.RotationDegrees, adj.StraightenDegrees,
+                                         adj.FlipHorizontal, adj.FlipVertical,
+                                         adj.CropLeftPercent, adj.CropTopPercent,
+                                         adj.CropRightPercent, adj.CropBottomPercent)
+            Dim hinzu As Byte(), weg As Byte()
+            Dim versatzX = 0, versatzY = 0
+            If schluessel = _korrCacheKey Then
+                hinzu = _korrCacheHinzu
+                weg = _korrCacheWeg
+                ' Nur die Lage ist anders: den Versatz im Anzeigeraum bestimmen und beim Abtasten
+                ' abziehen, statt die ganze Projektion zu wiederholen.
+                If maske.BrushLeft <> _korrCacheQuelleLinks OrElse maske.BrushTop <> _korrCacheQuelleOben Then
+                    Dim alt = SourcePercentToDisplayPercent(_korrCacheQuelleLinks * 100.0 / maske.SourceWidthPixels,
+                                                            _korrCacheQuelleOben * 100.0 / maske.SourceHeightPixels)
+                    Dim neu = SourcePercentToDisplayPercent(maske.BrushLeft * 100.0 / maske.SourceWidthPixels,
+                                                            maske.BrushTop * 100.0 / maske.SourceHeightPixels)
+                    If alt.HasValue AndAlso neu.HasValue Then
+                        versatzX = CInt(Math.Round((neu.Value.X - alt.Value.X) / 100.0 * overlay.Width))
+                        versatzY = CInt(Math.Round((neu.Value.Y - alt.Value.Y) / 100.0 * overlay.Height))
+                    End If
+                End If
+            Else
+                hinzu = ProjectCorrectionRasterToDisplay(maske, maske.BrushAddPngBase64, adj, overlay.Width, overlay.Height, displayWidth, displayHeight)
+                weg = ProjectCorrectionRasterToDisplay(maske, maske.BrushSubtractPngBase64, adj, overlay.Width, overlay.Height, displayWidth, displayHeight)
+                _korrCacheKey = schluessel
+                _korrCacheHinzu = hinzu
+                _korrCacheWeg = weg
+                _korrCacheQuelleLinks = maske.BrushLeft
+                _korrCacheQuelleOben = maske.BrushTop
+            End If
+            If hinzu Is Nothing AndAlso weg Is Nothing Then Return
+
+            Dim stride = overlay.RowBytes
+            Dim puffer = New Byte(stride * overlay.Height - 1) {}
+            Runtime.InteropServices.Marshal.Copy(overlay.GetPixels(), puffer, 0, puffer.Length)
+            ' Das Overlay ist premultipliziertes BGRA in reinem Rot - Deckung steht im Alphakanal,
+            ' und Rot muss mitgezogen werden, sonst leuchtet ein aufgehellter Bereich falsch.
+            For y = 0 To overlay.Height - 1
+                Dim row = y * stride, iRow = y * overlay.Width
+                Dim qy = y - versatzY
+                For x = 0 To overlay.Width - 1
+                    Dim qx = x - versatzX
+                    Dim a = CInt(puffer(row + x * 4 + 3))
+                    If qx >= 0 AndAlso qy >= 0 AndAlso qx < overlay.Width AndAlso qy < overlay.Height Then
+                        Dim i = qy * overlay.Width + qx
+                        If hinzu IsNot Nothing Then a += CInt(hinzu(i)) * 128 \ 255
+                        If weg IsNot Nothing Then a -= CInt(weg(i)) * 128 \ 255
+                    End If
+                    a = Math.Max(0, Math.Min(128, a))
+                    Dim o = row + x * 4
+                    puffer(o) = 0
+                    puffer(o + 1) = 0
+                    puffer(o + 2) = CByte(a)   ' premultipliziertes Rot = Alpha
+                    puffer(o + 3) = CByte(a)
+                Next
+            Next
+            Runtime.InteropServices.Marshal.Copy(puffer, 0, overlay.GetPixels(), puffer.Length)
+        End Sub
+
+        ''' <summary>Ein Korrekturraster (Quellraum) auf die Overlay-Größe bringen. Nothing, wenn es
+        ''' leer ist oder sich nicht projizieren lässt.</summary>
+        Private Function ProjectCorrectionRasterToDisplay(maske As ImageMask, pngBase64 As String,
+                                                          adj As ImageAdjustments,
+                                                          overlayWidth As Integer, overlayHeight As Integer,
+                                                          displayWidth As Integer, displayHeight As Integer) As Byte()
+            If String.IsNullOrWhiteSpace(pngBase64) Then Return Nothing
+            Dim hilfsmaske = New ImageMask With {
+                .SourceWidthPixels = maske.SourceWidthPixels, .SourceHeightPixels = maske.SourceHeightPixels,
+                .Left = maske.BrushLeft, .Top = maske.BrushTop,
+                .Right = maske.BrushRight, .Bottom = maske.BrushBottom,
+                .PngBase64 = pngBase64
+            }
+            Dim rectPx As SKRectI
+            Using imDisplay = ImageProcessor.BuildSelectionMaskFromLayerMask(hilfsmaske, adj, rectPx)
+                If imDisplay Is Nothing OrElse rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return Nothing
+                Dim ergebnis = New Byte(overlayWidth * overlayHeight - 1) {}
+                Dim sx = displayWidth / CDbl(overlayWidth)
+                Dim sy = displayHeight / CDbl(overlayHeight)
+                Dim stride = imDisplay.RowBytes
+                Dim quelle = New Byte(stride * imDisplay.Height - 1) {}
+                Runtime.InteropServices.Marshal.Copy(imDisplay.GetPixels(), quelle, 0, quelle.Length)
+                For y = 0 To overlayHeight - 1
+                    Dim dy = CInt(Math.Floor((y + 0.5) * sy)) - rectPx.Top
+                    If dy < 0 OrElse dy >= imDisplay.Height Then Continue For
+                    Dim zRow = y * overlayWidth, qRow = dy * stride
+                    For x = 0 To overlayWidth - 1
+                        Dim dx = CInt(Math.Floor((x + 0.5) * sx)) - rectPx.Left
+                        If dx < 0 OrElse dx >= imDisplay.Width Then Continue For
+                        ergebnis(zRow + x) = quelle(qRow + dx)
+                    Next
+                Next
+                Return ergebnis
+            End Using
+        End Function
+
+        Private Function BuildGradientRedOverlayBitmap(maske As ImageMask,
+                                                       Optional livePts As List(Of SKPoint) = Nothing,
+                                                       Optional eraseMode As Boolean = False) As Bitmap
             If maske Is Nothing OrElse Not maske.IsGradient Then Return Nothing
             Dim displaySize = GetAnnotationDisplayPixelSize()
             Dim bw = displaySize.Width, bh = displaySize.Height
@@ -7565,6 +7800,21 @@ Namespace ViewModels
                         paint.Shader?.Dispose()
                     End Using
                 End Using
+                ApplyBrushCorrectionToOverlay(overlay, maske, bw, bh)
+                ' Laufender Strich obendrauf - sonst verschwaende das Verlaufs-Overlay waehrend des
+                ' Ziehens und kaeme erst beim Loslassen zurueck.
+                If livePts IsNot Nothing AndAlso livePts.Count > 0 Then
+                    Using canvas = New SKCanvas(overlay)
+                        Dim scaled As New List(Of SKPoint)(livePts.Count)
+                        For Each p In livePts
+                            scaled.Add(New SKPoint(CSng(p.X * ovScale), CSng(p.Y * ovScale)))
+                        Next
+                        ImageProcessor.DrawSoftMaskStroke(canvas, scaled,
+                                                          CSng(Math.Max(0.5, MaskBrushRadiusDisplay() * ovScale)),
+                                                          CSng(Math.Max(0.0, _selectionFeather) * ovScale),
+                                                          New SKColor(255, 0, 0, 128), eraseMode)
+                    End Using
+                End If
                 Return ImageProcessor.ToAvaloniaBitmap(overlay)
             End Using
         End Function
@@ -7595,7 +7845,18 @@ Namespace ViewModels
                 ' Der Startpunkt gewinnt NICHT gegen den Endpunkt: bei einem ganz kurzen Verlauf
                 ' liegen beide fast aufeinander, und der Endpunkt ist der, den man dann meint.
                 griff = 0
+            ElseIf IstAufInnererEllipse(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
+                griff = 3
+            ElseIf IstAufUebergangsstrich(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
+                ' VOR der Achse pruefen: die Striche liegen auf ihr, sonst gewaenne immer das
+                ' Verschieben des ganzen Verlaufs und der Uebergang waere nie greifbar.
+                griff = 3
             ElseIf IstAufVerlaufsachse(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
+                griff = 2
+            ElseIf IstImVerlaufsbereich(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
+                ' Innerhalb der Maske ziehen VERSCHIEBT sie. Vorher legte jeder Zug daneben einen
+                ' neuen Verlauf an - der bestehende war dann nur noch ueber die Achse zu fassen,
+                ' einen Strich von wenigen Pixeln Breite.
                 griff = 2
             End If
             If griff < 0 Then Return False
@@ -7605,11 +7866,98 @@ Namespace ViewModels
             _gradientHandle = griff
             _gradientMoveRefX = xPercent
             _gradientMoveRefY = yPercent
+            ' Die Greiftoleranz ist zugleich der MASSSTAB der Ellipsenrechnung - das Ziehen muss
+            ' denselben benutzen wie der Treffertest, sonst springt der Wert beim Anfassen.
+            _gradientSlopX = slopXPercent
+            _gradientSlopY = slopYPercent
+            _gradientMoveBrush = New SKRectI(maske.BrushLeft, maske.BrushTop, maske.BrushRight, maske.BrushBottom)
             _gradientMoveStart = New SKPoint(CSng(maske.GradientStartXPercent), CSng(maske.GradientStartYPercent))
             _gradientMoveEnd = New SKPoint(CSng(maske.GradientEndXPercent), CSng(maske.GradientEndYPercent))
             Return True
         End Function
 
+
+
+
+        ''' <summary>Liegt der Punkt INNERHALB der Maske? Beim radialen Verlauf heisst das: in der
+        ''' aeusseren Ellipse. Beim linearen gibt es keine geschlossene Flaeche - er reicht ueber
+        ''' das ganze Bild -, deshalb gilt dort das BAND zwischen den beiden Uebergangsstrichen:
+        ''' das ist der Bereich, den das Overlay als "der Verlauf" zeigt. Wer weiter draussen zieht,
+        ''' meint einen neuen Verlauf, nicht diesen.</summary>
+        Private Shared Function IstImVerlaufsbereich(geo As Double(), xPercent As Double, yPercent As Double,
+                                                     slopXPercent As Double, slopYPercent As Double) As Boolean
+            If geo Is Nothing OrElse geo.Length < 7 Then Return False
+            If geo(6) > 0.5 Then
+                Dim laenge As Double
+                Dim r = EllipsenRadiusNormiert(geo, xPercent, yPercent, slopXPercent, slopYPercent, laenge)
+                Return r >= 0.0 AndAlso r <= 1.0
+            End If
+            Dim ax = geo(0), ay = geo(1), bx = geo(2), by = geo(3)
+            Dim dx = bx - ax, dy = by - ay
+            Dim len2 = dx * dx + dy * dy
+            If len2 < 0.000001 Then Return False
+            Dim mx = (ax + bx) / 2.0, my = (ay + by) / 2.0
+            Dim t = ((xPercent - mx) * dx + (yPercent - my) * dy) / len2
+            Return Math.Abs(t) <= Math.Max(0.02, Math.Min(100.0, geo(5)) / 200.0)
+        End Function
+        ''' <summary>Normierter Ellipsenradius des Punktes: 1 = auf der Aussenkante, 0 = im
+        ''' Mittelpunkt. Gerechnet wird in SLOP-EINHEITEN (beide Achsen durch ihre eigene Toleranz
+        ''' geteilt) - Prozent auf einer 3:2-Kante sind in X und Y verschieden lang, und eine
+        ''' Ellipsenrechnung in solchen Koordinaten waere schief. Eine Laengeneinheit entspricht
+        ''' danach genau der Greiftoleranz.</summary>
+        Private Shared Function EllipsenRadiusNormiert(geo As Double(), xPercent As Double, yPercent As Double,
+                                                       slopXPercent As Double, slopYPercent As Double,
+                                                       ByRef laengeSkaliert As Double) As Double
+            laengeSkaliert = 0.0
+            If slopXPercent <= 0.0 OrElse slopYPercent <= 0.0 Then Return -1.0
+            Dim ax = geo(0) / slopXPercent, ay = geo(1) / slopYPercent
+            Dim bx = geo(2) / slopXPercent, by = geo(3) / slopYPercent
+            Dim px = xPercent / slopXPercent, py = yPercent / slopYPercent
+            Dim dx = bx - ax, dy = by - ay
+            Dim laenge = Math.Sqrt(dx * dx + dy * dy)
+            If laenge < 0.0001 Then Return -1.0
+            laengeSkaliert = laenge
+            Dim ex = dx / laenge, ey = dy / laenge
+            Dim vx = px - ax, vy = py - ay
+            Dim u = vx * ex + vy * ey
+            Dim v = -vx * ey + vy * ex
+            Dim halbNeben = Math.Max(0.05, geo(4)) * laenge
+            Return Math.Sqrt((u / laenge) * (u / laenge) + (v / halbNeben) * (v / halbNeben))
+        End Function
+
+        ''' <summary>Liegt der Punkt auf der INNEREN Ellipse des radialen Verlaufs - der Grenze, ab
+        ''' der die Deckung abfaellt? Sie sitzt beim normierten Radius (1 - Uebergang/100), genau
+        ''' dort, wo das Overlay sie zeichnet. Unter 0,02 zeichnet das Overlay sie nicht mehr, dann
+        ''' gibt es auch nichts zu greifen.</summary>
+        Private Shared Function IstAufInnererEllipse(geo As Double(), xPercent As Double, yPercent As Double,
+                                                     slopXPercent As Double, slopYPercent As Double) As Boolean
+            If geo Is Nothing OrElse geo.Length < 7 OrElse geo(6) <= 0.5 Then Return False
+            Dim innen = 1.0 - Math.Max(0.0, Math.Min(100.0, geo(5))) / 100.0
+            If innen <= 0.02 Then Return False
+            Dim laenge As Double
+            Dim r = EllipsenRadiusNormiert(geo, xPercent, yPercent, slopXPercent, slopYPercent, laenge)
+            If r < 0.0 Then Return False
+            Return Math.Abs(r - innen) * laenge <= 1.0
+        End Function
+        ''' <summary>Liegt der Punkt auf einem der beiden Uebergangsstriche? Die sitzen auf der Achse
+        ''' bei plusminus (Achsenlaenge mal Uebergang/200) um die Mitte - genau dort, wo sie das
+        ''' Overlay zeichnet. NUR beim linearen Verlauf: der radiale zeigt statt der Striche eine
+        ''' innere Ellipse, die eine eigene Trefferpruefung braeuchte.</summary>
+        Private Shared Function IstAufUebergangsstrich(geo As Double(), xPercent As Double, yPercent As Double,
+                                                       slopXPercent As Double, slopYPercent As Double) As Boolean
+            If geo Is Nothing OrElse geo.Length < 7 OrElse geo(6) > 0.5 Then Return False
+            Dim ax = geo(0), ay = geo(1), bx = geo(2), by = geo(3)
+            Dim dx = bx - ax, dy = by - ay
+            If dx * dx + dy * dy < 0.000001 Then Return False
+            Dim mx = (ax + bx) / 2.0, my = (ay + by) / 2.0
+            Dim anteil = Math.Max(0.0, Math.Min(1.0, geo(5) / 100.0)) / 2.0
+            For Each vorzeichen In New Double() {-1.0, 1.0}
+                Dim px = mx + dx * anteil * vorzeichen
+                Dim py = my + dy * anteil * vorzeichen
+                If Math.Abs(xPercent - px) <= slopXPercent AndAlso Math.Abs(yPercent - py) <= slopYPercent Then Return True
+            Next
+            Return False
+        End Function
         ''' <summary>Liegt der Punkt auf der Verbindungslinie der beiden Griffe? Dann fasst man den
         ''' Verlauf als Ganzes an.</summary>
         Private Shared Function IstAufVerlaufsachse(geo As Double(), xPercent As Double, yPercent As Double,
@@ -7638,7 +7986,35 @@ Namespace ViewModels
             End If
             Dim maske = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _gradientDragMaskId)
             If maske Is Nothing Then Return
-            If _gradientHandle = 2 Then
+            If _gradientHandle = 3 AndAlso maske.IsRadialGradient Then
+                ' Innere Ellipse: der normierte Radius des Zeigers IST die innere Grenze. Umkehrung
+                ' der Zeichnung (innen = 1 - Uebergang/100).
+                Dim geoR = GradientGeometry
+                If geoR Is Nothing Then Return
+                Dim laengeR As Double
+                Dim rR = EllipsenRadiusNormiert(geoR, xPercent, yPercent, _gradientSlopX, _gradientSlopY, laengeR)
+                If rR < 0.0 Then Return
+                maske.GradientFeatherPercent = Math.Max(2.0, Math.Min(100.0, (1.0 - Math.Max(0.02, Math.Min(0.98, rR))) * 100.0))
+                _gradientFeatherPercent = maske.GradientFeatherPercent
+                Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
+            ElseIf _gradientHandle = 3 Then
+                ' Uebergangsstrich: der Abstand des Zeigers von der Achsenmitte ENTLANG der Achse
+                ' bestimmt die Breite. Umkehrung der Zeichnung (Strich bei Anteil Uebergang/200):
+                ' Uebergang = Anteil mal 200. Verhaeltnisse entlang einer Geraden bleiben bei
+                ' Drehung/Zuschnitt erhalten, deshalb darf das im ANZEIGERAUM gerechnet werden.
+                Dim geo = GradientGeometry
+                If geo Is Nothing Then Return
+                Dim dx = geo(2) - geo(0), dy = geo(3) - geo(1)
+                Dim len2 = dx * dx + dy * dy
+                If len2 < 0.000001 Then Return
+                Dim mx = (geo(0) + geo(2)) / 2.0, my = (geo(1) + geo(3)) / 2.0
+                Dim t = ((xPercent - mx) * dx + (yPercent - my) * dy) / len2
+                ' Untergrenze 2 statt 0: bei 0 faellt die Rampe auf eine harte Kante zusammen, und
+                ' die beiden Striche lägen aufeinander - der Uebergang waere nicht mehr zu fassen.
+                maske.GradientFeatherPercent = Math.Max(2.0, Math.Min(100.0, Math.Abs(t) * 200.0))
+                _gradientFeatherPercent = maske.GradientFeatherPercent
+                Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
+            ElseIf _gradientHandle = 2 Then
                 ' Ganzer Verlauf: der Versatz wird im ANZEIGERAUM gemessen und für beide Punkte
                 ' einzeln in den Quellraum gerechnet - sonst liefe er bei gedrehtem Bild schief.
                 Dim aNeu = DisplayVersatzAufQuelle(_gradientMoveStart, xPercent - _gradientMoveRefX, yPercent - _gradientMoveRefY)
@@ -7648,6 +8024,17 @@ Namespace ViewModels
                 maske.GradientStartYPercent = aNeu.Value.Y
                 maske.GradientEndXPercent = bNeu.Value.X
                 maske.GradientEndYPercent = bNeu.Value.Y
+                ' Pinselkorrektur mitnehmen: derselbe Versatz in QUELLPIXELN. Ein Verschieben ist eine
+                ' reine Verschiebung - das achsenparallele Rechteck bleibt achsenparallel, es muss also
+                ' nichts umgerechnet werden ausser dem Ursprung.
+                If _gradientMoveBrush.Right > _gradientMoveBrush.Left AndAlso maske.HasBrushCorrection Then
+                    Dim dxPx = CInt(Math.Round((aNeu.Value.X - _gradientMoveStart.X) / 100.0 * maske.SourceWidthPixels))
+                    Dim dyPx = CInt(Math.Round((aNeu.Value.Y - _gradientMoveStart.Y) / 100.0 * maske.SourceHeightPixels))
+                    maske.BrushLeft = _gradientMoveBrush.Left + dxPx
+                    maske.BrushTop = _gradientMoveBrush.Top + dyPx
+                    maske.BrushRight = _gradientMoveBrush.Right + dxPx
+                    maske.BrushBottom = _gradientMoveBrush.Bottom + dyPx
+                End If
             Else
                 Dim quelle = DisplayPercentToSourcePercent(xPercent, yPercent)
                 If Not quelle.HasValue Then Return
@@ -14906,6 +15293,12 @@ Namespace ViewModels
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
             End If
             AddHistoryEntry("Rückgängig")
+            ' Das rote Overlay neu zeichnen: ApplyAdjustments hat die transiente Auswahl-Bindung
+            ' zurückgesetzt (_activeSelectionIsMask), und damit wäre das Overlay verschwunden -
+            ' beim VERLAUF völlig zu Unrecht, denn der hängt gar nicht an der Auswahl, sondern an
+            ' der wiederhergestellten Maske. Bei einer gemalten Maske ohne Bindung räumt derselbe
+            ' Aufruf das Overlay korrekt ab.
+            PublishMaskBrushOverlay(nurWennSichtbar:=True)
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub
@@ -14928,6 +15321,12 @@ Namespace ViewModels
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
             End If
             AddHistoryEntry("Wiederholt")
+            ' Das rote Overlay neu zeichnen: ApplyAdjustments hat die transiente Auswahl-Bindung
+            ' zurückgesetzt (_activeSelectionIsMask), und damit wäre das Overlay verschwunden -
+            ' beim VERLAUF völlig zu Unrecht, denn der hängt gar nicht an der Auswahl, sondern an
+            ' der wiederhergestellten Maske. Bei einer gemalten Maske ohne Bindung räumt derselbe
+            ' Aufruf das Overlay korrekt ab.
+            PublishMaskBrushOverlay(nurWennSichtbar:=True)
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub
@@ -16582,6 +16981,12 @@ Namespace ViewModels
             _selectedMaskedAdjustmentLayerId = ""
             _selectedLayerRow = Nothing
             If wasActiveSelectionTarget Then ClearSelection(captureUndo:=False)
+            ' Die geloeschte Ebene war vielleicht die, deren rote Deckung gerade zu sehen ist. Ohne
+            ' diese zwei Zeilen bleibt das alte Overlay-Bitmap stehen, und die View bekommt nicht
+            ' einmal mit, dass es keinen markierten Verlauf mehr gibt - die Maske sieht dann aus,
+            ' als waere sie noch da. Vierter Fall derselben Klasse, siehe MASK_TOOL_DECOUPLING_PLAN.
+            RaiseGradientPropertiesChanged()
+            PublishMaskBrushOverlay()
             RebuildLayerRows()
             _hasChanges = True
             RaiseResetButtonStateChanged()
@@ -19322,6 +19727,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowSelectionAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowMaskAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowGradientControls))
+            Me.RaisePropertyChanged(NameOf(IsRefiningGradientMask))
             Me.RaisePropertyChanged(NameOf(ShowDrawControls))
             Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
             Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))

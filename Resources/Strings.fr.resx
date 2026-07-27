@@ -4625,4 +4625,25 @@
   <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Expor_36a2bae3" xml:space="preserve">
     <value>Format cible présélectionné dans Enregistrer sous, Exporter vers et les autres fonctions par lots. FPX est le format de projet modifiable, proposé dans Enregistrer sous et Exporter vers ; là où il ne l'est pas, JPG est utilisé.</value>
   </data>
+  <data name="Der_Pinsel_bessert_den_gew_hlten_Verlauf_nach_St_09811de5" xml:space="preserve">
+    <value>Le pinceau retouche le dégradé sélectionné : les traits ajoutent des zones, « Soustraire » les retire à nouveau. Le dégradé lui-même reste déplaçable.</value>
+  </data>
+  <data name="Pinsel_Maske_frei_ins_Bild_malen_Hinzuf_gen_und__2195d79c" xml:space="preserve">
+    <value>Pinceau : peindre le masque librement sur l’image — ajouter et soustraire avec le sélecteur ci-dessous</value>
+  </data>
+  <data name="Linearer_Verlauf_im_Bild_ziehen_die_Maske_l_uft__ae7499c8" xml:space="preserve">
+    <value>Dégradé linéaire : faites glisser sur l’image, le masque s’estompe du point de départ au point d’arrivée. Maj verrouille la direction</value>
+  </data>
+  <data name="Radialer_Verlauf_von_der_Mitte_nach_aussen_ziehe_f885ecaf" xml:space="preserve">
+    <value>Dégradé radial : faites glisser du centre vers l’extérieur. Avec « Inverser », le masque agit à l’extérieur</value>
+  </data>
+  <data name="Neue_Auswahlebene_cefd276f" xml:space="preserve">
+    <value>Nouveau calque de sélection</value>
+  </data>
+  <data name="Aus_der_gemalten_Maske_eine_Maskenebene_erstelle_753f265e" xml:space="preserve">
+    <value>Transformer le masque peint en calque de masque</value>
+  </data>
+  <data name="Aus_der_Auswahl_direkt_eine_Auswahlebene_erstell_920a69ad" xml:space="preserve">
+    <value>Transformer la sélection directement en calque de sélection (sans devoir d’abord modifier un réglage)</value>
+  </data>
 </root>

@@ -15,39 +15,37 @@
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
 
-            <!-- Die drei Arten stehen als BREITE Zeilen mit Text untereinander, nicht als
-                 Symbolreihe: sie schliessen einander aus und man wählt sie einmal pro Maske,
-                 nicht im Sekundentakt wie einen Pinselmodus. -->
-            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,7"
-                    Command="{Binding SetMaskModeCommand}" CommandParameter="Brush"
-                    Classes.active="{Binding IsMaskBrushMode}"
-                    ToolTip.Tip="Maske frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter">
-                <StackPanel Orientation="Horizontal" Spacing="8">
+            <!-- Symbolreihe wie im Auswahlwerkzeug: die drei Arten schliessen einander aus,
+                 und die Beschriftung stand nur in die Breite. Was sie tun, sagt der Tooltip. -->
+            <TextBlock Text="Werkzeug" Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="ghost" Padding="8,6"
+                        Command="{Binding SetMaskModeCommand}" CommandParameter="Brush"
+                        Classes.active="{Binding IsMaskBrushMode}"
+                        ToolTip.Tip="Pinsel: Maske frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg" Width="16" Height="16" />
-                    <TextBlock Text="Pinsel" VerticalAlignment="Center" />
-                </StackPanel>
-            </Button>
-            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,7"
-                    Command="{Binding SetMaskModeCommand}" CommandParameter="Linear"
-                    Classes.active="{Binding IsMaskLinearMode}"
-                    ToolTip.Tip="Im Bild ziehen: die Maske läuft vom Startpunkt zum Endpunkt aus. Umschalt rastet die Richtung">
-                <StackPanel Orientation="Horizontal" Spacing="8">
+                </Button>
+                <Button Classes="ghost" Padding="8,6"
+                        Command="{Binding SetMaskModeCommand}" CommandParameter="Linear"
+                        Classes.active="{Binding IsMaskLinearMode}"
+                        ToolTip.Tip="Linearer Verlauf: im Bild ziehen, die Maske läuft vom Startpunkt zum Endpunkt aus. Umschalt rastet die Richtung">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg" Width="16" Height="16" />
-                    <TextBlock Text="Linearer Verlauf" VerticalAlignment="Center" />
-                </StackPanel>
-            </Button>
-            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,7"
-                    Command="{Binding SetMaskModeCommand}" CommandParameter="Radial"
-                    Classes.active="{Binding IsMaskRadialMode}"
-                    ToolTip.Tip="Von der Mitte nach aussen ziehen. Mit „Umkehren“ wirkt die Maske aussen statt innen">
-                <StackPanel Orientation="Horizontal" Spacing="8">
+                </Button>
+                <Button Classes="ghost" Padding="8,6"
+                        Command="{Binding SetMaskModeCommand}" CommandParameter="Radial"
+                        Classes.active="{Binding IsMaskRadialMode}"
+                        ToolTip.Tip="Radialer Verlauf: von der Mitte nach aussen ziehen. Mit „Umkehren“ wirkt die Maske aussen statt innen">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg" Width="16" Height="16" />
-                    <TextBlock Text="Radialer Verlauf" VerticalAlignment="Center" />
-                </StackPanel>
-            </Button>
-
+                </Button>
+            </StackPanel>
             <!-- Pinsel-Zweig -->
             <StackPanel Spacing="8" IsVisible="{Binding IsMaskBrushMode}">
+                <TextBlock IsVisible="{Binding IsRefiningGradientMask}"
+                           Text="Der Pinsel bessert den gewählten Verlauf nach: Striche nehmen Bereiche hinzu, mit „Abziehen“ wieder weg. Der Verlauf selbst bleibt verschiebbar."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -112,11 +110,11 @@
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding HasActiveSelection}"
                         Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
-                        ToolTip.Tip="Aus der gemalten Maske eine Korrekturebene erstellen">
+                        ToolTip.Tip="Aus der gemalten Maske eine Maskenebene erstellen">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
                                        Width="16" Height="16" />
-                        <TextBlock Text="Neue Korrekturebene" />
+                        <TextBlock Text="Neue Maskenebene" />
                     </StackPanel>
                 </Button>
             </StackPanel>

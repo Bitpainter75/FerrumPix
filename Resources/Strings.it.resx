@@ -4625,4 +4625,25 @@
   <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Expor_36a2bae3" xml:space="preserve">
     <value>Formato di destinazione preselezionato in Salva con nome, Esporta in e nelle altre funzioni in serie. FPX è il formato di progetto modificabile e si può scegliere in Salva con nome ed Esporta in; dove non è disponibile viene usato JPG.</value>
   </data>
+  <data name="Der_Pinsel_bessert_den_gew_hlten_Verlauf_nach_St_09811de5" xml:space="preserve">
+    <value>Il pennello ritocca il gradiente selezionato: le pennellate aggiungono aree, con «Sottrai» le tolgono di nuovo. Il gradiente stesso resta spostabile.</value>
+  </data>
+  <data name="Pinsel_Maske_frei_ins_Bild_malen_Hinzuf_gen_und__2195d79c" xml:space="preserve">
+    <value>Pennello: dipingi la maschera liberamente sull’immagine — aggiungi e sottrai con il selettore sotto</value>
+  </data>
+  <data name="Linearer_Verlauf_im_Bild_ziehen_die_Maske_l_uft__ae7499c8" xml:space="preserve">
+    <value>Gradiente lineare: trascina sull’immagine, la maschera sfuma dal punto iniziale a quello finale. Maiusc blocca la direzione</value>
+  </data>
+  <data name="Radialer_Verlauf_von_der_Mitte_nach_aussen_ziehe_f885ecaf" xml:space="preserve">
+    <value>Gradiente radiale: trascina dal centro verso l’esterno. Con «Inverti» la maschera agisce all’esterno</value>
+  </data>
+  <data name="Neue_Auswahlebene_cefd276f" xml:space="preserve">
+    <value>Nuovo livello selezione</value>
+  </data>
+  <data name="Aus_der_gemalten_Maske_eine_Maskenebene_erstelle_753f265e" xml:space="preserve">
+    <value>Trasforma la maschera dipinta in un livello maschera</value>
+  </data>
+  <data name="Aus_der_Auswahl_direkt_eine_Auswahlebene_erstell_920a69ad" xml:space="preserve">
+    <value>Trasforma la selezione direttamente in un livello selezione (senza dover prima cambiare un’impostazione)</value>
+  </data>
 </root>

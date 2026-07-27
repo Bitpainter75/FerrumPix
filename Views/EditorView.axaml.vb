@@ -1492,7 +1492,11 @@ Namespace Views
                 If vm.CurrentTool = EditorTool.Mask AndAlso Not vm.IsMaskBrushMode Then
                     Dim gxPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                     Dim gyPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
-                    Const gradientSlopPixels As Double = 12.0
+                    ' Greifradius der Verlaufs-Anfasser in Bildschirmpixeln. 12 war messbar zu knapp -
+                    ' die Uebergangsstriche sind duenne Linien, und der Zeiger muss sie nicht treffen,
+                    ' sondern nur meinen. Groesser als etwa 20 wuerde die Anfasser bei kurzen Verlaeufen
+                    ' ineinander laufen (Start und Ende liegen dann nahe beieinander).
+                    Const gradientSlopPixels As Double = 18.0
                     If Not vm.TryBeginGradientHandleDrag(gxPct, gyPct,
                                                          gradientSlopPixels / imageRect.Width * 100.0,
                                                          gradientSlopPixels / imageRect.Height * 100.0) Then

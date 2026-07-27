@@ -1002,6 +1002,28 @@ Namespace Views
             UpdateGalleryItemContextMenu(sender, item)
         End Sub
 
+        ''' <summary>Klick in den LEEREN Bereich der Galerie hebt die Auswahl auf.
+        '''
+        ''' Läuft in der Blasenphase am ScrollViewer: ein Klick auf eine Kachel wird in
+        ''' <see cref="OnThumbnailPointerPressed"/> als behandelt markiert und kommt hier gar nicht
+        ''' erst an. Die zweite Prüfung über <see cref="HasImageItemContext"/> ist trotzdem kein
+        ''' Zierrat - Teile einer Kachel (Bewertungssterne, Abzeichen) können den Klick zwar
+        ''' verarbeiten, ohne ihn als behandelt zu melden, und dann läge die Kachel unter dem Zeiger,
+        ''' obwohl das Ereignis durchkommt.
+        '''
+        ''' Nur die linke Taste: ein Rechtsklick ins Leere öffnet das Kontextmenü des Bereichs und
+        ''' darf die Auswahl nicht wegnehmen - sonst zielte "Einfügen" plötzlich ins Nichts.</summary>
+        Public Sub OnGalleryAreaPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            If e.Handled Then Return
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            If Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
+            If HasImageItemContext(e.Source) Then Return
+            If vm.SelectedItems Is Nothing OrElse vm.SelectedItems.Count = 0 Then Return
+            vm.ClearSelection()
+            _selectionAnchor = Nothing
+        End Sub
+
         Public Sub OnGalleryAreaContextRequested(sender As Object, e As ContextRequestedEventArgs)
             If ConsumeSuppressedGalleryContextMenu(e) Then Return
             Dim vm = GetVm()
