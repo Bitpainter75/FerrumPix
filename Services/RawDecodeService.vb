@@ -45,6 +45,7 @@ Namespace Services
         Private Delegate Sub SetIntFn(handle As IntPtr, value As Integer)
         Private Delegate Function GetCamMulFn(handle As IntPtr, index As Integer) As Single
         Private Delegate Sub SetUserMulFn(handle As IntPtr, index As Integer, value As Single)
+        Private Delegate Sub SetGammaFn(handle As IntPtr, index As Integer, value As Single)   ' libraw_set_gamma nimmt FLOAT, nicht double
         Private Delegate Function MakeMemImageFn(handle As IntPtr, ByRef errc As Integer) As IntPtr
         Private Delegate Sub PtrFn(handle As IntPtr)
 
@@ -81,6 +82,8 @@ Namespace Services
         Private Shared _setOutputColor As SetIntFn
         Private Shared _getCamMul As GetCamMulFn
         Private Shared _setUserMul As SetUserMulFn
+        Private Shared _setNoAutoBright As SetIntFn
+        Private Shared _setGamma As SetGammaFn
         Private Shared _process As IntFn
         Private Shared _unpackThumb As IntFn
         Private Shared _makeMemThumb As MakeMemImageFn
@@ -182,6 +185,8 @@ Namespace Services
                     _setOutputColor = GetExport(Of SetIntFn)(handle, "libraw_set_output_color")
                     _getCamMul = GetExport(Of GetCamMulFn)(handle, "libraw_get_cam_mul")
                     _setUserMul = GetExport(Of SetUserMulFn)(handle, "libraw_set_user_mul")
+                    _setNoAutoBright = GetExport(Of SetIntFn)(handle, "libraw_set_no_auto_bright")
+                    _setGamma = GetExport(Of SetGammaFn)(handle, "libraw_set_gamma")
                     _process = GetExport(Of IntFn)(handle, "libraw_dcraw_process")
                     _unpackThumb = GetExport(Of IntFn)(handle, "libraw_unpack_thumb")
                     _makeMemThumb = GetExport(Of MakeMemImageFn)(handle, "libraw_dcraw_make_mem_thumb")
@@ -194,6 +199,7 @@ Namespace Services
                     _init = Nothing : _openFile = Nothing : _unpack = Nothing
                     _setOutputBps = Nothing : _setOutputColor = Nothing
                     _getCamMul = Nothing : _setUserMul = Nothing
+                    _setNoAutoBright = Nothing : _setGamma = Nothing
                     _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
                     _unpackThumb = Nothing : _makeMemThumb = Nothing
                     NativeLibrary.Free(handle)
@@ -400,7 +406,7 @@ Namespace Services
         ''' Der 16-Bit-Zweig in DecodeCore und Convert16 bleiben deshalb lauffaehig stehen; die
         ''' Diagnose ruft Convert16 direkt auf, damit er nicht unbemerkt verrottet. Umschalten
         ''' ist genau diese eine Zahl.</summary>
-        Private Const DecodeOutputBits As Integer = 8
+        Private Const DecodeOutputBits As Integer = 16
 
         Private Shared Function DecodeCore(path As String) As SKBitmap
             Dim handle = _init(0UI)
@@ -416,6 +422,22 @@ Namespace Services
 
                 _setOutputBps(handle, DecodeOutputBits)
                 _setOutputColor(handle, 1) ' sRGB
+                ' LINEAR und OHNE Auto-Aufhellung dekodieren - die Tonabbildung macht Convert16.
+                ' LibRaws Auto-Aufhellung ist ein Histogramm-Stretch: gemessen faellt sie an einem
+                ' dunklen Motiv zu HELL und an einem hellen zu DUNKEL aus (P50 0,140 gegen Lightrooms
+                ' 0,086 bzw. 0,304 gegen 0,396). Motivabhaengig in beide Richtungen - kein
+                ' Korrekturfaktor kann das beheben, deshalb ersetzt sie eine feste Wiedergabe.
+                ' Fehlen die Schalter (exotische libraw), bleibt es beim alten Verhalten: dann
+                ' liefert LibRaw gamma-kodierte Daten und die Tabellen unten passen nicht - darum
+                ' faellt der Decode in diesem Fall auf 8 Bit zurueck.
+                Dim linearMoeglich = _setNoAutoBright IsNot Nothing AndAlso _setGamma IsNot Nothing
+                If linearMoeglich Then
+                    _setNoAutoBright(handle, 1)
+                    _setGamma(handle, 0, 1.0F) ' Gamma-Kurve neutral: 1/1 = linear
+                    _setGamma(handle, 1, 1.0F)
+                Else
+                    _setOutputBps(handle, 8)
+                End If
                 ' Kamera-Weißabgleich: die As-Shot-Multiplikatoren als user_mul setzen (die C-API
                 ' hat keinen use_camera_wb-Setter). Ohne gültige cam_mul bleibt der Standard.
                 Dim mul0 = _getCamMul(handle, 0)
@@ -525,8 +547,109 @@ Namespace Services
         '''
         ''' Zeilenweise aus dem nativen Puffer kopiert, damit kein zweiter Vollbild-Puffer
         ''' entsteht.</summary>
+
+        ''' <summary>Adobes ACR-Standardtonkurve (dng_tone_curve_acr3_default aus dem oeffentlichen
+        ''' DNG-SDK), auf 129 Stuetzstellen gerastert - linear ein, linear aus. Der Rasterfehler
+        ''' gegen die 1025 Originalstuetzstellen liegt bei 0,107 von 255, also unter einem halben
+        ''' Tonwert. Sie darf mitgeliefert werden; Adobes TABELLENdaten (HueSatMap, LookTable)
+        ''' duerfen es NICHT.</summary>
+        Private Shared ReadOnly Acr3Kurve As Double() = {
+            0.000000, 0.006230, 0.014850, 0.026430, 0.040020, 0.054830, 0.070570, 0.087100,
+            0.104330, 0.122180, 0.140610, 0.159560, 0.179010, 0.198930, 0.219290, 0.239630,
+            0.259610, 0.279180, 0.298330, 0.317040, 0.335310, 0.353130, 0.370500, 0.387420,
+            0.403890, 0.419930, 0.435540, 0.450730, 0.465510, 0.479890, 0.493870, 0.507470,
+            0.520690, 0.533560, 0.546070, 0.558240, 0.570070, 0.581590, 0.592810, 0.603730,
+            0.614360, 0.624720, 0.634820, 0.644660, 0.654260, 0.663620, 0.672750, 0.681650,
+            0.690350, 0.698830, 0.707110, 0.715200, 0.723090, 0.730810, 0.738340, 0.745700,
+            0.752890, 0.759920, 0.766790, 0.773500, 0.780060, 0.786470, 0.792740, 0.798870,
+            0.804860, 0.810720, 0.816450, 0.822050, 0.827530, 0.832880, 0.838120, 0.843240,
+            0.848250, 0.853150, 0.857940, 0.862620, 0.867200, 0.871680, 0.876060, 0.880340,
+            0.884530, 0.888620, 0.892620, 0.896530, 0.900350, 0.904080, 0.907730, 0.911300,
+            0.914780, 0.918180, 0.921500, 0.924750, 0.927920, 0.931010, 0.934030, 0.936980,
+            0.939860, 0.942660, 0.945400, 0.948070, 0.950670, 0.953200, 0.955670, 0.958080,
+            0.960420, 0.962710, 0.964930, 0.967090, 0.969190, 0.971230, 0.973220, 0.975150,
+            0.977020, 0.978840, 0.980610, 0.982320, 0.983980, 0.985580, 0.987140, 0.988640,
+            0.990090, 0.991500, 0.992850, 0.994160, 0.995420, 0.996640, 0.997800, 0.998920,
+            1.000000
+        }
+
+        ''' <summary>Grundbelichtung in EV und Schwarzabzug der Belichtungsrampe.
+        '''
+        ''' Beides sind ECHTE Groessen aus Adobes Pipeline (BaselineExposure bzw. der Schwarzabzug
+        ''' des DNG-SDK), keine freien Parameter. Gefittet gegen Lightroom-Exporte OHNE Preset an
+        ''' DREI Motiven mit angeglichener Geometrie; das Optimum liegt bei allen dreien auf
+        ''' demselben Paar - also kamerafest, nicht motivabhaengig. Mittlerer |dRGB| zu Lightroom:
+        ''' Basis gegen Basis 13,1/15,0/25,1 (Auto-Aufhellung) auf 5,4/5,4/15,5; durch die
+        ''' unveraenderte Preset-Kette 16,4/21,5/15,7 auf 11,8/12,7/13,7.
+        '''
+        ''' MESSHINWEIS: Lightroom entzerrt standardmaessig mit dem Objektivprofil und skaliert
+        ''' dabei um rund 2 %. Ohne Geometrie-Angleich misst ein Vergleich vor allem
+        ''' Fehlregistrierung (WID_7643: 27,2 statt 15,9). FerrumPix baut die Objektivkorrektur
+        ''' bewusst NICHT nach - siehe Audits/LIGHTROOM_ANGLEICH.md.</summary>
+        Private Const GrundbelichtungEv As Double = 0.5
+        Private Const SchwarzAbzug As Double = 0.003
+        ''' <summary>Tabelle LINEAR (0..65535) -> Belichtungsrampe + ACR3-Tonkurve, wieder linear
+        ''' in 0..65535. Einmal gebaut statt pro Pixel gerechnet: die Kurve wird je Pixel ZWEIMAL
+        ''' gebraucht (hellster und dunkelster Kanal).</summary>
+        Private Shared ReadOnly TonTabelle As Integer() = BaueTonTabelle()
+
+        ''' <summary>Tabelle LINEAR (0..65535) -> sRGB-kodiert (0..65535). Getrennt von der
+        ''' Tonkurve, weil der mittlere Kanal ZWISCHEN den beiden anderen interpoliert wird - und
+        ''' zwar linear, vor der Gamma-Kodierung.</summary>
+        Private Shared ReadOnly GammaTabelle As Integer() = BaueGammaTabelle()
+
+        Private Shared Function BaueTonTabelle() As Integer()
+            Dim t(65535) As Integer
+            Dim weiss = 1.0 / (2.0 ^ GrundbelichtungEv)
+            Dim steigung = 1.0 / (weiss - SchwarzAbzug)
+            ' Weicher Fuss wie im DNG-SDK: eine quadratische Anlaufstrecke um den Schwarzpunkt,
+            ' sonst entstuende dort eine sichtbare Kante.
+            Dim radius = Math.Min(0.5 * SchwarzAbzug, (1.0 / 16.0) / steigung)
+            Dim qskala = If(radius > 0, steigung / (4.0 * radius), 0.0)
+            For i = 0 To 65535
+                Dim x = i / 65535.0
+                Dim v As Double
+                If x <= SchwarzAbzug - radius Then
+                    v = 0.0
+                ElseIf x >= SchwarzAbzug + radius Then
+                    v = Math.Min((x - SchwarzAbzug) * steigung, 1.0)
+                Else
+                    v = qskala * (x - (SchwarzAbzug - radius)) ^ 2
+                End If
+                ' ACR3-Kurve mit linearer Interpolation zwischen den 129 Stuetzstellen.
+                Dim pos = Math.Max(0.0, Math.Min(1.0, v)) * (Acr3Kurve.Length - 1)
+                Dim idx = CInt(Math.Floor(pos))
+                If idx > Acr3Kurve.Length - 2 Then idx = Acr3Kurve.Length - 2
+                Dim f = pos - idx
+                Dim yk = Acr3Kurve(idx) * (1.0 - f) + Acr3Kurve(idx + 1) * f
+                t(i) = CInt(Math.Round(Math.Max(0.0, Math.Min(1.0, yk)) * 65535.0))
+            Next
+            Return t
+        End Function
+
+        Private Shared Function BaueGammaTabelle() As Integer()
+            Dim t(65535) As Integer
+            For i = 0 To 65535
+                Dim v = i / 65535.0
+                Dim sg = If(v <= 0.0031308, v * 12.92, 1.055 * Math.Pow(v, 1.0 / 2.4) - 0.055)
+                t(i) = CInt(Math.Round(Math.Max(0.0, Math.Min(1.0, sg)) * 65535.0))
+            Next
+            Return t
+        End Function
+
+        ''' <summary>16-Bit-LINEARE LibRaw-Ausgabe in 8-Bit-sRGB umsetzen: Belichtungsrampe,
+        ''' ACR3-Tonkurve nach Adobes RGBTone-Regel, sRGB-Gamma, Bayer-Dither.
+        '''
+        ''' RGBTone heisst: die Kurve laeuft auf dem HELLSTEN und dem DUNKELSTEN Kanal, der
+        ''' mittlere wird zwischen den beiden Ergebnissen interpoliert. Kanalweise angewandt
+        ''' verschoebe die Kurve den Farbton - genau der Fehler, der Lichter ausbleichen laesst.
+        '''
+        ''' Der Dither benutzt DIESELBE Schwelle fuer alle drei Kanaele eines Pixels: kanalweise
+        ''' verschiedene Schwellen faerben neutrale Flaechen ein.</summary>
         Private Shared Sub Convert16(data As IntPtr, width As Integer, height As Integer, pixels As Byte())
             Dim schwellen = DitherSchwellen
+            Dim ton = TonTabelle
+            Dim gamma = GammaTabelle
             Dim rowShorts(width * 3 - 1) As Short
             Dim rowBytes = width * 6
             For y = 0 To height - 1
@@ -543,10 +666,24 @@ Namespace Services
                     ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
                     ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
                     ' CByte kann nicht ueberlaufen.
+                    Dim hoch = Math.Max(r, Math.Max(g, b))
+                    Dim tief = Math.Min(r, Math.Min(g, b))
+                    Dim tHoch = ton(hoch)
+                    Dim tTief = ton(tief)
+                    Dim rr As Integer, gg As Integer, bb As Integer
+                    If hoch = tief Then
+                        rr = tHoch : gg = tHoch : bb = tHoch
+                    Else
+                        Dim spanne = hoch - tief
+                        Dim delta = tHoch - tTief
+                        rr = tTief + CInt(CLng(delta) * (r - tief) \ spanne)
+                        gg = tTief + CInt(CLng(delta) * (g - tief) \ spanne)
+                        bb = tTief + CInt(CLng(delta) * (b - tief) \ spanne)
+                    End If
                     Dim t = schwellen(ditherRow Or (x And 7))
-                    pixels(d) = CByte((b * 255 + t) \ 65535)
-                    pixels(d + 1) = CByte((g * 255 + t) \ 65535)
-                    pixels(d + 2) = CByte((r * 255 + t) \ 65535)
+                    pixels(d) = CByte((gamma(bb) * 255 + t) \ 65535)
+                    pixels(d + 1) = CByte((gamma(gg) * 255 + t) \ 65535)
+                    pixels(d + 2) = CByte((gamma(rr) * 255 + t) \ 65535)
                     pixels(d + 3) = 255
                     d += 4
                 Next
