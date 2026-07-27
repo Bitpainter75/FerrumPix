@@ -84,6 +84,7 @@ Namespace Services
         Private Shared _setUserMul As SetUserMulFn
         Private Shared _setNoAutoBright As SetIntFn
         Private Shared _setGamma As SetGammaFn
+        Private Shared _setFbdd As SetIntFn
         Private Shared _process As IntFn
         Private Shared _unpackThumb As IntFn
         Private Shared _makeMemThumb As MakeMemImageFn
@@ -193,13 +194,21 @@ Namespace Services
                     _makeMemImage = GetExport(Of MakeMemImageFn)(handle, "libraw_dcraw_make_mem_image")
                     _clearMem = GetExport(Of PtrFn)(handle, "libraw_dcraw_clear_mem")
                     _close = GetExport(Of PtrFn)(handle, "libraw_close")
+                    ' OPTIONAL, deshalb eigenes Try: eine aeltere libraw ohne diesen Export ist
+                    ' voll brauchbar, sie rauscht nur mehr. Im Hauptblock wuerde sie hier
+                    ' komplett durchfallen und die RAW-Entwicklung ganz abschalten.
+                    Try
+                        _setFbdd = GetExport(Of SetIntFn)(handle, "libraw_set_fbdd_noiserd")
+                    Catch
+                        _setFbdd = Nothing
+                    End Try
                     _library = handle
                 Catch
                     ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
                     _init = Nothing : _openFile = Nothing : _unpack = Nothing
                     _setOutputBps = Nothing : _setOutputColor = Nothing
                     _getCamMul = Nothing : _setUserMul = Nothing
-                    _setNoAutoBright = Nothing : _setGamma = Nothing
+                    _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing
                     _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
                     _unpackThumb = Nothing : _makeMemThumb = Nothing
                     NativeLibrary.Free(handle)
@@ -438,6 +447,15 @@ Namespace Services
                 Else
                     _setOutputBps(handle, 8)
                 End If
+                ' Rauschminderung VOR dem Demosaic. Sie greift an der einzigen Stelle, an der das
+                ' Muster des Sensors noch bekannt ist - danach hat das Demosaic den Fehler bereits
+                ' ueber die Nachbarschaft verteilt, und jede spaetere Glaettung muss ihn wieder
+                ' einsammeln. Gemessen am dunklen Bildteil eines Konzert-RAW, durch die Basisstufe:
+                ' Farbrauschen 2,47 -> 1,31, Luminanzrauschen 1,03 -> 0,85, Detail 0,66 -> 0,64.
+                ' Kostet rund eine halbe Sekunde bei 20 MP.
+                ' LEICHT (1), nicht VOLL (2): voll ist beim Farbrauschen gemessen SCHLECHTER
+                ' (1,74 gegen 1,31) - hier gilt nicht "mehr ist besser".
+                If _setFbdd IsNot Nothing Then _setFbdd(handle, FbddRauschminderung)
                 ' Kamera-Weißabgleich: die As-Shot-Multiplikatoren als user_mul setzen (die C-API
                 ' hat keinen use_camera_wb-Setter). Ohne gültige cam_mul bleibt der Standard.
                 Dim mul0 = _getCamMul(handle, 0)
@@ -585,7 +603,11 @@ Namespace Services
         ''' MESSHINWEIS: Lightroom entzerrt standardmaessig mit dem Objektivprofil und skaliert
         ''' dabei um rund 2 %. Ohne Geometrie-Angleich misst ein Vergleich vor allem
         ''' Fehlregistrierung (WID_7643: 27,2 statt 15,9). FerrumPix baut die Objektivkorrektur
-        ''' bewusst NICHT nach - siehe Audits/LIGHTROOM_ANGLEICH.md.</summary>
+        ''' bewusst NICHT nach - siehe Audits/RAW_UND_FARBE.md.</summary>
+        ''' <summary>FBDD-Stufe von LibRaw: 0 = aus, 1 = leicht, 2 = voll. Siehe Begruendung an der
+        ''' Aufrufstelle - 2 ist beim Farbrauschen gemessen schlechter als 1.</summary>
+        Private Const FbddRauschminderung As Integer = 1
+
         Private Const GrundbelichtungEv As Double = 0.5
         Private Const SchwarzAbzug As Double = 0.003
         ''' <summary>Tabelle LINEAR (0..65535) -> Belichtungsrampe + ACR3-Tonkurve, wieder linear

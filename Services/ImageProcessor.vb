@@ -4077,7 +4077,7 @@ Namespace Services
         ''' Ebenen-Maske laufen weiterhin ueber die Auswahl (ApplySelectionCandidate ->
         ''' WriteSelectionMaskBackToLayer), weil deren Raster zugleich die Quelle des roten Overlays
         ''' ist. MergePaintedMaskStroke ist der vorbereitete Weg dorthin und wird heute nur von der
-        ''' Diagnose gefahren - siehe Audits/MASK_TOOL_DECOUPLING_PLAN.md, Schritt 4.</summary>
+        ''' Diagnose gefahren - siehe Audits/OFFENE_PUNKTE.md.</summary>
         Public Shared Function ApplyMaskBrushStroke(ziel As ImageMask, strich As ImageMask,
                                                     abziehen As Boolean) As Boolean
             If ziel Is Nothing OrElse strich Is Nothing Then Return False

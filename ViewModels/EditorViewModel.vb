@@ -17061,7 +17061,7 @@ Namespace ViewModels
             ' Die geloeschte Ebene war vielleicht die, deren rote Deckung gerade zu sehen ist. Ohne
             ' diese zwei Zeilen bleibt das alte Overlay-Bitmap stehen, und die View bekommt nicht
             ' einmal mit, dass es keinen markierten Verlauf mehr gibt - die Maske sieht dann aus,
-            ' als waere sie noch da. Vierter Fall derselben Klasse, siehe MASK_TOOL_DECOUPLING_PLAN.
+            ' als waere sie noch da. Vierter Fall derselben Klasse, siehe Audits/MASKEN_EBENEN_AUSWAHL.md.
             RaiseGradientPropertiesChanged()
             PublishMaskBrushOverlay()
             RebuildLayerRows()
