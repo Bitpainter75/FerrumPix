@@ -4784,4 +4784,16 @@
   <data name="Chinesisch_e66834c6" xml:space="preserve">
     <value>Chinois</value>
   </data>
+  <data name="T_nung_756f0237" xml:space="preserve">
+    <value>Teinte</value>
+  </data>
+  <data name="Au_engl_hen_f1c17a23" xml:space="preserve">
+    <value>Lueur externe</value>
+  </data>
+  <data name="0_Elemente_ausgew_hlt_ea243f33" xml:space="preserve">
+    <value>{0} éléments sélectionnés</value>
+  </data>
+  <data name="0_Elemente_in_der_Zwischenablage_b5c5cdb9" xml:space="preserve">
+    <value>{0} éléments dans le presse-papiers</value>
+  </data>
 </root>

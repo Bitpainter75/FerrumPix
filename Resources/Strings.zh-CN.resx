@@ -124,7 +124,7 @@
     <value>视图：</value>
   </data>
   <data name="Anwendungsskalierung_e336c491" xml:space="preserve">
-    <value>应用缩放</value>
+    <value>界面缩放</value>
   </data>
   <data name="Appearance_41def7a0" xml:space="preserve">
     <value>外观</value>
@@ -181,10 +181,10 @@
     <value>编辑</value>
   </data>
   <data name="Bearbeitungsrezept_geladen_abbe85fe" xml:space="preserve">
-    <value>已加载编辑配方</value>
+    <value>已加载编辑设置</value>
   </data>
   <data name="Bearbeitungsrezept_gespeichert_58590c9b" xml:space="preserve">
-    <value>已保存编辑配方</value>
+    <value>已保存编辑设置</value>
   </data>
   <data name="Before_74f39697" xml:space="preserve">
     <value>之前</value>
@@ -193,7 +193,7 @@
     <value>前后对比</value>
   </data>
   <data name="Belichtung_09d968f2" xml:space="preserve">
-    <value>曝光</value>
+    <value>曝光度</value>
   </data>
   <data name="Benutzeroberfl_chendichte_0d0c40a6" xml:space="preserve">
     <value>界面密度</value>
@@ -226,10 +226,10 @@
     <value>查看器</value>
   </data>
   <data name="Bewertung_58ca7df8" xml:space="preserve">
-    <value>评分</value>
+    <value>星级</value>
   </data>
   <data name="BEWERTUNG_fca3954d" xml:space="preserve">
-    <value>评分</value>
+    <value>星级</value>
   </data>
   <data name="Bibliothek_d75732b8" xml:space="preserve">
     <value>图库</value>
@@ -253,7 +253,7 @@
     <value>图像大小</value>
   </data>
   <data name="Bildschirm_f_r_Skalierung_875b3ec6" xml:space="preserve">
-    <value>应用缩放的屏幕</value>
+    <value>缩放目标显示器</value>
   </data>
   <data name="Black_b406fb57" xml:space="preserve">
     <value>黑色</value>
@@ -526,7 +526,7 @@
     <value>输入文件名</value>
   </data>
   <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Tags_vo_e5f7741e" xml:space="preserve">
-    <value>移除已不存在图像的元数据（评分、收藏、标签）。</value>
+    <value>清理已不存在图像的元数据（星级、收藏和标签）。</value>
   </data>
   <data name="Error_787aa161" xml:space="preserve">
     <value>错误：</value>
@@ -550,13 +550,13 @@
     <value>已导出：</value>
   </data>
   <data name="Exposure_862ee3b1" xml:space="preserve">
-    <value>曝光</value>
+    <value>曝光度</value>
   </data>
   <data name="F_r_private_Nutzung_frei_be3eeedc" xml:space="preserve">
     <value>个人使用免费</value>
   </data>
   <data name="Fade_5298d08b" xml:space="preserve">
-    <value>淡化</value>
+    <value>褪色</value>
   </data>
   <data name="Farbe_89b7957d" xml:space="preserve">
     <value>颜色</value>
@@ -565,10 +565,10 @@
     <value>重置颜色</value>
   </data>
   <data name="Farbmischer_1f0c48cc" xml:space="preserve">
-    <value>颜色混合器</value>
+    <value>混色器</value>
   </data>
   <data name="Farbmischer_zur_cksetzen_764463fe" xml:space="preserve">
-    <value>重置颜色混合器</value>
+    <value>重置混色器</value>
   </data>
   <data name="Farbraum_ce914831" xml:space="preserve">
     <value>色彩空间</value>
@@ -622,10 +622,10 @@
     <value>文件类型</value>
   </data>
   <data name="Filmstrip_im_Editor_anzeigen_69698114" xml:space="preserve">
-    <value>在编辑器中显示胶片栏</value>
+    <value>在编辑器中显示胶片显示窗格</value>
   </data>
   <data name="Filmstrip_im_Viewer_anzeigen_c541ebf7" xml:space="preserve">
-    <value>在查看器中显示胶片栏</value>
+    <value>在查看器中显示胶片显示窗格</value>
   </data>
   <data name="Filter_d7decf1a" xml:space="preserve">
     <value>筛选</value>
@@ -787,7 +787,7 @@
     <value>项已选择</value>
   </data>
   <data name="JPG_Qualit_t_038d0284" xml:space="preserve">
-    <value>JPG 质量</value>
+    <value>JPEG 品质</value>
   </data>
   <data name="June_a9db9067" xml:space="preserve">
     <value>六月</value>
@@ -802,7 +802,7 @@
     <value>相机</value>
   </data>
   <data name="Kein_Bearbeitungsrezept_gefunden_330ec739" xml:space="preserve">
-    <value>未找到编辑配方</value>
+    <value>未找到编辑设置</value>
   </data>
   <data name="Kein_Bild_ge_ffnet_1bd73187" xml:space="preserve">
     <value>未打开图像</value>
@@ -973,7 +973,7 @@
     <value>下一张图像</value>
   </data>
   <data name="Nicht_bewertet_2944fe26" xml:space="preserve">
-    <value>未评分</value>
+    <value>无星级</value>
   </data>
   <data name="No_folder_open_bb7b6b23" xml:space="preserve">
     <value>未打开文件夹</value>
@@ -991,7 +991,7 @@
     <value>未选择项目</value>
   </data>
   <data name="Noise_15b378e9" xml:space="preserve">
-    <value>噪点</value>
+    <value>杂色</value>
   </data>
   <data name="Nur_Favoriten_87501cd3" xml:space="preserve">
     <value>仅显示收藏</value>
@@ -1078,10 +1078,10 @@
     <value>网格视图</value>
   </data>
   <data name="Rating_6437b7bf" xml:space="preserve">
-    <value>评分</value>
+    <value>星级</value>
   </data>
   <data name="Rauschen_ded8bdce" xml:space="preserve">
-    <value>噪点</value>
+    <value>杂色</value>
   </data>
   <data name="Rechts_d2911a6a" xml:space="preserve">
     <value>右侧</value>
@@ -1117,10 +1117,10 @@
     <value>重置修饰</value>
   </data>
   <data name="Rezept_konnte_nicht_geladen_werden_ca7226d7" xml:space="preserve">
-    <value>无法加载配方：</value>
+    <value>无法加载编辑设置：</value>
   </data>
   <data name="Rezept_konnte_nicht_gespeichert_werden_af3ff7fa" xml:space="preserve">
-    <value>无法保存配方：</value>
+    <value>无法保存编辑设置：</value>
   </data>
   <data name="Rot_ab9513c7" xml:space="preserve">
     <value>红色</value>
@@ -1162,7 +1162,7 @@
     <value>关闭</value>
   </data>
   <data name="Schwarz_4b436dc5" xml:space="preserve">
-    <value>黑色</value>
+    <value>黑色色阶</value>
   </data>
   <data name="Seitenverh_ltnis_8a496526" xml:space="preserve">
     <value>宽高比</value>
@@ -1201,10 +1201,10 @@
     <value>显示 EXIF 信息</value>
   </data>
   <data name="Show_filmstrip_in_editor_2a88e956" xml:space="preserve">
-    <value>在编辑器中显示胶片栏</value>
+    <value>在编辑器中显示胶片显示窗格</value>
   </data>
   <data name="Show_filmstrip_in_viewer_20f1322a" xml:space="preserve">
-    <value>在查看器中显示胶片栏</value>
+    <value>在查看器中显示胶片显示窗格</value>
   </data>
   <data name="Show_folders_in_gallery_5025ab4f" xml:space="preserve">
     <value>在图库中显示文件夹</value>
@@ -1228,10 +1228,10 @@
     <value>在文件列表上方显示路径导航。</value>
   </data>
   <data name="Shows_the_image_strip_at_the_bottom_of_the_edito_dc3934aa" xml:space="preserve">
-    <value>在编辑器底部显示图像栏。</value>
+    <value>在编辑器底部显示胶片显示窗格。</value>
   </data>
   <data name="Shows_the_image_strip_at_the_bottom_of_the_viewe_bf6b2029" xml:space="preserve">
-    <value>在查看器底部显示图像栏。</value>
+    <value>在查看器底部显示胶片显示窗格。</value>
   </data>
   <data name="Shows_the_tab_bar_in_the_main_window_4cba4d0b" xml:space="preserve">
     <value>在主窗口中显示标签栏。</value>
@@ -1282,7 +1282,7 @@
     <value>语言</value>
   </data>
   <data name="Start_mit_Bilddatei_6a19cd1d" xml:space="preserve">
-    <value>带图像文件启动</value>
+    <value>打开图像文件时</value>
   </data>
   <data name="Start_stop_slideshow_Space_e8338383" xml:space="preserve">
     <value>开始/停止幻灯片播放（空格键）</value>
@@ -1429,7 +1429,7 @@
     <value>查看器</value>
   </data>
   <data name="Vignette_42275e06" xml:space="preserve">
-    <value>暗角</value>
+    <value>裁剪后暗角</value>
   </data>
   <data name="Vollbild_d6d9901a" xml:space="preserve">
     <value>全屏</value>
@@ -1495,7 +1495,7 @@
     <value>白平衡</value>
   </data>
   <data name="Wei_fb938e02" xml:space="preserve">
-    <value>白色</value>
+    <value>白色色阶</value>
   </data>
   <data name="Weitere_Optionen_d83a4ef1" xml:space="preserve">
     <value>其他选项。</value>
@@ -1510,7 +1510,7 @@
     <value>欢迎使用 FerrumPix</value>
   </data>
   <data name="Wird_f_r_das_Speichern_und_Exportieren_als_JPG_v_614ce77a" xml:space="preserve">
-    <value>用于保存和导出 JPG。</value>
+    <value>用于保存和导出 JPEG。</value>
   </data>
   <data name="Wird_gespeichert_129ed064" xml:space="preserve">
     <value>正在保存…</value>
@@ -1519,10 +1519,10 @@
     <value>在文件列表上方显示路径导航。</value>
   </data>
   <data name="Zeigt_die_Bildleiste_am_unteren_Rand_des_Editors_3e30b75c" xml:space="preserve">
-    <value>在编辑器底部显示图像栏。</value>
+    <value>在编辑器底部显示胶片显示窗格。</value>
   </data>
   <data name="Zeigt_die_Bildleiste_am_unteren_Rand_des_Viewers_108721b7" xml:space="preserve">
-    <value>在查看器底部显示图像栏。</value>
+    <value>在查看器底部显示胶片显示窗格。</value>
   </data>
   <data name="Zeigt_die_Registerkartenleiste_im_Hauptfenster_a_13a6d0a8" xml:space="preserve">
     <value>在主窗口中显示标签栏。</value>
@@ -1627,7 +1627,7 @@
     <value>选择自定义文本颜色</value>
   </data>
   <data name="Filmstreifen_ein_oder_ausblenden_fc46ea89" xml:space="preserve">
-    <value>显示或隐藏胶片栏</value>
+    <value>显示或隐藏胶片显示窗格</value>
   </data>
   <data name="Klicke_ins_Bild_oder_nutze_um_eine_Textebene_anz_1999bb75" xml:space="preserve">
     <value>单击图像或使用 + 创建文本图层。</value>
@@ -1708,7 +1708,7 @@
     <value>搜索子文件夹</value>
   </data>
   <data name="Verzeichnis_fc15c350" xml:space="preserve">
-    <value>目录</value>
+    <value>文件夹</value>
   </data>
   <data name="Zuschneiden_anwenden_4868e7ab" xml:space="preserve">
     <value>应用裁剪</value>
@@ -1744,7 +1744,7 @@
     <value>条件</value>
   </data>
   <data name="Berechnungsmethode_f_r_die_Gr_en_nderung_0523cef9" xml:space="preserve">
-    <value>调整大小的计算方法</value>
+    <value>调整图像大小的重新采样方法</value>
   </data>
   <data name="Bildgr_e_anwenden_c6388271" xml:space="preserve">
     <value>应用图像大小</value>
@@ -1762,7 +1762,7 @@
     <value>创建拼贴图…</value>
   </data>
   <data name="Cross_dbfe7362" xml:space="preserve">
-    <value>十字</value>
+    <value>交叉冲印</value>
   </data>
   <data name="DETAILS_UND_EFFEKTE_7fa450cc" xml:space="preserve">
     <value>细节与效果</value>
@@ -1774,7 +1774,7 @@
     <value>所选图像将作为拼贴图保存到当前文件夹。</value>
   </data>
   <data name="Dramatisch_35e38c2b" xml:space="preserve">
-    <value>戏剧</value>
+    <value>戏剧化</value>
   </data>
   <data name="Drehung_bb151d57" xml:space="preserve">
     <value>旋转</value>
@@ -1897,10 +1897,10 @@
     <value>重新排列</value>
   </data>
   <data name="Neuberechnung_2ed9c792" xml:space="preserve">
-    <value>重采样</value>
+    <value>重新采样</value>
   </data>
   <data name="Noir_c34fc172" xml:space="preserve">
-    <value>黑色电影</value>
+    <value>黑白电影</value>
   </data>
   <data name="Nutzt_die_Grafikhardware_zur_Videodekodierung_Be_164b727e" xml:space="preserve">
     <value>使用图形硬件解码视频。若播放出现画面异常，请关闭并改用软件解码。下次打开视频时生效。</value>
@@ -1966,7 +1966,7 @@
     <value>重新排列图像顺序（随机模式下还会改变大小和旋转）</value>
   </data>
   <data name="Schachbrettmuster_Standard_echt_durchsichtig_ode_bdf3665e" xml:space="preserve">
-    <value>可选择棋盘格（默认）、真正透明或纯色。</value>
+    <value>可选择棋盘格（默认）、透明背景或纯色背景。</value>
   </data>
   <data name="Schatten_0d4f122f" xml:space="preserve">
     <value>阴影</value>
@@ -2074,7 +2074,7 @@
     <value>缩放</value>
   </data>
   <data name="Zuletzt_zuerst_9484e3f3" xml:space="preserve">
-    <value>最新优先</value>
+    <value>最新在前</value>
   </data>
   <data name="Bitte_behebe_Namenskonflikte_oder_ung_ltige_Name_f0c666d6" xml:space="preserve">
     <value>请修复预览中的名称冲突或无效名称。</value>
@@ -2107,7 +2107,7 @@
     <value>圆角</value>
   </data>
   <data name="Aktiv_16a766ca" xml:space="preserve">
-    <value>活动</value>
+    <value>启用</value>
   </data>
   <data name="Alle_Einstellungen_dieses_Werkzeugs_zur_cksetzen_2e2e41e7" xml:space="preserve">
     <value>重置此工具的所有设置</value>
@@ -2119,7 +2119,7 @@
     <value>重置所有修饰点</value>
   </data>
   <data name="Alt_e30eff92" xml:space="preserve">
-    <value>老化</value>
+    <value>怀旧</value>
   </data>
   <data name="Anker_47a80269" xml:space="preserve">
     <value>锚点</value>
@@ -2152,7 +2152,7 @@
     <value>重置细节：清晰度、锐度、模糊、颗粒和方法</value>
   </data>
   <data name="Dunst_b8cec811" xml:space="preserve">
-    <value>雾化</value>
+    <value>薄雾</value>
   </data>
   <data name="Einpassen_Verhalten_08e3361e" xml:space="preserve">
     <value>适合方式</value>
@@ -2182,10 +2182,10 @@
     <value>适用于查看器和编辑器：可选择仅在图像大于视口时缩小，或始终缩放至视口。</value>
   </data>
   <data name="Gl_hen_95635384" xml:space="preserve">
-    <value>发光</value>
+    <value>辉光</value>
   </data>
   <data name="Homepage_ac066591" xml:space="preserve">
-    <value>主页</value>
+    <value>官方网站</value>
   </data>
   <data name="Im_Viewer_ffnen_584a398c" xml:space="preserve">
     <value>在查看器中打开</value>
@@ -2326,7 +2326,7 @@
     <value>仿制图章（Alt+单击设置源点）</value>
   </data>
   <data name="Struktur_8ad87337" xml:space="preserve">
-    <value>结构</value>
+    <value>纹理</value>
   </data>
   <data name="Vergr_ert_oder_verkleinert_die_Schrift_der_Oberf_e14413e1" xml:space="preserve">
     <value>按整数级别放大或缩小界面字体，立即生效。</value>
@@ -2551,7 +2551,7 @@
     <value>将关键词保存到描述</value>
   </data>
   <data name="Speichert_FerrumPix_Bewertungen_in_einem_abgegre_d73d5de9" xml:space="preserve">
-    <value>将 FerrumPix 评分保存到 Immich 描述中的独立区块，而不是 Immich 评分字段。</value>
+    <value>将 FerrumPix 星级保存到 Immich 描述中的独立区块，而不是 Immich 星级字段。</value>
   </data>
   <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_0b05b5ee" xml:space="preserve">
     <value>将 FerrumPix 关键词保存到 Immich 描述中的独立区块，而不是 Immich 标签。</value>
@@ -2617,10 +2617,10 @@
     <value>版权</value>
   </data>
   <data name="Kleinbild_0ea90523" xml:space="preserve">
-    <value>等效 35 毫米</value>
+    <value>35 mm 等效焦距</value>
   </data>
   <data name="Luminanz_6637e6e3" xml:space="preserve">
-    <value>明度</value>
+    <value>明亮度</value>
   </data>
   <data name="Filmnegativ_d7d1414c" xml:space="preserve">
     <value>胶片负片</value>
@@ -2644,7 +2644,7 @@
     <value>片基</value>
   </data>
   <data name="Aufnehmen_8c5c4d42" xml:space="preserve">
-    <value>拾取</value>
+    <value>取样</value>
   </data>
   <data name="Pipette_auf_den_unbelichteten_Filmrand_zwischen__a410569a" xml:space="preserve">
     <value>吸管：单击画格之间未曝光的胶片边缘。预览会短暂重新显示原始负片。</value>
@@ -2659,16 +2659,16 @@
     <value>密度曲线陡峭程度：向左更平坦、更明亮，向右对比更强、更暗。</value>
   </data>
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
-    <value>应用筛选…</value>
+    <value>应用滤镜…</value>
   </data>
   <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>应用筛选</value>
+    <value>应用滤镜</value>
   </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>文件</value>
   </data>
   <data name="W_hle_den_Look_und_wohin_die_Bilder_geschrieben__99bb404c" xml:space="preserve">
-    <value>选择外观和图像写入位置。</value>
+    <value>选择图像风格和输出位置。</value>
   </data>
   <data name="Anwenden_b18093c4" xml:space="preserve">
     <value>应用</value>
@@ -2737,7 +2737,7 @@
     <value>更新现有资源</value>
   </data>
   <data name="Bearbeitungen_ersetzen_das_Immich_Asset_aus_dem__beef823a" xml:space="preserve">
-    <value>编辑结果将替换其来源 Immich 资源（保留相册、关键词、评分和收藏，原始资源移入 Immich 回收站）。只有启用后，编辑器才能直接保存 Immich 图像。关闭时，每次编辑都会通过“另存为”创建新资源。</value>
+    <value>编辑结果将替换其来源 Immich 资源（保留相册、关键词、星级和收藏，原始资源移入 Immich 回收站）。只有启用后，编辑器才能直接保存 Immich 图像。关闭时，每次编辑都会通过“另存为”创建新资源。</value>
   </data>
   <data name="L_schen_in_Immich_erlauben_0e3f9647" xml:space="preserve">
     <value>允许删除 Immich 资源</value>
@@ -2881,7 +2881,7 @@
     <value>重命名图层（F2）</value>
   </data>
   <data name="Bearbeitungen_ersetzen_das_Immich_Asset_aus_dem__cc8cfeea" xml:space="preserve">
-    <value>编辑结果将替换其来源 Immich 资源（保留相册、标签、评分和收藏，原始资源移入 Immich 回收站）。同时适用于“保存”和以 Immich 为目标的“另存为”。关闭时，每次编辑都会创建新资源。</value>
+    <value>编辑结果将替换其来源 Immich 资源（保留相册、标签、星级和收藏，原始资源移入 Immich 回收站）。同时适用于“保存”和以 Immich 为目标的“另存为”。关闭时，每次编辑都会创建新资源。</value>
   </data>
   <data name="Ohne_Datum_f99058be" xml:space="preserve">
     <value>无日期</value>
@@ -2911,16 +2911,16 @@
     <value>地点</value>
   </data>
   <data name="Farbetikett_06854c28" xml:space="preserve">
-    <value>颜色标签</value>
+    <value>色标</value>
   </data>
   <data name="Lila_df014f5e" xml:space="preserve">
     <value>紫色</value>
   </data>
   <data name="Kein_Etikett_ea16fedc" xml:space="preserve">
-    <value>无标签</value>
+    <value>无色标</value>
   </data>
   <data name="ETIKETT_ff958f07" xml:space="preserve">
-    <value>标签</value>
+    <value>色标</value>
   </data>
   <data name="Pink_54076359" xml:space="preserve">
     <value>粉色</value>
@@ -2938,7 +2938,7 @@
     <value>拖动控制柄时保持宽高比，与“图像大小”相同。关闭时图像会拉伸到拖动尺寸（Shift 仍可强制保持比例）。</value>
   </data>
   <data name="Bewertung_Etikett_dbc10b78" xml:space="preserve">
-    <value>评分和标签</value>
+    <value>星级和色标</value>
   </data>
   <data name="Ebene_rastern_29861d53" xml:space="preserve">
     <value>栅格化图层</value>
@@ -2971,7 +2971,7 @@
     <value>将尺寸附加到文件名</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_1920x1080_jpg_b5f403e4" xml:space="preserve">
-    <value>photo.jpg becomes photo_1920x1080.jpg</value>
+    <value>photo.jpg 将变为 photo_1920x1080.jpg</value>
   </data>
   <data name="Bildgr_e_ndern_ccecda91" xml:space="preserve">
     <value>调整图像大小</value>
@@ -3022,7 +3022,7 @@
     <value>Ctrl+1–5</value>
   </data>
   <data name="Bewertung_setzen_dieselbe_Zahl_erneut_oder_Strg__a67aab8f" xml:space="preserve">
-    <value>设置评分（再次按相同数字或 Ctrl+0 可移除）</value>
+    <value>设置星级（再次按相同数字或 Ctrl+0 可清除）</value>
   </data>
   <data name="Strg_Q_170b2b61" xml:space="preserve">
     <value>Ctrl+Q</value>
@@ -3256,13 +3256,13 @@
     <value>默认</value>
   </data>
   <data name="N_chstgelegen_633ab016" xml:space="preserve">
-    <value>最近邻</value>
+    <value>邻近（硬边缘）</value>
   </data>
   <data name="Bilinear_a8b51aa0" xml:space="preserve">
-    <value>双线性</value>
+    <value>两次线性</value>
   </data>
   <data name="Bikubisch_841800ce" xml:space="preserve">
-    <value>双三次</value>
+    <value>两次立方</value>
   </data>
   <data name="Sterne_a1a58241" xml:space="preserve">
     <value>星</value>
@@ -3352,7 +3352,7 @@
     <value>保存旋转</value>
   </data>
   <data name="Verwerfen_24cc57bc" xml:space="preserve">
-    <value>放弃</value>
+    <value>不保存</value>
   </data>
   <data name="Soll_die_Drehung_von_0_gespeichert_werden_bevor__8a43f254" xml:space="preserve">
     <value>是否在{1}之前保存 {0} 的旋转？</value>
@@ -3376,7 +3376,7 @@
     <value>所选内容将生成 PDF 并在默认应用中打开，随后可使用系统打印对话框。</value>
   </data>
   <data name="Seitengr_e_3b3f2e86" xml:space="preserve">
-    <value>页面大小</value>
+    <value>纸张尺寸</value>
   </data>
   <data name="Hochformat_82437297" xml:space="preserve">
     <value>纵向</value>
@@ -3580,7 +3580,7 @@
     <value>未命名</value>
   </data>
   <data name="Start_ohne_Bilddatei_72e8629d" xml:space="preserve">
-    <value>不带图像文件启动</value>
+    <value>未指定图像文件时</value>
   </data>
   <data name="Lege_ein_leeres_Bild_an_oder_ffne_eine_vorhanden_932cb164" xml:space="preserve">
     <value>新建空白图像或打开现有文件。</value>
@@ -3634,25 +3634,25 @@
     <value>起始偏移</value>
   </data>
   <data name="RAW_entwickelt_8ef68cd6" xml:space="preserve">
-    <value>RAW 已显影</value>
+    <value>RAW 处理完成</value>
   </data>
   <data name="RAW_Vorschau_e60fc82f" xml:space="preserve">
     <value>RAW 预览</value>
   </data>
   <data name="Farbrauschen_7e6f8299" xml:space="preserve">
-    <value>彩色噪点</value>
+    <value>彩色杂色</value>
   </data>
   <data name="Negativ_entfernt_Farbrauschen_gegl_ttet_werden_n_9662d0de" xml:space="preserve">
-    <value>负值移除彩色噪点：仅平滑色度分量，保留明度和细节。正值添加彩色噪点。</value>
+    <value>负值减少彩色杂色：仅平滑色度分量，保留明亮度和细节；正值添加彩色杂色。</value>
   </data>
   <data name="Positiv_f_gt_Staubk_rner_und_Kratzer_hinzu_Film__1d1681ed" xml:space="preserve">
     <value>正值添加灰尘和划痕（胶片效果）；负值在保留边缘的同时移除瑕疵。</value>
   </data>
   <data name="Positiv_f_gt_Rauschen_hinzu_negativ_reduziert_es_1decfbdc" xml:space="preserve">
-    <value>正值添加噪点；负值减少噪点（均匀平滑）。</value>
+    <value>正值添加杂色；负值减少杂色（均匀平滑）。</value>
   </data>
   <data name="Begleitdatei_konnte_nicht_geschrieben_werden_7f337000" xml:space="preserve">
-    <value>无法写入边车文件</value>
+    <value>无法写入附属文件</value>
   </data>
   <data name="Als_Favorit_3cb310d8" xml:space="preserve">
     <value>添加到收藏</value>
@@ -3685,7 +3685,7 @@
     <value>添加到收藏</value>
   </data>
   <data name="RAW_wird_entwickelt_cd804af0" xml:space="preserve">
-    <value>正在显影 RAW…</value>
+    <value>正在处理 RAW…</value>
   </data>
   <data name="Kreis_invers_ed6ffbac" xml:space="preserve">
     <value>反向圆形</value>
@@ -3763,7 +3763,7 @@
     <value>渲染 SVG 图标</value>
   </data>
   <data name="Datenbank_f_r_Bewertungen_Tags_und_Zwischenspeic_dcd39467" xml:space="preserve">
-    <value>用于评分、标签和缓存的数据库</value>
+    <value>星级、标签和缓存数据库</value>
   </data>
   <data name="EXIF_und_IPTC_Daten_lesen_e97651d2" xml:space="preserve">
     <value>读取 EXIF 和 IPTC 数据</value>
@@ -3775,13 +3775,13 @@
     <value>界面图标集</value>
   </data>
   <data name="RAW_Dateien_entwickeln_c85fb82f" xml:space="preserve">
-    <value>显影 RAW 文件</value>
+    <value>处理 RAW 文件</value>
   </data>
   <data name="Videowiedergabe_und_Video_Vorschaubilder_b2bcf9a7" xml:space="preserve">
     <value>视频播放与视频缩略图</value>
   </data>
   <data name="LibRaw_und_libmpv_stehen_unter_der_LGPL_sie_werd_bf6db0e8" xml:space="preserve">
-    <value>LibRaw 和 libmpv 采用 LGPL 许可证：FerrumPix 不加修改地动态加载它们，你可以替换为自行构建的相同版本。许可证文本和来源记录位于应用旁的 licenses 文件夹中。</value>
+    <value>LibRaw 和 libmpv 采用 LGPL 许可证。FerrumPix 会以动态方式加载未经修改的版本，用户也可以替换为自行构建的相同版本。许可证文本和来源说明位于 FerrumPix 所在目录的 licenses 文件夹中。</value>
   </data>
   <data name="GPL_3_0_5af8926d" xml:space="preserve">
     <value>GPL-3.0</value>
@@ -3844,7 +3844,7 @@
     <value>无法保存旋转</value>
   </data>
   <data name="Bearbeitung_in_Begleitdatei_gespeichert_3dc10f16" xml:space="preserve">
-    <value>编辑内容已保存到边车文件</value>
+    <value>编辑内容已保存到附属文件</value>
   </data>
   <data name="Erstellt_98607f4d" xml:space="preserve">
     <value>创建时间</value>
@@ -3856,10 +3856,10 @@
     <value>葡萄牙语</value>
   </data>
   <data name="Farbgradierung_7c624b2d" xml:space="preserve">
-    <value>色彩分级</value>
+    <value>颜色分级</value>
   </data>
   <data name="Farbgradierung_zur_cksetzen_ffa13609" xml:space="preserve">
-    <value>重置色彩分级</value>
+    <value>重置颜色分级</value>
   </data>
   <data name="Global_5f1184f7" xml:space="preserve">
     <value>全局</value>
@@ -3901,7 +3901,7 @@
     <value>高光优先</value>
   </data>
   <data name="berlagerung_0bb0d92f" xml:space="preserve">
-    <value>绘制叠加层</value>
+    <value>绘画叠加</value>
   </data>
   <data name="Wirkgr_e_der_Sch_rfung_0_feine_Kanten_h_her_sch__de7a7353" xml:space="preserve">
     <value>锐化尺度：0 表示细小边缘，值越高越强调粗大结构。</value>
@@ -3919,7 +3919,7 @@
     <value>混入细颗粒层：值越高，颗粒越活跃。</value>
   </data>
   <data name="Wie_die_Vignette_abdunkelt_Farb_Priorit_t_h_lt_d_8eb754a8" xml:space="preserve">
-    <value>暗角变暗方式：“颜色优先”保留色彩，“高光优先”保护明亮区域，“绘制叠加层”降低饱和度并形成平坦的灰色渐变。</value>
+    <value>裁剪后暗角的变暗方式：“颜色优先”保留颜色，“高光优先”保护明亮区域，“绘画叠加”降低饱和度并形成平坦的灰色渐变。</value>
   </data>
   <data name="Sch_rfe_zur_cksetzen_5f73cef3" xml:space="preserve">
     <value>重置锐化</value>
@@ -3937,25 +3937,25 @@
     <value>将目录数据同步到 XMP</value>
   </data>
   <data name="Schreibt_Bewertung_Farb_Label_und_Stichworte_zus_84b9770d" xml:space="preserve">
-    <value>同时将评分、颜色标签和关键词写入 XMP 边车文件，供其他程序读取；.fpxmp 编辑内容保持不变。</value>
+    <value>同时将星级、色标和关键词写入 XMP 附属文件，供其他程序读取；.fpxmp 编辑设置保持不变。</value>
   </data>
   <data name="Fehlende_XMP_Sidecars_anlegen_d1a7dd45" xml:space="preserve">
-    <value>创建缺失的 XMP 边车文件</value>
+    <value>创建缺失的 XMP 附属文件</value>
   </data>
   <data name="Legt_beim_Synchronisieren_auch_neue_xmp_Dateien__7c253df3" xml:space="preserve">
     <value>同步时若不存在 .xmp 文件则新建。</value>
   </data>
   <data name="Bearbeitete_RAWs_als_Thumbnail_entwickeln_c2675ef8" xml:space="preserve">
-    <value>为已编辑 RAW 生成显影缩略图</value>
+    <value>为已编辑的 RAW 生成处理后缩略图</value>
   </data>
   <data name="Zeigt_in_der_Galerie_das_entwickelte_RAW_mit_dei_ff1eb3f6" xml:space="preserve">
-    <value>在图库中显示应用编辑后的 RAW 显影结果，但仅限存在 .fpxmp 的文件。未编辑 RAW 仍使用快速的内嵌 JPG。</value>
+    <value>在图库中显示经过处理并应用编辑的 RAW；仅限存在 .fpxmp 的文件。未编辑的 RAW 仍使用快速的嵌入式 JPEG 预览。</value>
   </data>
   <data name="Bearbeitete_RAWs_im_Viewer_entwickeln_9f7d590b" xml:space="preserve">
-    <value>在查看器中显影已编辑 RAW</value>
+    <value>在查看器中处理已编辑的 RAW</value>
   </data>
   <data name="Zeigt_auch_im_Viewer_das_entwickelte_bearbeitete_99fe4ca8" xml:space="preserve">
-    <value>在查看器中显示应用编辑后的 RAW 显影结果而非内嵌预览，但仅限存在 .fpxmp 的文件。</value>
+    <value>在查看器中显示经过处理并应用编辑的 RAW，而不是嵌入式预览；仅限存在 .fpxmp 的文件。</value>
   </data>
   <data name="Bild_und_Bearbeitungen_werden_geladen_dce06d0e" xml:space="preserve">
     <value>正在加载图像和编辑内容…</value>
@@ -4000,7 +4000,7 @@
     <value>蒙版画笔：绘制蒙版（柔边，可添加/减去），以红色叠加层显示</value>
   </data>
   <data name="Bewertungssterne_immer_anzeigen_a4803ddc" xml:space="preserve">
-    <value>始终显示评分星级</value>
+    <value>始终显示星级</value>
   </data>
   <data name="Zeigt_die_Sterne_auf_der_Kachel_dauerhaft_an_sta_c8f5548f" xml:space="preserve">
     <value>始终在缩略图上显示星级，而非仅在鼠标悬停时显示。</value>
@@ -4171,10 +4171,10 @@
     <value>向右旋转</value>
   </data>
   <data name="Bewertung_entfernen_6e74699a" xml:space="preserve">
-    <value>移除评分</value>
+    <value>清除星级</value>
   </data>
   <data name="Bewertung_setzen_dieselbe_Zahl_erneut_entfernt_s_98ac91f1" xml:space="preserve">
-    <value>设置评分（再次按相同数字可移除）</value>
+    <value>设置星级（再次按相同数字可清除）</value>
   </data>
   <data name="Auswahl_kopieren_924351a5" xml:space="preserve">
     <value>复制选区</value>
@@ -4300,22 +4300,22 @@
     <value>解锁组</value>
   </data>
   <data name="Farbmischer_weiche_Farbverteilung_experimentell_b4eb2b02" xml:space="preserve">
-    <value>颜色混合器：柔和颜色分布（实验性）</value>
+    <value>混色器：柔和颜色分布（实验性）</value>
   </data>
   <data name="Verteilt_die_Wirkung_der_acht_Farbregler_nach_ei_0d4f80ed" xml:space="preserve">
     <value>使用另一种模型分配八个颜色滑块的效果：颜色范围更宽且柔和重叠，颜色越鲜艳，明度滑块作用越强。对已打开图像立即生效，并可随时切换回来。</value>
   </data>
   <data name="RAWs_beim_Entwickeln_automatisch_aufhellen_e01489cf" xml:space="preserve">
-    <value>显影时自动提亮 RAW</value>
+    <value>处理 RAW 时自动提亮</value>
   </data>
   <data name="RAW_Entwicklung_262a99f9" xml:space="preserve">
-    <value>RAW 显影</value>
+    <value>RAW 处理</value>
   </data>
   <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Betrac_baaac979" xml:space="preserve">
-    <value>设置 RAW 文件的显影方式及其在图库、查看器和编辑器中的显示方式。</value>
+    <value>设置 RAW 文件的处理方式，以及它们在图库、查看器和编辑器中的显示方式。</value>
   </data>
   <data name="Hellt_jedes_entwickelte_RAW_automatisch_auf_bis__39c16dfa" xml:space="preserve">
-    <value>自动提亮每张显影的 RAW，直到图像最亮部分接近白色。关闭后，FerrumPix 会像 Lightroom 一样保留拍摄时的明暗层次，并使用胶片风格基础曲线呈现自然的中间调、高光和色彩。下次打开图像或重建预览时生效。</value>
+    <value>自动提亮每张处理后的 RAW，直到图像最亮部分接近白色。关闭后，FerrumPix 会像 Lightroom 一样处理 RAW：保留拍摄时的明暗层次，并通过胶片风格基础曲线呈现自然的中间调、高光和色彩。下次打开图像或重建预览时生效。</value>
   </data>
   <data name="Automatische_Bildverbesserung_4d6123c8" xml:space="preserve">
     <value>自动图像增强</value>
@@ -4333,10 +4333,10 @@
     <value>编辑</value>
   </data>
   <data name="Look_b8db515e" xml:space="preserve">
-    <value>外观</value>
+    <value>风格</value>
   </data>
   <data name="Kein_Look_cea142c2" xml:space="preserve">
-    <value>无外观</value>
+    <value>无风格</value>
   </data>
   <data name="Kein_Wasserzeichen_26d169c9" xml:space="preserve">
     <value>无水印</value>
@@ -4525,19 +4525,19 @@
     <value>已粘贴调整</value>
   </data>
   <data name="Anpassen_Farbe_Details_und_Effekte_dieses_Bildes_e25c4fab" xml:space="preserve">
-    <value>记忆此图像的调整、颜色、细节和效果设置；不包括裁剪、对象和蒙版</value>
+    <value>复制此图像的调整、颜色、细节和效果设置；不包括裁剪、对象和蒙版</value>
   </data>
   <data name="Die_gemerkten_Anpassungen_auf_dieses_Bild_anwend_ad37e4f4" xml:space="preserve">
-    <value>将已记忆的调整应用到此图像</value>
+    <value>将复制的调整应用到此图像</value>
   </data>
   <data name="Diese_Auswahl_l_sst_sich_nicht_zur_ckschreiben_e_9871eda0" xml:space="preserve">
     <value>无法将所选内容写回原文件，将创建新文件。</value>
   </data>
   <data name="RAWs_ohne_Bearbeitung_im_Stapel_entwickeln_c6f05b13" xml:space="preserve">
-    <value>批处理时显影未编辑 RAW</value>
+    <value>批处理未编辑的 RAW</value>
   </data>
   <data name="Stapelfunktionen_wie_Bildgr_e_ndern_oder_Exporti_a431c120" xml:space="preserve">
-    <value>“调整图像大小”“导出到”等批处理功能会以传感器完整分辨率显影 RAW。关闭后，未编辑 RAW 使用速度更快但尺寸更小的内嵌预览。带有编辑内容（.fpxmp）的 RAW 始终按其配方显影并写出，不受此设置影响。</value>
+    <value>“调整图像大小”“导出到”等批处理功能会以传感器完整分辨率处理 RAW。关闭后，未编辑的 RAW 使用速度更快但尺寸更小的嵌入式预览。带有编辑内容（.fpxmp）的 RAW 始终按其编辑设置处理并输出，不受此设置影响。</value>
   </data>
   <data name="Anzeigen_46a5a62e" xml:space="preserve">
     <value>查看</value>
@@ -4594,7 +4594,7 @@
     <value>默认格式</value>
   </data>
   <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Konve_ca9e7ae1" xml:space="preserve">
-    <value>“另存为”“转换为”和“导出到”中预选的目标格式。FPX 仅用于“另存为”，其他对话框选择 FPX 时使用 JPG。</value>
+    <value>“另存为”“转换为”和“导出到”中预选的目标格式。FPX 仅用于“另存为”；其他对话框会改用 JPEG。</value>
   </data>
   <data name="Bitte_einen_Namen_f_r_die_Anpassung_eingeben_c5df6671" xml:space="preserve">
     <value>请输入调整名称。</value>
@@ -4621,7 +4621,7 @@
     <value>PDF</value>
   </data>
   <data name="Vorgew_hltes_Zielformat_in_Speichern_unter_Expor_36a2bae3" xml:space="preserve">
-    <value>“另存为”“导出到”和其他批处理功能中预选的目标格式。FPX 是可编辑项目格式，可用于“另存为”和“导出到”；不支持 FPX 时使用 JPG。</value>
+    <value>“另存为”“导出到”和其他批处理功能中预选的目标格式。FPX 是可编辑项目格式，可用于“另存为”和“导出到”；不支持 FPX 时使用 JPEG。</value>
   </data>
   <data name="Der_Pinsel_bessert_den_gew_hlten_Verlauf_nach_St_09811de5" xml:space="preserve">
     <value>画笔可细化所选渐变：笔画添加区域，“减去”会移除区域；渐变本身仍可移动。</value>
@@ -4654,7 +4654,7 @@
     <value>根据相机型号匹配基础亮度</value>
   </data>
   <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>不同相机的 RAW 原始亮度不同。启用后，FerrumPix 会使用 200 多款相机型号的参考值进行校正，使同一场景无论由哪台相机拍摄都能显影为相近亮度。</value>
+    <value>不同相机生成的 RAW 原始亮度有所不同。启用后，FerrumPix 会使用 200 多款相机型号的参考值进行校正，使同一场景无论由哪台相机拍摄，处理后都呈现相近亮度。</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>比较</value>
@@ -4664,5 +4664,17 @@
   </data>
   <data name="Chinesisch_e66834c6" xml:space="preserve">
     <value>中文</value>
+  </data>
+  <data name="T_nung_756f0237" xml:space="preserve">
+    <value>色调</value>
+  </data>
+  <data name="Au_engl_hen_f1c17a23" xml:space="preserve">
+    <value>外发光</value>
+  </data>
+  <data name="0_Elemente_ausgew_hlt_ea243f33" xml:space="preserve">
+    <value>已选择 {0} 项</value>
+  </data>
+  <data name="0_Elemente_in_der_Zwischenablage_b5c5cdb9" xml:space="preserve">
+    <value>剪贴板中有 {0} 项</value>
   </data>
 </root>
