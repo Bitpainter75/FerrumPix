@@ -5,6 +5,7 @@ Imports System.Runtime.CompilerServices
 Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Text.RegularExpressions
+Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Controls.Primitives
 Imports Avalonia.Input
@@ -24,6 +25,19 @@ Namespace Services
         ''' Eigene Ressourcendatei nur für die Such-Tags der Formen/Symbole-Icons (Resources/IconTags*.resx),
         ''' getrennt von den allgemeinen UI-Texten, damit sich beide unabhängig voneinander pflegen lassen.
         Private Shared ReadOnly IconTags As New ResourceManager("FerrumPix.IconTags", GetType(LocalizationService).Assembly)
+
+        ''' Markiert UI-Bereiche, deren Text absichtlich unverändert bleiben soll, z.B. die
+        ''' Eigennamen der Sprachen in der Sprachauswahl.
+        Public Shared ReadOnly KeepOriginalProperty As AttachedProperty(Of Boolean) =
+            AvaloniaProperty.RegisterAttached(Of LocalizationService, Control, Boolean)("KeepOriginal")
+
+        Public Shared Function GetKeepOriginal(target As Control) As Boolean
+            Return target.GetValue(KeepOriginalProperty)
+        End Function
+
+        Public Shared Sub SetKeepOriginal(target As Control, value As Boolean)
+            target.SetValue(KeepOriginalProperty, value)
+        End Sub
 
         Public Shared Property LanguageMode As String
             Get
@@ -109,6 +123,8 @@ Namespace Services
 
         Public Shared Sub ApplyTo(root As ILogical)
             If root Is Nothing Then Return
+            Dim control = TryCast(root, Control)
+            If control IsNot Nothing AndAlso GetKeepOriginal(control) Then Return
             ApplyOne(root)
             For Each child In root.GetLogicalChildren()
                 ApplyTo(child)
