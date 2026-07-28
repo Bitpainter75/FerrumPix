@@ -69,6 +69,15 @@ Namespace Views
             If content IsNot Nothing Then LocalizationService.ApplyTo(content)
         End Sub
 
+        ''' <summary>Die Galerie erzeugt Karten und Listenzeilen erst aus dem DataTemplate, nachdem
+        ''' die einmalige Fenster-Lokalisierung bereits gelaufen sein kann. Jedes neu materialisierte
+        ''' Element lokalisiert deshalb nur seinen eigenen Unterbaum - auch nach Scrollen oder einem
+        ''' Wechsel des DisplayItems-Fensters.</summary>
+        Private Sub OnGalleryItemAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
+            Dim itemRoot = TryCast(sender, Visual)
+            If itemRoot IsNot Nothing Then LocalizationService.ApplyToVisualTree(itemRoot)
+        End Sub
+
         Private Sub OnDescendantGotFocus(sender As Object, e As FocusChangedEventArgs)
             Dim focused = TryCast(e.Source, Control)
             If focused Is Nothing OrElse Object.ReferenceEquals(focused, Me) Then Return

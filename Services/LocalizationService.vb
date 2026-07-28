@@ -10,6 +10,7 @@ Imports Avalonia.Controls
 Imports Avalonia.Controls.Primitives
 Imports Avalonia.Input
 Imports Avalonia.LogicalTree
+Imports Avalonia.VisualTree
 
 Namespace Services
 
@@ -128,6 +129,24 @@ Namespace Services
             ApplyOne(root)
             For Each child In root.GetLogicalChildren()
                 ApplyTo(child)
+            Next
+        End Sub
+
+        ''' <summary>Lokalisiert einen bereits materialisierten visuellen Unterbaum. DataTemplates
+        ''' liegen nicht vollständig im logischen Baum und benötigen diesen Einstieg, sobald ihr
+        ''' Container dynamisch erzeugt wurde.</summary>
+        Public Shared Sub ApplyToVisualTree(root As Visual)
+            If root Is Nothing Then Return
+
+            Dim logical = TryCast(root, ILogical)
+            If logical IsNot Nothing Then
+                Dim control = TryCast(logical, Control)
+                If control IsNot Nothing AndAlso GetKeepOriginal(control) Then Return
+                ApplyOne(logical)
+            End If
+
+            For Each child In root.GetVisualChildren()
+                ApplyToVisualTree(child)
             Next
         End Sub
 
