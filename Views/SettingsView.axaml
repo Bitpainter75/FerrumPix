@@ -261,6 +261,11 @@
                                         Padding="10,6"
                                         Command="{Binding SetLanguageModeCommand}"
                                         CommandParameter="Portuguese">Portugiesisch</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsLanguageChinese}"
+                                        Padding="10,6"
+                                        Command="{Binding SetLanguageModeCommand}"
+                                        CommandParameter="Chinese">中文</Button>
                             </StackPanel>
                         </Grid>
 

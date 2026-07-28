@@ -51,6 +51,7 @@ Namespace Services
                     Case "fr" : Return "French"
                     Case "it" : Return "Italian"
                     Case "pt" : Return "Portuguese"
+                    Case "zh" : Return "Chinese"
                     Case Else : Return "English"
                 End Select
             End Get
@@ -58,7 +59,7 @@ Namespace Services
 
         Public Shared Function NormalizeLanguageMode(value As String) As String
             Select Case If(value, "").Trim()
-                Case "German", "English", "Spanish", "French", "Italian", "Portuguese"
+                Case "German", "English", "Spanish", "French", "Italian", "Portuguese", "Chinese"
                     Return value.Trim()
                 Case Else
                     Return "System"
@@ -119,6 +120,7 @@ Namespace Services
                 Case "French" : Return "fr"
                 Case "Italian" : Return "it"
                 Case "Portuguese" : Return "pt"
+                Case "Chinese" : Return "zh-CN"
                 Case "English" : Return ""
                 Case Else
                     Return ResolveSystemCultureCode()
@@ -127,10 +129,12 @@ Namespace Services
 
         Private Shared Function ResolveSystemCultureCode() As String
             Dim systemCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant()
+            If IsChineseCultureCode(systemCode) Then Return "zh-CN"
             If IsSupportedCultureCode(systemCode) Then Return systemCode
 
             For Each variableName In {"LANGUAGE", "LC_MESSAGES", "LANG"}
                 Dim code = ExtractCultureCode(Environment.GetEnvironmentVariable(variableName))
+                If IsChineseCultureCode(code) Then Return "zh-CN"
                 If IsSupportedCultureCode(code) Then Return code
             Next
 
@@ -158,6 +162,10 @@ Namespace Services
                 Case Else
                     Return False
             End Select
+        End Function
+
+        Private Shared Function IsChineseCultureCode(code As String) As Boolean
+            Return String.Equals(If(code, ""), "zh", StringComparison.OrdinalIgnoreCase)
         End Function
 
         Private Shared Function MakeKey(text As String) As String
