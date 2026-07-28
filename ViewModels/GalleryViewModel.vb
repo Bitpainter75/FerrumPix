@@ -2233,15 +2233,14 @@ Namespace ViewModels
                     If result.Items.Count > 0 Then
                         Dim isFirstBatch = (total = 0)
                         If serverAssets IsNot Nothing Then serverAssets.AddRange(result.Items)
-                        ' Bereits aus dem Katalog angezeigte Assets: nur Kernfelder nachziehen, die
-                        ' die Timeline/Kacheln sofort betreffen (Favorit) - der Rest heilt sich
-                        ' viewport-gekoppelt ueber updatedAt selbst.
+                        ' Bereits aus dem Katalog angezeigte Assets vollständig nachziehen. Ältere
+                        ' Katalogversionen enthielten weder Dateigröße noch EXIF-/Änderungszeiten;
+                        ' nur den Favoriten zu aktualisieren ließ diese Einträge trotz vollständiger
+                        ' Serverantwort dauerhaft bei 0 B bzw. „Ohne Datum".
                         If itemsByAssetId IsNot Nothing Then
                             For Each asset In result.Items
                                 Dim known As ImageItem = Nothing
-                                If itemsByAssetId.TryGetValue(asset.Id, known) AndAlso known.IsFavorite <> asset.IsFavorite Then
-                                    known.IsFavorite = asset.IsFavorite
-                                End If
+                                If itemsByAssetId.TryGetValue(asset.Id, known) Then known.ApplyImmichMetadata(asset, replaceMissingDates:=True)
                             Next
                         End If
                         Dim items = result.Items.Select(Function(a) ImageItem.CreateImmichItem(a, thumbnailToken)).ToList()
