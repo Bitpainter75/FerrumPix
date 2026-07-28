@@ -831,29 +831,46 @@ Namespace Models
             item.Rating = asset.Rating
             item.Tags = If(asset.Tags, New List(Of String)())
             item.ExifDateTaken = asset.ExifDateTaken
+            item.ExifDateModified = asset.ExifDateModified
             item.ExifCamera = asset.Camera
             item.ExifIso = asset.Iso
             item.ExifAperture = asset.Aperture
             Dim created = If(asset.FileCreatedAt.HasValue, asset.FileCreatedAt.Value, DateTime.MinValue)
             item.FileCreatedAt = created
-            item.DateModified = created
+            item.DateModified = If(asset.FileModifiedAt.HasValue, asset.FileModifiedAt.Value, created)
             Return item
         End Function
 
-        ''' <summary>Ergänzt ein Immich-Item um die erst per Detail-Abruf verfügbaren Metadaten
-        ''' (Dateigröße, Rating, Kamera/ISO/Blende, Aufnahmedatum, Stichwörter) und feuert die passenden
-        ''' PropertyChanged, damit Kachel und Info-Leiste sich aktualisieren.</summary>
-        Public Sub ApplyImmichDetail(fileSizeBytes As Long, rating As Integer, camera As String,
-                                     iso As Integer?, aperture As Double?, dateTaken As DateTime?, tags As List(Of String))
-            If Not IsImmichAsset Then Return
-            FileSize = fileSizeBytes
+        ''' <summary>Übernimmt die vollständigen, sortierbaren Metadaten eines Immich-Assets. Derselbe
+        ''' Weg aktualisiert sowohl den sofort angezeigten lokalen Katalog beim Server-Abgleich als auch
+        ''' die später eintreffende Detailantwort eines sichtbaren Elements.</summary>
+        Public Sub ApplyImmichMetadata(asset As ImmichAsset, Optional replaceMissingDates As Boolean = False)
+            If Not IsImmichAsset OrElse asset Is Nothing Then Return
+            FileSize = asset.FileSizeBytes
             RaisePropertyChanged(NameOf(FileSizeText))
-            Me.Rating = rating
-            ExifCamera = camera
-            ExifIso = iso
-            ExifAperture = aperture
-            If dateTaken.HasValue Then ExifDateTaken = dateTaken
-            Me.Tags = If(tags, New List(Of String)())
+            Me.Rating = asset.Rating
+            Me.IsFavorite = asset.IsFavorite
+            ImageWidth = asset.Width
+            ImageHeight = asset.Height
+            ExifCamera = asset.Camera
+            ExifIso = asset.Iso
+            ExifAperture = asset.Aperture
+            If replaceMissingDates OrElse asset.ExifDateTaken.HasValue Then ExifDateTaken = asset.ExifDateTaken
+            If replaceMissingDates OrElse asset.ExifDateModified.HasValue Then ExifDateModified = asset.ExifDateModified
+            If asset.FileCreatedAt.HasValue Then
+                FileCreatedAt = asset.FileCreatedAt.Value
+            ElseIf replaceMissingDates Then
+                FileCreatedAt = DateTime.MinValue
+            End If
+            If asset.FileModifiedAt.HasValue Then
+                DateModified = asset.FileModifiedAt.Value
+            ElseIf asset.FileCreatedAt.HasValue Then
+                DateModified = asset.FileCreatedAt.Value
+            ElseIf replaceMissingDates Then
+                DateModified = DateTime.MinValue
+            End If
+            RaisePropertyChanged(NameOf(DateText))
+            Me.Tags = If(asset.Tags, New List(Of String)())
             RaisePropertyChanged(NameOf(Tags))
             RaisePropertyChanged(NameOf(SearchText))
         End Sub
@@ -1275,8 +1292,7 @@ Namespace Models
                                            Dim detail = Await ImmichService.GetAssetDetailCachedAsync(assetId, updatedAt, token).ConfigureAwait(False)
                                            If detail Is Nothing OrElse token.IsCancellationRequested Then Return
                                            Await Dispatcher.UIThread.InvokeAsync(
-                                               Sub() ApplyImmichDetail(detail.FileSizeBytes, detail.Rating, detail.Camera,
-                                                                       detail.Iso, detail.Aperture, detail.ExifDateTaken, detail.Tags))
+                                               Sub() ApplyImmichMetadata(detail))
                                        Catch
                                        End Try
                                    End Function)

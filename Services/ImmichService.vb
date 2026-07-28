@@ -30,7 +30,9 @@ Namespace Services
         Public Property FileName As String = ""
         Public Property IsVideo As Boolean
         Public Property FileCreatedAt As DateTime?
+        Public Property FileModifiedAt As DateTime?
         Public Property ExifDateTaken As DateTime?
+        Public Property ExifDateModified As DateTime?
         Public Property Width As Integer
         Public Property Height As Integer
         Public Property Camera As String = ""
@@ -916,12 +918,7 @@ Namespace Services
                 Dim client = GetClient()
                 ' Ein gemeinsamer Fetcher fuer "Alle Fotos", Alben, Personen und Orte - search/metadata
                 ' filtert wahlweise per albumIds, personIds (Gesichtserkennung des Servers) oder city.
-                Dim filters As New List(Of String)()
-                If Not String.IsNullOrWhiteSpace(albumId) Then filters.Add($"""albumIds"":[""{albumId}""]")
-                If Not String.IsNullOrWhiteSpace(personId) Then filters.Add($"""personIds"":[""{personId}""]")
-                If Not String.IsNullOrWhiteSpace(city) Then filters.Add($"""city"":{JsonSerializer.Serialize(city)}")
-                Dim filterPrefix = If(filters.Count > 0, String.Join(",", filters) & ",", "")
-                Dim requestBody = $"{{{filterPrefix}""page"":{Math.Max(1, page)},""size"":{AssetPageSize}}}"
+                Dim requestBody = BuildAssetPageSearchBody(page, albumId, personId, city)
                 Using content = New StringContent(requestBody, Encoding.UTF8, "application/json")
                     Using resp = Await client.PostAsync(ApiUrl("search/metadata"), content, cancellationToken).ConfigureAwait(False)
                         resp.EnsureSuccessStatusCode()
@@ -949,6 +946,18 @@ Namespace Services
                 DiagnosticLogService.LogException("Immich.GetAssetsPage", ex)
             End Try
             Return result
+        End Function
+
+        ''' <summary>Gemeinsamer, rein funktionaler Aufbau des Requests für die Galerie-Timeline.
+        ''' Als eigene Naht lässt sich der API-Vertrag ohne einen laufenden Immich-Server prüfen.</summary>
+        Private Shared Function BuildAssetPageSearchBody(page As Integer, albumId As String,
+                                                         personId As String, city As String) As String
+            Dim filters As New List(Of String)()
+            If Not String.IsNullOrWhiteSpace(albumId) Then filters.Add($"""albumIds"":[""{albumId}""]")
+            If Not String.IsNullOrWhiteSpace(personId) Then filters.Add($"""personIds"":[""{personId}""]")
+            If Not String.IsNullOrWhiteSpace(city) Then filters.Add($"""city"":{JsonSerializer.Serialize(city)}")
+            Dim filterPrefix = If(filters.Count > 0, String.Join(",", filters) & ",", "")
+            Return $"{{{filterPrefix}""page"":{Math.Max(1, page)},""size"":{AssetPageSize},""withExif"":true}}"
         End Function
 
         ''' <summary>Benannte Personen der serverseitigen Gesichtserkennung (GET /api/people).
@@ -1058,6 +1067,7 @@ Namespace Services
                 .FileName = If(a.OriginalFileName, a.Id),
                 .IsVideo = String.Equals(a.Type, "VIDEO", StringComparison.OrdinalIgnoreCase),
                 .FileCreatedAt = ParseDate(a.FileCreatedAt),
+                .FileModifiedAt = ParseDate(a.FileModifiedAt),
                 .IsFavorite = a.IsFavorite,
                 .UpdatedAt = If(a.UpdatedAt, ""),
                 .Description = If(a.ExifInfo?.Description, "")
@@ -1068,6 +1078,7 @@ Namespace Services
             If a.ExifInfo IsNot Nothing Then
                 item.FileSizeBytes = If(a.ExifInfo.FileSizeInByte.HasValue, CLng(a.ExifInfo.FileSizeInByte.Value), 0L)
                 item.ExifDateTaken = ParseDate(a.ExifInfo.DateTimeOriginal)
+                item.ExifDateModified = ParseDate(a.ExifInfo.ModifyDate)
                 item.Iso = If(a.ExifInfo.Iso.HasValue, CInt(Math.Round(a.ExifInfo.Iso.Value)), CType(Nothing, Integer?))
                 item.Aperture = a.ExifInfo.FNumber
                 ' Immich (v3): 1-5 gültig, null/-1 = unbewertet. Auf FerrumPix 0-5 abbilden.
@@ -1085,6 +1096,14 @@ Namespace Services
             End If
             ApplyFerrumPixDescriptionMeta(item)
             Return item
+        End Function
+
+        ''' <summary>Schmale Diagnose-Naht für die JSON-Vertragsregressionen der Immich-Anbindung.
+        ''' Verwendet absichtlich denselben DTO- und Mapping-Pfad wie echte Serverantworten.</summary>
+        Private Shared Function MapAssetJsonForDiagnostics(json As String) As ImmichAsset
+            Dim dto = JsonSerializer.Deserialize(Of ImmichAssetDto)(json, JsonOptions)
+            If dto Is Nothing Then Return Nothing
+            Return MapAsset(dto)
         End Function
 
         Private Const FerrumPixMetaStart As String = "[FerrumPix]"
@@ -1690,6 +1709,7 @@ Namespace Services
             Public Property Visibility As String
             Public Property OriginalFileName As String
             Public Property FileCreatedAt As String
+            Public Property FileModifiedAt As String
             Public Property UpdatedAt As String
             Public Property IsFavorite As Boolean
             ' Maße/Dauer liegen bei der Metadaten-Suche auf oberster Ebene (kein exifInfo), beim
@@ -1711,6 +1731,7 @@ Namespace Services
             Public Property Iso As Double?
             Public Property FNumber As Double?
             Public Property DateTimeOriginal As String
+            Public Property ModifyDate As String
             Public Property Description As String
             Public Property Rating As Double?
             Public Property FileSizeInByte As Double?
