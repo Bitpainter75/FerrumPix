@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.LensCorrectionPanel">
+    <StackPanel Spacing="7">
+        <Expander Header="Objektivkorrektur" icons:ExpanderState.Key="objektivkorrektur">
+            <Expander.HeaderTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/aperture.svg"
+                                Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Classes="icon-btn group-reset"
+                                Width="28" Height="28" Padding="0"
+                                Command="{Binding DataContext.ResetLensCorrectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ToolTip.Tip="Auf automatische Erkennung zurücksetzen">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                Width="14" Height="14" />
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </Expander.HeaderTemplate>
+            <StackPanel Spacing="8" Margin="0,8,0,0">
+                <!-- Dasselbe Muster wie die Stichwoerter im Infopanel, und aus gutem Grund: dort
+                     laeuft ein AutoCompleteBox als REINES Textfeld mit Vorschlaegen - ohne Bindung
+                     an die Auswahl, ohne SelectionChanged, ohne von Hand aufgeklappte Liste.
+                     Genau diese drei Zutaten hatte die erste Fassung hier, und jede Auswahl stuerzte
+                     in Avaloniens Abbau des Aufklapp-Fensters ab. Uebernommen wird ueber den Knopf
+                     daneben, nicht durch das Antippen eines Vorschlags. -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <AutoCompleteBox Name="LensSearchBox"
+                                     Text="{Binding LensFilter, Mode=TwoWay}"
+                                     ItemsSource="{Binding LensCandidates}"
+                                     PlaceholderText="Objektiv suchen…"
+                                     FilterMode="Contains"
+                                     MinimumPrefixLength="0"
+                                     FontSize="{DynamicResource FP.Font.Small}"
+                                     Padding="8,5"/>
+                    <Button Grid.Column="1" Classes="ghost" Padding="10,5" Margin="6,0,0,0"
+                            Command="{Binding ApplyLensAssignmentCommand}"
+                            CommandParameter="{Binding #LensSearchBox.Text}"
+                            ToolTip.Tip="Das eingetragene Objektiv übernehmen">
+                        <TextBlock Text="Übernehmen" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                </Grid>
+
+                <!-- no-translate: der Inhalt kommt aus einer Bindung. Ohne die Klasse
+                     ueberschreibt der Sprach-Durchlauf ihn mit einer Uebersetzung und LOESCHT
+                     damit die Bindung - die Zeile stuende danach fuer immer still. -->
+                <TextBlock Text="{Binding LensCorrectionStatus}"
+                           Classes="no-translate"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+
+                <StackPanel Spacing="4" IsVisible="{Binding LensCorrectionAvailable}">
+                    <CheckBox Content="Verzeichnung" IsChecked="{Binding LensDistortionEnabled}"
+                              IsEnabled="{Binding HasLensDistortionData}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              ToolTip.Tip="Biegt das Bild zurück, sodass gerade Linien wieder gerade sind. Am besten gleich zu Beginn entscheiden - schaltet man später um, passen bereits gesetzte Masken und eingefügte Objekte nicht mehr genau."/>
+                    <CheckBox Content="Farbsäume an den Bildecken" IsChecked="{Binding LensTcaEnabled}"
+                              IsEnabled="{Binding HasLensTcaData}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              ToolTip.Tip="Verschiebt Rot und Blau gegen Grün zurück und entfernt damit die farbigen Ränder an kontrastreichen Kanten in den Bildecken."/>
+                    <CheckBox Content="Randabdunklung" IsChecked="{Binding LensVignettingEnabled}"
+                              IsEnabled="{Binding HasLensVignettingData}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              ToolTip.Tip="Hellt die Bildecken auf, soweit das Objektiv dort Licht verliert."/>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Stärke der Verzeichnungskorrektur">
+                        <TextBlock Text="Verzeichnung" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
+                                           Value="{Binding LensDistortionAmount}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding LensDistortionAmount, Mode=TwoWay}" Minimum="0" Maximum="200" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Stärke der Farbsaum-Korrektur">
+                        <TextBlock Text="Farbsäume" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
+                                           Value="{Binding LensTcaAmount}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding LensTcaAmount, Mode=TwoWay}" Minimum="0" Maximum="200" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Stärke der Randabdunklungs-Korrektur">
+                        <TextBlock Text="Randabdunklung" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
+                                           Value="{Binding LensVignettingAmount}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding LensVignettingAmount, Mode=TwoWay}" Minimum="0" Maximum="200" />
+                    </Grid>
+                </StackPanel>
+
+            </StackPanel>
+        </Expander>
+    </StackPanel>
+</UserControl>

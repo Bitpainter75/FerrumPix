@@ -41,6 +41,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="Assets\**" Exclude="Assets\Objektivdaten\**" />
+    <!-- Die Objektivdaten liegen als gewoehnliche Assembly-Ressource und NICHT als
+         Avalonia-Ressource: sie werden auch ohne laufende Anwendung gelesen (Pruefstand,
+         Messwerkzeuge), und Avaloniens Ressourcenlader setzt eine gestartete App voraus. -->
+    <EmbeddedResource Include="Assets\Objektivdaten\objektivdaten.zip" />
   </ItemGroup>
 </Project>

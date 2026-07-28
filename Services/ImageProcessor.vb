@@ -1174,7 +1174,7 @@ Namespace Services
         Public Property IsLocked As Boolean = False
         Public Property Opacity As Single = 1.0F
         Public Property Adjustments As ImageAdjustments = New ImageAdjustments()
-        ''' <summary>True = diese Ebene wurde aus einem Lightroom-Preset importiert (lokale Korrektur).
+        ''' <summary>True = diese Ebene wurde aus einem XMP-Preset importiert (lokale Korrektur).
         ''' Beim Anwenden eines ANDEREN Presets werden diese entfernt, damit sich Presets nicht
         ''' aufeinander stapeln - manuell erstellte Ebenen (False) bleiben davon unberührt.</summary>
         Public Property FromPreset As Boolean = False
@@ -1314,7 +1314,7 @@ Namespace Services
         ''' <summary>Farbrauschen HINZUFUEGEN 0-100 - die Plus-Seite desselben Reglers im Panel
         ''' („Farbrauschen" ist bipolar wie „Rauschen": minus entfernt, plus faerbt ein). Getrennt
         ''' gespeichert, damit <see cref="ColorNoiseReduction"/> weiter genau das bleibt, was
-        ''' Lightroom unter crs:ColorNoiseReduction ablegt (0-100 Entfernung) - eine gemeinsame
+        ''' unter crs:ColorNoiseReduction abgelegt wird (0-100 Entfernung) - eine gemeinsame
         ''' Skala mit Vorzeichen haette den Preset-Import zweideutig gemacht.</summary>
         Public Property ColorNoiseAdd As Single = 0
         Public Property DustScratches As Single = 0
@@ -1324,7 +1324,7 @@ Namespace Services
         Public Property Glow As Single = 0
         Public Property Vibrance As Single = 0
 
-        ''' KAMERAKALIBRIERUNG (Lightroom-Panel "Kalibrierung", crs:RedHue/RedSaturation/...).
+        ''' KAMERAKALIBRIERUNG (Panel "Kalibrierung", crs:RedHue/RedSaturation/...).
         ''' Dreht und saettigt die drei PRIMAERFARBEN und ist damit das, was vielen Presets ihren
         ''' charakteristischen Farbstich gibt - ohne sie kam ein Preset strukturell unvollstaendig an.
         ''' Alle Werte -100..100. Naeherung: Farbton = Drehung der Primaerfarbe um die Grauachse
@@ -1339,6 +1339,31 @@ Namespace Services
 
         ''' Gruen-/Magenta-Verschiebung, die nur die TIEFEN faerbt (crs:ShadowTint).
         Public Property CalibrationShadowTint As Single = 0
+        ' ── Objektivkorrektur, uebersteuert je Bild ─────────────────────────
+        '
+        ' Nothing heisst "wie in den Einstellungen vorgegeben". Bewusst dreiwertig und nicht einfach
+        ' Boolean: waere die Vorgabe hier hineinkopiert, wuerde ein spaeter umgestellter Schalter
+        ' alle bereits gespeicherten Rezepte nicht mehr erreichen - und man saehe der Datei nicht an,
+        ' ob AUS eine Entscheidung war oder nur der damalige Standard.
+        Public Property LensDistortion As Boolean? = Nothing
+        Public Property LensTca As Boolean? = Nothing
+        Public Property LensVignetting As Boolean? = Nothing
+
+        ' Staerke je Korrektur in Prozent, 100 = wie kalibriert. Sie ist noetig, weil die Messwerte
+        ' fuer ein OBJEKTIVMODELL gelten, nicht fuer das einzelne Exemplar - und weil sie an einer
+        ' anderen Kamera aufgenommen wurden. Am eigenen Referenzfoto lag der Rotkanal bei doppelter
+        ' Staerke naeher am Ziel als bei einfacher, der Blaukanal dagegen schlechter; ein fester
+        ' Faktor kann das nicht abbilden.
+        ''' <summary>Von Hand gewaehltes Objektiv, wenn die Aufnahmedaten KEINES nennen. Dann gibt
+        ''' es keinen Objektivnamen, an dem sich eine dauerhafte Zuordnung festmachen liesse - also
+        ''' gehoert die Wahl ins Rezept dieses einen Bildes. Nennt das EXIF ein Objektiv, bleibt es
+        ''' bei der Zuordnung ueber den Namen, die dann fuer den ganzen Bestand gilt.</summary>
+        Public Property LensModel As String = ""
+
+        Public Property LensDistortionAmount As Single = 100
+        Public Property LensTcaAmount As Single = 100
+        Public Property LensVignettingAmount As Single = 100
+
         Public Property Vignette As Single = 0
         Public Property VignetteTransition As Single = 55
         Public Property VignetteRoundness As Single = 0
@@ -1409,8 +1434,8 @@ Namespace Services
         ''' <summary>Farbgradierung: vier Zonen (Schatten/Mitten/Lichter/Global) mit je Farbton (0-360),
         ''' Sättigung (0-100) und Luminanz (±100). Die Schatten- und Lichter-Felder hießen bis
         ''' SplitToning*: Split-Toning ist die Zweizonen-Variante desselben Werkzeugs, und Adobe hat es
-        ''' ab Lightroom 2020 genauso in die Farbgradierung überführt (crs:SplitToning* wird beim Import
-        ''' weiterhin gelesen, siehe LightroomPresetService).</summary>
+        ''' ab den neueren Prozessversionen genauso in die Farbgradierung überführt (crs:SplitToning* wird beim Import
+        ''' weiterhin gelesen, siehe XmpPresetService).</summary>
         Public Property ColorGradeShadowHue As Single = 0
         Public Property ColorGradeShadowSaturation As Single = 0
         Public Property ColorGradeShadowLuminance As Single = 0
@@ -2068,12 +2093,16 @@ Namespace Services
         ''' eingebettete JPEG-Vorschau nehmen. Fuer Stapellaeufe, in denen Geschwindigkeit vor
         ''' Aufloesung geht (Einstellung "RAWs ohne Rezept im Stapel entwickeln"). Auf alles
         ''' andere hat der Schalter keine Wirkung.</param>
-        Friend Shared Function DecodeOriented(path As String, Optional developRaw As Boolean = True) As SKBitmap
+        ''' <param name="objektivWahl">Welche Objektivkorrekturen fuer DIESES Bild gelten. Nothing =
+        ''' wie in den Einstellungen vorgegeben. Sie gehoert hierher und nicht in die Reglerkette:
+        ''' sie veraendert den DECODE, nicht die Nachbearbeitung.</param>
+        Friend Shared Function DecodeOriented(path As String, Optional developRaw As Boolean = True,
+                                              Optional objektivWahl As ObjektivDatenService.Wahl = Nothing) As SKBitmap
             ' Echte RAW-Entwicklung, wenn das System-libraw da ist: voll aufgelöstes Demosaic mit
             ' Kamera-Weißabgleich statt der eingebetteten JPEG-Vorschau. Liefert der Decode nichts
             ' (defekte Datei, exotisches Format), greift darunter der bisherige Vorschau-Weg.
             If developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
-                Dim developed = RawDecodeService.TryDecode(path)
+                Dim developed = RawDecodeService.TryDecode(path, objektivWahl)
                 If developed IsNot Nothing Then Return developed
             ElseIf Not RawPreviewService.IsSupportedRaw(path) Then
                 ' Anderes Hauptbild -> der ~180-MB-Entwicklungs-Cache ist stale und kann weg.
@@ -2170,7 +2199,7 @@ Namespace Services
         End Sub
 
         Public Shared Function ApplyAdjustments(sourcePath As String, adj As ImageAdjustments) As Bitmap
-            Using original = DecodeOriented(sourcePath)
+            Using original = DecodeOriented(sourcePath, True, ObjektivWahlAus(adj))
                 If original Is Nothing Then Return Nothing
 
                 Using processed = ProcessBitmap(original, adj)
@@ -2269,6 +2298,20 @@ Namespace Services
                     Return ms
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Die Objektiv-Wahl aus einem Rezept. Eigene Stelle, damit jeder Weg, der aus
+        ''' einem Rezept dekodiert, dieselbe Umsetzung benutzt.</summary>
+        Friend Shared Function ObjektivWahlAus(adj As ImageAdjustments) As ObjektivDatenService.Wahl
+            If adj Is Nothing Then Return Nothing
+            Return New ObjektivDatenService.Wahl With {
+                .Verzeichnung = adj.LensDistortion,
+                .Farbquerfehler = adj.LensTca,
+                .Vignettierung = adj.LensVignetting,
+                .StaerkeVerzeichnung = adj.LensDistortionAmount / 100.0,
+                .StaerkeFarbquerfehler = adj.LensTcaAmount / 100.0,
+                .StaerkeVignettierung = adj.LensVignettingAmount / 100.0,
+                .ObjektivModell = adj.LensModel}
         End Function
 
         Public Shared Function ApplyAdjustments(source As SKBitmap, adj As ImageAdjustments) As Bitmap
@@ -3098,9 +3141,10 @@ Namespace Services
         ''' <summary>Voll aufgelöster Decode für das ARBEITSBILD: öffentlicher
         ''' Zugang zum universellen Decode-Chokepoint (RAW/ICO-Sonderfälle + EXIF-Orientierung).
         ''' Der Aufrufer übernimmt den Besitz des Bitmaps.</summary>
-        Public Shared Function DecodeWorkingImage(path As String) As SKBitmap
+        Public Shared Function DecodeWorkingImage(path As String,
+                                                  Optional objektivWahl As ObjektivDatenService.Wahl = Nothing) As SKBitmap
             Try
-                Return DecodeOriented(path)
+                Return DecodeOriented(path, True, objektivWahl)
             Catch
                 Return Nothing
             End Try
@@ -4542,7 +4586,7 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Rastert eine LINEARE Verlaufsmaske (Lightroom „Mask/Gradient") in den Quellraum.
+        ''' <summary>Rastert eine LINEARE Verlaufsmaske (crs "Mask/Gradient") in den Quellraum.
         ''' Zero/Full sind Bruchkoordinaten des Bildes (0..1, dürfen außerhalb liegen). Die Maske ist 0 an
         ''' der Zero-Linie und rampt entlang der Senkrechten linear auf maskValue an der Full-Linie (danach
         ''' konstant).</summary>
@@ -4569,9 +4613,9 @@ Namespace Services
             Return EncodeSourceMaskFromAlpha(full, sourceW, sourceH, name)
         End Function
 
-        ''' <summary>Rastert eine RADIALE Verlaufsmaske (Lightroom „Mask/CircularGradient") in den
+        ''' <summary>Rastert eine RADIALE Verlaufsmaske (crs "Mask/CircularGradient") in den
         ''' Quellraum. Top/Left/Bottom/Right in Bruchkoordinaten; angleDeg Grad; feather 0..100 (Anteil des
-        ''' Radius mit weichem Auslauf); Flipped=True → Wirkung INNEN, sonst AUSSEN (Lightroom-Standard).
+        ''' Radius mit weichem Auslauf); Flipped=True → Wirkung INNEN, sonst AUSSEN (der uebliche Standard).
         ''' Roundness/Midpoint werden in v1 vereinfacht (reine Ellipse, Halbwert = 1-feather).</summary>
         Public Shared Function BuildRadialGradientMask(sourceW As Integer, sourceH As Integer,
                                                        top As Double, left As Double, bottom As Double, right As Double,
@@ -11529,11 +11573,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' <summary>Wie schnell der FEINE Durchgang mit dem Regler hochlaeuft. Er war frueher
         ''' linear an den Reglerwert gekoppelt: bei 25 wurden 25 Prozent geglaettete Chroma mit
         ''' 1,0 px Radius beigemischt. Gemessen an einem Konzert-RAW liess das vom Farbrauschen
-        ''' 3,26 von 4,39 stehen, waehrend Lightroom beim GLEICHEN Wert auf 1,25 kommt - unsere 25
+        ''' 3,26 von 4,39 stehen, waehrend die Referenz beim GLEICHEN Wert auf 1,25 kommt - unsere 25
         ''' wirkten wie deren 5. Feines Pixelrauschen ist aber bei kleinem Radius erledigt oder gar
         ''' nicht; ein Regler, der es erst bei Vollausschlag wegnimmt, ist falsch geeicht.
         ''' Der feine Durchgang (Radius UND Beimischung) ist deshalb bei 42 voll ausgefahren -
-        ''' damit trifft 25, Lightrooms Standardwert fuer RAWs, auch bei uns dessen Wirkung.
+        ''' damit trifft 25, der uebliche Standardwert fuer RAWs, auch bei uns dessen Wirkung.
         ''' Der obere Reglerbereich bleibt nicht tot: der GROBE Durchgang skaliert weiterhin mit
         ''' dem rohen Reglerwert ueber die ganze Strecke, und nur er erreicht die tieffrequenten
         ''' Farbflecken (siehe CoarseChromaSigma).</summary>
@@ -12188,7 +12232,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
 
         ' Parst "x1,y1;x2,y2;..." zu sortierten, X-eindeutigen Stützpunkten (0..255) für die Tonwertkurve.
-        ' Friend, damit die Preset-Faltung (LightroomPresetService.ApplyParametricCurve) die Punktkurve
+        ' Friend, damit die Preset-Faltung (XmpPresetService.ApplyParametricCurve) die Punktkurve
         ' mit demselben Spline auswertet wie die Engine - frueher lief die Faltung ueber eine eigene
         ' LINEARE Naeherung, die die Kurvenkruemmung verwarf.
         Friend Shared Function ParseCurvePoints(pointsCsv As String) As List(Of (X As Double, Y As Double))
@@ -12227,9 +12271,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' interpoliert Tonkurven mit einem NATUERLICHEN kubischen Spline, der an derselben
         ''' Kennlinie systematisch hoeher laeuft (Rot-Kurve des Testpresets bei x=20: 7,7 gegen
         ''' unsere 6,5). Ein A/B mit ausgetauschter Interpolation, sonst identischer Kette, ergab
-        ''' auf der besseren Basis eine GROESSERE Abweichung zu Lightroom (8,25 -> 9,39 am einen
+        ''' auf der besseren Basis eine GROESSERE Abweichung zur Referenz (8,25 -> 9,39 am einen
         ''' Motiv, 8,08 -> 9,30 am anderen) und nur auf der heutigen Basis eine kleinere
-        ''' (16,85 -> 15,93). Widerspruechlich, also nicht umgestellt - erst wenn ein Lightroom-
+        ''' (16,85 -> 15,93). Widerspruechlich, also nicht umgestellt - erst wenn ein Referenz-
         ''' Export OHNE Preset vorliegt, laesst sich das sauber entscheiden.</summary>
         Friend Shared Function EvaluateCurveSpline(points As List(Of (X As Double, Y As Double)), x As Double) As Double
             Dim n = points.Count

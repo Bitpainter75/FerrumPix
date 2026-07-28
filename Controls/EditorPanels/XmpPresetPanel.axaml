@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.XmpPresetPanel">
-    <Expander Header="XMP-Preset" icons:ExpanderState.Key="lightroom-preset">
+    <Expander Header="XMP-Preset" icons:ExpanderState.Key="xmp-preset">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
@@ -17,7 +17,7 @@
                             Width="28"
                             Height="28"
                             Padding="0"
-                            Command="{Binding DataContext.ResetLightroomPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Command="{Binding DataContext.ResetXmpPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ToolTip.Tip="Preset entfernen und Regler zurücksetzen">
                         <icons:SvgIcon
                             Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
@@ -28,7 +28,7 @@
                             Width="28"
                             Height="28"
                             Padding="0"
-                            Click="OnLoadLightroomPresetClick"
+                            Click="OnLoadXmpPresetClick"
                             ToolTip.Tip="XMP laden">
                         <icons:SvgIcon
                             Source="avares://FerrumPix/Assets/Icons/outline/circle-plus.svg"
@@ -43,18 +43,18 @@
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         BorderBrush="{DynamicResource FP.Accent}"
-                        Click="OnLoadLightroomPresetClick">
+                        Click="OnLoadXmpPresetClick">
                     <TextBlock Text="XMP laden" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Grid.Column="1" Classes="ghost" Padding="8,5"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         BorderBrush="{DynamicResource FP.Accent}"
-                        Click="OnLoadLightroomFolderClick">
+                        Click="OnLoadXmpFolderClick">
                     <TextBlock Text="Ordner laden" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </Grid>
-            <ItemsControl ItemsSource="{Binding SavedLightroomPresets}">
+            <ItemsControl ItemsSource="{Binding SavedXmpPresets}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel />
@@ -76,7 +76,7 @@
                                         Background="Transparent"
                                         BorderThickness="0"
                                         Padding="0"
-                                        Click="OnApplySavedLightroomPresetClick">
+                                        Click="OnApplySavedXmpPresetClick">
                                     <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Small}" />
                                 </Button>
                                 <Button Grid.Column="1"
@@ -84,7 +84,7 @@
                                         Background="Transparent"
                                         BorderThickness="0"
                                         Padding="4,0,0,0"
-                                        Click="OnRemoveSavedLightroomPresetClick"
+                                        Click="OnRemoveSavedXmpPresetClick"
                                         ToolTip.Tip="Preset entfernen">
                                     <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.Large}"
                                                Foreground="{DynamicResource FP.Text.Muted}" />

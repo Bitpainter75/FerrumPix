@@ -9,13 +9,13 @@ Namespace ViewModels
         Public Property PreserveMetadata As Boolean = True
 
         Public Const SourceFilter As String = "Filter"
-        Public Const SourceLightroom As String = "Lightroom"
+        Public Const SourceXmpPreset As String = "XmpPreset"
         Public Const SourceLut As String = "Lut"
         ''' <summary>Automatische Bildverbesserung: keine Vorgabe-Datei, sondern die Messung des
         ''' Editors ("Auto") - die Reglerwerte werden PRO BILD gemessen, nicht aus einer Vorlage.</summary>
         Public Const SourceAuto As String = "Auto"
 
-        ''' <summary>Woher der Look kommt: eingebauter Filter, Lightroom-Preset (.xmp) oder LUT (.cube).</summary>
+        ''' <summary>Woher der Look kommt: eingebauter Filter, XMP-Preset (.xmp) oder LUT (.cube).</summary>
         Public Property SourceKind As String = SourceFilter
 
         ''' <summary>Name des Filters bzw. des Presets - landet bei "Neue Dateien" auch im Dateinamen.</summary>
@@ -24,7 +24,7 @@ Namespace ViewModels
         ''' <summary>Pfad der .xmp-/.cube-Datei; leer bei eingebauten Filtern.</summary>
         Public Property PresetPath As String = ""
 
-        ''' <summary>Wirkung in Prozent. Nur für Filter und LUT - ein Lightroom-Preset ist eine Sammlung
+        ''' <summary>Wirkung in Prozent. Nur für Filter und LUT - ein XMP-Preset ist eine Sammlung
         ''' einzelner Regler und kennt keinen gemeinsamen Mischregler.</summary>
         Public Property Strength As Integer = 100
 

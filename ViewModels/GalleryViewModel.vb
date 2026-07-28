@@ -592,7 +592,7 @@ Namespace ViewModels
             End Get
         End Property
         ''' Gelb kam mit dem XMP-Sidecar-Import dazu: xmp:Label="Yellow" ist eines der fünf Etiketten,
-        ''' die Lightroom vergibt. Ohne diesen Filter landeten importierte Fotos in einer Markierung,
+        ''' die andere Programme vergeben. Ohne diesen Filter landeten importierte Fotos in einer Markierung,
         ''' nach der man nicht filtern kann.
         Public ReadOnly Property IsFilterLabelYellow As Boolean
             Get
@@ -5417,7 +5417,7 @@ Namespace ViewModels
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Function
 
-        ''' <summary>Stapel: einen eingebauten Filter, ein Lightroom-Preset (.xmp) oder eine LUT (.cube) auf
+        ''' <summary>Stapel: einen eingebauten Filter, ein XMP-Preset (.xmp) oder eine LUT (.cube) auf
         ''' die Auswahl anwenden - entweder in die Originale hinein oder in neue Dateien (mit dem Namen der
         ''' Vorgabe im Dateinamen).</summary>
         Private Async Sub ApplyFilterSelected()
@@ -5519,13 +5519,13 @@ Namespace ViewModels
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Sub
 
-        ''' <summary>Übersetzt die Dialogauswahl in Anpassungen. Lightroom-Presets laufen durch denselben
-        ''' LightroomPresetService wie der Editor - es gibt nur eine Abbildung der crs:-Schlüssel.
+        ''' <summary>Übersetzt die Dialogauswahl in Anpassungen. XMP-Presets laufen durch denselben
+        ''' XmpPresetService wie der Editor - es gibt nur eine Abbildung der crs:-Schlüssel.
         ''' Nothing, wenn die Preset-Datei fehlt oder nichts Verwertbares enthält.</summary>
         Private Shared Function BuildBatchFilterAdjustments(result As BatchFilterDialogResult) As ImageAdjustments
             Select Case result.SourceKind
-                Case BatchFilterDialogResult.SourceLightroom
-                    Return LightroomPresetService.LoadLook(result.PresetPath)
+                Case BatchFilterDialogResult.SourceXmpPreset
+                    Return XmpPresetService.LoadLook(result.PresetPath)
 
                 Case BatchFilterDialogResult.SourceLut
                     If String.IsNullOrWhiteSpace(result.PresetPath) OrElse Not File.Exists(result.PresetPath) Then Return Nothing
@@ -6096,8 +6096,8 @@ Namespace ViewModels
             ' automatische Bildverbesserung misst dagegen PRO BILD im Writer.
             Dim vorlage As ImageAdjustments
             Select Case result.LookKind
-                Case BatchFilterDialogResult.SourceLightroom
-                    vorlage = LightroomPresetService.LoadLook(result.LookPath)
+                Case BatchFilterDialogResult.SourceXmpPreset
+                    vorlage = XmpPresetService.LoadLook(result.LookPath)
                 Case BatchFilterDialogResult.SourceLut
                     vorlage = If(File.Exists(result.LookPath),
                                  New ImageAdjustments With {.LutPath = result.LookPath, .LutStrength = result.LookStrength},

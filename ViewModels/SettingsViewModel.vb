@@ -380,6 +380,32 @@ Namespace ViewModels
         End Property
         Private _useCameraBaselineTable As Boolean
 
+        ''' <summary>Objektivkorrektur als VORGABE. Wirkt wie die Kamera-Referenzwerte beim
+        ''' naechsten Oeffnen; pro Bild ist sie im Werkzeug uebersteuerbar.</summary>
+        Public Property LensCorrectionEnabled As Boolean
+            Get
+                Return _lensCorrectionEnabled
+            End Get
+            Set(value As Boolean)
+                If _lensCorrectionEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_lensCorrectionEnabled, value)
+                Dim settings = AppSettingsService.Load()
+                settings.LensCorrectionEnabled = value
+                AppSettingsService.Save(settings)
+            End Set
+        End Property
+        Private _lensCorrectionEnabled As Boolean
+
+        ''' <summary>Wie viele Objektive die mitgelieferte Sammlung kennt - fuer den Beschreibungstext
+        ''' unter dem Schalter.</summary>
+        Public ReadOnly Property LensDatabaseInfo As String
+            Get
+                Dim b = ObjektivDatenService.Bestand()
+                Return LocalizationService.T("Mitgelieferte Messwerte") & ": " & b.Objektive & " " &
+                       LocalizationService.T("Objektive")
+            End Get
+        End Property
+
         ''' Wie viele bereits geladene Vorschaubilder maximal dauerhaft im Arbeitsspeicher gehalten
         ''' werden (siehe ImageItem.MaxResidentThumbnails) - wirkt sofort, auch ohne "Übernehmen".
         Public Property ThumbnailMemoryCacheCapacity As Integer
@@ -1533,6 +1559,7 @@ Namespace ViewModels
             _developRawInViewer = _appSettings.DevelopRawInViewer
             _developRawInBatch = _appSettings.DevelopRawInBatch
             _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
+            _lensCorrectionEnabled = _appSettings.LensCorrectionEnabled
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
             _thumbnailQuality = _appSettings.ThumbnailQuality
             _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)

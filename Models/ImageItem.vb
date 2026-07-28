@@ -599,6 +599,12 @@ Namespace Models
 
         Private _thumbnail As Bitmap
         Private _thumbState As Integer = 0       ' 0=unloaded, 1=queued/loading, 2=done
+        ' Zählt jedes ausdrückliche Verwerfen (ClearThumbnail). Ein Worker merkt sich den Stand beim
+        ' Ausreihen und darf sein Ergebnis nur einhängen, wenn er unverändert ist. Ohne das konnte
+        ' ReloadThumbnail (gedrehte RAW) einen bereits laufenden Ladevorgang zwar abmelden, dessen
+        ' Ergebnis landete danach aber trotzdem im Feld - die Kachel blieb ungedreht stehen, und das
+        ' Bitmap des zweiten, inzwischen gestarteten Workers ging verloren.
+        Private _thumbnailGeneration As Integer = 0
         Private _inViewportQueue As Boolean = False
         Private _inBackgroundQueue As Boolean = False
         Private _isThumbnailLoading As Boolean = False
@@ -637,7 +643,7 @@ Namespace Models
                 Return Volatile.Read(_maxResidentThumbnails)
             End Get
             Set(value As Integer)
-                Dim evicted As List(Of ImageItem) = Nothing
+                Dim evicted As List(Of KeyValuePair(Of ImageItem, Bitmap)) = Nothing
                 SyncLock _thumbnailQueueLock
                     _maxResidentThumbnails = Math.Max(0, value)
                     evicted = EvictExcessLocked()
@@ -664,7 +670,7 @@ Namespace Models
         ''' aufgerufen werden (SyncLock ist pro Thread reentrant, daher auch von Aufrufern sicher,
         ''' die das Lock bereits halten).</summary>
         Private Shared Sub TouchResident(item As ImageItem)
-            Dim evicted As List(Of ImageItem) = Nothing
+            Dim evicted As List(Of KeyValuePair(Of ImageItem, Bitmap)) = Nothing
             SyncLock _thumbnailQueueLock
                 If item._residentLruNode IsNot Nothing Then _residentLru.Remove(item._residentLruNode)
                 item._residentLruNode = _residentLru.AddLast(item)
@@ -676,8 +682,12 @@ Namespace Models
         ''' <summary>Verdrängt vom ältesten Ende der LRU-Liste, bis MaxResidentThumbnails erreicht
         ''' ist oder keine weiteren nicht aktuell sichtbaren Kandidaten mehr existieren. Muss unter
         ''' _thumbnailQueueLock aufgerufen werden.</summary>
-        Private Shared Function EvictExcessLocked() As List(Of ImageItem)
-            Dim evicted As List(Of ImageItem) = Nothing
+        ''' <summary>Das Leeren von _thumbnail gehoert MIT unter das Lock - lag es frueher im
+        ''' nachgelagerten Dispose-Schritt, konnte ein Worker sein Ergebnis dazwischen einhaengen und
+        ''' die Verdraengung nullte es gleich wieder weg (bzw. umgekehrt). Herausgegeben wird deshalb
+        ''' das abgeloeste Bitmap, nicht das Element.</summary>
+        Private Shared Function EvictExcessLocked() As List(Of KeyValuePair(Of ImageItem, Bitmap))
+            Dim evicted As List(Of KeyValuePair(Of ImageItem, Bitmap)) = Nothing
             Dim node = _residentLru.First
             While _residentLru.Count > _maxResidentThumbnails AndAlso node IsNot Nothing
                 Dim nextNode = node.Next
@@ -686,8 +696,10 @@ Namespace Models
                     _residentLru.Remove(node)
                     candidate._residentLruNode = Nothing
                     candidate._thumbState = 0
-                    If evicted Is Nothing Then evicted = New List(Of ImageItem)()
-                    evicted.Add(candidate)
+                    Dim bmp = candidate._thumbnail
+                    candidate._thumbnail = Nothing
+                    If evicted Is Nothing Then evicted = New List(Of KeyValuePair(Of ImageItem, Bitmap))()
+                    evicted.Add(New KeyValuePair(Of ImageItem, Bitmap)(candidate, bmp))
                 End If
                 node = nextNode
             End While
@@ -701,11 +713,11 @@ Namespace Models
         ''' NullReferenceException abstürzen (Image.ArrangeOverride). Das Umhängen von
         ''' Source=Nothing und das Dispose müssen daher auf dem UI-Thread und in dieser
         ''' Reihenfolge erfolgen.</summary>
-        Private Shared Sub DisposeEvictedThumbnails(evicted As List(Of ImageItem))
+        Private Shared Sub DisposeEvictedThumbnails(evicted As List(Of KeyValuePair(Of ImageItem, Bitmap)))
             If evicted IsNot Nothing Then
-                For Each oldest In evicted
-                    Dim bmp = oldest._thumbnail
-                    oldest._thumbnail = Nothing
+                For Each eintrag In evicted
+                    Dim oldest = eintrag.Key
+                    Dim bmp = eintrag.Value
                     If bmp IsNot Nothing Then
                         Dispatcher.UIThread.Post(Sub()
                                                       oldest.RaisePropertyChanged(NameOf(Thumbnail))
@@ -1056,6 +1068,10 @@ Namespace Models
             While True
                 Dim item As ImageItem = Nothing
                 Dim isBackgroundItem As Boolean = False
+                ' Der Generationsstand wird beim AUSREIHEN genommen, nicht erst im Lader: sonst
+                ' bliebe zwischen Ausreihen und Lesen ein Fenster, in dem ein ClearThumbnail
+                ' unbemerkt bliebe und dieser Worker sein veraltetes Bild trotzdem einhaengt.
+                Dim generation As Integer = 0
                 SyncLock _thumbnailQueueLock
                     If _viewportQueue.Count > 0 Then
                         ' LIFO: most recently requested viewport item first
@@ -1079,10 +1095,11 @@ Namespace Models
                         _runningThumbnailWorkers -= 1
                         Return
                     End If
+                    generation = item._thumbnailGeneration
                 End SyncLock
 
                 Try
-                    Await item.LoadThumbnailAsync()
+                    Await item.LoadThumbnailAsync(generation)
                 Catch
                 End Try
 
@@ -1102,11 +1119,48 @@ Namespace Models
             Return Not _evictThumbnailAfterLoad
         End Function
 
-        Private Async Function LoadThumbnailAsync() As Task
+        ''' <summary>Haengt ein fertig geladenes Vorschaubild ein. Der Commit MUSS unter
+        ''' _thumbnailQueueLock laufen: ClearThumbnail, EvictExcessLocked und
+        ''' SetViewportThumbnailRequests mutieren dieselben Felder unter Lock, ein Schreibzugriff
+        ''' des Workers daneben ueberschrieb sonst eine zwischenzeitliche Verwerfung.
+        '''
+        ''' Rueckgabe False = das Ergebnis ist nicht mehr gewollt (ClearThumbnail dazwischen); der
+        ''' Aufrufer disposed sein Bitmap. Bei True steht in <paramref name="previous"/> das
+        ''' abgeloeste Bitmap, das ERST NACH der UI-Benachrichtigung disposed werden darf - sonst
+        ''' greift ein laufender Layoutdurchlauf auf ein totes Bitmap zu (siehe
+        ''' DisposeEvictedThumbnails).
+        '''
+        ''' TouchResident laeuft bewusst im selben Lock: wurde das Element waehrend des Ladens
+        ''' LRU-verdraengt, traegt es sich hier wieder ein. Ohne das haengt ein Bitmap im Feld, das
+        ''' die Verdraengung nie wieder erreicht - der stetige Verbrauch beim langen Scrollen.</summary>
+        Private Function CommitThumbnail(bmp As Bitmap, generation As Integer, ByRef previous As Bitmap) As Boolean
+            previous = Nothing
+            SyncLock _thumbnailQueueLock
+                If _thumbnailGeneration <> generation Then Return False
+                previous = _thumbnail
+                _thumbnail = bmp
+                _thumbState = 2
+                If bmp IsNot Nothing Then TouchResident(Me)
+            End SyncLock
+            Return True
+        End Function
+
+        ''' <summary>Setzt den Ladezustand der Abbruch- und Fehlerwege - wie CommitThumbnail unter
+        ''' Lock und mit Generationspruefung, damit ein abgebrochener Worker nicht den Zustand einer
+        ''' bereits laufenden Neuanforderung zurueckdreht (das wuerde einen dritten Worker
+        ''' einreihen).</summary>
+        Private Sub SetThumbStateAfterLoad(state As Integer, generation As Integer)
+            SyncLock _thumbnailQueueLock
+                If _thumbnailGeneration <> generation Then Return
+                _thumbState = state
+            End SyncLock
+        End Sub
+
+        Private Async Function LoadThumbnailAsync(generation As Integer) As Task
             If Volatile.Read(_thumbState) = 2 Then Return
             Dim token = _thumbnailCancellationToken
             If token.IsCancellationRequested Then
-                _thumbState = 0
+                SetThumbStateAfterLoad(0, generation)
                 Return
             End If
 
@@ -1114,7 +1168,7 @@ Namespace Models
             ' über den Immich-Netz-/Diskcache. State-, TouchResident- und UI-Benachrichtigungs-Ablauf
             ' sind identisch zum lokalen Zweig, damit LRU-Verdrängung und Dispose-Race-Schutz greifen.
             If _immichAssetId IsNot Nothing Then
-                Await LoadImmichThumbnailAsync(token)
+                Await LoadImmichThumbnailAsync(token, generation)
                 Return
             End If
 
@@ -1138,14 +1192,17 @@ Namespace Models
 
                 If token.IsCancellationRequested Then
                     bmp?.Dispose()
-                    _thumbState = 0
+                    SetThumbStateAfterLoad(0, generation)
                     Return
                 End If
 
-                _thumbnail = bmp
-                _thumbState = 2
-                If bmp IsNot Nothing Then TouchResident(Me)
+                Dim abgeloest As Bitmap = Nothing
+                If Not CommitThumbnail(bmp, generation, abgeloest) Then
+                    bmp?.Dispose()
+                    Return
+                End If
                 Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), DispatcherPriority.Background)
+                If Not Object.ReferenceEquals(abgeloest, bmp) Then abgeloest?.Dispose()
 
                 If bmp IsNot Nothing AndAlso Not cachedWasExact Then
                     Dim replacement As Bitmap = Nothing
@@ -1157,19 +1214,19 @@ Namespace Models
                     Catch
                     End Try
 
-                    If replacement IsNot Nothing AndAlso Not token.IsCancellationRequested Then
-                        Dim old = _thumbnail
-                        _thumbnail = replacement
+                    Dim ersetzt As Bitmap = Nothing
+                    If replacement IsNot Nothing AndAlso Not token.IsCancellationRequested AndAlso
+                       CommitThumbnail(replacement, generation, ersetzt) Then
                         Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), DispatcherPriority.Background)
-                        If Not Object.ReferenceEquals(old, replacement) Then old?.Dispose()
+                        If Not Object.ReferenceEquals(ersetzt, replacement) Then ersetzt?.Dispose()
                     Else
                         replacement?.Dispose()
                     End If
                 End If
             Catch ex As OperationCanceledException
-                _thumbState = 0
+                SetThumbStateAfterLoad(0, generation)
             Catch
-                _thumbState = 2
+                SetThumbStateAfterLoad(2, generation)
             End Try
         End Function
 
@@ -1178,22 +1235,25 @@ Namespace Models
         ''' Benachrichtigungs-Ablauf, damit das Ergebnis genauso resident/verdrängbar ist wie ein
         ''' lokales Thumbnail. Ein Nothing-Ergebnis (Server nicht erreichbar) zählt bewusst als
         ''' "fertig" (State 2), um Wiederhol-Stürme gegen einen ausgefallenen Server zu vermeiden.</summary>
-        Private Async Function LoadImmichThumbnailAsync(token As CancellationToken) As Task
+        Private Async Function LoadImmichThumbnailAsync(token As CancellationToken, generation As Integer) As Task
             Try
                 Dim bmp = Await ImmichService.LoadThumbnailBitmapAsync(_immichAssetId, ImmichService.ThumbnailSize, token)
                 If token.IsCancellationRequested Then
                     bmp?.Dispose()
-                    _thumbState = 0
+                    SetThumbStateAfterLoad(0, generation)
                     Return
                 End If
-                _thumbnail = bmp
-                _thumbState = 2
-                If bmp IsNot Nothing Then TouchResident(Me)
+                Dim abgeloest As Bitmap = Nothing
+                If Not CommitThumbnail(bmp, generation, abgeloest) Then
+                    bmp?.Dispose()
+                    Return
+                End If
                 Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), DispatcherPriority.Background)
+                If Not Object.ReferenceEquals(abgeloest, bmp) Then abgeloest?.Dispose()
             Catch ex As OperationCanceledException
-                _thumbState = 0
+                SetThumbStateAfterLoad(0, generation)
             Catch
-                _thumbState = 2
+                SetThumbStateAfterLoad(2, generation)
             End Try
             ' An den (viewport-priorisierten) Thumbnail-Ladeweg gekoppelt: sichtbare Bilder bekommen ihre
             ' Detaildaten (Dateigröße/Rating/Kamera/Tags) zuerst, statt eager 25.000 Assets auf einmal.
@@ -1295,6 +1355,10 @@ Namespace Models
                 _evictThumbnailAfterLoad = False
                 _isPinnedVisible = False
                 _thumbState = 0
+                ' Meldet einen etwa noch laufenden Ladevorgang ab: dessen Commit prallt danach ab
+                ' und disposed sein Bitmap selbst. _isThumbnailLoading = False allein reicht nicht -
+                ' es beendet den Worker nicht, es macht das Element nur wieder anforderbar.
+                _thumbnailGeneration += 1
                 If _residentLruNode IsNot Nothing Then
                     _residentLru.Remove(_residentLruNode)
                     _residentLruNode = Nothing

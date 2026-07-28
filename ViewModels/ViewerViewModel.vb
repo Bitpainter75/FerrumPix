@@ -25,7 +25,9 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private ReadOnly _mainVm As MainWindowViewModel
+        ' Bewusst die schmale Sicht (siehe IViewerHost) und nicht das MainWindowViewModel: nur so
+        ' laesst sich der Betrachter ohne den Anwendungsrumpf bauen und der Bildvergleich messen.
+        Private ReadOnly _mainVm As IViewerHost
         Private _currentImagePath As String = ""
         Private _bitmapLoadToken As Integer = 0
         Private _isBitmapLoading As Boolean = False
@@ -179,6 +181,11 @@ Namespace ViewModels
         ''' obwohl CurrentImage dort bewusst Nothing bleibt).
         Public ReadOnly Property HasNoMedia As Boolean
             Get
+                ' Im Vergleich zeigen die beiden Flaechen die Bilder, das versteckte Einzelbild ist
+                ' dabei belanglos. Ohne diese Bedingung erschien "Kein Bild geoeffnet" mitten in der
+                ' laufenden Vergleichsansicht - ein Platzhalter, der dem widerspricht, was zu sehen
+                ' ist.
+                If _isCompareMode Then Return False
                 Return _currentImage Is Nothing AndAlso Not IsVideoFile AndAlso Not _isBitmapLoading
             End Get
         End Property
@@ -782,7 +789,7 @@ Namespace ViewModels
         Public ReadOnly Property SeekVideoCommand As ICommand
         Public ReadOnly Property ToggleVideoMuteCommand As ICommand
 
-        Public Sub New(mainVm As MainWindowViewModel)
+        Public Sub New(mainVm As IViewerHost)
             _mainVm = mainVm
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
             Tags = New ObservableCollection(Of String)()
@@ -1102,6 +1109,27 @@ Namespace ViewModels
             End Get
         End Property
 
+        Private _isCompareViewportLinked As Boolean = True
+
+        ''' <summary>Gekoppelt (Vorgabe) spiegelt die eine Flaeche ihren Ausschnitt in die andere -
+        ''' dafuer ist der Vergleich bei zwei Aufnahmen DERSELBEN Szene da. Entkoppelt scrollt jede
+        ''' fuer sich, was bei unterschiedlich gerahmten Aufnahmen der einzig brauchbare Weg ist.
+        '''
+        ''' Bewusst ein EIGENER Schalter und keine dritte Stufe am Anheften: das Anheften beantwortet
+        ''' "welches Bild halte ich fest", der hier "wie bewegen sich die Flaechen". Zwei Fragen an
+        ''' einem Knopf waeren nicht ablesbar.
+        '''
+        ''' Der ZOOM bleibt in beiden Faellen gemeinsam - sonst vergliche man zwei Vergroesserungen
+        ''' statt zweier Bilder.</summary>
+        Public Property IsCompareViewportLinked As Boolean
+            Get
+                Return _isCompareViewportLinked
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isCompareViewportLinked, value)
+            End Set
+        End Property
+
         ''' <summary>Welche Flaeche den Fokus hat (0 = links, 1 = rechts). Der Rahmen haengt daran,
         ''' und das Infopanel zeigt die Daten GENAU dieser Flaeche.</summary>
         Public Property FocusedComparePane As Integer
@@ -1140,6 +1168,40 @@ Namespace ViewModels
             CurrentImagePath = pfad
             CurrentFileName = IO.Path.GetFileName(pfad)
             BeginInfoPanelSwitch(pfad)
+            ' Der Dateiname allein reicht nicht: Sterne, Herz und Farbetikett in der Fusszeile
+            ' gehoeren zum SELBEN Bild wie der Name daneben. Ohne das zeigte die Fusszeile die
+            ' Bewertung der zuletzt in der Einzelansicht geoeffneten Datei, waehrend links der
+            ' Name der fokussierten Flaeche stand - und ein Klick auf einen Stern haette sie dem
+            ' falschen Bild gegeben.
+            UebernehmeKatalogAttribute(pfad)
+            LoadInfoPanelData(pfad)
+            Me.RaisePropertyChanged(NameOf(CanEdit))
+        End Sub
+
+        ''' <summary>Bewertung, Favorit und Farbetikett des Bildes aus dem Katalog in die
+        ''' Fusszeilen-Felder uebernehmen. Die EINE Stelle dafuer: sie lag vorher zweimal wortgleich
+        ''' im Oeffnen- und im Blaettern-Weg, und der Vergleich hatte sie gar nicht.</summary>
+        Private Sub UebernehmeKatalogAttribute(imagePath As String)
+            _isFavorite = LibraryService.Instance.GetFavorite(imagePath)
+            Me.RaisePropertyChanged(NameOf(IsFavorite))
+            _rating = LibraryService.Instance.GetRating(imagePath)
+            Me.RaisePropertyChanged(NameOf(Rating))
+            Me.RaisePropertyChanged(NameOf(RatingText))
+            _colorLabel = LibraryService.Instance.GetColorLabel(imagePath)
+            RaiseColorLabelProperties()
+        End Sub
+
+        ''' <summary>Doppelklick auf eine Vergleichsflaeche: erst den Fokus dorthin, dann das Bild
+        ''' DIESER Flaeche im Editor oeffnen - genauso, wie ein Doppelklick in der Einzelansicht das
+        ''' angezeigte Bild oeffnet. Der Fokuswechsel zieht Pfad und Fusszeile mit, deshalb trifft
+        ''' der Editor danach das richtige Bild.</summary>
+        Public Sub OpenComparePaneInEditor(pane As Integer)
+            If Not _isCompareMode Then Return
+            FocusedComparePane = pane
+            Dim pfad = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
+            If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
+            If Not CanEdit Then Return
+            EditCommand.Execute(Nothing)
         End Sub
 
         ''' <summary>Zwei Bilder zum Vergleich oeffnen. Das LINKE gilt als das aktuelle - Ordner-
@@ -1165,12 +1227,260 @@ Namespace ViewModels
             _focusedComparePane = 0
             _pinnedPath = leftPath
             IsCompareMode = True
+            LadeVergleichsMarken()
             For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
                            NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
-                           NameOf(IsImagePinned), NameOf(PinnedFileName)}
+                           NameOf(IsImagePinned), NameOf(PinnedFileName),
+                           NameOf(CanDeleteCurrent), NameOf(CanSwapComparePanes),
+                           NameOf(HasNoMedia)}
                 Me.RaisePropertyChanged(n)
             Next
             LadeVergleichsbilder()
+        End Sub
+
+        ' ── Marken auf den Vergleichsflaechen ───────────────────────────────────
+        '
+        ' Wie auf der Galerie-Kachel: Sterne, Herz, Anpassen und Loeschen liegen AUF dem Bild, zu
+        ' dem sie gehoeren. Das ist auch der Grund, warum sie hier ueberhaupt sind - der Knopf in
+        ' der Werkzeugleiste kann im Vergleich nicht sagen, welches der beiden Bilder er meint, und
+        ' bei einer nicht umkehrbaren Aktion ist das zu wenig.
+
+        Private _compareLeftRating As Integer
+        Private _compareRightRating As Integer
+        Private _compareLeftFavorite As Boolean
+        Private _compareRightFavorite As Boolean
+
+        Public ReadOnly Property CompareLeftRating As Integer
+            Get
+                Return _compareLeftRating
+            End Get
+        End Property
+
+        Public ReadOnly Property CompareRightRating As Integer
+            Get
+                Return _compareRightRating
+            End Get
+        End Property
+
+        Public ReadOnly Property CompareLeftIsFavorite As Boolean
+            Get
+                Return _compareLeftFavorite
+            End Get
+        End Property
+
+        Public ReadOnly Property CompareRightIsFavorite As Boolean
+            Get
+                Return _compareRightFavorite
+            End Get
+        End Property
+
+        ''' <summary>Bewertung und Favorit beider Flaechen aus dem Katalog nachziehen. Jede Stelle,
+        ''' die einen der beiden Pfade aendert, ruft das - sonst zeigen die Marken die Werte des
+        ''' vorherigen Bildes.</summary>
+        Private Sub LadeVergleichsMarken()
+            _compareLeftRating = If(String.IsNullOrEmpty(_compareLeftPath), 0, LibraryService.Instance.GetRating(_compareLeftPath))
+            _compareRightRating = If(String.IsNullOrEmpty(_compareRightPath), 0, LibraryService.Instance.GetRating(_compareRightPath))
+            _compareLeftFavorite = Not String.IsNullOrEmpty(_compareLeftPath) AndAlso LibraryService.Instance.GetFavorite(_compareLeftPath)
+            _compareRightFavorite = Not String.IsNullOrEmpty(_compareRightPath) AndAlso LibraryService.Instance.GetFavorite(_compareRightPath)
+            For Each n In {NameOf(CompareLeftRating), NameOf(CompareRightRating),
+                           NameOf(CompareLeftIsFavorite), NameOf(CompareRightIsFavorite)}
+                Me.RaisePropertyChanged(n)
+            Next
+        End Sub
+
+        Private Function PfadDerFlaeche(pane As Integer) As String
+            Return If(pane = 1, _compareRightPath, _compareLeftPath)
+        End Function
+
+        ''' <summary>Sterne setzen. Derselbe Stern nochmal loescht die Bewertung - genauso wie auf
+        ''' der Galerie-Kachel.</summary>
+        Public Sub SetCompareRating(pane As Integer, sterne As Integer)
+            Dim pfad = PfadDerFlaeche(pane)
+            If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
+            Dim bisher = If(pane = 1, _compareRightRating, _compareLeftRating)
+            Dim neuerWert = If(bisher = sterne, 0, Math.Max(0, Math.Min(5, sterne)))
+            LibraryService.Instance.SetRating(pfad, neuerWert)
+            LadeVergleichsMarken()
+            ' Die Fusszeile zeigt die fokussierte Flaeche - sie muss mit, wenn genau die gemeint war.
+            If pane = _focusedComparePane Then UebernehmeKatalogAttribute(pfad)
+        End Sub
+
+        Public Sub ToggleCompareFavorite(pane As Integer)
+            Dim pfad = PfadDerFlaeche(pane)
+            If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
+            Dim bisher = If(pane = 1, _compareRightFavorite, _compareLeftFavorite)
+            LibraryService.Instance.SetFavorite(pfad, Not bisher)
+            LadeVergleichsMarken()
+            If pane = _focusedComparePane Then UebernehmeKatalogAttribute(pfad)
+        End Sub
+
+        ''' <summary>Eine Flaeche loeschen. Danach rueckt nach: bei der RECHTEN kommt das naechste
+        ''' Bild dorthin, bei der LINKEN wandert die rechte nach links (samt ihrer bereits geladenen
+        ''' Bitmap) und rechts kommt das naechste. So bleibt immer ein Bezugsbild stehen und eine
+        ''' Serie laesst sich in einem Zug durchsehen.</summary>
+        Public Sub DeleteComparePane(pane As Integer)
+            If Not _isCompareMode Then Return
+            Dim pfad = PfadDerFlaeche(pane)
+            If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
+            _mainVm.RequestDeletePaths({pfad}, Sub() NachDemLoeschenImVergleich(pane, pfad))
+        End Sub
+
+        Private Sub NachDemLoeschenImVergleich(pane As Integer, geloescht As String)
+            ' Die Stelle in der Liste MERKEN, bevor der Pfad herausfaellt - "das naechste Bild" ist
+            ' genau das, was danach an dieser Stelle steht.
+            Dim stelle = _folderPaths.FindIndex(Function(p) String.Equals(p, geloescht, StringComparison.OrdinalIgnoreCase))
+            _folderPaths.RemoveAll(Function(p) String.Equals(p, geloescht, StringComparison.OrdinalIgnoreCase))
+            LoadFilmstrip()
+
+            ' Beide Flaechen zeigten dasselbe Bild (direkt nach dem Anheften) - dann ist nach dem
+            ' Loeschen nichts mehr zu vergleichen.
+            Dim beideGleich = String.Equals(_compareLeftPath, _compareRightPath, StringComparison.OrdinalIgnoreCase)
+
+            If _folderPaths.Count = 0 Then
+                ExitCompare(zurueckZumFokus:=False)
+                InvalidatePendingBitmapLoad()
+                CurrentImage = Nothing
+                CurrentImagePath = ""
+                CurrentFileName = ""
+                _mainVm.BackToGallery(IO.Path.GetDirectoryName(geloescht))
+                Return
+            End If
+
+            If beideGleich Then
+                ' Angeheftet, aber noch nicht weitergeblaettert: beide Flaechen zeigten dieselbe
+                ' Datei. Mit ihr faellt das Bezugsbild weg, also gibt es nichts mehr zu vergleichen.
+                ' Frueher blieb der geloeschte Pfad links stehen und die Flaeche zeigte eine Datei,
+                ' die es nicht mehr gibt.
+                Dim weiter = NaechsterPfadAb(stelle, "")
+                ExitCompare(zurueckZumFokus:=False)
+                Dim wIdx = _folderPaths.FindIndex(Function(p) String.Equals(p, weiter, StringComparison.OrdinalIgnoreCase))
+                If wIdx >= 0 Then LoadPathAt(wIdx)
+                Return
+            End If
+
+            If pane = 0 Then
+                ' Die rechte Bitmap wandert MIT nach links, sie ist bereits geladen - ein zweiter
+                ' Decode fuer ein Bild, das schon da ist, waere bei RAW Sekunden.
+                _compareLeftPath = _compareRightPath
+                Dim wegwerfen = CompareLeftImage
+                SetzeVergleichsBitmaps(CompareRightImage, Nothing)
+                GibVergleichsBitmapFrei(wegwerfen)
+                _pinnedPath = _compareLeftPath
+                _vergleichLadeZaehler += 1
+            End If
+
+            ' Das Bild, das jetzt LINKS steht, darf nicht als "das naechste" rechts landen - beim
+            ' Loeschen der linken Flaeche ist die rechte gerade dorthin gewandert und stuende sonst
+            ' auf beiden Seiten.
+            Dim naechster = NaechsterPfadAb(stelle, _compareLeftPath)
+            If String.IsNullOrEmpty(naechster) Then
+                ' Nur noch EIN Bild uebrig - ein Vergleich mit sich selbst hat keinen Sinn.
+                Dim bleibt = If(String.IsNullOrEmpty(_compareLeftPath), naechster, _compareLeftPath)
+                ExitCompare(zurueckZumFokus:=False)
+                Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, bleibt, StringComparison.OrdinalIgnoreCase))
+                If idx >= 0 Then LoadPathAt(idx)
+                Return
+            End If
+
+            _compareRightPath = naechster
+            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, naechster, StringComparison.OrdinalIgnoreCase))
+            _focusedComparePane = 0
+            LadeVergleichsbilder(nurRechts:=True)
+            LadeVergleichsMarken()
+            ZeigeDatenDerFokussiertenFlaeche()
+            For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
+                           NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
+                           NameOf(IsImagePinned), NameOf(PinnedFileName),
+                           NameOf(CanSwapComparePanes), NameOf(PositionText),
+                           NameOf(CurrentFilmstripIndex)}
+                Me.RaisePropertyChanged(n)
+            Next
+            MarkCurrentFilmstripItem()
+        End Sub
+
+        ''' <summary>Das Bild, das nach dem Loeschen an dieser Stelle steht. Ist die Liste dort zu
+        ''' Ende, wird vorne weitergesucht - sonst endete eine Serie am letzten Bild in einer leeren
+        ''' Flaeche.</summary>
+        Private Function NaechsterPfadAb(stelle As Integer, ausser As String) As String
+            If _folderPaths.Count = 0 Then Return ""
+            Dim start = Math.Max(0, Math.Min(stelle, _folderPaths.Count - 1))
+            For i = 0 To _folderPaths.Count - 1
+                Dim k = (start + i) Mod _folderPaths.Count
+                If Not String.Equals(_folderPaths(k), ausser, StringComparison.OrdinalIgnoreCase) Then Return _folderPaths(k)
+            Next
+            Return ""
+        End Function
+
+        ''' <summary>Beide Vergleichs-Bitmaps setzen, OHNE eines freizugeben.
+        '''
+        ''' Die Setter geben das abgeloeste Bild frei - richtig, solange ein Bild wirklich ersetzt
+        ''' wird. Beim Tauschen und beim Nachruecken wandert es dagegen nur auf die ANDERE SEITE,
+        ''' und dann zieht der Setter ihm den Boden weg: der erste Zuweisung gibt das Bitmap frei,
+        ''' das die zweite gerade hinlegen will. Die Anzeige liest danach dessen Groesse und der
+        ''' Prozess faellt. Deshalb hier direkt auf die Felder und die Meldung von Hand - und wer
+        ''' wirklich etwas wegwerfen will, tut das ausdruecklich ueber
+        ''' <see cref="GibVergleichsBitmapFrei"/>.</summary>
+        Private Sub SetzeVergleichsBitmaps(links As Bitmap, rechts As Bitmap)
+            _compareLeftImage = links
+            _compareRightImage = rechts
+            Me.RaisePropertyChanged(NameOf(CompareLeftImage))
+            Me.RaisePropertyChanged(NameOf(CompareRightImage))
+        End Sub
+
+        ''' <summary>Ein abgelegtes Vergleichsbild freigeben - erst NACH der Benachrichtigung, damit
+        ''' kein laufender Layoutdurchlauf mehr darauf zugreift (dieselbe Regel wie bei den
+        ''' Vorschaubildern).</summary>
+        Private Shared Sub GibVergleichsBitmapFrei(bmp As Bitmap)
+            If bmp Is Nothing Then Return
+            Dispatcher.UIThread.Post(Sub() bmp.Dispose(), DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Tauschbar, sobald zwei VERSCHIEDENE Bilder anliegen. Direkt nach dem Anheften
+        ''' steht auf beiden Seiten dasselbe; ein Tausch waere dort ein Knopf, der nichts tut.</summary>
+        Public ReadOnly Property CanSwapComparePanes As Boolean
+            Get
+                Return _isCompareMode AndAlso
+                       Not String.IsNullOrEmpty(_compareLeftPath) AndAlso
+                       Not String.IsNullOrEmpty(_compareRightPath) AndAlso
+                       Not String.Equals(_compareLeftPath, _compareRightPath, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Seiten tauschen: das rechte Bild wird das neue angeheftete und wandert nach
+        ''' links, das bisher angeheftete nach rechts. Der Weg, wenn man beim Blaettern ein besseres
+        ''' Bezugsbild findet.
+        '''
+        ''' Die Bitmaps wandern MIT, es wird nichts neu geladen - bei zwei entwickelten RAWs waeren
+        ''' das sonst zwei volle Decodes fuer einen Tausch. Der Ladezaehler muss trotzdem hoch:
+        ''' laeuft gerade ein Ladevorgang, faellt sein Ergebnis sonst in die inzwischen getauschte
+        ''' Flaeche.</summary>
+        Public Sub SwapComparePanes()
+            If Not CanSwapComparePanes Then Return
+            Dim alterLinker = _compareLeftPath
+            _compareLeftPath = _compareRightPath
+            _compareRightPath = alterLinker
+
+            SetzeVergleichsBitmaps(CompareRightImage, CompareLeftImage)
+
+            _vergleichLadeZaehler += 1
+            _pinnedPath = _compareLeftPath
+            _focusedComparePane = 0
+            LadeVergleichsMarken()
+
+            ' Das Weiterblaettern haengt am Index der RECHTEN Flaeche - er muss dem getauschten
+            ' Bild folgen, sonst springt der naechste Tastendruck an eine fremde Stelle im Ordner.
+            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, _compareRightPath, StringComparison.OrdinalIgnoreCase))
+            If idx >= 0 Then _currentIndex = idx
+
+            ZeigeDatenDerFokussiertenFlaeche()
+            For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
+                           NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
+                           NameOf(IsImagePinned), NameOf(PinnedFileName),
+                           NameOf(CanSwapComparePanes), NameOf(PositionText),
+                           NameOf(CurrentFilmstripIndex)}
+                Me.RaisePropertyChanged(n)
+            Next
+            MarkCurrentFilmstripItem()
         End Sub
 
         ''' <summary>Die rechte Flaeche auf ein anderes Bild setzen - der Weg des Filmstreifens.
@@ -1181,6 +1491,8 @@ Namespace ViewModels
             If String.Equals(path, _compareRightPath, StringComparison.OrdinalIgnoreCase) Then Return
             _compareRightPath = path
             Me.RaisePropertyChanged(NameOf(CompareRightFileName))
+            Me.RaisePropertyChanged(NameOf(CanSwapComparePanes))
+            LadeVergleichsMarken()
             LadeVergleichsbilder(nurRechts:=True)
             ' Steht der Fokus rechts, muss auch das Infopanel mit.
             If _focusedComparePane = 1 Then ZeigeDatenDerFokussiertenFlaeche()
@@ -1203,7 +1515,9 @@ Namespace ViewModels
             ' weil dessen Neuoeffnen den Filmstreifen mitzieht.
             _pinnedPath = ""
             For Each n In {NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
-                           NameOf(IsImagePinned), NameOf(PinnedFileName)}
+                           NameOf(IsImagePinned), NameOf(PinnedFileName),
+                           NameOf(CanDeleteCurrent), NameOf(CanSwapComparePanes),
+                           NameOf(HasNoMedia)}
                 Me.RaisePropertyChanged(n)
             Next
             If Not zurueckZumFokus OrElse String.IsNullOrEmpty(fokusPfad) Then Return
@@ -1224,20 +1538,27 @@ Namespace ViewModels
             Dim marke = _vergleichLadeZaehler
             Dim links = _compareLeftPath, rechts = _compareRightPath
             Try
-                If Not nurRechts Then
-                    Dim a = Await Task.Run(Function() DecodeViewerBitmap(links))
+                ' "nurRechts" heisst: das festgehaltene linke Bild NICHT neu laden - es ist die
+                ' Referenz und ein zweiter Decode waere bei RAW Sekunden. Es heisst aber nicht
+                ' "ohne linkes Bild weitermachen": blaettert man direkt nach dem Anheften weiter,
+                ' ueberholt diese Anforderung den noch laufenden ersten Ladevorgang, dessen Ergebnis
+                ' dann verworfen wird - die linke Flaeche blieb dauerhaft leer.
+                If Not nurRechts OrElse _compareLeftImage Is Nothing Then
+                    Dim a = Await Task.Run(Function() DecodeViewerBitmap(links, immerEntwickeln:=True))
                     If Not _isCompareMode OrElse marke <> _vergleichLadeZaehler Then
                         a?.Dispose()
                         Return
                     End If
                     CompareLeftImage = a
+                    If _isFitToWindow Then UpdateFitZoom()
                 End If
-                Dim b = Await Task.Run(Function() DecodeViewerBitmap(rechts))
+                Dim b = Await Task.Run(Function() DecodeViewerBitmap(rechts, immerEntwickeln:=True))
                 If Not _isCompareMode OrElse marke <> _vergleichLadeZaehler Then
                     b?.Dispose()
                     Return
                 End If
                 CompareRightImage = b
+                If _isFitToWindow AndAlso CompareLeftImage Is Nothing Then UpdateFitZoom()
             Catch ex As Exception
                 DiagnosticLogService.LogException("Viewer.Vergleich", ex)
             End Try
@@ -1281,13 +1602,7 @@ Namespace ViewModels
             UpdateStatus()
             LoadInfoPanelData(imagePath)
 
-            _isFavorite = LibraryService.Instance.GetFavorite(imagePath)
-            Me.RaisePropertyChanged(NameOf(IsFavorite))
-            _rating = LibraryService.Instance.GetRating(imagePath)
-            Me.RaisePropertyChanged(NameOf(Rating))
-            Me.RaisePropertyChanged(NameOf(RatingText))
-            _colorLabel = LibraryService.Instance.GetColorLabel(imagePath)
-            RaiseColorLabelProperties()
+            UebernehmeKatalogAttribute(imagePath)
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
@@ -1420,20 +1735,45 @@ Namespace ViewModels
         End Function
 
         ''' Reiner Decode ohne ViewModel-Zustand - laeuft im Task.Run-Worker.
-        Private Shared Function DecodeViewerBitmap(path As String) As Bitmap
+        ''' <summary>Die Entscheidung, ob ein RAW entwickelt oder als eingebettete Kamera-Vorschau
+        ''' gezeigt wird - bewusst als parameterlose reine Funktion und nicht als Eigenschaft, damit
+        ''' sie ohne Anwendung, ohne Einstellungen und ohne LibRaw geprueft werden kann.
+        '''
+        ''' Im Vergleich gilt sie IMMER: dort ist die Kamera-Vorschau die falsche Quelle. Sonst nur
+        ''' bei eingeschalteter Einstellung UND vorhandener Begleitdatei - ohne Rezept lohnt der
+        ''' teure Decode in der Einzelansicht nicht.</summary>
+        Friend Shared Function SollRawEntwickeln(immerEntwickeln As Boolean, libRawVorhanden As Boolean,
+                                                 einstellungAn As Boolean, begleitdateiDa As Boolean) As Boolean
+            If Not libRawVorhanden Then Return False
+            If immerEntwickeln Then Return True
+            Return einstellungAn AndAlso begleitdateiDa
+        End Function
+
+        ''' <param name="immerEntwickeln">Im Bildvergleich gesetzt. Dort ist die eingebettete
+        ''' Kamera-Vorschau die falsche Quelle: sie zeigt die Wiedergabe der KAMERA, nicht unsere -
+        ''' zwei RAWs nebeneinander waeren damit nach der Kamera beurteilt statt nach der eigenen
+        ''' Entwicklung, und ein RAW neben einem JPEG vergliche zwei verschiedene Pipelines. Kostet
+        ''' den vollen Decode je Bild; das linke Bild bleibt deshalb stehen und wird beim
+        ''' Weiterblaettern nicht neu geladen (siehe LadeVergleichsbilder).</param>
+        Private Shared Function DecodeViewerBitmap(path As String, Optional immerEntwickeln As Boolean = False) As Bitmap
             If RawPreviewService.IsSupportedRaw(path) Then
-                ' Optionale entwickelte Vorschau (nur bei aktiver Einstellung + vorhandener .fpxmp +
-                ' verfügbarem LibRaw): das bearbeitete RAW wie im Editor, statt der schnellen
-                ' eingebetteten Vorschau. ApplyAdjustments liefert bereits orientiert + mit Rezept-Geometrie.
-                If AppSettingsService.Load().DevelopRawInViewer AndAlso RawDecodeService.IsAvailable AndAlso RawSidecarService.Exists(path) Then
-                    Dim adj = RawSidecarService.TryRead(path)
-                    If adj IsNot Nothing Then
-                        Try
-                            Dim developed = ImageProcessor.ApplyAdjustments(path, adj)
-                            If developed IsNot Nothing Then Return developed
-                        Catch
-                        End Try
-                    End If
+                ' Entwickelte Vorschau statt der schnellen eingebetteten: im Vergleich immer, sonst
+                ' nur bei aktiver Einstellung und vorhandener .fpxmp. ApplyAdjustments liefert
+                ' bereits orientiert + mit Rezept-Geometrie.
+                If SollRawEntwickeln(immerEntwickeln, RawDecodeService.IsAvailable,
+                                     AppSettingsService.Load().DevelopRawInViewer,
+                                     RawSidecarService.Exists(path)) Then
+                    ' Ohne Begleitdatei die Vorgabewerte: entwickelt wird trotzdem, nur eben ohne
+                    ' Rezept. Genau das ist im Vergleich gewollt.
+                    Dim adj = If(RawSidecarService.Exists(path), RawSidecarService.TryRead(path), Nothing)
+                    If adj Is Nothing Then adj = New ImageAdjustments()
+                    Try
+                        Dim developed = ImageProcessor.ApplyAdjustments(path, adj)
+                        If developed IsNot Nothing Then Return developed
+                    Catch
+                        ' Faellt die Entwicklung aus (fehlendes LibRaw, defekte Datei), lieber die
+                        ' eingebettete Vorschau als eine leere Flaeche.
+                    End Try
                 End If
                 Using preview = RawPreviewService.ExtractPreviewWithFallback(path)
                     ' Gedrehte RAWs tragen ihre Drehung im Sidecar (die Datei selbst wird nie
@@ -2227,13 +2567,7 @@ Namespace ViewModels
             If _isFitToWindow Then UpdateFitZoom()
             UpdateStatus()
             LoadInfoPanelData(_currentImagePath)
-            _isFavorite = LibraryService.Instance.GetFavorite(_currentImagePath)
-            Me.RaisePropertyChanged(NameOf(IsFavorite))
-            _rating = LibraryService.Instance.GetRating(_currentImagePath)
-            Me.RaisePropertyChanged(NameOf(Rating))
-            Me.RaisePropertyChanged(NameOf(RatingText))
-            _colorLabel = LibraryService.Instance.GetColorLabel(_currentImagePath)
-            RaiseColorLabelProperties()
+            UebernehmeKatalogAttribute(_currentImagePath)
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
@@ -2253,7 +2587,18 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Loeschen ist im Vergleich gesperrt. Dort stehen ZWEI Bilder nebeneinander, und
+        ''' welches der Knopf traefe, waere nicht ablesbar - der Fokus ist eine feine Markierung, kein
+        ''' Sicherheitsmerkmal fuer eine nicht umkehrbare Aktion. Wer loeschen will, verlaesst den
+        ''' Vergleich; dann ist eindeutig, was gemeint ist.</summary>
+        Public ReadOnly Property CanDeleteCurrent As Boolean
+            Get
+                Return Not _isCompareMode AndAlso Not String.IsNullOrEmpty(_currentImagePath)
+            End Get
+        End Property
+
         Private Sub DeleteCurrent()
+            If Not CanDeleteCurrent Then Return
             ' In einer Immich-Sitzung ist _currentImagePath nur die heruntergeladene Temp-Kopie - die zu
             ' löschen wäre wirkungslos (sie wäre beim nächsten Blättern wieder da). Gemeint ist das Asset.
             If _isImmichSession Then
@@ -2426,7 +2771,30 @@ Namespace ViewModels
             ZoomLevel = fitZoom
         End Sub
 
+        Private _compareViewportWidth As Double
+        Private _compareViewportHeight As Double
+
+        ''' <summary>Die Groesse EINER Vergleichsflaeche. Der Vergleich braucht eine eigene, weil die
+        ''' einzelne Bildflaeche waehrenddessen ausgeblendet ist und damit Groesse null meldet - das
+        ''' Einpassen rechnete sonst mit einer Flaeche von null und lieferte stumpf 100 %.</summary>
+        Public Sub SetCompareViewportSize(width As Double, height As Double)
+            _compareViewportWidth = Math.Max(0, width)
+            _compareViewportHeight = Math.Max(0, height)
+            If _isCompareMode AndAlso _isFitToWindow Then UpdateFitZoom()
+        End Sub
+
         Private Function CalculateFitZoom() As Double
+            ' Im Vergleich zaehlt das Bild IN DER FLAECHE, nicht das versteckte Einzelbild. Bei RAW
+            ' sind das zwei verschiedene Groessen: die Flaechen zeigen die volle Entwicklung, das
+            ' Einzelbild die kleine eingebettete Vorschau. Mit deren Groesse gerechnet fiel das
+            ' Einpassen um den Faktor zwischen beiden daneben.
+            If _isCompareMode Then
+                Dim quelle = If(CompareLeftImage, CompareRightImage)
+                If quelle Is Nothing OrElse _compareViewportWidth <= 0 OrElse _compareViewportHeight <= 0 Then Return 1.0
+                Return EinpassenFaktor(quelle.Size.Width, quelle.Size.Height,
+                                       _compareViewportWidth, _compareViewportHeight)
+            End If
+
             If CurrentImage Is Nothing OrElse _imageViewportWidth <= 0 OrElse _imageViewportHeight <= 0 Then
                 Return 1.0
             End If
@@ -2445,9 +2813,15 @@ Namespace ViewModels
                 Return 1.0
             End If
 
-            Dim scaleX = _imageViewportWidth / imageWidth
-            Dim scaleY = _imageViewportHeight / imageHeight
-            Dim fitScale = Math.Max(0.05, Math.Min(scaleX, scaleY))
+            Return EinpassenFaktor(imageWidth, imageHeight, _imageViewportWidth, _imageViewportHeight)
+        End Function
+
+        ''' <summary>Die EINE Einpassen-Rechnung fuer Einzelbild und Vergleich. Vorher stand sie nur
+        ''' im Einzelbild-Weg; der Vergleich hatte gar keine.</summary>
+        Private Function EinpassenFaktor(bildBreite As Double, bildHoehe As Double,
+                                         flaecheBreite As Double, flaecheHoehe As Double) As Double
+            If bildBreite <= 0 OrElse bildHoehe <= 0 OrElse flaecheBreite <= 0 OrElse flaecheHoehe <= 0 Then Return 1.0
+            Dim fitScale = Math.Max(0.05, Math.Min(flaecheBreite / bildBreite, flaecheHoehe / bildHoehe))
 
             ' "Nur wenn größer": kleinere Bilder nicht auf die Darstellungsfläche hochskalieren,
             ' sondern in Originalgröße (100%) zeigen - "Immer einpassen" (Default) skaliert dagegen

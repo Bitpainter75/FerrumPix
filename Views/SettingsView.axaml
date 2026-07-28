@@ -95,6 +95,15 @@
                         <TextBlock Text="Tastenkürzel"/>
                     </StackPanel>
                 </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="TechnologySection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/license.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Technologie"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Border>
 
@@ -1113,6 +1122,18 @@
                                           OffContent=""
                                           VerticalAlignment="Center"/>
                         </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Objektivfehler korrigieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gleicht Verzeichnung, Farbsäume an den Bildecken und Randabdunklung anhand von Messwerten für das verwendete Objektiv aus. Objektiv und Kamera werden aus den Aufnahmedaten erkannt; liegen für das Objektiv keine Messwerte vor, bleibt das Bild unverändert. Diese Vorgabe lässt sich pro Bild im Werkzeug übersteuern." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding LensDatabaseInfo}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding LensCorrectionEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -1466,6 +1487,42 @@
                             </Grid>
                         </StackPanel>
 
+                        <TextBlock Text="Bildvergleich" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
+                        <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Leertaste" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Seiten tauschen - das rechte Bild wird das neue angeheftete" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Pfeil links oder rechts" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Nur die rechte Fläche blättert weiter, das angeheftete Bild bleibt links stehen" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Vergleich beenden" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Klick auf eine Fläche" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Diese Fläche bekommt den Fokus; Fußzeile und Infopanel zeigen ihr Bild" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Doppelklick auf eine Fläche" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Dieses Bild im Editor öffnen" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Ziehen mit links oder rechts" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Ausschnitt verschieben; gekoppelt zieht die andere Fläche mit" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Strg+Mausrad oder Rechtsklick+Mausrad" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Zoomen - ein Wert gilt für beide Flächen" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Im Vergleich ohne Wirkung - gelöscht wird über die Marke auf dem jeweiligen Bild" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </Grid>
+                        </StackPanel>
+
                         <TextBlock Text="Betrachter" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
                         <StackPanel Spacing="6">
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1811,6 +1868,18 @@
                                 </Button>
                                 <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/tabler/tabler-icons/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                     <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                </Button>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Lensfun" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Kalibrierdaten fotografischer Objektive (Datenbank, unverändert mitgeliefert)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/lensfun/lensfun" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
+                                </Button>
+                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://creativecommons.org/licenses/by-sa/3.0/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                    <TextBlock Text="CC-BY-SA-3.0" FontSize="{DynamicResource FP.Font.Caption}"/>
                                 </Button>
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">

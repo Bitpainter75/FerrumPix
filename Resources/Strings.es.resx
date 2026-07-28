@@ -3875,9 +3875,6 @@
   <data name="Wirkt_auf_das_ganze_Bild_unabh_ngig_vom_Tonwert_ddd82eb2" xml:space="preserve">
     <value>Afecta a toda la imagen, independientemente del tono</value>
   </data>
-  <data name="Entfernt_Filter_LUT_und_Lightroom_Preset_dec8af39" xml:space="preserve">
-    <value>Elimina el filtro, la LUT y el preajuste de Lightroom</value>
-  </data>
   <data name="LUT_entfernen_528e89c6" xml:space="preserve">
     <value>Quitar LUT</value>
   </data>
@@ -4316,9 +4313,6 @@
   <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Betrac_baaac979" xml:space="preserve">
     <value>Cómo se revelan los archivos RAW y cómo se muestran en la galería, el visor y el editor.</value>
   </data>
-  <data name="Hellt_jedes_entwickelte_RAW_automatisch_auf_bis__39c16dfa" xml:space="preserve">
-    <value>Aclara automáticamente cada RAW revelado hasta que las partes más claras de la imagen quedan casi blancas. Desactivado, FerrumPix revela como Lightroom: se conserva la tonalidad de la toma y una curva base fílmica da a medios tonos, luces y colores su carácter habitual. Surte efecto la próxima vez que se abra una imagen o se reconstruya una vista previa.</value>
-  </data>
   <data name="Automatische_Bildverbesserung_4d6123c8" xml:space="preserve">
     <value>Mejora automática de la imagen</value>
   </data>
@@ -4663,5 +4657,128 @@
   </data>
   <data name="Bild_anheften_das_n_chste_Bild_wird_daneben_zum__e44dba37" xml:space="preserve">
     <value>Fijar la imagen: la siguiente se muestra al lado para comparar</value>
+  </data>
+  <data name="Ausschnitt_beider_Bilder_koppeln_ausgeschaltet_l_8e172d22" xml:space="preserve">
+    <value>Vincular el encuadre visible de ambas fotos: desactivado, cada lado se puede mover por separado</value>
+  </data>
+  <data name="Seiten_tauschen_das_rechte_Bild_wird_das_neue_an_b646b7a7" xml:space="preserve">
+    <value>Intercambiar lados: la foto de la derecha pasa a ser la fijada</value>
+  </data>
+  <data name="Objektivfehler_korrigieren_339a0d12" xml:space="preserve">
+    <value>Corregir defectos del objetivo</value>
+  </data>
+  <data name="Gleicht_Verzeichnung_Farbs_ume_an_den_Bildecken__e2270841" xml:space="preserve">
+    <value>Compensa la distorsión, los bordes de color en las esquinas y el oscurecimiento periférico a partir de mediciones del objetivo utilizado. El objetivo y la cámara se reconocen por los datos de la toma; si no hay mediciones para el objetivo, la foto queda sin cambios. Este valor predeterminado puede anularse por foto en la herramienta.</value>
+  </data>
+  <data name="Kalibrierdaten_fotografischer_Objektive_Datenban_d213de78" xml:space="preserve">
+    <value>Datos de calibración de objetivos fotográficos (base de datos, incluida sin cambios)</value>
+  </data>
+  <data name="Mitgelieferte_Messwerte_67e0b136" xml:space="preserve">
+    <value>Mediciones incluidas</value>
+  </data>
+  <data name="Objektive_05af14bf" xml:space="preserve">
+    <value>objetivos</value>
+  </data>
+  <data name="Lensfun_a1831dc5" xml:space="preserve">
+    <value>Lensfun</value>
+  </data>
+  <data name="CC_BY_SA_3_0_00b3dfee" xml:space="preserve">
+    <value>CC-BY-SA-3.0</value>
+  </data>
+  <data name="Bildvergleich_4c30b57f" xml:space="preserve">
+    <value>Comparación de fotos</value>
+  </data>
+  <data name="Pfeil_links_oder_rechts_478c9dd8" xml:space="preserve">
+    <value>Flecha izquierda o derecha</value>
+  </data>
+  <data name="Nur_die_rechte_Fl_che_bl_ttert_weiter_das_angehe_61b1444d" xml:space="preserve">
+    <value>Solo el lado derecho avanza; la foto fijada permanece a la izquierda</value>
+  </data>
+  <data name="Vergleich_beenden_aef82dd2" xml:space="preserve">
+    <value>Finalizar la comparación</value>
+  </data>
+  <data name="Klick_auf_eine_Fl_che_a443a0dd" xml:space="preserve">
+    <value>Clic en un lado</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_c6b6883e" xml:space="preserve">
+    <value>Ese lado recibe el foco; el pie y el panel de información muestran su foto</value>
+  </data>
+  <data name="Doppelklick_auf_eine_Fl_che_b28710b4" xml:space="preserve">
+    <value>Doble clic en un lado</value>
+  </data>
+  <data name="Dieses_Bild_im_Editor_ffnen_b01164aa" xml:space="preserve">
+    <value>Abrir esa foto en el editor</value>
+  </data>
+  <data name="Ziehen_mit_links_oder_rechts_bac5657f" xml:space="preserve">
+    <value>Arrastrar con el botón izquierdo o derecho</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_zieht_die_ander_09265778" xml:space="preserve">
+    <value>Mover el encuadre visible; si están vinculados el otro lado sigue</value>
+  </data>
+  <data name="Zoomen_ein_Wert_gilt_f_r_beide_Fl_chen_6a3eae68" xml:space="preserve">
+    <value>Zoom: un valor se aplica a ambos lados</value>
+  </data>
+  <data name="Im_Vergleich_ohne_Wirkung_gel_scht_wird_ber_die__6454ff70" xml:space="preserve">
+    <value>Sin efecto en la comparación: se elimina con la marca sobre la propia foto</value>
+  </data>
+  <data name="Keine_Objektivangabe_in_den_Aufnahmedaten_facb09b8" xml:space="preserve">
+    <value>Los datos de la toma no indican objetivo</value>
+  </data>
+  <data name="keine_Messwerte_vorhanden_0add488c" xml:space="preserve">
+    <value>sin mediciones disponibles</value>
+  </data>
+  <data name="von_Hand_zugeordnet_abdd7876" xml:space="preserve">
+    <value>asignado manualmente</value>
+  </data>
+  <data name="Objektivkorrektur_3d646ca4" xml:space="preserve">
+    <value>Corrección del objetivo</value>
+  </data>
+  <data name="Verzeichnung_a8329dc9" xml:space="preserve">
+    <value>Distorsión</value>
+  </data>
+  <data name="Farbs_ume_an_den_Bildecken_1c325dc3" xml:space="preserve">
+    <value>Franjas de color en las esquinas</value>
+  </data>
+  <data name="Randabdunklung_044044b6" xml:space="preserve">
+    <value>Oscurecimiento periférico</value>
+  </data>
+  <data name="Wird_das_Objektiv_nicht_erkannt_l_sst_es_sich_hi_442dfd21" xml:space="preserve">
+    <value>Si el objetivo no se reconoce, puede asignarse manualmente aquí. La asignación se aplica después a todas las fotos del mismo objetivo.</value>
+  </data>
+  <data name="Biegt_das_Bild_zur_ck_sodass_gerade_Linien_wiede_07525cc7" xml:space="preserve">
+    <value>Endereza la imagen para que las líneas rectas vuelvan a serlo. Conviene decidirlo al principio: si se cambia más tarde, las máscaras y los objetos insertados dejan de encajar con precisión.</value>
+  </data>
+  <data name="Verschiebt_Rot_und_Blau_gegen_Gr_n_zur_ck_und_en_fe8ee910" xml:space="preserve">
+    <value>Desplaza el rojo y el azul de vuelta respecto al verde y elimina los bordes de color en los contornos de alto contraste de las esquinas.</value>
+  </data>
+  <data name="Hellt_die_Bildecken_auf_soweit_das_Objektiv_dort_9ea43575" xml:space="preserve">
+    <value>Aclara las esquinas en la medida en que el objetivo pierde luz allí.</value>
+  </data>
+  <data name="Auf_automatische_Erkennung_zur_cksetzen_86d72329" xml:space="preserve">
+    <value>Restablecer a la detección automática</value>
+  </data>
+  <data name="Farbs_ume_5e919643" xml:space="preserve">
+    <value>Franjas de color</value>
+  </data>
+  <data name="St_rke_der_Verzeichnungskorrektur_25eaf0ac" xml:space="preserve">
+    <value>Intensidad de la corrección de distorsión</value>
+  </data>
+  <data name="St_rke_der_Farbsaum_Korrektur_d5c7e53f" xml:space="preserve">
+    <value>Intensidad de la corrección de franjas de color</value>
+  </data>
+  <data name="St_rke_der_Randabdunklungs_Korrektur_99e38bd9" xml:space="preserve">
+    <value>Intensidad de la corrección del oscurecimiento periférico</value>
+  </data>
+  <data name="von_Hand_gew_hlt_nur_f_r_dieses_Bild_7446d453" xml:space="preserve">
+    <value>elegido manualmente, solo para esta foto</value>
+  </data>
+  <data name="Objektiv_suchen_bd4aa71c" xml:space="preserve">
+    <value>Buscar un objetivo…</value>
+  </data>
+  <data name="Das_eingetragene_Objektiv_bernehmen_00fb88c7" xml:space="preserve">
+    <value>Aplicar el objetivo introducido</value>
+  </data>
+  <data name="Zoom_ohne_Brennweitenangabe_nicht_zuzuordnen_abbfb8cc" xml:space="preserve">
+    <value>zoom sin distancia focal: no se puede asignar</value>
   </data>
 </root>

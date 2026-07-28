@@ -166,7 +166,7 @@ Namespace Services
         End Function
 
         ' ── Mitwandern bei Dateioperationen ──────────────────────────────────────
-        ' Wie XMP-Sidecars in Lightroom: Verschieben/Kopieren/Umbenennen/Loeschen der RAW-Datei
+        ' Wie XMP-Sidecars ueblicherweise: Verschieben/Kopieren/Umbenennen/Loeschen der RAW-Datei
         ' nimmt die Begleitdatei mit. Immer best effort - ein Fehler an der Begleitdatei darf die
         ' Hauptoperation nie scheitern lassen (deshalb schlucken alle drei Methoden Ausnahmen).
 
@@ -240,7 +240,7 @@ Namespace Services
 
         Private Shared ReadOnly _rotationCache As New ConcurrentDictionary(Of String, CachedRotation)(PathIdentity.Comparer)
 
-        ''' <summary>Übernimmt die Entwicklungseinstellungen aus einer Lightroom-/Camera-Raw-Sidecar
+        ''' <summary>Übernimmt die Entwicklungseinstellungen aus einer XMP-Sidecar
         ''' ("foto.cr2.xmp" oder "foto.xmp") in eine neue .fpxmp - EINMALIG, solange es noch keine gibt.
         '''
         ''' Damit gibt es genau EINEN Ort, an dem crs:-Werte in unser Rezeptformat übersetzt werden: der
@@ -259,7 +259,7 @@ Namespace Services
             Try
                 Dim xmpPath = XmpSidecarService.FindSidecar(rawPath)
                 If String.IsNullOrEmpty(xmpPath) Then Return False
-                Dim look = LightroomPresetService.LoadLook(xmpPath)
+                Dim look = XmpPresetService.LoadLook(xmpPath)
                 If look Is Nothing OrElse Not HasAnyAdjustment(look) Then Return False
                 Return TryWrite(rawPath, look)
             Catch

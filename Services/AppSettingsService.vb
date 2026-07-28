@@ -48,7 +48,14 @@ Namespace Services
         Public Property RecipeJson As String = ""
     End Class
 
-    Public Class LightroomPresetSettings
+    ''' <summary>Eine von Hand gesetzte Objektiv-Zuordnung: der Name aus dem EXIF und der Eintrag
+    ''' aus der mitgelieferten Sammlung, der dafuer gelten soll.</summary>
+    Public Class LensAssignment
+        Public Property ExifName As String = ""
+        Public Property Modell As String = ""
+    End Class
+
+    Public Class XmpPresetSettings
         Implements INotifyPropertyChanged
 
         Public Property Id As String = Guid.NewGuid().ToString("N")
@@ -264,7 +271,16 @@ Namespace Services
         ''' AdjustmentPresetSettings) und der Name der zuletzt benutzten.
         Public Property AdjustmentPresets As New List(Of AdjustmentPresetSettings)()
         Public Property LastAdjustmentPresetName As String = ""
-        Public Property LightroomPresets As New List(Of LightroomPresetSettings)()
+        ' Der Name bleibt so: er ist der Schluessel in der settings.json. Umbenennen hiesse,
+        ' dass bereits gespeicherte Presets bei vorhandenen Installationen verschwinden.
+        ''' <summary>Objektivkorrektur (Verzeichnung, Farbquerfehler, Vignettierung) als
+        ''' VORGABE fuer neue Bilder. Standard AN: die Korrektur beruht auf Messwerten des
+        ''' jeweiligen Objektivs, und ohne Messwerte passiert ohnehin nichts. Pro Bild ist
+        ''' sie im Werkzeug uebersteuerbar.</summary>
+        Public Property LensCorrectionEnabled As Boolean = True
+        Public Property LensAssignments As New List(Of LensAssignment)()
+
+        Public Property LightroomPresets As New List(Of XmpPresetSettings)()
         Public Property LutPresets As New List(Of LutPresetSettings)()
 
         ' Immich-Anbindung (self-hosted Foto-Server). Der Baum blendet den Immich-Zweig nur ein,
@@ -414,7 +430,7 @@ Namespace Services
                 settings.LastWatermarkPresetName = NormalizePresetName(settings.LastWatermarkPresetName)
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
                 settings.AdjustmentPresets = NormalizeAdjustmentPresets(settings.AdjustmentPresets)
-                settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
+                settings.LightroomPresets = NormalizeXmpPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Return settings
             Catch ex As JsonException
@@ -498,7 +514,7 @@ Namespace Services
                 settings.LastWatermarkPresetName = NormalizePresetName(settings.LastWatermarkPresetName)
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
                 settings.AdjustmentPresets = NormalizeAdjustmentPresets(settings.AdjustmentPresets)
-                settings.LightroomPresets = NormalizeLightroomPresets(settings.LightroomPresets)
+                settings.LightroomPresets = NormalizeXmpPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
                 Dim json = JsonSerializer.Serialize(settings, New JsonSerializerOptions With {.WriteIndented = True})
 
@@ -941,16 +957,16 @@ Namespace Services
             End Select
         End Function
 
-        Public Shared Function NormalizeLightroomPresets(value As List(Of LightroomPresetSettings)) As List(Of LightroomPresetSettings)
-            Dim result As New List(Of LightroomPresetSettings)()
+        Public Shared Function NormalizeXmpPresets(value As List(Of XmpPresetSettings)) As List(Of XmpPresetSettings)
+            Dim result As New List(Of XmpPresetSettings)()
             Dim seenPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-            For Each preset In If(value, New List(Of LightroomPresetSettings)())
+            For Each preset In If(value, New List(Of XmpPresetSettings)())
                 If preset Is Nothing Then Continue For
                 Dim presetPath = NormalizeFolderPath(preset.Path)
                 If String.IsNullOrWhiteSpace(presetPath) OrElse Not seenPaths.Add(presetPath) Then Continue For
                 Dim name = If(preset.Name, "").Trim()
                 If String.IsNullOrWhiteSpace(name) Then name = IO.Path.GetFileNameWithoutExtension(presetPath)
-                result.Add(New LightroomPresetSettings With {
+                result.Add(New XmpPresetSettings With {
                     .Id = If(String.IsNullOrWhiteSpace(preset.Id), Guid.NewGuid().ToString("N"), preset.Id),
                     .Name = name,
                     .Path = presetPath

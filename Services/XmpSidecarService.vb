@@ -90,14 +90,14 @@ Namespace Services
             Try
                 For Each description In doc.Descendants(RdfNs + "Description")
                     ' Beide Schreibweisen abdecken: derselbe Wert steht je nach Erzeuger als ATTRIBUT
-                    ' am rdf:Description oder als KINDELEMENT darunter. Lightroom bevorzugt Attribute,
+                    ' am rdf:Description oder als KINDELEMENT darunter. Die Erzeuger bevorzugen Attribute,
                     ' exiftool schreibt Elemente - wer nur eine Form liest, verliert die halbe Welt.
                     If Not result.Rating.HasValue Then
                         Dim ratingText = ReadValue(description, XmpNs + "Rating")
                         Dim parsed As Double
                         If Not String.IsNullOrWhiteSpace(ratingText) AndAlso
                            Double.TryParse(ratingText, NumberStyles.Float, CultureInfo.InvariantCulture, parsed) Then
-                            ' Lightroom kennt "abgelehnt" als Bewertung -1; unsere Skala geht bei 0 los.
+                            ' Das Schema kennt "abgelehnt" als Bewertung -1; unsere Skala geht bei 0 los.
                             result.Rating = CInt(Math.Max(0, Math.Min(5, Math.Round(parsed))))
                         End If
                     End If
@@ -150,7 +150,7 @@ Namespace Services
             Next
         End Sub
 
-        ''' <summary>xmp:Label führt einen freien Text; Lightroom und die meisten anderen schreiben dort
+        ''' <summary>xmp:Label führt einen freien Text; Die meisten Programme schreiben dort
         ''' Farbwörter. Unsere ColorLabel-Spalte hält dagegen Hex-Werte aus der Akzentfarben-Palette
         ''' (siehe AppSettingsService.NormalizeAccentColor), und der Galerie-Filter vergleicht sie
         ''' ORDINAL - die Großschreibung hier ist deshalb Teil der Zusicherung, nicht Kosmetik.
@@ -170,7 +170,7 @@ Namespace Services
         End Function
 
         ''' <summary>Umkehrung von <see cref="MapLabel"/> für den Schreibweg: unser Hex-Akzent → das
-        ''' englische Lightroom-Farbwort (das andere Programme in xmp:Label erwarten). Round-Trip-sicher:
+        ''' englische englische Farbwort (das andere Programme in xmp:Label erwarten). Round-Trip-sicher:
         ''' das zurückgegebene Wort ergibt über MapLabel wieder exakt denselben Hex. Leer, wenn der Hex
         ''' kein Palettenwert ist (dann wird kein xmp:Label geschrieben, statt zu raten). Vergleich über
         ''' die 6 RGB-Hexstellen, groß-/kleinschreib- und Alpha-tolerant.</summary>

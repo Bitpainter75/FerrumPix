@@ -295,7 +295,7 @@ Namespace ViewModels
         Private _lutPath As String = ""
         Private _lutStrength As Double = 100
         Private _lastAppliedFilterPresetName As String = ""
-        Private _lastAppliedLightroomPresetPath As String = ""
+        Private _lastAppliedXmpPresetPath As String = ""
         Private _lastAppliedLutPresetPath As String = ""
         Private _whiteBalance As String = "Wie Aufnahme"
         Private _rotationDegrees As Integer = 0
@@ -1186,11 +1186,11 @@ Namespace ViewModels
         Private ReadOnly _fixedShapeItems As New ObservableCollection(Of ShapeIconEntry)()
         Private ReadOnly _filteredShapeIcons As New BulkObservableCollection(Of ShapeIconEntry)()
         Private ReadOnly _watermarkPresets As New List(Of WatermarkPresetSettings)()
-        Public ReadOnly Property SavedLightroomPresets As ObservableCollection(Of LightroomPresetSettings) = New ObservableCollection(Of LightroomPresetSettings)()
+        Public ReadOnly Property SavedXmpPresets As ObservableCollection(Of XmpPresetSettings) = New ObservableCollection(Of XmpPresetSettings)()
         Public ReadOnly Property SavedLutPresets As ObservableCollection(Of LutPresetSettings) = New ObservableCollection(Of LutPresetSettings)()
 
         ''' <summary>Der Name des zuletzt angewendeten Filters - und "Keine", wenn ÜBERHAUPT KEIN Look
-        ''' anliegt, also weder Filter noch LUT noch Lightroom-Preset.
+        ''' anliegt, also weder Filter noch LUT noch XMP-Preset.
         '''
         ''' Damit markiert der Knopf „Keine" den Zustand, den er herstellt: er ist das globale
         ''' Zurücksetzen aller drei Look-Quellen (siehe ApplyExclusiveFilterPreset, das ResetFilterInternal
@@ -1199,7 +1199,7 @@ Namespace ViewModels
         Public ReadOnly Property LastAppliedFilterPresetName As String
             Get
                 If Not String.IsNullOrEmpty(_lastAppliedFilterPresetName) Then Return _lastAppliedFilterPresetName
-                If Not String.IsNullOrWhiteSpace(_lastAppliedLightroomPresetPath) Then Return ""
+                If Not String.IsNullOrWhiteSpace(_lastAppliedXmpPresetPath) Then Return ""
                 If Not String.IsNullOrWhiteSpace(_lastAppliedLutPresetPath) Then Return ""
                 Return "Keine"
             End Get
@@ -1526,23 +1526,23 @@ Namespace ViewModels
             Next
         End Sub
 
-        Private Sub LoadSavedLightroomPresets()
-            SavedLightroomPresets.Clear()
+        Private Sub LoadSavedXmpPresets()
+            SavedXmpPresets.Clear()
             For Each preset In AppSettingsService.Load().LightroomPresets
-                SavedLightroomPresets.Add(preset)
+                SavedXmpPresets.Add(preset)
             Next
-            SyncLastAppliedLightroomPreset()
+            SyncLastAppliedXmpPreset()
         End Sub
 
-        Private Sub PersistSavedLightroomPresets()
+        Private Sub PersistSavedXmpPresets()
             Dim settings = AppSettingsService.Load()
-            settings.LightroomPresets = SavedLightroomPresets.Select(Function(p) New LightroomPresetSettings With {
+            settings.LightroomPresets = SavedXmpPresets.Select(Function(p) New XmpPresetSettings With {
                 .Id = p.Id,
                 .Name = p.Name,
                 .Path = p.Path
             }).ToList()
             AppSettingsService.Save(settings)
-            LoadSavedLightroomPresets()
+            LoadSavedXmpPresets()
         End Sub
 
         Private Sub LoadSavedLutPresets()
@@ -1565,28 +1565,28 @@ Namespace ViewModels
             End If
 
             If hasFilter Then
-                _lastAppliedLightroomPresetPath = ""
+                _lastAppliedXmpPresetPath = ""
                 _lastAppliedLutPresetPath = ""
-                SyncLastAppliedLightroomPreset()
+                SyncLastAppliedXmpPreset()
                 SyncLastAppliedLutPreset()
             End If
         End Sub
 
-        Private Sub SetLastAppliedLightroomPreset(xmpPath As String)
+        Private Sub SetLastAppliedXmpPreset(xmpPath As String)
             _lastAppliedFilterPresetName = ""
             Me.RaisePropertyChanged(NameOf(LastAppliedFilterPresetName))
             _lastAppliedLutPresetPath = ""
-            _lastAppliedLightroomPresetPath = If(xmpPath, "").Trim()
-            SyncLastAppliedLightroomPreset()
+            _lastAppliedXmpPresetPath = If(xmpPath, "").Trim()
+            SyncLastAppliedXmpPreset()
             SyncLastAppliedLutPreset()
         End Sub
 
         Private Sub SetLastAppliedLutPreset(cubePath As String)
             _lastAppliedFilterPresetName = ""
             Me.RaisePropertyChanged(NameOf(LastAppliedFilterPresetName))
-            _lastAppliedLightroomPresetPath = ""
+            _lastAppliedXmpPresetPath = ""
             _lastAppliedLutPresetPath = If(cubePath, "").Trim()
-            SyncLastAppliedLightroomPreset()
+            SyncLastAppliedXmpPreset()
             SyncLastAppliedLutPreset()
         End Sub
 
@@ -1724,17 +1724,17 @@ Namespace ViewModels
 
         Private Sub ClearLastAppliedLook()
             _lastAppliedFilterPresetName = ""
-            _lastAppliedLightroomPresetPath = ""
+            _lastAppliedXmpPresetPath = ""
             _lastAppliedLutPresetPath = ""
             Me.RaisePropertyChanged(NameOf(LastAppliedFilterPresetName))
-            SyncLastAppliedLightroomPreset()
+            SyncLastAppliedXmpPreset()
             SyncLastAppliedLutPreset()
         End Sub
 
-        Private Sub SyncLastAppliedLightroomPreset()
-            For Each preset In SavedLightroomPresets
-                preset.IsLastApplied = Not String.IsNullOrWhiteSpace(_lastAppliedLightroomPresetPath) AndAlso
-                    String.Equals(preset.Path, _lastAppliedLightroomPresetPath, StringComparison.OrdinalIgnoreCase)
+        Private Sub SyncLastAppliedXmpPreset()
+            For Each preset In SavedXmpPresets
+                preset.IsLastApplied = Not String.IsNullOrWhiteSpace(_lastAppliedXmpPresetPath) AndAlso
+                    String.Equals(preset.Path, _lastAppliedXmpPresetPath, StringComparison.OrdinalIgnoreCase)
             Next
         End Sub
 
@@ -4296,7 +4296,7 @@ Namespace ViewModels
         ''' <summary>Der EINE Regler „Farbrauschen" im Panel, bipolar wie sein Nachbar „Rauschen":
         ''' minus entfernt Farbrauschen, plus fuegt welches hinzu. Er ist bewusst nur die Anzeigeseite
         ''' zweier getrennt gespeicherter Werte - <see cref="ColorNoiseReduction"/> muss 0-100
-        ''' „Entfernung" bleiben, weil genau das aus crs:ColorNoiseReduction eines Lightroom-Presets
+        ''' „Entfernung" bleiben, weil genau das aus crs:ColorNoiseReduction eines XMP-Presets
         ''' kommt und auch dorthin zurueckgeschrieben wird. Eine gemeinsame Skala mit Vorzeichen waere
         ''' beim Preset-Import zweideutig gewesen.
         ''' Die beiden Seiten schliessen sich aus: wer ins Minus zieht, hat kein Plus mehr stehen.</summary>
@@ -4368,6 +4368,354 @@ Namespace ViewModels
                 SetUndoableDouble(_vibrance, value, NameOf(Vibrance))
             End Set
         End Property
+
+        ' ── Objektivkorrektur ───────────────────────────────────────────────────
+        '
+        ' Die drei Schalter veraendern den DECODE, nicht die Reglerkette. Deshalb wird das
+        ' Arbeitsbild neu aufgebaut, wenn einer umgelegt wird - ein blosses Nachrendern zeigte
+        ' weiterhin das alte Bild. Das kostet bei RAW spuerbar Zeit; es ist eine Entscheidung, die
+        ' man einmal am Anfang trifft, nicht ein Regler zum Spielen.
+
+        Private _lensDistortion As Boolean? = Nothing
+        Private _lensTca As Boolean? = Nothing
+        Private _lensVignetting As Boolean? = Nothing
+        Private _objektivKorrektur As ObjektivDatenService.Korrektur = Nothing
+        Private _objektivExifName As String = ""
+        ' Von Hand gewaehltes Objektiv, wenn die Aufnahmedaten keines nennen (Rezeptfeld).
+        Private _lensModel As String = ""
+        Private _objektivKamera As (Hersteller As String, Modell As String) = ("", "")
+
+        Public ReadOnly Property LensCorrectionAvailable As Boolean
+            Get
+                Return _objektivKorrektur IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Was in der Gruppe oben steht: das erkannte Objektiv, oder warum nichts gefunden
+        ''' wurde. Ohne diese Zeile waere nicht unterscheidbar, ob die Korrektur nichts tut, weil
+        ''' sie aus ist, weil das Objektiv fehlt oder weil es gar keine Aufnahmedaten gibt.</summary>
+        Public ReadOnly Property LensCorrectionStatus As String
+            Get
+                If String.IsNullOrWhiteSpace(_objektivExifName) Then
+                    If _objektivKorrektur IsNot Nothing Then
+                        Return _objektivKorrektur.ObjektivName & " - " &
+                               LocalizationService.T("von Hand gewählt, nur für dieses Bild")
+                    End If
+                    ' Ein gewaehltes Objektiv OHNE Ergebnis hat einen Grund - den soll die Zeile
+                    ' nennen, statt so auszusehen, als sei der Knopf kaputt.
+                    If Not String.IsNullOrWhiteSpace(_lensModel) Then
+                        If ObjektivDatenService.BrauchtBrennweite(_lensModel, _objektivKamera.Modell) Then
+                            Return _lensModel & " - " &
+                                   LocalizationService.T("Zoom ohne Brennweitenangabe: nicht zuzuordnen")
+                        End If
+                        Return _lensModel & " - " & LocalizationService.T("keine Messwerte vorhanden")
+                    End If
+                    Return LocalizationService.T("Keine Objektivangabe in den Aufnahmedaten")
+                End If
+                If _objektivKorrektur Is Nothing Then
+                    Return _objektivExifName & " - " & LocalizationService.T("keine Messwerte vorhanden")
+                End If
+                Dim zugeordnet = ObjektivDatenService.ZuordnungFuer(_objektivExifName)
+                If Not String.IsNullOrWhiteSpace(zugeordnet) Then
+                    Return _objektivKorrektur.ObjektivName & " - " & LocalizationService.T("von Hand zugeordnet")
+                End If
+                Return _objektivKorrektur.ObjektivName
+            End Get
+        End Property
+
+        Public ReadOnly Property HasLensDistortionData As Boolean
+            Get
+                Return _objektivKorrektur IsNot Nothing AndAlso _objektivKorrektur.HatVerzeichnung
+            End Get
+        End Property
+
+        Public ReadOnly Property HasLensTcaData As Boolean
+            Get
+                Return _objektivKorrektur IsNot Nothing AndAlso _objektivKorrektur.HatFarbquerfehler
+            End Get
+        End Property
+
+        Public ReadOnly Property HasLensVignettingData As Boolean
+            Get
+                Return _objektivKorrektur IsNot Nothing AndAlso _objektivKorrektur.HatVignettierung
+            End Get
+        End Property
+
+        ''' <summary>Die Objektive, die an diese Kamera passen - fuer die Zuordnung von Hand. Der
+        ''' Anschluss filtert wie beim automatischen Weg: ein Objektiv fuer ein fremdes Bajonett
+        ''' anzubieten hiesse, in genau den Fehler zu fuehren, den die Automatik vermeidet.</summary>
+        Private _lensCandidates As List(Of String) = Nothing
+        Private _lensCandidatesFuer As String = Nothing
+
+        ''' <summary>Die Objektive, die an diese Kamera passen - fuer die Zuordnung von Hand.
+        '''
+        ''' GEMERKT je Kamera, nicht bei jedem Lesen neu gebaut: eine neue Liste laesst das
+        ''' Suchfeld seine Auswahl verwerfen. Genau daran blieb das Feld nach dem Auswaehlen leer -
+        ''' die Uebernahme meldete die Liste mit, das Feld baute neu auf und war die Auswahl wieder
+        ''' los.</summary>
+        Private _lensFilter As String = ""
+
+        ''' <summary>Uebernimmt, was im Suchfeld steht. Getrennt vom Tippen, weil ein Wechsel der
+        ''' Zuordnung das Arbeitsbild neu dekodiert - bei RAW Sekunden. Genommen wird ein genauer
+        ''' Treffer; sonst der einzige, auf den die Eingabe passt. Passt sie auf mehrere, passiert
+        ''' nichts: raten waere hier schlimmer als nichts zu tun.</summary>
+        Public Sub ApplyLensAssignment(eingabe As String)
+            ' Der Text kommt vom Suchfeld MIT, statt aus der Bindung gelesen zu werden: wann eine
+            ' zweiseitige Textbindung zurueckschreibt, haengt am Steuerelement, und ein Knopf, der
+            ' manchmal nichts tut, ist schlimmer als gar keiner.
+            Dim text = If(eingabe, _lensFilter)
+            If String.IsNullOrWhiteSpace(text) Then Return
+            text = text.Trim()
+            Dim alle = LensCandidates
+            If alle.Count = 0 Then Return
+
+            Dim treffer = WaehleObjektiv(text, alle)
+            If Not String.IsNullOrEmpty(treffer) Then LensAssignment = treffer
+        End Sub
+
+        ''' <summary>Welches Objektiv eine Eingabe meint. Als parameterlose Funktion, damit die Regel
+        ''' pruefbar ist, ohne den Editor zu bauen.
+        '''
+        ''' Erst ein genauer Treffer (so kommt eine aus der Liste uebernommene Zeile an), sonst der
+        ''' erste, auf den ALLE eingegebenen Woerter passen - Reihenfolge und Gross-/Kleinschreibung
+        ''' egal, damit "300 sigma" auch "Sigma 300mm ..." findet. Bei mehreren Treffern wird bewusst
+        ''' der erste genommen und NICHT geschwiegen: die Zeile darunter zeigt sofort, was gilt, und
+        ''' das Zuruecksetzen im Kopf loest es wieder. Ein Knopf, der manchmal nichts tut, ist
+        ''' schlimmer als eine sichtbare Vorauswahl.</summary>
+        Friend Shared Function WaehleObjektiv(eingabe As String, kandidaten As List(Of String)) As String
+            If kandidaten Is Nothing OrElse kandidaten.Count = 0 Then Return ""
+            If String.IsNullOrWhiteSpace(eingabe) Then Return ""
+            Dim text = eingabe.Trim()
+            Dim genau = kandidaten.FirstOrDefault(Function(n) String.Equals(n, text, StringComparison.OrdinalIgnoreCase))
+            If Not String.IsNullOrEmpty(genau) Then Return genau
+            Dim worte = text.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
+            Return If(kandidaten.FirstOrDefault(Function(n) worte.All(
+                Function(w) n.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0)), "")
+        End Function
+
+        ''' <summary>Sucheingabe fuer die Objektivliste. Die Sammlung fuehrt ueber 1300 Objektive -
+        ''' ohne Filter ist die Liste unbenutzbar, mit Filter aber weiterhin vollstaendig sichtbar,
+        ''' wenn das Feld leer ist.</summary>
+        Public Property LensFilter As String
+            Get
+                Return _lensFilter
+            End Get
+            Set(value As String)
+                Dim neuerWert = If(value, "")
+                If String.Equals(_lensFilter, neuerWert, StringComparison.Ordinal) Then Return
+                _lensFilter = neuerWert
+                Me.RaisePropertyChanged(NameOf(LensFilter))
+            End Set
+        End Property
+
+
+        Public ReadOnly Property LensCandidates As List(Of String)
+            Get
+                Dim schluessel = _objektivKamera.Hersteller & "|" & _objektivKamera.Modell
+                If _lensCandidates Is Nothing OrElse Not String.Equals(_lensCandidatesFuer, schluessel, StringComparison.Ordinal) Then
+                    _lensCandidates = ObjektivDatenService.PassendeObjektive(_objektivKamera.Hersteller, _objektivKamera.Modell)
+                    _lensCandidatesFuer = schluessel
+                End If
+                Return _lensCandidates
+            End Get
+        End Property
+
+        ''' <summary>Die aktuelle Zuordnung von Hand, leer bei automatischer Erkennung.</summary>
+        ''' <summary>Die Zuordnung von Hand. ZWEI Wege, je nachdem, ob die Aufnahmedaten ein
+        ''' Objektiv nennen:
+        '''
+        ''' - MIT Objektivnamen: dauerhaft ueber den Namen gemerkt, gilt fuer den ganzen Bestand
+        '''   dieses Objektivs. Der haeufigste Fall, und der nuetzlichste.
+        ''' - OHNE Objektivnamen: es gibt keinen Schluessel, an dem sich etwas dauerhaft festmachen
+        '''   liesse. Die Wahl landet deshalb im REZEPT dieses einen Bildes. Vorher brach das
+        '''   Speichern hier still ab, und die Auswahl sah wirkungslos aus.</summary>
+        Public Property LensAssignment As String
+            Get
+                If String.IsNullOrWhiteSpace(_objektivExifName) Then Return _lensModel
+                Return ObjektivDatenService.ZuordnungFuer(_objektivExifName)
+            End Get
+            Set(value As String)
+                ' Leer und Nothing sind DASSELBE ("automatisch erkennen"). Ohne diese Angleichung
+                ' schrieb die Auswahlliste beim Aufbau einmal Nothing zurueck, waehrend die
+                ' Eigenschaft "" lieferte - und dieser Scheinwechsel loeste einen vollen Neuaufbau
+                ' des Arbeitsbilds aus, ohne dass der Nutzer etwas getan hatte.
+                Dim neuerWert = If(value, "")
+                If String.Equals(neuerWert, LensAssignment, StringComparison.Ordinal) Then Return
+                CaptureUndoState(NameOf(LensAssignment))
+                If String.IsNullOrWhiteSpace(_objektivExifName) Then
+                    _lensModel = neuerWert
+                Else
+                    ObjektivDatenService.SetzeZuordnung(_objektivExifName, neuerWert)
+                End If
+                AktualisiereObjektivKorrektur()
+                BaueArbeitsbildNeuWegenObjektiv()
+            End Set
+        End Property
+
+        Public Property LensDistortionEnabled As Boolean
+            Get
+                Return LoeseObjektivSchalter(_lensDistortion)
+            End Get
+            Set(value As Boolean)
+                SetzeObjektivSchalter(_lensDistortion, value, NameOf(LensDistortionEnabled))
+            End Set
+        End Property
+
+        Public Property LensTcaEnabled As Boolean
+            Get
+                Return LoeseObjektivSchalter(_lensTca)
+            End Get
+            Set(value As Boolean)
+                SetzeObjektivSchalter(_lensTca, value, NameOf(LensTcaEnabled))
+            End Set
+        End Property
+
+        Public Property LensVignettingEnabled As Boolean
+            Get
+                Return LoeseObjektivSchalter(_lensVignetting)
+            End Get
+            Set(value As Boolean)
+                SetzeObjektivSchalter(_lensVignetting, value, NameOf(LensVignettingEnabled))
+            End Set
+        End Property
+
+        ' Staerke je Korrektur. Sie ist noetig, weil die Messwerte fuer ein OBJEKTIVMODELL gelten und
+        ' nicht fuer das einzelne Exemplar: am Referenzfoto lag der Rotkanal bei doppelter Staerke
+        ' naeher am Ziel, der Blaukanal dagegen schlechter. Ein fester Faktor kann das nicht
+        ' abbilden, ein Regler schon.
+        Private _lensDistortionAmount As Double = 100
+        Private _lensTcaAmount As Double = 100
+        Private _lensVignettingAmount As Double = 100
+
+        Public Property LensDistortionAmount As Double
+            Get
+                Return _lensDistortionAmount
+            End Get
+            Set(value As Double)
+                SetzeObjektivStaerke(_lensDistortionAmount, value, NameOf(LensDistortionAmount))
+            End Set
+        End Property
+
+        Public Property LensTcaAmount As Double
+            Get
+                Return _lensTcaAmount
+            End Get
+            Set(value As Double)
+                SetzeObjektivStaerke(_lensTcaAmount, value, NameOf(LensTcaAmount))
+            End Set
+        End Property
+
+        Public Property LensVignettingAmount As Double
+            Get
+                Return _lensVignettingAmount
+            End Get
+            Set(value As Double)
+                SetzeObjektivStaerke(_lensVignettingAmount, value, NameOf(LensVignettingAmount))
+            End Set
+        End Property
+
+        ''' <summary>Wie SetUndoableDouble, aber mit Neuaufbau des Arbeitsbilds statt eines
+        ''' Nachrenderns: die Objektivkorrektur sitzt VOR der Reglerkette.</summary>
+        Private Sub SetzeObjektivStaerke(ByRef feld As Double, wert As Double, name As String)
+            Dim geklemmt = Math.Max(0, Math.Min(200, wert))
+            If Math.Abs(feld - geklemmt) < 0.0001 Then Return
+            CaptureUndoState(name)
+            feld = geklemmt
+            Me.RaisePropertyChanged(name)
+            RaiseResetButtonStateChanged()
+            BaueArbeitsbildNeuWegenObjektiv()
+        End Sub
+
+        ''' <summary>Die Objektiv-Wahl aus den Editor-Feldern. Eigene Stelle, damit jeder Weg, der
+        ''' das Arbeitsbild neu dekodiert, dieselben Werte benutzt.</summary>
+        Private Function ObjektivWahlAusFeldern() As ObjektivDatenService.Wahl
+            Return New ObjektivDatenService.Wahl With {
+                .Verzeichnung = _lensDistortion,
+                .Farbquerfehler = _lensTca,
+                .Vignettierung = _lensVignetting,
+                .StaerkeVerzeichnung = _lensDistortionAmount / 100.0,
+                .StaerkeFarbquerfehler = _lensTcaAmount / 100.0,
+                .StaerkeVignettierung = _lensVignettingAmount / 100.0}
+        End Function
+
+        Private Shared Function LoeseObjektivSchalter(feld As Boolean?) As Boolean
+            If feld.HasValue Then Return feld.Value
+            Return AppSettingsService.Load().LensCorrectionEnabled
+        End Function
+
+        Private Sub SetzeObjektivSchalter(ByRef feld As Boolean?, wert As Boolean, name As String)
+            If LoeseObjektivSchalter(feld) = wert AndAlso feld.HasValue Then Return
+            CaptureUndoState(name)
+            feld = wert
+            Me.RaisePropertyChanged(name)
+            RaiseResetButtonStateChanged()
+            BaueArbeitsbildNeuWegenObjektiv()
+        End Sub
+
+        ''' <summary>Das Arbeitsbild neu dekodieren. Die Objektivkorrektur sitzt VOR der Reglerkette,
+        ''' ein blosses Nachrendern zeigte deshalb weiter das alte Bild.</summary>
+        ''' <summary>Zurueck auf automatische Erkennung: die drei Schalter folgen wieder der Vorgabe
+        ''' aus den Einstellungen, und eine von Hand gesetzte Zuordnung faellt weg. Der Weg zurueck,
+        ''' wenn die Zuordnung danebenlag - ohne ihn muesste man in der Liste einen Eintrag suchen,
+        ''' um sagen zu koennen "keinen".</summary>
+        Public Sub ResetLensCorrection()
+            Dim hatteZuordnung = Not String.IsNullOrWhiteSpace(LensAssignment)
+            Dim hatteSchalter = _lensDistortion.HasValue OrElse _lensTca.HasValue OrElse _lensVignetting.HasValue OrElse
+                                _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100
+            If Not hatteZuordnung AndAlso Not hatteSchalter Then Return
+            CaptureUndoState("Objektivkorrektur")
+            _lensDistortion = Nothing
+            _lensTca = Nothing
+            _lensVignetting = Nothing
+            _lensDistortionAmount = 100
+            _lensTcaAmount = 100
+            _lensVignettingAmount = 100
+            _lensModel = ""
+            If hatteZuordnung AndAlso Not String.IsNullOrWhiteSpace(_objektivExifName) Then
+                ObjektivDatenService.SetzeZuordnung(_objektivExifName, "")
+            End If
+            AktualisiereObjektivKorrektur()
+            RaiseResetButtonStateChanged()
+            BaueArbeitsbildNeuWegenObjektiv()
+        End Sub
+
+        Private Sub BaueArbeitsbildNeuWegenObjektiv()
+            If String.IsNullOrEmpty(_currentImagePath) Then Return
+            ' Die Anzeigeeinstellung ueberlebt den Neuaufbau: sie gehoert zur ANSICHT, nicht zum
+            ' Bild. Ohne das sprang die Anzeige von "Einpassen" auf einen festen Prozentwert -
+            ' bei voller Sensoraufloesung auf einstellige Prozente.
+            Dim warEingepasst = _activeZoomPreset = ZoomPresetMode.Fit
+            PreparePreviewSource(_currentImagePath)
+            If warEingepasst Then ActiveZoomPreset = ZoomPresetMode.Fit
+        End Sub
+
+        ''' <summary>Kamera, Objektiv und die gefundenen Kennlinien fuer das aktuelle Bild neu
+        ''' ermitteln. Wird beim Oeffnen und nach einer Zuordnung gerufen.</summary>
+        Private Sub AktualisiereObjektivKorrektur()
+            _objektivExifName = ""
+            _objektivKamera = ("", "")
+            _objektivKorrektur = Nothing
+            Try
+                If Not String.IsNullOrEmpty(_currentImagePath) AndAlso File.Exists(_currentImagePath) Then
+                    Dim daten = ExifService.ReadExif(_currentImagePath)
+                    _objektivExifName = If(daten?.Lens, "")
+                    _objektivKamera = ("", If(daten?.Camera, ""))
+                    _objektivKorrektur = ObjektivDatenService.FindeKorrekturFuerDatei(_currentImagePath, _lensModel)
+                End If
+            Catch
+            End Try
+            _lensFilter = LensAssignment
+            Me.RaisePropertyChanged(NameOf(LensFilter))
+            For Each n In {NameOf(LensCorrectionAvailable), NameOf(LensCorrectionStatus),
+                           NameOf(HasLensDistortionData), NameOf(HasLensTcaData),
+                           NameOf(HasLensVignettingData), NameOf(LensCandidates),
+                           NameOf(LensAssignment), NameOf(LensDistortionEnabled),
+                           NameOf(LensTcaEnabled), NameOf(LensVignettingEnabled),
+                           NameOf(LensDistortionAmount), NameOf(LensTcaAmount),
+                           NameOf(LensVignettingAmount)}
+                Me.RaisePropertyChanged(n)
+            Next
+        End Sub
 
         Public Property Vignette As Double
             Get
@@ -8029,6 +8377,10 @@ Namespace ViewModels
                 ' Der Startpunkt gewinnt NICHT gegen den Endpunkt: bei einem ganz kurzen Verlauf
                 ' liegen beide fast aufeinander, und der Endpunkt ist der, den man dann meint.
                 griff = 0
+            ElseIf IstAufStauchungsGriff(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
+                ' VOR der inneren Ellipse pruefen: der Griff liegt auf der aeusseren, und bei
+                ' schmalem Uebergang liegen beide dicht beieinander - dann meint man den Griff.
+                griff = 4
             ElseIf IstAufInnererEllipse(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
                 griff = 3
             ElseIf IstAufUebergangsstrich(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
@@ -8109,6 +8461,57 @@ Namespace ViewModels
             Return Math.Sqrt((u / laenge) * (u / laenge) + (v / halbNeben) * (v / halbNeben))
         End Function
 
+        ''' <summary>Der Griff fuer die STAUCHUNG: er sitzt auf der Ellipse quer zur Achse, dort wo
+        ''' die zweite Halbachse endet. Rueckgabe in Prozentkoordinaten, Nothing wenn es ihn nicht
+        ''' gibt (kein radialer Verlauf oder Achse zu kurz).
+        '''
+        ''' Gerechnet wird im NORMIERTEN Raum: Prozent-x und Prozent-y beziehen sich auf
+        ''' verschiedene Pixelmasse, ein "senkrecht" in Prozent waere im Bild schief. Denselben
+        ''' Massstab benutzen Trefferpruefung und Zeichnung, sonst springt der Griff beim
+        ''' Anfassen.</summary>
+        Friend Shared Function StauchungsGriff(geo As Double(), slopXPercent As Double, slopYPercent As Double) _
+                                               As Double()
+            If geo Is Nothing OrElse geo.Length < 7 OrElse geo(6) <= 0.5 Then Return Nothing
+            If slopXPercent <= 0.0 OrElse slopYPercent <= 0.0 Then Return Nothing
+            Dim ax = geo(0) / slopXPercent, ay = geo(1) / slopYPercent
+            Dim bx = geo(2) / slopXPercent, by = geo(3) / slopYPercent
+            Dim dx = bx - ax, dy = by - ay
+            Dim laenge = Math.Sqrt(dx * dx + dy * dy)
+            If laenge < 0.0001 Then Return Nothing
+            Dim ex = dx / laenge, ey = dy / laenge
+            ' Senkrecht zur Achse, Laenge gleich der zweiten Halbachse.
+            Dim halbNeben = Math.Max(0.05, geo(4)) * laenge
+            Dim px = ax - ey * halbNeben
+            Dim py = ay + ex * halbNeben
+            Return New Double() {px * slopXPercent, py * slopYPercent}
+        End Function
+
+        Private Shared Function IstAufStauchungsGriff(geo As Double(), xPercent As Double, yPercent As Double,
+                                                      slopXPercent As Double, slopYPercent As Double) As Boolean
+            Dim g = StauchungsGriff(geo, slopXPercent, slopYPercent)
+            If g Is Nothing Then Return False
+            Return Math.Abs(xPercent - g(0)) <= slopXPercent AndAlso Math.Abs(yPercent - g(1)) <= slopYPercent
+        End Function
+
+        ''' <summary>Die Stauchung, die sich aus einer Zeigerposition ergibt: der Abstand QUER zur
+        ''' Achse, gemessen in Vielfachen der Achsenlaenge. Geklemmt auf denselben Bereich wie der
+        ''' Regler - sonst liesse sich mit der Maus etwas einstellen, das der Regler nicht anzeigen
+        ''' kann.</summary>
+        Friend Shared Function StauchungAusZeiger(geo As Double(), xPercent As Double, yPercent As Double,
+                                                  slopXPercent As Double, slopYPercent As Double) As Double
+            If geo Is Nothing OrElse geo.Length < 7 Then Return -1.0
+            If slopXPercent <= 0.0 OrElse slopYPercent <= 0.0 Then Return -1.0
+            Dim ax = geo(0) / slopXPercent, ay = geo(1) / slopYPercent
+            Dim bx = geo(2) / slopXPercent, by = geo(3) / slopYPercent
+            Dim dx = bx - ax, dy = by - ay
+            Dim laenge = Math.Sqrt(dx * dx + dy * dy)
+            If laenge < 0.0001 Then Return -1.0
+            Dim ex = dx / laenge, ey = dy / laenge
+            Dim vx = xPercent / slopXPercent - ax, vy = yPercent / slopYPercent - ay
+            Dim quer = Math.Abs(-vx * ey + vy * ex)
+            Return Math.Max(0.05, Math.Min(4.0, quer / laenge))
+        End Function
+
         ''' <summary>Liegt der Punkt auf der INNEREN Ellipse des radialen Verlaufs - der Grenze, ab
         ''' der die Deckung abfaellt? Sie sitzt beim normierten Radius (1 - Uebergang/100), genau
         ''' dort, wo das Overlay sie zeichnet. Unter 0,02 zeichnet das Overlay sie nicht mehr, dann
@@ -8170,7 +8573,17 @@ Namespace ViewModels
             End If
             Dim maske = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _gradientDragMaskId)
             If maske Is Nothing Then Return
-            If _gradientHandle = 3 AndAlso maske.IsRadialGradient Then
+            If _gradientHandle = 4 Then
+                ' Stauchung: der Abstand des Zeigers QUER zur Achse ist die zweite Halbachse.
+                Dim geoS = GradientGeometry
+                If geoS Is Nothing Then Return
+                Dim neu = StauchungAusZeiger(geoS, xPercent, yPercent, _gradientSlopX, _gradientSlopY)
+                If neu < 0.0 Then Return
+                If rasten Then neu = Math.Round(neu * 20.0) / 20.0
+                maske.GradientRadiusRatio = neu
+                _gradientRadiusRatio = neu
+                Me.RaisePropertyChanged(NameOf(GradientRadiusRatio))
+            ElseIf _gradientHandle = 3 AndAlso maske.IsRadialGradient Then
                 ' Innere Ellipse: der normierte Radius des Zeigers IST die innere Grenze. Umkehrung
                 ' der Zeichnung (innen = 1 - Uebergang/100).
                 Dim geoR = GradientGeometry
@@ -11314,6 +11727,8 @@ Namespace ViewModels
         Public ReadOnly Property ResetLightCommand As ICommand
         Public ReadOnly Property ResetColorCommand As ICommand
         Public ReadOnly Property ResetDetailCommand As ICommand
+        Public ReadOnly Property ApplyLensAssignmentCommand As ICommand
+        Public ReadOnly Property ResetLensCorrectionCommand As ICommand
         Public ReadOnly Property ResetEffectsCommand As ICommand
         Public ReadOnly Property ResetRetouchCommand As ICommand
         Public ReadOnly Property ClearSelectionCommand As ICommand
@@ -11337,7 +11752,7 @@ Namespace ViewModels
         Public ReadOnly Property ResetGrainCommand As ICommand
         Public ReadOnly Property ResetDetailGroupCommand As ICommand
         Public ReadOnly Property ResetLutCommand As ICommand
-        Public ReadOnly Property ResetLightroomPresetCommand As ICommand
+        Public ReadOnly Property ResetXmpPresetCommand As ICommand
         Public ReadOnly Property ResetFrameCommand As ICommand
         Public ReadOnly Property ResetFilterCommand As ICommand
         Public ReadOnly Property ResetCurveCommand As ICommand
@@ -11373,7 +11788,7 @@ Namespace ViewModels
             LoadAllShapeIcons()
             LoadWatermarkPresets()
             LoadAdjustmentPresetNames()
-            LoadSavedLightroomPresets()
+            LoadSavedXmpPresets()
             LoadSavedLutPresets()
             _previewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(PreviewDebounceMs)}
             AddHandler _previewTimer.Tick, Sub()
@@ -11621,6 +12036,8 @@ Namespace ViewModels
                                                             PushUndo()
                                                             ResetDetailInternal()
                                                         End Sub)
+            ApplyLensAssignmentCommand = ReactiveCommand.Create(Of String)(Sub(text) ApplyLensAssignment(text))
+            ResetLensCorrectionCommand = ReactiveCommand.Create(Sub() ResetLensCorrection())
             ResetEffectsCommand = ReactiveCommand.Create(Sub()
                                                              PushUndo()
                                                              ResetEffectsInternal()
@@ -11694,11 +12111,11 @@ Namespace ViewModels
                                                          PushUndo()
                                                          ResetLutInternal()
                                                      End Sub)
-            ' Die Preset-Gruppe ist der Sonderfall: ein Lightroom-Preset SCHREIBT in Licht, Farbe,
+            ' Die Preset-Gruppe ist der Sonderfall: ein XMP-Preset SCHREIBT in Licht, Farbe,
             ' Details, Effekte, HSL, Farbgradierung und Kurven. Sein Zuruecksetzer muss deshalb
             ' genauso weit reichen - hier ist die weite Wirkung nicht ueberraschend, sondern genau
             ' das, was "Preset entfernen" bedeutet.
-            ResetLightroomPresetCommand = ReactiveCommand.Create(Sub()
+            ResetXmpPresetCommand = ReactiveCommand.Create(Sub()
                                                                      PushUndo()
                                                                      ResetFilterInternal()
                                                                  End Sub)
@@ -12307,6 +12724,9 @@ Namespace ViewModels
             _currentImagePath = imagePath
             SelectedInfoTab = InfoSidebarTab.General
             ResetAdjustmentsInternal(resetEditorUi:=True)
+            ' Nach dem Zuruecksetzen: die Rezeptfelder sind dann auf "wie vorgegeben", und die
+            ' Statuszeile zeigt das Objektiv DIESES Bildes statt des vorigen.
+            AktualisiereObjektivKorrektur()
             ClearUndoHistory()
             Dim previousSuppressPreviewDirty = _suppressPreviewDirty
             _suppressPreviewDirty = True
@@ -13958,11 +14378,15 @@ Namespace ViewModels
         ''' Bei einer .fpx mit voll aufgelöstem retouch.png ist DAS BÜNDEL-Arbeitsbild der Decode
         ''' (Striche/Retusche bereits eingebacken); ein Vorschauauflösungs-Altbestand
         ''' (Seed) fällt über die Maße-Prüfung sauber auf das Basisbild zurück.</summary>
-        Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String) As (Full As SKBitmap, Baked As Boolean)
+        ''' <param name="objektivWahl">Die Objektivkorrektur dieses Bildes. Sie MUSS hier ankommen:
+        ''' sie veraendert den DECODE, nicht die Reglerkette - ohne sie taeten die Schalter und
+        ''' Regler der Gruppe schlicht nichts.</param>
+        Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String,
+                                                       objektivWahl As ObjektivDatenService.Wahl) As (Full As SKBitmap, Baked As Boolean)
             Dim fullDecode As SKBitmap = Nothing
             Dim bakedFromFpx = False
             If Not String.IsNullOrEmpty(overridePath) AndAlso File.Exists(overridePath) Then
-                fullDecode = ImageProcessor.DecodeWorkingImage(overridePath)
+                fullDecode = ImageProcessor.DecodeWorkingImage(overridePath, objektivWahl)
                 If fullDecode IsNot Nothing Then
                     Dim baseSize = ImageProcessor.GetOrientedImageSize(imagePath)
                     If baseSize.Width > 0 AndAlso (fullDecode.Width <> baseSize.Width OrElse fullDecode.Height <> baseSize.Height) Then
@@ -13978,7 +14402,7 @@ Namespace ViewModels
                     End If
                 End If
             End If
-            If fullDecode Is Nothing Then fullDecode = ImageProcessor.DecodeWorkingImage(imagePath)
+            If fullDecode Is Nothing Then fullDecode = ImageProcessor.DecodeWorkingImage(imagePath, objektivWahl)
             Return (fullDecode, bakedFromFpx)
         End Function
 
@@ -14044,7 +14468,7 @@ Namespace ViewModels
         Private Sub PreparePreviewSource(imagePath As String, Optional scheduleInitialRender As Boolean = True)
             Dim token = BeginPreviewSourceSwap(imagePath)
             If token < 0 Then Return
-            CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath),
+            CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath, ObjektivWahlAusFeldern()),
                                       token, scheduleInitialRender)
         End Sub
 
@@ -14079,7 +14503,8 @@ Namespace ViewModels
 
             ' Feld VOR dem Wechsel in den Hintergrund lesen - es gehört dem UI-Thread.
             Dim overridePath = _workingImageOverridePath
-            Dim decoded = Await Task.Run(Function() DecodeForPreviewSource(imagePath, overridePath))
+            Dim wahl = ObjektivWahlAusFeldern()
+            Dim decoded = Await Task.Run(Function() DecodeForPreviewSource(imagePath, overridePath, wahl))
             CompletePreviewSourceSwap(decoded, token, scheduleInitialRender)
         End Function
 
@@ -15126,6 +15551,13 @@ Namespace ViewModels
         Private Function BuildAdjustmentsFromFields(Optional forPreview As Boolean = False,
                                                     Optional includeEditorOverlayAnnotations As Boolean = False) As ImageAdjustments
             Dim adj = New ImageAdjustments With {
+                .LensDistortion = _lensDistortion,
+                .LensTca = _lensTca,
+                .LensVignetting = _lensVignetting,
+                .LensModel = _lensModel,
+                .LensDistortionAmount = CSng(_lensDistortionAmount),
+                .LensTcaAmount = CSng(_lensTcaAmount),
+                .LensVignettingAmount = CSng(_lensVignettingAmount),
                 .Brightness = CSng(_brightness),
                 .Contrast = CSng(_contrast),
                 .Saturation = CSng(_saturation),
@@ -15989,6 +16421,19 @@ Namespace ViewModels
             _addNoise = 0
             _structure = 0
             _glow = 0
+            ' Objektivkorrektur: die drei Schalter zurueck auf "wie in den Einstellungen", die
+            ' Staerken auf 100, und das von Hand gewaehlte Objektiv samt Sucheingabe weg. Ohne diese
+            ' Zeilen erbte Bild B die Objektivwahl von Bild A - und weil eine gesetzte Wahl den
+            ' Namen aus den Aufnahmedaten SCHLAEGT, fand der Abgleich danach fuer gar kein Bild mehr
+            ' etwas.
+            _lensDistortion = Nothing
+            _lensTca = Nothing
+            _lensVignetting = Nothing
+            _lensDistortionAmount = 100
+            _lensTcaAmount = 100
+            _lensVignettingAmount = 100
+            _lensModel = ""
+            _lensFilter = ""
             _whiteBalance = "Wie Aufnahme"
             _calibrationRedHue = 0
             _calibrationRedSaturation = 0
@@ -16061,8 +16506,8 @@ Namespace ViewModels
             _lutStrength = 100
             ' Auch die "zuletzt angewandt"-Marker loeschen. Ohne das blieben nach einem Bildwechsel
             ' die Panel-Hervorhebungen des VORIGEN Bildes stehen: FilterPanel haengt an
-            ' LastAppliedFilterPresetName, LightroomPreset-/LutPresetPanel an IsLastApplied (aus
-            ' _lastAppliedLightroomPresetPath/_lastAppliedLutPresetPath) - die Pixelwerte oben wurden
+            ' LastAppliedFilterPresetName, XmpPreset-/LutPresetPanel an IsLastApplied (aus
+            ' _lastAppliedXmpPresetPath/_lastAppliedLutPresetPath) - die Pixelwerte oben wurden
             ' zwar neutralisiert, die Auswahl-Markierung folgte aber nicht.
             ClearLastAppliedLook()
             _retouchSpots.Clear()
@@ -18019,6 +18464,25 @@ Namespace ViewModels
         ''' View, und die erreicht der Pruefstand nicht. Genau diese Regel war zweimal defekt: einmal
         ''' wirkte die Einstellung erst nach erneutem Oeffnen, einmal passte eine Groessenaenderung
         ''' der Flaeche nicht neu ein.</summary>
+        ''' <summary>Muss nach einem Bildwechsel neu eingepasst werden?
+        '''
+        ''' Bei RAW zeigt der Editor zuerst die kleine eingebettete Vorschau und danach den vollen
+        ''' Decode in Sensoraufloesung. Das Einpassen lief bisher nur EINMAL, beim ersten Layout -
+        ''' also gegen die Vorschau. Der Zoom blieb danach auf deren Wert stehen, obwohl inzwischen
+        ''' ein viel groesseres Bild angezeigt wurde.
+        '''
+        ''' Neu eingepasst wird deshalb, sobald sich die ANGEZEIGTE GROESSE aendert und der Nutzer
+        ''' weiterhin auf Einpassen steht. Einen selbst gesetzten Zoom fasst das nicht an - dafuer
+        ''' ist die zweite Bedingung da.</summary>
+        Friend Shared Function MussNeuEinpassen(schonEingepasst As Boolean, stehtAufEinpassen As Boolean,
+                                                alteBreite As Double, alteHoehe As Double,
+                                                neueBreite As Double, neueHoehe As Double) As Boolean
+            If Not schonEingepasst Then Return True
+            If Not stehtAufEinpassen Then Return False
+            If neueBreite <= 0 OrElse neueHoehe <= 0 Then Return False
+            Return Math.Abs(neueBreite - alteBreite) > 0.5 OrElse Math.Abs(neueHoehe - alteHoehe) > 0.5
+        End Function
+
         Friend Shared Function EinpassenProzent(flaecheBreite As Double, flaecheHoehe As Double,
                                                 bildBreite As Double, bildHoehe As Double,
                                                 nurVerkleinern As Boolean) As Double
@@ -19689,6 +20153,16 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetEffectsInternal()
+            ' Zurueck auf "wie in den Einstellungen vorgegeben" - nicht auf hart AUS. Jedes Feld,
+            ' das hier gesetzt wird, braucht sein Gegenstueck; sonst bliebe eine Abschaltung nach
+            ' dem Zuruecksetzen stehen.
+            _lensDistortion = Nothing
+            _lensTca = Nothing
+            _lensVignetting = Nothing
+            _lensDistortionAmount = 100
+            _lensTcaAmount = 100
+            _lensVignettingAmount = 100
+            _lensModel = ""
             _vignette = 0
             _vignetteTransition = 55
             _vignetteRoundness = 0
@@ -19713,7 +20187,7 @@ Namespace ViewModels
         '''
         ''' Bis hing der Knopf am weit greifenden <see cref="ResetFilterInternal"/> und
         ''' räumte damit auch Licht, Farbe, Details, Effekte, HSL, Farbgradierung und Kurven weg. Die
-        ''' Begründung dafür war, dass Lightroom-Presets und LUTs im selben Bereich angewendet werden
+        ''' Begründung dafür war, dass XMP-Presets und LUTs im selben Bereich angewendet werden
         ''' - nur sah man dem kleinen Pfeil in der Ecke nicht an, dass er die ganze Bearbeitung
         ''' verwirft. Dieser Weg gibt es weiterhin, aber sichtbar beschriftet: der Knopf „Keine".</summary>
         ''' <summary>Seit „Auto" im selben Panel sitzt, nimmt dieser Zurücksetzer auch die automatische
@@ -19842,7 +20316,7 @@ Namespace ViewModels
         End Sub
 
         ''' Setzt neben den eigentlichen Filter-Werten (FilterPreset/FilterStrength) auch alle Werte
-        ''' zurück, die ApplyLightroomPreset schreibt (Light/Color/Detail/Effects/HSL/Farbgradierung/
+        ''' zurück, die ApplyXmpPreset schreibt (Light/Color/Detail/Effects/HSL/Farbgradierung/
         ''' Tonwertkurve) sowie die angewendete LUT. Das ist der Rumpf hinter dem Knopf „Keine" und
         ''' hinter jedem Preset-Wechsel (ein Preset ERSETZT den Look) - NICHT der Gruppen-Zurücksetzer,
         ''' dafür gibt es ResetFilterGroupInternal.
@@ -19969,6 +20443,11 @@ Namespace ViewModels
             LoadCurvePointsFromString(_curveGreenPoints, "")
             LoadCurvePointsFromString(_curveBluePoints, "")
             LoadCurvePointsFromString(_curveLuminancePoints, "")
+            ' LoadCurvePointsFromString schaltet OnCurvePointsChanged ab (sonst gaebe jeder der
+            ' fuenf Kanaele einen eigenen Undo-Punkt). Damit faellt aber auch die Meldung der
+            ' Kanal-Markierungen aus, die sonst dort haengt - die Punkte am Kanalumschalter blieben
+            ' nach dem Zuruecksetzen stehen, obwohl keine Kurve mehr anliegt.
+            RaiseCurveEditedMarkers()
         End Sub
 
         Private Sub OnCurvePointsChanged(sender As Object, e As System.Collections.Specialized.NotifyCollectionChangedEventArgs)
@@ -20281,12 +20760,12 @@ Namespace ViewModels
 
 
 
-        ''' Übernimmt den Look eines Lightroom-/Camera-Raw-Presets. Die Abbildung der crs:-Schlüssel
-        ''' liegt in LightroomPresetService - die Stapelverarbeitung der Galerie braucht exakt dieselbe.
-        Public Sub ApplyLightroomPreset(xmpPath As String)
+        ''' Übernimmt den Look eines XMP-Presets. Die Abbildung der crs:-Schlüssel
+        ''' liegt in XmpPresetService - die Stapelverarbeitung der Galerie braucht exakt dieselbe.
+        Public Sub ApplyXmpPreset(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
             Try
-                Dim look = LightroomPresetService.LoadLook(xmpPath)
+                Dim look = XmpPresetService.LoadLook(xmpPath)
                 If look Is Nothing Then Return
 
                 PushUndo()
@@ -20305,7 +20784,7 @@ Namespace ViewModels
                 End Try
 
                 RaiseExtendedAdjustmentProperties()
-                SetLastAppliedLightroomPreset(xmpPath)
+                SetLastAppliedXmpPreset(xmpPath)
                 StatusText = LocalizationService.T("XMP-Preset angewendet")
                 SchedulePreviewForCurrentTarget()
             Catch ex As Exception
@@ -20354,7 +20833,7 @@ Namespace ViewModels
                 RebuildLayerRows()
                 Return
             End Try
-            Dim specs = LightroomPresetService.ParseLocalCorrections(xmp)
+            Dim specs = XmpPresetService.ParseLocalCorrections(xmp)
             If specs Is Nothing OrElse specs.Count = 0 Then
                 RebuildLayerRows()
                 Return
@@ -20468,30 +20947,30 @@ Namespace ViewModels
             LoadCurvePointsFromString(_curveBluePoints, look.CurveBluePoints)
         End Sub
 
-        Public Sub SaveLightroomPresetToSettings(xmpPath As String)
+        Public Sub SaveXmpPresetToSettings(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
             Dim normalizedPath = xmpPath.Trim()
-            Dim existing = SavedLightroomPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, StringComparison.OrdinalIgnoreCase))
+            Dim existing = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, StringComparison.OrdinalIgnoreCase))
             If existing Is Nothing Then
-                SavedLightroomPresets.Add(New LightroomPresetSettings With {
+                SavedXmpPresets.Add(New XmpPresetSettings With {
                     .Id = Guid.NewGuid().ToString("N"),
                     .Name = IO.Path.GetFileNameWithoutExtension(normalizedPath),
                     .Path = normalizedPath
                 })
-                PersistSavedLightroomPresets()
+                PersistSavedXmpPresets()
             End If
         End Sub
 
-        Public Sub RemoveLightroomPresetFromSettings(xmpPath As String)
+        Public Sub RemoveXmpPresetFromSettings(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) Then Return
-            Dim existing = SavedLightroomPresets.FirstOrDefault(Function(p) String.Equals(p.Path, xmpPath.Trim(), StringComparison.OrdinalIgnoreCase))
+            Dim existing = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, xmpPath.Trim(), StringComparison.OrdinalIgnoreCase))
             If existing Is Nothing Then Return
-            If String.Equals(_lastAppliedLightroomPresetPath, existing.Path, StringComparison.OrdinalIgnoreCase) Then
-                _lastAppliedLightroomPresetPath = ""
+            If String.Equals(_lastAppliedXmpPresetPath, existing.Path, StringComparison.OrdinalIgnoreCase) Then
+                _lastAppliedXmpPresetPath = ""
             End If
-            SavedLightroomPresets.Remove(existing)
-            PersistSavedLightroomPresets()
-            SyncLastAppliedLightroomPreset()
+            SavedXmpPresets.Remove(existing)
+            PersistSavedXmpPresets()
+            SyncLastAppliedXmpPreset()
         End Sub
 
         ''' MatchCasing.CaseInsensitive ist auf Linux/macOS nötig - Directory.EnumerateFiles matcht
@@ -20502,12 +20981,12 @@ Namespace ViewModels
             .MatchCasing = MatchCasing.CaseInsensitive
         }
 
-        Public Sub ImportLightroomPresetsFromFolder(folderPath As String)
+        Public Sub ImportXmpPresetsFromFolder(folderPath As String)
             If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
             Dim count = 0
             Try
                 For Each file In Directory.EnumerateFiles(folderPath, "*.xmp", CaseInsensitiveFileSearch)
-                    SaveLightroomPresetToSettings(file)
+                    SaveXmpPresetToSettings(file)
                     count += 1
                 Next
             Catch
@@ -20561,17 +21040,17 @@ Namespace ViewModels
 
         ''' <summary>Der Weg, den die gespeicherten Preset-Kacheln nehmen. Die Liste steht in den
         ''' Einstellungen, die Dateien liegen irgendwo beim Nutzer - verschiebt oder löscht er eine, zeigt
-        ''' die Kachel auf ins Leere. Vorher fiel ein Klick darauf STUMM aus (ApplyLightroomPreset/
+        ''' die Kachel auf ins Leere. Vorher fiel ein Klick darauf STUMM aus (ApplyXmpPreset/
         ''' ApplyLutPreset steigen bei fehlender Datei einfach aus), und die tote Kachel blieb für immer
         ''' stehen: der Nutzer konnte sie nur über das ×-Symbol loswerden, ohne zu wissen, dass sie kaputt
         ''' ist. Jetzt sagt es das und bietet an, den Eintrag zu entfernen.
         '''
-        ''' Bewusst NEBEN ApplyLightroomPreset/ApplyLutPreset statt darin: diese beiden werden auch ohne
+        ''' Bewusst NEBEN ApplyXmpPreset/ApplyLutPreset statt darin: diese beiden werden auch ohne
         ''' Hauptfenster gerufen (Stapelverarbeitung, Diagnose) und dürfen dort nicht auf einen Dialog
         ''' warten. Der Dialog gehört an die Kachel, weil nur dort ein Listeneintrag dahintersteht.</summary>
-        Public Async Function ApplySavedLightroomPresetAsync(xmpPath As String) As Task
+        Public Async Function ApplySavedXmpPresetAsync(xmpPath As String) As Task
             If Await ConfirmMissingPresetFileAsync(xmpPath, isLut:=False) Then Return
-            ApplyLightroomPreset(xmpPath)
+            ApplyXmpPreset(xmpPath)
         End Function
 
         Public Async Function ApplySavedLutPresetAsync(cubePath As String) As Task
@@ -20599,7 +21078,7 @@ Namespace ViewModels
                 If isLut Then
                     RemoveLutPresetFromSettings(path)
                 Else
-                    RemoveLightroomPresetFromSettings(path)
+                    RemoveXmpPresetFromSettings(path)
                 End If
                 StatusText = LocalizationService.T("Eintrag aus der Liste entfernt")
             End If

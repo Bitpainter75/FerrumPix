@@ -6,12 +6,12 @@ Imports System.Text.RegularExpressions
 
 Namespace Services
 
-    ''' <summary>Liest ein Lightroom-/Camera-Raw-Preset (.xmp) und übersetzt es in ein
+    ''' <summary>Liest ein XMP-Preset (.xmp) und übersetzt es in ein
     ''' <see cref="ImageAdjustments"/>, das nur den LOOK trägt (Licht, Farbe, Details, Effekte, HSL,
     ''' Split-Toning, Tonwertkurven) - keine Geometrie, keine Objekte, keine Auswahl.
     ''' Bewusst ohne ViewModel: den Editor interessiert derselbe Look wie die Stapelverarbeitung der
     ''' Galerie, und zwei Abbildungen derselben XMP-Schlüssel würden garantiert auseinanderlaufen.</summary>
-    Public Class LightroomPresetService
+    Public Class XmpPresetService
 
         ''' <summary>Nothing, wenn die Datei fehlt oder keine crs:-Werte enthält. Alle Felder, die das
         ''' Preset nicht setzt, bleiben auf ihrem neutralen Standard - ein geladenes Preset ersetzt den
@@ -24,13 +24,13 @@ Namespace Services
             ' Wertetabelle sickern und dort gleichnamige Regler des Kopf-Blocks ueberschreiben.
             Dim look = ParseLookProfile(rawText)
             Dim xmpText = StripNestedCrsBlocks(rawText)
-            Dim values = ParseLightroomXmpValues(xmpText)
+            Dim values = ParseXmpValues(xmpText)
             If values.Count = 0 Then Return Nothing
 
             Dim adj As New ImageAdjustments()
             Dim d As Double
 
-            ''' Die *2012-Schlüssel stammen aus Prozessversion 2012 (Lightroom 4, 2012) und sind bei allem
+            ''' Die *2012-Schlüssel stammen aus Prozessversion 2012 und sind bei allem
             ''' üblich, was danach entstand. Ältere Presets (PV2003/PV2010) schreiben dieselben Regler OHNE
             ''' Suffix und teils unter anderen Namen. Ohne Rückfall kommen sie vollständig leer an, ohne dass
             ''' irgendetwas darauf hindeutet - der Nutzer sieht ein Preset, das nichts tut. Deshalb je Regler
@@ -111,7 +111,7 @@ Namespace Services
             ''' crs:ConvertToGrayscale="True" - beide Formen kommen in freier Wildbahn vor. Ohne das kam
             ''' ein S/W-Preset in voller Farbe an, und zwar wortlos: alle anderen Regler stimmten, nur die
             ''' Umwandlung fehlte. Der Filtername ist zugleich der Schaltschlüssel in BuildFilterPresetMatrix.
-            ''' DRITTE Quelle: das PROFIL (crs:Look). Presets aus der Lightroom-CC-Zeit setzen keinen der
+            ''' DRITTE Quelle: das PROFIL (crs:Look). Presets neuerer Erzeuger setzen keinen der
             ''' beiden Schlüssel, sondern verweisen nur auf ein monochromes Kameraprofil ("Adobe
             ''' Monochrome", Gruppe "B&W") - gemessen an einer echten Sammlung betraf das 3 von 25
             ''' Presets, und alle drei kamen BUNT an. Dieselbe Falle wie oben, nur eine Ebene höher.
@@ -121,10 +121,10 @@ Namespace Services
             If monoFromKeys OrElse monoFromLook Then
                 adj.FilterPreset = "S/W"
                 adj.FilterStrength = ImageAdjustments.DefaultFilterStrength("S/W")
-                ' Kommt das Schwarzweiß NUR aus dem Profil, trägt dessen crs:Amount die Stärke: Lightroom
-                ' blendet ein Profil damit gegen die Farbwiedergabe (1.0 = voll). Ein B/W-Profil bei 0,67
+                ' Kommt das Schwarzweiß NUR aus dem Profil, trägt dessen crs:Amount die Stärke: damit
+                ' wird ein Profil gegen die Farbwiedergabe geblendet (1.0 = voll). Ein B/W-Profil bei 0,67
                 ' ergibt dort ein teilentsättigtes Bild - genau das macht unsere FilterStrength auch.
-                ' Bei crs:SupportsAmount="false" ist der Regler in Lightroom gesperrt, dann gilt voll.
+                ' Bei crs:SupportsAmount="false" ist der Regler beim Erzeuger gesperrt, dann gilt voll.
                 ' Steht crs:Treatment/ConvertToGrayscale in der Datei, ist die Umwandlung ausdrücklich
                 ' gewollt und bleibt voll - eine halbe Umwandlung ergäbe nur ein blasses Bild.
                 If Not monoFromKeys AndAlso look.HasAmount AndAlso look.SupportsAmount Then
@@ -133,7 +133,7 @@ Namespace Services
             End If
 
             ''' WEISSABGLEICH. crs:IncrementalTemperature/-Tint ist die relative ±100-Verschiebung, die
-            ''' unserem Temperatur-/Tönungsregler direkt entspricht (Lightroom schreibt sie für Nicht-RAW-
+            ''' unserem Temperatur-/Tönungsregler direkt entspricht (Erzeuger schreiben sie für Nicht-RAW-
             ''' Dateien, portable Presets liegen praktisch immer in dieser Form vor) - sie hat deshalb
             ''' IMMER Vorrang. crs:Temperature dagegen ist ein ABSOLUTER Kelvin-Wert (z.B. 5500), wie ihn
             ''' RAW-Presets schreiben. Es gibt keine aufnahmeunabhängig korrekte Umrechnung in unseren
@@ -157,9 +157,9 @@ Namespace Services
             If TryGetXmpDouble(values, "BlueSaturation", d) Then adj.CalibrationBlueSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "ShadowTint", d) Then adj.CalibrationShadowTint = Clamp100(d)
 
-            ' TORWÄCHTER crs:WhiteBalance. "As Shot" heißt in Lightroom: den Weißabgleich der AUFNAHME
+            ' TORWÄCHTER crs:WhiteBalance. "As Shot" heißt: den Weißabgleich der AUFNAHME
             ' behalten, das Preset fasst ihn nicht an. Ein Preset in diesem Modus schleppt trotzdem oft
-            ' crs:Temperature/crs:Tint mit (Lightroom schreibt den zuletzt gesehenen Stand einfach mit),
+            ' crs:Temperature/crs:Tint mit (der Erzeuger schreibt den zuletzt gesehenen Stand einfach mit),
             ' und die Werte gehören dann zu einem fremden Foto. Ohne diesen Wächter zog ein solches
             ' Preset den Weißabgleich des eigenen Bildes auf die Aufnahmebedingungen eines anderen.
             ' NUR bei "As Shot" gesperrt: "Custom", "Auto" und die Vorgaben ("Daylight", "Cloudy" …)
@@ -223,7 +223,7 @@ Namespace Services
             If TryGetXmpDouble(values, "SaturationAdjustmentMagenta", d) Then adj.MagentaSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentMagenta", d) Then adj.MagentaLuminance = Clamp100(d)
 
-            ''' SCHWARZWEISS-MISCHER (crs:GrayMixer*). Lightroom ersetzt im S/W-Modus das ganze HSL-Panel
+            ''' SCHWARZWEISS-MISCHER (crs:GrayMixer*). Im S/W-Modus ersetzt das Schema das ganze HSL-Panel
             ''' durch diese acht Regler - sie bestimmen, wie hell jeder Farbbereich im Grau landet, und
             ''' sind damit der eigentliche Charakter eines S/W-Presets (gemessen an einer echten Sammlung:
             ''' Silvertide zieht Aqua +32, Blau +39, Purpur +27, Magenta +26 hoch). Ohne sie kam JEDES
@@ -232,7 +232,7 @@ Namespace Services
             ''' und die HSL-Stufe läuft in der Punktoperationskette VOR der S/W-Matrix (siehe
             ''' ImageProcessorPointOps: HSL-Bänder, dann Preset-Farbmatrix). Die Gewichtung greift also
             ''' noch am farbigen Pixel, genau wie bei Adobe.
-            ''' ÜBERSCHREIBT LuminanceAdjustment* bewusst: im S/W-Modus wertet Lightroom die Farb-HSL-
+            ''' ÜBERSCHREIBT LuminanceAdjustment* bewusst: im S/W-Modus wertet das Schema die Farb-HSL-
             ''' Regler nicht mehr aus, ein aus dem Farbteil geerbter Wert wäre ein Rest, kein Look.
             ''' Nur im S/W-Modus - sonst würde ein Farbpreset, das die Werte für einen möglichen
             ''' S/W-Wechsel bloß mitschleppt, seine Farbluminanzen verlieren.
@@ -255,11 +255,11 @@ Namespace Services
             If TryGetXmpDouble(values, "SplitToningHighlightSaturation", d) Then adj.ColorGradeHighlightSaturation = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "SplitToningBalance", d) Then adj.ColorGradeBalance = Clamp100(d)
 
-            ''' FARBGRADIERUNG (crs:ColorGrade*, ab Lightroom 2020). Sie hat das Split-Toning oben
+            ''' FARBGRADIERUNG (crs:ColorGrade*, ab den neueren Prozessversionen). Sie hat das Split-Toning oben
             ''' abgelöst: Presets aus dieser Zeit schreiben NUR noch diese Schlüssel, und weil wir bis
             ''' allein die alten lasen, kam ihre Farbstimmung überhaupt nicht an - wortlos,
             ''' denn alle übrigen Regler stimmten. Sie stehen bewusst NACH den alten Schlüsseln: liegen
-            ''' beide in derselben Datei (Lightroom schreibt zur Rückwärtskompatibilität oft beides),
+            ''' beide in derselben Datei (zur Rückwärtskompatibilität steht oft beides in der Datei),
             ''' gewinnt die neuere Angabe. Die Skalen sind deckungsgleich, keine Umrechnung nötig.
             If TryGetXmpDouble(values, "ColorGradeShadowHue", d) Then adj.ColorGradeShadowHue = Clamp(d, 0, 360)
             If TryGetXmpDouble(values, "ColorGradeShadowSat", d) Then adj.ColorGradeShadowSaturation = Clamp(d, 0, 100)
@@ -278,22 +278,22 @@ Namespace Services
             ''' Tonwertkurven liegen als verschachtelte rdf:Seq/rdf:li-Listen vor, nicht als einfache
             ''' Attribute - der Attribut-Regex oben kann sie nicht erfassen, daher eine eigene, gezielte
             ''' Extraktion je Kurven-Element.
-            ''' Neben der Punktkurve führt Lightroom eine zweite, PARAMETRISCHE Kurve: vier Zonenregler
+            ''' Neben der Punktkurve führt das Schema eine zweite, PARAMETRISCHE Kurve: vier Zonenregler
             ''' (Schatten/Dunkel/Licht/Lichter), deren Zonengrenzen selbst wieder Parameter sind. Beide
             ''' wirken übereinander. Wird sie ignoriert, fehlt Presets, die ihren Tonwert-Look darüber
             ''' aufbauen, genau dieser Teil. Sie wird deshalb in die Punktkurve eingerechnet - eine
             ''' Annäherung an Adobes Kurvenform, kein exakter Nachbau.
             ' Punktkurve: bevorzugt PV2012; fehlt sie (alte PV2003/2010-Presets), auf die Alt-Kurve
             ' <crs:ToneCurve> zurückfallen (gleiches rdf:Seq-Format). Beide durchlaufen dieselbe Faltung.
-            Dim mainCurvePoints = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012")
-            If mainCurvePoints Is Nothing Then mainCurvePoints = ParseLightroomCurvePoints(xmpText, "ToneCurve")
+            Dim mainCurvePoints = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012")
+            If mainCurvePoints Is Nothing Then mainCurvePoints = ParseXmpCurvePoints(xmpText, "ToneCurve")
             Dim combinedCurve = ApplyParametricCurve(values, mainCurvePoints)
             If combinedCurve IsNot Nothing Then adj.CurveRgbPoints = combinedCurve
-            Dim redCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Red")
+            Dim redCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Red")
             If redCurve IsNot Nothing Then adj.CurveRedPoints = redCurve
-            Dim greenCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Green")
+            Dim greenCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Green")
             If greenCurve IsNot Nothing Then adj.CurveGreenPoints = greenCurve
-            Dim blueCurve = ParseLightroomCurvePoints(xmpText, "ToneCurvePV2012Blue")
+            Dim blueCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Blue")
             If blueCurve IsNot Nothing Then adj.CurveBluePoints = blueCurve
 
             Return adj
@@ -313,7 +313,7 @@ Namespace Services
         ''' <paramref name="referenceKelvin"/> ist der Aufnahme-Weißabgleich (crs:AsShotTemperature),
         ''' wenn das XMP ihn trägt - Sidecars von RAW-Dateien schreiben ihn, portable Presets meist
         ''' nicht. MIT ihm ist die Umrechnung aufnahmespezifisch exakt (der Regler bildet die Differenz
-        ''' Aufnahme→Ziel ab, genau das, was Lightroom beim Anwenden tut); OHNE ihn bleibt die feste
+        ''' Aufnahme→Ziel ab, genau das, was beim Anwenden passieren soll); OHNE ihn bleibt die feste
         ''' D65-Annahme - gut für Tageslicht, für Kunstlicht/Nacht bewusst nur annähernd (siehe
         ''' Kommentar am Aufrufer).</summary>
         Private Shared Function KelvinToRelativeTemperature(kelvin As Double, Optional referenceKelvin As Double = WhiteBalanceReferenceKelvin) As Single
@@ -346,6 +346,9 @@ Namespace Services
             Dim highlightSplit = GetXmpDoubleOrDefault(values, "ParametricHighlightSplit", 75) * 2.55
 
             ' Vollausschlag eines Zonenreglers verschiebt seine Zone um diesen Betrag (von 255).
+            ' Am 28.07.2026 gegen die Referenzbasis abgetastet (50 bis 130): der Wert bringt die
+            ' Bandform zwar naeher heran, die Gesamtabweichung steigt an einem der beiden Motive
+            ' aber deutlich. Also nicht die gesuchte Kennlinie, siehe RAW_UND_FARBE.md.
             Const MaxParametricShift As Double = 50.0
 
             Dim nodesX = {0.0, shadowSplit / 2.0, (shadowSplit + midtoneSplit) / 2.0,
@@ -396,7 +399,7 @@ Namespace Services
         End Function
 
         ''' <summary>Das PROFIL eines Presets (crs:Look), soweit es aus der .xmp ablesbar ist. Die
-        ''' eigentlichen Profildaten (eine 3D-Farbtabelle) stecken NICHT in der Datei - Lightroom holt sie
+        ''' eigentlichen Profildaten (eine 3D-Farbtabelle) stecken NICHT in der Datei - der Erzeuger holt sie
         ''' über die UUID aus seiner Profilbibliothek und schreibt deshalb crs:Stubbed="true". Ein Profil
         ''' exakt nachzubilden ist damit unmöglich; ablesbar bleiben Name, Gruppe und Stärke. Genau daran
         ''' hängt aber die Entscheidung "ist dieses Preset schwarzweiß?" - siehe LoadLook.</summary>
@@ -405,7 +408,7 @@ Namespace Services
             Public Group As String = ""
             Public Amount As Double = 1.0
             Public HasAmount As Boolean = False
-            ''' Lightroom sperrt den Stärkeregler bei manchen Profilen (crs:SupportsAmount="false").
+            ''' Manche Erzeuger sperren den Stärkeregler bei manchen Profilen (crs:SupportsAmount="false").
             Public SupportsAmount As Boolean = True
 
             ''' <summary>Erkennt ein monochromes Profil an Name ODER Gruppe. Adobe benennt sie
@@ -459,7 +462,7 @@ Namespace Services
         End Function
 
         ''' <summary>Entfernt die VERSCHACHTELTEN crs-Blöcke (Profil, lokale Korrekturen, Retusche) aus dem
-        ''' Text. ParseLightroomXmpValues sammelt crs:-Attribute flach über die ganze Datei ein und kennt
+        ''' Text. ParseXmpValues sammelt crs:-Attribute flach über die ganze Datei ein und kennt
         ''' die Verschachtelung nicht - ein crs:Amount aus dem Profil oder ein crs:Feather aus einer Maske
         ''' landet dort unter demselben Schlüssel wie ein Regler des Kopf-Blocks und würde ihn stumm
         ''' überschreiben. Solange LoadLook nur lange, eindeutige Namen las, ging das gut; mit dem Profil
@@ -474,7 +477,7 @@ Namespace Services
             Return text
         End Function
 
-        Private Shared Function ParseLightroomXmpValues(text As String) As Dictionary(Of String, String)
+        Private Shared Function ParseXmpValues(text As String) As Dictionary(Of String, String)
             Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
             If String.IsNullOrWhiteSpace(text) Then Return result
             ''' Nur "crs:"-Attribute (Camera Raw Settings) - ohne den Namespace-Zwang würde jedes andere
@@ -509,7 +512,7 @@ Namespace Services
         ''' Extrahiert eine crs:ToneCurvePV2012[Red|Green|Blue]-Punktliste (rdf:Seq aus rdf:li-Einträgen
         ''' "x, y") und liefert sie im gleichen "x,y;x,y;..."-Format wie ImageAdjustments.Curve*Points.
         ''' Nothing wenn das Element fehlt oder keine gültigen Punkte enthält.
-        Private Shared Function ParseLightroomCurvePoints(text As String, elementName As String) As String
+        Private Shared Function ParseXmpCurvePoints(text As String, elementName As String) As String
             Dim blockMatch = Regex.Match(text, $"<crs:{elementName}>(?<body>.*?)</crs:{elementName}>", RegexOptions.Singleline)
             If Not blockMatch.Success Then Return Nothing
 
@@ -602,14 +605,14 @@ Namespace Services
                 Dim parts = Regex.Split(block.Groups("b").Value, "crs:What=""Correction""")
                 For i = 1 To parts.Length - 1
                     Dim chunk = parts(i)
-                    ' crs:CorrectionActive="false" heißt: in Lightroom ist der Haken raus, die Korrektur
+                    ' crs:CorrectionActive="false" heißt: der Haken ist raus, die Korrektur
                     ' liegt zwar im Preset, wirkt aber nicht. Bisher ungelesen - eine abgeschaltete Maske
                     ' kam als aktive Anpassungsebene an, und der Nutzer sah einen Effekt, den das Preset
                     ' ausdrücklich nicht will. Fehlt das Attribut, gilt aktiv (so schreiben es ältere
                     ' Erzeuger).
                     If Not CorrFlag(chunk, "CorrectionActive", True) Then Continue For
                     ' crs:CorrectionAmount ist die Gesamtstärke der Korrektur (1.0 = voll). Sie gehört mit
-                    ' crs:MaskValue zusammen in die MASKE, nicht in die Regler: Lightroom blendet damit die
+                    ' crs:MaskValue zusammen in die MASKE, nicht in die Regler: damit blendet der Erzeuger die
                     ' ganze Korrektur aus, und genau das macht ein flacherer Maskenwert bei uns auch. Über
                     ' die Regler zu skalieren wäre falsch - Werte wie Farbton skalieren nicht linear.
                     Dim correctionAmount = CorrAttr(chunk, "CorrectionAmount", 1.0)

@@ -16,7 +16,7 @@ Namespace Controls.EditorPanels
             AvaloniaXamlLoader.Load(Me)
         End Sub
 
-        Public Async Sub OnLoadLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnLoadXmpPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
             Try
@@ -33,13 +33,13 @@ Namespace Controls.EditorPanels
                 })
                 Dim file = files?.FirstOrDefault()
                 If file Is Nothing Then Return
-                vm.SaveLightroomPresetToSettings(file.Path.LocalPath)
-                vm.ApplyLightroomPreset(file.Path.LocalPath)
+                vm.SaveXmpPresetToSettings(file.Path.LocalPath)
+                vm.ApplyXmpPreset(file.Path.LocalPath)
             Catch
             End Try
         End Sub
 
-        Public Async Sub OnLoadLightroomFolderClick(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnLoadXmpFolderClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
             Try
@@ -51,32 +51,32 @@ Namespace Controls.EditorPanels
                 })
                 Dim folder = folders?.FirstOrDefault()
                 If folder Is Nothing Then Return
-                vm.ImportLightroomPresetsFromFolder(folder.Path.LocalPath)
+                vm.ImportXmpPresetsFromFolder(folder.Path.LocalPath)
             Catch
             End Try
         End Sub
 
-        ''' Über ApplySavedLightroomPresetAsync statt direkt über ApplyLightroomPreset: nur hier steht ein
+        ''' Über ApplySavedXmpPresetAsync statt direkt über ApplyXmpPreset: nur hier steht ein
         ''' LISTENEINTRAG hinter dem Klick, und nur hier lässt sich deshalb anbieten, ihn zu entfernen,
         ''' wenn die Datei nicht mehr da ist.
-        Public Async Sub OnApplySavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnApplySavedXmpPresetClick(sender As Object, e As RoutedEventArgs)
             Try
                 Dim vm = TryCast(DataContext, EditorViewModel)
-                Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LightroomPresetSettings)
+                Dim preset = TryCast(TryCast(sender, Control)?.DataContext, XmpPresetSettings)
                 If vm Is Nothing OrElse preset Is Nothing Then Return
-                Await vm.ApplySavedLightroomPresetAsync(preset.Path)
+                Await vm.ApplySavedXmpPresetAsync(preset.Path)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
                 ' und beendet den Prozess.
-                DiagnosticLogService.LogException("XmpPresetPanel.OnApplySavedLightroomPresetClick", ex)
+                DiagnosticLogService.LogException("XmpPresetPanel.OnApplySavedXmpPresetClick", ex)
             End Try
         End Sub
 
-        Public Sub OnRemoveSavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Sub OnRemoveSavedXmpPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LightroomPresetSettings)
+            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, XmpPresetSettings)
             If vm Is Nothing OrElse preset Is Nothing Then Return
-            vm.RemoveLightroomPresetFromSettings(preset.Path)
+            vm.RemoveXmpPresetFromSettings(preset.Path)
             e.Handled = True
         End Sub
     End Class

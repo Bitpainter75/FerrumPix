@@ -172,9 +172,19 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Ein Text mit dieser Klasse wird NICHT uebersetzt. Gedacht fuer Anzeigen, deren
+        ''' Inhalt aus einer Bindung kommt: das Zuweisen von Text loescht die Bindung, und die Anzeige
+        ''' steht danach fuer immer auf dem Wert, den sie beim Sprachwechsel zufaellig hatte.
+        '''
+        ''' Warum das lange nicht auffiel: der Baumdurchlauf ueberspringt LEERE Texte, und die
+        ''' allermeisten gebundenen Anzeigen sind beim Anwenden der Sprache noch leer. Erst eine, die
+        ''' schon beim Aufbau etwas anzeigt, faellt in die Falle.</summary>
+        Public Const KeineUebersetzung As String = "no-translate"
+
         Private Shared Sub ApplyOne(node As ILogical)
             Dim textBlock = TryCast(node, TextBlock)
-            If textBlock IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBlock.Text) Then
+            If textBlock IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBlock.Text) AndAlso
+               Not textBlock.Classes.Contains(KeineUebersetzung) Then
                 textBlock.Text = T(textBlock.Text)
             End If
 

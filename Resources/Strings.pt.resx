@@ -3874,9 +3874,6 @@
   <data name="Wirkt_auf_das_ganze_Bild_unabh_ngig_vom_Tonwert_ddd82eb2" xml:space="preserve">
     <value>Afeta toda a imagem, independentemente do tom</value>
   </data>
-  <data name="Entfernt_Filter_LUT_und_Lightroom_Preset_dec8af39" xml:space="preserve">
-    <value>Remove filtro, LUT e predefinição do Lightroom</value>
-  </data>
   <data name="LUT_entfernen_528e89c6" xml:space="preserve">
     <value>Remover LUT</value>
   </data>
@@ -4315,9 +4312,6 @@
   <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Betrac_baaac979" xml:space="preserve">
     <value>Como os ficheiros RAW são revelados e mostrados na galeria, no visualizador e no editor.</value>
   </data>
-  <data name="Hellt_jedes_entwickelte_RAW_automatisch_auf_bis__39c16dfa" xml:space="preserve">
-    <value>Clareia automaticamente cada RAW revelado até que as partes mais claras da imagem fiquem quase brancas. Desativado, o FerrumPix revela como o Lightroom: a tonalidade da captura é mantida e uma curva base fílmica dá aos meios-tons, altas luzes e cores o seu caráter habitual. Tem efeito na próxima abertura de uma imagem ou reconstrução de uma pré-visualização.</value>
-  </data>
   <data name="Automatische_Bildverbesserung_4d6123c8" xml:space="preserve">
     <value>Melhoria automática da imagem</value>
   </data>
@@ -4662,5 +4656,128 @@
   </data>
   <data name="Bild_anheften_das_n_chste_Bild_wird_daneben_zum__e44dba37" xml:space="preserve">
     <value>Fixar a imagem — a seguinte é mostrada ao lado para comparação</value>
+  </data>
+  <data name="Ausschnitt_beider_Bilder_koppeln_ausgeschaltet_l_8e172d22" xml:space="preserve">
+    <value>Vincular o enquadramento visível das duas fotos: desativado, cada lado move-se separadamente</value>
+  </data>
+  <data name="Seiten_tauschen_das_rechte_Bild_wird_das_neue_an_b646b7a7" xml:space="preserve">
+    <value>Trocar os lados: a foto da direita passa a ser a fixada</value>
+  </data>
+  <data name="Objektivfehler_korrigieren_339a0d12" xml:space="preserve">
+    <value>Corrigir defeitos da objetiva</value>
+  </data>
+  <data name="Gleicht_Verzeichnung_Farbs_ume_an_den_Bildecken__e2270841" xml:space="preserve">
+    <value>Compensa distorção, franjas de cor nos cantos e escurecimento das bordas com base em medições da objetiva utilizada. Objetiva e câmara são reconhecidas pelos dados da captura; sem medições para a objetiva, a foto fica inalterada. Esta predefinição pode ser substituída por foto na ferramenta.</value>
+  </data>
+  <data name="Kalibrierdaten_fotografischer_Objektive_Datenban_d213de78" xml:space="preserve">
+    <value>Dados de calibração de objetivas fotográficas (base de dados, incluída sem alterações)</value>
+  </data>
+  <data name="Mitgelieferte_Messwerte_67e0b136" xml:space="preserve">
+    <value>Medições incluídas</value>
+  </data>
+  <data name="Objektive_05af14bf" xml:space="preserve">
+    <value>objetivas</value>
+  </data>
+  <data name="Lensfun_a1831dc5" xml:space="preserve">
+    <value>Lensfun</value>
+  </data>
+  <data name="CC_BY_SA_3_0_00b3dfee" xml:space="preserve">
+    <value>CC-BY-SA-3.0</value>
+  </data>
+  <data name="Bildvergleich_4c30b57f" xml:space="preserve">
+    <value>Comparação de fotos</value>
+  </data>
+  <data name="Pfeil_links_oder_rechts_478c9dd8" xml:space="preserve">
+    <value>Seta esquerda ou direita</value>
+  </data>
+  <data name="Nur_die_rechte_Fl_che_bl_ttert_weiter_das_angehe_61b1444d" xml:space="preserve">
+    <value>Apenas o lado direito avança; a foto fixada permanece à esquerda</value>
+  </data>
+  <data name="Vergleich_beenden_aef82dd2" xml:space="preserve">
+    <value>Terminar a comparação</value>
+  </data>
+  <data name="Klick_auf_eine_Fl_che_a443a0dd" xml:space="preserve">
+    <value>Clique num lado</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_c6b6883e" xml:space="preserve">
+    <value>Esse lado recebe o foco; o rodapé e o painel de informações mostram a sua foto</value>
+  </data>
+  <data name="Doppelklick_auf_eine_Fl_che_b28710b4" xml:space="preserve">
+    <value>Duplo clique num lado</value>
+  </data>
+  <data name="Dieses_Bild_im_Editor_ffnen_b01164aa" xml:space="preserve">
+    <value>Abrir essa foto no editor</value>
+  </data>
+  <data name="Ziehen_mit_links_oder_rechts_bac5657f" xml:space="preserve">
+    <value>Arrastar com o botão esquerdo ou direito</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_zieht_die_ander_09265778" xml:space="preserve">
+    <value>Mover o enquadramento; se vinculados, o outro lado acompanha</value>
+  </data>
+  <data name="Zoomen_ein_Wert_gilt_f_r_beide_Fl_chen_6a3eae68" xml:space="preserve">
+    <value>Zoom: um valor vale para ambos os lados</value>
+  </data>
+  <data name="Im_Vergleich_ohne_Wirkung_gel_scht_wird_ber_die__6454ff70" xml:space="preserve">
+    <value>Sem efeito na comparação: elimina-se com a marca sobre a própria foto</value>
+  </data>
+  <data name="Keine_Objektivangabe_in_den_Aufnahmedaten_facb09b8" xml:space="preserve">
+    <value>Nenhuma objetiva indicada nos dados da captura</value>
+  </data>
+  <data name="keine_Messwerte_vorhanden_0add488c" xml:space="preserve">
+    <value>sem medições disponíveis</value>
+  </data>
+  <data name="von_Hand_zugeordnet_abdd7876" xml:space="preserve">
+    <value>atribuído manualmente</value>
+  </data>
+  <data name="Objektivkorrektur_3d646ca4" xml:space="preserve">
+    <value>Correção da objetiva</value>
+  </data>
+  <data name="Verzeichnung_a8329dc9" xml:space="preserve">
+    <value>Distorção</value>
+  </data>
+  <data name="Farbs_ume_an_den_Bildecken_1c325dc3" xml:space="preserve">
+    <value>Franjas de cor nos cantos</value>
+  </data>
+  <data name="Randabdunklung_044044b6" xml:space="preserve">
+    <value>Escurecimento das bordas</value>
+  </data>
+  <data name="Wird_das_Objektiv_nicht_erkannt_l_sst_es_sich_hi_442dfd21" xml:space="preserve">
+    <value>Se a objetiva não for reconhecida, pode ser atribuída manualmente aqui. A atribuição passa a valer para todas as fotos da mesma objetiva.</value>
+  </data>
+  <data name="Biegt_das_Bild_zur_ck_sodass_gerade_Linien_wiede_07525cc7" xml:space="preserve">
+    <value>Endireita a imagem para que as linhas retas voltem a sê-lo. É melhor decidir logo no início: se mudar mais tarde, as máscaras e os objetos inseridos deixam de encaixar com exatidão.</value>
+  </data>
+  <data name="Verschiebt_Rot_und_Blau_gegen_Gr_n_zur_ck_und_en_fe8ee910" xml:space="preserve">
+    <value>Desloca o vermelho e o azul face ao verde e remove as bordas coloridas nos contornos de alto contraste nos cantos.</value>
+  </data>
+  <data name="Hellt_die_Bildecken_auf_soweit_das_Objektiv_dort_9ea43575" xml:space="preserve">
+    <value>Clareia os cantos na medida em que a objetiva aí perde luz.</value>
+  </data>
+  <data name="Auf_automatische_Erkennung_zur_cksetzen_86d72329" xml:space="preserve">
+    <value>Repor a deteção automática</value>
+  </data>
+  <data name="Farbs_ume_5e919643" xml:space="preserve">
+    <value>Franjas de cor</value>
+  </data>
+  <data name="St_rke_der_Verzeichnungskorrektur_25eaf0ac" xml:space="preserve">
+    <value>Intensidade da correção de distorção</value>
+  </data>
+  <data name="St_rke_der_Farbsaum_Korrektur_d5c7e53f" xml:space="preserve">
+    <value>Intensidade da correção das franjas de cor</value>
+  </data>
+  <data name="St_rke_der_Randabdunklungs_Korrektur_99e38bd9" xml:space="preserve">
+    <value>Intensidade da correção do escurecimento das bordas</value>
+  </data>
+  <data name="von_Hand_gew_hlt_nur_f_r_dieses_Bild_7446d453" xml:space="preserve">
+    <value>escolhido manualmente, apenas para esta foto</value>
+  </data>
+  <data name="Objektiv_suchen_bd4aa71c" xml:space="preserve">
+    <value>Procurar uma objetiva…</value>
+  </data>
+  <data name="Das_eingetragene_Objektiv_bernehmen_00fb88c7" xml:space="preserve">
+    <value>Aplicar a objetiva introduzida</value>
+  </data>
+  <data name="Zoom_ohne_Brennweitenangabe_nicht_zuzuordnen_abbfb8cc" xml:space="preserve">
+    <value>zoom sem distância focal: não é possível atribuir</value>
   </data>
 </root>

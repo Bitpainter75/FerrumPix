@@ -93,6 +93,13 @@ Namespace Controls
 
             ZeichneGriff(context, a, False)
             ZeichneGriff(context, b, True)
+            ' Beim radialen Verlauf zusaetzlich ein Griff QUER zur Achse: dort endet die zweite
+            ' Halbachse, und daran laesst sich die Stauchung ziehen. Ohne ihn waere sie das einzige
+            ' Mass der Ellipse, das nur der Regler kann.
+            If istRadial Then
+                Dim r2 = Math.Max(0.05, ratio) * laenge
+                ZeichneGriff(context, New Point(a.X - ey * r2, a.Y + ex * r2), True)
+            End If
         End Sub
 
         Private Shared Sub ZeichneEllipse(context As DrawingContext, stift As Pen, mitte As Point,

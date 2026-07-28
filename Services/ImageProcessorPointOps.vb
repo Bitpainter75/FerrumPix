@@ -145,7 +145,7 @@ Namespace Services
                              adj.Saturation <> 0 OrElse adj.Contrast <> 0 OrElse
                              adj.Brightness <> 0
             ' Kalibrierung wirkt auf die Primaerfarben und gehoert damit VOR Weissabgleich und
-            ' Saettigung - dieselbe Reihenfolge wie in Lightroom. Beide Matrizen werden zu EINER
+            ' Saettigung - dieselbe Reihenfolge wie ueblich. Beide Matrizen werden zu EINER
             ' verrechnet, der Pixeldurchlauf bleibt also unveraendert schnell.
             Dim kalibrierung = BuildCalibrationMatrix(adj)
             If wantsColor OrElse kalibrierung IsNot Nothing Then
@@ -488,12 +488,15 @@ Namespace Services
                     ' SCHWARZ BLEIBT FESTGENAGELT: eine positive Anhebung war bisher am
                     ' Punkt d0=0 ein reiner OFFSET (wBlacks=1 dort) - Blacks +25 / Shadows +43 hoben
                     ' reines Schwarz auf ~0.10, die dahinterliegende steile Kurvenzone machte 0.19
-                    ' daraus. Gemessen an echten Lightroom-Exporten desselben Presets bleibt Adobes
+                    ' daraus. Gemessen an echten Referenz-Exporten desselben Presets bleibt deren
                     ' Schwarzboden dagegen EXAKT am Fusspunkt der Tonwertkurve: positive Blacks/
                     ' Shadows STRECKEN die Tiefen aus dem Schwarz heraus, sie verschieben es nicht.
                     ' Deshalb laeuft eine positive Anhebung unter d0=0.1 glatt auf null aus. NUR die
                     ' positive Richtung: negatives Absenken DARF bis in den Boden druecken
                     ' (Schwarz-Crush), die Klemmung haelt f(0)=0 dort von selbst.
+                    ' Die Breite dieses Auslaufs (0,1) wurde am 28.07.2026 gegen die Referenzbasis
+                    ' abgetastet: 0,1 bis 0,5. An einem Motiv sank die Abweichung dabei stetig, am
+                    ' zweiten stieg sie - der Wert ist also NICHT der Fehler, siehe RAW_UND_FARBE.md.
                     If lift > 0.0 Then lift *= ToneSmoothFade(d0 / 0.1)
                     v = Clamp(CSng(d0 + lift), 0.0F, 1.0F)
                 End If
@@ -650,7 +653,7 @@ Namespace Services
         ''' 2. Der ERSTE Fix interpolierte linear zum Endwert (<c>v + (1−v)·a</c>) - der hob dafuer
         '''    SCHWARZ an: f(0) = a, ein dunkles sattes Pixel (L 0,05) sprang bei +28 auf 0,32.
         '''    Gemessen am Konzertfoto-Vergleich: die Magenta/Purpur-Buehnenlichter hoben
-        '''    den ganzen dunklen Hintergrund an, waehrend Lightrooms Schwarzboden exakt am
+        '''    den ganzen dunklen Hintergrund an, waehrend der Schwarzboden der Referenz exakt am
         '''    Kurven-Fusspunkt blieb - Adobes Regler nageln Schwarz fest.
         ''' Die Parabel erfuellt beide Enden: f(0) = 0 (Schwarz bleibt Schwarz, unten wirkt sie wie
         ''' die Multiplikation), f(1) = 1 mit Steigung 1−a (laeuft weich aus statt zu klemmen),
@@ -898,7 +901,7 @@ Namespace Services
                         ' Die HSL-Saettigung VOR der Tonstufe festhalten: die per-Kanal-Kurven
                         ' duerfen sie nach unten nicht druecken (Restore unten). Gemessen am
                         ' Adobe-Referenz-Render (DCP-Basis, DNG-SDK-Reihenfolge) desselben Fotos:
-                        ' Lightrooms Grundabstimmung hebt die Tiefen mit KOMPRESSIVER Steigung
+                        ' Die Grundabstimmung der Referenz hebt die Tiefen mit KOMPRESSIVER Steigung
                         ' (~0,6) und verdoppelt dabei trotzdem die Chroma - das geht nur, wenn die
                         ' Tonstufen sich konstant-S verhalten (Chroma waechst mit der Hebung mit).
                         ' Unsere per-Kanal-Anwendung skaliert die Chroma dagegen mit der Steigung
@@ -908,7 +911,7 @@ Namespace Services
                         ' fuer die TIEFEN (Gewicht 1 unter L 0,10, smoothstep auslaufend bis 0,25):
                         ' der Vergleich traegt nur den Schatten-Lift als konstant-S; ein globaler
                         ' Restore uebersaettigte gemessen die Mitten (Bin 0,2-0,3: 0,169 gegen LRs
-                        ' 0,067), wo Lightroom der per-Kanal-Senkung des Presets folgt.
+                        ' 0,067), wo die Referenz der per-Kanal-Senkung des Presets folgt.
                         '
                         ' CHROMA-TOR ist Pflicht: HSL-S ist in den Tiefen riesig,
                         ' obwohl kaum Farbe da ist - ein fast schwarzes Pixel (4,0,0) hat S = 1,0.
@@ -1075,7 +1078,7 @@ Namespace Services
                             Dim gewicht = Math.Max(0.0F, 1.0F - helligkeit * 2.0F)
                             If gewicht > 0.0F Then
                                 Dim staerke = schattenToenung / 100.0F * 0.12F * gewicht
-                                ' Positiv = Magenta (Gruen runter), negativ = Gruen. Wie in Lightroom.
+                                ' Positiv = Magenta (Gruen runter), negativ = Gruen. Uebliche Belegung.
                                 gg = Clamp(gg - staerke, 0.0F, 1.0F)
                                 rr = Clamp(rr + staerke * 0.5F, 0.0F, 1.0F)
                                 bb = Clamp(bb + staerke * 0.5F, 0.0F, 1.0F)

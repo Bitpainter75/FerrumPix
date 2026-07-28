@@ -3875,9 +3875,6 @@
   <data name="Wirkt_auf_das_ganze_Bild_unabh_ngig_vom_Tonwert_ddd82eb2" xml:space="preserve">
     <value>Agisce sull'intera immagine, indipendentemente dal tono</value>
   </data>
-  <data name="Entfernt_Filter_LUT_und_Lightroom_Preset_dec8af39" xml:space="preserve">
-    <value>Rimuove filtro, LUT e preset Lightroom</value>
-  </data>
   <data name="LUT_entfernen_528e89c6" xml:space="preserve">
     <value>Rimuovi LUT</value>
   </data>
@@ -4316,9 +4313,6 @@
   <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Betrac_baaac979" xml:space="preserve">
     <value>Come i file RAW vengono sviluppati e mostrati in galleria, visualizzatore ed editor.</value>
   </data>
-  <data name="Hellt_jedes_entwickelte_RAW_automatisch_auf_bis__39c16dfa" xml:space="preserve">
-    <value>Schiarisce automaticamente ogni RAW sviluppato finché le parti più chiare dell'immagine sono quasi bianche. Disattivato, FerrumPix sviluppa come Lightroom: la tonalità dello scatto viene mantenuta e una curva di base filmica dà a mezzitoni, alte luci e colori il loro carattere consueto. Ha effetto alla prossima apertura di un'immagine o ricostruzione di un'anteprima.</value>
-  </data>
   <data name="Automatische_Bildverbesserung_4d6123c8" xml:space="preserve">
     <value>Miglioramento automatico dell'immagine</value>
   </data>
@@ -4663,5 +4657,128 @@
   </data>
   <data name="Bild_anheften_das_n_chste_Bild_wird_daneben_zum__e44dba37" xml:space="preserve">
     <value>Fissa l’immagine: la successiva viene mostrata accanto per il confronto</value>
+  </data>
+  <data name="Ausschnitt_beider_Bilder_koppeln_ausgeschaltet_l_8e172d22" xml:space="preserve">
+    <value>Collega l'inquadratura visibile di entrambe le foto: disattivato, ogni lato si sposta per conto proprio</value>
+  </data>
+  <data name="Seiten_tauschen_das_rechte_Bild_wird_das_neue_an_b646b7a7" xml:space="preserve">
+    <value>Scambia i lati: la foto di destra diventa quella fissata</value>
+  </data>
+  <data name="Objektivfehler_korrigieren_339a0d12" xml:space="preserve">
+    <value>Correggere i difetti dell'obiettivo</value>
+  </data>
+  <data name="Gleicht_Verzeichnung_Farbs_ume_an_den_Bildecken__e2270841" xml:space="preserve">
+    <value>Compensa distorsione, frange colorate negli angoli e scurimento ai bordi in base a misurazioni dell'obiettivo utilizzato. Obiettivo e fotocamera vengono riconosciuti dai dati di scatto; senza misurazioni per l'obiettivo la foto resta invariata. Questa impostazione predefinita può essere modificata per singola foto nello strumento.</value>
+  </data>
+  <data name="Kalibrierdaten_fotografischer_Objektive_Datenban_d213de78" xml:space="preserve">
+    <value>Dati di calibrazione di obiettivi fotografici (database, incluso invariato)</value>
+  </data>
+  <data name="Mitgelieferte_Messwerte_67e0b136" xml:space="preserve">
+    <value>Misurazioni incluse</value>
+  </data>
+  <data name="Objektive_05af14bf" xml:space="preserve">
+    <value>obiettivi</value>
+  </data>
+  <data name="Lensfun_a1831dc5" xml:space="preserve">
+    <value>Lensfun</value>
+  </data>
+  <data name="CC_BY_SA_3_0_00b3dfee" xml:space="preserve">
+    <value>CC-BY-SA-3.0</value>
+  </data>
+  <data name="Bildvergleich_4c30b57f" xml:space="preserve">
+    <value>Confronto foto</value>
+  </data>
+  <data name="Pfeil_links_oder_rechts_478c9dd8" xml:space="preserve">
+    <value>Freccia sinistra o destra</value>
+  </data>
+  <data name="Nur_die_rechte_Fl_che_bl_ttert_weiter_das_angehe_61b1444d" xml:space="preserve">
+    <value>Solo il lato destro avanza; la foto fissata resta a sinistra</value>
+  </data>
+  <data name="Vergleich_beenden_aef82dd2" xml:space="preserve">
+    <value>Terminare il confronto</value>
+  </data>
+  <data name="Klick_auf_eine_Fl_che_a443a0dd" xml:space="preserve">
+    <value>Clic su un lato</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_c6b6883e" xml:space="preserve">
+    <value>Quel lato riceve il fuoco; piè di pagina e pannello informazioni mostrano la sua foto</value>
+  </data>
+  <data name="Doppelklick_auf_eine_Fl_che_b28710b4" xml:space="preserve">
+    <value>Doppio clic su un lato</value>
+  </data>
+  <data name="Dieses_Bild_im_Editor_ffnen_b01164aa" xml:space="preserve">
+    <value>Aprire quella foto nell'editor</value>
+  </data>
+  <data name="Ziehen_mit_links_oder_rechts_bac5657f" xml:space="preserve">
+    <value>Trascinare con il tasto sinistro o destro</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_zieht_die_ander_09265778" xml:space="preserve">
+    <value>Spostare l'inquadratura; se collegati l'altro lato segue</value>
+  </data>
+  <data name="Zoomen_ein_Wert_gilt_f_r_beide_Fl_chen_6a3eae68" xml:space="preserve">
+    <value>Zoom: un valore vale per entrambi i lati</value>
+  </data>
+  <data name="Im_Vergleich_ohne_Wirkung_gel_scht_wird_ber_die__6454ff70" xml:space="preserve">
+    <value>Senza effetto nel confronto: si elimina con il contrassegno sulla foto stessa</value>
+  </data>
+  <data name="Keine_Objektivangabe_in_den_Aufnahmedaten_facb09b8" xml:space="preserve">
+    <value>Nessun obiettivo indicato nei dati di scatto</value>
+  </data>
+  <data name="keine_Messwerte_vorhanden_0add488c" xml:space="preserve">
+    <value>nessuna misurazione disponibile</value>
+  </data>
+  <data name="von_Hand_zugeordnet_abdd7876" xml:space="preserve">
+    <value>assegnato manualmente</value>
+  </data>
+  <data name="Objektivkorrektur_3d646ca4" xml:space="preserve">
+    <value>Correzione dell'obiettivo</value>
+  </data>
+  <data name="Verzeichnung_a8329dc9" xml:space="preserve">
+    <value>Distorsione</value>
+  </data>
+  <data name="Farbs_ume_an_den_Bildecken_1c325dc3" xml:space="preserve">
+    <value>Frange colorate negli angoli</value>
+  </data>
+  <data name="Randabdunklung_044044b6" xml:space="preserve">
+    <value>Scurimento ai bordi</value>
+  </data>
+  <data name="Wird_das_Objektiv_nicht_erkannt_l_sst_es_sich_hi_442dfd21" xml:space="preserve">
+    <value>Se l'obiettivo non viene riconosciuto, è possibile assegnarlo manualmente qui. L'assegnazione vale poi per tutte le foto dello stesso obiettivo.</value>
+  </data>
+  <data name="Biegt_das_Bild_zur_ck_sodass_gerade_Linien_wiede_07525cc7" xml:space="preserve">
+    <value>Raddrizza l'immagine in modo che le linee rette tornino diritte. Meglio deciderlo subito: cambiando in seguito, maschere e oggetti inseriti non combaciano più esattamente.</value>
+  </data>
+  <data name="Verschiebt_Rot_und_Blau_gegen_Gr_n_zur_ck_und_en_fe8ee910" xml:space="preserve">
+    <value>Riporta rosso e blu rispetto al verde ed elimina i bordi colorati sui contorni ad alto contrasto negli angoli.</value>
+  </data>
+  <data name="Hellt_die_Bildecken_auf_soweit_das_Objektiv_dort_9ea43575" xml:space="preserve">
+    <value>Schiarisce gli angoli nella misura in cui l'obiettivo vi perde luce.</value>
+  </data>
+  <data name="Auf_automatische_Erkennung_zur_cksetzen_86d72329" xml:space="preserve">
+    <value>Ripristinare il rilevamento automatico</value>
+  </data>
+  <data name="Farbs_ume_5e919643" xml:space="preserve">
+    <value>Frange colorate</value>
+  </data>
+  <data name="St_rke_der_Verzeichnungskorrektur_25eaf0ac" xml:space="preserve">
+    <value>Intensità della correzione della distorsione</value>
+  </data>
+  <data name="St_rke_der_Farbsaum_Korrektur_d5c7e53f" xml:space="preserve">
+    <value>Intensità della correzione delle frange colorate</value>
+  </data>
+  <data name="St_rke_der_Randabdunklungs_Korrektur_99e38bd9" xml:space="preserve">
+    <value>Intensità della correzione dello scurimento ai bordi</value>
+  </data>
+  <data name="von_Hand_gew_hlt_nur_f_r_dieses_Bild_7446d453" xml:space="preserve">
+    <value>scelto manualmente, solo per questa foto</value>
+  </data>
+  <data name="Objektiv_suchen_bd4aa71c" xml:space="preserve">
+    <value>Cercare un obiettivo…</value>
+  </data>
+  <data name="Das_eingetragene_Objektiv_bernehmen_00fb88c7" xml:space="preserve">
+    <value>Applicare l'obiettivo inserito</value>
+  </data>
+  <data name="Zoom_ohne_Brennweitenangabe_nicht_zuzuordnen_abbfb8cc" xml:space="preserve">
+    <value>zoom senza lunghezza focale: non assegnabile</value>
   </data>
 </root>

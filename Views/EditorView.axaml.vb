@@ -38,7 +38,10 @@ Namespace Views
 
         ' Zoom state (0-100 slider maps exponentially to 5%-2000%)
         Private _zoomSliderValue As Double = 50
-        Private _zoomInitialized As Boolean = False
+        Private _zoomInitialized As Boolean
+        ' Die Bildgroesse, gegen die zuletzt eingepasst wurde.
+        Private _letzteEinpassBreite As Double
+        Private _letzteEinpassHoehe As Double = False
         Private _ignoreSliderChange As Boolean = False
 
         ' Pan state
@@ -541,7 +544,7 @@ Namespace Views
             vm.DeleteCurrentWatermarkPreset()
         End Sub
 
-        Public Async Sub OnLoadLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnLoadXmpPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
             Try
@@ -558,24 +561,24 @@ Namespace Views
                 })
                 Dim file = files?.FirstOrDefault()
                 If file Is Nothing Then Return
-                vm.SaveLightroomPresetToSettings(file.Path.LocalPath)
-                vm.ApplyLightroomPreset(file.Path.LocalPath)
+                vm.SaveXmpPresetToSettings(file.Path.LocalPath)
+                vm.ApplyXmpPreset(file.Path.LocalPath)
             Catch
             End Try
         End Sub
 
-        Public Sub OnApplySavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Sub OnApplySavedXmpPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, FerrumPix.Services.LightroomPresetSettings)
+            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, FerrumPix.Services.XmpPresetSettings)
             If vm Is Nothing OrElse preset Is Nothing Then Return
-            vm.ApplyLightroomPreset(preset.Path)
+            vm.ApplyXmpPreset(preset.Path)
         End Sub
 
-        Public Sub OnRemoveSavedLightroomPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Sub OnRemoveSavedXmpPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, FerrumPix.Services.LightroomPresetSettings)
+            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, FerrumPix.Services.XmpPresetSettings)
             If vm Is Nothing OrElse preset Is Nothing Then Return
-            vm.RemoveLightroomPresetFromSettings(preset.Path)
+            vm.RemoveXmpPresetFromSettings(preset.Path)
             e.Handled = True
         End Sub
 
@@ -917,6 +920,18 @@ Namespace Views
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             Select Case e.PropertyName
+                Case NameOf(EditorViewModel.CurrentImagePath)
+                    ' Ein ANDERES Bild faengt bei der Einstellung an, nicht beim Zoom des vorigen.
+                    ' ResetZoomForNewGeometry laesst einen selbst gesetzten Zoom bewusst stehen -
+                    ' richtig bei einem Beschnitt am selben Bild, falsch beim Bildwechsel: dort
+                    ' uebersteuerte der Zoom des vorherigen Bildes dauerhaft die Einstellung.
+                    Dim neuesVm = TryCast(sender, EditorViewModel)
+                    If neuesVm IsNot Nothing Then neuesVm.ActiveZoomPreset = ZoomPresetMode.Fit
+                    _zoomInitialized = False
+                    _letzteEinpassBreite = 0
+                    _letzteEinpassHoehe = 0
+                    _panX = 0
+                    _panY = 0
                 Case NameOf(EditorViewModel.CurrentImage)
                     _sliderPosition = 0.5
                     ResetZoomForNewGeometry(TryCast(sender, EditorViewModel))
@@ -1066,10 +1081,15 @@ Namespace Views
             Dim imgH = effectiveSize.Height
             Dim showBefore = vm.ShowBeforeImage
 
-            ' On first load reset zoom to fit-to-window
-            If Not _zoomInitialized Then
+            ' Einpassen beim ersten Layout - UND erneut, sobald sich die angezeigte Groesse
+            ' aendert. Bei RAW ist das der Wechsel von der kleinen eingebetteten Vorschau auf den
+            ' vollen Decode; ohne die zweite Bedingung blieb der Zoom auf dem Wert der Vorschau.
+            If EditorViewModel.MussNeuEinpassen(_zoomInitialized, vm.ActiveZoomPreset = ZoomPresetMode.Fit,
+                                                _letzteEinpassBreite, _letzteEinpassHoehe, imgW, imgH) Then
                 _panX = 0
                 _panY = 0
+                _letzteEinpassBreite = imgW
+                _letzteEinpassHoehe = imgH
                 Dim fitPct = EditorViewModel.EinpassenProzent(cw, ch, imgW, imgH, IsOnlyWhenLargerFitBehavior())
                 _zoomSliderValue = ZoomToSlider(fitPct)
                 _ignoreSliderChange = True

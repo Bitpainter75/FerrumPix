@@ -100,6 +100,57 @@ Namespace Views
             Me.Focus()
         End Sub
 
+        ''' <summary>Ausschnitt koppeln oder entkoppeln. Beim EINKOPPELN zieht die fokussierte
+        ''' Flaeche die andere sofort auf ihren Ausschnitt - sonst blieben die beiden Seiten nach
+        ''' dem Einschalten so lange auseinander, bis man eine von ihnen anfasst.</summary>
+        Public Sub OnToggleCompareViewportLinkClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            vm.IsCompareViewportLinked = Not vm.IsCompareViewportLinked
+            If Not vm.IsCompareViewportLinked Then Return
+            Dim fuehrend = Me.FindControl(Of ScrollViewer)(
+                If(vm.IsCompareRightFocused, "CompareRightScroll", "CompareLeftScroll"))
+            If fuehrend IsNot Nothing Then OnCompareScrollChanged(fuehrend, Nothing)
+        End Sub
+
+        ''' <summary>Die Marken tragen ihre Flaeche im Tag ("0" links, "1" rechts), die Sterne
+        ''' zusaetzlich den Wert ("0:3"). Ohne diese Zuordnung waere am Knopf nicht ablesbar, welches
+        ''' der beiden Bilder er meint - und genau dafuer sitzen die Marken auf dem Bild.</summary>
+        Private Shared Function FlaecheAus(sender As Object) As Integer
+            Dim tag = TryCast(TryCast(sender, Control)?.Tag, String)
+            If String.IsNullOrEmpty(tag) Then Return 0
+            Return If(tag.Split(":"c)(0) = "1", 1, 0)
+        End Function
+
+        Private Sub OnCompareStarClick(sender As Object, e As RoutedEventArgs)
+            Dim tag = TryCast(TryCast(sender, Control)?.Tag, String)
+            If String.IsNullOrEmpty(tag) Then Return
+            Dim teile = tag.Split(":"c)
+            Dim sterne As Integer
+            If teile.Length <> 2 OrElse Not Integer.TryParse(teile(1), sterne) Then Return
+            GetVm()?.SetCompareRating(FlaecheAus(sender), sterne)
+            e.Handled = True
+        End Sub
+
+        Private Sub OnCompareFavoriteClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.ToggleCompareFavorite(FlaecheAus(sender))
+            e.Handled = True
+        End Sub
+
+        Private Sub OnCompareEditClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.OpenComparePaneInEditor(FlaecheAus(sender))
+            e.Handled = True
+        End Sub
+
+        Private Sub OnCompareDeleteClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.DeleteComparePane(FlaecheAus(sender))
+            e.Handled = True
+        End Sub
+
+        Public Sub OnSwapComparePanesClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.SwapComparePanes()
+        End Sub
+
         Public Sub OnTogglePinClick(sender As Object, e As RoutedEventArgs)
             GetVm()?.TogglePin()
         End Sub
@@ -181,13 +232,24 @@ Namespace Views
                     ApplyImageFitMode()
                     e.Handled = True
                 Case Key.Delete
-                    vm.DeleteCurrentCommand.Execute(Nothing)
-                    e.Handled = True
+                    ' Im Vergleich stehen zwei Bilder nebeneinander - welches die Taste traefe,
+                    ' waere nicht ablesbar. Loeschen ist nicht umkehrbar, also lieber nichts tun.
+                    If vm.CanDeleteCurrent Then
+                        vm.DeleteCurrentCommand.Execute(Nothing)
+                        e.Handled = True
+                    End If
                 Case Key.F2
                     vm.RenameCurrentCommand.Execute(Nothing)
                     e.Handled = True
                 Case Key.Space
-                    vm.ToggleSlideshowCommand.Execute(Nothing)
+                    ' Im Vergleich tauscht die Leertaste die Seiten - eine Diashow waere dort
+                    ' sinnlos, und Tauschen ist die Aktion, die man beim Durchsehen einer Serie am
+                    ' haeufigsten braucht.
+                    If vm.IsCompareMode Then
+                        vm.SwapComparePanes()
+                    Else
+                        vm.ToggleSlideshowCommand.Execute(Nothing)
+                    End If
                     e.Handled = True
                 ' F11 behandelt MainWindow.OnWindowKeyDown im Tunnel, für alle Modi gemeinsam.
                 Case Key.Escape, Key.Back
@@ -617,6 +679,31 @@ Namespace Views
             e.Pointer.Capture(sv)
         End Sub
 
+        ''' <summary>Die Groesse EINER Vergleichsflaeche an das ViewModel melden. Die einzelne
+        ''' Bildflaeche ist waehrend des Vergleichs ausgeblendet und meldet Groesse null - ohne diese
+        ''' Meldung rechnete das Einpassen mit einer Flaeche von null und lieferte stumpf 100 %.</summary>
+        Private Sub OnCompareViewportSizeChanged(sender As Object, e As SizeChangedEventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            vm.SetCompareViewportSize(e.NewSize.Width, e.NewSize.Height)
+            ApplyCompareFitMode()
+        End Sub
+
+        ''' <summary>Doppelklick auf eine Vergleichsflaeche oeffnet DEREN Bild im Editor - dasselbe,
+        ''' was der Doppelklick in der Einzelansicht tut. Ohne das war der Vergleich die einzige
+        ''' Ansicht, aus der man nicht per Doppelklick weiterkam.</summary>
+        Private Sub OnComparePaneDoubleTapped(sender As Object, e As TappedEventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
+            Dim sv = TryCast(sender, ScrollViewer)
+            If sv Is Nothing Then Return
+            ' Ein laufendes Ziehen beenden, sonst haengt der Zeiger-Fang am ScrollViewer, waehrend
+            ' der Editor nach vorn kommt.
+            _compareZiehtScroll = Nothing
+            vm.OpenComparePaneInEditor(If(TryCast(sv.Tag, String) = "1", 1, 0))
+            e.Handled = True
+        End Sub
+
         ''' <summary>Ziehen mit der Maus im Vergleich. Ein ScrollViewer kann das von sich aus nicht -
         ''' die einzelne Bildflaeche hat dafuer eigene Zeiger-Handler, und der Vergleich braucht sie
         ''' genauso. Der gespiegelte Ausschnitt folgt von selbst ueber ScrollChanged.</summary>
@@ -659,6 +746,10 @@ Namespace Views
             If _spiegeltAusschnitt Then Return
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
+            ' Entkoppelt scrollt jede Flaeche fuer sich - fuer Aufnahmen, die nicht deckungsgleich
+            ' sind (anderer Ausschnitt, anderes Objektiv), wo das Spiegeln die zweite Flaeche vom
+            ' interessanten Bildteil wegzieht.
+            If Not vm.IsCompareViewportLinked Then Return
             Dim quelle = TryCast(sender, ScrollViewer)
             If quelle Is Nothing Then Return
             Dim links = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")

@@ -1033,8 +1033,10 @@
                             </Border>
 
                             <!-- DETAILS + KÖRNUNG (je eigene Karte im Panel, wie ResizePanel) -->
-                            <panels:DetailsPanel Margin="0,7,0,0"
-                                                 IsVisible="{Binding ShowDetailAdjustments}" />
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowDetailAdjustments}">
+                                <panels:DetailsPanel />
+                            </Border>
 
                             <!-- SCHÄRFE + WEICHZEICHNEN (je eigene Karte im Panel) -->
                             <panels:SharpnessPanel Margin="0,7,0,0"
@@ -1070,6 +1072,13 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowLightAdjustments}">
                                 <panels:CurvePanel />
+                            </Border>
+
+                            <!-- OBJEKTIVKORREKTUR (ausklappbar) - gehört unter die Kurve: sie sitzt
+                                 im Decode, also VOR allem, was die Regler darüber tun. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowLightAdjustments}">
+                                <panels:LensCorrectionPanel />
                             </Border>
 
                             <!-- FILMNEGATIV (ausklappbar) - gehört zu "Anpassen": die Umkehr ist eine

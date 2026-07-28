@@ -463,7 +463,7 @@ Namespace Services
 
         ''' <summary>Die Reihenfolge, in der MetadataExtractor die Tags liefert, ist technisch und nicht
         ''' inhaltlich sortiert - die ersten Einträge sind bei JPEGs Kompression/Datenpräzision und bei
-        ''' Lightroom-XMP dutzende crs:*-Reglerwerte, während Autor, Stichwörter oder Copyright weit
+        ''' XMP-Presets dutzende crs:*-Reglerwerte, während Autor, Stichwörter oder Copyright weit
         ''' hinten stehen. Deshalb bestimmt eine Prioritätsliste je Kategorie, was ins Badge-Overlay
         ''' kommt; erst wenn davon nichts zutrifft, fällt die Zusammenfassung auf die Rohreihenfolge
         ''' zurück, damit exotische Dateien nicht mit leerem Overlay dastehen.</summary>
@@ -851,7 +851,7 @@ Namespace Services
         ''' <summary>Schreibt Katalogdaten (Bewertung, Farb-Label, Stichworte) in ein Adobe-XMP-Sidecar -
         ''' die Verallgemeinerung von <see cref="WriteXmpRatingSidecar"/>. Vorhandene fremde Knoten
         ''' bleiben erhalten (nur die betroffenen werden gesetzt/ersetzt). <paramref name="colorLabelWord"/>
-        ''' ist das englische Lightroom-Farbwort (siehe XmpSidecarService.LabelToXmpWord); leer entfernt
+        ''' ist das englische englische Farbwort (siehe XmpSidecarService.LabelToXmpWord); leer entfernt
         ''' xmp:Label. Leere Stichwortliste entfernt dc:subject. Legt nur bei
         ''' <paramref name="createIfMissing"/> eine neue Datei an. Gegated wird über die Einstellung im
         ''' Aufrufer (LibraryService), NICHT hier.</summary>

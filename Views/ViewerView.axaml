@@ -54,6 +54,20 @@
                                Width="20" Height="20"/>
                     </Button>
 
+                    <!-- Ausschnitt koppeln. Bewusst ein EIGENER Schalter und keine dritte Stufe am
+                         Anheften: das Anheften beantwortet "welches Bild halte ich fest", dieser
+                         "wie bewegen sich die Flaechen". Nur im Vergleich sichtbar, weil er sonst
+                         nichts bedeutet. -->
+                    <Button Classes="icon-btn" Width="38" Height="38"
+                            IsVisible="{Binding IsCompareMode}"
+                            Classes.active="{Binding IsCompareViewportLinked}"
+                            Click="OnToggleCompareViewportLinkClick"
+                            ToolTip.Tip="Ausschnitt beider Bilder koppeln - ausgeschaltet lässt sich jede Seite für sich verschieben">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/link.svg"
+                               Width="20" Height="20"/>
+                    </Button>
+
+
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding RotateLeftCommand}"
                             IsEnabled="{Binding IsSingleImageMode}"
@@ -91,6 +105,7 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right" >
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding DeleteCurrentCommand}"
+                            IsEnabled="{Binding CanDeleteCurrent}"
                             ToolTip.Tip="Löschen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
                                        Width="18" Height="18"/>
@@ -214,7 +229,9 @@
                         <ScrollViewer Grid.Column="0" Name="CompareLeftScroll"
                                       HorizontalScrollBarVisibility="Auto"
                                       VerticalScrollBarVisibility="Auto"
+                                      SizeChanged="OnCompareViewportSizeChanged"
                                       PointerPressed="OnComparePanePressed" Tag="0"
+                                      DoubleTapped="OnComparePaneDoubleTapped"
                                       PointerMoved="OnComparePaneMoved"
                                       PointerReleased="OnComparePaneReleased"
                                       PointerCaptureLost="OnComparePaneReleased">
@@ -222,6 +239,72 @@
                                    Stretch="Uniform"
                                    RenderOptions.BitmapInterpolationMode="HighQuality" />
                         </ScrollViewer>
+
+                        <!-- Marken der linken Flaeche. Dauerhaft sichtbar und AUF dem Bild: nur so ist
+                             ablesbar, welches der beiden Bilder ein Knopf meint. Alles am linken Rand,
+                             damit der Blick beim Vergleichen nur eine Kante absuchen muss. -->
+                        <Grid Grid.Column="0" ZIndex="2" IsVisible="{Binding IsCompareMode}">
+                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                        HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0">
+                                <Button Classes="gallery-overlay-btn" Width="30" Height="30" Padding="0"
+                                        Tag="0" Click="OnCompareEditClick" ToolTip.Tip="Anpassen">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg"
+                                                   Width="17" Height="17" IconBrush="White"/>
+                                </Button>
+                                <Button Classes="gallery-overlay-btn danger" Width="30" Height="30" Padding="0"
+                                        Tag="0" Click="OnCompareDeleteClick" ToolTip.Tip="Löschen">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                                   Width="18" Height="18" IconBrush="White"/>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom"
+                                        HorizontalAlignment="Left" Margin="10,0,0,10">
+                                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                            Tag="0:1" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                            Tag="0:2" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                            Tag="0:3" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                            Tag="0:4" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                            Tag="0:5" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                </StackPanel>
+                                <Button Classes="favorite-btn image-favorite-btn" Width="30" Height="30" Padding="0"
+                                        Tag="0" Click="OnCompareFavoriteClick" ToolTip.Tip="Favorit">
+                                    <Grid>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                                       Width="20" Height="20" Classes="fav-heart"
+                                                       IsVisible="{Binding !CompareLeftIsFavorite}"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                                       Width="20" Height="20" Classes="fav-heart active"
+                                                       IsVisible="{Binding CompareLeftIsFavorite}"/>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
 
                         <Border Grid.Column="2" BorderThickness="2" CornerRadius="3"
                                 BorderBrush="{DynamicResource FP.Accent}"
@@ -231,6 +314,7 @@
                                       HorizontalScrollBarVisibility="Auto"
                                       VerticalScrollBarVisibility="Auto"
                                       PointerPressed="OnComparePanePressed" Tag="1"
+                                      DoubleTapped="OnComparePaneDoubleTapped"
                                       PointerMoved="OnComparePaneMoved"
                                       PointerReleased="OnComparePaneReleased"
                                       PointerCaptureLost="OnComparePaneReleased">
@@ -238,6 +322,90 @@
                                    Stretch="Uniform"
                                    RenderOptions.BitmapInterpolationMode="HighQuality" />
                         </ScrollViewer>
+
+                        <!-- Marken der rechten Flaeche. Dauerhaft sichtbar und AUF dem Bild: nur so ist
+                             ablesbar, welches der beiden Bilder ein Knopf meint. Alles am linken Rand,
+                             damit der Blick beim Vergleichen nur eine Kante absuchen muss. -->
+                        <Grid Grid.Column="2" ZIndex="2" IsVisible="{Binding IsCompareMode}">
+                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                        HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0">
+                                <Button Classes="gallery-overlay-btn" Width="30" Height="30" Padding="0"
+                                        Tag="1" Click="OnCompareEditClick" ToolTip.Tip="Anpassen">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg"
+                                                   Width="17" Height="17" IconBrush="White"/>
+                                </Button>
+                                <Button Classes="gallery-overlay-btn danger" Width="30" Height="30" Padding="0"
+                                        Tag="1" Click="OnCompareDeleteClick" ToolTip.Tip="Löschen">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                                   Width="18" Height="18" IconBrush="White"/>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom"
+                                        HorizontalAlignment="Left" Margin="10,0,0,10">
+                                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                            Tag="1:1" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                            Tag="1:2" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                            Tag="1:3" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                            Tag="1:4" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
+                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                            Tag="1:5" Click="OnCompareStarClick">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                       Classes="rating-star" Width="17" Height="17"/>
+                                    </Button>
+                                </StackPanel>
+                                <Button Classes="favorite-btn image-favorite-btn" Width="30" Height="30" Padding="0"
+                                        Tag="1" Click="OnCompareFavoriteClick" ToolTip.Tip="Favorit">
+                                    <Grid>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                                       Width="20" Height="20" Classes="fav-heart"
+                                                       IsVisible="{Binding !CompareRightIsFavorite}"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
+                                                       Width="20" Height="20" Classes="fav-heart active"
+                                                       IsVisible="{Binding CompareRightIsFavorite}"/>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+
+                        <!-- Tauschen sitzt zwischen den Flaechen: es gehoert zu BEIDEN, nicht zu
+                             einer. Rund, damit es sich von den eckigen Marken der Flaechen
+                             unterscheidet und nicht als deren dritter Knopf gelesen wird. -->
+                        <Button Grid.Column="0" Grid.ColumnSpan="3" ZIndex="3"
+                                Classes="video-play-badge"
+                                Width="46" Height="46" CornerRadius="23"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                IsEnabled="{Binding CanSwapComparePanes}"
+                                Click="OnSwapComparePanesClick"
+                                ToolTip.Tip="Seiten tauschen - das rechte Bild wird das neue angeheftete">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg"
+                                           Width="22" Height="22"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           IconBrush="White"/>
+                        </Button>
+
                     </Grid>
 
                 </Grid>

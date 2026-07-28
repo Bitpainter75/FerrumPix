@@ -22,6 +22,10 @@ Namespace ViewModels
 
     Public Class MainWindowViewModel
         Inherits ViewModelBase
+        ' Der Betrachter kennt nur noch diese schmale Sicht auf den Rahmen (siehe IViewerHost) -
+        ' nicht mehr die ganze Klasse. Die Implements-Klauseln unten sind die Liste dessen, was er
+        ' anfassen darf.
+        Implements IViewerHost
 
         Private _currentMode As AppMode
         Private _previousModeBeforeSettings As AppMode = AppMode.Gallery
@@ -71,10 +75,10 @@ Namespace ViewModels
         Private _dialogSelectedWatermarkPresetName As String = ""
         Private ReadOnly _dialogWatermarkPresets As New List(Of WatermarkPresetSettings)()
 
-        Public Property Gallery As GalleryViewModel
+        Public Property Gallery As GalleryViewModel Implements IViewerHost.Gallery
         Public Property Viewer As ViewerViewModel
-        Public Property Editor As EditorViewModel
-        Public Property Settings As SettingsViewModel
+        Public Property Editor As EditorViewModel Implements IViewerHost.Editor
+        Public Property Settings As SettingsViewModel Implements IViewerHost.Settings
 
         ''' <summary>Meldet die Fensterbreite an alle Leisten. Wird von MainWindow bei jeder
         ''' Größenänderung gerufen; meldet nur, wenn sich an mindestens einer Schwelle etwas
@@ -101,7 +105,7 @@ Namespace ViewModels
         Public ReadOnly Property DialogBatchRenamePreview As ObservableCollection(Of BatchRenamePreviewItem) = New ObservableCollection(Of BatchRenamePreviewItem)()
         Public ReadOnly Property DialogWatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
 
-        Public Property CurrentMode As AppMode
+        Public Property CurrentMode As AppMode Implements IViewerHost.CurrentMode
             Get
                 Return _currentMode
             End Get
@@ -138,7 +142,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property IsFullscreen As Boolean
+        Public Property IsFullscreen As Boolean Implements IViewerHost.IsFullscreen
             Get
                 Return _isFullscreen
             End Get
@@ -332,7 +336,7 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing) As Task
+        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing) As Task Implements IViewerHost.OpenImageInEditor
             If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmEditorLeaveAsync("ein anderes Bild zu öffnen") Then Return
             End If
@@ -369,7 +373,7 @@ Namespace ViewModels
             CurrentMode = _previousModeBeforeSettings
         End Sub
 
-        Public Async Sub BackToGallery(Optional sourcePath As String = Nothing)
+        Public Async Sub BackToGallery(Optional sourcePath As String = Nothing) Implements IViewerHost.BackToGallery
             Try
                 If CurrentMode = AppMode.Editor Then
                     If Not Await ConfirmEditorLeaveAsync("zur Galerie zu wechseln") Then Return
@@ -401,7 +405,7 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Public Async Sub EnterFullscreen()
+        Public Async Sub EnterFullscreen() Implements IViewerHost.EnterFullscreen
             Try
                 If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso (Gallery.SelectedItem.IsImage OrElse Gallery.SelectedItem.IsVideoFile) Then
                     _previousModeBeforeFullscreen = AppMode.Gallery
@@ -690,7 +694,7 @@ Namespace ViewModels
         ''' Anpassungen, nicht als Datei.
         Private ReadOnly _dialogFilterChoicePaths As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
 
-        ''' Die Auswahlliste zur aktuellen Quelle - eingebaute Filter, gespeicherte Lightroom-Presets oder
+        ''' Die Auswahlliste zur aktuellen Quelle - eingebaute Filter, gespeicherte XMP-Presets oder
         ''' gespeicherte LUTs. Wird bei jedem Quellenwechsel neu aufgebaut.
         Public ReadOnly Property DialogFilterChoices As New ObservableCollection(Of String)()
 
@@ -705,7 +709,7 @@ Namespace ViewModels
                 RebuildDialogFilterChoices()
                 Me.RaisePropertyChanged(NameOf(DialogFilterSourceKind))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceFilter))
-                Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceLightroom))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceXmpPreset))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceLut))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceAuto))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterFileVisible))
@@ -724,9 +728,9 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property IsDialogFilterSourceLightroom As Boolean
+        Public ReadOnly Property IsDialogFilterSourceXmpPreset As Boolean
             Get
-                Return String.Equals(_dialogFilterSourceKind, BatchFilterDialogResult.SourceLightroom, StringComparison.OrdinalIgnoreCase)
+                Return String.Equals(_dialogFilterSourceKind, BatchFilterDialogResult.SourceXmpPreset, StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
@@ -750,12 +754,12 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Ein Lightroom-Preset ist eine Sammlung einzelner Regler, kein Effekt mit einem Mischregler -
+        ''' Ein XMP-Preset ist eine Sammlung einzelner Regler, kein Effekt mit einem Mischregler -
         ''' eine "Stärke" gäbe es dort nur als willkürliche Skalierung aller Werte. Die automatische
         ''' Bildverbesserung setzt gemessene Absolutwerte - auch dort wäre eine Stärke willkürlich.
         Public ReadOnly Property IsDialogFilterStrengthVisible As Boolean
             Get
-                Return Not IsDialogFilterSourceLightroom AndAlso Not IsDialogFilterSourceAuto
+                Return Not IsDialogFilterSourceXmpPreset AndAlso Not IsDialogFilterSourceAuto
             End Get
         End Property
 
@@ -842,7 +846,7 @@ Namespace ViewModels
                 DialogFilterChoices.Add(LocalizationService.T("Automatische Bildverbesserung"))
             Else
                 Dim settings = AppSettingsService.Load()
-                Dim entries = If(IsDialogFilterSourceLightroom,
+                Dim entries = If(IsDialogFilterSourceXmpPreset,
                                  settings.LightroomPresets.Select(Function(p) (p.Name, p.Path)),
                                  settings.LutPresets.Select(Function(p) (p.Name, p.Path)))
                 For Each entry In entries
@@ -860,7 +864,7 @@ Namespace ViewModels
         End Sub
 
         ' ── „Exportieren nach" (Galerie): Sammel-Export ─────────────────────────
-        ' Ein Look aus EINER Liste (eingebaute Filter + gespeicherte Lightroom-/LUT-Vorgaben),
+        ' Ein Look aus EINER Liste (eingebaute Filter + gespeicherte XMP-/LUT-Vorgaben),
         ' dazu Auto-Verbesserung, Wasserzeichen-Vorgabe, Bildgröße und Metadaten. Der Dialog
         ' nutzt den gemeinsamen SaveAs-Block (Format/Qualität/Ziel/Muster/Übernehmen).
 
@@ -971,7 +975,7 @@ Namespace ViewModels
             RaiseDialogBatchResizeProperties()
 
             For Each name In {NameOf(DialogFilterSourceKind), NameOf(IsDialogFilterSourceFilter),
-                              NameOf(IsDialogFilterSourceLightroom), NameOf(IsDialogFilterSourceLut),
+                              NameOf(IsDialogFilterSourceXmpPreset), NameOf(IsDialogFilterSourceLut),
                               NameOf(IsDialogFilterSourceAuto),
                               NameOf(IsDialogFilterFileVisible), NameOf(IsDialogFilterStrengthVisible),
                               NameOf(IsDialogFilterChoiceVisible), NameOf(DialogSelectedWatermarkPresetName)}
@@ -1124,7 +1128,7 @@ Namespace ViewModels
             ' Auto-Auswahl die Vorgabenliste unsichtbar und der Auto-Knopf aktiv - der Dialog war
             ' fuer Filter unbedienbar.
             For Each name In {NameOf(DialogFilterSourceKind), NameOf(IsDialogFilterSourceFilter),
-                              NameOf(IsDialogFilterSourceLightroom), NameOf(IsDialogFilterSourceLut),
+                              NameOf(IsDialogFilterSourceXmpPreset), NameOf(IsDialogFilterSourceLut),
                               NameOf(IsDialogFilterSourceAuto), NameOf(IsDialogFilterChoiceVisible),
                               NameOf(IsDialogFilterFileVisible), NameOf(IsDialogFilterStrengthVisible),
                               NameOf(DialogBatchFilterOverwrite), NameOf(DialogBatchFilterAppendName),
@@ -2219,11 +2223,11 @@ Namespace ViewModels
         ' Die Knopfbeschriftungen sind Optional-Vorgaben und müssen deshalb Konstanten bleiben
         ' (VB verlangt konstante Ausdrücke) - übersetzt wird daher IM RUMPF, nicht in der Signatur.
         ' Genau daran lag es, dass „OK"/„Abbrechen" in jeder Sprache deutsch blieben.
-        Public Async Function ShowMessageAsync(titleText As String, messageText As String, Optional confirmText As String = "OK") As Task
+        Public Async Function ShowMessageAsync(titleText As String, messageText As String, Optional confirmText As String = "OK") As Task Implements IViewerHost.ShowMessageAsync
             Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "", LocalizationService.T(confirmText), "")
         End Function
 
-        Public Async Function ShowConfirmAsync(titleText As String, messageText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of Boolean)
+        Public Async Function ShowConfirmAsync(titleText As String, messageText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of Boolean) Implements IViewerHost.ShowConfirmAsync
             Dim result = Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "",
                                                LocalizationService.T(confirmText), LocalizationService.T(cancelText))
             Return result IsNot Nothing
@@ -2995,7 +2999,7 @@ Namespace ViewModels
         ''' die Ansicht blendet die Elemente damit sofort aus, statt auf den Papierkorb zu warten. Ein
         ''' fehlgeschlagenes Löschen holt sie über den Abgleich in <paramref name="afterDelete"/> zurück.</param>
         Public Async Sub RequestDeletePaths(paths As IEnumerable(Of String), Optional afterDelete As Action = Nothing,
-                                            Optional beforeDelete As Action = Nothing)
+                                            Optional beforeDelete As Action = Nothing) Implements IViewerHost.RequestDeletePaths
             Dim pathList = paths.
                 Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
                 Where(Function(p) FileOperationPolicy.CanDelete(p)).
@@ -3073,7 +3077,7 @@ Namespace ViewModels
         ''' und nicht je Ansicht: Viewer und Editor koennen beide einen Sidecar schreiben, und die
         ''' erste Fassung hatte in genau dieser Doppelung den Editor-Fall vergessen
         ''' ("auch bei Thumbnails wird nicht korrekt gedreht").</summary>
-        Public Sub ReloadThumbnailsForFile(path As String)
+        Public Sub ReloadThumbnailsForFile(path As String) Implements IViewerHost.ReloadThumbnailsForFile
             If String.IsNullOrWhiteSpace(path) Then Return
             Gallery?.RefreshThumbnailFor(path)
             ImageItem.ReloadThumbnailsFor(Viewer?.FilmstripItems, path)
@@ -3083,7 +3087,7 @@ Namespace ViewModels
         ''' Bei Dateien (nicht Ordnern) wird nur der Basisname ohne Endung im Eingabefeld angezeigt -
         ''' die Endung wird nach der Eingabe automatisch wieder angehängt, damit sie beim Umbenennen
         ''' nicht versehentlich mit überschrieben/entfernt werden kann.
-        Public Async Sub RequestRenamePath(itemPath As String, Optional afterRename As Action(Of String) = Nothing)
+        Public Async Sub RequestRenamePath(itemPath As String, Optional afterRename As Action(Of String) = Nothing) Implements IViewerHost.RequestRenamePath
             If String.IsNullOrEmpty(itemPath) OrElse Not (IO.File.Exists(itemPath) OrElse IO.Directory.Exists(itemPath)) Then Return
             If Not FileOperationPolicy.CanRename(itemPath) Then Return
             Dim oldName = IO.Path.GetFileName(itemPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
@@ -3386,7 +3390,7 @@ Namespace ViewModels
         ''' Schließen gelöscht - der Editor rendert seinen Bearbeitungsstand dorthin.</summary>
         Public Sub ShowPrintDialog(imagePaths As IEnumerable(Of String),
                                    Optional title As String = Nothing,
-                                   Optional tempFile As String = Nothing)
+                                   Optional tempFile As String = Nothing) Implements IViewerHost.ShowPrintDialog
             Dim paths = If(imagePaths, Enumerable.Empty(Of String)()).
                 Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso File.Exists(p)).
                 ToList()
