@@ -991,7 +991,7 @@ Namespace Views
                     Return
                 End If
                 If Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
-                   Not e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
+                   Not PlatformShortcutService.HasSelectionModifier(e.KeyModifiers) AndAlso
                    vm.SelectedItems IsNot Nothing AndAlso
                    vm.SelectedItems.Count > 1 AndAlso
                    vm.SelectedItems.Contains(item) Then
@@ -1204,7 +1204,7 @@ Namespace Views
             If item Is Nothing OrElse item.IsParentFolderEntry Then Return
             If modifiers.HasFlag(KeyModifiers.Shift) Then
                 vm.SelectRange(_selectionAnchor, item)
-            ElseIf modifiers.HasFlag(KeyModifiers.Control) Then
+            ElseIf PlatformShortcutService.HasSelectionModifier(modifiers) Then
                 vm.ToggleSelection(item)
                 _selectionAnchor = item
             Else
@@ -2098,7 +2098,7 @@ Namespace Views
             If vm Is Nothing Then Return
             If IsTextInputSource(e.Source) Then Return
 
-            If e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+            If PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then
                 Select Case e.Key
                 Case Key.A
                     vm.SelectAllVisible()
@@ -2124,6 +2124,11 @@ Namespace Views
                         FocusSearchBox()
                         e.Handled = True
                         Return
+                End Select
+            End If
+
+            If PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) Then
+                Select Case e.Key
                     Case Key.W
                         ' Strg+W: Filter anwenden (vorher Strg+Umschalt+F).
                         DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+W hasSelectedImage={vm.HasSelectedImage}")
