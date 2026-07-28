@@ -20,7 +20,7 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - View photos fullscreen with zoom, pan, filmstrip navigation, metadata and histogram.
 - Edit photos with crop, resize, rotate, color tools, tone curves, filters, text, shapes, symbols, retouch tools, paint tools and selections.
 - Run batch work from the gallery, including rename, convert, resize, watermark, metadata removal, filters and *Export to*, which combines all of those into one dialog. Every photo format FerrumPix can open works as a source - RAW, PSD, `.fpx`, HEIC, TIFF, BMP and GIF included; formats that cannot be written back simply produce new files instead of offering *Overwrite originals*. A RAW with an `.fpxmp` recipe is developed and processed the way you edited it; whether RAWs without a recipe are developed too is a setting under *RAW development*. `.fpx` is available as a target format in *Export to*, so a batch can come out as reopenable projects rather than finished pictures.
-- Develop RAW files from the sensor data, with automatic sidecar files that keep the original untouched.
+- Develop RAW files from the sensor data, with automatic sidecar files that keep the original untouched, and correct lens distortion, colour fringing and edge darkening from measured data for some 1300 lenses.
 - Work with common image and video formats - JPEG, PNG, WEBP, BMP, GIF, RAW, and read-only HEIC/HEIF/AVIF, TIFF and Photoshop files.
 - Connect to a self-hosted Immich server for browsing, upload, download, editing and metadata sync.
 
@@ -48,7 +48,9 @@ Several photos can also be laid out as a collage from the same menus, with a cho
 
 The viewer opens photos and videos quickly and keeps navigation simple. It supports fullscreen mode, zoom, pan, slideshow, filmstrip navigation, ratings, favorites, tags and deletion.
 
-Two photos can be put side by side: pick two in the gallery and choose *Compare*, or pin the photo you are looking at with the pin button in the toolbar. One zoom applies to both halves and dragging one moves the other with it, so you are always looking at the same part of both pictures - which is what makes a comparison worth anything. Clicking a half gives it the focus and switches the info panel to that photo's data, without the pictures swapping places. With a photo pinned, the filmstrip, the arrow keys and the mouse wheel page the other side onward while the pinned one stays put, so a series of near-identical shots can be worked through against a fixed reference.
+Two photos can be put side by side: pick two in the gallery and choose *Compare*, or pin the photo you are looking at with the pin button in the toolbar. One zoom applies to both halves and dragging one moves the other with it, so you are always looking at the same part of both pictures - which is what makes a comparison worth anything. For shots that are not framed alike, the link button turns that off and each side moves on its own; the zoom stays shared either way. Clicking a half gives it the focus and switches the info panel, the stars, the heart and the colour label to that photo's data, without the pictures swapping places. With a photo pinned, the filmstrip, the arrow keys and the mouse wheel page the other side onward while the pinned one stays put, so a series of near-identical shots can be worked through against a fixed reference. The round button between the halves - or the space bar - swaps them, making the photo you just paged to the new reference.
+
+Each half carries the same badges as a gallery tile: stars, favourite, *Adjust* and *Delete*, always visible and always belonging to the picture they sit on. That is also why the toolbar's delete button and the `Del` key do nothing here - with two photos on screen, neither could say which one it meant, and deleting is not undoable. Deleting the right photo brings the next one into that half; deleting the left one moves the right photo over and loads the next on the right, so a series can be culled in one pass. RAW files are always developed in the comparison rather than shown as the small preview the camera stored, so two raw files are judged by your own rendering instead of the camera's.
 
 Video files use `libmpv` for inline playback and thumbnails. Linux packages use the system `libmpv`; Windows packages bundle the mpv runtime with FerrumPix.
 
@@ -70,7 +72,7 @@ The editor covers the most common photo work:
 - Text, shapes, symbols, images, QR codes and watermarks. Text can be set bold or italic, spaced out, and placed along an arc, a circle or a wave.
 - Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools. The brush picker offers 13 variants - soft round, pencil, marker, grainy acrylic, sandpaper, smudge, spatter, charcoal, crayon, airbrush, calligraphy, stipple and watercolor.
 - Rectangle, ellipse, lasso and magic wand selections. Selections are shown as marching ants, masks as a red overlay.
-- A separate mask tool with a mask brush (adjustable soft edge, add/subtract painting) and two masks you drag onto the image: a linear gradient that runs a correction out along the drag direction, and a radial one that fades it from a centre, invertible so it acts outside instead of inside. Gradient masks are stored as their geometry, not as painted pixels, so their handles, transition width, angle and - for the radial one - its ellipse can be changed at any time.
+- A separate mask tool with a mask brush (adjustable soft edge, add/subtract painting) and two masks you drag onto the image: a linear gradient that runs a correction out along the drag direction, and a radial one that fades it from a centre, invertible so it acts outside instead of inside. Gradient masks are stored as their geometry, not as painted pixels, so their handles, transition width, angle and - for the radial one - the shape of its ellipse can be changed at any time, with the mouse or with the sliders.
 - Save the current sliders under a name in the *Adjustments* group of the *Adjust* tool and apply them to any other image later - the usual way to develop a series consistently. Adjust, Colour, Details and Effects travel; crop, size, objects and masks are deliberately left out, because they belong to one particular picture. Any number of sets can be kept, saving under an existing name replaces that one, and the list survives restarts.
 - Turn a selection or mask into a correction layer whose adjustment applies only inside it. The fill tool fills a selection layer with a solid colour or a linear/radial gradient; on a mask layer the fill's brightness grades how strongly the adjustment applies across the mask - and stays editable afterwards.
 - Per object editing with opacity, blend modes, shadows, glow and transform controls.
@@ -82,6 +84,8 @@ The editor covers the most common photo work:
 RAW files are developed from the actual sensor data - full-resolution demosaic, camera white balance, sRGB - instead of editing the embedded JPEG preview. The status bar shows whether you are working on *RAW developed* or *RAW preview*.
 
 The development starts from a fixed, film-like base curve rather than stretching every photo until its brightest parts are almost white. A dim stage stays dim and a bright beach stays bright: the photo keeps the exposure it was taken with, and midtones and colours land close to what other raw developers show for the same file. Coloured speckle is taken out at the one moment where the sensor's own pattern is still known, before the colour information is reconstructed - after that step it has already been smeared across neighbouring pixels and is much harder to remove. DNG files that merely wrap an already-developed picture, as produced by some converters and scanners, are recognised and passed through untouched instead of being given a second tone curve. LibRaw comes with the packages: Linux packages depend on the system library, the Flatpak builds it in, and Windows releases bundle it.
+
+Lens defects can be corrected from measured data: distortion, the coloured fringes at high-contrast edges in the corners, and the darkening towards the edges. FerrumPix ships an open collection of calibration data covering some 1300 lenses and recognises lens and camera from the shot data - including lenses used through an adapter, since the collection knows which mounts accept which. If there is no data for your lens, nothing happens to the photo: a wrong lens curve is far more visible than a missing one, so the match is deliberately strict and stays silent rather than guessing. It is on by default and can be overridden per photo in the *Lens correction* group of the *Adjust* tool, which also shows which lens was recognised, lets you assign one by hand when the name in the file does not match, and carries a strength slider for each of the three corrections - the data describes a lens model, not your particular copy. Distortion is best decided at the start: switching it later leaves masks and inserted objects slightly out of place, since it moves every pixel.
 
 Slider edits on RAW files are remembered in a small `.fpxmp` sidecar file next to the RAW and re-applied the next time you open it. The RAW itself is never modified. Sidecars travel with the RAW when it is moved, copied, renamed or deleted in FerrumPix. If a RAW carries a Lightroom `.xmp` sidecar with develop settings, they are converted once into an `.fpxmp` recipe so the photo opens the way you left it elsewhere.
 
@@ -180,6 +184,8 @@ The editor and the save dialogs can be set up to match how you work: a default t
 
 Raw files from different cameras leave the sensor at different brightness. A switch adapts the base brightness to the camera model using reference values for over 200 models, so the same scene develops equally bright whichever camera took it. It is off by default - the values are measured rather than supplied by the manufacturers - and unknown models are left exactly as they are.
 
+A second switch turns the lens correction on or off as the default for new photos. It is on, because it does nothing at all unless there is measured data for the lens that took the picture.
+
 The last two sections are reference material: a full list of keyboard and mouse shortcuts for gallery, viewer and editor, and a *Technology* section listing everything FerrumPix is built on, with a link to each project and to its licence text.
 
 ## Technology
@@ -196,6 +202,7 @@ The last two sections are reference material: a full list of keyboard and mouse 
 - [LibRaw](https://www.libraw.org/) (RAW development)
 - [libheif](https://github.com/strukturag/libheif) (HEIC/HEIF/AVIF, optional and never bundled)
 - [BitMiracle.LibTiff.NET](https://github.com/BitMiracle/libtiff.net) (TIFF)
+- [Lensfun](https://github.com/lensfun/lensfun) lens calibration database, bundled unchanged under [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
 - [Tabler Icons](https://github.com/tabler/tabler-icons)
 
 ## Installation
