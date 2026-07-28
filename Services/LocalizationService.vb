@@ -1,6 +1,7 @@
 Imports System
 Imports System.Globalization
 Imports System.Resources
+Imports System.Runtime.CompilerServices
 Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Text.RegularExpressions
@@ -19,6 +20,7 @@ Namespace Services
 
         Private Shared _languageMode As String = "System"
         Private Shared ReadOnly Strings As New ResourceManager("FerrumPix.Strings", GetType(LocalizationService).Assembly)
+        Private Shared ReadOnly AppliedValues As New ConditionalWeakTable(Of ILogical, LocalizedNodeState)()
         ''' Eigene Ressourcendatei nur für die Such-Tags der Formen/Symbole-Icons (Resources/IconTags*.resx),
         ''' getrennt von den allgemeinen UI-Texten, damit sich beide unabhängig voneinander pflegen lassen.
         Private Shared ReadOnly IconTags As New ResourceManager("FerrumPix.IconTags", GetType(LocalizationService).Assembly)
@@ -190,53 +192,82 @@ Namespace Services
         Public Const KeineUebersetzung As String = "no-translate"
 
         Private Shared Sub ApplyOne(node As ILogical)
+            Dim state = AppliedValues.GetValue(node, Function(ignored) New LocalizedNodeState())
+
             Dim textBlock = TryCast(node, TextBlock)
             If textBlock IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBlock.Text) AndAlso
                Not textBlock.Classes.Contains(KeineUebersetzung) Then
-                textBlock.Text = T(textBlock.Text)
+                textBlock.Text = TranslateTracked(textBlock.Text, state.Text)
             End If
 
             Dim content = TryCast(node, ContentControl)
             If content IsNot Nothing AndAlso TypeOf content.Content Is String Then
-                content.Content = T(CStr(content.Content))
+                content.Content = TranslateTracked(CStr(content.Content), state.Content)
             End If
 
             Dim menuItem = TryCast(node, MenuItem)
             If menuItem IsNot Nothing AndAlso TypeOf menuItem.Header Is String Then
-                menuItem.Header = T(CStr(menuItem.Header))
+                menuItem.Header = TranslateTracked(CStr(menuItem.Header), state.MenuHeader)
             End If
 
             ' Expander und TabItem erben Header nicht von MenuItem, sondern von
             ' HeaderedContentControl - ohne diesen Zweig blieben ihre Überschriften deutsch.
             Dim headered = TryCast(node, HeaderedContentControl)
             If headered IsNot Nothing AndAlso TypeOf headered.Header Is String Then
-                headered.Header = T(CStr(headered.Header))
+                headered.Header = TranslateTracked(CStr(headered.Header), state.Header)
             End If
 
             Dim textBox = TryCast(node, TextBox)
             If textBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBox.PlaceholderText) Then
-                textBox.PlaceholderText = T(textBox.PlaceholderText)
+                textBox.PlaceholderText = TranslateTracked(textBox.PlaceholderText, state.Placeholder)
             End If
 
             ' AutoCompleteBox ist keine TextBox, hat aber denselben Platzhalter.
             Dim autoComplete = TryCast(node, AutoCompleteBox)
             If autoComplete IsNot Nothing AndAlso Not String.IsNullOrEmpty(autoComplete.PlaceholderText) Then
-                autoComplete.PlaceholderText = T(autoComplete.PlaceholderText)
+                autoComplete.PlaceholderText = TranslateTracked(autoComplete.PlaceholderText, state.Placeholder)
             End If
 
             ' ComboBox erbt ihren Platzhalter ebenfalls nicht von TextBox - ohne diesen Zweig bliebe der
             ' Text einer noch leeren Auswahlliste deutsch.
             Dim comboBox = TryCast(node, ComboBox)
             If comboBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(comboBox.PlaceholderText) Then
-                comboBox.PlaceholderText = T(comboBox.PlaceholderText)
+                comboBox.PlaceholderText = TranslateTracked(comboBox.PlaceholderText, state.Placeholder)
             End If
 
             Dim control = TryCast(node, Control)
             If control IsNot Nothing Then
                 Dim tip = ToolTip.GetTip(control)
-                If TypeOf tip Is String Then ToolTip.SetTip(control, T(CStr(tip)))
+                If TypeOf tip Is String Then
+                    ToolTip.SetTip(control, TranslateTracked(CStr(tip), state.ToolTip))
+                End If
             End If
         End Sub
+
+        Private Shared Function TranslateTracked(current As String, state As LocalizedValueState) As String
+            If state.Source Is Nothing OrElse
+               Not String.Equals(current, state.LastApplied, StringComparison.Ordinal) Then
+                state.Source = current
+            End If
+
+            Dim translated = T(state.Source)
+            state.LastApplied = translated
+            Return translated
+        End Function
+
+        Private NotInheritable Class LocalizedNodeState
+            Public ReadOnly Text As New LocalizedValueState()
+            Public ReadOnly Content As New LocalizedValueState()
+            Public ReadOnly MenuHeader As New LocalizedValueState()
+            Public ReadOnly Header As New LocalizedValueState()
+            Public ReadOnly Placeholder As New LocalizedValueState()
+            Public ReadOnly ToolTip As New LocalizedValueState()
+        End Class
+
+        Private NotInheritable Class LocalizedValueState
+            Public Source As String
+            Public LastApplied As String
+        End Class
     End Class
 
 End Namespace
