@@ -240,6 +240,13 @@
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
         <Setter Property="CornerRadius" Value="8"/>
     </Style>
+    <!-- Sprach-Eigennamen mischen lateinische und CJK-Fonts mit unterschiedlichen Zeilenmetriken.
+         Eine feste Containerhöhe hält die Auswahl trotzdem optisch auf einer Linie. -->
+    <Style Selector="Button.language-option">
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
     <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
     </Style>
