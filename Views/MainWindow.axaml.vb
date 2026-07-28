@@ -1,5 +1,6 @@
 Imports Avalonia
 Imports Avalonia.Controls
+Imports Avalonia.Controls.Chrome
 Imports Avalonia.Input
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
@@ -23,12 +24,14 @@ Namespace Views
         Private _stateBeforeFullscreen As WindowState = WindowState.Normal
         Private _allowWindowClose As Boolean = False
         Private _closeButtonRequestActive As Boolean = False
+        Private ReadOnly _usesNativeMacWindowChrome As Boolean = OperatingSystem.IsMacOS()
 
         ''' <summary>Wer den Tastaturfokus hatte, bevor ein Overlay-Dialog ihn an sich gezogen hat.</summary>
         Private _focusBeforeDialog As Control = Nothing
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            ConfigurePlatformWindowChrome()
             ApplyInitialWindowSize()
             Icon = App.AppIcon
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
@@ -45,6 +48,58 @@ Namespace Views
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnWindowKeyDown, RoutingStrategies.Tunnel)
             AddHandler PointerPressed, AddressOf OnWindowPointerPressed
             WireWindowChrome()
+        End Sub
+
+        ''' <summary>macOS erhaelt den nativen NSWindow-Rahmen mit den roten, gelben und
+        ''' gruenen Fensterknoepfen. Der Clientbereich reicht dabei in die vorhandene
+        ''' 50-Pixel-Kopfleiste hinein. Auf Windows und Linux bleiben die in XAML
+        ''' gesetzten rahmenlosen, selbst gezeichneten Fensterdekorationen unveraendert.</summary>
+        Private Sub ConfigurePlatformWindowChrome()
+            If Not _usesNativeMacWindowChrome Then Return
+
+            WindowDecorations = WindowDecorations.Full
+            ExtendClientAreaToDecorationsHint = True
+            ExtendClientAreaTitleBarHeightHint = 50
+
+            ' Rundung, Rand, Schatten UND das Abschneiden der Fensterecken gehoeren
+            ' auf macOS ausschliesslich NSWindow. Der Avalonia-Rahmen darf weder eine
+            ' zweite Schnittkante noch eine transparente Compositing-Kante erzeugen.
+            Dim frame = Me.FindControl(Of Border)("WindowFrame")
+            If frame IsNot Nothing Then
+                frame.CornerRadius = New CornerRadius(0)
+                frame.ClipToBounds = False
+                Background = frame.Background
+            End If
+
+            ' Die drei nativen Knoepfe bleiben links frei; auf macOS sitzt das Logo
+            ' stattdessen rechts in der vorhandenen Kopfleiste.
+            Dim logo = Me.FindControl(Of StackPanel)("WindowLogoPanel")
+            If logo IsNot Nothing Then
+                Grid.SetColumn(logo, 2)
+                logo.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+                logo.Margin = New Thickness(0, 0, 18, 0)
+            End If
+
+            ' Der Host hat absichtlich keine IsVisible-Bindung. Die Bindung des inneren
+            ' Panels wird erst mit dem DataContext aktiv und wuerde einen fruehen
+            ' Plattformwert sonst wieder ueberschreiben.
+            Dim customControlsHost = Me.FindControl(Of Border)("CustomWindowControlsHost")
+            If customControlsHost IsNot Nothing Then customControlsHost.IsVisible = False
+
+            For Each resizeName As String In {"ResizeTop", "ResizeBottom", "ResizeLeft", "ResizeRight",
+                                              "ResizeTopLeft", "ResizeTopRight", "ResizeBottomLeft", "ResizeBottomRight"}
+                Dim resizeArea = Me.FindControl(Of Border)(resizeName)
+                If resizeArea IsNot Nothing Then resizeArea.IsVisible = False
+            Next
+
+            ' Uebergibt Ziehen und Doppelklick der oberen Leiste an macOS. Die
+            ' ausdruecklich markierten Fussleisten bleiben beim bestehenden
+            ' Avalonia-BeginMoveDrag-Verhalten.
+            Dim nativeTitleBar = Me.FindControl(Of Border)("TopWindowDragArea")
+            If nativeTitleBar IsNot Nothing Then
+                WindowDecorationProperties.SetElementRole(
+                    nativeTitleBar, WindowDecorationsElementRole.TitleBar)
+            End If
         End Sub
 
         Private Sub ApplyInitialWindowSize()
@@ -361,18 +416,20 @@ Namespace Views
         End Sub
 
         Private Sub WireWindowChrome()
-            WireBtn("MinimizeButton", AddressOf OnMinimizeClick)
-            WireBtn("MaximizeButton", AddressOf OnMaximizeClick)
-            WireBtn("CloseButton", AddressOf OnCloseClick)
+            If Not _usesNativeMacWindowChrome Then
+                WireBtn("MinimizeButton", AddressOf OnMinimizeClick)
+                WireBtn("MaximizeButton", AddressOf OnMaximizeClick)
+                WireBtn("CloseButton", AddressOf OnCloseClick)
 
-            WireResizeBorder("ResizeTop", WindowEdge.North)
-            WireResizeBorder("ResizeBottom", WindowEdge.South)
-            WireResizeBorder("ResizeLeft", WindowEdge.West)
-            WireResizeBorder("ResizeRight", WindowEdge.East)
-            WireResizeBorder("ResizeTopLeft", WindowEdge.NorthWest)
-            WireResizeBorder("ResizeTopRight", WindowEdge.NorthEast)
-            WireResizeBorder("ResizeBottomLeft", WindowEdge.SouthWest)
-            WireResizeBorder("ResizeBottomRight", WindowEdge.SouthEast)
+                WireResizeBorder("ResizeTop", WindowEdge.North)
+                WireResizeBorder("ResizeBottom", WindowEdge.South)
+                WireResizeBorder("ResizeLeft", WindowEdge.West)
+                WireResizeBorder("ResizeRight", WindowEdge.East)
+                WireResizeBorder("ResizeTopLeft", WindowEdge.NorthWest)
+                WireResizeBorder("ResizeTopRight", WindowEdge.NorthEast)
+                WireResizeBorder("ResizeBottomLeft", WindowEdge.SouthWest)
+                WireResizeBorder("ResizeBottomRight", WindowEdge.SouthEast)
+            End If
 
             Dim titleBar = Me.FindControl(Of Grid)("TitleBar")
             If titleBar IsNot Nothing Then
@@ -406,9 +463,21 @@ Namespace Views
         ''' Schiebereglern und Listen ab, bevor sie den Ziehbereich erreicht.</summary>
         Private Sub TitleBarPointerPressed(sender As Object, e As PointerPressedEventArgs)
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
-            If Not IsInWindowDragArea(TryCast(e.Source, Control)) Then Return
+            Dim source = TryCast(e.Source, Control)
+            If _usesNativeMacWindowChrome AndAlso IsInTopWindowDragArea(source) Then Return
+            If Not IsInWindowDragArea(source) Then Return
             BeginMoveDrag(e)
         End Sub
+
+        Private Function IsInTopWindowDragArea(source As Control) As Boolean
+            Dim topArea = Me.FindControl(Of Border)("TopWindowDragArea")
+            Dim ctrl = source
+            While ctrl IsNot Nothing
+                If ctrl Is topArea Then Return True
+                ctrl = TryCast(ctrl.Parent, Control)
+            End While
+            Return False
+        End Function
 
         Private Shared Function IsInWindowDragArea(source As Control) As Boolean
             Dim ctrl = source
