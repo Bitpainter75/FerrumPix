@@ -4,6 +4,7 @@ Imports Avalonia.Input
 Imports Avalonia.Input.Platform
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Interactivity
+Imports Avalonia.LogicalTree
 Imports Avalonia.Threading
 Imports Avalonia.Media.Imaging
 Imports Avalonia.VisualTree
@@ -60,6 +61,12 @@ Namespace Views
             ' Das Control gehört dieser View-Instanz - kein Abmelden nötig, sie sterben gemeinsam.
             Dim scrubber = Me.FindControl(Of GalleryTimelineScrubber)("GalleryTimelineScrubber")
             If scrubber IsNot Nothing Then AddHandler scrubber.ScrubRequested, AddressOf OnTimelineScrubRequested
+        End Sub
+
+        Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
+            Dim flyout = TryCast(sender, Flyout)
+            Dim content = TryCast(flyout?.Content, ILogical)
+            If content IsNot Nothing Then LocalizationService.ApplyTo(content)
         End Sub
 
         Private Sub OnDescendantGotFocus(sender As Object, e As FocusChangedEventArgs)

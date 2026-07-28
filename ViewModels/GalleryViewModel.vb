@@ -351,7 +351,7 @@ Namespace ViewModels
                     Case "Type" : modeLabel = LocalizationService.T("Typ")
                     Case "Rating" : modeLabel = LocalizationService.T("Bewertung")
                     Case "Favorite" : modeLabel = LocalizationService.T("Favorit")
-                    Case Else : modeLabel = "Name"
+                    Case Else : modeLabel = LocalizationService.T("Name")
                 End Select
 
                 Return $"{modeLabel} {If(_sortAscending, LocalizationService.T("aufsteigend"), LocalizationService.T("absteigend"))}"
