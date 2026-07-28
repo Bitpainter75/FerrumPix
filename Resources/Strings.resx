@@ -4782,4 +4782,7 @@
   <data name="Zoom_ohne_Brennweitenangabe_nicht_zuzuordnen_abbfb8cc" xml:space="preserve">
     <value>zoom without a focal length: cannot be assigned</value>
   </data>
+  <data name="Chinesisch_e66834c6" xml:space="preserve">
+    <value>Chinese</value>
+  </data>
 </root>

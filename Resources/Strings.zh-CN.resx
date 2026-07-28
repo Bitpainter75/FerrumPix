@@ -4662,4 +4662,7 @@
   <data name="Bild_anheften_das_n_chste_Bild_wird_daneben_zum__e44dba37" xml:space="preserve">
     <value>Pin image — the next image is shown beside it for comparison</value>
   </data>
+  <data name="Chinesisch_e66834c6" xml:space="preserve">
+    <value>中文</value>
+  </data>
 </root>
