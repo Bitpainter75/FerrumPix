@@ -918,26 +918,48 @@ Namespace Services
                 Dim client = GetClient()
                 ' Ein gemeinsamer Fetcher fuer "Alle Fotos", Alben, Personen und Orte - search/metadata
                 ' filtert wahlweise per albumIds, personIds (Gesichtserkennung des Servers) oder city.
-                Dim requestBody = BuildAssetPageSearchBody(page, albumId, personId, city)
+                Dim requestBody = BuildAssetPageSearchBody(page, albumId, personId, city, includeExif:=True)
+                Dim statusCode As Integer
+                Dim body As String
                 Using content = New StringContent(requestBody, Encoding.UTF8, "application/json")
                     Using resp = Await client.PostAsync(ApiUrl("search/metadata"), content, cancellationToken).ConfigureAwait(False)
-                        resp.EnsureSuccessStatusCode()
-                        Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
-                        Dim dto = JsonSerializer.Deserialize(Of ImmichSearchResponseDto)(body, JsonOptions)
-                        Dim items = dto?.Assets?.Items
-                        If items IsNot Nothing Then
-                            For Each a In items
-                                If a Is Nothing OrElse String.IsNullOrEmpty(a.Id) Then Continue For
-                                If Not IsBrowsableAsset(a.Visibility) Then Continue For
-                                result.Items.Add(MapAsset(a))
-                            Next
-                        End If
-                        Dim parsedPage As Integer
-                        If Not String.IsNullOrEmpty(dto?.Assets?.NextPage) AndAlso Integer.TryParse(dto.Assets.NextPage, parsedPage) Then
-                            result.NextPage = parsedPage
-                        End If
+                        statusCode = CInt(resp.StatusCode)
+                        body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
                     End Using
                 End Using
+
+                ' Older Immich servers may reject the optional withExif field instead of ignoring
+                ' it. Retry only for that specific contract error; network failures and invalid
+                ' filters must not cause a second request or hide the original failure.
+                If IsWithExifRejected(statusCode, body) Then
+                    DiagnosticLogService.LogAlways("Immich.GetAssetsPage",
+                                                   $"HTTP {statusCode} für withExif - Wiederholung ohne EXIF")
+                    requestBody = BuildAssetPageSearchBody(page, albumId, personId, city, includeExif:=False)
+                    Using content = New StringContent(requestBody, Encoding.UTF8, "application/json")
+                        Using resp = Await client.PostAsync(ApiUrl("search/metadata"), content, cancellationToken).ConfigureAwait(False)
+                            statusCode = CInt(resp.StatusCode)
+                            body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                        End Using
+                    End Using
+                End If
+
+                If statusCode < 200 OrElse statusCode >= 300 Then
+                    Throw New HttpRequestException($"HTTP {statusCode} bei Immich-Metadatensuche")
+                End If
+
+                Dim dto = JsonSerializer.Deserialize(Of ImmichSearchResponseDto)(body, JsonOptions)
+                Dim items = dto?.Assets?.Items
+                If items IsNot Nothing Then
+                    For Each a In items
+                        If a Is Nothing OrElse String.IsNullOrEmpty(a.Id) Then Continue For
+                        If Not IsBrowsableAsset(a.Visibility) Then Continue For
+                        result.Items.Add(MapAsset(a))
+                    Next
+                End If
+                Dim parsedPage As Integer
+                If Not String.IsNullOrEmpty(dto?.Assets?.NextPage) AndAlso Integer.TryParse(dto.Assets.NextPage, parsedPage) Then
+                    result.NextPage = parsedPage
+                End If
                 LastError = Nothing
             Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
@@ -951,13 +973,23 @@ Namespace Services
         ''' <summary>Gemeinsamer, rein funktionaler Aufbau des Requests für die Galerie-Timeline.
         ''' Als eigene Naht lässt sich der API-Vertrag ohne einen laufenden Immich-Server prüfen.</summary>
         Private Shared Function BuildAssetPageSearchBody(page As Integer, albumId As String,
-                                                         personId As String, city As String) As String
+                                                         personId As String, city As String,
+                                                         Optional includeExif As Boolean = True) As String
             Dim filters As New List(Of String)()
             If Not String.IsNullOrWhiteSpace(albumId) Then filters.Add($"""albumIds"":[""{albumId}""]")
             If Not String.IsNullOrWhiteSpace(personId) Then filters.Add($"""personIds"":[""{personId}""]")
             If Not String.IsNullOrWhiteSpace(city) Then filters.Add($"""city"":{JsonSerializer.Serialize(city)}")
             Dim filterPrefix = If(filters.Count > 0, String.Join(",", filters) & ",", "")
-            Return $"{{{filterPrefix}""page"":{Math.Max(1, page)},""size"":{AssetPageSize},""withExif"":true}}"
+            Dim exifPart = If(includeExif, ",""withExif"":true", "")
+            Return $"{{{filterPrefix}""page"":{Math.Max(1, page)},""size"":{AssetPageSize}{exifPart}}}"
+        End Function
+
+        Private Shared Function IsWithExifRejected(statusCode As Integer, body As String) As Boolean
+            If statusCode <> 400 AndAlso statusCode <> 422 Then Return False
+            Dim text = If(body, "")
+            Return text.IndexOf("withExif", StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                   text.IndexOf("unknown property", StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                   text.IndexOf("not allowed", StringComparison.OrdinalIgnoreCase) >= 0
         End Function
 
         ''' <summary>Benannte Personen der serverseitigen Gesichtserkennung (GET /api/people).
@@ -1096,14 +1128,6 @@ Namespace Services
             End If
             ApplyFerrumPixDescriptionMeta(item)
             Return item
-        End Function
-
-        ''' <summary>Schmale Diagnose-Naht für die JSON-Vertragsregressionen der Immich-Anbindung.
-        ''' Verwendet absichtlich denselben DTO- und Mapping-Pfad wie echte Serverantworten.</summary>
-        Private Shared Function MapAssetJsonForDiagnostics(json As String) As ImmichAsset
-            Dim dto = JsonSerializer.Deserialize(Of ImmichAssetDto)(json, JsonOptions)
-            If dto Is Nothing Then Return Nothing
-            Return MapAsset(dto)
         End Function
 
         Private Const FerrumPixMetaStart As String = "[FerrumPix]"

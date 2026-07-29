@@ -28,12 +28,10 @@ Namespace Services
             End Get
         End Property
 
-        Private Sub New(Optional databasePath As String = Nothing)
-            Dim dir = If(String.IsNullOrWhiteSpace(databasePath),
-                         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix"),
-                         Path.GetDirectoryName(databasePath))
+        Private Sub New()
+            Dim dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
             Directory.CreateDirectory(dir)
-            _dbPath = If(String.IsNullOrWhiteSpace(databasePath), Path.Combine(dir, "immich-index.db"), databasePath)
+            _dbPath = Path.Combine(dir, "immich-index.db")
             _connectionString = $"Data Source={_dbPath}"
             Try
                 InitDb()
@@ -41,12 +39,6 @@ Namespace Services
                 DiagnosticLogService.LogException("ImmichIndex.Init", ex)
             End Try
         End Sub
-
-        ''' <summary>Erzeugt einen isolierten Index für die Vertragsregressionen, ohne den
-        ''' Anwendungskatalog des Benutzers zu berühren.</summary>
-        Private Shared Function CreateForDiagnostics(databasePath As String) As ImmichIndexService
-            Return New ImmichIndexService(databasePath)
-        End Function
 
         Private Sub InitDb()
             Using conn = New SqliteConnection(_connectionString)
