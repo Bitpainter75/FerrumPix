@@ -58,7 +58,10 @@ Namespace Services
                         "  Camera     TEXT," &
                         "  Iso        INTEGER," &
                         "  Aperture   REAL," &
+                        "  FileCreatedAt TEXT," &
+                        "  FileModifiedAt TEXT," &
                         "  DateTaken  TEXT," &
+                        "  DateModified TEXT," &
                         "  Tags       TEXT NOT NULL DEFAULT ''," &
                         "  Width      INTEGER NOT NULL DEFAULT 0," &
                         "  Height     INTEGER NOT NULL DEFAULT 0," &
@@ -79,6 +82,10 @@ Namespace Services
                         "  FileName      TEXT NOT NULL DEFAULT ''," &
                         "  IsVideo       INTEGER NOT NULL DEFAULT 0," &
                         "  FileCreatedAt TEXT," &
+                        "  FileModifiedAt TEXT," &
+                        "  FileSize      INTEGER NOT NULL DEFAULT 0," &
+                        "  DateTaken     TEXT," &
+                        "  DateModified  TEXT," &
                         "  Width         INTEGER NOT NULL DEFAULT 0," &
                         "  Height        INTEGER NOT NULL DEFAULT 0," &
                         "  IsFavorite    INTEGER NOT NULL DEFAULT 0," &
@@ -87,6 +94,29 @@ Namespace Services
                         ")"
                     cmd.ExecuteNonQuery()
                 End Using
+                EnsureColumn(conn, "AssetMeta", "FileCreatedAt", "TEXT")
+                EnsureColumn(conn, "AssetMeta", "FileModifiedAt", "TEXT")
+                EnsureColumn(conn, "AssetMeta", "DateModified", "TEXT")
+                EnsureColumn(conn, "AssetList", "FileModifiedAt", "TEXT")
+                EnsureColumn(conn, "AssetList", "FileSize", "INTEGER NOT NULL DEFAULT 0")
+                EnsureColumn(conn, "AssetList", "DateTaken", "TEXT")
+                EnsureColumn(conn, "AssetList", "DateModified", "TEXT")
+            End Using
+        End Sub
+
+        Private Shared Sub EnsureColumn(conn As SqliteConnection, tableName As String,
+                                        columnName As String, definition As String)
+            Using check = conn.CreateCommand()
+                check.CommandText = $"PRAGMA table_info({tableName})"
+                Using reader = check.ExecuteReader()
+                    While reader.Read()
+                        If String.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase) Then Return
+                    End While
+                End Using
+            End Using
+            Using alter = conn.CreateCommand()
+                alter.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {definition}"
+                alter.ExecuteNonQuery()
             End Using
         End Sub
 
@@ -99,7 +129,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT AssetId,FileName,IsVideo,FileCreatedAt,Width,Height,IsFavorite,UpdatedAt " &
+                        cmd.CommandText = "SELECT AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt " &
                                           "FROM AssetList WHERE ServerKey=$s ORDER BY Position"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         Using r = cmd.ExecuteReader()
@@ -109,10 +139,14 @@ Namespace Services
                                     .FileName = If(r.IsDBNull(1), "", r.GetString(1)),
                                     .IsVideo = Not r.IsDBNull(2) AndAlso r.GetInt32(2) <> 0,
                                     .FileCreatedAt = ParseDate(If(r.IsDBNull(3), "", r.GetString(3))),
-                                    .Width = If(r.IsDBNull(4), 0, r.GetInt32(4)),
-                                    .Height = If(r.IsDBNull(5), 0, r.GetInt32(5)),
-                                    .IsFavorite = Not r.IsDBNull(6) AndAlso r.GetInt32(6) <> 0,
-                                    .UpdatedAt = If(r.IsDBNull(7), "", r.GetString(7))
+                                    .FileModifiedAt = ParseDate(If(r.IsDBNull(4), "", r.GetString(4))),
+                                    .FileSizeBytes = If(r.IsDBNull(5), 0L, r.GetInt64(5)),
+                                    .ExifDateTaken = ParseDate(If(r.IsDBNull(6), "", r.GetString(6))),
+                                    .ExifDateModified = ParseDate(If(r.IsDBNull(7), "", r.GetString(7))),
+                                    .Width = If(r.IsDBNull(8), 0, r.GetInt32(8)),
+                                    .Height = If(r.IsDBNull(9), 0, r.GetInt32(9)),
+                                    .IsFavorite = Not r.IsDBNull(10) AndAlso r.GetInt32(10) <> 0,
+                                    .UpdatedAt = If(r.IsDBNull(11), "", r.GetString(11))
                                 })
                             End While
                         End Using
@@ -142,14 +176,18 @@ Namespace Services
                         End Using
                         Using ins = conn.CreateCommand()
                             ins.Transaction = transaction
-                            ins.CommandText = "INSERT INTO AssetList(ServerKey,Position,AssetId,FileName,IsVideo,FileCreatedAt,Width,Height,IsFavorite,UpdatedAt) " &
-                                              "VALUES($s,$pos,$a,$n,$v,$c,$w,$h,$f,$u)"
+                            ins.CommandText = "INSERT INTO AssetList(ServerKey,Position,AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt) " &
+                                              "VALUES($s,$pos,$a,$n,$v,$c,$m,$fs,$dt,$dm,$w,$h,$f,$u)"
                             Dim pS = ins.Parameters.Add("$s", SqliteType.Text)
                             Dim pPos = ins.Parameters.Add("$pos", SqliteType.Integer)
                             Dim pA = ins.Parameters.Add("$a", SqliteType.Text)
                             Dim pN = ins.Parameters.Add("$n", SqliteType.Text)
                             Dim pV = ins.Parameters.Add("$v", SqliteType.Integer)
                             Dim pC = ins.Parameters.Add("$c", SqliteType.Text)
+                            Dim pM = ins.Parameters.Add("$m", SqliteType.Text)
+                            Dim pFs = ins.Parameters.Add("$fs", SqliteType.Integer)
+                            Dim pDt = ins.Parameters.Add("$dt", SqliteType.Text)
+                            Dim pDm = ins.Parameters.Add("$dm", SqliteType.Text)
                             Dim pW = ins.Parameters.Add("$w", SqliteType.Integer)
                             Dim pH = ins.Parameters.Add("$h", SqliteType.Integer)
                             Dim pF = ins.Parameters.Add("$f", SqliteType.Integer)
@@ -163,6 +201,10 @@ Namespace Services
                                 pN.Value = If(a.FileName, "")
                                 pV.Value = If(a.IsVideo, 1, 0)
                                 pC.Value = If(a.FileCreatedAt.HasValue, a.FileCreatedAt.Value.ToString("o", CultureInfo.InvariantCulture), CType(DBNull.Value, Object))
+                                pM.Value = If(a.FileModifiedAt.HasValue, a.FileModifiedAt.Value.ToString("o", CultureInfo.InvariantCulture), CType(DBNull.Value, Object))
+                                pFs.Value = a.FileSizeBytes
+                                pDt.Value = If(a.ExifDateTaken.HasValue, a.ExifDateTaken.Value.ToString("o", CultureInfo.InvariantCulture), CType(DBNull.Value, Object))
+                                pDm.Value = If(a.ExifDateModified.HasValue, a.ExifDateModified.Value.ToString("o", CultureInfo.InvariantCulture), CType(DBNull.Value, Object))
                                 pW.Value = a.Width
                                 pH.Value = a.Height
                                 pF.Value = If(a.IsFavorite, 1, 0)
@@ -186,7 +228,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,DateTaken,Tags,Width,Height,IsFavorite " &
+                        cmd.CommandText = "SELECT UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite " &
                                           "FROM AssetMeta WHERE ServerKey=$s AND AssetId=$a"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$a", assetId)
@@ -204,11 +246,14 @@ Namespace Services
                                 .Camera = If(r.IsDBNull(3), "", r.GetString(3)),
                                 .Iso = If(r.IsDBNull(4), CType(Nothing, Integer?), r.GetInt32(4)),
                                 .Aperture = If(r.IsDBNull(5), CType(Nothing, Double?), r.GetDouble(5)),
-                                .ExifDateTaken = ParseDate(If(r.IsDBNull(6), "", r.GetString(6))),
-                                .Tags = SplitTags(If(r.IsDBNull(7), "", r.GetString(7))),
-                                .Width = If(r.IsDBNull(8), 0, r.GetInt32(8)),
-                                .Height = If(r.IsDBNull(9), 0, r.GetInt32(9)),
-                                .IsFavorite = Not r.IsDBNull(10) AndAlso r.GetInt32(10) <> 0
+                                .FileCreatedAt = ParseDate(If(r.IsDBNull(6), "", r.GetString(6))),
+                                .FileModifiedAt = ParseDate(If(r.IsDBNull(7), "", r.GetString(7))),
+                                .ExifDateTaken = ParseDate(If(r.IsDBNull(8), "", r.GetString(8))),
+                                .ExifDateModified = ParseDate(If(r.IsDBNull(9), "", r.GetString(9))),
+                                .Tags = SplitTags(If(r.IsDBNull(10), "", r.GetString(10))),
+                                .Width = If(r.IsDBNull(11), 0, r.GetInt32(11)),
+                                .Height = If(r.IsDBNull(12), 0, r.GetInt32(12)),
+                                .IsFavorite = Not r.IsDBNull(13) AndAlso r.GetInt32(13) <> 0
                             }
                             Return asset
                         End Using
@@ -228,10 +273,10 @@ Namespace Services
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText =
-                            "INSERT INTO AssetMeta(ServerKey,AssetId,UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,DateTaken,Tags,Width,Height,IsFavorite) " &
-                            "VALUES($s,$a,$u,$fs,$r,$cam,$iso,$ap,$dt,$tags,$w,$h,$fav) " &
+                            "INSERT INTO AssetMeta(ServerKey,AssetId,UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite) " &
+                            "VALUES($s,$a,$u,$fs,$r,$cam,$iso,$ap,$fc,$fm,$dt,$dm,$tags,$w,$h,$fav) " &
                             "ON CONFLICT(ServerKey,AssetId) DO UPDATE SET " &
-                            "UpdatedAt=$u,FileSize=$fs,Rating=$r,Camera=$cam,Iso=$iso,Aperture=$ap,DateTaken=$dt,Tags=$tags,Width=$w,Height=$h,IsFavorite=$fav"
+                            "UpdatedAt=$u,FileSize=$fs,Rating=$r,Camera=$cam,Iso=$iso,Aperture=$ap,FileCreatedAt=$fc,FileModifiedAt=$fm,DateTaken=$dt,DateModified=$dm,Tags=$tags,Width=$w,Height=$h,IsFavorite=$fav"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$a", asset.Id)
                         cmd.Parameters.AddWithValue("$u", If(asset.UpdatedAt, ""))
@@ -240,7 +285,10 @@ Namespace Services
                         cmd.Parameters.AddWithValue("$cam", If(CObj(asset.Camera), DBNull.Value))
                         cmd.Parameters.AddWithValue("$iso", If(asset.Iso.HasValue, CObj(asset.Iso.Value), DBNull.Value))
                         cmd.Parameters.AddWithValue("$ap", If(asset.Aperture.HasValue, CObj(asset.Aperture.Value), DBNull.Value))
+                        cmd.Parameters.AddWithValue("$fc", If(asset.FileCreatedAt.HasValue, CObj(asset.FileCreatedAt.Value.ToString("o", CultureInfo.InvariantCulture)), DBNull.Value))
+                        cmd.Parameters.AddWithValue("$fm", If(asset.FileModifiedAt.HasValue, CObj(asset.FileModifiedAt.Value.ToString("o", CultureInfo.InvariantCulture)), DBNull.Value))
                         cmd.Parameters.AddWithValue("$dt", If(asset.ExifDateTaken.HasValue, CObj(asset.ExifDateTaken.Value.ToString("o", CultureInfo.InvariantCulture)), DBNull.Value))
+                        cmd.Parameters.AddWithValue("$dm", If(asset.ExifDateModified.HasValue, CObj(asset.ExifDateModified.Value.ToString("o", CultureInfo.InvariantCulture)), DBNull.Value))
                         cmd.Parameters.AddWithValue("$tags", JoinTags(asset.Tags))
                         cmd.Parameters.AddWithValue("$w", asset.Width)
                         cmd.Parameters.AddWithValue("$h", asset.Height)
