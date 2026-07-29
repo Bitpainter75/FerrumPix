@@ -257,22 +257,6 @@ Namespace Services
                 End Sub)
         End Sub
 
-        Public Sub TogglePause()
-            EnqueueCommand(
-                Sub()
-                    SyncLock _syncRoot
-                        If _initializationFailed Then Return
-                        If _isPaused Then
-                            _pendingPlay = True
-                            If _initialized Then SetPauseLocked(False)
-                        Else
-                            _pendingPlay = False
-                            If _initialized Then SetPauseLocked(True)
-                        End If
-                    End SyncLock
-                End Sub)
-        End Sub
-
         Public Sub [Stop]()
             EnqueueCommand(
                 Sub()

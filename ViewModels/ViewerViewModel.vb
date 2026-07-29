@@ -1924,6 +1924,7 @@ Namespace ViewModels
             Try
                 _mediaPlayer?.LoadPending()
                 _mediaPlayer?.Play()
+                IsVideoPlaying = True
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.StartPendingVideoAutoplay", ex)
             End Try
@@ -1966,7 +1967,13 @@ Namespace ViewModels
                 Return
             End If
 
-            _mediaPlayer.TogglePause()
+            If IsVideoPlaying Then
+                _mediaPlayer.Pause()
+                IsVideoPlaying = False
+            Else
+                _mediaPlayer.Play()
+                IsVideoPlaying = True
+            End If
         End Sub
 
         Private Sub SeekVideo(seconds As Double)
@@ -2014,6 +2021,11 @@ Namespace ViewModels
 
         Private Sub OnVideoEndReached(reason As Integer, [error] As Integer)
             Dispatcher.UIThread.Post(Sub()
+                                          ' Stop wird beim Navigieren/Neuladen absichtlich ausgelöst und
+                                          ' kann erst nach dem Start der nächsten Datei eintreffen. Der
+                                          ' aufrufende Pfad hat den UI-Zustand bereits gesetzt; ein spätes
+                                          ' Stop-Ereignis darf die neue Wiedergabe nicht auf "pausiert" setzen.
+                                          If reason = CInt(MpvInterop.MpvEndFileReason.Stop) Then Return
                                           If reason <> CInt(MpvInterop.MpvEndFileReason.Eof) Then
                                               IsVideoPlaying = False
                                               Return
