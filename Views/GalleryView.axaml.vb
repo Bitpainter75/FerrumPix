@@ -1207,16 +1207,17 @@ Namespace Views
             _dragStartArgs = Nothing
 
             ' Immich-Assets sind Pseudo-Pfade (immich://…) und damit für ein fremdes Ziel wie Dolphin
-            ' keine echten Dateien. Vor dem Ziehen die Originale in temporäre Dateien holen, damit der
-            ' Export nach außen (und ein interner Drop) tatsächlich eine Datei liefert.
+            ' keine echten Dateien. Vor dem Ziehen die Originale in temporäre Dateien holen; bei
+            ' Live/Motion Photos gehören sichtbares Bild und verknüpftes Video gemeinsam zur Last.
             Dim paths As New List(Of String)()
             For Each it In dragItems
                 If it Is Nothing Then Continue For
                 If it.IsImmichAsset Then
                     Dim assetId As String = Nothing, fileName As String = Nothing
                     If Not ImmichService.TryParsePseudoPath(it.FilePath, assetId, fileName) Then Continue For
-                    Dim tmp = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
-                    If Not String.IsNullOrEmpty(tmp) Then paths.Add(tmp)
+                    Dim downloads = Await ImmichService.DownloadOriginalPairToTempAsync(
+                        assetId, fileName, it.ImmichLivePhotoVideoId)
+                    paths.AddRange(downloads.Select(Function(d) d.TempPath))
                 ElseIf Not String.IsNullOrEmpty(it.FilePath) Then
                     paths.Add(it.FilePath)
                 End If

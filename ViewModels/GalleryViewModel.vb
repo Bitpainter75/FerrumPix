@@ -5173,21 +5173,25 @@ Namespace ViewModels
                 If Not ImmichService.TryParsePseudoPath(pseudo, assetId, fileName) Then Continue For
                 done += 1
                 StatusText = String.Format(LocalizationService.T("Lade aus Immich… ({0}/{1})"), done, total)
-                Dim temp = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
-                If String.IsNullOrEmpty(temp) OrElse Not File.Exists(temp) Then Continue For
-                Try
-                    Dim dest = MakeUniqueFilePath(IO.Path.Combine(targetFolder, If(String.IsNullOrEmpty(fileName), assetId, fileName)))
-                    File.Copy(temp, dest, False)
-                    saved += 1
-                Catch ex As Exception
-                    DiagnosticLogService.LogException("Immich.DownloadToFolder", ex)
-                End Try
+                Dim item = Items.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                            String.Equals(i.ImmichAssetId, assetId, StringComparison.Ordinal))
+                Dim downloads = Await ImmichService.DownloadOriginalPairToTempAsync(
+                    assetId, fileName, item?.ImmichLivePhotoVideoId)
+                For Each download In downloads
+                    Try
+                        Dim dest = MakeUniqueFilePath(IO.Path.Combine(targetFolder, download.FileName))
+                        File.Copy(download.TempPath, dest, False)
+                        saved += 1
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Immich.DownloadToFolder", ex)
+                    End Try
+                Next
             Next
             If Not _isVirtualFolder AndAlso String.Equals(NormalizePath(targetFolder), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then
                 SyncFolderItems()
             End If
             RefreshTree()
-            StatusText = String.Format(LocalizationService.T("{0} Bilder aus Immich gespeichert"), saved)
+            StatusText = String.Format(LocalizationService.T("{0} Dateien aus Immich gespeichert"), saved)
         End Function
 
         Private Shared Function MakeUniqueFilePath(path As String) As String

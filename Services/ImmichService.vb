@@ -50,6 +50,11 @@ Namespace Services
         Public Property Tags As New List(Of String)()
     End Class
 
+    Public Class ImmichDownloadedOriginal
+        Public Property FileName As String = ""
+        Public Property TempPath As String = ""
+    End Class
+
     ''' <summary>Eine benannte Person aus der serverseitigen Gesichtserkennung von Immich.</summary>
     Public Class ImmichPerson
         Public Property Id As String = ""
@@ -1321,6 +1326,35 @@ Namespace Services
                 DiagnosticLogService.LogException("Immich.DownloadOriginal", ex)
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Lädt das sichtbare Original und - bei einem von Immich erkannten Live/Motion
+        ''' Photo - zusätzlich dessen verknüpftes Video-Original. Die Server-Verknüpfung ist die
+        ''' einzige Quelle; lokale Dateien werden hier bewusst nicht analysiert.</summary>
+        Public Shared Async Function DownloadOriginalPairToTempAsync(assetId As String, originalFileName As String,
+                                                                     livePhotoVideoId As String,
+                                                                     Optional cancellationToken As CancellationToken = Nothing) As Task(Of List(Of ImmichDownloadedOriginal))
+            Dim result As New List(Of ImmichDownloadedOriginal)()
+            Dim imagePath = Await DownloadOriginalToTempAsync(assetId, originalFileName, cancellationToken).ConfigureAwait(False)
+            If Not String.IsNullOrEmpty(imagePath) AndAlso File.Exists(imagePath) Then
+                result.Add(New ImmichDownloadedOriginal With {
+                    .FileName = If(String.IsNullOrWhiteSpace(originalFileName), IO.Path.GetFileName(imagePath), originalFileName),
+                    .TempPath = imagePath
+                })
+            End If
+
+            If String.IsNullOrWhiteSpace(livePhotoVideoId) Then Return result
+            Dim videoDetail = Await GetAssetDetailAsync(livePhotoVideoId, cancellationToken).ConfigureAwait(False)
+            Dim fallbackName = IO.Path.GetFileNameWithoutExtension(If(originalFileName, assetId)) & ".mp4"
+            Dim videoFileName = If(videoDetail?.FileName, fallbackName)
+            Dim videoPath = Await DownloadOriginalToTempAsync(livePhotoVideoId, videoFileName, cancellationToken).ConfigureAwait(False)
+            If Not String.IsNullOrEmpty(videoPath) AndAlso File.Exists(videoPath) Then
+                result.Add(New ImmichDownloadedOriginal With {
+                    .FileName = videoFileName,
+                    .TempPath = videoPath
+                })
+            End If
+            Return result
         End Function
 
         ''' <summary>Setzt den Favoriten-Status eines Assets auf dem Server (Rückrichtung) und hält den
