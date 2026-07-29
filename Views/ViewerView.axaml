@@ -632,9 +632,8 @@
         <!-- Einziges, dauerhaft angehängtes MpvVideoView für Fenster- UND Vollbildmodus - wird per
              Grid.Row/Column/RowSpan/ColumnSpan/Margin im Code-behind (ApplyVideoLayout) zwischen
              beiden Zuständen umgeschaltet, statt zwei separate VideoViews mit eigenem
-             Anhängen/Abhängen-Zyklus zu verwenden. Letzteres führte dazu, dass das native
-             Fenster-Handle beim Wechsel nicht zuverlässig rechtzeitig bereitstand (kein Bild,
-             oder mpv erzeugte mangels Ziel kurzzeitig ein eigenes Fenster).
+             OpenGL-Kontext zu verwenden. So bleibt der libmpv-Renderkontext über den Wechsel
+             erhalten und das Video wird als Teil der Avalonia-Oberfläche zusammengesetzt.
         -->
         <Grid Name="VideoOverlay"
               Grid.Row="1" Grid.Column="0"

@@ -172,6 +172,40 @@ Namespace Services
             Redirect = 5
         End Enum
 
+        Friend Enum MpvRenderParamType As Integer
+            Invalid = 0
+            ApiType = 1
+            OpenGlInitParams = 2
+            OpenGlFbo = 3
+            FlipY = 4
+        End Enum
+
+        <UnmanagedFunctionPointer(CallingConvention.Cdecl)>
+        Friend Delegate Function MpvOpenGlGetProcAddress(context As IntPtr, name As IntPtr) As IntPtr
+
+        <UnmanagedFunctionPointer(CallingConvention.Cdecl)>
+        Friend Delegate Sub MpvRenderUpdateCallback(context As IntPtr)
+
+        <StructLayout(LayoutKind.Sequential)>
+        Friend Structure MpvRenderParam
+            Public Type As MpvRenderParamType
+            Public Data As IntPtr
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Friend Structure MpvOpenGlInitParams
+            Public GetProcAddress As MpvOpenGlGetProcAddress
+            Public GetProcAddressContext As IntPtr
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Friend Structure MpvOpenGlFbo
+            Public Fbo As Integer
+            Public Width As Integer
+            Public Height As Integer
+            Public InternalFormat As Integer
+        End Structure
+
         <StructLayout(LayoutKind.Sequential)>
         Friend Structure MpvEvent
             Public EventId As MpvEventId
@@ -227,6 +261,35 @@ Namespace Services
         <DllImport("libmpv", EntryPoint:="mpv_wait_event", CallingConvention:=CallingConvention.Cdecl)>
         Friend Shared Function WaitEvent(handle As IntPtr, timeout As Double) As IntPtr
         End Function
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_create", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Function RenderContextCreate(ByRef context As IntPtr,
+                                                   handle As IntPtr,
+                                                   <[In]> parameters As MpvRenderParam()) As Integer
+        End Function
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_set_update_callback", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Sub RenderContextSetUpdateCallback(context As IntPtr,
+                                                         callback As MpvRenderUpdateCallback,
+                                                         callbackContext As IntPtr)
+        End Sub
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_update", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Function RenderContextUpdate(context As IntPtr) As ULong
+        End Function
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_render", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Function RenderContextRender(context As IntPtr,
+                                                   <[In]> parameters As MpvRenderParam()) As Integer
+        End Function
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_report_swap", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Sub RenderContextReportSwap(context As IntPtr)
+        End Sub
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_free", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Sub RenderContextFree(context As IntPtr)
+        End Sub
     End Class
 
 End Namespace

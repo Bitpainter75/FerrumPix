@@ -17,19 +17,22 @@ Namespace Services
 
         Private ReadOnly _syncRoot As New Object()
         Private ReadOnly _enableHardwareAcceleration As Boolean
-        ' Unter macOS darf kein synchroner libmpv-Aufruf auf dem Avalonia-UI-Thread laufen:
-        ' mpvs Cocoa-Videoausgabe synchronisiert ihrerseits mit der Main Queue. Treffen beide
-        ' Richtungen zusammen, warten UI und Videoausgabe dauerhaft aufeinander. Eine serielle
-        ' Befehlswarteschlange hält die mpv-Aufrufreihenfolge, ohne die Oberfläche zu blockieren.
+        ' Normale libmpv-Befehle laufen getrennt vom OpenGL-Renderthread. Das ist eine harte
+        ' Anforderung der Render-API und verhindert gleichzeitig, dass Datei-/Seek-Befehle die
+        ' Avalonia-Oberfläche blockieren.
         Private ReadOnly _commandQueue As New BlockingCollection(Of Action)()
         Private ReadOnly _commandThread As Thread
         Private ReadOnly _commandQueueLock As New Object()
         Private _disposeQueued As Boolean = False
+        Private _disposeRequested As Boolean = False
 
         Private _handle As IntPtr = IntPtr.Zero
+        Private _renderContext As IntPtr = IntPtr.Zero
+        Private _getProcAddressCallback As MpvInterop.MpvOpenGlGetProcAddress
+        Private _renderUpdateCallback As MpvInterop.MpvRenderUpdateCallback
+        Private _requestRender As Action
         Private _eventThread As Thread
         Private _disposed As Boolean = False
-        Private _windowHandle As IntPtr = IntPtr.Zero
         Private _initialized As Boolean = False
         Private _pendingPath As String = Nothing
         Private _pendingPlay As Boolean = False
@@ -53,37 +56,159 @@ Namespace Services
             _commandThread.Start()
         End Sub
 
-        Public Sub AttachWindow(windowHandle As IntPtr)
-            If windowHandle = IntPtr.Zero Then Return
-            EnqueueCommand(
-                Sub()
-                    Try
-                        SyncLock _syncRoot
-                            If _disposed OrElse _initializationFailed Then Return
-                            If _windowHandle = windowHandle AndAlso _initialized Then Return
-                            _windowHandle = windowHandle
-                            If Not _initialized Then
-                                InitializeLocked()
-                            ElseIf _handle <> IntPtr.Zero Then
-                                SetOptionStringLocked("wid", WindowHandleToUnsignedString(_windowHandle))
+        Friend ReadOnly Property IsDisposeRequested As Boolean
+            Get
+                SyncLock _syncRoot
+                    Return _disposeRequested
+                End SyncLock
+            End Get
+        End Property
+
+        ''' <summary>Bindet libmpv an den aktuell gesetzten Avalonia-OpenGL-Kontext.
+        ''' Muss ausschließlich aus OpenGlControlBase.OnOpenGl* aufgerufen werden.</summary>
+        Friend Function AttachOpenGl(getProcAddress As Func(Of String, IntPtr), requestRender As Action) As Boolean
+            If getProcAddress Is Nothing OrElse requestRender Is Nothing Then Return False
+
+            Try
+                SyncLock _syncRoot
+                    If _disposed OrElse _disposeRequested OrElse _initializationFailed Then Return False
+                    If _renderContext <> IntPtr.Zero Then Return True
+
+                    InitializeCoreLocked()
+
+                    _getProcAddressCallback =
+                        Function(context As IntPtr, namePointer As IntPtr) As IntPtr
+                            Try
+                                Dim name = Marshal.PtrToStringUTF8(namePointer)
+                                If String.IsNullOrEmpty(name) Then Return IntPtr.Zero
+                                Return getProcAddress(name)
+                            Catch
+                                Return IntPtr.Zero
+                            End Try
+                        End Function
+
+                    _renderUpdateCallback =
+                        Sub(context As IntPtr)
+                            Try
+                                requestRender()
+                            Catch
+                            End Try
+                        End Sub
+                    _requestRender = requestRender
+
+                    Using apiType As New Utf8String("opengl")
+                        Dim initParams = New MpvInterop.MpvOpenGlInitParams With {
+                            .GetProcAddress = _getProcAddressCallback,
+                            .GetProcAddressContext = IntPtr.Zero
+                        }
+                        Dim initParamsPointer = Marshal.AllocHGlobal(Marshal.SizeOf(Of MpvInterop.MpvOpenGlInitParams)())
+                        Try
+                            Marshal.StructureToPtr(initParams, initParamsPointer, False)
+                            Dim parameters = {
+                                New MpvInterop.MpvRenderParam With {
+                                    .Type = MpvInterop.MpvRenderParamType.ApiType,
+                                    .Data = apiType.Pointer
+                                },
+                                New MpvInterop.MpvRenderParam With {
+                                    .Type = MpvInterop.MpvRenderParamType.OpenGlInitParams,
+                                    .Data = initParamsPointer
+                                },
+                                New MpvInterop.MpvRenderParam With {
+                                    .Type = MpvInterop.MpvRenderParamType.Invalid,
+                                    .Data = IntPtr.Zero
+                                }
+                            }
+                            Dim context As IntPtr = IntPtr.Zero
+                            Dim result = MpvInterop.RenderContextCreate(context, _handle, parameters)
+                            If result < 0 OrElse context = IntPtr.Zero Then
+                                Throw New InvalidOperationException($"libmpv OpenGL-Renderer konnte nicht initialisiert werden ({result}).")
                             End If
-                        End SyncLock
-                    Catch ex As Exception
-                        HandleInitializationFailure(ex)
-                    End Try
-                End Sub)
+                            _renderContext = context
+                        Finally
+                            Marshal.FreeHGlobal(initParamsPointer)
+                        End Try
+                    End Using
+
+                    MpvInterop.RenderContextSetUpdateCallback(_renderContext, _renderUpdateCallback, IntPtr.Zero)
+                End SyncLock
+
+                LoadPending()
+                Return True
+            Catch ex As Exception
+                HandleInitializationFailure(ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Löst den OpenGL-Renderer, solange Avalonia den zugehörigen Kontext current hält.</summary>
+        Friend Sub DetachOpenGl()
+            Dim context As IntPtr
+            Dim shouldDispose As Boolean
+            SyncLock _syncRoot
+                context = _renderContext
+                _renderContext = IntPtr.Zero
+                _requestRender = Nothing
+                shouldDispose = _disposeRequested
+            End SyncLock
+
+            If context <> IntPtr.Zero Then
+                Try
+                    MpvInterop.RenderContextSetUpdateCallback(context, Nothing, IntPtr.Zero)
+                Catch
+                End Try
+                MpvInterop.RenderContextFree(context)
+            End If
+
+            _renderUpdateCallback = Nothing
+            _getProcAddressCallback = Nothing
+            If shouldDispose Then QueueDispose()
         End Sub
 
-        Public Sub DetachWindow()
-            EnqueueCommand(
-                Sub()
-                    SyncLock _syncRoot
-                        _windowHandle = IntPtr.Zero
-                        If _initializationFailed OrElse Not _initialized OrElse _handle = IntPtr.Zero Then Return
-                        SetOptionStringLocked("wid", "-1")
-                    End SyncLock
-                End Sub)
-        End Sub
+        ''' <summary>Zeichnet den nächsten Frame in Avalonias aktuellen Framebuffer.
+        ''' Muss ausschließlich aus OpenGlControlBase.OnOpenGlRender aufgerufen werden.</summary>
+        Friend Function RenderOpenGlFrame(framebuffer As Integer, width As Integer, height As Integer) As Boolean
+            Dim context As IntPtr
+            SyncLock _syncRoot
+                context = _renderContext
+            End SyncLock
+            If context = IntPtr.Zero OrElse width <= 0 OrElse height <= 0 Then Return False
+
+            MpvInterop.RenderContextUpdate(context)
+
+            Dim fbo = New MpvInterop.MpvOpenGlFbo With {
+                .Fbo = framebuffer,
+                .Width = width,
+                .Height = height,
+                .InternalFormat = 0
+            }
+            Dim flipY As Integer = 1
+            Dim fboPointer = Marshal.AllocHGlobal(Marshal.SizeOf(Of MpvInterop.MpvOpenGlFbo)())
+            Dim flipPointer = Marshal.AllocHGlobal(Marshal.SizeOf(Of Integer)())
+            Try
+                Marshal.StructureToPtr(fbo, fboPointer, False)
+                Marshal.WriteInt32(flipPointer, flipY)
+                Dim parameters = {
+                    New MpvInterop.MpvRenderParam With {
+                        .Type = MpvInterop.MpvRenderParamType.OpenGlFbo,
+                        .Data = fboPointer
+                    },
+                    New MpvInterop.MpvRenderParam With {
+                        .Type = MpvInterop.MpvRenderParamType.FlipY,
+                        .Data = flipPointer
+                    },
+                    New MpvInterop.MpvRenderParam With {
+                        .Type = MpvInterop.MpvRenderParamType.Invalid,
+                        .Data = IntPtr.Zero
+                    }
+                }
+                Dim result = MpvInterop.RenderContextRender(context, parameters)
+                If result >= 0 Then MpvInterop.RenderContextReportSwap(context)
+                Return result >= 0
+            Finally
+                Marshal.FreeHGlobal(flipPointer)
+                Marshal.FreeHGlobal(fboPointer)
+            End Try
+        End Function
 
         Public Sub Load(path As String)
             If String.IsNullOrWhiteSpace(path) Then Return
@@ -91,7 +216,7 @@ Namespace Services
                 Sub()
                     SyncLock _syncRoot
                         _pendingPath = path
-                        If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
+                        If _initializationFailed OrElse Not _initialized OrElse _renderContext = IntPtr.Zero Then Return
                         SetPauseLocked(True)
                         Dim result = CommandLocked("loadfile", path, "replace")
                         If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
@@ -104,7 +229,7 @@ Namespace Services
                 Sub()
                     SyncLock _syncRoot
                         If String.IsNullOrWhiteSpace(_pendingPath) Then Return
-                        If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
+                        If _initializationFailed OrElse Not _initialized OrElse _renderContext = IntPtr.Zero Then Return
                         SetPauseLocked(True)
                         Dim result = CommandLocked("loadfile", _pendingPath, "replace")
                         If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
@@ -181,7 +306,7 @@ Namespace Services
         Private Sub EnqueueCommand(workItem As Action)
             If workItem Is Nothing Then Return
             SyncLock _commandQueueLock
-                If _disposeQueued OrElse _commandQueue.IsAddingCompleted Then Return
+                If _disposeRequested OrElse _disposeQueued OrElse _commandQueue.IsAddingCompleted Then Return
                 _commandQueue.Add(workItem)
             End SyncLock
         End Sub
@@ -203,7 +328,6 @@ Namespace Services
                 _initializationFailed = True
                 _disposed = True
                 _initialized = False
-                _windowHandle = IntPtr.Zero
                 handleToDestroy = _handle
                 eventThread = _eventThread
             End SyncLock
@@ -236,8 +360,8 @@ Namespace Services
             RaiseEvent InitializationFailed(ex)
         End Sub
 
-        Private Sub InitializeLocked()
-            If _initializationFailed OrElse _initialized OrElse _windowHandle = IntPtr.Zero Then Return
+        Private Sub InitializeCoreLocked()
+            If _initializationFailed OrElse _initialized Then Return
 
             MpvInterop.EnsureResolver()
             _handle = MpvInterop.Create()
@@ -252,12 +376,8 @@ Namespace Services
             ' FerrumPix zeichnet seine eigenen Steuerelemente und braucht den mpv-OSC nicht.
             TrySetOptionStringLocked("osc", "no")
             SetOptionStringLocked("keep-open", "no")
+            SetOptionStringLocked("vo", "libmpv")
             SetOptionStringLocked("hwdec", If(_enableHardwareAcceleration, "auto-safe", "no"))
-            If OperatingSystem.IsLinux() Then
-                SetOptionStringLocked("vo", "gpu")
-                SetOptionStringLocked("gpu-context", "x11egl")
-            End If
-            SetOptionStringLocked("wid", WindowHandleToUnsignedString(_windowHandle))
 
             Dim result = MpvInterop.Initialize(_handle)
             If result < 0 Then Throw New InvalidOperationException($"libmpv konnte nicht initialisiert werden ({result}).")
@@ -267,13 +387,6 @@ Namespace Services
             ObservePropertyLocked(PropPause, "pause", MpvInterop.MpvFormat.Flag)
             ObservePropertyLocked(PropMute, "mute", MpvInterop.MpvFormat.Flag)
             SetPropertyStringLocked("mute", If(_isMuted, "yes", "no"))
-
-            ' Klick aufs Video toggelt Wiedergabe/Pause: Das Video sitzt in
-            ' einem NativeControlHost - Avalonia-Pointer-Events erreichen es NIE, das native
-            ' mpv-Fenster schluckt sie. Deshalb bindet mpv selbst die linke Maustaste; alle uebrigen
-            ' Default-Bindings bleiben aus (input-default-bindings=no). Der Pause-Status fliesst
-            ' ueber die bestehende pause-Observation zurueck in die Oberflaeche (Play-Knopf folgt).
-            CommandLocked("keybind", "MBTN_LEFT", "cycle pause")
 
             _eventThread = New Thread(AddressOf EventLoop) With {
                 .IsBackground = True,
@@ -394,20 +507,26 @@ Namespace Services
             SetPropertyStringLocked("pause", If(value, "yes", "no"))
         End Sub
 
-        Private Shared Function WindowHandleToUnsignedString(handle As IntPtr) As String
-            If OperatingSystem.IsLinux() Then
-                Return CUInt(handle.ToInt64() And &HFFFFFFFFL).ToString(CultureInfo.InvariantCulture)
-            End If
-
-            If IntPtr.Size <= 4 Then
-                Return CUInt(handle.ToInt32()).ToString(CultureInfo.InvariantCulture)
-            End If
-
-            Dim bytes = BitConverter.GetBytes(handle.ToInt64())
-            Return BitConverter.ToUInt64(bytes, 0).ToString(CultureInfo.InvariantCulture)
-        End Function
-
         Public Sub Dispose() Implements IDisposable.Dispose
+            Dim requestRender As Action
+            Dim canDisposeNow As Boolean
+            SyncLock _syncRoot
+                If _disposeRequested Then Return
+                _disposeRequested = True
+                requestRender = _requestRender
+                canDisposeNow = _renderContext = IntPtr.Zero
+            End SyncLock
+
+            If requestRender IsNot Nothing Then
+                Try
+                    requestRender()
+                Catch
+                End Try
+            End If
+            If canDisposeNow Then QueueDispose()
+        End Sub
+
+        Private Sub QueueDispose()
             SyncLock _commandQueueLock
                 If _disposeQueued Then Return
                 _disposeQueued = True
