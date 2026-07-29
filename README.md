@@ -52,7 +52,7 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 Each half carries the same badges as a gallery tile: stars, favourite, *Adjust* and *Delete*, always visible and always belonging to the picture they sit on. That is also why the toolbar's delete button and the `Del` key do nothing here - with two photos on screen, neither could say which one it meant, and deleting is not undoable. Deleting the right photo brings the next one into that half; deleting the left one moves the right photo over and loads the next on the right, so a series can be culled in one pass. RAW files are always developed in the comparison rather than shown as the small preview the camera stored, so two raw files are judged by your own rendering instead of the camera's.
 
-Video files use `libmpv` for inline playback and thumbnails. Linux packages use the system `libmpv`; Windows packages bundle the mpv runtime with FerrumPix.
+Video files use `libmpv` for inline playback and thumbnails. Linux packages use the system `libmpv`; Windows packages and the experimental macOS builds bundle the mpv runtime with FerrumPix.
 
 Printing is available from the toolbar or with `Ctrl+P`, using the same dialog as the gallery.
 
@@ -91,7 +91,7 @@ Slider edits on RAW files are remembered in a small `.fpxmp` sidecar file next t
 
 Photoshop files (`.psd`/`.psb`) open in the gallery, viewer and editor. FerrumPix reads the flattened composite and never writes them back - *Save* is disabled, *Save as…* exports to the usual formats.
 
-HEIC/HEIF/AVIF (the format current phones photograph in) and TIFF open the same way, read-only. HEIC needs the system's `libheif`, which FerrumPix loads if it is there and does without if it is not - it is deliberately not bundled, because HEIC is usually HEVC-encoded and that decision belongs to the distribution. TIFF needs nothing extra: 8 and 16 bit, greyscale, palette, CMYK, LZW/Deflate/JPEG compression, striped and tiled files are covered (16-bit CMYK is not), and multi-page files show the first page. BMP and GIF (first frame) can be read and processed as well.
+HEIC/HEIF/AVIF (the formats current phones photograph in) and TIFF open the same way, read-only, through FerrumPix's unified image decoder. Its `libvips` runtime is bundled on Linux, Windows and macOS, so these formats need no separate decoder installation. On macOS, the system ImageIO decoder is preferred for HEIC/HEIF/AVIF, JPEG 2000, JPEG XL and MPO, with `libvips` as the fallback. Multi-page TIFF files show the first page; BMP and GIF (first frame) can be read and processed as well.
 
 Exporting to JPEG/PNG/WEBP writes the result into pixels; while the editor is open, changes can be undone and objects stay editable. Save as a `.fpx` project (or use *Save as* to a normal image) if the original file should stay untouched.
 
@@ -198,10 +198,10 @@ The last two sections are reference material: a full list of keyboard and mouse 
 - [Microsoft.Data.Sqlite](https://learn.microsoft.com/dotnet/standard/data/sqlite/)
 - [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet)
 - [QRCoder](https://github.com/codebude/QRCoder)
-- [libmpv](https://mpv.io/)
+- [libmpv](https://mpv.io/) (video playback and thumbnails)
 - [LibRaw](https://www.libraw.org/) (RAW development)
-- [libheif](https://github.com/strukturag/libheif) (HEIC/HEIF/AVIF, optional and never bundled)
-- [BitMiracle.LibTiff.NET](https://github.com/BitMiracle/libtiff.net) (TIFF)
+- [NetVips](https://github.com/kleisauke/net-vips) (.NET bindings for the unified image decoder)
+- [libvips](https://www.libvips.org/) (TIFF, SVG, HEIC/HEIF/AVIF and additional image formats)
 - [Lensfun](https://github.com/lensfun/lensfun) lens calibration database, bundled unchanged under [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
 - [Tabler Icons](https://github.com/tabler/tabler-icons)
 
@@ -228,13 +228,13 @@ And as a package in the AUR:
 
 The packages are self-contained and include the .NET runtime.
 
-`libmpv` (video playback and thumbnails) and `libraw` (RAW development) are required, not optional. The Linux packages declare both as dependencies, so the package manager installs them along with FerrumPix. Windows releases bundle both under `runtimes/win-x64/native`, in the setup as well as in the portable ZIP.
+`libmpv` provides video playback and thumbnails. Linux native packages declare it as a dependency, while Windows releases and the experimental macOS builds bundle the runtime. FerrumPix prefers its bundled copy where one is included and falls back to a compatible system installation.
 
-`libheif` is different: it is optional and never bundled, on any platform. It is what opens HEIC, HEIF and AVIF, and those files are usually HEVC-encoded - a codec that carries patent licensing in several countries, which is a decision for the distribution and not for this project. The Linux packages recommend it, so most package managers pull it in; where it is missing, HEIC files simply stay closed and everything else works unchanged. On Windows nothing is bundled either, so HEIC stays closed unless you place a `libheif.dll` next to FerrumPix yourself.
+`libvips` is the bundled image-decoding runtime behind NetVips. It supplies the unified read-only path for TIFF, SVG, HEIC/HEIF/AVIF, JPEG 2000, JPEG XL, MPO and other supported raster formats; its format loaders are part of the packaged runtime, so there is no separate HEIF or TIFF decoder to install. On macOS, FerrumPix first uses the system ImageIO support for the phone and modern container formats listed above, then falls back to `libvips`.
 
-Two cases differ. The Flatpak builds LibRaw into the sandbox but deliberately ships no `libmpv`, so it has no video support. The Linux ZIP and the AppImage have no package manager to pull anything in and expect both libraries on the system; the experimental macOS builds ship without LibRaw - install it with `brew install libraw`.
+`libraw` is still required for full RAW development. Linux native packages declare it as a dependency, Windows releases bundle it, and the Flatpak builds it into the sandbox. The Linux ZIP and AppImage expect it on the system; the experimental macOS builds require `brew install libraw`. FerrumPix prefers a compatible system LibRaw so package-manager security updates and support for newer cameras take effect.
 
-Where a library is present on the system, FerrumPix uses that one in preference to a bundled copy, so it keeps getting security updates and support for newer cameras. Where one is genuinely missing, FerrumPix keeps running: video files are then unavailable and RAW files fall back to their embedded preview.
+The Flatpak deliberately ships no `libmpv`, so it has no video support. The Linux ZIP and AppImage also expect `libmpv` on the system. Where a native component is genuinely missing, FerrumPix keeps running: video files are unavailable without `libmpv`, and RAW files fall back to their embedded preview without LibRaw.
 
 ## Building From Source
 
