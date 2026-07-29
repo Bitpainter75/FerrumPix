@@ -1,6 +1,7 @@
 Imports System
 Imports System.Collections.Generic
 Imports System.IO
+Imports System.Linq
 Imports System.Reflection
 Imports System.Runtime.InteropServices
 
@@ -11,6 +12,9 @@ Namespace Services
         End Sub
 
         Private Shared _resolverInstalled As Boolean = False
+        Private Shared ReadOnly _bundledLoadLock As New Object()
+        Private Shared ReadOnly _bundledDependencyHandles As New List(Of IntPtr)()
+        Private Shared ReadOnly _preloadedDirectories As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
         Shared Sub New()
             EnsureResolver()
@@ -25,7 +29,7 @@ Namespace Services
         Public Shared Function IsAvailable() As Boolean
             EnsureResolver()
             Dim handle As IntPtr
-            If TryLoadPreferSystem(GetType(MpvInterop).Assembly, Nothing, handle) Then
+            If TryLoadBundledFirst(GetType(MpvInterop).Assembly, Nothing, handle) Then
                 NativeLibrary.Free(handle)
                 Return True
             End If
@@ -36,21 +40,19 @@ Namespace Services
             If Not String.Equals(libraryName, "libmpv", StringComparison.Ordinal) Then Return IntPtr.Zero
 
             Dim handle As IntPtr
-            If TryLoadPreferSystem(assembly, searchPath, handle) Then Return handle
+            If TryLoadBundledFirst(assembly, searchPath, handle) Then Return handle
             Return IntPtr.Zero
         End Function
 
-        ''' <summary>Erst die Bibliothek des Systems, dann die mitgelieferte.
-        '''
-        ''' Die Reihenfolge ist Absicht: eine vom Paketverwalter gepflegte libmpv bekommt
-        ''' Sicherheitsaktualisierungen und passt zu den Codecs, Treibern und Ausgabepfaden des
-        ''' Systems. Die mitgelieferte Fassung ist der Rückfall für Umgebungen, die keine haben -
-        ''' Windows und die portablen Pakete.</summary>
-        Private Shared Function TryLoadPreferSystem(assembly As Assembly, searchPath As DllImportSearchPath?, ByRef handle As IntPtr) As Boolean
+        ''' <summary>Die mit FerrumPix veröffentlichte Bibliothek ist der primäre Laufzeitpfad.
+        ''' Eine Systeminstallation bleibt nur als Rückfall für ältere/selbst gebaute Pakete.</summary>
+        Private Shared Function TryLoadBundledFirst(assembly As Assembly, searchPath As DllImportSearchPath?, ByRef handle As IntPtr) As Boolean
+            If TryLoadBundledLibrary(handle) Then Return True
             For Each candidate In LibraryNames()
                 If NativeLibrary.TryLoad(candidate, assembly, searchPath, handle) Then Return True
             Next
-            Return TryLoadBundledLibrary(handle)
+            handle = IntPtr.Zero
+            Return False
         End Function
 
         Private Shared Function LibraryNames() As String()
@@ -63,18 +65,57 @@ Namespace Services
         End Function
 
         Private Shared Function TryLoadBundledLibrary(ByRef handle As IntPtr) As Boolean
-            For Each path In BundledLibraryCandidates()
-                If NativeLibrary.TryLoad(path, handle) Then Return True
-            Next
-            handle = IntPtr.Zero
-            Return False
+            SyncLock _bundledLoadLock
+                For Each path In BundledLibraryCandidates()
+                    If Not File.Exists(path) Then Continue For
+                    PreloadBundledDependencies(IO.Path.GetDirectoryName(path), IO.Path.GetFileName(path))
+                    If NativeLibrary.TryLoad(path, handle) Then Return True
+                Next
+                handle = IntPtr.Zero
+                Return False
+            End SyncLock
         End Function
+
+        ''' <summary>media-kits portable macOS libraries refer to one another via @rpath. A .NET
+        ''' application does not link against them at build time, so dyld has no matching rpath.
+        ''' Loading the siblings by absolute path first makes their install names available before
+        ''' libmpv itself is opened. Repeated passes resolve the dependency graph without baking a
+        ''' fragile, hand-maintained load order into FerrumPix.</summary>
+        Private Shared Sub PreloadBundledDependencies(directoryPath As String, mainLibraryName As String)
+            If Not OperatingSystem.IsMacOS() OrElse String.IsNullOrWhiteSpace(directoryPath) Then Return
+            If _preloadedDirectories.Contains(directoryPath) Then Return
+
+            Dim pending As List(Of String)
+            Try
+                pending = Directory.EnumerateFiles(directoryPath, "*.dylib", SearchOption.TopDirectoryOnly).
+                    Where(Function(path) Not String.Equals(IO.Path.GetFileName(path), mainLibraryName, StringComparison.OrdinalIgnoreCase)).
+                    ToList()
+            Catch
+                Return
+            End Try
+
+            Dim madeProgress As Boolean
+            Do
+                madeProgress = False
+                For index = pending.Count - 1 To 0 Step -1
+                    Dim dependencyHandle As IntPtr
+                    If NativeLibrary.TryLoad(pending(index), dependencyHandle) Then
+                        _bundledDependencyHandles.Add(dependencyHandle)
+                        pending.RemoveAt(index)
+                        madeProgress = True
+                    End If
+                Next
+            Loop While madeProgress AndAlso pending.Count > 0
+
+            _preloadedDirectories.Add(directoryPath)
+        End Sub
 
         Private Shared Iterator Function BundledLibraryCandidates() As IEnumerable(Of String)
             Dim baseDir = AppContext.BaseDirectory
             Dim rid = GetCurrentRuntimeIdentifier()
 
             For Each name In LibraryNames()
+                Yield Path.Combine(baseDir, "libmpv", name)
                 Yield Path.Combine(baseDir, name)
                 If Not String.IsNullOrEmpty(rid) Then Yield Path.Combine(baseDir, "runtimes", rid, "native", name)
             Next

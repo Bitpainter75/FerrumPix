@@ -68,7 +68,7 @@ Namespace ViewModels
         Private ReadOnly _applicationScaleScreens As New ObservableCollection(Of String)()
         Private _cleanupResultMessage As String = ""
         Private _thumbnailCacheResultMessage As String = ""
-        Private _videoHardwareAcceleration As Boolean = False
+        Private _videoHardwareAcceleration As Boolean = True
         Private _transparencyBackgroundMode As String = "Checkerboard"
         Private _transparencyBackgroundColor As String = "#FFFFFFFF"
         Private _enableDiagnosticLogging As Boolean = False
@@ -138,7 +138,7 @@ Namespace ViewModels
         Private _savedFontSizeOffset As Integer = 0
         Private _savedApplicationScale As Double = 1.0
         Private _savedApplicationScaleScreen As String = "HDMI-A-1"
-        Private _savedVideoHardwareAcceleration As Boolean = False
+        Private _savedVideoHardwareAcceleration As Boolean = True
         Private _savedTransparencyBackgroundMode As String = "Checkerboard"
         Private _savedTransparencyBackgroundColor As String = "#FFFFFFFF"
 
@@ -1912,7 +1912,7 @@ Namespace ViewModels
             EditorLayersPanelExpanded = False
             ViewerInfoSidebarExpanded = True
             LanguageMode = "System"
-            VideoHardwareAcceleration = False
+            VideoHardwareAcceleration = True
             TransparencyBackgroundMode = "Checkerboard"
             TransparencyBackgroundColor = "#FFFFFFFF"
             FontSizeOffset = 0

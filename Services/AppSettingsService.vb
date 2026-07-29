@@ -237,7 +237,7 @@ Namespace Services
         ''' beim Start ohne Bild waere er eine Sackgasse. Wer im Vollbild beendet, kommt maximiert zurueck.
         Public Property MainWindowMaximized As Boolean = False
         Public Property SavedSearches As New List(Of SavedSearchSettings)()
-        Public Property VideoHardwareAcceleration As Boolean = False
+        Public Property VideoHardwareAcceleration As Boolean = True
         Public Property TransparencyBackgroundMode As String = "Checkerboard"
         Public Property TransparencyBackgroundColor As String = "#FFFFFFFF"
         Public Property LastBatchRenamePattern As String = "{name}_###"

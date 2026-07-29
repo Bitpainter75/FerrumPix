@@ -12,12 +12,10 @@ Namespace Services
     ''' gehalten, weil mehrere parallele Decoder schnell mehr Last erzeugen als der Thumbnail-Cache spart.
     Public Class VideoPreviewService
 
-        Private Shared ReadOnly _videoExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
         Private Shared ReadOnly _thumbnailGate As New SemaphoreSlim(1, 1)
 
         Public Shared Function IsSupportedVideo(filePath As String) As Boolean
-            If String.IsNullOrEmpty(filePath) Then Return False
-            Return _videoExtensions.Contains(Path.GetExtension(filePath).ToLowerInvariant())
+            Return MediaFormatService.IsVideo(filePath)
         End Function
 
         Public Shared Function ExtractPreview(filePath As String, Optional maxDimension As Integer = 480, Optional timeoutMs As Integer = 4000) As MemoryStream
@@ -49,7 +47,9 @@ Namespace Services
                 SetOption(handle, "msg-level", "all=no")
                 SetOption(handle, "config", "no")
                 SetOption(handle, "input-default-bindings", "no")
-                SetOption(handle, "osc", "no")
+                ' Minimal gebaute libmpv-Varianten können ohne OSC-Skript ausgeliefert werden;
+                ' dessen Abschalten ist für headless Thumbnails optional.
+                TrySetOption(handle, "osc", "no")
                 SetOption(handle, "audio", "no")
                 SetOption(handle, "pause", "yes")
                 SetOption(handle, "keep-open", "yes")
@@ -169,6 +169,12 @@ Namespace Services
                 If result < 0 Then Throw New InvalidOperationException($"libmpv option {name} fehlgeschlagen ({result}).")
             End Using
         End Sub
+
+        Private Shared Function TrySetOption(handle As IntPtr, name As String, value As String) As Boolean
+            Using namePtr = New Utf8String(name), valuePtr = New Utf8String(value)
+                Return MpvInterop.SetOptionString(handle, namePtr.Pointer, valuePtr.Pointer) >= 0
+            End Using
+        End Function
 
         Private Shared Function Command(handle As IntPtr, ParamArray args As String()) As Integer
             Dim allocations As New List(Of Utf8String)()

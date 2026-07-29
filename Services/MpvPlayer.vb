@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Concurrent
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Runtime.InteropServices
@@ -16,6 +17,14 @@ Namespace Services
 
         Private ReadOnly _syncRoot As New Object()
         Private ReadOnly _enableHardwareAcceleration As Boolean
+        ' Unter macOS darf kein synchroner libmpv-Aufruf auf dem Avalonia-UI-Thread laufen:
+        ' mpvs Cocoa-Videoausgabe synchronisiert ihrerseits mit der Main Queue. Treffen beide
+        ' Richtungen zusammen, warten UI und Videoausgabe dauerhaft aufeinander. Eine serielle
+        ' Befehlswarteschlange hält die mpv-Aufrufreihenfolge, ohne die Oberfläche zu blockieren.
+        Private ReadOnly _commandQueue As New BlockingCollection(Of Action)()
+        Private ReadOnly _commandThread As Thread
+        Private ReadOnly _commandQueueLock As New Object()
+        Private _disposeQueued As Boolean = False
 
         Private _handle As IntPtr = IntPtr.Zero
         Private _eventThread As Thread
@@ -37,103 +46,154 @@ Namespace Services
 
         Public Sub New(enableHardwareAcceleration As Boolean)
             _enableHardwareAcceleration = enableHardwareAcceleration
+            _commandThread = New Thread(AddressOf CommandLoop) With {
+                .IsBackground = True,
+                .Name = "libmpv-command-loop"
+            }
+            _commandThread.Start()
         End Sub
 
         Public Sub AttachWindow(windowHandle As IntPtr)
             If windowHandle = IntPtr.Zero Then Return
-
-            Try
-                SyncLock _syncRoot
-                    If _disposed OrElse _initializationFailed Then Return
-                    If _windowHandle = windowHandle AndAlso _initialized Then Return
-                    _windowHandle = windowHandle
-                    If Not _initialized Then
-                        InitializeLocked()
-                    ElseIf _handle <> IntPtr.Zero Then
-                        SetOptionStringLocked("wid", WindowHandleToUnsignedString(_windowHandle))
-                    End If
-                End SyncLock
-            Catch ex As Exception
-                HandleInitializationFailure(ex)
-            End Try
+            EnqueueCommand(
+                Sub()
+                    Try
+                        SyncLock _syncRoot
+                            If _disposed OrElse _initializationFailed Then Return
+                            If _windowHandle = windowHandle AndAlso _initialized Then Return
+                            _windowHandle = windowHandle
+                            If Not _initialized Then
+                                InitializeLocked()
+                            ElseIf _handle <> IntPtr.Zero Then
+                                SetOptionStringLocked("wid", WindowHandleToUnsignedString(_windowHandle))
+                            End If
+                        End SyncLock
+                    Catch ex As Exception
+                        HandleInitializationFailure(ex)
+                    End Try
+                End Sub)
         End Sub
 
         Public Sub DetachWindow()
-            SyncLock _syncRoot
-                _windowHandle = IntPtr.Zero
-                If _initializationFailed OrElse Not _initialized OrElse _handle = IntPtr.Zero Then Return
-                SetOptionStringLocked("wid", "-1")
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _windowHandle = IntPtr.Zero
+                        If _initializationFailed OrElse Not _initialized OrElse _handle = IntPtr.Zero Then Return
+                        SetOptionStringLocked("wid", "-1")
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub Load(path As String)
             If String.IsNullOrWhiteSpace(path) Then Return
-
-            SyncLock _syncRoot
-                _pendingPath = path
-                If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
-                SetPauseLocked(True)
-                Dim result = CommandLocked("loadfile", path, "replace")
-                If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _pendingPath = path
+                        If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
+                        SetPauseLocked(True)
+                        Dim result = CommandLocked("loadfile", path, "replace")
+                        If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub LoadPending()
-            SyncLock _syncRoot
-                If String.IsNullOrWhiteSpace(_pendingPath) Then Return
-                If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
-                SetPauseLocked(True)
-                Dim result = CommandLocked("loadfile", _pendingPath, "replace")
-                If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        If String.IsNullOrWhiteSpace(_pendingPath) Then Return
+                        If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
+                        SetPauseLocked(True)
+                        Dim result = CommandLocked("loadfile", _pendingPath, "replace")
+                        If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub Play()
-            SyncLock _syncRoot
-                _pendingPlay = True
-                If _initialized AndAlso Not _initializationFailed Then SetPauseLocked(False)
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _pendingPlay = True
+                        If _initialized AndAlso Not _initializationFailed Then SetPauseLocked(False)
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub Pause()
-            SyncLock _syncRoot
-                _pendingPlay = False
-                If _initialized AndAlso Not _initializationFailed Then SetPauseLocked(True)
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _pendingPlay = False
+                        If _initialized AndAlso Not _initializationFailed Then SetPauseLocked(True)
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub TogglePause()
-            SyncLock _syncRoot
-                If _initializationFailed Then Return
-                If _isPaused Then
-                    _pendingPlay = True
-                    If _initialized Then SetPauseLocked(False)
-                Else
-                    _pendingPlay = False
-                    If _initialized Then SetPauseLocked(True)
-                End If
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        If _initializationFailed Then Return
+                        If _isPaused Then
+                            _pendingPlay = True
+                            If _initialized Then SetPauseLocked(False)
+                        Else
+                            _pendingPlay = False
+                            If _initialized Then SetPauseLocked(True)
+                        End If
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub [Stop]()
-            SyncLock _syncRoot
-                _pendingPlay = False
-                If _initialized AndAlso Not _initializationFailed Then CommandLocked("stop")
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _pendingPlay = False
+                        If _initialized AndAlso Not _initializationFailed Then CommandLocked("stop")
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub Seek(seconds As Double)
-            SyncLock _syncRoot
-                If _initializationFailed OrElse Not _initialized Then Return
-                SetPropertyStringLocked("time-pos", Math.Max(0, seconds).ToString(CultureInfo.InvariantCulture))
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        If _initializationFailed OrElse Not _initialized Then Return
+                        SetPropertyStringLocked("time-pos", Math.Max(0, seconds).ToString(CultureInfo.InvariantCulture))
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub SetMuted(value As Boolean)
-            SyncLock _syncRoot
-                _isMuted = value
-                If _initialized AndAlso Not _initializationFailed Then SetPropertyStringLocked("mute", If(value, "yes", "no"))
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _isMuted = value
+                        If _initialized AndAlso Not _initializationFailed Then SetPropertyStringLocked("mute", If(value, "yes", "no"))
+                    End SyncLock
+                End Sub)
+        End Sub
+
+        Private Sub EnqueueCommand(workItem As Action)
+            If workItem Is Nothing Then Return
+            SyncLock _commandQueueLock
+                If _disposeQueued OrElse _commandQueue.IsAddingCompleted Then Return
+                _commandQueue.Add(workItem)
             End SyncLock
+        End Sub
+
+        Private Sub CommandLoop()
+            For Each workItem In _commandQueue.GetConsumingEnumerable()
+                Try
+                    workItem()
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("VideoPlayback.Command", ex)
+                End Try
+            Next
         End Sub
 
         Private Sub HandleInitializationFailure(ex As Exception)
@@ -188,7 +248,9 @@ Namespace Services
             SetOptionStringLocked("msg-level", "all=no")
             SetOptionStringLocked("config", "no")
             SetOptionStringLocked("input-default-bindings", "no")
-            SetOptionStringLocked("osc", "no")
+            ' Die gebündelte Minimal-Laufzeit enthält kein OSC-Skript. Das Abschalten ist optional:
+            ' FerrumPix zeichnet seine eigenen Steuerelemente und braucht den mpv-OSC nicht.
+            TrySetOptionStringLocked("osc", "no")
             SetOptionStringLocked("keep-open", "no")
             SetOptionStringLocked("hwdec", If(_enableHardwareAcceleration, "auto-safe", "no"))
             If OperatingSystem.IsLinux() Then
@@ -315,6 +377,12 @@ Namespace Services
             End Using
         End Sub
 
+        Private Function TrySetOptionStringLocked(name As String, value As String) As Boolean
+            Using namePtr = New Utf8String(name), valuePtr = New Utf8String(value)
+                Return MpvInterop.SetOptionString(_handle, namePtr.Pointer, valuePtr.Pointer) >= 0
+            End Using
+        End Function
+
         Private Sub SetPropertyStringLocked(name As String, value As String)
             Using namePtr = New Utf8String(name), valuePtr = New Utf8String(value)
                 MpvInterop.SetPropertyString(_handle, namePtr.Pointer, valuePtr.Pointer)
@@ -340,6 +408,15 @@ Namespace Services
         End Function
 
         Public Sub Dispose() Implements IDisposable.Dispose
+            SyncLock _commandQueueLock
+                If _disposeQueued Then Return
+                _disposeQueued = True
+                _commandQueue.Add(AddressOf DisposeCore)
+                _commandQueue.CompleteAdding()
+            End SyncLock
+        End Sub
+
+        Private Sub DisposeCore()
             Dim handleToDestroy As IntPtr = IntPtr.Zero
             Dim eventThread As Thread = Nothing
 

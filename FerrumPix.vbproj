@@ -55,4 +55,32 @@
          Messwerkzeuge), und Avaloniens Ressourcenlader setzt eine gestartete App voraus. -->
     <EmbeddedResource Include="Assets\Objektivdaten\objektivdaten.zip" />
   </ItemGroup>
+
+  <!--
+    libmpv is part of the macOS application instead of being an end-user prerequisite.
+    The universal dylibs support both osx-arm64 and osx-x64 and are copied next to the
+    executable so their @rpath dependencies can be preloaded from one directory.
+  -->
+  <ItemGroup Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx-'))">
+    <Content Include="Native/libmpv/osx/*.dylib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>libmpv/%(Filename)%(Extension)</TargetPath>
+    </Content>
+    <Content Include="Native/libmpv/NOTICE.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>licenses/libmpv-NOTICE.md</TargetPath>
+    </Content>
+    <Content Include="Native/libmpv/LGPL-2.1.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>licenses/LGPL-2.1.txt</TargetPath>
+    </Content>
+    <Content Include="Native/libmpv/GPL-2.0.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>licenses/GPL-2.0.txt</TargetPath>
+    </Content>
+  </ItemGroup>
 </Project>
