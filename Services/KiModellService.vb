@@ -199,7 +199,7 @@ Namespace Services
                                         .Zweck = "Tiefenkarte", .Bytes = 66339845,
                                         .Sha256 = "007d73146ac82eb424d7306fb2e9d15fb4d2702d5129040d9e68adeb28bc384e"},
                 New ModellEintrag With {.Schluessel = "lama",
-                                        .Datei = "lama-v2.onnx", .Gruppe = "Objekt entfernen",
+                                        .Datei = "lama-v1.onnx", .Gruppe = "Objekt entfernen",
                                         .Zweck = "Lücken füllen", .Bytes = 110513159,
                                         .Sha256 = "11ba60a0e23344f7d42d2aba31cf9a599e9d1b3bb265b41b68595e2a2d72df16"}}
 
@@ -214,7 +214,7 @@ Namespace Services
         ''' tragen KANN - ein neues Modell an einem neuen Ort ist dann ein Registereintrag und keine
         ''' Umstellung.</summary>
         Public Const HerkunftBasis As String =
-            "https://github.com/Bitpainter75/FerrumPix-Models/releases/download/modelle-v2/"
+            "https://github.com/Bitpainter75/FerrumPix-Models/releases/download/modelle-v1/"
 
         ''' <summary>Der Eintrag zu einem Schluessel, oder Nothing.</summary>
         Public Shared Function EintragFuer(schluessel As String) As ModellEintrag
