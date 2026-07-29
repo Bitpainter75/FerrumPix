@@ -3417,11 +3417,7 @@ Namespace ViewModels
         ' ".fpx" gehört dazu: FerrumPix-Projekte erscheinen wie Bilder in Galerie und Filmstreifen
         ' (Thumbnail aus dem eingebetteten Composite, siehe ThumbnailCacheService).
         ' Anzeigbare Medien: feste Formate plus die kanonischen RAW-Endungen.
-        Private ReadOnly _imageExtensions As String() = {
-            ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif",
-            ".ico", ".svg", ".fpx", ".psd", ".psb",
-            ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
-        }.Concat(RawPreviewService.SupportedExtensions).ToArray()
+        Private ReadOnly _imageExtensions As String() = MediaFormatService.DisplayMediaExtensions
 
         ''' <summary>
         ''' Freier Speicherplatz des Laufwerks, auf dem der aktuelle Ordner liegt. Läuft im Hintergrund:
@@ -5251,24 +5247,16 @@ Namespace ViewModels
             Return AppSettingsService.Load().DevelopRawInBatch
         End Function
 
-        Private Shared ReadOnly BatchConvertExcludedExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".svg"}
         ''' <summary>Kann die Stapel-Bildbearbeitung (Groesse/Wasserzeichen/Filter) diese Datei
         ''' schreiben? Die Menuesichtbarkeit MUSS dieselbe Frage stellen wie
         ''' GetSelectedBatchEditableImageItems - sonst stehen Eintraege da, die beim Klick still
         ''' nichts tun (.tif/.bmp/.heic waren sichtbar, der Dialog erschien nie).</summary>
         Public Shared Function IsBatchImageEditReadable(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
-            If BatchImageEditReadableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant()) Then Return True
-            ' RAW, PSD und .fpx sind LESBARE Quellen wie jede andere - SaveImage rendert sie
-            ' (RAW ueber die eingebettete Vorschau, PSD ueber das Gesamtbild, .fpx aus Basisbild +
-            ' Rezept). Nur ZURUECKschreiben kann man sie nicht, und genau das entscheidet
-            ' IsBatchImageEditWritable weiter unten - dort wird "Originale ueberschreiben"
-            ' gesperrt. Die Endungen kommen aus den zustaendigen Diensten statt aus einer zweiten
-            ' Liste hier: eine neu unterstuetzte RAW-Endung soll nicht an zwei Stellen gepflegt
-            ' werden muessen.
-            Return RawPreviewService.IsSupportedRaw(path) OrElse
-                   PsdPreviewService.IsSupportedPsd(path) OrElse
-                   FpxService.IsFpx(path)
+            If MediaFormatService.IsSvg(path) OrElse MediaFormatService.IsVideo(path) Then Return False
+            Dim extension = IO.Path.GetExtension(path)
+            Return MediaFormatService.ImageExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase) OrElse
+                   RawPreviewService.IsSupportedRaw(path)
         End Function
 
         Public Shared Function IsBatchImageEditWritable(path As String) As Boolean
@@ -5280,17 +5268,8 @@ Namespace ViewModels
         ''' nicht - deren Eintraege blieben sonst wirkungslos sichtbar.)</summary>
         Public Shared Function IsBatchExportable(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
-            Return Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
+            Return Not MediaFormatService.IsVideo(path) AndAlso Not MediaFormatService.IsSvg(path)
         End Function
-
-        ''' <summary>Formate, die die Stapel-Bildbearbeitung als QUELLE lesen kann. BMP/GIF (Skia)
-        ''' und HEIC/HEIF/AVIF (libheif) sind dabei, obwohl sie sich nicht zurueckschreiben lassen -
-        ''' dafuer entstehen NEUE Dateien im gewaehlten Zielformat. GIF liefert das erste Einzelbild.
-        ''' HEIC steht hier ohne Verfuegbarkeitspruefung: ohne libheif scheitert der Decode sichtbar,
-        ''' statt dass der Menuepunkt je nach System verschwindet.</summary>
-        Private Shared ReadOnly BatchImageEditReadableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif",
-                                                                                ".heic", ".heif", ".hif", ".avif",
-                                                                                ".tif", ".tiff"}
 
         ''' <summary>Formate, die sich AN ORT UND STELLE ueberschreiben lassen - dafuer braucht es
         ''' einen Encoder fuer genau dieses Format (siehe ImageProcessor.CanEncodeToTargetExtension).
@@ -6081,7 +6060,7 @@ Namespace ViewModels
         Private Async Function ExportSelectedAsync() As Task
             Dim targetItems = GetSelectedImageItems().
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
-                Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
+                Where(Function(i) IsBatchExportable(i.FilePath)).
                 ToList()
             DiagnosticLogService.LogAlways("Gallery.ExportTo", $"selected={GetSelectedImageItems().Count} exportable={targetItems.Count}")
             If targetItems.Count = 0 Then Return
@@ -6239,7 +6218,7 @@ Namespace ViewModels
         Private Async Sub BatchConvertSelected()
             Dim targetItems = GetSelectedImageItems().
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
-                Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
+                Where(Function(i) IsBatchExportable(i.FilePath)).
                 ToList()
             DiagnosticLogService.LogAlways("Gallery.BatchConvert", $"selected={GetSelectedImageItems().Count} convertible={targetItems.Count}")
             If targetItems.Count = 0 Then Return

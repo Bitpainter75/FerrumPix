@@ -287,7 +287,7 @@ Namespace Services
         End Function
 
         ''' <summary>Liefert das eingebettete Komposit als dekodierbaren PNG-Stream (Position 0) - wie
-        ''' RawPreviewService/SvgPreviewService, sodass Thumbnail- und Betrachterpfade es wie ein normales
+        ''' RawPreviewService/UniversalImageDecodeService, sodass Thumbnail- und Betrachterpfade es wie ein normales
         ''' Bild weiterverarbeiten. Nothing bei Fehler oder fehlendem Komposit.</summary>
         Public Shared Function ExtractComposite(fpxPath As String) As MemoryStream
             Try

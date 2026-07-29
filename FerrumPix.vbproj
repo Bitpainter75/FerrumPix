@@ -33,11 +33,19 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
-    <!-- TIFF lesen: SkiaSharp kann das Format nicht. Rein verwaltet (kein natives Beiwerk),
-         BSD-3-Clause und damit mit der GPL-3 der Anwendung vertraeglich. -->
-    <PackageReference Include="BitMiracle.LibTiff.NET" Version="2.4.660" />
+    <PackageReference Include="NetVips" Version="3.2.0" />
+    <PackageReference Include="NetVips.Native" Version="8.18.4" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
     <PackageReference Include="Svg.Skia" Version="5.1.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <Content Include="$(NuGetPackageRoot)netvips.native.$(RuntimeIdentifier)/8.18.4/THIRD-PARTY-NOTICES.md"
+             Condition="Exists('$(NuGetPackageRoot)netvips.native.$(RuntimeIdentifier)/8.18.4/THIRD-PARTY-NOTICES.md')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>licenses/libvips-THIRD-PARTY-NOTICES.md</TargetPath>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

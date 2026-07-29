@@ -12997,14 +12997,13 @@ Namespace ViewModels
         Private Shared Function CanParticipateInEditorFilmstrip(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
             If VideoPreviewService.IsSupportedVideo(path) Then Return False
-            If SvgPreviewService.IsSupportedSvg(path) Then Return False
+            If MediaFormatService.IsSvg(path) Then Return False
 
-            Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
-            Dim editableExts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico"}
             ' .fpx-Projekte sind im Editor voll bearbeitbar (Rezept wird wiederhergestellt) und
             ' gehoeren deshalb in den Filmstreifen - solange das Format aktiviert ist.
-            Return editableExts.Contains(ext) OrElse RawPreviewService.IsSupportedRaw(path) OrElse
-                   PsdPreviewService.IsSupportedPsd(path) OrElse FpxService.IsFpx(path)
+            Dim extension = IO.Path.GetExtension(path)
+            Return MediaFormatService.ImageExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase) OrElse
+                   RawPreviewService.IsSupportedRaw(path)
         End Function
 
         ''' <paramref name="markDirty"/>: False für reine ANZEIGE-Auslöser (Vorher/Nachher-Vergleich

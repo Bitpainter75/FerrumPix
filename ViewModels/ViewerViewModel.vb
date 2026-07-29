@@ -213,8 +213,7 @@ Namespace ViewModels
 
             If RawPreviewService.IsSupportedRaw(path) OrElse
                PsdPreviewService.IsSupportedPsd(path) OrElse
-               HeifDecodeService.IsSupportedHeif(path) OrElse
-               TiffPreviewService.IsSupportedTiff(path) OrElse
+               UniversalImageDecodeService.IsSupported(path) OrElse
                FpxService.IsFpx(path) Then
                 Return True
             End If
@@ -684,7 +683,7 @@ Namespace ViewModels
         Public ReadOnly Property CanEdit As Boolean
             Get
                 Return Not IsVideoFile AndAlso
-                       Not SvgPreviewService.IsSupportedSvg(_currentImagePath)
+                       Not MediaFormatService.IsSvg(_currentImagePath)
             End Get
         End Property
 
@@ -962,7 +961,7 @@ Namespace ViewModels
                         ZoomLevel = 1.0
                     Case Else : IsFitToWindow = False
                 End Select
-                LoadBitmap()
+                LoadImmichBitmap(assetId)
                 If _isFitToWindow Then UpdateFitZoom()
                 UpdateStatus()
                 ' Die heruntergeladene Temp-Kopie ist das Original - EXIF/IPTC/XMP direkt daraus lesen.
@@ -1690,6 +1689,40 @@ Namespace ViewModels
             RunBitmapLoad(path, token, FpxService.IsFpx(path))
         End Sub
 
+        ''' <summary>Lädt bei Immich zuerst das heruntergeladene Original. Kann FerrumPix dessen
+        ''' Format lokal nicht dekodieren, wird die vom Server gerenderte große Vorschau verwendet.
+        ''' Das gilt bewusst für jedes serverseitig unterstützte Bildformat statt nur für HEIC.</summary>
+        Private Sub LoadImmichBitmap(assetId As String)
+            If VideoPreviewService.IsSupportedVideo(_currentImagePath) Then
+                LoadBitmap()
+                Return
+            End If
+
+            StopVideoPlayback()
+            Dim token = System.Threading.Interlocked.Increment(_bitmapLoadToken)
+            Dim path = _currentImagePath
+            SetBitmapLoading(True)
+            CurrentImage = Nothing
+            ImageWidth = 0
+            ImageHeight = 0
+            RunImmichBitmapLoad(path, assetId, token)
+        End Sub
+
+        Private Async Sub RunImmichBitmapLoad(path As String, assetId As String, token As Integer)
+            Dim bmp As Bitmap = Nothing
+            Try
+                bmp = Await Task.Run(Function() DecodeViewerBitmap(path))
+                If bmp Is Nothing AndAlso token = System.Threading.Volatile.Read(_bitmapLoadToken) Then
+                    bmp = Await ImmichService.LoadThumbnailBitmapAsync(assetId, ImmichService.PreviewSize)
+                End If
+            Catch
+                bmp = Nothing
+            End Try
+
+            If Not ApplyLoadedBitmap(token, bmp) Then Return
+            SetBitmapLoading(False)
+        End Sub
+
         ''' Verwirft ein eventuell laufendes asynchrones Bild-Laden (Bildwechsel auf Video,
         ''' Loeschen/Freigeben der Datei) - ohne das koennte ein spaetes Decode-Ergebnis ein
         ''' bewusst geleertes CurrentImage wieder "auferstehen" lassen.
@@ -1719,7 +1752,6 @@ Namespace ViewModels
                 bmp?.Dispose()
                 Return False
             End If
-
             If bmp Is Nothing Then
                 CurrentImage = Nothing
                 ImageWidth = 0
@@ -1783,11 +1815,6 @@ Namespace ViewModels
                               Nothing)
                 End Using
             End If
-            If SvgPreviewService.IsSupportedSvg(path) Then
-                Using preview = SvgPreviewService.ExtractPreview(path)
-                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
-                End Using
-            End If
             If IcoPreviewService.IsSupportedIco(path) Then
                 Using preview = IcoPreviewService.ExtractPreview(path)
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
@@ -1799,6 +1826,11 @@ Namespace ViewModels
                     Return If(preview IsNot Nothing,
                               ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(path)),
                               Nothing)
+                End Using
+            End If
+            If UniversalImageDecodeService.IsSupported(path) Then
+                Using preview = UniversalImageDecodeService.ExtractPreview(path)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
                 End Using
             End If
             If FpxService.IsFpx(path) Then
@@ -2015,11 +2047,7 @@ Namespace ViewModels
         Private Sub LoadFolderContext(folder As String, currentPath As String)
             ' ".fpx" gehört dazu: Projekte blättern im Viewer/Vollbild mit (Anzeige aus dem Composite).
             ' Feste Formate plus die kanonischen RAW-Endungen (RawPreviewService.SupportedExtensions).
-            Dim exts = {
-                ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif",
-                ".ico", ".svg", ".fpx", ".psd", ".psb",
-                ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
-            }.Concat(RawPreviewService.SupportedExtensions).ToArray()
+            Dim exts = MediaFormatService.DisplayMediaExtensions
             Try
                 _folderPaths = Directory.GetFiles(folder).
                     Where(Function(f) exts.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).

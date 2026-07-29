@@ -2040,17 +2040,11 @@ Namespace Services
             If IcoPreviewService.IsSupportedIco(path) Then Return IcoPreviewService.ExtractPreview(path)
             ' PSD/PSB nur-lesend: das zusammengesetzte Gesamtbild als PNG (siehe PsdPreviewService).
             If PsdPreviewService.IsSupportedPsd(path) Then Return PsdPreviewService.ExtractPreview(path)
-            ' HEIC/HEIF/AVIF kann SkiaSharp nicht - libheif liefert es als PNG herein (nur lesend,
-            ' siehe HeifDecodeService). Fehlt die Bibliothek, faellt es auf den normalen Datei-
-            ' Strom zurueck; der Decode scheitert dann wie bisher sichtbar statt still falsch.
-            If HeifDecodeService.IsSupportedHeif(path) AndAlso HeifDecodeService.IsAvailable Then
-                Dim heif = HeifDecodeService.ExtractPreview(path)
-                If heif IsNot Nothing Then Return heif
-            End If
-            ' TIFF kann SkiaSharp ebenfalls nicht - LibTiff.NET liefert es als PNG herein.
-            If TiffPreviewService.IsSupportedTiff(path) Then
-                Dim tiff = TiffPreviewService.ExtractPreview(path)
-                If tiff IsNot Nothing Then Return tiff
+            ' Nicht von Skia gelesene Rasterformate kommen über den gebündelten Universaldecoder
+            ' als orientierter PNG-Strom herein (nur lesend).
+            If UniversalImageDecodeService.IsSupported(path) Then
+                Dim decoded = UniversalImageDecodeService.ExtractPreview(path)
+                If decoded IsNot Nothing Then Return decoded
             End If
             Return File.OpenRead(path)
         End Function
@@ -3234,14 +3228,9 @@ Namespace Services
         ''' <summary>Bildabmessungen aus den Kopfdaten, ohne vollstaendiges Dekodieren. (0,0), wenn
         ''' das Format unbekannt ist - Aufrufer MUESSEN das abfangen, statt mit 0 weiterzurechnen.</summary>
         Public Shared Function GetImageSize(imagePath As String) As (Width As Integer, Height As Integer)
-            ' HEIC/HEIF/AVIF kennt SKCodec nicht - dort antwortet libheif aus dem Container.
-            If HeifDecodeService.IsSupportedHeif(imagePath) AndAlso HeifDecodeService.IsAvailable Then
-                Dim heifSize = HeifDecodeService.TryGetSize(imagePath)
-                If heifSize.Width > 0 AndAlso heifSize.Height > 0 Then Return heifSize
-            End If
-            If TiffPreviewService.IsSupportedTiff(imagePath) Then
-                Dim tiffSize = TiffPreviewService.TryGetSize(imagePath)
-                If tiffSize.Width > 0 AndAlso tiffSize.Height > 0 Then Return tiffSize
+            If UniversalImageDecodeService.IsSupported(imagePath) Then
+                Dim decodedSize = UniversalImageDecodeService.TryGetSize(imagePath)
+                If decodedSize.Width > 0 AndAlso decodedSize.Height > 0 Then Return decodedSize
             End If
             Try
                 Using codec = SKCodec.Create(imagePath)
@@ -10115,12 +10104,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' durch ihre eigene eingebettete Vorschau ersetzt. Ein Ziel
             ' mit RAW-/PSD-Endung ist IMMER falsch - wir können diese Formate nicht schreiben.
             If RawPreviewService.IsSupportedRaw(targetPath) OrElse PsdPreviewService.IsSupportedPsd(targetPath) OrElse
-               HeifDecodeService.IsSupportedHeif(targetPath) OrElse TiffPreviewService.IsSupportedTiff(targetPath) Then
+               UniversalImageDecodeService.IsSupported(targetPath) Then
                 workingFull?.Dispose()
                 Return False
             End If
             If (RawPreviewService.IsSupportedRaw(sourcePath) OrElse PsdPreviewService.IsSupportedPsd(sourcePath) OrElse
-                HeifDecodeService.IsSupportedHeif(sourcePath) OrElse TiffPreviewService.IsSupportedTiff(sourcePath)) AndAlso
+                UniversalImageDecodeService.IsSupported(sourcePath)) AndAlso
                PathIdentity.AreSame(sourcePath, targetPath) Then
                 workingFull?.Dispose()
                 Return False

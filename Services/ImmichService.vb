@@ -11,6 +11,7 @@ Imports System.Text.Json.Serialization
 Imports System.Threading
 Imports System.Threading.Tasks
 Imports Avalonia.Media.Imaging
+Imports Avalonia.Threading
 
 Namespace Services
 
@@ -1205,9 +1206,14 @@ Namespace Services
             If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
             cancellationToken.ThrowIfCancellationRequested()
             Try
-                Using ms = New MemoryStream(bytes, writable:=False)
-                    Return New Bitmap(ms)
-                End Using
+                ' Bitmap benötigt Avalonia.Platform.IPlatformRenderInterface und darf deshalb
+                ' nach dem ConfigureAwait(False)-Download nicht auf dem Pool-Thread entstehen.
+                Return Await Dispatcher.UIThread.InvokeAsync(
+                    Function()
+                        Using ms = New MemoryStream(bytes, writable:=False)
+                            Return New Bitmap(ms)
+                        End Using
+                    End Function)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Immich.DecodeThumbnail", ex)
                 Return Nothing

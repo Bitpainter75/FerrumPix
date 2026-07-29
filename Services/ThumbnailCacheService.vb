@@ -690,22 +690,15 @@ Namespace Services
             If RawPreviewService.IsSupportedRaw(filePath) Then
                 Return OpenRawThumbnailSource(filePath)
             End If
-            If SvgPreviewService.IsSupportedSvg(filePath) Then
-                Return SvgPreviewService.ExtractPreview(filePath, CacheWidth)
-            End If
             If IcoPreviewService.IsSupportedIco(filePath) Then
                 Return IcoPreviewService.ExtractPreview(filePath)
             End If
             If PsdPreviewService.IsSupportedPsd(filePath) Then
                 Return PsdPreviewService.ExtractPreview(filePath)
             End If
-            If HeifDecodeService.IsSupportedHeif(filePath) AndAlso HeifDecodeService.IsAvailable Then
-                Dim heif = HeifDecodeService.ExtractPreview(filePath)
-                If heif IsNot Nothing Then Return heif
-            End If
-            If TiffPreviewService.IsSupportedTiff(filePath) Then
-                Dim tiff = TiffPreviewService.ExtractPreview(filePath)
-                If tiff IsNot Nothing Then Return tiff
+            If UniversalImageDecodeService.IsSupported(filePath) Then
+                Dim decoded = UniversalImageDecodeService.ExtractPreview(filePath, CacheWidth)
+                If decoded IsNot Nothing Then Return decoded
             End If
             If FpxService.IsFpx(filePath) Then
                 Return FpxService.ExtractComposite(filePath)
@@ -805,11 +798,6 @@ Namespace Services
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath), rawContainerPath:=filePath)
                     End Using
-                ElseIf SvgPreviewService.IsSupportedSvg(filePath) Then
-                    Using preview = SvgPreviewService.ExtractPreview(filePath, CacheWidth)
-                        cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
-                    End Using
                 ElseIf IcoPreviewService.IsSupportedIco(filePath) Then
                     Using preview = IcoPreviewService.ExtractPreview(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
@@ -820,18 +808,10 @@ Namespace Services
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
                     End Using
-                ElseIf TiffPreviewService.IsSupportedTiff(filePath) Then
-                    ' LibTiff wendet das Orientierungs-Tag selbst an - keine zweite Korrektur.
-                    Using preview = TiffPreviewService.ExtractPreview(filePath)
+                ElseIf UniversalImageDecodeService.IsSupported(filePath) Then
+                    Using preview = UniversalImageDecodeService.ExtractPreview(filePath, CacheWidth)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
-                    End Using
-                ElseIf HeifDecodeService.IsSupportedHeif(filePath) AndAlso HeifDecodeService.IsAvailable Then
-                    ' libheif wendet die Drehung aus dem Container selbst an - hier also KEINE
-                    ' zusaetzliche Korrektur, sonst waere sie doppelt.
-                    Using preview = HeifDecodeService.ExtractPreview(filePath)
-                        cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
+                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
                     End Using
                 ElseIf FpxService.IsFpx(filePath) Then
                     Using preview = FpxService.ExtractComposite(filePath)

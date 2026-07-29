@@ -7,7 +7,7 @@ Namespace Services
 
     ''' <summary>
     ''' Dekodiert ICO-Dateien, da SkiaSharps Codec das Format nicht kennt. Liefert wie
-    ''' RawPreviewService und SvgPreviewService einen dekodierbaren MemoryStream (PNG), den die
+    ''' RawPreviewService und UniversalImageDecodeService einen dekodierbaren MemoryStream (PNG), den die
     ''' bestehenden Thumbnail- und Vorschau-Pfade wie ein normales Bild weiterverarbeiten.
     '''
     ''' Eine ICO-Datei ist ein Container mit mehreren Auflösungen. Jeder Eintrag ist entweder eine

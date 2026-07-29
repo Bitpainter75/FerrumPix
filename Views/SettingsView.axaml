@@ -1836,14 +1836,26 @@
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                                 <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="BitMiracle.LibTiff.NET 2.4" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="TIFF-Dateien lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="NetVips 3.2" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text=".NET-Anbindung für den universellen Bilddecoder" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/BitMiracle/libtiff.net" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/kleisauke/net-vips" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
                                 </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://bitmiracle.github.io/libtiff.net/help/articles/license.html" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/kleisauke/net-vips/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                    <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                </Button>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="libvips 8.18" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="TIFF, SVG und weitere Bildformate lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/libvips/libvips" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
+                                </Button>
+                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/libvips/libvips/blob/master/COPYING" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                    <TextBlock Text="LGPL-3.0-or-later" FontSize="{DynamicResource FP.Font.Caption}"/>
                                 </Button>
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
