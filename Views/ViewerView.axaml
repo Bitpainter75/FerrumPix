@@ -662,7 +662,7 @@
                     Padding="12,8"
                     Margin="12">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
-                    <Button Grid.Column="0" Classes="icon-btn" Width="32" Height="32"
+                    <Button Grid.Column="0" Classes="icon-btn video-control" Width="32" Height="32"
                             Command="{Binding PlayPauseVideoCommand}"
                             ToolTip.Tip="Play/Pause">
                         <Panel>
@@ -674,15 +674,14 @@
                                        Minimum="0" Maximum="{Binding VideoDurationSeconds}"
                                        Value="{Binding VideoPositionSeconds, Mode=OneWay}"/>
                     <TextBlock Grid.Column="2" Text="{Binding VideoTimeText}" Foreground="White" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <Button Grid.Column="3" Classes="icon-btn" Width="32" Height="32"
+                    <Button Grid.Column="3" Classes="icon-btn video-control" Width="32" Height="32"
                             Command="{Binding ToggleVideoMuteCommand}"
                             ToolTip.Tip="Stumm">
                         <Panel Width="16" Height="16">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/volume.svg" Width="16" Height="16" IconBrush="White"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/volume.svg" Width="16" Height="16"/>
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
                                            Width="9" Height="9"
                                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                           IconBrush="White"
                                            IsVisible="{Binding IsVideoMuted}"/>
                         </Panel>
                     </Button>
