@@ -10747,6 +10747,12 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public ReadOnly Property ShowHistogram As Boolean
+            Get
+                Return True
+            End Get
+        End Property
+
         Public Property ExifInfo As ExifData
             Get
                 Return _exifInfo

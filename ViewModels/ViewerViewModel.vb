@@ -653,6 +653,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ShowHistogram As Boolean
+            Get
+                Return Not IsVideoFile
+            End Get
+        End Property
+
         ''' Ob die Inline-Videowiedergabe im Viewer verfügbar ist. Für den Viewer wird libmpv
         ''' verwendet; fehlt die Bibliothek, zeigt die View stattdessen einen Hinweis.
         Public ReadOnly Property IsVideoPlaybackAvailable As Boolean
@@ -968,6 +974,7 @@ Namespace ViewModels
                 LoadInfoPanelData(_currentImagePath, preserveExistingTags:=True)
                 Me.RaisePropertyChanged(NameOf(IsRawFile))
                 Me.RaisePropertyChanged(NameOf(IsVideoFile))
+                Me.RaisePropertyChanged(NameOf(ShowHistogram))
                 Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
                 Me.RaisePropertyChanged(NameOf(HasNoMedia))
                 Me.RaisePropertyChanged(NameOf(CanEdit))
@@ -1604,6 +1611,7 @@ Namespace ViewModels
             UebernehmeKatalogAttribute(imagePath)
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
+            Me.RaisePropertyChanged(NameOf(ShowHistogram))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
             Me.RaisePropertyChanged(NameOf(HasNoMedia))
             Me.RaisePropertyChanged(NameOf(CanEdit))
@@ -1627,6 +1635,7 @@ Namespace ViewModels
             LoadInfoPanelData(_currentImagePath)
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
+            Me.RaisePropertyChanged(NameOf(ShowHistogram))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
             Me.RaisePropertyChanged(NameOf(HasNoMedia))
             Me.RaisePropertyChanged(NameOf(CanEdit))
@@ -2598,6 +2607,7 @@ Namespace ViewModels
             UebernehmeKatalogAttribute(_currentImagePath)
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
+            Me.RaisePropertyChanged(NameOf(ShowHistogram))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
             Me.RaisePropertyChanged(NameOf(HasNoMedia))
             Me.RaisePropertyChanged(NameOf(CanEdit))
