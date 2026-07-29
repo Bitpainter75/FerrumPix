@@ -4775,10 +4775,511 @@
   <data name="Objektiv_suchen_bd4aa71c" xml:space="preserve">
     <value>Rechercher un objectif…</value>
   </data>
-  <data name="Das_eingetragene_Objektiv_bernehmen_00fb88c7" xml:space="preserve">
-    <value>Appliquer l'objectif saisi</value>
-  </data>
   <data name="Zoom_ohne_Brennweitenangabe_nicht_zuzuordnen_abbfb8cc" xml:space="preserve">
     <value>zoom sans focale : impossible à attribuer</value>
+  </data>
+  <data name="Das_eingetragene_Objektiv_bernehmen_leeres_Feld__76078e10" xml:space="preserve">
+    <value>Appliquer l'objectif saisi ; un champ vide rétablit la détection automatique</value>
+  </data>
+  <data name="Verzerren_88238388" xml:space="preserve">
+    <value>Déformer</value>
+  </data>
+  <data name="Verzerren_zur_cksetzen_654a354d" xml:space="preserve">
+    <value>Réinitialiser la déformation</value>
+  </data>
+  <data name="Senkrecht_11a7886e" xml:space="preserve">
+    <value>Vertical</value>
+  </data>
+  <data name="Waagerecht_bdd5c94a" xml:space="preserve">
+    <value>Horizontal</value>
+  </data>
+  <data name="Kippt_um_die_waagerechte_Achse_richtet_st_rzende_ae42b40d" xml:space="preserve">
+    <value>Bascule autour de l'axe horizontal : redresse les verticales fuyantes des bâtiments</value>
+  </data>
+  <data name="Kippt_um_die_senkrechte_Achse_f688e84c" xml:space="preserve">
+    <value>Bascule autour de l'axe vertical</value>
+  </data>
+  <data name="Dehnt_das_Ergebnis_in_die_Breite_oder_in_die_H_h_65e16e24" xml:space="preserve">
+    <value>Étire le résultat en largeur ou en hauteur</value>
+  </data>
+  <data name="Holt_das_Bild_heran_um_die_leer_gewordenen_Ecken_f954af39" xml:space="preserve">
+    <value>Rapproche l'image pour masquer les coins restés vides</value>
+  </data>
+  <data name="Masken_kippen_mit_Eingef_gte_Objekte_nicht_sie_b_bde304b2" xml:space="preserve">
+    <value>Les masques suivent l'inclinaison. Les objets insérés non : ils restent des rectangles.</value>
+  </data>
+  <data name="Gitter_125fce7f" xml:space="preserve">
+    <value>Grille</value>
+  </data>
+  <data name="Wie_fein_das_St_tzpunktraster_ist_Gr_ber_verzerr_77add524" xml:space="preserve">
+    <value>Finesse de la grille de points de contrôle. Plus grossière, la déformation est plus douce. Plus fine, elle est plus précise.</value>
+  </data>
+  <data name="Die_Punkte_im_Bild_ziehen_Anwenden_backt_die_Ver_0fe42cd3" xml:space="preserve">
+    <value>Faites glisser les points dans l'image. Appliquer fixe la déformation dans les pixels - ensuite les masques ne correspondent plus exactement.</value>
+  </data>
+  <data name="Gitter_zur_cksetzen_7ed238ac" xml:space="preserve">
+    <value>Réinitialiser la grille</value>
+  </data>
+  <data name="Verzerrung_wird_angewendet_9c7dc5f5" xml:space="preserve">
+    <value>Application de la déformation…</value>
+  </data>
+  <data name="Verzerren_fehlgeschlagen_b4a9d10a" xml:space="preserve">
+    <value>Échec de la déformation</value>
+  </data>
+  <data name="Verzerrung_angewendet_9bfc032c" xml:space="preserve">
+    <value>Déformation appliquée</value>
+  </data>
+  <data name="Drehen_und_Verzerren_d9ebe09a" xml:space="preserve">
+    <value>Pivoter et déformer</value>
+  </data>
+  <data name="Perspektive_e720186d" xml:space="preserve">
+    <value>Perspective</value>
+  </data>
+  <data name="Gitterverzerrung_0cbc7f6d" xml:space="preserve">
+    <value>Déformation par grille</value>
+  </data>
+  <data name="Die_vier_Ecken_lassen_sich_auch_direkt_im_Bild_z_61b94987" xml:space="preserve">
+    <value>Les quatre coins peuvent aussi être déplacés directement dans l'image.</value>
+  </data>
+  <data name="Drehen_zur_cksetzen_dd5aee78" xml:space="preserve">
+    <value>Réinitialiser la rotation</value>
+  </data>
+  <data name="Wieder_durchsichtig_9106760e" xml:space="preserve">
+    <value>Redevenir transparent</value>
+  </data>
+  <data name="F_llt_alles_was_sonst_durchsichtig_bliebe_erweit_cbc15b0b" xml:space="preserve">
+    <value>Remplit tout ce qui resterait transparent : toile agrandie, coins vides après redressement ou déformation, zones effacées.</value>
+  </data>
+  <data name="ONNX_Runtime_1_28_75207326" xml:space="preserve">
+    <value>ONNX Runtime 1.28</value>
+  </data>
+  <data name="F_hrt_gelernte_Modelle_aus_Die_Telemetrie_ist_ab_3d10ed60" xml:space="preserve">
+    <value>Exécute des modèles appris. La télémétrie est désactivée, aucune donnée n'est transmise. FerrumPix ne fournit pas de modèles et ne les télécharge pas de lui-même.</value>
+  </data>
+  <data name="Bild_wird_f_r_die_Objektauswahl_gelesen_adfa3d05" xml:space="preserve">
+    <value>Lecture de l'image pour la sélection d'objets…</value>
+  </data>
+  <data name="Objektauswahl_nicht_m_glich_edc121a5" xml:space="preserve">
+    <value>Sélection d'objet impossible</value>
+  </data>
+  <data name="An_dieser_Stelle_wurde_kein_Objekt_gefunden_46aaa5e9" xml:space="preserve">
+    <value>Aucun objet trouvé à cet endroit</value>
+  </data>
+  <data name="Objekt_ausgew_hlt_1a779da5" xml:space="preserve">
+    <value>Objet sélectionné</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_w_hlt_das_getroffene_Objekt_W_84abcedf" xml:space="preserve">
+    <value>Un clic dans l'image sélectionne l'objet touché. D'autres clics ajoutent des zones, avec Alt enfoncée ils les retirent.</value>
+  </data>
+  <data name="Das_erste_Anklicken_eines_Bildes_dauert_einen_Mo_54c206a1" xml:space="preserve">
+    <value>Le premier clic sur une image prend un instant, ensuite c'est rapide.</value>
+  </data>
+  <data name="Objekt_anklicken_die_Maske_des_getroffenen_Objek_92bf94cc" xml:space="preserve">
+    <value>Cliquez sur un objet : le masque de l'objet touché apparaît de lui-même. Alt et clic retire de nouveau un endroit</value>
+  </data>
+  <data name="Jeder_Klick_w_hlt_ein_neues_Objekt_f2dfddf3" xml:space="preserve">
+    <value>Chaque clic sélectionne un nouvel objet</value>
+  </data>
+  <data name="Weitere_Klicks_erweitern_die_Maske_6b27604e" xml:space="preserve">
+    <value>Les clics suivants étendent le masque</value>
+  </data>
+  <data name="Klicks_nehmen_Stellen_wieder_weg_7f82716c" xml:space="preserve">
+    <value>Les clics retirent de nouveau des endroits</value>
+  </data>
+  <data name="Aus_der_Objektmaske_eine_Maskenebene_erstellen_8b52f426" xml:space="preserve">
+    <value>Créer un calque de masque à partir du masque d'objet</value>
+  </data>
+  <data name="Kante_9e4d22cf" xml:space="preserve">
+    <value>Bord</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_w_hlt_das_getroffene_Objekt_8e939938" xml:space="preserve">
+    <value>Un clic dans l'image sélectionne l'objet touché.</value>
+  </data>
+  <data name="Wie_knapp_die_Kante_sitzt_Klein_l_sst_sie_breite_408f5c10" xml:space="preserve">
+    <value>À quel point le bord est serré. Petit le laisse s'estomper plus largement - pour cheveux, branches et fourrure. Grand coupe au plus près - pour les objets à bord net.</value>
+  </data>
+  <data name="L_sst_die_Maske_um_die_Kante_herum_wachsen_oder__9feec74f" xml:space="preserve">
+    <value>Fait grandir ou rétrécir le masque autour de son bord. Si le modèle coupe d'un cheveu trop à l'intérieur, cela le rattrape.</value>
+  </data>
+  <data name="Von_a4b078f9" xml:space="preserve">
+    <value>De</value>
+  </data>
+  <data name="Bis_0afaa0e5" xml:space="preserve">
+    <value>À</value>
+  </data>
+  <data name="Nach_Entfernung_w_hlen_alles_was_in_einem_Tiefen_e9b497e6" xml:space="preserve">
+    <value>Sélectionner par distance : tout ce qui se trouve dans une plage de profondeur. Atteint l'arrière-plan et le premier plan même là où les couleurs se ressemblent</value>
+  </data>
+  <data name="W_hlt_alles_was_in_einem_Entfernungsbereich_lieg_5bd8748e" xml:space="preserve">
+    <value>Sélectionne tout ce qui se trouve dans une plage de distance. 100 est le plus proche, 0 le plus lointain.</value>
+  </data>
+  <data name="Die_Tiefe_wird_einmal_je_Bild_berechnet_das_daue_4fcb924a" xml:space="preserve">
+    <value>La profondeur est calculée une fois par image, ce qui prend un instant.</value>
+  </data>
+  <data name="Der_ferne_Rand_des_gew_hlten_Bereichs_af1fefb1" xml:space="preserve">
+    <value>Le bord lointain de la plage choisie</value>
+  </data>
+  <data name="Der_nahe_Rand_des_gew_hlten_Bereichs_b66bb9d5" xml:space="preserve">
+    <value>Le bord proche de la plage choisie</value>
+  </data>
+  <data name="L_sst_die_Maske_an_beiden_R_ndern_auslaufen_Ohne_dcc45785" xml:space="preserve">
+    <value>Laisse le masque s'estomper aux deux bords. Sans cela, un bord visible traverse l'image</value>
+  </data>
+  <data name="Aus_der_Tiefenmaske_eine_Maskenebene_erstellen_9cf7e826" xml:space="preserve">
+    <value>Créer un calque de masque à partir du masque de profondeur</value>
+  </data>
+  <data name="Tiefe_wird_berechnet_715521a6" xml:space="preserve">
+    <value>Calcul de la profondeur…</value>
+  </data>
+  <data name="Tiefe_konnte_nicht_berechnet_werden_a5373018" xml:space="preserve">
+    <value>La profondeur n'a pas pu être calculée</value>
+  </data>
+  <data name="In_diesem_Tiefenbereich_liegt_nichts_ae23d819" xml:space="preserve">
+    <value>Rien ne se trouve dans cette plage de profondeur</value>
+  </data>
+  <data name="Maske_nach_Tiefe_gesetzt_c317c8df" xml:space="preserve">
+    <value>Masque défini par la profondeur</value>
+  </data>
+  <data name="Tiefen_Unsch_rfe_f28adc70" xml:space="preserve">
+    <value>Flou de profondeur</value>
+  </data>
+  <data name="Sch_rfe_bei_d661d52b" xml:space="preserve">
+    <value>Net à</value>
+  </data>
+  <data name="Tiefensch_rfe_af95e372" xml:space="preserve">
+    <value>Profondeur de champ</value>
+  </data>
+  <data name="Die_Entfernung_die_scharf_bleibt_100_ist_am_n_ch_203b6782" xml:space="preserve">
+    <value>La distance qui reste nette. 100 est le plus proche</value>
+  </data>
+  <data name="Wie_stark_die_Unsch_rfe_am_fernsten_Punkt_wird_6ec3a381" xml:space="preserve">
+    <value>L'intensité du flou au point le plus lointain</value>
+  </data>
+  <data name="Wie_breit_die_Sch_rfeebene_ist_klein_ergibt_eine_61db8968" xml:space="preserve">
+    <value>La largeur de la zone nette : petit donne une bande étroite, grand une large</value>
+  </data>
+  <data name="Wird_beim_Anwenden_in_die_Pixel_gerechnet_wie_ei_0ccb599e" xml:space="preserve">
+    <value>Appliquer le fixe dans les pixels, comme une retouche. La profondeur est calculée une fois par image.</value>
+  </data>
+  <data name="Unsch_rfe_wird_angewendet_fd4741ae" xml:space="preserve">
+    <value>Application du flou…</value>
+  </data>
+  <data name="Unsch_rfe_fehlgeschlagen_78d2e115" xml:space="preserve">
+    <value>Échec du flou</value>
+  </data>
+  <data name="Unsch_rfe_angewendet_e8c4387f" xml:space="preserve">
+    <value>Flou appliqué</value>
+  </data>
+  <data name="Umfang_der_Auswahl_2a47afaa" xml:space="preserve">
+    <value>Étendue de la sélection</value>
+  </data>
+  <data name="Teil_d237b7fb" xml:space="preserve">
+    <value>Partie</value>
+  </data>
+  <data name="Mittel_48577b86" xml:space="preserve">
+    <value>Moyen</value>
+  </data>
+  <data name="Ganzes_3815c400" xml:space="preserve">
+    <value>Entier</value>
+  </data>
+  <data name="Nur_den_getroffenen_Teil_etwa_ein_rmel_b9b390f0" xml:space="preserve">
+    <value>Seulement la partie touchée, par exemple une manche</value>
+  </data>
+  <data name="Den_Gegenstand_zu_dem_der_Teil_geh_rt_etwa_die_J_ca664165" xml:space="preserve">
+    <value>L'objet auquel appartient la partie, par exemple la veste</value>
+  </data>
+  <data name="Das_ganze_Objekt_etwa_die_Person_c44d402b" xml:space="preserve">
+    <value>L'objet entier, par exemple la personne</value>
+  </data>
+  <data name="Die_vier_Ecken_im_Bild_ziehen_281cf418" xml:space="preserve">
+    <value>Faire glisser les quatre coins dans l'image</value>
+  </data>
+  <data name="Das_St_tzpunktraster_im_Bild_ziehen_df10bd99" xml:space="preserve">
+    <value>Faire glisser la grille de points dans l'image</value>
+  </data>
+  <data name="Erst_w_hlen_dann_liegt_das_jeweilige_Werkzeug_be_de86f4af" xml:space="preserve">
+    <value>Choisissez d'abord, l'outil correspondant apparaît alors sur l'image. Un nouveau clic le masque.</value>
+  </data>
+  <data name="In_eine_Maske_umwandeln_3828b7ef" xml:space="preserve">
+    <value>Convertir en masque</value>
+  </data>
+  <data name="In_eine_Auswahl_umwandeln_d60b98b1" xml:space="preserve">
+    <value>Convertir en sélection</value>
+  </data>
+  <data name="In_eine_Maske_umgewandelt_7f858fd9" xml:space="preserve">
+    <value>Converti en masque</value>
+  </data>
+  <data name="In_eine_Auswahl_umgewandelt_24dcfdd7" xml:space="preserve">
+    <value>Converti en sélection</value>
+  </data>
+  <data name="Aus_der_Auswahl_eine_Maske_machen_dieselbe_Form__ffdd63f5" xml:space="preserve">
+    <value>Transformer la sélection en masque : la même forme, mais elle module au lieu de limiter</value>
+  </data>
+  <data name="Aus_der_Maske_eine_Auswahl_machen_dieselbe_Form__4bf13a6c" xml:space="preserve">
+    <value>Transformer le masque en sélection : la même forme, mais elle limite au lieu de moduler</value>
+  </data>
+  <data name="Verschieben_Objekte_und_Ebenen_greifen_ohne_zu_m_ac387069" xml:space="preserve">
+    <value>Déplacer : saisir objets et calques sans peindre</value>
+  </data>
+  <data name="Objekte_und_Ebenen_greifen_ohne_zu_malen_1d357a9f" xml:space="preserve">
+    <value>Saisir objets et calques sans peindre.</value>
+  </data>
+  <data name="Modelle_db90f3aa" xml:space="preserve">
+    <value>Modèles</value>
+  </data>
+  <data name="Zwei_Funktionen_brauchen_eine_Modelldatei_Sie_ge_f583bf24" xml:space="preserve">
+    <value>Deux fonctions ont besoin d'un fichier de modèle. Ils ne font pas partie du paquet et FerrumPix ne télécharge rien de lui-même. En cliquant sur Télécharger, le fichier est récupéré depuis GitHub, qui voit alors l'adresse IP de cette machine. Ensuite tout s'exécute sur cette machine et rien n'est transmis.</value>
+  </data>
+  <data name="Wird_geladen_17fac8ea" xml:space="preserve">
+    <value>Téléchargement…</value>
+  </data>
+  <data name="Eine_neuere_Fassung_liegt_bereit_72c86896" xml:space="preserve">
+    <value>Une version plus récente est disponible</value>
+  </data>
+  <data name="Vorhanden_a8282ce8" xml:space="preserve">
+    <value>Installé</value>
+  </data>
+  <data name="Nicht_vorhanden_759d9854" xml:space="preserve">
+    <value>Non installé</value>
+  </data>
+  <data name="Herunterladen_c153d506" xml:space="preserve">
+    <value>Télécharger</value>
+  </data>
+  <data name="Maske_nach_Entfernung_und_Tiefen_Unsch_rfe_858745e5" xml:space="preserve">
+    <value>Masque par distance et flou de profondeur</value>
+  </data>
+  <data name="Objekt_im_Bild_anklicken_Maske_entsteht_von_selb_357e9326" xml:space="preserve">
+    <value>Cliquez sur un objet, le masque apparaît de lui-même</value>
+  </data>
+  <data name="Tiefe_86a28ff7" xml:space="preserve">
+    <value>Profondeur</value>
+  </data>
+  <data name="Objektauswahl_b10aaf65" xml:space="preserve">
+    <value>Sélection d'objet</value>
+  </data>
+  <data name="Die_geladene_Datei_stimmt_nicht_mit_der_erwartet_3cb4ff03" xml:space="preserve">
+    <value>Le fichier téléchargé ne correspond pas à celui attendu et a été rejeté</value>
+  </data>
+  <data name="Das_Herunterladen_ist_fehlgeschlagen_4ddbc189" xml:space="preserve">
+    <value>Le téléchargement a échoué</value>
+  </data>
+  <data name="Abgebrochen_4a206f7c" xml:space="preserve">
+    <value>Annulé</value>
+  </data>
+  <data name="F_hrt_gelernte_Modelle_aus_Die_Telemetrie_ist_ab_7cc00c0e" xml:space="preserve">
+    <value>Exécute des modèles appris. La télémétrie est désactivée, aucune donnée n'est transmise. Les modèles eux-mêmes ne font pas partie du paquet et ne sont téléchargés que sur demande.</value>
+  </data>
+  <data name="Zwei_Funktionen_brauchen_eine_Modelldatei_Sie_ge_0ed1a42c" xml:space="preserve">
+    <value>Deux fonctions ont besoin d'un fichier de modèle. Ils ne font pas partie du paquet.</value>
+  </data>
+  <data name="Zwei_Funktionen_brauchen_eine_Modelldatei_die_si_3131044a" xml:space="preserve">
+    <value>Deux fonctions ont besoin d'un fichier de modèle qui peut être téléchargé depuis GitHub.</value>
+  </data>
+  <data name="Rund_7b662a05" xml:space="preserve">
+    <value>Rond</value>
+  </data>
+  <data name="Tiefen_Unsch_rfe_zur_cksetzen_67530835" xml:space="preserve">
+    <value>Réinitialiser le flou de profondeur</value>
+  </data>
+  <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
+    <value>Dans quelle mesure les points lumineux restent des disques brillants au lieu de se fondre en une tache terne</value>
+  </data>
+  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
+    <value>La forme du diaphragme: ronde ou un polygone avec autant de lamelles</value>
+  </data>
+  <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
+    <value>Supprimer un objet</value>
+  </data>
+  <data name="Markiertes_verschwinden_lassen_der_Hintergrund_w_1fd7e579" xml:space="preserve">
+    <value>Faire disparaître ce qui est marqué, l'arrière-plan est prolongé</value>
+  </data>
+  <data name="L_sst_das_Markierte_verschwinden_und_setzt_den_H_b9d1e718" xml:space="preserve">
+    <value>Fait disparaître ce qui est marqué et prolonge l'arrière-plan. Calculé dans les pixels, comme une retouche.</value>
+  </data>
+  <data name="Es_ist_nichts_markiert_f308dcea" xml:space="preserve">
+    <value>Rien n'est marqué</value>
+  </data>
+  <data name="Objekt_wird_entfernt_9a359fbd" xml:space="preserve">
+    <value>Suppression de l'objet…</value>
+  </data>
+  <data name="Entfernen_fehlgeschlagen_bbe17e08" xml:space="preserve">
+    <value>La suppression a échoué</value>
+  </data>
+  <data name="Objekt_entfernt_3d51bb68" xml:space="preserve">
+    <value>Objet supprimé</value>
+  </data>
+  <data name="Scharf_von_282f9fea" xml:space="preserve">
+    <value>Net à partir de</value>
+  </data>
+  <data name="Scharf_bis_e25c03b2" xml:space="preserve">
+    <value>Net jusqu'à</value>
+  </data>
+  <data name="Untere_Grenze_des_scharfen_Bereichs_0_ist_am_wei_27b06783" xml:space="preserve">
+    <value>Limite inférieure de la zone nette. 0 est le plus éloigné</value>
+  </data>
+  <data name="Obere_Grenze_des_scharfen_Bereichs_100_ist_am_n__abaeaab6" xml:space="preserve">
+    <value>Limite supérieure de la zone nette. 100 est le plus proche</value>
+  </data>
+  <data name="Wie_weich_der_bergang_vom_scharfen_Bereich_in_di_93f7a02a" xml:space="preserve">
+    <value>Avec quelle douceur la zone nette se fond dans le flou</value>
+  </data>
+  <data name="Drei_Werkzeuge_brauchen_eine_Modelldatei_die_sic_1184d74f" xml:space="preserve">
+    <value>Trois outils ont besoin d'un fichier de modèle qui peut être téléchargé depuis GitHub.</value>
+  </data>
+  <data name="Daf_r_fehlt_eine_Modelldatei_Sie_l_sst_sich_in_d_d1423b4c" xml:space="preserve">
+    <value>Il manque un fichier de modèle pour cela. Il peut être téléchargé dans les réglages, sous Modèles.</value>
+  </data>
+  <data name="Die_Unsch_rfe_kommt_je_Bildpunkt_aus_seiner_Entf_5d0f7dbf" xml:space="preserve">
+    <value>Le flou vient de la distance de chaque point.</value>
+  </data>
+  <data name="Objekt_im_Bild_anklicken_die_Maske_entsteht_von__c0ead6a6" xml:space="preserve">
+    <value>Cliquez sur un objet dans l'image, le masque apparaît tout seul.</value>
+  </data>
+  <data name="W_hlt_alles_was_in_einem_Entfernungsbereich_lieg_a5d05441" xml:space="preserve">
+    <value>Sélectionne tout ce qui se trouve dans une plage de distance.</value>
+  </data>
+  <data name="Die_Zeichenmaschine_unter_SkiaSharp_eigene_Lizen_1d502c1d" xml:space="preserve">
+    <value>Le moteur de dessin sous SkiaSharp - licence propre, pas celle de l'enveloppe</value>
+  </data>
+  <data name="Die_native_Unterlage_der_Datenbank_eigene_Lizenz_878101f3" xml:space="preserve">
+    <value>La couche native sous la base de données - licence propre</value>
+  </data>
+  <data name="Die_Datenbank_selbst_mitgeliefert_in_der_nativen_f33c3536" xml:space="preserve">
+    <value>La base de données elle-même, fournie dans la couche native</value>
+  </data>
+  <data name="Skia_4c0000e3" xml:space="preserve">
+    <value>Skia</value>
+  </data>
+  <data name="SQLitePCLRaw_3_50_6be15601" xml:space="preserve">
+    <value>SQLitePCLRaw 3.50</value>
+  </data>
+  <data name="SQLite_9f09ccbd" xml:space="preserve">
+    <value>SQLite</value>
+  </data>
+  <data name="Public_Domain_b95d9612" xml:space="preserve">
+    <value>Public Domain</value>
+  </data>
+  <data name="F_hrt_gelernte_Modelle_aus_Telemetrie_abgeschalt_fd8ca4d6" xml:space="preserve">
+    <value>Exécute les modèles appris, télémétrie désactivée</value>
+  </data>
+  <data name="Zeichenmaschine_unter_SkiaSharp_16b82ee8" xml:space="preserve">
+    <value>Moteur de dessin sous SkiaSharp</value>
+  </data>
+  <data name="Native_Unterlage_der_Datenbank_087469f3" xml:space="preserve">
+    <value>Couche native sous la base de données</value>
+  </data>
+  <data name="Die_Datenbank_selbst_a4c924b2" xml:space="preserve">
+    <value>La base de données elle-même</value>
+  </data>
+  <data name="Kalibrierdaten_f_r_Objektive_c22475f5" xml:space="preserve">
+    <value>Données de calibration des objectifs</value>
+  </data>
+  <data name="HEIC_HEIF_AVIF_nur_vom_System_7551d0f2" xml:space="preserve">
+    <value>HEIC/HEIF/AVIF, uniquement du système</value>
+  </data>
+  <data name="Keine_Ordner_im_Zwischenspeicher_d447e66a" xml:space="preserve">
+    <value>Aucun dossier dans le cache</value>
+  </data>
+  <data name="1_Ordner_0f72713e" xml:space="preserve">
+    <value>1 dossier</value>
+  </data>
+  <data name="0_Ordner_5b9d25fe" xml:space="preserve">
+    <value>{0} dossiers</value>
+  </data>
+  <data name="MobileSAM_4ec73d99" xml:space="preserve">
+    <value>MobileSAM</value>
+  </data>
+  <data name="MiDaS_60e664c7" xml:space="preserve">
+    <value>MiDaS</value>
+  </data>
+  <data name="LaMa_2aa3f618" xml:space="preserve">
+    <value>LaMa</value>
+  </data>
+  <data name="Objektauswahl_per_Klick_Modelldatei_b66c30d4" xml:space="preserve">
+    <value>Sélection d'objet par clic (fichier de modèle)</value>
+  </data>
+  <data name="Tiefenkarte_f_r_Maske_und_Unsch_rfe_Modelldatei_852efe34" xml:space="preserve">
+    <value>Carte de profondeur pour masque et flou (fichier de modèle)</value>
+  </data>
+  <data name="Objekte_entfernen_Modelldatei_084e63ee" xml:space="preserve">
+    <value>Supprimer des objets (fichier de modèle)</value>
+  </data>
+  <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
+    <value>Groupes de réglage visibles</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
+    <value>Détermine quels groupes apparaissent dans la zone de réglages de l'éditeur. Masquer ne change que l'affichage: les valeurs réglées sont conservées et continuent d'agir.</value>
+  </data>
+  <data name="Wird_berechnet_a96029ae" xml:space="preserve">
+    <value>Calcul en cours…</value>
+  </data>
+  <data name="Verzerrung_wird_angewendet_3201d123" xml:space="preserve">
+    <value>Application de la distorsion</value>
+  </data>
+  <data name="Tiefe_wird_berechnet_f30d2fa3" xml:space="preserve">
+    <value>Calcul de la profondeur</value>
+  </data>
+  <data name="Unsch_rfe_wird_angewendet_6d2437c1" xml:space="preserve">
+    <value>Application du flou</value>
+  </data>
+  <data name="Objekt_wird_entfernt_adfff123" xml:space="preserve">
+    <value>Suppression de l'objet</value>
+  </data>
+  <data name="Bild_wird_gelesen_319eaf31" xml:space="preserve">
+    <value>Lecture de l'image</value>
+  </data>
+  <data name="Vorschau_df968561" xml:space="preserve">
+    <value>Aperçu</value>
+  </data>
+  <data name="Systemsprache_ef9a107d" xml:space="preserve">
+    <value>Langue du système</value>
+  </data>
+  <data name="Linien_52db7dcb" xml:space="preserve">
+    <value>Lignes</value>
+  </data>
+  <data name="Linienverzerrung_000c55de" xml:space="preserve">
+    <value>Déformation par lignes</value>
+  </data>
+  <data name="Linien_auf_Kanten_legen_und_ziehen_a546610a" xml:space="preserve">
+    <value>Poser des lignes sur des bords et les tirer</value>
+  </data>
+  <data name="Alle_Linien_entfernen_d149f8ad" xml:space="preserve">
+    <value>Supprimer toutes les lignes</value>
+  </data>
+  <data name="Im_Bild_eine_Linie_ber_eine_Kante_ziehen_Danach__1f1749d2" xml:space="preserve">
+    <value>Tracez une ligne sur un bord de l'image. Ensuite, tirez la ligne, ou l'une de ses extrémités, à sa nouvelle place: le bord suit, et son entourage suit doucement.</value>
+  </data>
+  <data name="Letzte_Linie_entfernen_aea3a933" xml:space="preserve">
+    <value>Supprimer la dernière ligne</value>
+  </data>
+  <data name="Die_zuletzt_gezogene_Linie_wieder_entfernen_87acaece" xml:space="preserve">
+    <value>Supprimer la dernière ligne tracée</value>
+  </data>
+  <data name="Wird_beim_Anwenden_in_die_Pixel_gerechnet_wie_ei_49f92be5" xml:space="preserve">
+    <value>Calculé dans les pixels lors de l'application, comme une retouche. Les objets insérés ne sont pas déformés avec.</value>
+  </data>
+  <data name="Farbflecken_d36f4c7c" xml:space="preserve">
+    <value>Taches de couleur</value>
+  </data>
+  <data name="Fleckengr_e_d5f77262" xml:space="preserve">
+    <value>Taille des taches</value>
+  </data>
+  <data name="Rauschen_zur_cksetzen_a8f3f46f" xml:space="preserve">
+    <value>Réinitialiser le bruit</value>
+  </data>
+  <data name="Gegen_gro_e_Farbflecken_aus_hochgezogenen_Aufnah_42aa3ed9" xml:space="preserve">
+    <value>Contre les grandes taches de couleur des prises poussées. Agit sur plusieurs tailles et laisse les bords et la structure fine intacts.</value>
+  </data>
+  <data name="Wie_gro_e_Flecken_noch_erfasst_werden_H_her_grei_83950b6b" xml:space="preserve">
+    <value>Jusqu'à quelle taille de tache l'effet porte. Plus haut porte plus loin, mais coûte plus de temps.</value>
+  </data>
+  <data name="Wird_beim_Anwenden_in_die_Pixel_gerechnet_wie_ei_38e958d9" xml:space="preserve">
+    <value>Calculé dans les pixels lors de l'application, comme une retouche. Les objets insérés suivent sans être figés.</value>
+  </data>
+  <data name="Ein_Objekt_ist_markiert_die_vier_Anfasser_verzer_1d2b75c0" xml:space="preserve">
+    <value>Un objet est sélectionné: les quatre poignées déforment cet objet, pas l'image. La déformation appartient à l'objet et n'est pas figée.</value>
+  </data>
+  <data name="Objektverzerrung_zur_cksetzen_b62c981b" xml:space="preserve">
+    <value>Réinitialiser la déformation de l'objet</value>
   </data>
 </root>

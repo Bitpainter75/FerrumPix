@@ -1,6 +1,7 @@
 Imports System
 Imports System.IO
 Imports System.Runtime.InteropServices
+Imports System.Threading.Tasks
 Imports SkiaSharp
 
 Namespace Services
@@ -357,6 +358,10 @@ Namespace Services
                 ' Der Schluessel MUSS jede Groesse tragen, die das Ergebnis veraendert. Fehlt eine,
                 ' liefert der Cache das Bild der vorigen Einstellung zurueck, und der Schalter
                 ' sieht aus, als tue er nichts.
+                ' Die VERZEICHNUNG steht bewusst NICHT im Schluessel: sie ist eine eigene Stufe
+                ' hinter dem Decode, und im Zwischenspeicher liegt das Bild VOR ihr. Sonst warf ihr
+                ' Ein- und Ausschalten den ganzen Decode weg und liess libraw erneut laufen -
+                ' Sekunden fuer eine Umrechnung, die selbst Millisekunden braucht.
                 Dim objSchluessel = ObjektivSchluessel(objektiv)
                 SyncLock _cacheLock
                     If _cachedBitmap IsNot Nothing AndAlso
@@ -364,7 +369,7 @@ Namespace Services
                        _cachedWriteTimeUtc = writeTime AndAlso
                        _cachedGrundbelichtung = grundEv AndAlso
                        String.Equals(_cachedObjektiv, objSchluessel, StringComparison.Ordinal) Then
-                        Return _cachedBitmap.Copy()
+                        Return MitVerzeichnung(_cachedBitmap.Copy(), objektiv)
                     End If
                 End SyncLock
 
@@ -387,24 +392,36 @@ Namespace Services
                     _cachedGrundbelichtung = grundEv
                     _cachedObjektiv = objSchluessel
                     _cachedWriteTimeUtc = writeTime
-                    Return _cachedBitmap.Copy()
+                    Return MitVerzeichnung(_cachedBitmap.Copy(), objektiv)
                 End SyncLock
             Catch
                 Return Nothing
             End Try
         End Function
 
-        ''' <summary>Alles, was am Ergebnis der Objektivkorrektur haengt, in einer Zeichenkette -
-        ''' fuer den Decode-Zwischenspeicher.</summary>
+        ''' <summary>Die Verzeichnungsstufe auf ein frisch aus dem Zwischenspeicher geholtes Bild.
+        ''' Besitz geht an den Aufrufer; das uebergebene Bild wird verbraucht.</summary>
+        Private Shared Function MitVerzeichnung(bild As SKBitmap,
+                                                objektiv As ObjektivDatenService.Korrektur) As SKBitmap
+            If bild Is Nothing Then Return Nothing
+            If objektiv Is Nothing OrElse Not objektiv.HatVerzeichnung Then Return bild
+            Dim entzerrt = EntferneVerzeichnung(bild, objektiv)
+            If entzerrt Is Nothing Then Return bild
+            bild.Dispose()
+            Return entzerrt
+        End Function
+
+        ''' <summary>Alles, was am Ergebnis der Objektivkorrektur haengt UND schon im Decode steckt,
+        ''' in einer Zeichenkette - fuer den Decode-Zwischenspeicher. Die Verzeichnung fehlt hier
+        ''' absichtlich: sie laeuft erst danach, siehe MitVerzeichnung.</summary>
         Private Shared Function ObjektivSchluessel(k As ObjektivDatenService.Korrektur) As String
             If k Is Nothing Then Return ""
             Return String.Format(Globalization.CultureInfo.InvariantCulture,
-                "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10}|{11}|{12:R}|{13:R}|{14:R}|{15:R}|{16:R}|{17:R}",
+                "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10:R}|{11:R}",
                 k.HatFarbquerfehler, k.HatVignettierung,
                 k.TcaBr, k.TcaCr, k.TcaVr, k.TcaBb, k.TcaCb, k.TcaVb,
                 k.NormSkala, k.Vk1 + k.Vk2 * 3 + k.Vk3 * 7,
-                k.HatVerzeichnung, k.VerzeichnungsModell, k.Va, k.Vb, k.Vc,
-                k.StaerkeVerzeichnung, k.StaerkeFarbquerfehler, k.StaerkeVignettierung)
+                k.StaerkeFarbquerfehler, k.StaerkeVignettierung)
         End Function
 
         ''' <summary>Die Kennlinien fuer diese Datei, sofern die Korrektur gilt. Die Verzeichnung
@@ -458,27 +475,33 @@ Namespace Services
             Dim norm = k.NormSkala
             If norm <= 0.0 Then Return Nothing
 
-            For y = 0 To hoehe - 1
-                Dim dy = y - cy
-                Dim z = y * breite * 4
-                For x = 0 To breite - 1
-                    Dim dx = x - cx
-                    Dim rPix = Math.Sqrt(dx * dx + dy * dy)
-                    Dim sx = cx, sy = cy
-                    If rPix > 0.0 Then
-                        ' Die Kennlinie bildet den KORRIGIERTEN Radius auf den VERZEICHNETEN ab.
-                        ' Das sieht verkehrt herum aus, ist aber genau richtig: gerechnet wird vom
-                        ' fertigen Zielbild rueckwaerts, um in der Quelle nachzuschlagen.
-                        Dim rNorm = rPix * norm
-                        Dim rVerz = ObjektivDatenService.VerzeichnungsRadius(k, rNorm)
-                        Dim faktor = rVerz / rNorm
-                        sx = cx + dx * faktor
-                        sy = cy + dy * faktor
-                    End If
-                    ZieheBilinear(quellPixel, breite, hoehe, schrittQ, sx, sy, ausgabe, z)
-                    z += 4
-                Next
-            Next
+            ' ZEILENWEISE PARALLEL. Jede Zeile schreibt ausschliesslich in ihren eigenen Abschnitt
+            ' von "ausgabe" und liest nur aus der unveraenderlichen Quellkopie - die Zeilen sind
+            ' voneinander unabhaengig, es braucht keine Sperre. Der Grund: die Schleife rechnet je
+            ' Pixel eine Wurzel und ein Polynom, und bei 45 MP dauerte sie auf einem Kern so lange,
+            ' dass ein Objektivwechsel spuerbar stand.
+            Parallel.For(0, hoehe,
+                Sub(y)
+                    Dim dy = y - cy
+                    Dim z = y * breite * 4
+                    For x = 0 To breite - 1
+                        Dim dx = x - cx
+                        Dim rPix = Math.Sqrt(dx * dx + dy * dy)
+                        Dim sx = cx, sy = cy
+                        If rPix > 0.0 Then
+                            ' Die Kennlinie bildet den KORRIGIERTEN Radius auf den VERZEICHNETEN ab.
+                            ' Das sieht verkehrt herum aus, ist aber genau richtig: gerechnet wird vom
+                            ' fertigen Zielbild rueckwaerts, um in der Quelle nachzuschlagen.
+                            Dim rNorm = rPix * norm
+                            Dim rVerz = ObjektivDatenService.VerzeichnungsRadius(k, rNorm)
+                            Dim faktor = rVerz / rNorm
+                            sx = cx + dx * faktor
+                            sy = cy + dy * faktor
+                        End If
+                        ZieheBilinear(quellPixel, breite, hoehe, schrittQ, sx, sy, ausgabe, z)
+                        z += 4
+                    Next
+                End Sub)
             Marshal.Copy(ausgabe, 0, zielZeiger, ausgabe.Length)
             Return ziel
         End Function
@@ -650,15 +673,12 @@ Namespace Services
                     End If
                     Marshal.Copy(pixels, 0, bitmap.GetPixels(), pixels.Length)
                     ' Reihenfolge: erst Vignettierung und Farbquerfehler (beide im Umsetzungsschritt
-                    ' oben, auf den unveraenderten Bildpunkten gemessen), dann die Verzeichnung.
-                    ' Andersherum wuerden beide an verschobenen Stellen rechnen.
-                    If objektiv IsNot Nothing AndAlso objektiv.HatVerzeichnung Then
-                        Dim entzerrt = EntferneVerzeichnung(bitmap, objektiv)
-                        If entzerrt IsNot Nothing Then
-                            bitmap.Dispose()
-                            Return entzerrt
-                        End If
-                    End If
+                    ' oben, auf den unveraenderten Bildpunkten gemessen), DANN die Verzeichnung.
+                    ' Andersherum wuerden beide an verschobenen Stellen rechnen. Die Verzeichnung
+                    ' laeuft aber nicht mehr hier, sondern hinter dem Zwischenspeicher
+                    ' (MitVerzeichnung) - so wirft ihr Umschalten den Decode nicht weg. An der
+                    ' Reihenfolge aendert das nichts: was hier zurueckkommt, ist genau das Bild vor
+                    ' der Verzeichnung.
                     Return bitmap
                 Catch
                     bitmap.Dispose()

@@ -73,7 +73,10 @@ The editor covers the most common photo work:
 - Brush, transparent eraser, blur/smudge, clone stamp and repair brush tools. The brush picker offers 13 variants - soft round, pencil, marker, grainy acrylic, sandpaper, smudge, spatter, charcoal, crayon, airbrush, calligraphy, stipple and watercolor.
 - Rectangle, ellipse, lasso and magic wand selections. Selections are shown as marching ants, masks as a red overlay.
 - A separate mask tool with a mask brush (adjustable soft edge, add/subtract painting) and two masks you drag onto the image: a linear gradient that runs a correction out along the drag direction, and a radial one that fades it from a centre, invertible so it acts outside instead of inside. Gradient masks are stored as their geometry, not as painted pixels, so their handles, transition width, angle and - for the radial one - the shape of its ellipse can be changed at any time, with the mouse or with the sliders.
+- Select an object by clicking it. A mode in the mask tool hands the click to a model that runs on your machine: click something in the picture and its mask appears - the sky behind branches, a person against a wall of the same colour, the plate but not the table. Further clicks extend it, holding `Alt` takes areas away again, and the result becomes a mask layer like any painted mask. The first click on a photo takes a moment because the picture is read once; every click after that is immediate. Nothing leaves the machine. This needs a model file. FerrumPix never fetches one by itself; the settings have a *Models* section that fetches it on a button press and checks afterwards that what arrived is what was meant. Without the file the button is greyed out and says where to get it.
 - Save the current sliders under a name in the *Adjustments* group of the *Adjust* tool and apply them to any other image later - the usual way to develop a series consistently. Adjust, Colour, Details and Effects travel; crop, size, objects and masks are deliberately left out, because they belong to one particular picture. Any number of sets can be kept, saving under an existing name replaces that one, and the list survives restarts.
+- Select by distance. A second model gives every point of the picture its depth, and two sliders pick everything within a range of it, with a soft transition so no visible edge runs across the photo. It catches what colour cannot - the sky behind branches, a person against a wall of the same tone.
+- Remove something from the picture. Mark it - painted, clicked or selected by distance - and press *Remove object*. What was there disappears and the background is continued through the gap: a horizon keeps running, a wall keeps its line. That is the difference to the healing brush, which copies texture from somewhere else and has nothing to copy when the pattern has to continue rather than repeat. It is computed into the pixels like retouching, and one step back takes it out again.
 - Turn a selection or mask into a correction layer whose adjustment applies only inside it. The fill tool fills a selection layer with a solid colour or a linear/radial gradient; on a mask layer the fill's brightness grades how strongly the adjustment applies across the mask - and stays editable afterwards.
 - Per object editing with opacity, blend modes, shadows, glow and transform controls.
 - A toggleable Layers panel with the full object stack: per-layer visibility, opacity, blend mode, drag-and-drop reorder, rename (double-click or F2), rasterize (bake a layer into the image so retouching can work on its pixels) and delete, plus the base image as a hideable background layer. Selection and mask correction layers appear with their own name and icon, and every layer's actions are available from the footer or a right-click context menu. Object layers can be grouped (Ctrl+G): a group is one named, collapsible row with its own visibility switch, and picking any member selects the whole group so it moves, scales, rotates and flips as one.
@@ -190,20 +193,50 @@ The last two sections are reference material: a full list of keyboard and mouse 
 
 ## Technology
 
-- [Avalonia UI](https://avaloniaui.net/) 12.1
-- VB.NET on .NET 10
-- [ReactiveUI](https://www.reactiveui.net/)
-- [SkiaSharp](https://github.com/mono/SkiaSharp)
-- [Svg.Skia](https://github.com/wieslawsoltes/Svg.Skia)
-- [Microsoft.Data.Sqlite](https://learn.microsoft.com/dotnet/standard/data/sqlite/)
-- [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet)
-- [QRCoder](https://github.com/codebude/QRCoder)
-- [libmpv](https://mpv.io/)
-- [LibRaw](https://www.libraw.org/) (RAW development)
-- [libheif](https://github.com/strukturag/libheif) (HEIC/HEIF/AVIF, optional and never bundled)
-- [BitMiracle.LibTiff.NET](https://github.com/BitMiracle/libtiff.net) (TIFF)
-- [Lensfun](https://github.com/lensfun/lensfun) lens calibration database, bundled unchanged under [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
-- [Tabler Icons](https://github.com/tabler/tabler-icons)
+FerrumPix itself is [GPL-3.0-only](LICENSE). Every package carries a copy of that
+licence and a `THIRD-PARTY-NOTICES.txt` listing the components below with the
+licence each is used under.
+
+- [Avalonia UI](https://avaloniaui.net/) 12.1 - [MIT](https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md)
+- VB.NET on [.NET 10](https://github.com/dotnet/runtime) - [MIT](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT)
+- [ReactiveUI](https://www.reactiveui.net/) - [MIT](https://github.com/reactiveui/ReactiveUI/blob/main/LICENSE)
+- [SkiaSharp](https://github.com/mono/SkiaSharp) - [MIT](https://github.com/mono/SkiaSharp/blob/main/LICENSE.md), wrapping [Skia](https://github.com/google/skia) - [BSD-3-Clause](https://github.com/google/skia/blob/main/LICENSE)
+- [Svg.Skia](https://github.com/wieslawsoltes/Svg.Skia) - [MIT](https://github.com/wieslawsoltes/Svg.Skia/blob/master/LICENSE.TXT)
+- [Microsoft.Data.Sqlite](https://learn.microsoft.com/dotnet/standard/data/sqlite/) - [MIT](https://github.com/dotnet/efcore/blob/main/LICENSE.txt), with [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw) - [Apache-2.0](https://github.com/ericsink/SQLitePCL.raw/blob/master/LICENSE.TXT)
+- [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet) - [Apache-2.0](https://github.com/drewnoakes/metadata-extractor-dotnet/blob/main/LICENSE)
+- [QRCoder](https://github.com/codebude/QRCoder) - [MIT](https://github.com/codebude/QRCoder/blob/master/LICENSE.txt)
+- [libmpv](https://mpv.io/) - [GPL-2.0-or-later](https://github.com/mpv-player/mpv/blob/master/LICENSE.GPL)
+- [LibRaw](https://www.libraw.org/) (RAW development) - [LGPL-2.1](https://www.libraw.org/about)
+- [libheif](https://github.com/strukturag/libheif) (HEIC/HEIF/AVIF, optional and never bundled) - [LGPL-3.0](https://github.com/strukturag/libheif/blob/master/COPYING)
+- [BitMiracle.LibTiff.NET](https://github.com/BitMiracle/libtiff.net) (TIFF) - [BSD-3-Clause](https://github.com/BitMiracle/libtiff.net/blob/master/license.txt)
+- [Lensfun](https://github.com/lensfun/lensfun) lens calibration database, bundled unchanged - [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+- [ONNX Runtime](https://github.com/microsoft/onnxruntime) - [MIT](https://github.com/microsoft/onnxruntime/blob/main/LICENSE). Its telemetry is switched off before anything else touches it, and no data is transmitted.
+- [Tabler Icons](https://github.com/tabler/tabler-icons) - [MIT](https://github.com/tabler/tabler-icons/blob/master/LICENSE)
+
+Where a bundled library is under the GPL or LGPL, the packages also carry the
+reference to the matching source: `licenses/mpv/` and `licenses/libraw/` name
+the exact upstream version, commit and build recipe.
+
+### Model files
+
+Three features use a model file: object selection with
+[MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0, code and weights, built on
+Segment Anything by Meta and TinyViT by Microsoft), depth with
+[MiDaS](https://github.com/isl-org/MiDaS) (MIT), and object removal with
+[LaMa](https://github.com/advimman/lama) (Apache-2.0).
+
+The model files are not part of the package. The settings have a section that says how big each one
+is, fetches it when you press the button and checks afterwards that what arrived is what was meant.
+Nothing is fetched unless you press it. They are looked for in this order:
+
+1. `~/.config/FerrumPix/Modelle` on Linux, the matching application data folder elsewhere
+2. a `Modelle` folder next to the application
+3. `/usr/share/ferrumpix/modelle`
+
+Whether a feature appears depends only on whether its file is there - without it the button is
+simply not there. The licence text and the attribution notices travel with the model files, and are
+also collected at
+[FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models).
 
 ## Installation
 

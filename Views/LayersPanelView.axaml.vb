@@ -35,6 +35,17 @@ Namespace Views
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            ' Der Klick in den LEEREN Bereich unter den Ebenen muss VOR der Liste ankommen. Die
+            ' ListBox behandelt PointerPressed selbst; ein gewoehnlicher Handler auf der Flaeche
+            ' darunter bekam das Ereignis deshalb nie zu sehen, und eine markierte Maskenebene liess
+            ' sich so nicht abwaehlen. Mit dem Tunnel laeuft er davor - Klicks auf echte Zeilen
+            ' erkennt er an ihrem ListBoxItem und laesst sie durch.
+            Dim flaeche = Me.FindControl(Of Grid)("LayerListArea")
+            If flaeche IsNot Nothing Then
+                flaeche.AddHandler(InputElement.PointerPressedEvent,
+                                   New EventHandler(Of PointerPressedEventArgs)(AddressOf OnLayerListAreaPointerPressed),
+                                   RoutingStrategies.Tunnel)
+            End If
         End Sub
 
         ' ── Umbenennen ────────────────────────────────────────────────────────
@@ -73,8 +84,15 @@ Namespace Views
             ' freie Bereich (auch bei leerem Stapel) ist der bequeme Weg zurück zum Bildziel.
             Dim source = TryCast(e.Source, Visual)
             If source IsNot Nothing AndAlso source.FindAncestorOfType(Of ListBoxItem)() IsNot Nothing Then Return
+            ' Bildlaufleiste und Knoepfe im freien Bereich sind KEIN Klick ins Leere - sonst
+            ' verlaere man beim Scrollen die Markierung.
+            If source IsNot Nothing AndAlso
+               (source.FindAncestorOfType(Of ScrollBar)() IsNot Nothing OrElse
+                source.FindAncestorOfType(Of Button)() IsNot Nothing) Then Return
             TryCast(DataContext, EditorViewModel)?.SelectGlobalAdjustmentsTarget()
-            e.Handled = True
+            ' NICHT als behandelt markieren: der Tunnel laeuft vor der Liste, und ein behandeltes
+            ' Ereignis naehme ihr das Scrollen und das Ausklappen von Gruppen.
+            e.Handled = False
         End Sub
 
         ' Tastaturbedienung auf der markierten Ebene: F2 umbenennen, Entf löschen, Strg+D duplizieren.

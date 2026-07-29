@@ -7,7 +7,7 @@ Imports Avalonia.VisualTree
 
 Namespace Controls.EditorPanels
 
-    Public Class SoftenPanel
+    Public Class NoisePanel
         Inherits UserControl
 
         Public Sub New()

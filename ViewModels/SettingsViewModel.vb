@@ -1,4 +1,6 @@
+Imports System.Collections.Generic
 Imports System.Collections.ObjectModel
+Imports System.Threading.Tasks
 Imports System.Globalization
 Imports System.Linq
 Imports System.Reflection
@@ -56,6 +58,7 @@ Namespace ViewModels
         Private _editorToolSidebarCollapsed As Boolean = False
         Private _editorStartupTool As String = "Selection"
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
+        Private _versteckteAnpassungsgruppen As String = ""
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _startupImageMode As String = "Viewer"
         Private _startupNoImageMode As String = "Gallery"
@@ -590,6 +593,31 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Auswahlliste der Sprachen. Der Systemeintrag traegt seinen Namen aus der
+        ''' Uebersetzung, alle anderen ihren eigenen Namen in ihrer eigenen Sprache.</summary>
+        Public ReadOnly Property SprachOptionen As New ObservableCollection(Of SprachOption)()
+
+        Public Property AusgewaehlteSprache As SprachOption
+            Get
+                Return SprachOptionen.FirstOrDefault(
+                    Function(o) String.Equals(o.Schluessel, _languageMode, StringComparison.Ordinal))
+            End Get
+            Set(value As SprachOption)
+                If value Is Nothing Then Return
+                LanguageMode = value.Schluessel
+            End Set
+        End Property
+
+        Private Sub BaueSprachOptionen()
+            SprachOptionen.Clear()
+            For Each sp In LocalizationService.Sprachen
+                SprachOptionen.Add(New SprachOption With {
+                    .Schluessel = sp.Schluessel,
+                    .Name = If(sp.Schluessel = "System", LocalizationService.T("Systemsprache"), sp.Name)})
+            Next
+            Me.RaisePropertyChanged(NameOf(AusgewaehlteSprache))
+        End Sub
+
         Public Property LanguageMode As String
             Get
                 Return _languageMode
@@ -599,6 +627,7 @@ Namespace ViewModels
                 If _languageMode = value Then Return
                 Me.RaiseAndSetIfChanged(_languageMode, value)
                 RaiseLanguageModeProperties()
+                Me.RaisePropertyChanged(NameOf(AusgewaehlteSprache))
                 LocalizationService.LanguageMode = value
                 SaveLanguageSettings()
                 _mainVm?.RefreshLocalization()
@@ -1204,6 +1233,41 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Welche Anpassungsgruppen im Editor NICHT erscheinen. Nur die Anzeige ist
+        ''' betroffen: eingestellte Werte bleiben erhalten und wirken weiter.</summary>
+        Public Property VersteckteAnpassungsgruppen As String
+            Get
+                Return _versteckteAnpassungsgruppen
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeVersteckteAnpassungsgruppen(value)
+                If _versteckteAnpassungsgruppen = value Then Return
+                Me.RaiseAndSetIfChanged(_versteckteAnpassungsgruppen, value)
+                SaveLayoutSettings()
+                _mainVm?.Editor?.RefreshVersteckteAnpassungsgruppen()
+            End Set
+        End Property
+
+        Public ReadOnly Property AnpassungsgruppenItems As New ObservableCollection(Of AnpassungsgruppeItem)()
+
+        Private Sub BaueAnpassungsgruppenItems()
+            AnpassungsgruppenItems.Clear()
+            For Each g In AppSettingsService.AusblendbareAnpassungsgruppen
+                Dim item = New AnpassungsgruppeItem With {
+                    .Key = g.Schluessel,
+                    .Label = LocalizationService.T(g.Bezeichnung)}
+                item.SetzeSichtbar(Not VersteckteAnpassungsgruppen.Split(","c).Any(
+                    Function(k) String.Equals(k.Trim(), g.Schluessel, StringComparison.OrdinalIgnoreCase)))
+                AddHandler item.SichtbarGeaendert, AddressOf UebernehmeAnpassungsgruppen
+                AnpassungsgruppenItems.Add(item)
+            Next
+        End Sub
+
+        Private Sub UebernehmeAnpassungsgruppen(sender As Object, e As EventArgs)
+            VersteckteAnpassungsgruppen = String.Join(",",
+                AnpassungsgruppenItems.Where(Function(i) Not i.IstSichtbar).Select(Function(i) i.Key))
+        End Sub
+
         Public ReadOnly Property EditorToolGroupItems As New ObservableCollection(Of EditorToolGroupItem)()
 
         ''' <summary>Baut die Anzeigeliste neu auf. Die Beschriftungen kommen ÜBERSETZT aus dem
@@ -1221,7 +1285,7 @@ Namespace ViewModels
 
         Private Shared Function EditorToolGroupLabel(key As String) As String
             Select Case If(key, "").Trim()
-                Case "Transform" : Return LocalizationService.T("Transformieren")
+                Case "Transform" : Return LocalizationService.T("Drehen und Verzerren")
                 Case "Tools" : Return LocalizationService.T("Werkzeuge")
                 Case Else : Return LocalizationService.T("Anpassungen")
             End Select
@@ -1506,6 +1570,7 @@ Namespace ViewModels
 
         Public ReadOnly Property TestImmichConnectionCommand As ICommand
 
+        Public ReadOnly Property HoleModellCommand As ICommand
         Public ReadOnly Property ResetCommand As ICommand
         Public ReadOnly Property ApplyCommand As ICommand
         Public ReadOnly Property CancelCommand As ICommand
@@ -1529,6 +1594,17 @@ Namespace ViewModels
         Public ReadOnly Property DeleteThumbnailCacheFolderCommand As ICommand
         Public ReadOnly Property DeleteAllThumbnailCacheCommand As ICommand
         Public Property ThumbnailCacheFolders As ObservableCollection(Of ThumbnailCacheFolderInfo)
+
+        ''' <summary>Was zugeklappt in der Kopfzeile steht. Ohne diese Zahl waere die zugeklappte
+        ''' Liste eine Leerstelle - man wuesste nicht, ob sich das Aufklappen lohnt.</summary>
+        Public ReadOnly Property ThumbnailCacheFolderCountText As String
+            Get
+                Dim n = ThumbnailCacheFolders.Count
+                If n = 0 Then Return LocalizationService.T("Keine Ordner im Zwischenspeicher")
+                If n = 1 Then Return LocalizationService.T("1 Ordner")
+                Return String.Format(LocalizationService.T("{0} Ordner"), n)
+            End Get
+        End Property
 
         Public ReadOnly Property ThumbnailCacheSummaryText As String
             Get
@@ -1593,6 +1669,7 @@ Namespace ViewModels
             _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
             _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
+            _versteckteAnpassungsgruppen = AppSettingsService.NormalizeVersteckteAnpassungsgruppen(_appSettings.VersteckteAnpassungsgruppen)
             RebuildEditorToolGroupItems()
             _editorSnapMarginPercent = Math.Max(0, Math.Min(20, _appSettings.EditorSnapMarginPercent))
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
@@ -1610,6 +1687,13 @@ Namespace ViewModels
             _immichDeletePermanently = _appSettings.ImmichDeletePermanently
             FolderNode.ShowHiddenFolders = _showHiddenFolders
             ImageItem.ImmichDeleteAllowed = _immichAllowDelete
+            BaueModellGruppen()
+            BaueAnpassungsgruppenItems()
+            BaueSprachOptionen()
+            HoleModellCommand = ReactiveCommand.Create(Of ModellGruppe)(
+                Sub(g)
+                    Dim ignoriert = HoleModellGruppeAsync(g)
+                End Sub)
             ResetCommand = ReactiveCommand.Create(Sub() ResetToDefaults())
             ApplyCommand = ReactiveCommand.Create(Sub()
                                                      SnapshotSettings()
@@ -2021,6 +2105,7 @@ Namespace ViewModels
             settings.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
             settings.EditorStartupTool = _editorStartupTool
             settings.EditorToolGroupOrder = _editorToolGroupOrder
+            settings.VersteckteAnpassungsgruppen = _versteckteAnpassungsgruppen
             settings.DefaultSaveFormat = _defaultSaveFormat
             settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             AppSettingsService.Save(settings)
@@ -2053,6 +2138,7 @@ Namespace ViewModels
 
             _isThumbnailCacheRefreshing = True
             Me.RaisePropertyChanged(NameOf(ThumbnailCacheSummaryText))
+            Me.RaisePropertyChanged(NameOf(ThumbnailCacheFolderCountText))
             Try
                 Do
                     _isThumbnailCacheRefreshQueued = False
@@ -2068,6 +2154,7 @@ Namespace ViewModels
             Finally
                 _isThumbnailCacheRefreshing = False
                 Me.RaisePropertyChanged(NameOf(ThumbnailCacheSummaryText))
+            Me.RaisePropertyChanged(NameOf(ThumbnailCacheFolderCountText))
             End Try
         End Sub
 
@@ -2287,13 +2374,238 @@ Namespace ViewModels
         Private Shared Function ToHex(color As Color) As String
             Return $"#{color.R:X2}{color.G:X2}{color.B:X2}"
         End Function
+        ' ── Modelle ─────────────────────────────────────────────────────────────
+        '
+        ' Eine Zeile je Baustein, nicht je Datei: fuer den Nutzer ist "Objektauswahl" die Einheit,
+        ' nicht die Frage, ob das aus zwei Dateien besteht. Fehlt eine davon, fehlt der Baustein.
+
+        ''' <summary>Ein Baustein aus einer oder mehreren Modelldateien.</summary>
+        Public Class ModellGruppe
+            Inherits ViewModelBase
+
+            Public Property Name As String = ""
+            Public Property Beschreibung As String = ""
+            Public Property Dateien As New List(Of KiModellService.ModellEintrag)()
+
+            Private _fortschritt As Double = 0
+            Private _laeuft As Boolean = False
+            Private _meldung As String = ""
+
+            ''' <summary>Was zusammen geholt werden muesste, in MiB.</summary>
+            Public ReadOnly Property GroesseText As String
+                Get
+                    Dim summe = Dateien.Sum(Function(d) d.Bytes)
+                    Return (summe / 1048576.0).ToString("F0", Globalization.CultureInfo.CurrentCulture) & " MiB"
+                End Get
+            End Property
+
+            ''' <summary>Alle Dateien in einer benutzbaren Fassung vorhanden?</summary>
+            Public ReadOnly Property IstVollstaendig As Boolean
+                Get
+                    Return Dateien.All(Function(d) Not String.IsNullOrEmpty(KiModellService.BesteDatei(d.Schluessel)))
+                End Get
+            End Property
+
+            ''' <summary>Laeuft mindestens eine Datei in einer AELTEREN Fassung? Dann gibt es etwas
+            ''' zu aktualisieren - und bis dahin arbeitet alles weiter.</summary>
+            Public ReadOnly Property IstAktualisierbar As Boolean
+                Get
+                    Return IstVollstaendig AndAlso
+                           Dateien.Any(Function(d) KiModellService.IstAktualisierbar(d.Schluessel))
+                End Get
+            End Property
+
+            Public ReadOnly Property StatusText As String
+                Get
+                    If _laeuft Then Return LocalizationService.T("Wird geladen…")
+                    If Not String.IsNullOrEmpty(_meldung) Then Return _meldung
+                    If IstAktualisierbar Then Return LocalizationService.T("Eine neuere Fassung liegt bereit")
+                    If IstVollstaendig Then Return LocalizationService.T("Vorhanden")
+                    Return LocalizationService.T("Nicht vorhanden")
+                End Get
+            End Property
+
+            ''' <summary>Beschriftung des Knopfes: Herunterladen, Aktualisieren oder nichts.</summary>
+            Public ReadOnly Property KnopfText As String
+                Get
+                    If IstAktualisierbar Then Return LocalizationService.T("Aktualisieren")
+                    Return LocalizationService.T("Herunterladen")
+                End Get
+            End Property
+
+            Public ReadOnly Property KnopfSichtbar As Boolean
+                Get
+                    Return Not _laeuft AndAlso (Not IstVollstaendig OrElse IstAktualisierbar)
+                End Get
+            End Property
+
+            Public Property Fortschritt As Double
+                Get
+                    Return _fortschritt
+                End Get
+                Set(value As Double)
+                    Me.RaiseAndSetIfChanged(_fortschritt, value)
+                End Set
+            End Property
+
+            Public Property Laeuft As Boolean
+                Get
+                    Return _laeuft
+                End Get
+                Set(value As Boolean)
+                    Me.RaiseAndSetIfChanged(_laeuft, value)
+                    MeldeZustand()
+                End Set
+            End Property
+
+            Public Property Meldung As String
+                Get
+                    Return _meldung
+                End Get
+                Set(value As String)
+                    Me.RaiseAndSetIfChanged(_meldung, value)
+                    Me.RaisePropertyChanged(NameOf(StatusText))
+                End Set
+            End Property
+
+            Public Sub MeldeZustand()
+                For Each n In {NameOf(IstVollstaendig), NameOf(IstAktualisierbar), NameOf(StatusText),
+                               NameOf(KnopfText), NameOf(KnopfSichtbar)}
+                    Me.RaisePropertyChanged(n)
+                Next
+            End Sub
+        End Class
+
+        Public ReadOnly Property ModellGruppen As ObservableCollection(Of ModellGruppe) =
+            New ObservableCollection(Of ModellGruppe)()
+
+        Public ReadOnly Property ModellOrdner As String
+            Get
+                Return KiModellService.ModellOrdner
+            End Get
+        End Property
+
+        ''' <summary>Steht die Laufzeit ueberhaupt zur Verfuegung? Ohne sie waeren die Knoepfe
+        ''' sinnlos - die Dateien liessen sich holen und nichts koennte sie ausfuehren.</summary>
+        Public ReadOnly Property ModellLaufzeitDa As Boolean
+            Get
+                Return KiModellService.LaufzeitVerfuegbar
+            End Get
+        End Property
+
+        Private Sub BaueModellGruppen()
+            ModellGruppen.Clear()
+            For Each name In KiModellService.BekannteEintraege.Select(Function(e) e.Gruppe).Distinct()
+                Dim dateien = KiModellService.BekannteEintraege.Where(Function(e) e.Gruppe = name).ToList()
+                Dim beschreibung As String
+                Select Case name
+                    Case "Tiefe"
+                        beschreibung = LocalizationService.T("Maske nach Entfernung und Tiefen-Unschärfe")
+                    Case "Objekt entfernen"
+                        beschreibung = LocalizationService.T("Markiertes verschwinden lassen, der Hintergrund wird fortgesetzt")
+                    Case Else
+                        beschreibung = LocalizationService.T("Objekt im Bild anklicken, Maske entsteht von selbst")
+                End Select
+                Dim anzeigeName As String
+                Select Case name
+                    Case "Tiefe" : anzeigeName = LocalizationService.T("Tiefe")
+                    Case "Objekt entfernen" : anzeigeName = LocalizationService.T("Objekt entfernen")
+                    Case Else : anzeigeName = LocalizationService.T("Objektauswahl")
+                End Select
+                ModellGruppen.Add(New ModellGruppe With {
+                    .Name = anzeigeName,
+                    .Beschreibung = beschreibung,
+                    .Dateien = dateien})
+            Next
+        End Sub
+
+        ''' <summary>Holt alle Dateien einer Gruppe. NUR von hier aus - es gibt keinen anderen Weg,
+        ''' auf dem die Anwendung etwas aus dem Netz holt.</summary>
+        Public Async Function HoleModellGruppeAsync(gruppe As ModellGruppe) As Task
+            If gruppe Is Nothing OrElse gruppe.Laeuft Then Return
+            gruppe.Meldung = ""
+            gruppe.Laeuft = True
+            gruppe.Fortschritt = 0
+            Try
+                Dim gesamt = gruppe.Dateien.Sum(Function(d) d.Bytes)
+                Dim fertig As Long = 0
+                For Each datei In gruppe.Dateien
+                    Dim dieseDatei = datei
+                    Dim bisher = fertig
+                    Dim melder = New Progress(Of Double)(
+                        Sub(anteil)
+                            If gesamt > 0 Then
+                                gruppe.Fortschritt = Math.Min(1.0, (bisher + anteil * dieseDatei.Bytes) / gesamt)
+                            End If
+                        End Sub)
+                    Dim ergebnis = Await ModellDownloadService.HoleAsync(dieseDatei, melder)
+                    Select Case ergebnis
+                        Case ModellDownloadService.Ergebnis.Fertig, ModellDownloadService.Ergebnis.SchonDa
+                            fertig += dieseDatei.Bytes
+                        Case ModellDownloadService.Ergebnis.PruefsummeFalsch
+                            gruppe.Meldung = LocalizationService.T("Die geladene Datei stimmt nicht mit der erwarteten überein und wurde verworfen")
+                            Return
+                        Case ModellDownloadService.Ergebnis.Abgebrochen
+                            gruppe.Meldung = LocalizationService.T("Abgebrochen")
+                            Return
+                        Case Else
+                            gruppe.Meldung = LocalizationService.T("Das Herunterladen ist fehlgeschlagen")
+                            Return
+                    End Select
+                Next
+                gruppe.Fortschritt = 1
+            Finally
+                gruppe.Laeuft = False
+                gruppe.MeldeZustand()
+            End Try
+        End Function
+
     End Class
 
     ''' <summary>Eine Zeile der Werkzeuggruppen-Reihenfolge auf der Einstellungsseite: der stabile
     ''' Name (Key) geht an die Verschiebe-Befehle, die Beschriftung ist bereits übersetzt.</summary>
+    ''' <summary>Ein Eintrag in der Sprachauswahl.</summary>
+    Public Class SprachOption
+        Public Property Schluessel As String = ""
+        Public Property Name As String = ""
+        Public Overrides Function ToString() As String
+            Return Name
+        End Function
+    End Class
+
     Public Class EditorToolGroupItem
         Public Property Key As String = ""
         Public Property Label As String = ""
+
+    End Class
+
+    ''' <summary>Eine Anpassungsgruppe im Einstellungsdialog: Beschriftung und Haken.</summary>
+    Public Class AnpassungsgruppeItem
+        Inherits ReactiveObject
+
+        Public Event SichtbarGeaendert As EventHandler
+
+        Public Property Key As String = ""
+        Public Property Label As String = ""
+
+        Private _istSichtbar As Boolean = True
+        Public Property IstSichtbar As Boolean
+            Get
+                Return _istSichtbar
+            End Get
+            Set(value As Boolean)
+                If _istSichtbar = value Then Return
+                Me.RaiseAndSetIfChanged(_istSichtbar, value)
+                RaiseEvent SichtbarGeaendert(Me, EventArgs.Empty)
+            End Set
+        End Property
+
+        ''' <summary>Setzen OHNE das Ereignis - fuer den Aufbau der Liste. Sonst schriebe schon das
+        ''' Fuellen die Einstellung zurueck, und zwar Eintrag fuer Eintrag.</summary>
+        Public Sub SetzeSichtbar(wert As Boolean)
+            _istSichtbar = wert
+            Me.RaisePropertyChanged(NameOf(IstSichtbar))
+        End Sub
     End Class
 
 End Namespace

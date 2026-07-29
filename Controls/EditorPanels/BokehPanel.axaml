@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.BokehPanel">
+    <!-- TIEFEN-UNSCHAERFE: die Staerke kommt je Bildpunkt aus seiner ENTFERNUNG, nicht aus einem
+         festen Radius. Das ist der Unterschied zwischen "unscharfer Hintergrund" und "sieht aus wie
+         offene Blende". Eigene Gruppe statt Unterabschnitt beim Weichzeichnen, weil sie ein eigenes
+         Anwenden hat: sie braucht die Tiefenkarte, und die ist eine Modellausgabe und kein
+         Rezeptwert. Erscheint nur, wenn das Tiefenmodell vorliegt. -->
+    <Border Classes="adjustment-group"
+        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=bokeh}">
+        <Expander Header="Tiefen-Unschärfe" icons:ExpanderState.Key="bokeh">
+            <Expander.HeaderTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/aperture.svg"
+                                Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Classes="icon-btn group-reset"
+                                Width="28"
+                                Height="28"
+                                Padding="0"
+                                Command="{Binding DataContext.ResetBokehCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ToolTip.Tip="Tiefen-Unschärfe zurücksetzen">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                Width="14" Height="14" />
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </Expander.HeaderTemplate>
+            <StackPanel Spacing="2" Margin="0,8,0,0" IsEnabled="{Binding IsBokehVerfuegbar}"
+                        ToolTip.Tip="{Binding BokehHinweis}">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Untere Grenze des scharfen Bereichs. 0 ist am weitesten weg">
+                    <TextBlock Text="Scharf von" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding BokehVon}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding BokehVon, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Obere Grenze des scharfen Bereichs. 100 ist am nächsten">
+                    <TextBlock Text="Scharf bis" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding BokehBis}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding BokehBis, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Wie stark die Unschärfe am fernsten Punkt wird">
+                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding BokehStaerke}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding BokehStaerke, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Wie weich der Übergang vom scharfen Bereich in die Unschärfe verläuft">
+                    <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100"
+                                       Value="{Binding BokehUebergang}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding BokehUebergang, Mode=TwoWay}" Minimum="1" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" Margin="0,4,0,0"
+                      ToolTip.Tip="Wie stark Lichtpunkte als leuchtende Scheiben erhalten bleiben, statt sich zu einem matten Fleck zu mitteln">
+                    <TextBlock Text="Lichter" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding BokehLichter}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding BokehLichter, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <!-- Die Form der Blende bestimmt, wie ein Lichtpunkt im unscharfen Bereich aussieht.
+                     Als Knopfreihe statt Regler, weil es zwischen Rund und Dreieck nichts gibt. -->
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" Margin="0,6,0,0"
+                      ToolTip.Tip="Die Form der Blende: rund oder als Vieleck mit so vielen Lamellen">
+                    <TextBlock Text="Blende" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <Grid Grid.Column="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="6" Margin="6,0,0,0">
+                        <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
+                                Command="{Binding SetBokehBlendeCommand}" CommandParameter="0"
+                                Classes.active="{Binding IsBlendeRund}">
+                            <TextBlock Text="Rund" FontSize="{DynamicResource FP.Font.Small}"
+                                       HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
+                                Command="{Binding SetBokehBlendeCommand}" CommandParameter="5"
+                                Classes.active="{Binding IsBlendeFuenf}">
+                            <TextBlock Text="5" FontSize="{DynamicResource FP.Font.Small}"
+                                       HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
+                                Command="{Binding SetBokehBlendeCommand}" CommandParameter="6"
+                                Classes.active="{Binding IsBlendeSechs}">
+                            <TextBlock Text="6" FontSize="{DynamicResource FP.Font.Small}"
+                                       HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Grid.Column="3" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
+                                Command="{Binding SetBokehBlendeCommand}" CommandParameter="7"
+                                Classes.active="{Binding IsBlendeSieben}">
+                            <TextBlock Text="7" FontSize="{DynamicResource FP.Font.Small}"
+                                       HorizontalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+                </Grid>
+                <TextBlock Text="Wird beim Anwenden in die Pixel gerechnet, wie eine Retusche. Die Tiefe wird einmal je Bild ermittelt."
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
+                           Margin="0,8,0,6"/>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                        IsEnabled="{Binding HasBokehChanges}"
+                        Command="{Binding ApplyBokehCommand}">
+                    <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center"/>
+                </Button>
+            </StackPanel>
+        </Expander>
+    </Border>
+</UserControl>

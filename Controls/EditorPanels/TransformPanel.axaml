@@ -2,102 +2,368 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.TransformPanel">
-    <Expander Header="Drehen" icons:ExpanderState.Key="transform">
-        <Expander.HeaderTemplate>
-            <DataTemplate>
-                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="8"
-                                VerticalAlignment="Center">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/frame.svg"
-                            Width="14" Height="14" />
-                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                    </StackPanel>
-                    <Button Grid.Column="1"
-                            Classes="icon-btn group-reset"
-                            Width="28"
-                            Height="28"
-                            Padding="0"
-                            Command="{Binding DataContext.ResetTransformCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            ToolTip.Tip="Transformieren zurücksetzen">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                            Width="14" Height="14" />
+    <StackPanel Spacing="7">
+        <Border Classes="adjustment-group">
+            <Expander Header="Drehen" icons:ExpanderState.Key="transform">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                        VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/frame.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Command="{Binding DataContext.ResetTransformCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Drehen zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="8" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Classes="ghost" Height="36" Padding="8,6"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding RotateLeftCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
+                                    Width="20" Height="20" />
+                                <TextBlock Text="Links" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1" Classes="ghost" Height="36" Padding="8,6"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding RotateRightCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise-2.svg"
+                                    Width="20" Height="20" />
+                                <TextBlock Text="Rechts" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Ausrichten"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
+                                           DefaultValue="0"
+                                           Value="{Binding StraightenDegrees}"
+                                           WheelIncrement="0.1"
+                                           Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding StraightenDegrees, Mode=TwoWay}"
+                                                 Minimum="-180" Maximum="180" Increment="0.1"
+                                                 FormatString="F1" />
+                    </Grid>
+                    <CheckBox Content="Leinwand automatisch vergrößern"
+                              IsChecked="{Binding StraightenExpandCanvas}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              ToolTip.Tip="Vergrößert die Leinwand beim Ausrichten so, dass keine Bildecken abgeschnitten werden, statt das Bild zum Ausgleich hineinzuzoomen" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Classes="ghost" Height="36" Padding="8,6"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding FlipHorizontalCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/flip-horizontal.svg"
+                                    Width="20" Height="20" />
+                                <TextBlock Text="Horizontal" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1" Classes="ghost" Height="36" Padding="8,6"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding FlipVerticalCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/flip-vertical.svg"
+                                    Width="20" Height="20" />
+                                <TextBlock Text="Vertikal" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+        <!-- ERST WAEHLEN, dann erscheint das Overlay. Beide gleichzeitig ueber dem Bild war ein
+             Fehler: Eck-Anfasser und Rasterpunkte liegen teils uebereinander, und man sieht zwei
+             Werkzeuge, von denen man eines meint. Nochmal auf denselben Knopf waehlt wieder ab. -->
+        <Border Classes="adjustment-group">
+            <StackPanel Spacing="6">
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/perspective.svg"
+                                   Width="14" Height="14" />
+                    <TextBlock Text="Verzerren" FontWeight="SemiBold"
+                               FontSize="{DynamicResource FP.Font.Small}" />
+                </StackPanel>
+                <!-- Nach dem TEXT bemessen, nicht zu gleichen Teilen: "Perspektive" ist doppelt
+                     so lang wie "Gitter", und gleich breite Knoepfe lassen den einen
+                     gequetscht und die anderen halb leer aussehen. -->
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Classes="ghost" Padding="12,6"
+                            Command="{Binding SetVerzerrenModusCommand}" CommandParameter="Perspektive"
+                            Classes.active="{Binding IsVerzerrenPerspektive}"
+                            ToolTip.Tip="Die vier Ecken im Bild ziehen">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/perspective.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Perspektive" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
                     </Button>
-                </Grid>
-            </DataTemplate>
-        </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                <Button Classes="ghost" Height="36" Padding="8,6"
-                        HorizontalContentAlignment="Center"
-                        Command="{Binding RotateLeftCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
-                            Width="20" Height="20" />
-                        <TextBlock Text="Links" />
-                    </StackPanel>
-                </Button>
-                <Button Grid.Column="1" Classes="ghost" Height="36" Padding="8,6"
-                        HorizontalContentAlignment="Center"
-                        Command="{Binding RotateRightCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise-2.svg"
-                            Width="20" Height="20" />
-                        <TextBlock Text="Rechts" />
-                    </StackPanel>
-                </Button>
-            </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                <TextBlock Text="Ausrichten"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
-                                   DefaultValue="0"
-                                   Value="{Binding StraightenDegrees}"
-                                   WheelIncrement="0.1"
-                                   Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding StraightenDegrees, Mode=TwoWay}"
-                                         Minimum="-180" Maximum="180" Increment="0.1"
-                                         FormatString="F1" />
-            </Grid>
-            <CheckBox Content="Leinwand automatisch vergrößern"
-                      IsChecked="{Binding StraightenExpandCanvas}"
-                      FontSize="{DynamicResource FP.Font.Small}"
-                      ToolTip.Tip="Vergrößert die Leinwand beim Ausrichten so, dass keine Bildecken abgeschnitten werden, statt das Bild zum Ausgleich hineinzuzoomen" />
-            <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
-                  IsVisible="{Binding StraightenExpandCanvas}">
-                <TextBlock Text="Hintergrund"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:ColorPickerButton Grid.Column="1"
-                                         SelectedColor="{Binding CanvasBackgroundColorValue, Mode=TwoWay}" />
-            </Grid>
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                <Button Classes="ghost" Height="36" Padding="8,6"
-                        HorizontalContentAlignment="Center"
-                        Command="{Binding FlipHorizontalCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/flip-horizontal.svg"
-                            Width="20" Height="20" />
-                        <TextBlock Text="Horizontal" />
-                    </StackPanel>
-                </Button>
-                <Button Grid.Column="1" Classes="ghost" Height="36" Padding="8,6"
-                        HorizontalContentAlignment="Center"
-                        Command="{Binding FlipVerticalCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/flip-vertical.svg"
-                            Width="20" Height="20" />
-                        <TextBlock Text="Vertikal" />
-                    </StackPanel>
-                </Button>
-            </Grid>
-        </StackPanel>
-    </Expander>
+                    <Button Grid.Column="1" Classes="ghost" Padding="12,6"
+                            Command="{Binding SetVerzerrenModusCommand}" CommandParameter="Gitter"
+                            Classes.active="{Binding IsVerzerrenGitter}"
+                            ToolTip.Tip="Das Stützpunktraster im Bild ziehen">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/grid-dots.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Gitter" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" Classes="ghost" Padding="12,6"
+                            Command="{Binding SetVerzerrenModusCommand}" CommandParameter="Linien"
+                            Classes.active="{Binding IsVerzerrenLinien}"
+                            ToolTip.Tip="Linien auf Kanten legen und ziehen">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Linien" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <TextBlock Text="Erst wählen, dann liegt das jeweilige Werkzeug über dem Bild. Nochmal darauf klicken blendet es wieder aus."
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <!-- PERSPEKTIVE: eine Matrix, und deshalb in derselben Geometriestufe wie Drehen und
+             Beschnitt - Masken wandern von selbst mit. Objekte tun das NICHT: ein Rechteck bleibt
+             unter einer Perspektive kein Rechteck, dafuer muessten sie Vierecke werden.
+             Bewusst getrennt von der Gitterverzerrung darunter: die eine ist ein Rezeptwert und
+             beliebig oft aenderbar, die andere wird in die Pixel gebacken. -->
+        <Border Classes="adjustment-group" >
+            <Border.IsVisible>
+                <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                    <Binding Path="IsVerzerrenPerspektive"/>
+                    <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="perspektive"/>
+                </MultiBinding>
+            </Border.IsVisible>
+            <Expander Header="Perspektive" icons:ExpanderState.Key="perspektive" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <!-- Ist ein Objekt markiert, gehoeren die vier Anfasser IHM. Das steht hier,
+                         weil man es sonst erst durch Ausprobieren herausfindet. -->
+                    <Border Background="{DynamicResource FP.Bg.Input}" BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6" Margin="0,0,0,8" Padding="8,6"
+                            IsVisible="{Binding VerzerrtDasObjekt}">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Ein Objekt ist markiert - die vier Anfasser verzerren dieses Objekt, nicht das Bild. Die Verzerrung gehört zum Objekt und wird nicht eingebacken."
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}" />
+                            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                                    IsEnabled="{Binding HatObjektVerzerrung}"
+                                    Command="{Binding ResetObjektVerzerrungCommand}">
+                                <TextBlock Text="Objektverzerrung zurücksetzen"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           HorizontalAlignment="Center"/>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/perspective.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28" Height="28" Padding="0"
+                                    Command="{Binding DataContext.ResetPerspectiveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Verzerren zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Kippt um die waagerechte Achse: richtet stürzende Linien an Gebäuden auf">
+                        <TextBlock Text="Senkrecht" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           Value="{Binding PerspectiveVertical}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding PerspectiveVertical, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Kippt um die senkrechte Achse">
+                        <TextBlock Text="Waagerecht" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           Value="{Binding PerspectiveHorizontal}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding PerspectiveHorizontal, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Dehnt das Ergebnis in die Breite oder in die Höhe">
+                        <TextBlock Text="Seitenverhältnis" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           Value="{Binding PerspectiveAspect}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding PerspectiveAspect, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Holt das Bild heran, um die leer gewordenen Ecken zu verdecken">
+                        <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                           Value="{Binding PerspectiveScale}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding PerspectiveScale, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                    <TextBlock Text="Die vier Ecken lassen sich auch direkt im Bild ziehen."
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
+                               Margin="0,6,0,0"/>
+                    <TextBlock Text="Masken kippen mit. Eingefügte Objekte nicht - sie bleiben Rechtecke."
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
+                               Margin="0,4,0,0"
+                               IsVisible="{Binding HasPerspectiveWarning}"/>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+        <!-- GITTERVERZERRUNG: freie Verzerrung ueber ein Stuetzpunktraster. Bewusst mit eigenem
+             "Anwenden": sie ist NICHT als Rezeptwert darstellbar und wird beim Anwenden in die
+             Pixel gebacken - danach ist sie Teil des Bildes, wie eine Retusche. -->
+        <Border Classes="adjustment-group" >
+            <Border.IsVisible>
+                <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                    <Binding Path="IsVerzerrenGitter"/>
+                    <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="gitterverzerrung"/>
+                </MultiBinding>
+            </Border.IsVisible>
+            <Expander Header="Gitterverzerrung" icons:ExpanderState.Key="gitterverzerrung" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/grid-dots.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28" Height="28" Padding="0"
+                                    Command="{Binding DataContext.ResetWarpGridCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Gitter zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Wie fein das Stützpunktraster ist. Gröber verzerrt weicher, feiner genauer.">
+                        <TextBlock Text="Raster" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="2" Maximum="12"
+                                           Value="{Binding WarpGridSize}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding WarpGridSize, Mode=TwoWay}" Minimum="2" Maximum="12" />
+                    </Grid>
+                    <TextBlock Text="Die Punkte im Bild ziehen. Anwenden backt die Verzerrung in die Pixel - Masken passen danach nicht mehr genau."
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
+                               Margin="0,6,0,6"/>
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                            IsEnabled="{Binding HasWarpGridChanges}"
+                            Command="{Binding ApplyWarpGridCommand}">
+                        <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+        <!-- LINIENVERZERRUNG. Man legt eine Linie auf eine KANTE im Bild und zieht sie an ihren
+             neuen Platz; die Kante geht als Ganzes mit, die Umgebung folgt weich. Das ist der
+             Unterschied zum Stuetzpunktraster darueber: dort muesste man einer Kante ein Dutzend
+             Punkte einzeln nachfuehren. Wie das Raster wird sie GEBACKEN, nicht als Zahl gemerkt. -->
+        <Border Classes="adjustment-group" IsVisible="{Binding IsVerzerrenLinien}">
+            <Expander Header="Linienverzerrung" icons:ExpanderState.Key="linienverzerrung" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/vector.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28" Height="28" Padding="0"
+                                    Command="{Binding DataContext.ResetLinienCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Alle Linien entfernen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="8" Margin="0,8,0,0">
+                    <TextBlock Text="Im Bild eine Linie über eine Kante ziehen. Danach die Linie oder eines ihrer Enden an den neuen Platz ziehen - die Kante geht mit, die Umgebung folgt weich."
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               FontSize="{DynamicResource FP.Font.Small}" />
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                        <TextBlock Text="Linien" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <TextBlock Grid.Column="1" Classes="no-translate"
+                                   Text="{Binding LinienAnzahl}"
+                                   VerticalAlignment="Center"
+                                   FontSize="{DynamicResource FP.Font.Small}" />
+                    </Grid>
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                            Command="{Binding EntferneLetzteLinieCommand}"
+                            ToolTip.Tip="Die zuletzt gezogene Linie wieder entfernen">
+                        <TextBlock Text="Letzte Linie entfernen" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                    <TextBlock Text="Wird beim Anwenden in die Pixel gerechnet, wie eine Retusche. Eingefügte Objekte gehen mit, ohne eingebacken zu werden."
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                            IsEnabled="{Binding HasLinienChanges}"
+                            Command="{Binding ApplyLinienCommand}">
+                        <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+            </Expander>
+        </Border>
+    </StackPanel>
 </UserControl>

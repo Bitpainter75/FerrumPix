@@ -146,7 +146,8 @@
             </Expander>
         </Border>
 
-        <Border Classes="adjustment-group">
+        <Border Classes="adjustment-group"
+        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=resize-canvas}">
             <Expander Header="Leinwand" icons:ExpanderState.Key="resize-canvas">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
@@ -194,13 +195,6 @@
                     </Grid>
                     <CheckBox Content="Seitenverhältnis beibehalten"
                               IsChecked="{Binding LockCanvasAspect}" FontSize="{DynamicResource FP.Font.Small}" />
-                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
-                        <TextBlock Text="Hintergrund"
-                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <icons:ColorPickerButton Grid.Column="1"
-                                                 SelectedColor="{Binding CanvasBackgroundColorValue, Mode=TwoWay}" />
-                    </Grid>
                     <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
                         <TextBlock Text="Position" Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Top" Margin="0,10,0,0" />
@@ -318,6 +312,66 @@
                             <TextBlock Text="Leinwandgröße anwenden" />
                         </StackPanel>
                     </Button>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+        <!-- HINTERGRUND: eine Eigenschaft des Dokuments, kein Werkzeug. Sie steht hier, weil hier
+             der Platz entsteht, der sie braucht - eine erweiterte Leinwand ist sonst durchsichtig.
+             Sie fuellt aber ALLES Durchsichtige, auch die leeren Ecken von Begradigen und Verzerren
+             und weggeradierte Stellen. -->
+        <Border Classes="adjustment-group"
+        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=hintergrund}">
+            <Expander Header="Hintergrund" icons:ExpanderState.Key="hintergrund">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/color-swatch.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28" Height="28" Padding="0"
+                                    Command="{Binding DataContext.ClearDocumentBackgroundCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Wieder durchsichtig">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="6" Margin="0,8,0,0">
+                    <!-- Die drei haeufigsten Faelle direkt, der Waehler daneben fuer alles andere. -->
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                        <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                                Command="{Binding SetDocumentBackgroundCommand}" CommandParameter="Transparent"
+                                Classes.active="{Binding IsDocumentBackgroundTransparent}">
+                            <TextBlock Text="Transparent" FontSize="{DynamicResource FP.Font.Small}"
+                                       HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                                Command="{Binding SetDocumentBackgroundCommand}" CommandParameter="Black"
+                                Classes.active="{Binding IsDocumentBackgroundBlack}">
+                            <TextBlock Text="Schwarz" FontSize="{DynamicResource FP.Font.Small}"
+                                       HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                                Command="{Binding SetDocumentBackgroundCommand}" CommandParameter="White"
+                                Classes.active="{Binding IsDocumentBackgroundWhite}">
+                            <TextBlock Text="Weiß" FontSize="{DynamicResource FP.Font.Small}"
+                                       HorizontalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                        <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:ColorPickerButton Grid.Column="1"
+                                                 SelectedColor="{Binding CanvasBackgroundColorValue, Mode=TwoWay}" />
+                    </Grid>
                 </StackPanel>
             </Expander>
         </Border>

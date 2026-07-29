@@ -79,6 +79,16 @@
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                         Padding="14,10"
+                        IsVisible="{Binding ModellLaufzeitDa}"
+                        Tag="ModelsSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brain.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Modelle"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
                         Tag="PerformanceSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -225,43 +235,23 @@
                                 <TextBlock Text="Sprache" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Verwendet standardmäßig die Systemsprache; falls nicht unterstützt, Englisch." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                <Button Classes="ghost"
-                                        Classes.active="{Binding IsLanguageSystem}"
-                                        Padding="10,6"
-                                        Command="{Binding SetLanguageModeCommand}"
-                                        CommandParameter="System">System</Button>
-                                <Button Classes="ghost"
-                                        Classes.active="{Binding IsLanguageGerman}"
-                                        Padding="10,6"
-                                        Command="{Binding SetLanguageModeCommand}"
-                                        CommandParameter="German">Deutsch</Button>
-                                <Button Classes="ghost"
-                                        Classes.active="{Binding IsLanguageEnglish}"
-                                        Padding="10,6"
-                                        Command="{Binding SetLanguageModeCommand}"
-                                        CommandParameter="English">Englisch</Button>
-                                <Button Classes="ghost"
-                                        Classes.active="{Binding IsLanguageSpanish}"
-                                        Padding="10,6"
-                                        Command="{Binding SetLanguageModeCommand}"
-                                        CommandParameter="Spanish">Spanisch</Button>
-                                <Button Classes="ghost"
-                                        Classes.active="{Binding IsLanguageFrench}"
-                                        Padding="10,6"
-                                        Command="{Binding SetLanguageModeCommand}"
-                                        CommandParameter="French">Französisch</Button>
-                                <Button Classes="ghost"
-                                        Classes.active="{Binding IsLanguageItalian}"
-                                        Padding="10,6"
-                                        Command="{Binding SetLanguageModeCommand}"
-                                        CommandParameter="Italian">Italienisch</Button>
-                                <Button Classes="ghost"
-                                        Classes.active="{Binding IsLanguagePortuguese}"
-                                        Padding="10,6"
-                                        Command="{Binding SetLanguageModeCommand}"
-                                        CommandParameter="Portuguese">Portugiesisch</Button>
-                            </StackPanel>
+                            <!-- AUSWAHLLISTE statt Knopfreihe: mit jeder weiteren Sprache waere die
+                                 Reihe laenger geworden, bis sie nicht mehr in die Zeile passt. Die
+                                 Namen stehen in ihrer eigenen Sprache - wer die Oberflaeche in einer
+                                 Sprache sieht, die er nicht versteht, findet "Deutsch" wieder. -->
+                            <ComboBox Grid.Column="1"
+                                      Name="LanguageComboBox"
+                                      ItemsSource="{Binding SprachOptionen}"
+                                      SelectedItem="{Binding AusgewaehlteSprache, Mode=TwoWay}"
+                                      MinWidth="200"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Small}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -843,7 +833,10 @@
                             <!-- Breit genug, dass die längste Gruppenbeschriftung nicht bis an die
                                  Pfeilknöpfe heranläuft - „Transformieren" braucht in mehreren
                                  Sprachen deutlich mehr Platz als im Deutschen. -->
-                            <ItemsControl ItemsSource="{Binding EditorToolGroupItems}" MaxWidth="620" HorizontalAlignment="Left">
+                            <!-- FESTE Breite statt "so breit wie noetig": nur dann stehen die
+                                 Pfeile aller Zeilen an derselben Stelle am rechten Rand. Vorher
+                                 rutschten sie mit der Laenge der Beschriftung hin und her. -->
+                            <ItemsControl ItemsSource="{Binding EditorToolGroupItems}" HorizontalAlignment="Stretch">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Background="{DynamicResource FP.Bg.Input}"
@@ -852,7 +845,7 @@
                                                 CornerRadius="6"
                                                 Padding="10,6"
                                                 Margin="0,0,0,6"
-                                                MinWidth="380">
+                                                HorizontalAlignment="Stretch">
                                             <Grid ColumnDefinitions="*,Auto,Auto">
                                                 <TextBlock Text="{Binding Label}"
                                                            VerticalAlignment="Center"
@@ -874,6 +867,29 @@
                                                         CommandParameter="{Binding Key}">▼</Button>
                                             </Grid>
                                         </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Sichtbare Anpassungsgruppen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt fest, welche Gruppen im Anpassungsbereich des Editors erscheinen. Ausblenden ändert nur die Anzeige: eingestellte Werte bleiben erhalten und wirken weiter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding AnpassungsgruppenItems}" HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="3"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IstSichtbar, Mode=TwoWay}"
+                                                  Margin="0,0,12,2">
+                                            <TextBlock Classes="no-translate" Text="{Binding Label}"
+                                                       FontSize="{DynamicResource FP.Font.Small}"/>
+                                        </CheckBox>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -1242,6 +1258,49 @@
                     </StackPanel>
                 </Border>
 
+                <!-- MODELLE als eigener Abschnitt. Sie sind kein Randthema der Technologieliste:
+                     hier wird als einziger Ort in der ganzen Anwendung etwas aus dem Netz geholt, und
+                     ohne diese Dateien fehlen drei Werkzeuge. -->
+                <Border x:Name="ModelsSection" Classes="section" IsVisible="{Binding ModellLaufzeitDa}">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Modelle" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Drei Werkzeuge brauchen eine Modelldatei, die sich von GitHub nachladen lässt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Modelle" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Zwei Funktionen brauchen eine Modelldatei, die sich von GitHub nachladen lässt."
+                                       Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding ModellGruppen}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Classes="adjustment-group" Margin="0,0,0,8">
+                                            <StackPanel Spacing="6">
+                                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                                                        <TextBlock Classes="no-translate" Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Body}"/>
+                                                        <TextBlock Classes="no-translate" Text="{Binding Beschreibung}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                                                        <TextBlock Classes="no-translate" Text="{Binding StatusText}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Classes="no-translate" Text="{Binding GroesseText}" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                                    <Button Grid.Column="2" Classes="accent" Padding="12,7" VerticalAlignment="Center"
+                                                            IsVisible="{Binding KnopfSichtbar}"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.HoleModellCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Classes="no-translate" Text="{Binding KnopfText}" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                                    </Button>
+                                                </Grid>
+                                                <ProgressBar Minimum="0" Maximum="1" Value="{Binding Fortschritt}"
+                                                             IsVisible="{Binding Laeuft}" Height="4"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="no-translate" Text="{Binding ModellOrdner}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
+                        </StackPanel>                    </StackPanel>
+                </Border>
+
                 <Border x:Name="PerformanceSection" Classes="section">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
@@ -1335,36 +1394,48 @@
                                 </StackPanel>
                             </Grid>
 
-                            <ItemsControl ItemsSource="{Binding ThumbnailCacheFolders}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{DynamicResource FP.Bg.Input}"
-                                                BorderBrush="{DynamicResource FP.Border.Normal}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="10,8"
-                                                Margin="0,0,0,6">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                                    <TextBlock Text="{Binding DisplayName}"
-                                                               FontSize="{DynamicResource FP.Font.Body}"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding DetailText}"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="{DynamicResource FP.Font.Caption}"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                </StackPanel>
-                                                <Button Grid.Column="1"
-                                                        Classes="ghost"
-                                                        Padding="10,6"
-                                                        VerticalAlignment="Center"
-                                                        Command="{Binding DataContext.DeleteThumbnailCacheFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        CommandParameter="{Binding}">Löschen</Button>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <!-- AUFKLAPPBAR: die Liste kann Dutzende Ordner lang sein und schob
+                                 alles darunter aus dem Blick. Zugeklappt steht in der Kopfzeile, wie
+                                 viele es sind - wer aufraeumen will, klappt auf. -->
+                            <Expander>
+                                <Expander.Header>
+                                    <TextBlock Text="{Binding ThumbnailCacheFolderCountText}"
+                                               Classes="no-translate"
+                                               FontSize="{DynamicResource FP.Font.Small}"/>
+                                </Expander.Header>
+                                <StackPanel Margin="0,8,0,0">
+                                <ItemsControl ItemsSource="{Binding ThumbnailCacheFolders}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource FP.Bg.Input}"
+                                                    BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="6"
+                                                    Padding="10,8"
+                                                    Margin="0,0,0,6">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   FontSize="{DynamicResource FP.Font.Body}"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding DetailText}"
+                                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                                   FontSize="{DynamicResource FP.Font.Caption}"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1"
+                                                            Classes="ghost"
+                                                            Padding="10,6"
+                                                            VerticalAlignment="Center"
+                                                            Command="{Binding DataContext.DeleteThumbnailCacheFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}">Löschen</Button>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                </StackPanel>
+                            </Expander>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -1737,187 +1808,278 @@
                             <TextBlock Text="FerrumPix baut auf diesen Projekten auf. Die Schaltflächen öffnen die Projektseite und den Lizenztext im Browser." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
                         </StackPanel>
 
+
+
                         <StackPanel Spacing="10">
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="FerrumPix" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Diese Anwendung" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/Bitpainter75/FerrumPix" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://www.gnu.org/licenses/gpl-3.0.html" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="GPL-3.0" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text=".NET 10" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Laufzeitumgebung" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/dotnet/runtime" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/dotnet/runtime/blob/main/LICENSE.TXT" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="Avalonia UI 12.1" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Oberfläche und Fensterverwaltung" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/AvaloniaUI/Avalonia" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="ReactiveUI 12.0" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Datenbindung der Ansichtsmodelle" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/reactiveui/ReactiveUI" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/reactiveui/ReactiveUI/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="SkiaSharp 3.119" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Bildbearbeitung und Zeichnen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/mono/SkiaSharp" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/mono/SkiaSharp/blob/main/LICENSE.md" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="Svg.Skia 5.1" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="SVG-Symbole darstellen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/wieslawsoltes/Svg.Skia" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/wieslawsoltes/Svg.Skia/blob/master/LICENSE.TXT" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="Microsoft.Data.Sqlite 9.0" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Datenbank für Bewertungen, Tags und Zwischenspeicher" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/dotnet/efcore" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/dotnet/efcore/blob/main/LICENSE.txt" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="MetadataExtractor 2.8" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="EXIF- und IPTC-Daten lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/metadata-extractor-dotnet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/metadata-extractor-dotnet/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="BitMiracle.LibTiff.NET 2.4" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="TIFF-Dateien lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/BitMiracle/libtiff.net" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://bitmiracle.github.io/libtiff.net/help/articles/license.html" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="QRCoder 1.6" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="QR-Codes erzeugen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/codebude/QRCoder" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/codebude/QRCoder/blob/master/LICENSE.txt" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="Tabler Icons" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Symbolsatz der Oberfläche" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/tabler/tabler-icons" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/tabler/tabler-icons/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="Lensfun" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Kalibrierdaten fotografischer Objektive (Datenbank, unverändert mitgeliefert)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/lensfun/lensfun" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://creativecommons.org/licenses/by-sa/3.0/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="CC-BY-SA-3.0" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="LibRaw" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="RAW-Dateien entwickeln" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/LibRaw/LibRaw" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://www.libraw.org/about" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="LGPL-2.1" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="libmpv (mpv)" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Videowiedergabe und Video-Vorschaubilder" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/mpv-player/mpv" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/mpv-player/mpv/blob/master/Copyright" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="LGPL-2.1+" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="libheif (optional)" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Lesen von HEIC/HEIF/AVIF - wird nur vom System geladen, nicht mitgeliefert" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/strukturag/libheif" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/strukturag/libheif/blob/master/COPYING" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="LGPL-3.0" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
+                            <!-- ZWEISPALTIG und knapp: die Liste ist ein Nachschlagewerk, kein
+                                 Fliesstext. Paketname, ein Halbsatz wozu, und die beiden Knoepfe zu
+                                 Projektseite und Lizenz. -->
+                            <UniformGrid Columns="2">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="FerrumPix" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Diese Anwendung" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/Bitpainter75/FerrumPix" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.gnu.org/licenses/gpl-3.0.html" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="GPL-3.0" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text=".NET 10" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Laufzeitumgebung" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dotnet/runtime" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dotnet/runtime/blob/main/LICENSE.TXT" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Avalonia UI 12.1" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Oberfläche und Fensterverwaltung" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/AvaloniaUI/Avalonia" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="ReactiveUI 12.0" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Datenbindung der Ansichtsmodelle" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/reactiveui/ReactiveUI" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/reactiveui/ReactiveUI/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="ONNX Runtime 1.28" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Führt gelernte Modelle aus, Telemetrie abgeschaltet" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/microsoft/onnxruntime" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/microsoft/onnxruntime/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="SkiaSharp 3.119" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Bildbearbeitung und Zeichnen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/mono/SkiaSharp" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/mono/SkiaSharp/blob/main/LICENSE.md" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Skia" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Zeichenmaschine unter SkiaSharp" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/google/skia" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/google/skia/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Svg.Skia 5.1" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="SVG-Symbole darstellen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/wieslawsoltes/Svg.Skia" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/wieslawsoltes/Svg.Skia/blob/master/LICENSE.TXT" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Microsoft.Data.Sqlite 9.0" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Datenbank für Bewertungen, Tags und Zwischenspeicher" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dotnet/efcore" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dotnet/efcore/blob/main/LICENSE.txt" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="SQLitePCLRaw 3.50" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Native Unterlage der Datenbank" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/ericsink/SQLitePCL.raw" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/ericsink/SQLitePCL.raw/blob/master/LICENSE.TXT" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="SQLite" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Die Datenbank selbst" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.sqlite.org/" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.sqlite.org/copyright.html" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="Public Domain" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="MetadataExtractor 2.8" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="EXIF- und IPTC-Daten lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/metadata-extractor-dotnet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/metadata-extractor-dotnet/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="BitMiracle.LibTiff.NET 2.4" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="TIFF-Dateien lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/BitMiracle/libtiff.net" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://bitmiracle.github.io/libtiff.net/help/articles/license.html" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="QRCoder 1.6" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="QR-Codes erzeugen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/codebude/QRCoder" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/codebude/QRCoder/blob/master/LICENSE.txt" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Tabler Icons" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Symbolsatz der Oberfläche" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/tabler/tabler-icons" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/tabler/tabler-icons/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Lensfun" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Kalibrierdaten für Objektive" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/lensfun/lensfun" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://creativecommons.org/licenses/by-sa/3.0/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="CC-BY-SA-3.0" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="LibRaw" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="RAW-Dateien entwickeln" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/LibRaw/LibRaw" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.libraw.org/about" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="LGPL-2.1" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="libmpv (mpv)" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Videowiedergabe und Video-Vorschaubilder" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/mpv-player/mpv" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/mpv-player/mpv/blob/master/Copyright" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="LGPL-2.1+" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="libheif (optional)" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="HEIC/HEIF/AVIF, nur vom System" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/strukturag/libheif" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/strukturag/libheif/blob/master/COPYING" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="LGPL-3.0" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="MobileSAM" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Objektauswahl per Klick (Modelldatei)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/ChaoningZhang/MobileSAM" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/ChaoningZhang/MobileSAM/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="MiDaS" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Tiefenkarte für Maske und Unschärfe (Modelldatei)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/isl-org/MiDaS" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/isl-org/MiDaS/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="LaMa" FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Objekte entfernen (Modelldatei)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/advimman/lama" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/advimman/lama/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Caption}"/>
+                                    </Button>
+                                </Grid>
+                            </UniformGrid>
                         </StackPanel>
 
                         <TextBlock Text="LibRaw und libmpv stehen unter der LGPL: sie werden unverändert und dynamisch geladen eingebunden und können durch eigene Übersetzungen derselben Version ersetzt werden. Die Lizenztexte und Herkunftsnachweise liegen im Ordner licenses neben der Anwendung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>

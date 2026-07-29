@@ -41,8 +41,7 @@
             </Border>
 
             <!-- Ebenenstapel: oberster Eintrag = vorderste Ebene, Hintergrund liegt fest darunter. -->
-            <Grid Grid.Row="1" x:Name="LayerListArea"
-                  PointerPressed="OnLayerListAreaPointerPressed">
+            <Grid Grid.Row="1" x:Name="LayerListArea">
             <ListBox x:Name="LayerListBox"
                      Classes="layers-panel-list"
                      ItemsSource="{Binding LayerRows}"

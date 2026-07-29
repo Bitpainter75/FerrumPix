@@ -21,6 +21,12 @@
                        FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Classes="ghost" Padding="8,6"
+                        Command="{Binding SetMaskModeCommand}" CommandParameter="Verschieben"
+                        Classes.active="{Binding IsMaskMoveMode}"
+                        ToolTip.Tip="Verschieben: Objekte und Ebenen greifen, ohne zu malen">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pointer.svg" Width="16" Height="16" />
+                </Button>
+                <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Brush"
                         Classes.active="{Binding IsMaskBrushMode}"
                         ToolTip.Tip="Pinsel: Maske frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter">
@@ -37,6 +43,202 @@
                         Classes.active="{Binding IsMaskRadialMode}"
                         ToolTip.Tip="Radialer Verlauf: von der Mitte nach aussen ziehen. Mit „Umkehren“ wirkt die Maske aussen statt innen">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg" Width="16" Height="16" />
+                </Button>
+                <!-- Ohne Modelldatei GRAU statt weg, mit dem Weg zur Datei im Hinweis. Ein
+                     verschwundener Knopf verschweigt, dass es die Funktion gibt. -->
+                <Button Classes="ghost" Padding="8,6"
+                        IsEnabled="{Binding IsTiefenMaskeVerfuegbar}"
+                        Command="{Binding SetMaskModeCommand}" CommandParameter="Tiefe"
+                        Classes.active="{Binding IsMaskDepthMode}"
+                        ToolTip.Tip="{Binding TiefenMaskeHinweis}">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-3.svg" Width="16" Height="16" />
+                </Button>
+                <!-- Objektauswahl: der Bestand wird beim Programmstart einmal erhoben - siehe
+                     KiModellService.PruefeBestand. -->
+                <Button Classes="ghost" Padding="8,6"
+                        IsEnabled="{Binding IsMotivMaskeVerfuegbar}"
+                        Command="{Binding SetMaskModeCommand}" CommandParameter="Objekt"
+                        Classes.active="{Binding IsMaskObjectMode}"
+                        ToolTip.Tip="{Binding MotivMaskeHinweis}">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/click.svg" Width="16" Height="16" />
+                </Button>
+            </StackPanel>
+            <!-- Verschieben-Zweig: hier wird nicht gemalt. Der Knopf wandelt die aktuelle Form in
+                 die jeweils andere - es ist dasselbe Alpha-Raster, nur mit anderer Bedeutung. -->
+            <StackPanel Spacing="8" IsVisible="{Binding IsMaskMoveMode}">
+                <TextBlock Text="Objekte und Ebenen greifen, ohne zu malen."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding KannArtUmwandeln}"
+                        Command="{Binding WandleArtUmCommand}"
+                        ToolTip.Tip="{Binding ArtUmwandelnHinweis}">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Classes="no-translate" Text="{Binding ArtUmwandelnText}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <!-- Tiefen-Zweig. Es gibt hier keinen Klick: das Modell liest das ganze Bild, und die
+                 Regler schneiden aus der Tiefenkarte einen Bereich heraus. -->
+            <StackPanel Spacing="8" IsVisible="{Binding IsMaskDepthMode}">
+                <TextBlock Text="Wählt alles, was in einem Entfernungsbereich liegt. 100 ist am nächsten, 0 am weitesten weg."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <TextBlock Text="Die Tiefe wird einmal je Bild berechnet, das dauert einen Moment."
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsTiefenMaskeRechnend}"
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           FontSize="{DynamicResource FP.Font.Caption}" />
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Der ferne Rand des gewählten Bereichs">
+                    <TextBlock Text="Von" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding TiefeVon}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding TiefeVon, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Der nahe Rand des gewählten Bereichs">
+                    <TextBlock Text="Bis" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding TiefeBis}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding TiefeBis, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Lässt die Maske an beiden Rändern auslaufen. Ohne das zieht sich eine sichtbare Kante quer durchs Bild">
+                    <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="50"
+                                       Value="{Binding TiefeWeiche}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding TiefeWeiche, Mode=TwoWay}" Minimum="0" Maximum="50" />
+                </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
+                        ToolTip.Tip="Aus der Tiefenmaske eine Maskenebene erstellen">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Neue Maskenebene" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <!-- Objekt-Zweig. Dieselbe Modus-Reihe wie beim Pinsel: was ein Klick bedeutet, soll
+                 nicht davon abhaengen, mit welchem Werkzeug man gerade arbeitet. -->
+            <StackPanel Spacing="8" IsVisible="{Binding IsMaskObjectMode}">
+                <TextBlock Text="Ein Klick ins Bild wählt das getroffene Objekt."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="New"
+                            Classes.active="{Binding IsSelectionCombineNew}"
+                            ToolTip.Tip="Jeder Klick wählt ein neues Objekt">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Add"
+                            Classes.active="{Binding IsSelectionCombineAdd}"
+                            ToolTip.Tip="Weitere Klicks erweitern die Maske">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-plus.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Subtract"
+                            Classes.active="{Binding IsSelectionCombineSubtract}"
+                            ToolTip.Tip="Klicks nehmen Stellen wieder weg">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-minus.svg" Width="16" Height="16" />
+                    </Button>
+                    <Border Width="1" Margin="4,4" Background="{DynamicResource FP.Border.Normal}" />
+                    <Button Classes="ghost" Padding="8,6"
+                            IsEnabled="{Binding HasActiveSelection}"
+                            Command="{Binding InvertSelectionCommand}"
+                            ToolTip.Tip="Maske umkehren">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            IsEnabled="{Binding HasActiveSelection}"
+                            Command="{Binding ClearSelectionCommand}"
+                            ToolTip.Tip="Maske verwerfen (Strg+D oder Esc)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg" Width="16" Height="16" />
+                    </Button>
+                </StackPanel>
+                <TextBlock Text="Das erste Anklicken eines Bildes dauert einen Moment, danach geht es schnell."
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsMotivMaskeRechnend}"
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           FontSize="{DynamicResource FP.Font.Caption}" />
+                <!-- Ein Klick ist mehrdeutig: die Jacke, die Person oder die Gruppe? Das Modell
+                     beantwortet alle drei auf einmal - die Wahl kostet weder einen neuen Klick
+                     noch eine erneute Modellabfrage. -->
+                <TextBlock Text="Umfang der Auswahl" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding SetMotivKoernungCommand}" CommandParameter="0"
+                            Classes.active="{Binding IsKoernungFein}"
+                            ToolTip.Tip="Nur den getroffenen Teil, etwa ein Ärmel">
+                        <TextBlock Text="Teil" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding SetMotivKoernungCommand}" CommandParameter="1"
+                            Classes.active="{Binding IsKoernungMittel}"
+                            ToolTip.Tip="Den Gegenstand, zu dem der Teil gehört, etwa die Jacke">
+                        <TextBlock Text="Mittel" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                    <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding SetMotivKoernungCommand}" CommandParameter="2"
+                            Classes.active="{Binding IsKoernungGrob}"
+                            ToolTip.Tip="Das ganze Objekt, etwa die Person">
+                        <TextBlock Text="Ganzes" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                </Grid>
+                <!-- Feinschliff. Beide aendern NUR, wie die Modellausgabe in Deckung uebersetzt
+                     wird - das Modell wird nicht erneut gefragt, die Maske entsteht sofort neu. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Wie knapp die Kante sitzt. Klein lässt sie breiter auslaufen - für Haare, Zweige und Fell. Groß schneidet knapp - für harte Gegenstände.">
+                    <TextBlock Text="Kante" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="50"
+                                       Value="{Binding MotivMaskeKante}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding MotivMaskeKante, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Lässt die Maske um die Kante herum wachsen oder schrumpfen. Erkennt das Modell eine Haaresbreite zu wenig, holt man sie damit zurück.">
+                    <TextBlock Text="Umfang" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       Value="{Binding MotivMaskeUmfang}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding MotivMaskeUmfang, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                </Grid>
+                <!-- Derselbe Knopf wie beim Pinsel-Zweig: sitzt die Maske, wird sie zur Ebene. -->
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
+                        ToolTip.Tip="Aus der Objektmaske eine Maskenebene erstellen">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Neue Maskenebene" />
+                    </StackPanel>
                 </Button>
             </StackPanel>
             <!-- Pinsel-Zweig -->
@@ -170,6 +372,23 @@
                           ToolTip.Tip="Tauscht gedeckte und freie Seite - beim radialen Verlauf wirkt die Korrektur dann aussen statt innen" />
             </StackPanel>
 
-        </StackPanel>
+    
+            <!-- OBJEKT ENTFERNEN: braucht nur eine Markierung, egal aus welchem Zweig sie kommt -
+                 gemalt, per Klick erkannt oder nach Entfernung ausgewaehlt. Deshalb steht der Knopf
+                 nicht in einem der Zweige, sondern unter allen. -->
+            <StackPanel Spacing="6" Margin="0,4,0,0">
+                <Separator Margin="0,2,0,2" Background="{DynamicResource FP.Border}" Height="1"/>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding KannObjektEntfernen}"
+                        Command="{Binding ObjektEntfernenCommand}"
+                        ToolTip.Tip="{Binding ObjektEntfernenHinweis}">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Objekt entfernen" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+    </StackPanel>
     </Expander>
 </UserControl>

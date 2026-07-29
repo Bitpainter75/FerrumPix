@@ -3,7 +3,8 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.LensCorrectionPanel">
     <StackPanel Spacing="7">
-        <Expander Header="Objektivkorrektur" icons:ExpanderState.Key="objektivkorrektur">
+        <Expander Header="Objektivkorrektur" icons:ExpanderState.Key="objektivkorrektur"
+        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=objektivkorrektur}">
             <Expander.HeaderTemplate>
                 <DataTemplate>
                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -44,7 +45,7 @@
                     <Button Grid.Column="1" Classes="ghost" Padding="10,5" Margin="6,0,0,0"
                             Command="{Binding ApplyLensAssignmentCommand}"
                             CommandParameter="{Binding #LensSearchBox.Text}"
-                            ToolTip.Tip="Das eingetragene Objektiv übernehmen">
+                            ToolTip.Tip="Das eingetragene Objektiv übernehmen; leeres Feld schaltet auf automatische Erkennung zurück">
                         <TextBlock Text="Übernehmen" FontSize="{DynamicResource FP.Font.Small}"/>
                     </Button>
                 </Grid>

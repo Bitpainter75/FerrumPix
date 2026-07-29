@@ -61,6 +61,52 @@ Namespace Converters
         End Function
     End Class
 
+    ''' <summary>Wahr, wenn ALLE gebundenen Werte wahr sind.
+    '''
+    ''' Gebraucht dort, wo zwei Bedingungen dieselbe Sichtbarkeit bestimmen: das Werkzeug muss die
+    ''' Gruppe zeigen, UND sie darf nicht ausgeblendet sein. Zwei IsVisible an einem Element gibt es
+    ''' nicht, und die Bedingung im ViewModel zusammenzufassen hiesse, fuer jede Gruppe eine eigene
+    ''' Eigenschaft anzulegen.</summary>
+    Public Class AlleWahrConverter
+        Implements IMultiValueConverter
+
+        Public Function Convert(values As IList(Of Object), targetType As Type, parameter As Object,
+                                culture As Globalization.CultureInfo) As Object Implements IMultiValueConverter.Convert
+            If values Is Nothing Then Return False
+            For Each v In values
+                If Not TypeOf v Is Boolean Then Return False
+                If Not CBool(v) Then Return False
+            Next
+            Return True
+        End Function
+    End Class
+
+    ''' <summary>Wahr, wenn der Parameter NICHT in der gebundenen Komma-Liste steht.
+    '''
+    ''' Fuer das Ausblenden von Anpassungsgruppen: gebunden wird die Liste der versteckten
+    ''' Schluessel, der Parameter ist der Schluessel dieser Gruppe. Eine Liste statt vieler
+    ''' Eigenschaften - eine neue Gruppe kostet dann keine Zeile im ViewModel.</summary>
+    Public Class NichtInListeConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object,
+                                culture As Globalization.CultureInfo) As Object Implements IValueConverter.Convert
+            Dim schluessel = TryCast(parameter, String)
+            If String.IsNullOrWhiteSpace(schluessel) Then Return True
+            Dim liste = TryCast(value, String)
+            If String.IsNullOrWhiteSpace(liste) Then Return True
+            For Each teil In liste.Split(","c)
+                If String.Equals(teil.Trim(), schluessel.Trim(), StringComparison.OrdinalIgnoreCase) Then Return False
+            Next
+            Return True
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object,
+                                    culture As Globalization.CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Throw New NotSupportedException()
+        End Function
+    End Class
+
     Public Class StringEqualsConverter
         Implements IValueConverter
 

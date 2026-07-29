@@ -29,7 +29,9 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private ReadOnly _mainVm As MainWindowViewModel
+        ''' <summary>Der Anwendungsrahmen, aber nur in der schmalen Sicht (siehe IEditorHost).
+        ''' Darf Nothing sein - dann laeuft der Editor ohne Fenster, was ein Pruefstand braucht.</summary>
+        Private ReadOnly _mainVm As IEditorHost
         ' Identität des bearbeiteten Bildes (Filmstreifen, Metadaten, Bewertung, Navigation, Dateiname). Bei
         ' einem geöffneten .fpx ist das der PROJEKTpfad, während die Pipeline das entpackte Basisbild dekodiert.
         Private _currentImagePath As String = ""
@@ -110,6 +112,8 @@ Namespace ViewModels
         Private _noiseReduction As Double = 0
         Private _noiseReductionDetail As Double = 0
         Private _colorNoiseReduction As Double = 0
+        Private _farbrauschGrob As Double = 0
+        Private _farbrauschGrobSkala As Double = 50
         Private _colorNoiseAdd As Double = 0
         Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
         Private _dustScratches As Double = 0
@@ -323,7 +327,7 @@ Namespace ViewModels
         Private _canvasHeight As Integer = 0
         Private _lockCanvasAspect As Boolean = True
         Private _canvasAnchor As String = "Center"
-        Private _canvasBackgroundColor As String = "#FF000000"
+        Private _canvasBackgroundColor As String = "#00000000"
         ' Analog zu _appliedCropXxx: die zuletzt per "<Werkzeug> anwenden" bestätigten Werte.
         ' GetCurrentAdjustments (kanonisch, forPreview:=False) liest ausschließlich diese Felder -
         ' die Live-Felder oben (_resizeWidth usw.) treiben nur die Live-Vorschau
@@ -490,8 +494,124 @@ Namespace ViewModels
         ''' sind Undo/Redo gesperrt (siehe CanUndo) - die Undo-Zuordnung wäre sonst unvollständig.
         Private _pendingWorkingCommits As Integer = 0
 
+
+        ' ── Beschaeftigt-Zustand ────────────────────────────────────────────────
+        '
+        ' Wer einen Regler zieht, waehrend im Hintergrund gerechnet wird, arbeitet ins Leere: das
+        ' Ergebnis kommt spaeter und ueberschreibt, was inzwischen eingestellt wurde. Der Statustext
+        ' im Fuss reicht dafuer nicht - er steht am Rand, verschwindet wieder, und man schaut nicht
+        ' dorthin, waehrend man am Bild arbeitet.
+        '
+        ' Deshalb EINE Stelle, die sagt "es rechnet", mit zwei Wirkungen: ein Schleier ueber der
+        ' Bildflaeche mit einem Wort dazu, und gesperrte Regler. Was das Ergebnis verdirbt, soll man
+        ' gar nicht erst anfassen koennen, statt es unbemerkt zu tun.
+        '
+        ' Mit VERZOEGERUNG: unter einer Viertelsekunde erscheint gar nichts. Sonst blitzt bei jeder
+        ' Reglerbewegung etwas auf, und das ist unruhiger als gar keine Anzeige.
+
+        ''' <summary>Wie lange gerechnet werden darf, bevor es angezeigt wird.</summary>
+        Private Const BeschaeftigtVerzoegerungMs As Integer = 250
+
+        Private _beschaeftigtGrund As String = ""
+        Private _zeigtBeschaeftigt As Boolean = False
+        Private _beschaeftigtLauf As Integer = 0
+
+        ''' <summary>Rechnet gerade etwas, das eine Aenderung verdirbt? Das sind die Vorgaenge, die
+        ''' in die PIXEL gehen, und die Modelllaeufe. Der laufende Vorschau-Render gehoert
+        ''' ausdruecklich NICHT dazu: der laeuft dauernd und ist in Sekundenbruchteilen vorbei -
+        ''' darauf zu sperren hiesse, die Oberflaeche staendig zu sperren.</summary>
+        Public ReadOnly Property IstBeschaeftigt As Boolean
+            Get
+                Return _pendingWorkingCommits > 0 OrElse _tiefeRechnet OrElse _motivRechnet
+            End Get
+        End Property
+
+        ''' <summary>Der sichtbare Zustand - IstBeschaeftigt, aber erst nach der Verzoegerung.</summary>
+        Public ReadOnly Property ZeigtBeschaeftigt As Boolean
+            Get
+                Return _zeigtBeschaeftigt
+            End Get
+        End Property
+
+        Private _vorschauRechnet As Boolean = False
+
+        ''' <summary>Eine LIVE-VORSCHAU rechnet gerade. Bewusst getrennt vom Beschaeftigt-Zustand:
+        ''' sie sperrt NICHTS.
+        '''
+        ''' Der Unterschied ist wesentlich. Was in die Pixel geht, darf man waehrenddessen nicht
+        ''' anfassen - eine Vorschau dagegen entsteht genau deshalb, WEIL man am Regler zieht. Sie zu
+        ''' sperren hiesse, den Regler beim Ziehen zu blockieren. Man soll nur sehen, dass noch
+        ''' gerechnet wird, sonst wartet man vor einem Bild, das sich scheinbar nicht ruehrt.</summary>
+        Public ReadOnly Property ZeigtVorschauArbeit As Boolean
+            Get
+                Return _vorschauRechnet AndAlso Not _zeigtBeschaeftigt
+            End Get
+        End Property
+
+        Public Sub SetzeVorschauRechnet(wert As Boolean)
+            If _vorschauRechnet = wert Then Return
+            _vorschauRechnet = wert
+            Me.RaisePropertyChanged(NameOf(ZeigtVorschauArbeit))
+        End Sub
+
+        ''' <summary>Umgekehrt, fuer die Bedienbarkeit ganzer Panelbereiche.</summary>
+        Public ReadOnly Property BedienbarWaehrendArbeit As Boolean
+            Get
+                Return Not _zeigtBeschaeftigt
+            End Get
+        End Property
+
+        Public ReadOnly Property BeschaeftigtText As String
+            Get
+                If Not String.IsNullOrEmpty(_beschaeftigtGrund) Then Return _beschaeftigtGrund
+                Return LocalizationService.T("Wird berechnet…")
+            End Get
+        End Property
+
+        ''' <summary>Was gerade laeuft, in einem Wort. Wird von den langen Wegen gesetzt, bevor sie
+        ''' anfangen - sonst stuende dort nur "Wird berechnet".</summary>
+        Public Sub SetzeBeschaeftigtGrund(text As String)
+            If String.Equals(_beschaeftigtGrund, text, StringComparison.Ordinal) Then Return
+            _beschaeftigtGrund = If(text, "")
+            Me.RaisePropertyChanged(NameOf(BeschaeftigtText))
+        End Sub
+
+        ''' <summary>Nach jeder Aenderung an einer der Quellen aufrufen. Die eine Stelle, an der der
+        ''' sichtbare Zustand entsteht - verteilte Zuweisungen waeren die Gelegenheit, dass er
+        ''' irgendwo haengen bleibt.</summary>
+        Public Sub AktualisiereBeschaeftigt()
+            Me.RaisePropertyChanged(NameOf(IstBeschaeftigt))
+            If Not IstBeschaeftigt Then
+                ' SOFORT weg. Eine Verzoegerung beim Ausschalten liesse die Sperre stehen, obwohl
+                ' laengst nichts mehr laeuft - und das ist schlimmer als eine spaete Anzeige.
+                _beschaeftigtLauf += 1
+                If _zeigtBeschaeftigt Then
+                    _zeigtBeschaeftigt = False
+                    SetzeBeschaeftigtGrund("")
+                    Me.RaisePropertyChanged(NameOf(ZeigtBeschaeftigt))
+                    Me.RaisePropertyChanged(NameOf(BedienbarWaehrendArbeit))
+                    Me.RaisePropertyChanged(NameOf(ZeigtVorschauArbeit))
+                End If
+                Return
+            End If
+            If _zeigtBeschaeftigt Then Return
+            _beschaeftigtLauf += 1
+            Dim lauf = _beschaeftigtLauf
+            Dim ignoriert = ZeigeBeschaeftigtNachVerzoegerung(lauf)
+        End Sub
+
+        Private Async Function ZeigeBeschaeftigtNachVerzoegerung(lauf As Integer) As Task
+            Await Task.Delay(BeschaeftigtVerzoegerungMs)
+            If lauf <> _beschaeftigtLauf OrElse Not IstBeschaeftigt OrElse _zeigtBeschaeftigt Then Return
+            _zeigtBeschaeftigt = True
+            Me.RaisePropertyChanged(NameOf(ZeigtBeschaeftigt))
+            Me.RaisePropertyChanged(NameOf(BedienbarWaehrendArbeit))
+            Me.RaisePropertyChanged(NameOf(ZeigtVorschauArbeit))
+        End Function
+
         Private Sub EnqueueWorkingCommit(work As Func(Of WorkingImagePatch), onDoneUi As Action(Of WorkingImagePatch))
             _pendingWorkingCommits += 1
+            AktualisiereBeschaeftigt()
             RaiseSaveAvailabilityChanged()
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
@@ -519,6 +639,7 @@ Namespace ViewModels
                     Avalonia.Threading.Dispatcher.UIThread.Post(
                         Sub()
                             _pendingWorkingCommits = Math.Max(0, _pendingWorkingCommits - 1)
+                            AktualisiereBeschaeftigt()
                             Try
                                 If onDoneUi IsNot Nothing Then onDoneUi(patch)
                             Finally
@@ -1004,13 +1125,23 @@ Namespace ViewModels
                         ' Mehrfachauswahl bleibt das Werkzeug, wie es ist - dort geht es um die Menge,
                         ' nicht um eine bestimmte Maske.
                         ' Eine Verlaufsmaske hat weder Ameisen noch malbare Form - fuer sie ist das
-                        ' MASKEN-Werkzeug zustaendig, das ihre Griffe und Regler zeigt. Alles andere
-                        ' bleibt beim Auswahl-Werkzeug.
+                        ' MASKEN-Werkzeug zustaendig, das ihre Griffe und Regler zeigt.
+                        '
+                        ' Eine MASKEN-Ebene (gemalt oder aus der Objektauswahl) gehoert ebenfalls
+                        ' dorthin: sie zeigt rotes Overlay, keine Laufameisen, und bearbeitet wird
+                        ' sie mit dem Maskenpinsel. Sie ins Auswahl-Werkzeug zu schicken war falsch -
+                        ' dort steht die Bedienung fuer etwas, das sie nicht ist.
+                        '
+                        ' Nur eine echte AUSWAHL-Ebene fuehrt ins Auswahl-Werkzeug.
                         Dim istVerlauf = _imageMasks.Any(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId AndAlso m.IsGradient)
-                        Dim zielWerkzeug = If(istVerlauf, EditorTool.Mask, EditorTool.Selection)
+                        Dim istMaskenEbene = istVerlauf OrElse picked.IsMaskLayer
+                        Dim zielWerkzeug = If(istMaskenEbene, EditorTool.Mask, EditorTool.Selection)
                         If SelectedAdjustmentLayers.Count <= 1 AndAlso _currentTool <> zielWerkzeug Then
                             CurrentTool = zielWerkzeug
                         End If
+                        ' Eine gemalte Maskenebene wird mit dem PINSEL bearbeitet - der Verlaufsmodus
+                        ' zoege beim ersten Zug einen neuen Verlauf auf, statt sie nachzubessern.
+                        If istMaskenEbene AndAlso Not istVerlauf Then MaskMode = "Brush"
                         If istVerlauf Then
                             Dim verlauf = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId)
                             MaskMode = If(verlauf IsNot Nothing AndAlso verlauf.IsRadialGradient, "Radial", "Linear")
@@ -1036,6 +1167,29 @@ Namespace ViewModels
                 Return _selectedLayerRow IsNot Nothing
             End Get
         End Property
+
+        ''' <summary>Gibt es etwas, das Esc zuerst abwaehlen soll, bevor es den Editor verlaesst?
+        '''
+        ''' Bewusst NICHT nur die Panel-Zeile: eine gerade gezogene Verlaufsmaske setzt die
+        ''' Maskenebene, aber keine Zeile - Esc landete deshalb sofort beim Verlassen samt
+        ''' Speicherabfrage, obwohl sichtbar etwas markiert war.</summary>
+        Public ReadOnly Property HasDeselectableTarget As Boolean
+            Get
+                Return _selectedLayerRow IsNot Nothing OrElse
+                       Not String.IsNullOrWhiteSpace(_selectedMaskedAdjustmentLayerId) OrElse
+                       _selectedAnnotationIndex >= 0 OrElse
+                       Not String.IsNullOrEmpty(_pendingInsertKind)
+            End Get
+        End Property
+
+        ''' <summary>Alles abwaehlen, was Esc abwaehlen soll: Panel-Zeile, Maskenebene, Objekt und
+        ''' einen vorgemerkten Platzierungstyp. Die Regler zielen danach wieder aufs ganze Bild.</summary>
+        Public Sub DeselectCurrentTarget()
+            If Not HasDeselectableTarget Then Return
+            PendingInsertKind = ""
+            SelectGlobalAdjustmentsTarget()
+            Me.RaisePropertyChanged(NameOf(HasDeselectableTarget))
+        End Sub
 
         Public ReadOnly Property HasSelectedAdjustmentLayer As Boolean
             Get
@@ -1162,6 +1316,8 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseLayerPanelSelectionChanged()
+            Me.RaisePropertyChanged(NameOf(IsMaskToolbarAccented))
+            Me.RaisePropertyChanged(NameOf(HasDeselectableTarget))
             Me.RaisePropertyChanged(NameOf(SelectedLayerRow))
             Me.RaisePropertyChanged(NameOf(HasSelectedPanelLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAdjustmentLayer))
@@ -1175,6 +1331,16 @@ Namespace ViewModels
         Public Sub SelectGlobalAdjustmentsTarget()
             CommitSelectionAdjustModeToModel()
             CommitObjectAdjustModeToModel()
+            ' Eine bereits zu einer Ebene gemachte Auswahl ist nur noch eine Kopie - die Ebene
+            ' traegt sie. Sie stehen zu lassen, waehrend das Reglerziel aufs ganze Bild zurueckgeht,
+            ' hinterlaesst ein rotes Overlay bzw. Laufameisen ohne Ziel: sichtbar, aber ohne
+            ' Bedeutung, und weder mit Esc noch mit einem Klick ins Leere loszuwerden.
+            '
+            ' Eine noch NICHT uebernommene Auswahl bleibt dagegen stehen - die ist Arbeit, die
+            ' jemand gerade macht, und darf nicht bei einem Klick daneben verschwinden.
+            If _hasActiveSelection AndAlso Not String.IsNullOrEmpty(_selectionPromotedLayerId) Then
+                ClearSelection(captureUndo:=False)
+            End If
             _selectedMaskedAdjustmentLayerId = ""
             _selectedLayerRow = Nothing
             SelectedAnnotationIndex = -1
@@ -2150,6 +2316,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationKind))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationToolbarKind))
+                Me.RaisePropertyChanged(NameOf(IsMaskToolbarAccented))
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
                 Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
@@ -3128,6 +3295,19 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Traegt das Masken-Symbol in der Werkzeugleiste die Akzentfarbe?
+        '''
+        ''' Ja, solange eine Maske das Ziel der Regler ist - auch dann, wenn man dafuer gerade in
+        ''' einem Anpassen-Werkzeug steht. Dasselbe Verhalten wie bei den eingefuegten Objekten: das
+        ''' Symbol sagt nicht, welches Werkzeug offen ist, sondern WORAUF die Regler wirken. Ohne das
+        ''' sah eine markierte Maskenebene im Anpassen-Werkzeug aus wie gar keine.</summary>
+        Public ReadOnly Property IsMaskToolbarAccented As Boolean
+            Get
+                If String.Equals(SelectedAnnotationToolbarKind, "Mask", StringComparison.Ordinal) Then Return True
+                Return Not String.IsNullOrWhiteSpace(_selectedMaskedAdjustmentLayerId)
+            End Get
+        End Property
+
         Public ReadOnly Property SelectedAnnotationText As String
             Get
                 If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return ""
@@ -3592,6 +3772,29 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_currentTool, value)
                 If previousTool <> value Then
                     DiscardUncommittedToolEdits(previousTool)
+                    ' Die Vorschau der Tiefen-Unschaerfe gehoert zum Detailwerkzeug. Sie liegt ueber
+                    ' dem Bild und wuerde sonst in einem anderen Werkzeug stehen bleiben, wo ihre
+                    ' Regler gar nicht mehr zu sehen sind.
+                    RaeumeBokehVorschauAb()
+                    ' Dasselbe fuer das Verzerren: die Live-Vorschau, das Gitternetz und der
+                    ' Perspektivrahmen gehoeren zu einem Werkzeug, das man gerade verlaesst.
+                    VerzerrenModus = ""
+                    ' Das GITTER wird dabei zurueckgesetzt. Es ist nichts weiter als der Stand
+                    ' seiner Anfasser, und die sind nur im Werkzeug zu sehen: ein verzogenes Gitter,
+                    ' das man nicht sieht und nicht bedienen kann, ist ein stiller Zustand, der beim
+                    ' naechsten Anwenden ueberrascht. Die Perspektive bleibt - sie steht in Reglern,
+                    ' die man auch nach dem Wechsel noch sieht.
+                    If HasWarpGridChanges Then
+                        SetzeGitterZurueck()
+                        Me.RaisePropertyChanged(NameOf(WarpGridValues))
+                        Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
+                    End If
+                    ' Dasselbe fuer die Linien: sie sind nichts als der Stand ihrer Griffe, und die
+                    ' sieht man nur im Werkzeug.
+                    If _linien.Count > 0 Then
+                        _linien.Clear()
+                        MeldeLinien()
+                    End If
                     ' Werkzeugwechsel beendet eine laufende Pinsel-/Radiergummi-Mal-Sitzung (siehe
                     ' AddBrushStroke) - auch zwischen zwei Ebenen-Werkzeugen (Draw -> Text usw.), wo
                     ' SelectedAnnotationIndex sonst unverändert bliebe.
@@ -3681,12 +3884,12 @@ Namespace ViewModels
                 Select Case _currentTool
                     Case EditorTool.Crop : Return "Zuschneiden"
                     Case EditorTool.Resize : Return "Bildgröße"
-                    Case EditorTool.Rotate : Return "Drehen"
+                    Case EditorTool.Rotate : Return "Drehen und Verzerren"
                     Case EditorTool.Adjust : Return "Anpassen"
                     Case EditorTool.Color : Return "Farbe"
                     Case EditorTool.Effects, EditorTool.Frame : Return "Details und Effekte"
                     Case EditorTool.Filters : Return "Filter"
-                    Case EditorTool.Transform : Return "Transformieren"
+                    Case EditorTool.Transform : Return "Drehen und Verzerren"
                     Case EditorTool.Move : Return "Verschieben"
                     Case EditorTool.Selection : Return "Auswahl"
                     Case EditorTool.Mask : Return "Maske"
@@ -3818,12 +4021,27 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsMaskBrushMode))
                 Me.RaisePropertyChanged(NameOf(IsMaskLinearMode))
                 Me.RaisePropertyChanged(NameOf(IsMaskRadialMode))
+                Me.RaisePropertyChanged(NameOf(IsMaskObjectMode))
+                Me.RaisePropertyChanged(NameOf(IsMaskDepthMode))
+                Me.RaisePropertyChanged(NameOf(IsMaskMoveMode))
                 Me.RaisePropertyChanged(NameOf(ShowGradientControls))
             Me.RaisePropertyChanged(NameOf(IsRefiningGradientMask))
                 ' Der Masken-Pinsel benutzt weiterhin die Auswahl-Maschinerie (Alpha8-Stempel in die
                 ' Auswahlmaske); die Verlaeufe legen dagegen sofort eine parametrische Maske an.
-                If String.Equals(normalized, "Brush", StringComparison.Ordinal) Then
+                If String.Equals(normalized, "Verschieben", StringComparison.Ordinal) Then
+                    ' Derselbe Untermodus wie im Auswahl-Werkzeug: dort haengt das Greifen von
+                    ' Objekten daran. Zwei Wege fuer dieselbe Geste waeren zwei Fehlerquellen.
+                    SelectionMode = "Move"
+                ElseIf String.Equals(normalized, "Brush", StringComparison.Ordinal) Then
                     SelectionMode = "Brush"
+                ElseIf String.Equals(normalized, "Tiefe", StringComparison.Ordinal) Then
+                    ' Beim Betreten gleich rechnen - ohne Klick gibt es hier nichts anzustossen.
+                    Dim ignoriertT = ZeichneTiefenMaskeNeu()
+                ElseIf String.Equals(normalized, "Objekt", StringComparison.Ordinal) Then
+                    ' Die Objektauswahl sammelt Punkte fuer GENAU EIN Objekt. Beim Betreten des
+                    ' Modus faengt sie frisch an - sonst haetten die Klicks des vorigen Objekts
+                    ' noch Einfluss, und der erste Klick ergaebe etwas Unerwartetes.
+                    VergissMotivPunkte()
                 End If
             End Set
         End Property
@@ -4300,6 +4518,43 @@ Namespace ViewModels
         ''' kommt und auch dorthin zurueckgeschrieben wird. Eine gemeinsame Skala mit Vorzeichen waere
         ''' beim Preset-Import zweideutig gewesen.
         ''' Die beiden Seiten schliessen sich aus: wer ins Minus zieht, hat kein Plus mehr stehen.</summary>
+        ''' <summary>Die dritte Stufe: mehrskalige Minderung des GROBFLECKIGEN Farbrauschens. Die
+        ''' beiden Nachbarregler arbeiten auf EINER Groesse; grosse Farbflecken aus hochgezogenen
+        ''' Aufnahmen erreichen sie nur mit einem Radius, der alles andere mitfrisst.</summary>
+        Public Property FarbrauschGrob As Double
+            Get
+                Return _farbrauschGrob
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0, Math.Min(100, value))
+                If SetUndoableDouble(_farbrauschGrob, v, NameOf(FarbrauschGrob)) Then
+                    Me.RaisePropertyChanged(NameOf(FarbrauschGrob))
+                    Me.RaisePropertyChanged(NameOf(HatFarbflecken))
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Wie grosse Flecken noch erfasst werden.</summary>
+        ''' <summary>Die Fleckengroesse ist nur dann zu bedienen, wenn ueberhaupt etwas gemildert
+        ''' wird - sonst stellt man eine Groesse fuer eine Wirkung ein, die es nicht gibt.</summary>
+        Public ReadOnly Property HatFarbflecken As Boolean
+            Get
+                Return _farbrauschGrob > 0.01
+            End Get
+        End Property
+
+        Public Property FarbrauschGrobSkala As Double
+            Get
+                Return _farbrauschGrobSkala
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0, Math.Min(100, value))
+                If SetUndoableDouble(_farbrauschGrobSkala, v, NameOf(FarbrauschGrobSkala)) Then
+                    Me.RaisePropertyChanged(NameOf(FarbrauschGrobSkala))
+                End If
+            End Set
+        End Property
+
         Public Property ColorNoiseAmount As Double
             Get
                 If _colorNoiseAdd > 0 Then Return _colorNoiseAdd
@@ -4464,7 +4719,14 @@ Namespace ViewModels
             ' zweiseitige Textbindung zurueckschreibt, haengt am Steuerelement, und ein Knopf, der
             ' manchmal nichts tut, ist schlimmer als gar keiner.
             Dim text = If(eingabe, _lensFilter)
-            If String.IsNullOrWhiteSpace(text) Then Return
+            ' Leeres Feld heisst "wieder automatisch erkennen". Das ist die einzige Art, eine
+            ' Zuordnung ueber dieses Feld wieder loszuwerden - ohne sie muesste man den Umweg ueber
+            ' das Zuruecksetzen im Kopf nehmen, das zusaetzlich die Schalter und Regler mit
+            ' zurueckstellt.
+            If String.IsNullOrWhiteSpace(text) Then
+                LensAssignment = ""
+                Return
+            End If
             text = text.Trim()
             Dim alle = LensCandidates
             If alle.Count = 0 Then Return
@@ -4715,6 +4977,1411 @@ Namespace ViewModels
                            NameOf(LensVignettingAmount)}
                 Me.RaisePropertyChanged(n)
             Next
+        End Sub
+
+        ' ── Verzerren ───────────────────────────────────────────────────────────
+        '
+        ' Vier Werte, alle -100..100 und bei 0 wirkungslos. Sie gehoeren zur GEOMETRIE: sie
+        ' veraendern, wo ein Bildpunkt landet, nicht seine Farbe. Deshalb laufen sie ueber
+        ' SetUndoableGeometryDouble und nicht ueber den gewoehnlichen Reglerweg.
+
+        Private _perspectiveHorizontal As Double = 0
+        Private _perspectiveVertical As Double = 0
+        Private _perspectiveAspect As Double = 0
+        Private _perspectiveScale As Double = 0
+
+        Public Property PerspectiveHorizontal As Double
+            Get
+                Return _perspectiveHorizontal
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_perspectiveHorizontal, Math.Max(-100, Math.Min(100, value)),
+                                  NameOf(PerspectiveHorizontal))
+                Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
+            End Set
+        End Property
+
+        Public Property PerspectiveVertical As Double
+            Get
+                Return _perspectiveVertical
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_perspectiveVertical, Math.Max(-100, Math.Min(100, value)),
+                                  NameOf(PerspectiveVertical))
+                Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
+            End Set
+        End Property
+
+        Public Property PerspectiveAspect As Double
+            Get
+                Return _perspectiveAspect
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_perspectiveAspect, Math.Max(-100, Math.Min(100, value)),
+                                  NameOf(PerspectiveAspect))
+                Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
+            End Set
+        End Property
+
+        Public Property PerspectiveScale As Double
+            Get
+                Return _perspectiveScale
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_perspectiveScale, Math.Max(-100, Math.Min(100, value)),
+                                  NameOf(PerspectiveScale))
+                Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
+            End Set
+        End Property
+
+        ''' <summary>Der Hinweis erscheint nur, wenn er zutrifft: es wird verzerrt UND es gibt
+        ''' Objekte, die dabei nicht mitwandern. Ein Hinweis, der immer dasteht, wird nicht
+        ''' gelesen.</summary>
+        Public ReadOnly Property HasPerspectiveWarning As Boolean
+            Get
+                If Math.Abs(_perspectiveHorizontal) < 0.01 AndAlso Math.Abs(_perspectiveVertical) < 0.01 Then Return False
+                Return _annotations IsNot Nothing AndAlso _annotations.Count > 0
+            End Get
+        End Property
+
+        Private Sub ResetPerspectiveInternal()
+            If Not HasPerspectiveChanges Then Return
+            CaptureUndoState("Verzerren")
+            _perspectiveHorizontal = 0
+            _perspectiveVertical = 0
+            _perspectiveAspect = 0
+            _perspectiveScale = 0
+            Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+            For Each n In {NameOf(PerspectiveHorizontal), NameOf(PerspectiveVertical),
+                           NameOf(PerspectiveAspect), NameOf(PerspectiveScale)}
+                Me.RaisePropertyChanged(n)
+            Next
+            MeldeEckenGeaendert()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ' ── Welche Verzerrung gerade bedient wird ───────────────────────────────
+        '
+        ' Beide Overlays gleichzeitig ueber dem Bild waren ein Fehler: die Eck-Anfasser und die
+        ' Rasterpunkte liegen teils uebereinander, und man sieht zwei Werkzeuge, von denen man eines
+        ' meint. Erst waehlen, dann erscheint genau dessen Overlay. Ohne Wahl liegt nichts ueber dem
+        ' Bild - das ist auch der Zustand, in dem man Zoom und Verschieben ungestoert bedienen kann.
+
+        Private _verzerrenModus As String = ""
+
+        ''' <summary>"" = keines, "Perspektive" oder "Gitter".</summary>
+        Public Property VerzerrenModus As String
+            Get
+                Return _verzerrenModus
+            End Get
+            Set(value As String)
+                Dim v = If(value, "").Trim()
+                If Not (v = "Perspektive" OrElse v = "Gitter" OrElse v = "Linien") Then v = ""
+                ' Nochmal auf denselben Knopf: wieder abwaehlen. So wird man das Overlay los, ohne
+                ' das Werkzeug zu verlassen.
+                If String.Equals(_verzerrenModus, v, StringComparison.Ordinal) Then v = ""
+                If String.Equals(_verzerrenModus, v, StringComparison.Ordinal) Then Return
+                _verzerrenModus = v
+                ' Ein laufender Zug gehoert zum abgewaehlten Werkzeug und endet hier.
+                _perspectiveCornerDrag = -1
+                _warpDragIndex = -1
+                _linienDragIndex = -1
+                _linienDragTeil = -1
+                RaeumeGitterVorschauAb()
+                RaeumeLinienVorschauAb()
+                For Each n In {NameOf(VerzerrenModus), NameOf(IsVerzerrenPerspektive),
+                               NameOf(IsVerzerrenGitter), NameOf(IsVerzerrenLinien),
+                               NameOf(PerspectiveCornerValues), NameOf(LinienValues),
+                               NameOf(WarpGridValues)}
+                    Me.RaisePropertyChanged(n)
+                Next
+            End Set
+        End Property
+
+        Public ReadOnly Property IsVerzerrenPerspektive As Boolean
+            Get
+                Return String.Equals(_verzerrenModus, "Perspektive", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsVerzerrenLinien As Boolean
+            Get
+                Return String.Equals(_verzerrenModus, "Linien", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsVerzerrenGitter As Boolean
+            Get
+                Return String.Equals(_verzerrenModus, "Gitter", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ' ── Freie Ecken ─────────────────────────────────────────────────────────
+        '
+        ' Acht Versaetze in Prozent der Bildbreite bzw. -hoehe, im Uhrzeigersinn ab links oben. Sie
+        ' kommen ZUSAETZLICH zu den vier Reglern: die Regler kippen symmetrisch um eine Achse (der
+        ' Griff fuer stuerzende Linien), die Ecken erlauben jede Lage, die eine Homographie hergibt.
+        '
+        ' Wo die Ecken LIEGEN, rechnet nicht diese Klasse, sondern ImageGeometryMapper.
+        ' VerzerrungsEcken - dieselbe Stelle, aus der auch die Matrix im Renderer entsteht. Eine
+        ' zweite Rechnung hier wuerde frueher oder spaeter danebenliegen, und man saehe es daran,
+        ' dass ein Anfasser neben der Bildecke sitzt, die er anfasst.
+
+        Private ReadOnly _perspectiveCorners As Double() = New Double(7) {}
+        Private _perspectiveCornerDrag As Integer = -1
+
+        Public Property PerspectiveCorner0X As Double
+            Get
+                Return _perspectiveCorners(0)
+            End Get
+            Set(value As Double)
+                SetzeEckenVersatz(0, value)
+            End Set
+        End Property
+
+        Public Property PerspectiveCorner0Y As Double
+            Get
+                Return _perspectiveCorners(1)
+            End Get
+            Set(value As Double)
+                SetzeEckenVersatz(1, value)
+            End Set
+        End Property
+
+        Public Property PerspectiveCorner1X As Double
+            Get
+                Return _perspectiveCorners(2)
+            End Get
+            Set(value As Double)
+                SetzeEckenVersatz(2, value)
+            End Set
+        End Property
+
+        Public Property PerspectiveCorner1Y As Double
+            Get
+                Return _perspectiveCorners(3)
+            End Get
+            Set(value As Double)
+                SetzeEckenVersatz(3, value)
+            End Set
+        End Property
+
+        Public Property PerspectiveCorner2X As Double
+            Get
+                Return _perspectiveCorners(4)
+            End Get
+            Set(value As Double)
+                SetzeEckenVersatz(4, value)
+            End Set
+        End Property
+
+        Public Property PerspectiveCorner2Y As Double
+            Get
+                Return _perspectiveCorners(5)
+            End Get
+            Set(value As Double)
+                SetzeEckenVersatz(5, value)
+            End Set
+        End Property
+
+        Public Property PerspectiveCorner3X As Double
+            Get
+                Return _perspectiveCorners(6)
+            End Get
+            Set(value As Double)
+                SetzeEckenVersatz(6, value)
+            End Set
+        End Property
+
+        Public Property PerspectiveCorner3Y As Double
+            Get
+                Return _perspectiveCorners(7)
+            End Get
+            Set(value As Double)
+                SetzeEckenVersatz(7, value)
+            End Set
+        End Property
+
+        ''' <summary>Ein Eckenversatz. Der Bereich ist mit plus/minus 60 Prozent bewusst weiter als
+        ''' der der Regler: eine Ecke soll sich auch weit ueber die Bildkante hinausziehen lassen,
+        ''' sonst laesst sich eine schraeg fotografierte Flaeche nicht geradeziehen.</summary>
+        Private Sub SetzeEckenVersatz(index As Integer, wert As Double)
+            Dim v = Math.Max(-60.0, Math.Min(60.0, wert))
+            If Math.Abs(_perspectiveCorners(index) - v) < 0.0001 Then Return
+            CaptureUndoState("Verzerren")
+            _perspectiveCorners(index) = v
+            MeldeEckenGeaendert()
+            SchedulePreviewUpdate()
+        End Sub
+
+        Private Sub MeldeEckenGeaendert()
+            For Each n In {NameOf(PerspectiveCorner0X), NameOf(PerspectiveCorner0Y),
+                           NameOf(PerspectiveCorner1X), NameOf(PerspectiveCorner1Y),
+                           NameOf(PerspectiveCorner2X), NameOf(PerspectiveCorner2Y),
+                           NameOf(PerspectiveCorner3X), NameOf(PerspectiveCorner3Y),
+                           NameOf(PerspectiveCornerValues), NameOf(HasPerspectiveChanges),
+                           NameOf(HasPerspectiveWarning)}
+                Me.RaisePropertyChanged(n)
+            Next
+            RaiseResetButtonStateChanged()
+        End Sub
+
+        ''' <summary>Die vier Ecken des Verzerrungsvierecks in ANZEIGE-Prozent, im Uhrzeigersinn ab
+        ''' links oben: [x0, y0, x1, y1, x2, y2, x3, y3]. Fuer das Overlay und die Trefferpruefung.
+        '''
+        ''' Gerechnet wird ueber die gemeinsame Eckenfunktion und dann durch die restliche
+        ''' Geometriekette - so sitzt ein Anfasser auch bei Beschnitt, Drehung, Begradigung und
+        ''' Skalierung genau auf seiner Ecke. Nothing, solange kein Bild offen ist.</summary>
+        Public ReadOnly Property PerspectiveCornerValues As Double()
+            Get
+                Dim vorStufe = VerzerrungsStufenGroesse()
+                If vorStufe.Width <= 0 OrElse vorStufe.Height <= 0 Then Return Nothing
+                Dim anzeige = GetAnnotationDisplayPixelSize()
+                If anzeige.Width <= 0 OrElse anzeige.Height <= 0 Then Return Nothing
+
+                Dim ecken = ImageGeometryMapper.VerzerrungsEcken(vorStufe.Width, vorStufe.Height,
+                                                                 _perspectiveHorizontal, _perspectiveVertical,
+                                                                 CType(_perspectiveCorners.Clone(), Double()))
+                ' Seitenverhaeltnis und Groesse wirken NACH der Kippung um die Bildmitte - dieselbe
+                ' Reihenfolge wie in der Matrix, sonst wanderten die Anfasser bei "Groesse" nicht mit.
+                Dim m = ImageGeometryMapper.VerzerrungsMatrix(vorStufe.Width, vorStufe.Height,
+                                                              _perspectiveHorizontal, _perspectiveVertical,
+                                                              _perspectiveAspect, _perspectiveScale,
+                                                              CType(_perspectiveCorners.Clone(), Double()))
+                Dim werte(7) As Double
+                For i = 0 To 3
+                    ' Die Ecke ist der Zielpunkt der Verzerrung. Um ihn in die Anzeige zu bringen,
+                    ' wird der zugehoerige QUELLpunkt (die unverzerrte Bildecke) durch die volle
+                    ' Kette geschickt - die traegt die Verzerrung seit dieser Aenderung selbst.
+                    Dim quelleX = If(i = 1 OrElse i = 2, vorStufe.Width, 0.0)
+                    Dim quelleY = If(i = 2 OrElse i = 3, vorStufe.Height, 0.0)
+                    Dim ziel = If(m.IsIdentity, New SKPoint(CSng(quelleX), CSng(quelleY)),
+                                                m.MapPoint(New SKPoint(CSng(quelleX), CSng(quelleY))))
+                    werte(i * 2) = ziel.X / vorStufe.Width * 100.0
+                    werte(i * 2 + 1) = ziel.Y / vorStufe.Height * 100.0
+                Next
+                Return werte
+            End Get
+        End Property
+
+        ''' <summary>Die Groesse, auf der die Verzerrungsstufe rechnet: nach Beschnitt, Vierteldrehung
+        ''' und Begradigung, VOR Skalierung und Leinwand. Genau die Stufe, an der ApplyPerspective im
+        ''' Renderer sitzt.</summary>
+        Private Function VerzerrungsStufenGroesse() As (Width As Double, Height As Double)
+            Dim baseWidth = GetBaseWidth(), baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (0, 0)
+            Dim adj = BuildAppliedGeometryAdjustments()
+            adj.ResizeWidth = 0 : adj.ResizeHeight = 0
+            adj.CanvasWidth = 0 : adj.CanvasHeight = 0
+            Dim groesse = ImageProcessor.ComputeGeometryOutputSize(baseWidth, baseHeight, adj)
+            Return (groesse.Width, groesse.Height)
+        End Function
+
+        Public ReadOnly Property HasPerspectiveChanges As Boolean
+            Get
+                Return Math.Abs(_perspectiveHorizontal) > 0.0001 OrElse Math.Abs(_perspectiveVertical) > 0.0001 OrElse
+                       Math.Abs(_perspectiveAspect) > 0.0001 OrElse Math.Abs(_perspectiveScale) > 0.0001 OrElse
+                       _perspectiveCorners.Any(Function(v) Math.Abs(v) > 0.0001)
+            End Get
+        End Property
+
+        ''' <summary>Fasst die naechstgelegene Ecke an, sofern eine in Greifweite liegt. Die
+        ''' Trefferpruefung laeuft im ANZEIGERAUM, damit die Greifweite die auf dem Bildschirm
+        ''' ist.</summary>
+        Public Function TryBeginPerspectiveCornerDrag(xPercent As Double, yPercent As Double,
+                                                      slopXPercent As Double, slopYPercent As Double) As Boolean
+            Dim ecken = PerspectiveCornerValues
+            If ecken Is Nothing Then Return False
+            Dim besterAbstand = Double.MaxValue
+            Dim bester = -1
+            For i = 0 To 3
+                Dim dx = (xPercent - ecken(i * 2)) / Math.Max(0.0001, slopXPercent)
+                Dim dy = (yPercent - ecken(i * 2 + 1)) / Math.Max(0.0001, slopYPercent)
+                Dim d = dx * dx + dy * dy
+                If d <= 1.0 AndAlso d < besterAbstand Then
+                    besterAbstand = d
+                    bester = i
+                End If
+            Next
+            If bester < 0 Then Return False
+            PushUndo()
+            _perspectiveCornerDrag = bester
+            Return True
+        End Function
+
+        ''' <summary>Zieht die gefasste Ecke. Der Zeiger gibt die ZIELlage vor; gespeichert wird der
+        ''' Versatz gegenueber der Ausgangsecke, damit die Regler daneben ihre Bedeutung behalten.</summary>
+        Public Sub UpdatePerspectiveCornerDrag(xPercent As Double, yPercent As Double)
+            If _perspectiveCornerDrag < 0 Then Return
+            Dim vorStufe = VerzerrungsStufenGroesse()
+            If vorStufe.Width <= 0 OrElse vorStufe.Height <= 0 Then Return
+
+            ' Der Zielpunkt in der Stufengroesse. Er kommt aus dem ANZEIGE-Prozent, das dieselbe
+            ' Bezugsgroesse hat wie die Ausgabe von PerspectiveCornerValues.
+            Dim zielX = xPercent / 100.0 * vorStufe.Width
+            Dim zielY = yPercent / 100.0 * vorStufe.Height
+
+            ' Wo die Ecke OHNE ihren eigenen Versatz laege (Regler und die anderen drei Ecken
+            ' bleiben stehen) - die Differenz dazu ist der neue Versatz.
+            Dim ohne = CType(_perspectiveCorners.Clone(), Double())
+            ohne(_perspectiveCornerDrag * 2) = 0
+            ohne(_perspectiveCornerDrag * 2 + 1) = 0
+            Dim basis = ImageGeometryMapper.VerzerrungsEcken(vorStufe.Width, vorStufe.Height,
+                                                             _perspectiveHorizontal, _perspectiveVertical, ohne)
+            Dim i2 = _perspectiveCornerDrag
+            Dim neuX = (zielX - basis(i2).X) / vorStufe.Width * 100.0
+            Dim neuY = (zielY - basis(i2).Y) / vorStufe.Height * 100.0
+
+            _perspectiveCorners(i2 * 2) = Math.Max(-60.0, Math.Min(60.0, neuX))
+            _perspectiveCorners(i2 * 2 + 1) = Math.Max(-60.0, Math.Min(60.0, neuY))
+            MeldeEckenGeaendert()
+            SchedulePreviewUpdate()
+        End Sub
+
+        Public Sub EndPerspectiveCornerDrag()
+            _perspectiveCornerDrag = -1
+        End Sub
+
+        ' ── Gitterverzerrung ────────────────────────────────────────────────────
+        '
+        ' Das Raster lebt im QUELLRAUM (Prozent des unbeschnittenen Arbeitsbildes), nicht im
+        ' Anzeigeraum - aus demselben Grund wie bei den Verlaufsmasken: sonst wanderte die
+        ' Verzerrung, sobald zugeschnitten oder gedreht wird, und das Backen traefe eine andere
+        ' Stelle als die, auf die man gezogen hat. Fuer die Anzeige werden die Punkte einzeln in den
+        ' Anzeigeraum zurueckgerechnet; was ausserhalb des sichtbaren Ausschnitts liegt, kommt als
+        ' NaN heraus und wird weder gezeichnet noch angefasst.
+        '
+        ' Es ist bewusst KEIN Rezeptwert. Eine Gitterverzerrung laesst sich nicht als Matrix
+        ' schreiben, also auch nicht nachtraeglich mit dem Bild mitfuehren - sie wird gebacken, wie
+        ' die Retusche. Bis zum Backen ist sie nur eine Vorschau.
+
+        Private _warpColumns As Integer = 4
+        Private _warpRows As Integer = 4
+        Private _warpX As Double() = Nothing
+        Private _warpY As Double() = Nothing
+        Private _warpDragIndex As Integer = -1
+
+        Public ReadOnly Property WarpColumns As Integer
+            Get
+                Return _warpColumns
+            End Get
+        End Property
+
+        Public ReadOnly Property WarpRows As Integer
+            Get
+                Return _warpRows
+            End Get
+        End Property
+
+        ''' <summary>Die Rastergroesse. Ein groeberes Raster verzerrt weicher, ein feineres genauer;
+        ''' das Umstellen verwirft ein begonnenes Ziehen, weil die Punkte sonst nicht mehr
+        ''' zueinander passen.</summary>
+        Public Property WarpGridSize As Integer
+            Get
+                Return _warpColumns
+            End Get
+            Set(value As Integer)
+                Dim v = Math.Max(2, Math.Min(12, value))
+                If v = _warpColumns AndAlso v = _warpRows Then Return
+                CaptureUndoState("Gitter")
+                RaeumeGitterVorschauAb()
+                _warpColumns = v
+                _warpRows = v
+                SetzeGitterZurueck()
+                Me.RaisePropertyChanged(NameOf(WarpGridSize))
+                Me.RaisePropertyChanged(NameOf(WarpGridValues))
+                Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
+            End Set
+        End Property
+
+        ''' <summary>Das Raster fuer die Anzeige: [spalten, zeilen, x0, y0, ...] in ANZEIGE-Prozent.
+        ''' Gespeichert ist es im Quellraum; hier wird Punkt fuer Punkt umgerechnet. Punkte, die im
+        ''' aktuellen Ausschnitt gar nicht vorkommen (Beschnitt, leere Begradigungsecke), kommen als
+        ''' NaN heraus - die Anzeige laesst sie dann aus.</summary>
+        Public ReadOnly Property WarpGridValues As Double()
+            Get
+                StelleGitterBereit()
+                Dim werte(1 + _warpX.Length * 2) As Double
+                werte(0) = _warpColumns
+                werte(1) = _warpRows
+                For i = 0 To _warpX.Length - 1
+                    Dim anzeige = SourcePercentToDisplayPercent(_warpX(i), _warpY(i))
+                    If anzeige.HasValue Then
+                        werte(2 + i * 2) = anzeige.Value.X
+                        werte(3 + i * 2) = anzeige.Value.Y
+                    Else
+                        werte(2 + i * 2) = Double.NaN
+                        werte(3 + i * 2) = Double.NaN
+                    End If
+                Next
+                Return werte
+            End Get
+        End Property
+
+        Public ReadOnly Property HasWarpGridChanges As Boolean
+            Get
+                StelleGitterBereit()
+                For zi = 0 To _warpRows
+                    For si = 0 To _warpColumns
+                        Dim i = zi * (_warpColumns + 1) + si
+                        If Math.Abs(_warpX(i) - si * 100.0 / _warpColumns) > 0.01 OrElse
+                           Math.Abs(_warpY(i) - zi * 100.0 / _warpRows) > 0.01 Then Return True
+                    Next
+                Next
+                Return False
+            End Get
+        End Property
+
+        Private Sub StelleGitterBereit()
+            Dim anzahl = (_warpColumns + 1) * (_warpRows + 1)
+            If _warpX IsNot Nothing AndAlso _warpX.Length = anzahl Then Return
+            SetzeGitterZurueck()
+        End Sub
+
+        Private Sub SetzeGitterZurueck()
+            Dim anzahl = (_warpColumns + 1) * (_warpRows + 1)
+            ReDim _warpX(anzahl - 1)
+            ReDim _warpY(anzahl - 1)
+            For zi = 0 To _warpRows
+                For si = 0 To _warpColumns
+                    Dim i = zi * (_warpColumns + 1) + si
+                    _warpX(i) = si * 100.0 / _warpColumns
+                    _warpY(i) = zi * 100.0 / _warpRows
+                Next
+            Next
+            _warpDragIndex = -1
+        End Sub
+
+        ' ── Live-Vorschau der Gitterverzerrung ──────────────────────────────────
+        '
+        ' Waehrend des Ziehens wird eine KOPIE des Anzeigebildes verzerrt und ueber das Bild gelegt.
+        ' Ohne sie zieht man Punkte und sieht bis zum Anwenden nur ein Gitter - man kann also nicht
+        ' beurteilen, was man tut.
+        '
+        ' Die Kopie hat ANZEIGEgroesse, nicht Bildgroesse: sie ist nur zum Anschauen da, und ein
+        ' 45-MP-Netz bei jeder Mausbewegung waere unbezahlbar. Beim Anwenden wird dann sauber auf
+        ' dem vollen Arbeitsbild gerechnet.
+        '
+        ' Sie enthaelt KEINE Objekte: das Rezept-Anzeigebild ohne die eingefuegten Ebenen. Objekte
+        ' wandern bei einer Gitterverzerrung ohnehin nicht mit (sie werden erst beim Anwenden
+        ' ueberrechnet), und mitverzerrt in der Vorschau saehe man etwas, das nachher anders aussieht.
+
+        Private _gitterVorschauBasis As SKBitmap
+        Private _gitterVorschauQuellX As Single()
+        Private _gitterVorschauQuellY As Single()
+        Private _vorschauBild As Bitmap
+        Private _vorschauQuelle As String = ""
+
+        ''' <summary>Das Vorschaubild, das ueber dem Bild liegt, sonst Nothing.
+        '''
+        ''' EIN Kanal fuer beide Werkzeuge, die eine Live-Vorschau haben: Gitterverzerrung und
+        ''' Tiefen-Unschaerfe. Sie koennen nie gleichzeitig laufen (verschiedene Werkzeuge), und zwei
+        ''' Bilder uebereinander waeren nur eine Gelegenheit, dass eines haengen bleibt. Wer den Kanal
+        ''' gerade haelt, steht in <see cref="_vorschauQuelle"/>: nur der eigene Halter raeumt ihn ab,
+        ''' sonst loescht ein Werkzeug beim Verlassen die Vorschau des naechsten.</summary>
+        Public Property VorschauBild As Bitmap
+            Get
+                Return _vorschauBild
+            End Get
+            Private Set(value As Bitmap)
+                If Object.ReferenceEquals(_vorschauBild, value) Then Return
+                Dim alt = _vorschauBild
+                _vorschauBild = value
+                Me.RaisePropertyChanged(NameOf(VorschauBild))
+                Me.RaisePropertyChanged(NameOf(HatVorschau))
+                ' ERST melden, DANN freigeben: die Anzeige haelt sonst kurz ein totes Bitmap.
+                alt?.Dispose()
+            End Set
+        End Property
+
+        Public ReadOnly Property HatVorschau As Boolean
+            Get
+                Return _vorschauBild IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Die Grundlage der Vorschau anlegen: das Anzeigebild ohne Objekte, dazu die Lage
+        ''' des UNVERZERRTEN Rasters im Anzeigeraum. Letztere ist noetig, weil das Raster im
+        ''' Quellraum gleichmaessig ist, im Anzeigeraum nach Beschnitt oder Drehung aber nicht.</summary>
+        Private Sub BereiteGitterVorschauVor()
+            RaeumeGitterVorschauAb()
+            Dim groesse = GetAnnotationDisplayPixelSize()
+            If groesse.Width <= 0 OrElse groesse.Height <= 0 Then Return
+            Dim quelle = TryCast(DisplayImage, Bitmap)
+            If quelle Is Nothing Then Return
+
+            Try
+                ' Das Anzeigebild als SKBitmap in Anzeigegroesse. Ueber den PNG-Umweg, weil eine
+                ' Avalonia-Bitmap ihre Pixel nicht direkt herausgibt.
+                Using strom = New IO.MemoryStream()
+                    quelle.Save(strom, PngBitmapEncoderOptions.Default)
+                    strom.Position = 0
+                    Dim roh = SKBitmap.Decode(strom)
+                    If roh Is Nothing Then Return
+                    _gitterVorschauBasis = roh
+                End Using
+            Catch
+                RaeumeGitterVorschauAb()
+                Return
+            End Try
+
+            ' MIT OBJEKTEN. Frueher wurden sie fuer die Vorschau herausgerechnet, weil sie beim
+            ' Anwenden nicht mitverzerrt wurden - jetzt gehen sie mit, und dieselbe Verzerrung auf
+            ' dem Anzeigebild zeigt genau das Ergebnis.
+
+            StelleGitterBereit()
+            Dim n = (_warpColumns + 1) * (_warpRows + 1)
+            ReDim _gitterVorschauQuellX(n - 1)
+            ReDim _gitterVorschauQuellY(n - 1)
+            Dim bw = _gitterVorschauBasis.Width, bh = _gitterVorschauBasis.Height
+            For zi = 0 To _warpRows
+                For si = 0 To _warpColumns
+                    Dim i = zi * (_warpColumns + 1) + si
+                    Dim anzeige = SourcePercentToDisplayPercent(si * 100.0 / _warpColumns,
+                                                                zi * 100.0 / _warpRows)
+                    If anzeige.HasValue Then
+                        _gitterVorschauQuellX(i) = CSng(anzeige.Value.X / 100.0 * bw)
+                        _gitterVorschauQuellY(i) = CSng(anzeige.Value.Y / 100.0 * bh)
+                    Else
+                        ' Weggeschnitten: dann taugt die Vorschau nicht, lieber gar keine.
+                        RaeumeGitterVorschauAb()
+                        Return
+                    End If
+                Next
+            Next
+        End Sub
+
+        Private Sub RaeumeGitterVorschauAb()
+            If String.Equals(_vorschauQuelle, "Gitter", StringComparison.Ordinal) Then
+                VorschauBild = Nothing
+                _vorschauQuelle = ""
+            End If
+            _gitterVorschauBasis?.Dispose()
+            _gitterVorschauBasis = Nothing
+            _gitterVorschauQuellX = Nothing
+            _gitterVorschauQuellY = Nothing
+        End Sub
+
+        ''' <summary>Die Vorschau zum aktuellen Raster neu zeichnen.</summary>
+        Private Sub AktualisiereGitterVorschau()
+            If _gitterVorschauBasis Is Nothing OrElse _gitterVorschauQuellX Is Nothing Then Return
+            Dim werte = WarpGridValues
+            If werte Is Nothing OrElse werte.Length < 4 Then Return
+            Dim bw = _gitterVorschauBasis.Width, bh = _gitterVorschauBasis.Height
+            Dim n = (_warpColumns + 1) * (_warpRows + 1)
+            Dim zx(n - 1) As Single
+            Dim zy(n - 1) As Single
+            For i = 0 To n - 1
+                Dim x = werte(2 + i * 2), y = werte(3 + i * 2)
+                If Double.IsNaN(x) OrElse Double.IsNaN(y) Then Return
+                zx(i) = CSng(x / 100.0 * bw)
+                zy(i) = CSng(y / 100.0 * bh)
+            Next
+
+            Dim verzerrt = ImageGeometryMapper.VerzerreUeberGitter(
+                _gitterVorschauBasis, _warpColumns, _warpRows, zx, zy,
+                _gitterVorschauQuellX, _gitterVorschauQuellY)
+            ' Gleiches Objekt zurueck heisst: unbewegt, also nichts zu zeigen.
+            If verzerrt Is Nothing OrElse Object.ReferenceEquals(verzerrt, _gitterVorschauBasis) Then
+                RaeumeGitterVorschauAb()
+                Return
+            End If
+            Using verzerrt
+                Using daten = SKImage.FromBitmap(verzerrt).Encode(SKEncodedImageFormat.Png, 90)
+                    Using strom = New IO.MemoryStream(daten.ToArray())
+                        VorschauBild = New Bitmap(strom)
+                        _vorschauQuelle = "Gitter"
+                    End Using
+                End Using
+            End Using
+        End Sub
+
+
+        ' ── Linienverzerrung ────────────────────────────────────────────────────
+        '
+        ' Man legt eine Linie auf eine KANTE im Bild und zieht sie an ihren neuen Platz. Die Kante
+        ' geht als Ganzes mit, und die Umgebung folgt weich. Das ist der Unterschied zum
+        ' Stuetzpunktraster: dort muesste man einer Kante ein Dutzend Punkte einzeln nachfuehren.
+        '
+        ' Jede Linie liegt zweimal vor: als QUELLE dort, wo sie im Bild liegt, und als ZIEL dort,
+        ' wohin sie gezogen wurde. Beide im QUELLRAUM in Prozent, wie das Raster und aus demselben
+        ' Grund: sonst wanderte die Verzerrung, sobald spaeter zugeschnitten oder gedreht wird.
+
+        ''' <summary>Eine Linie der Verzerrung. Alle Werte in Quell-Prozent.</summary>
+        Public Class VerzerrLinie
+            Public Property QuelleAx As Double
+            Public Property QuelleAy As Double
+            Public Property QuelleBx As Double
+            Public Property QuelleBy As Double
+            Public Property ZielAx As Double
+            Public Property ZielAy As Double
+            Public Property ZielBx As Double
+            Public Property ZielBy As Double
+
+            Public ReadOnly Property IstBewegt As Boolean
+                Get
+                    Return Math.Abs(ZielAx - QuelleAx) > 0.02 OrElse Math.Abs(ZielAy - QuelleAy) > 0.02 OrElse
+                           Math.Abs(ZielBx - QuelleBx) > 0.02 OrElse Math.Abs(ZielBy - QuelleBy) > 0.02
+                End Get
+            End Property
+        End Class
+
+        Private ReadOnly _linien As New List(Of VerzerrLinie)()
+        ''' <summary>Welche Linie gerade gezogen wird, und woran: 0 Anfang, 1 Ende, 2 die ganze
+        ''' Linie. -1 heisst: kein Zug.</summary>
+        Private _linienDragIndex As Integer = -1
+        Private _linienDragTeil As Integer = -1
+        Private _linienDragStartX As Double = 0
+        Private _linienDragStartY As Double = 0
+        Private _linienDragZielAx As Double = 0
+        Private _linienDragZielAy As Double = 0
+        Private _linienDragZielBx As Double = 0
+        Private _linienDragZielBy As Double = 0
+
+        Public ReadOnly Property HasLinienChanges As Boolean
+            Get
+                Return _linien.Any(Function(l) l.IstBewegt)
+            End Get
+        End Property
+
+        Public ReadOnly Property LinienAnzahl As Integer
+            Get
+                Return _linien.Count
+            End Get
+        End Property
+
+        ''' <summary>Alle Linien fuer die Anzeige, in ANZEIGE-Prozent: [Anzahl, dann je Linie
+        ''' QuelleAx, QuelleAy, QuelleBx, QuelleBy, ZielAx, ZielAy, ZielBx, ZielBy].
+        '''
+        ''' Punkte ohne Anzeigeort (weggeschnitten, leere Begradigungsecke) kommen als NaN heraus
+        ''' und werden nicht gezeichnet - genau wie beim Raster.</summary>
+        Public ReadOnly Property LinienValues As Double()
+            Get
+                Dim werte(_linien.Count * 8) As Double
+                werte(0) = _linien.Count
+                For i = 0 To _linien.Count - 1
+                    Dim l = _linien(i)
+                    Dim paare = {(l.QuelleAx, l.QuelleAy), (l.QuelleBx, l.QuelleBy),
+                                 (l.ZielAx, l.ZielAy), (l.ZielBx, l.ZielBy)}
+                    For j = 0 To 3
+                        Dim anzeige = SourcePercentToDisplayPercent(paare(j).Item1, paare(j).Item2)
+                        If anzeige.HasValue Then
+                            werte(1 + i * 8 + j * 2) = anzeige.Value.X
+                            werte(2 + i * 8 + j * 2) = anzeige.Value.Y
+                        Else
+                            werte(1 + i * 8 + j * 2) = Double.NaN
+                            werte(2 + i * 8 + j * 2) = Double.NaN
+                        End If
+                    Next
+                Next
+                Return werte
+            End Get
+        End Property
+
+        Private Sub MeldeLinien()
+            Me.RaisePropertyChanged(NameOf(LinienValues))
+            Me.RaisePropertyChanged(NameOf(HasLinienChanges))
+            Me.RaisePropertyChanged(NameOf(LinienAnzahl))
+        End Sub
+
+        ''' <summary>Eine neue Linie beginnen. Quelle und Ziel sind dabei gleich - die Linie tut noch
+        ''' nichts, sie liegt erst einmal nur da. Erst das Ziehen an ihr verzerrt.</summary>
+        Public Function BeginneNeueLinie(xPercent As Double, yPercent As Double) As Boolean
+            Dim quelle = DisplayPercentToSourcePercent(xPercent, yPercent)
+            If Not quelle.HasValue Then Return False
+            If _linien.Count >= MaxLinien Then Return False
+            CaptureUndoState("Linien")
+            Dim l = New VerzerrLinie With {
+                .QuelleAx = quelle.Value.X, .QuelleAy = quelle.Value.Y,
+                .QuelleBx = quelle.Value.X, .QuelleBy = quelle.Value.Y,
+                .ZielAx = quelle.Value.X, .ZielAy = quelle.Value.Y,
+                .ZielBx = quelle.Value.X, .ZielBy = quelle.Value.Y}
+            _linien.Add(l)
+            _linienDragIndex = _linien.Count - 1
+            ' Beim Aufziehen wandert das ENDE, und zwar in Quelle und Ziel gleichzeitig: es wird ja
+            ' gerade erst festgelegt, wo die Linie liegt.
+            _linienDragTeil = 3
+            MeldeLinien()
+            BereiteLinienVorschauVor()
+            Return True
+        End Function
+
+        ''' <summary>Hoechstzahl der Linien. Jede kostet bei jedem Rasterknoten eine Auswertung -
+        ''' mit einem Dutzend faengt die Vorschau an zu haengen, und mehr braucht man auch nicht.</summary>
+        Public Const MaxLinien As Integer = 12
+
+        ''' <summary>Eine vorhandene Linie anfassen: an einem Ende oder in der Mitte. Getroffen wird
+        ''' die ZIELlinie - die Quelle bleibt liegen, wo sie liegt.</summary>
+        Public Function TryBeginLinienDrag(xPercent As Double, yPercent As Double,
+                                           slopXPercent As Double, slopYPercent As Double) As Boolean
+            Dim besterAbstand = Double.MaxValue
+            Dim besteLinie = -1, besterTeil = -1
+            For i = 0 To _linien.Count - 1
+                Dim l = _linien(i)
+                Dim a = SourcePercentToDisplayPercent(l.ZielAx, l.ZielAy)
+                Dim b = SourcePercentToDisplayPercent(l.ZielBx, l.ZielBy)
+                If Not a.HasValue OrElse Not b.HasValue Then Continue For
+                ' Erst die Enden: sie liegen auf der Linie, muessen also Vorrang haben.
+                For teil = 0 To 1
+                    Dim p = If(teil = 0, a.Value, b.Value)
+                    Dim dx = (xPercent - p.X) / Math.Max(0.0001, slopXPercent)
+                    Dim dy = (yPercent - p.Y) / Math.Max(0.0001, slopYPercent)
+                    Dim d = dx * dx + dy * dy
+                    If d <= 1.0 AndAlso d < besterAbstand Then
+                        besterAbstand = d
+                        besteLinie = i
+                        besterTeil = teil
+                    End If
+                Next
+            Next
+            If besteLinie < 0 Then
+                ' Dann die Linien selbst, in ihrer Mitte gefasst.
+                For i = 0 To _linien.Count - 1
+                    Dim l = _linien(i)
+                    Dim a = SourcePercentToDisplayPercent(l.ZielAx, l.ZielAy)
+                    Dim b = SourcePercentToDisplayPercent(l.ZielBx, l.ZielBy)
+                    If Not a.HasValue OrElse Not b.HasValue Then Continue For
+                    Dim d = AbstandZurStrecke(xPercent, yPercent, a.Value.X, a.Value.Y, b.Value.X, b.Value.Y,
+                                              slopXPercent, slopYPercent)
+                    If d <= 1.0 AndAlso d < besterAbstand Then
+                        besterAbstand = d
+                        besteLinie = i
+                        besterTeil = 2
+                    End If
+                Next
+            End If
+            If besteLinie < 0 Then Return False
+
+            CaptureUndoState("Linien")
+            _linienDragIndex = besteLinie
+            _linienDragTeil = besterTeil
+            _linienDragStartX = xPercent
+            _linienDragStartY = yPercent
+            Dim gefasst = _linien(besteLinie)
+            _linienDragZielAx = gefasst.ZielAx
+            _linienDragZielAy = gefasst.ZielAy
+            _linienDragZielBx = gefasst.ZielBx
+            _linienDragZielBy = gefasst.ZielBy
+            BereiteLinienVorschauVor()
+            Return True
+        End Function
+
+        ''' <summary>Abstand eines Punktes zu einer STRECKE, in Greifweiten gemessen. Nicht zur
+        ''' unendlichen Geraden: sonst liesse sich eine kurze Linie weit ausserhalb ihrer Enden
+        ''' anfassen.</summary>
+        Private Shared Function AbstandZurStrecke(px As Double, py As Double,
+                                                  ax As Double, ay As Double, bx As Double, by As Double,
+                                                  slopX As Double, slopY As Double) As Double
+            Dim dx = bx - ax, dy = by - ay
+            Dim laenge2 = dx * dx + dy * dy
+            Dim t = 0.0
+            If laenge2 > 0.000001 Then
+                t = ((px - ax) * dx + (py - ay) * dy) / laenge2
+                t = Math.Max(0.0, Math.Min(1.0, t))
+            End If
+            Dim nx = ax + t * dx, ny = ay + t * dy
+            Dim ex = (px - nx) / Math.Max(0.0001, slopX)
+            Dim ey = (py - ny) / Math.Max(0.0001, slopY)
+            Return ex * ex + ey * ey
+        End Function
+
+        Public Sub UpdateLinienDrag(xPercent As Double, yPercent As Double)
+            If _linienDragIndex < 0 OrElse _linienDragIndex >= _linien.Count Then Return
+            Dim l = _linien(_linienDragIndex)
+
+            If _linienDragTeil = 2 Then
+                ' Die ganze Ziellinie mitnehmen: die Verschiebung wird im ANZEIGERAUM genommen und
+                ' fuer beide Enden einzeln zurueckgerechnet. Ein Versatz in Quell-Prozent waere bei
+                ' gedrehtem Bild eine andere Richtung als die, in die man zieht.
+                Dim va = SourcePercentToDisplayPercent(_linienDragZielAx, _linienDragZielAy)
+                Dim vb = SourcePercentToDisplayPercent(_linienDragZielBx, _linienDragZielBy)
+                If Not va.HasValue OrElse Not vb.HasValue Then Return
+                Dim dx = xPercent - _linienDragStartX
+                Dim dy = yPercent - _linienDragStartY
+                Dim na = DisplayPercentToSourcePercent(va.Value.X + dx, va.Value.Y + dy)
+                Dim nb = DisplayPercentToSourcePercent(vb.Value.X + dx, vb.Value.Y + dy)
+                If Not na.HasValue OrElse Not nb.HasValue Then Return
+                l.ZielAx = Klemme100(na.Value.X) : l.ZielAy = Klemme100(na.Value.Y)
+                l.ZielBx = Klemme100(nb.Value.X) : l.ZielBy = Klemme100(nb.Value.Y)
+            Else
+                Dim quelle = DisplayPercentToSourcePercent(xPercent, yPercent)
+                If Not quelle.HasValue Then Return
+                Dim nx = Klemme100(quelle.Value.X), ny = Klemme100(quelle.Value.Y)
+                Select Case _linienDragTeil
+                    Case 0
+                        l.ZielAx = nx : l.ZielAy = ny
+                    Case 1
+                        l.ZielBx = nx : l.ZielBy = ny
+                    Case 3
+                        ' Aufziehen: Quelle UND Ziel, die Linie wird ja gerade erst gelegt.
+                        l.QuelleBx = nx : l.QuelleBy = ny
+                        l.ZielBx = nx : l.ZielBy = ny
+                End Select
+            End If
+
+            MeldeLinien()
+            AktualisiereLinienVorschau()
+        End Sub
+
+        Private Shared Function Klemme100(wert As Double) As Double
+            Return Math.Max(0.0, Math.Min(100.0, wert))
+        End Function
+
+        Public Sub EndLinienDrag()
+            If _linienDragIndex < 0 Then Return
+            ' Eine Linie, die beim Aufziehen zu kurz geblieben ist, war ein Klick und keine Linie.
+            ' Sie stehen zu lassen hiesse, dass jeder Fehlklick einen Griff auf dem Bild hinterlaesst.
+            If _linienDragTeil = 3 AndAlso _linienDragIndex < _linien.Count Then
+                Dim l = _linien(_linienDragIndex)
+                If Math.Abs(l.QuelleBx - l.QuelleAx) < 1.0 AndAlso Math.Abs(l.QuelleBy - l.QuelleAy) < 1.0 Then
+                    _linien.RemoveAt(_linienDragIndex)
+                    MeldeLinien()
+                End If
+            End If
+            _linienDragIndex = -1
+            _linienDragTeil = -1
+        End Sub
+
+        ''' <summary>Die zuletzt angelegte Linie wieder entfernen.</summary>
+        Public Sub EntferneLetzteLinie()
+            If _linien.Count = 0 Then Return
+            CaptureUndoState("Linien")
+            _linien.RemoveAt(_linien.Count - 1)
+            RaeumeLinienVorschauAb()
+            MeldeLinien()
+        End Sub
+
+        Public Sub ResetLinien()
+            If _linien.Count = 0 Then Return
+            CaptureUndoState("Linien")
+            _linien.Clear()
+            _linienDragIndex = -1
+            _linienDragTeil = -1
+            RaeumeLinienVorschauAb()
+            MeldeLinien()
+        End Sub
+
+        ''' <summary>Die Linien als flache Felder in PIXELN des uebergebenen Bildes.</summary>
+        Private Function LinienAlsPixel(breite As Integer, hoehe As Integer,
+                                        ByRef quelle As Double(), ByRef ziel As Double()) As Boolean
+            Dim bewegte = _linien.Where(Function(l) l.IstBewegt).ToList()
+            If bewegte.Count = 0 Then Return False
+            ReDim quelle(bewegte.Count * 4 - 1)
+            ReDim ziel(bewegte.Count * 4 - 1)
+            For i = 0 To bewegte.Count - 1
+                Dim l = bewegte(i)
+                quelle(i * 4) = l.QuelleAx / 100.0 * breite
+                quelle(i * 4 + 1) = l.QuelleAy / 100.0 * hoehe
+                quelle(i * 4 + 2) = l.QuelleBx / 100.0 * breite
+                quelle(i * 4 + 3) = l.QuelleBy / 100.0 * hoehe
+                ziel(i * 4) = l.ZielAx / 100.0 * breite
+                ziel(i * 4 + 1) = l.ZielAy / 100.0 * hoehe
+                ziel(i * 4 + 2) = l.ZielBx / 100.0 * breite
+                ziel(i * 4 + 3) = l.ZielBy / 100.0 * hoehe
+            Next
+            Return True
+        End Function
+
+
+        ''' <summary>Traegt eine Verzerrung in ALLE Objekte ein, damit sie mitgehen.
+        '''
+        ''' Gespeichert wird immer als GITTER, egal welches Werkzeug sie erzeugt hat. Das ist die
+        ''' Form, die alles ausdruecken kann, und sie laesst sich verketten: wird ein zweites Mal
+        ''' verzerrt, wandern einfach die vorhandenen Stuetzpunkte durch das neue Feld. Mit drei
+        ''' getrennten Arten muesste man fuer jede Paarung ueberlegen, was ihre Verkettung ist.
+        '''
+        ''' <paramref name="abbildung"/> nimmt einen Punkt in Bildprozent und gibt zurueck, wohin er
+        ''' wandert - ebenfalls in Bildprozent.</summary>
+        Private Sub UebertrageVerzerrungAufObjekte(abbildung As Func(Of Double, Double, (X As Double, Y As Double)))
+            If _annotations Is Nothing OrElse _annotations.Count = 0 Then Return
+            Const Stufen As Integer = 12
+            For Each a In _annotations
+                If a Is Nothing Then Continue For
+                Dim alt = a.Verzerrung
+                Dim knoten((Stufen + 1) * (Stufen + 1) * 2 - 1) As Double
+                For zi = 0 To Stufen
+                    For si = 0 To Stufen
+                        Dim i = (zi * (Stufen + 1) + si) * 2
+                        Dim px = si / CDbl(Stufen) * 100.0
+                        Dim py = zi / CDbl(Stufen) * 100.0
+                        ' ERST die bestehende Verzerrung, DANN die neue - in der Reihenfolge, in der
+                        ' sie eingestellt wurden.
+                        If alt IsNot Nothing AndAlso Not alt.IstLeer Then
+                            Dim v = BestehendeVerzerrung(alt, px, py)
+                            px = v.X : py = v.Y
+                        End If
+                        Dim n = abbildung(px, py)
+                        knoten(i) = n.X
+                        knoten(i + 1) = n.Y
+                    Next
+                Next
+                a.Verzerrung = New ObjektVerzerrung With {
+                    .Art = "Gitter", .Spalten = Stufen, .Zeilen = Stufen, .Knoten = knoten}
+            Next
+        End Sub
+
+        ''' <summary>Wohin ein Punkt durch eine BEREITS eingetragene Objektverzerrung wandert. Alles
+        ''' in Bildprozent.</summary>
+        Private Shared Function BestehendeVerzerrung(v As ObjektVerzerrung, px As Double, py As Double) As (X As Double, Y As Double)
+            If v Is Nothing OrElse v.IstLeer OrElse v.Art <> "Gitter" Then Return (px, py)
+            Dim u = Math.Max(0.0, Math.Min(1.0, px / 100.0)) * v.Spalten
+            Dim w = Math.Max(0.0, Math.Min(1.0, py / 100.0)) * v.Zeilen
+            Dim s0 = Math.Max(0, Math.Min(v.Spalten - 1, CInt(Math.Floor(u))))
+            Dim z0 = Math.Max(0, Math.Min(v.Zeilen - 1, CInt(Math.Floor(w))))
+            Dim tu = u - s0, tw = w - z0
+            Dim K = Function(si As Integer, zi As Integer) As (X As Double, Y As Double)
+                        Dim i = (zi * (v.Spalten + 1) + si) * 2
+                        Return (v.Knoten(i), v.Knoten(i + 1))
+                    End Function
+            Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
+            Dim oben = (a.X + (b.X - a.X) * tu, a.Y + (b.Y - a.Y) * tu)
+            Dim unten = (c.X + (d.X - c.X) * tu, c.Y + (d.Y - c.Y) * tu)
+            Return (oben.Item1 + (unten.Item1 - oben.Item1) * tw,
+                    oben.Item2 + (unten.Item2 - oben.Item2) * tw)
+        End Function
+
+        ''' <summary>Die Abbildung des GITTERWERKZEUGS: das Raster liegt im Quellraum in Prozent, ein
+        ''' Punkt wandert also zwischen seinen vier Stuetzpunkten.</summary>
+        Private Function GitterAbbildung() As Func(Of Double, Double, (X As Double, Y As Double))
+            Dim spalten = _warpColumns, zeilen = _warpRows
+            Dim xs = CType(_warpX.Clone(), Double())
+            Dim ys = CType(_warpY.Clone(), Double())
+            Return Function(px As Double, py As Double) As (X As Double, Y As Double)
+                       Dim u = Math.Max(0.0, Math.Min(1.0, px / 100.0)) * spalten
+                       Dim w = Math.Max(0.0, Math.Min(1.0, py / 100.0)) * zeilen
+                       Dim s0 = Math.Max(0, Math.Min(spalten - 1, CInt(Math.Floor(u))))
+                       Dim z0 = Math.Max(0, Math.Min(zeilen - 1, CInt(Math.Floor(w))))
+                       Dim tu = u - s0, tw = w - z0
+                       Dim K = Function(si As Integer, zi As Integer) As (X As Double, Y As Double)
+                                   Dim i = zi * (spalten + 1) + si
+                                   Return (xs(i), ys(i))
+                               End Function
+                       Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
+                       Dim oben = (a.X + (b.X - a.X) * tu, a.Y + (b.Y - a.Y) * tu)
+                       Dim unten = (c.X + (d.X - c.X) * tu, c.Y + (d.Y - c.Y) * tu)
+                       Return (oben.Item1 + (unten.Item1 - oben.Item1) * tw,
+                               oben.Item2 + (unten.Item2 - oben.Item2) * tw)
+                   End Function
+        End Function
+
+        ''' <summary>Die Abbildung des LINIENWERKZEUGS.</summary>
+        Private Function LinienAbbildung() As Func(Of Double, Double, (X As Double, Y As Double))
+            Dim bewegte = _linien.Where(Function(l) l.IstBewegt).ToList()
+            Dim q(bewegte.Count * 4 - 1) As Double
+            Dim z(bewegte.Count * 4 - 1) As Double
+            For i = 0 To bewegte.Count - 1
+                Dim l = bewegte(i)
+                q(i * 4) = l.QuelleAx : q(i * 4 + 1) = l.QuelleAy
+                q(i * 4 + 2) = l.QuelleBx : q(i * 4 + 3) = l.QuelleBy
+                z(i * 4) = l.ZielAx : z(i * 4 + 1) = l.ZielAy
+                z(i * 4 + 2) = l.ZielBx : z(i * 4 + 3) = l.ZielBy
+            Next
+            Return Function(px As Double, py As Double) As (X As Double, Y As Double)
+                       ' Das Feld sagt, WOHER ein Punkt seine Farbe holt. Ein Objekt soll dorthin
+                       ' WANDERN, also werden Quelle und Ziel getauscht.
+                       Dim p = ImageGeometryMapper.LinienPunkt(px, py, z, q)
+                       Return (CDbl(p.X), CDbl(p.Y))
+                   End Function
+        End Function
+
+        ''' <summary>Die Linienverzerrung ins Arbeitsbild backen - derselbe Weg wie beim Raster und
+        ''' aus demselben Grund: sie ist keine Matrix und laesst sich nicht als Zahl aufheben.</summary>
+        Public Sub ApplyLinienVerzerrung()
+            If Not HasLinienChanges Then Return
+            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
+
+            PushUndo()
+            Dim undoEintrag = _lastPushedUndoEntry
+            ' Die OBJEKTE gehen mit, ohne eingebacken zu werden.
+            UebertrageVerzerrungAufObjekte(LinienAbbildung())
+            SetzeBeschaeftigtGrund(LocalizationService.T("Verzerrung wird angewendet"))
+            StatusText = LocalizationService.T("Verzerrung wird angewendet…")
+            EnqueueWorkingCommit(
+                Function()
+                    Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
+                        Sub(full)
+                            Dim qp As Double() = Nothing, zp As Double() = Nothing
+                            If Not LinienAlsPixel(full.Width, full.Height, qp, zp) Then Return
+                            Dim stufen = ImageGeometryMapper.LinienRasterStufen
+                            Dim quellX As Single() = Nothing, quellY As Single() = Nothing
+                            ImageGeometryMapper.LinienFeld(full.Width, full.Height, stufen, stufen,
+                                                           qp, zp, quellX, quellY)
+                            If quellX Is Nothing Then Return
+                            Dim zielX(quellX.Length - 1) As Single
+                            Dim zielY(quellY.Length - 1) As Single
+                            For zi = 0 To stufen
+                                For si = 0 To stufen
+                                    Dim i = zi * (stufen + 1) + si
+                                    zielX(i) = CSng(si / CDbl(stufen) * full.Width)
+                                    zielY(i) = CSng(zi / CDbl(stufen) * full.Height)
+                                Next
+                            Next
+                            Using kopie = full.Copy()
+                                Using verzerrt = ImageGeometryMapper.VerzerreUeberGitter(
+                                        kopie, stufen, stufen, zielX, zielY, quellX, quellY)
+                                    If verzerrt Is Nothing OrElse Object.ReferenceEquals(verzerrt, kopie) Then Return
+                                    Using canvas = New SKCanvas(full)
+                                        canvas.Clear(SKColors.Transparent)
+                                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                            canvas.DrawBitmap(verzerrt, 0, 0, paint)
+                                        End Using
+                                    End Using
+                                End Using
+                            End Using
+                        End Sub)
+                End Function,
+                Sub(patch)
+                    If patch Is Nothing Then
+                        StatusText = LocalizationService.T("Verzerren fehlgeschlagen")
+                        Return
+                    End If
+                    If undoEintrag IsNot Nothing Then undoEintrag.Patch = patch
+                    RaeumeLinienVorschauAb()
+                    _linien.Clear()
+                    MeldeLinien()
+                    StatusText = LocalizationService.T("Verzerrung angewendet")
+                    _hasChanges = True
+                    SchedulePreviewUpdate()
+                End Sub)
+        End Sub
+
+        ' ── Live-Vorschau der Linienverzerrung ──────────────────────────────────
+        '
+        ' Derselbe Kanal wie bei Gitter und Tiefen-Unschaerfe: EIN Vorschaubild, mit Halter-Vermerk.
+        ' Die Grundlage ist das Anzeigebild OHNE Objekte, aus demselben Grund wie dort - Objekte
+        ' werden beim Anwenden nicht mitverzerrt.
+
+        Private _linienVorschauBasis As SKBitmap
+
+        Private Sub BereiteLinienVorschauVor()
+            RaeumeLinienVorschauAb()
+            Dim quelle = TryCast(DisplayImage, Bitmap)
+            If quelle Is Nothing Then Return
+            Try
+                Using strom = New IO.MemoryStream()
+                    quelle.Save(strom, PngBitmapEncoderOptions.Default)
+                    strom.Position = 0
+                    _linienVorschauBasis = SKBitmap.Decode(strom)
+                End Using
+            Catch
+                RaeumeLinienVorschauAb()
+                Return
+            End Try
+        End Sub
+
+
+        Private Sub RaeumeLinienVorschauAb()
+            If String.Equals(_vorschauQuelle, "Linien", StringComparison.Ordinal) Then
+                VorschauBild = Nothing
+                _vorschauQuelle = ""
+            End If
+            _linienVorschauBasis?.Dispose()
+            _linienVorschauBasis = Nothing
+        End Sub
+
+        Private Sub AktualisiereLinienVorschau()
+            If _linienVorschauBasis Is Nothing Then Return
+            Dim bw = _linienVorschauBasis.Width, bh = _linienVorschauBasis.Height
+            ' Die Vorschau rechnet im ANZEIGEraum: die Linien werden dafuer ueber ihre Anzeigelage
+            ' genommen, nicht ueber die Quelllage. Sonst saesse die Verzerrung bei beschnittenem
+            ' oder gedrehtem Bild woanders als der Griff, den man gerade zieht.
+            Dim werte = LinienValues
+            If werte Is Nothing OrElse werte.Length < 9 Then Return
+            Dim anzahl = CInt(werte(0))
+            Dim qp As New List(Of Double)(), zp As New List(Of Double)()
+            For i = 0 To anzahl - 1
+                Dim v(7) As Double
+                Dim gilt = True
+                For j = 0 To 7
+                    v(j) = werte(1 + i * 8 + j)
+                    If Double.IsNaN(v(j)) Then gilt = False
+                Next
+                If Not gilt Then Continue For
+                If Math.Abs(v(4) - v(0)) < 0.02 AndAlso Math.Abs(v(5) - v(1)) < 0.02 AndAlso
+                   Math.Abs(v(6) - v(2)) < 0.02 AndAlso Math.Abs(v(7) - v(3)) < 0.02 Then Continue For
+                qp.AddRange({v(0) / 100.0 * bw, v(1) / 100.0 * bh, v(2) / 100.0 * bw, v(3) / 100.0 * bh})
+                zp.AddRange({v(4) / 100.0 * bw, v(5) / 100.0 * bh, v(6) / 100.0 * bw, v(7) / 100.0 * bh})
+            Next
+            If qp.Count = 0 Then
+                RaeumeLinienVorschauAb()
+                Return
+            End If
+
+            Dim stufen = ImageGeometryMapper.LinienRasterStufen
+            Dim quellX As Single() = Nothing, quellY As Single() = Nothing
+            ImageGeometryMapper.LinienFeld(bw, bh, stufen, stufen, qp.ToArray(), zp.ToArray(), quellX, quellY)
+            If quellX Is Nothing Then Return
+            Dim zielX(quellX.Length - 1) As Single
+            Dim zielY(quellY.Length - 1) As Single
+            For zi = 0 To stufen
+                For si = 0 To stufen
+                    Dim i = zi * (stufen + 1) + si
+                    zielX(i) = CSng(si / CDbl(stufen) * bw)
+                    zielY(i) = CSng(zi / CDbl(stufen) * bh)
+                Next
+            Next
+            Dim verzerrt = ImageGeometryMapper.VerzerreUeberGitter(
+                _linienVorschauBasis, stufen, stufen, zielX, zielY, quellX, quellY)
+            If verzerrt Is Nothing OrElse Object.ReferenceEquals(verzerrt, _linienVorschauBasis) Then
+                RaeumeLinienVorschauAb()
+                Return
+            End If
+            Using verzerrt
+                Using daten = SKImage.FromBitmap(verzerrt).Encode(SKEncodedImageFormat.Png, 90)
+                    Using strom = New IO.MemoryStream(daten.ToArray())
+                        VorschauBild = New Bitmap(strom)
+                        _vorschauQuelle = "Linien"
+                    End Using
+                End Using
+            End Using
+        End Sub
+
+
+        ' ── Ein Objekt fuer sich verzerren ──────────────────────────────────────
+        '
+        ' Ist im Verzerren-Werkzeug ein Objekt markiert, gehoeren die Anfasser IHM und nicht dem
+        ' Bild. Die vier Ecken liegen dann auf dem Objektrechteck, und gespeichert werden sie in
+        ' Prozent DES OBJEKTS - so wandert die Verzerrung mit, wenn man das Objekt verschiebt,
+        ' statt sich zu aendern.
+
+        Private _objektEckeDrag As Integer = -1
+
+        ''' <summary>Gehoeren die Anfasser gerade einem Objekt statt dem Bild?</summary>
+        Public ReadOnly Property VerzerrtDasObjekt As Boolean
+            Get
+                Return ShowTransformAdjustments AndAlso HasSelectedAnnotation AndAlso
+                       IsVerzerrenPerspektive
+            End Get
+        End Property
+
+        Private Function AktuellesObjekt() As ImageAnnotation
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return Nothing
+            Return _annotations(_selectedAnnotationIndex)
+        End Function
+
+        ''' <summary>Die vier Ecken der eigenen Verzerrung, in Prozent des Objekts. Ohne eigene
+        ''' Verzerrung ist es das unverzerrte Rechteck.</summary>
+        Private Function ObjektEckenRoh() As Double()
+            Dim a = AktuellesObjekt()
+            If a Is Nothing Then Return Nothing
+            Dim v = a.EigeneVerzerrung
+            If v IsNot Nothing AndAlso v.Art = "Perspektive" AndAlso v.Ecken IsNot Nothing AndAlso
+               v.Ecken.Length = 8 Then
+                Return CType(v.Ecken.Clone(), Double())
+            End If
+            Return New Double() {0, 0, 100, 0, 100, 100, 0, 100}
+        End Function
+
+        ''' <summary>Die vier Ecken in ANZEIGE-Prozent, fuer das Overlay.</summary>
+        Public ReadOnly Property ObjektEckenValues As Double()
+            Get
+                If Not VerzerrtDasObjekt Then Return Nothing
+                Dim roh = ObjektEckenRoh()
+                If roh Is Nothing Then Return Nothing
+                Dim x = _annotationXPercent, y = _annotationYPercent
+                Dim b = _annotationWidthPercent, h = _annotationHeightPercent
+                If b <= 0 OrElse h <= 0 Then Return Nothing
+                Dim werte(7) As Double
+                For i = 0 To 3
+                    werte(i * 2) = x + roh(i * 2) / 100.0 * b
+                    werte(i * 2 + 1) = y + roh(i * 2 + 1) / 100.0 * h
+                Next
+                Return werte
+            End Get
+        End Property
+
+        Public ReadOnly Property HatObjektVerzerrung As Boolean
+            Get
+                Dim a = AktuellesObjekt()
+                Return a IsNot Nothing AndAlso a.EigeneVerzerrung IsNot Nothing AndAlso
+                       Not a.EigeneVerzerrung.IstLeer
+            End Get
+        End Property
+
+        Public Function TryBeginObjektEckeDrag(xPercent As Double, yPercent As Double,
+                                               slopXPercent As Double, slopYPercent As Double) As Boolean
+            Dim werte = ObjektEckenValues
+            If werte Is Nothing Then Return False
+            Dim besterAbstand = Double.MaxValue
+            Dim bester = -1
+            For i = 0 To 3
+                Dim dx = (xPercent - werte(i * 2)) / Math.Max(0.0001, slopXPercent)
+                Dim dy = (yPercent - werte(i * 2 + 1)) / Math.Max(0.0001, slopYPercent)
+                Dim d = dx * dx + dy * dy
+                If d <= 1.0 AndAlso d < besterAbstand Then
+                    besterAbstand = d
+                    bester = i
+                End If
+            Next
+            If bester < 0 Then Return False
+            CaptureUndoState("Objektverzerrung")
+            _objektEckeDrag = bester
+            Return True
+        End Function
+
+        Public Sub UpdateObjektEckeDrag(xPercent As Double, yPercent As Double)
+            If _objektEckeDrag < 0 Then Return
+            Dim a = AktuellesObjekt()
+            If a Is Nothing Then Return
+            Dim b = _annotationWidthPercent, h = _annotationHeightPercent
+            If b <= 0 OrElse h <= 0 Then Return
+            Dim roh = ObjektEckenRoh()
+            If roh Is Nothing Then Return
+            ' Zurueck in Objektprozent. BEWUSST nicht geklemmt: eine Ecke ueber den Objektrand hinaus
+            ' zu ziehen ist genau der Sinn der Sache - die Ebene waechst beim Zeichnen mit.
+            roh(_objektEckeDrag * 2) = (xPercent - _annotationXPercent) / b * 100.0
+            roh(_objektEckeDrag * 2 + 1) = (yPercent - _annotationYPercent) / h * 100.0
+            a.EigeneVerzerrung = New ObjektVerzerrung With {.Art = "Perspektive", .Ecken = roh}
+            MeldeObjektVerzerrung()
+            SchedulePreviewUpdate()
+        End Sub
+
+        Public Sub EndObjektEckeDrag()
+            _objektEckeDrag = -1
+        End Sub
+
+        ''' <summary>Die eigene Verzerrung des markierten Objekts wieder wegnehmen.</summary>
+        Public Sub ResetObjektVerzerrung()
+            Dim a = AktuellesObjekt()
+            If a Is Nothing OrElse a.EigeneVerzerrung Is Nothing Then Return
+            CaptureUndoState("Objektverzerrung")
+            a.EigeneVerzerrung = Nothing
+            MeldeObjektVerzerrung()
+            SchedulePreviewUpdate()
+        End Sub
+
+        Private Sub MeldeObjektVerzerrung()
+            Me.RaisePropertyChanged(NameOf(ObjektEckenValues))
+            Me.RaisePropertyChanged(NameOf(HatObjektVerzerrung))
+            Me.RaisePropertyChanged(NameOf(VerzerrtDasObjekt))
+        End Sub
+
+        ''' <summary>Fasst den naechstgelegenen Rasterpunkt an, sofern einer in Greifweite liegt.
+        ''' Die Trefferpruefung laeuft im ANZEIGERAUM: greifbar ist, was man sieht, und der Abstand
+        ''' soll der auf dem Bildschirm sein - im Quellraum waere er bei gedrehtem oder beschnittenem
+        ''' Bild ein anderer.</summary>
+        Public Function TryBeginWarpDrag(xPercent As Double, yPercent As Double,
+                                         slopXPercent As Double, slopYPercent As Double) As Boolean
+            StelleGitterBereit()
+            Dim besterAbstand = Double.MaxValue
+            Dim bester = -1
+            For i = 0 To _warpX.Length - 1
+                Dim anzeige = SourcePercentToDisplayPercent(_warpX(i), _warpY(i))
+                If Not anzeige.HasValue Then Continue For
+                Dim dx = (xPercent - anzeige.Value.X) / Math.Max(0.0001, slopXPercent)
+                Dim dy = (yPercent - anzeige.Value.Y) / Math.Max(0.0001, slopYPercent)
+                Dim d = dx * dx + dy * dy
+                If d <= 1.0 AndAlso d < besterAbstand Then
+                    besterAbstand = d
+                    bester = i
+                End If
+            Next
+            If bester < 0 Then Return False
+            PushUndo()
+            _warpDragIndex = bester
+            BereiteGitterVorschauVor()
+            Return True
+        End Function
+
+        Public Sub UpdateWarpDrag(xPercent As Double, yPercent As Double)
+            If _warpDragIndex < 0 Then Return
+            Dim quelle = DisplayPercentToSourcePercent(xPercent, yPercent)
+            ' Neben dem Bildinhalt (Leinwandrand, leere Begradigungsecke) gibt es keinen Quellpunkt.
+            ' Der Zug bleibt dann einfach stehen, statt auf einen geratenen Wert zu springen.
+            If Not quelle.HasValue Then Return
+            ' Die Randpunkte duerfen NICHT ins Bild hinein oder aus ihm heraus wandern: sonst
+            ' entstehen an der Bildkante durchsichtige Streifen oder es wird Bildinhalt
+            ' abgeschnitten, ohne dass man es beim Ziehen sieht. Sie bleiben auf ihrer Kante und
+            ' laufen nur DARAUF entlang.
+            Dim spalte = _warpDragIndex Mod (_warpColumns + 1)
+            Dim zeile = _warpDragIndex \ (_warpColumns + 1)
+            Dim nx = Math.Max(0.0, Math.Min(100.0, CDbl(quelle.Value.X)))
+            Dim ny = Math.Max(0.0, Math.Min(100.0, CDbl(quelle.Value.Y)))
+            If spalte = 0 Then nx = 0
+            If spalte = _warpColumns Then nx = 100
+            If zeile = 0 Then ny = 0
+            If zeile = _warpRows Then ny = 100
+            _warpX(_warpDragIndex) = nx
+            _warpY(_warpDragIndex) = ny
+            Me.RaisePropertyChanged(NameOf(WarpGridValues))
+            Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
+            AktualisiereGitterVorschau()
+        End Sub
+
+        Public Sub EndWarpDrag()
+            _warpDragIndex = -1
+            ' Die Vorschau BLEIBT nach dem Loslassen stehen: sie zeigt den Stand, den "Anwenden"
+            ' backen wuerde. Sie verschwindet erst beim Zuruecksetzen, beim Anwenden oder wenn das
+            ' Werkzeug gewechselt wird - sonst saehe man sein Ergebnis nur waehrend des Ziehens.
+        End Sub
+
+        Public Sub ResetWarpGrid()
+            If Not HasWarpGridChanges Then Return
+            CaptureUndoState("Gitter")
+            RaeumeGitterVorschauAb()
+            SetzeGitterZurueck()
+            Me.RaisePropertyChanged(NameOf(WarpGridValues))
+            Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
+        End Sub
+
+        ''' <summary>Die Verzerrung ins Arbeitsbild backen. Ab hier ist sie Teil der Pixel - genau
+        ''' wie bei der Retusche, und aus demselben Grund: sie ist nicht als Rezeptwert
+        ''' darstellbar.</summary>
+        Public Sub ApplyWarpGrid()
+            If Not HasWarpGridChanges Then Return
+            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
+            Dim spalten = _warpColumns, zeilen = _warpRows
+            Dim xs = CType(_warpX.Clone(), Double())
+            Dim ys = CType(_warpY.Clone(), Double())
+
+            PushUndo()
+            ' Der Schritt zurueck merkt sich nur das Rezept - der Flicken traegt die PIXEL.
+            Dim undoEintrag = _lastPushedUndoEntry
+            ' Die OBJEKTE gehen mit, ohne eingebacken zu werden: sie bekommen die Verzerrung als
+            ' Angabe ins Rezept und bleiben damit aenderbar - Text laesst sich weiter tippen.
+            UebertrageVerzerrungAufObjekte(GitterAbbildung())
+            SetzeBeschaeftigtGrund(LocalizationService.T("Verzerrung wird angewendet"))
+            StatusText = LocalizationService.T("Verzerrung wird angewendet…")
+            EnqueueWorkingCommit(
+                Function()
+                    Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
+                        Sub(full)
+                            Dim zx(xs.Length - 1) As Single
+                            Dim zy(ys.Length - 1) As Single
+                            For i = 0 To xs.Length - 1
+                                zx(i) = CSng(xs(i) / 100.0 * full.Width)
+                                zy(i) = CSng(ys(i) / 100.0 * full.Height)
+                            Next
+                            ' Erst auf einer KOPIE verzerren, dann zurueckzeichnen: die Quelle waehrend
+                            ' des Zeichnens gleichzeitig als Textur zu lesen und zu beschreiben gaebe
+                            ' Schlieren.
+                            Using kopie = full.Copy()
+                                Using verzerrt = ImageGeometryMapper.VerzerreUeberGitter(kopie, spalten, zeilen, zx, zy)
+                                    If verzerrt Is Nothing Then Return
+                                    Using canvas = New SKCanvas(full)
+                                        canvas.Clear(SKColors.Transparent)
+                                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                            canvas.DrawBitmap(verzerrt, 0, 0, paint)
+                                        End Using
+                                    End Using
+                                End Using
+                            End Using
+                        End Sub)
+                End Function,
+                Sub(patch)
+                    If patch Is Nothing Then
+                        StatusText = LocalizationService.T("Verzerren fehlgeschlagen")
+                        Return
+                    End If
+                    If undoEintrag IsNot Nothing Then undoEintrag.Patch = patch
+                    RaeumeGitterVorschauAb()
+                    SetzeGitterZurueck()
+                    Me.RaisePropertyChanged(NameOf(WarpGridValues))
+                    Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
+                    StatusText = LocalizationService.T("Verzerrung angewendet")
+                    _hasChanges = True
+                    SchedulePreviewUpdate()
+                End Sub)
         End Sub
 
         Public Property Vignette As Double
@@ -5954,13 +7621,43 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public ReadOnly Property IsDocumentBackgroundBlack As Boolean
+            Get
+                Return String.Equals(_canvasBackgroundColor, "#FF000000", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDocumentBackgroundWhite As Boolean
+            Get
+                Return String.Equals(_canvasBackgroundColor, "#FFFFFFFF", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDocumentBackgroundTransparent As Boolean
+            Get
+                Return Not HasDocumentBackground
+            End Get
+        End Property
+
+        ''' <summary>Ist ueberhaupt eine Hintergrundfarbe gesetzt? Voellig durchsichtig heisst nein.</summary>
+        Public ReadOnly Property HasDocumentBackground As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(_canvasBackgroundColor) AndAlso
+                       Not _canvasBackgroundColor.StartsWith("#00", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
         Public Property CanvasBackgroundColor As String
             Get
                 Return _canvasBackgroundColor
             End Get
             Set(value As String)
                 CaptureUndoState(NameOf(CanvasBackgroundColor))
-                Me.RaiseAndSetIfChanged(_canvasBackgroundColor, NormalizeAvaloniaColor(value, "#FF000000"))
+                Me.RaiseAndSetIfChanged(_canvasBackgroundColor, NormalizeAvaloniaColor(value, "#00000000"))
+                For Each n In {NameOf(HasDocumentBackground), NameOf(IsDocumentBackgroundBlack),
+                               NameOf(IsDocumentBackgroundWhite), NameOf(IsDocumentBackgroundTransparent)}
+                    Me.RaisePropertyChanged(n)
+                Next
                 Me.RaisePropertyChanged(NameOf(CanvasBackgroundColorValue))
                 Me.RaisePropertyChanged(NameOf(CanvasBackgroundBrush))
                 SchedulePreviewUpdate()
@@ -5969,7 +7666,12 @@ Namespace ViewModels
 
         Public Property CanvasBackgroundColorValue As Avalonia.Media.Color
             Get
-                Return ParseAvaloniaColorOrDefault(_canvasBackgroundColor, Avalonia.Media.Colors.Black)
+                ' GENAU der gespeicherte Wert, samt Alpha. Hier einen "schoeneren" Ersatzwert
+                ' zurueckzugeben ist eine Falle: der Farbwaehler ist beidseitig gebunden und
+                ' schreibt, was er liest, sofort wieder zurueck - aus "durchsichtig" wurde so beim
+                ' Anzeigen deckendes Weiss. Welche Farbe gerade gilt, sagen die drei Knoepfe
+                ' daneben; der Waehler muss nichts vortaeuschen.
+                Return ParseAvaloniaColorOrDefault(_canvasBackgroundColor, Avalonia.Media.Colors.Transparent)
             End Get
             Set(value As Avalonia.Media.Color)
                 CanvasBackgroundColor = value.ToString()
@@ -7040,7 +8742,12 @@ Namespace ViewModels
                 Return _hasActiveSelection
             End Get
             Set(value As Boolean)
+                Dim vorher = _hasActiveSelection
                 Me.RaiseAndSetIfChanged(_hasActiveSelection, value)
+                ' Was an einer Markierung haengt, muss mitgemeldet werden. "Objekt entfernen" liest
+                ' diesen Wert und blieb sonst dauerhaft grau: der Knopf fragte einmal beim Aufbau und
+                ' erfuhr nie, dass inzwischen etwas markiert ist.
+                If vorher <> _hasActiveSelection Then Me.RaisePropertyChanged(NameOf(KannObjektEntfernen))
             End Set
         End Property
 
@@ -7309,6 +9016,14 @@ Namespace ViewModels
             _selectionMaskBase64 = EncodeMaskBitmapToBase64(mask)
             RefreshSelectionMaskEdgePoints()
             Me.RaisePropertyChanged(NameOf(HasSelectionMask))
+            ' DER Engpass: hier laeuft JEDE Aenderung der committeten Auswahlmaske durch - Zauberstab,
+            ' Pinselstrich, Umkehren, Objektauswahl, Wiederherstellen. Die Ameisen entstehen aus den
+            ' Maskenraendern, die eine Zeile darueber neu gerechnet werden; das rote Overlay dagegen
+            ' ist ein eigenes Bild und blieb auf dem alten Stand, wenn ein Aufrufer es vergass.
+            ' Dreimal ist genau das passiert, jedesmal an einer anderen Stelle. Deshalb steht es
+            ' jetzt HIER und nicht bei den Aufrufern: wer die Maske aendert, kann das Overlay nicht
+            ' mehr vergessen.
+            If _activeSelectionIsMask Then PublishMaskBrushOverlay()
         End Sub
 
         Private Sub ClearSelectionMask()
@@ -7694,6 +9409,9 @@ Namespace ViewModels
             If _activeSelectionIsMask = value Then Return
             _activeSelectionIsMask = value
             Me.RaisePropertyChanged(NameOf(ActiveSelectionIsMask))
+            Me.RaisePropertyChanged(NameOf(KannArtUmwandeln))
+            Me.RaisePropertyChanged(NameOf(ArtUmwandelnText))
+            Me.RaisePropertyChanged(NameOf(ArtUmwandelnHinweis))
             If value Then PublishSelectionRedOverlay() Else SetSelectionMaskPreviewImage(Nothing)
         End Sub
 
@@ -7880,6 +9598,12 @@ Namespace ViewModels
             Return New SKPoint(CSng(quelle.X / baseWidth * 100.0), CSng(quelle.Y / baseHeight * 100.0))
         End Function
 
+        ''' <summary>Wie DisplayPercentToSourcePercent, aber oeffentlich - fuer die Hilfslinien der
+        ''' Lineale, die in der View liegen, ihre Lage aber im Quellraum fuehren muessen.</summary>
+        Public Function DisplayToSourcePercent(xPercent As Double, yPercent As Double) As SKPoint?
+            Return DisplayPercentToSourcePercent(xPercent, yPercent)
+        End Function
+
         ''' <summary>Gegenrichtung: Quellraum-Prozent zurück in Anzeige-Prozent, für die Griffe.</summary>
         Public Function SourcePercentToDisplayPercent(xPercent As Double, yPercent As Double) As SKPoint?
             Dim baseWidth = GetBaseWidth(), baseHeight = GetBaseHeight()
@@ -7888,9 +9612,15 @@ Namespace ViewModels
             If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
             Dim adj = BuildAppliedGeometryAdjustments()
             Dim ziel As SKPoint
+            ' Die RECHTE und UNTERE Kante liegen bei 100 Prozent auf einem Pixel, das nicht mehr zum
+            ' Bild gehoert - die Kette rechnet mit halboffenen Bereichen und weist den Punkt ab. Ein
+            ' Bruchteil eines Pixels nach innen, dann bezeichnet "100 Prozent" die Kante selbst.
+            ' Ohne das fehlten dem Stuetzpunktraster die letzte Spalte und die letzte Zeile, und eine
+            ' Hilfslinie ganz am rechten Rand verschwand.
+            Dim quelleX = Math.Min(baseWidth * xPercent / 100.0, baseWidth - 0.002)
+            Dim quelleY = Math.Min(baseHeight * yPercent / 100.0, baseHeight - 0.002)
             If Not ImageProcessor.TrySourcePointToGeometryOutput(
-                baseWidth * xPercent / 100.0, baseHeight * yPercent / 100.0,
-                baseWidth, baseHeight, adj, ziel) Then Return Nothing
+                quelleX, quelleY, baseWidth, baseHeight, adj, ziel) Then Return Nothing
             Return New SKPoint(CSng(ziel.X / displaySize.Width * 100.0), CSng(ziel.Y / displaySize.Height * 100.0))
         End Function
 
@@ -8876,6 +10606,1187 @@ Namespace ViewModels
             End Try
         End Function
 
+        ' ── Maske per Klick (gelerntes Modell) ──────────────────────────────────
+        '
+        ' Derselbe Weg wie beim Zauberstab, nur entscheidet nicht die Farbaehnlichkeit, sondern ein
+        ' Modell, was ein Objekt ist. Der Klick landet ueber ApplySelectionCandidate in derselben
+        ' Auswahlmaschinerie - es gibt bewusst KEIN zweites Maskensystem daneben.
+        '
+        ' Die teure Einbettung haengt nur am BILDINHALT und wird gemerkt. Ihr Schluessel enthaelt
+        ' alles, was das gerenderte Anzeigebild bestimmt; aendert sich davon etwas, wird neu
+        ' kodiert. Ohne den Schluessel zeigte ein Klick nach einem Zuschnitt die Maske der alten
+        ' Bildlage - und das saehe aus wie ein Modellfehler.
+
+        Private _motivEinbettung As MotivMaskeService.Einbettung
+        Private _motivSchluessel As String = ""
+        Private ReadOnly _motivTor As New SemaphoreSlim(1, 1)
+        Private ReadOnly _motivPunkte As New List(Of MotivMaskeService.Punkt)()
+
+        ''' <summary>Steht die Maske per Klick zur Verfuegung? Falsch heisst: Laufzeit oder
+        ''' Modelldateien fehlen, und der Knopf bleibt weg.</summary>
+        Public ReadOnly Property IsMotivMaskeVerfuegbar As Boolean
+            Get
+                Return MotivMaskeService.Verfuegbar
+            End Get
+        End Property
+
+        ' ── Maske verschieben ───────────────────────────────────────────────────
+        '
+        ' Verschoben wird nur das RECHTECK, nicht das Raster darin. Die Maske behaelt damit jeden
+        ' Zwischenwert genau so, wie sie ihn hatte - kein erneutes Abtasten, keine weicher werdende
+        ' Kante nach dem dritten Verschieben, und bei 45 MP kostet es nichts.
+
+        Private _maskeSchiebtStartX As Double = 0
+        Private _maskeSchiebtStartY As Double = 0
+        Private _maskeSchiebtRechteck As SKRectI = SKRectI.Empty
+        Private _maskeSchiebt As Boolean = False
+
+        ''' <summary>Fasst die Maske an, wenn der Punkt in ihr liegt.</summary>
+        Public Function TryBeginMaskeVerschieben(xPercent As Double, yPercent As Double) As Boolean
+            If Not _hasActiveSelection OrElse _selectionMask Is Nothing Then Return False
+            If Not IsPointInsideSelectionPercent(xPercent, yPercent) Then Return False
+            PushUndo()
+            _maskeSchiebtStartX = xPercent
+            _maskeSchiebtStartY = yPercent
+            _maskeSchiebtRechteck = _selectionMaskRect
+            _maskeSchiebt = True
+            Return True
+        End Function
+
+        Public Sub UpdateMaskeVerschieben(xPercent As Double, yPercent As Double)
+            If Not _maskeSchiebt OrElse _selectionMask Is Nothing Then Return
+            Dim groesse = GetAnnotationDisplayPixelSize()
+            If groesse.Width <= 0 OrElse groesse.Height <= 0 Then Return
+            Dim dx = CInt(Math.Round((xPercent - _maskeSchiebtStartX) / 100.0 * groesse.Width))
+            Dim dy = CInt(Math.Round((yPercent - _maskeSchiebtStartY) / 100.0 * groesse.Height))
+            Dim neu = New SKRectI(_maskeSchiebtRechteck.Left + dx, _maskeSchiebtRechteck.Top + dy,
+                                  _maskeSchiebtRechteck.Right + dx, _maskeSchiebtRechteck.Bottom + dy)
+            If neu.Left = _selectionMaskRect.Left AndAlso neu.Top = _selectionMaskRect.Top Then Return
+
+            ' Die Maske wird NICHT auf das Bild geklemmt: sie darf teilweise hinausragen, und wer
+            ' sie wieder hereinzieht, findet sie unveraendert vor. Ein Klemmen haette sie beim
+            ' Herausschieben beschnitten und beim Zurueckziehen waere sie kuerzer gewesen.
+            InvalidateSelectionLayerLink()
+            SetSelectionBoundsFromPixels(neu)
+            SetSelectionMaskData(_selectionMask.Copy(), neu)
+        End Sub
+
+        Public Sub EndMaskeVerschieben()
+            If Not _maskeSchiebt Then Return
+            _maskeSchiebt = False
+            ' Beim Bearbeiten einer Ebenen-Maske wandert die verschobene Form zurueck in die Ebene -
+            ' sonst saehe man sie an der neuen Stelle, und die Korrektur bliebe an der alten.
+            If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Verschieben-Modus im Masken-Werkzeug: dort wird nicht gemalt, sondern gegriffen -
+        ''' Objekte und Ebenen wie im Auswahl-Werkzeug.</summary>
+        Public ReadOnly Property IsMaskMoveMode As Boolean
+            Get
+                Return String.Equals(_maskMode, "Verschieben", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Laesst sich die aktuelle Auswahl in die jeweils andere Art umwandeln?</summary>
+        Public ReadOnly Property KannArtUmwandeln As Boolean
+            Get
+                Return _hasActiveSelection
+            End Get
+        End Property
+
+        ''' <summary>Beschriftung des Umschaltknopfes. EIN Knopf, der immer in die jeweils ANDERE
+        ''' Art wechselt - dann steht in beiden Werkzeugen dasselbe, und man muss nicht ueberlegen,
+        ''' welcher Knopf wo sitzt. Der Text sagt, was passiert, nicht was gerade ist.
+        '''
+        ''' Uebersetzt wird hier, nicht im Baumdurchlauf: der Text kommt aus einer Bindung, und der
+        ''' Durchlauf wuerde sie beim Zuweisen loeschen.</summary>
+        Public ReadOnly Property ArtUmwandelnText As String
+            Get
+                Return If(_activeSelectionIsMask,
+                          LocalizationService.T("In eine Auswahl umwandeln"),
+                          LocalizationService.T("In eine Maske umwandeln"))
+            End Get
+        End Property
+
+        Public ReadOnly Property ArtUmwandelnHinweis As String
+            Get
+                Return If(_activeSelectionIsMask,
+                          LocalizationService.T("Aus der Maske eine Auswahl machen: dieselbe Form, aber sie begrenzt statt abzustufen"),
+                          LocalizationService.T("Aus der Auswahl eine Maske machen: dieselbe Form, aber sie stuft ab statt zu begrenzen"))
+            End Get
+        End Property
+
+        ''' <summary>Wandelt zwischen AUSWAHL (Laufameisen) und MASKE (rotes Overlay) um.
+        '''
+        ''' Die Form ist dieselbe - es ist dasselbe Alpha-Raster. Was sich aendert, ist ihre
+        ''' BEDEUTUNG: eine Auswahl begrenzt, eine Maske stuft ab. Wer eine Auswahl gezogen hat und
+        ''' merkt, dass er eigentlich eine weiche Maske braucht, soll nicht von vorn anfangen muessen.
+        '''
+        ''' Eine bereits zur Ebene gewordene Auswahl wird MITgewandelt: sonst stuende die Ebene
+        ''' danach als das eine da und die aktive Auswahl als das andere.</summary>
+        Public Sub WandleAuswahlArt(zuMaske As Boolean)
+            If Not _hasActiveSelection Then Return
+            If _activeSelectionIsMask = zuMaske Then Return
+            PushUndo()
+            SetActiveSelectionIsMask(zuMaske)
+            ' Die Darstellung haengt an der Art, und SetActiveSelectionIsMask baut sie nur bei einem
+            ' Wechsel neu - der liegt hier vor, also passt das.
+            If Not String.IsNullOrEmpty(_selectionPromotedLayerId) Then
+                Dim ebene = _maskedAdjustmentLayers.FirstOrDefault(
+                    Function(l) l IsNot Nothing AndAlso l.Id = _selectionPromotedLayerId)
+                If ebene IsNot Nothing Then
+                    ebene.IsMaskLayer = zuMaske
+                    ebene.Name = If(zuMaske, LocalizationService.T("Masken-Korrektur"),
+                                             LocalizationService.T("Auswahl-Korrektur")) &
+                                 ebene.Name.Substring(Math.Max(0, ebene.Name.LastIndexOf(" "c)))
+                    RebuildLayerRows()
+                    SchedulePreviewUpdate()
+                End If
+            End If
+            Me.RaisePropertyChanged(NameOf(KannArtUmwandeln))
+            StatusText = If(zuMaske, LocalizationService.T("In eine Maske umgewandelt"),
+                                     LocalizationService.T("In eine Auswahl umgewandelt"))
+        End Sub
+
+        Public ReadOnly Property IsMaskObjectMode As Boolean
+            Get
+                Return String.Equals(_maskMode, "Objekt", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Laeuft gerade eine Kodierung? Fuer die Anzeige - sie dauert sichtbar lange.</summary>
+        Private _motivRechnet As Boolean = False
+        Public ReadOnly Property IsMotivMaskeRechnend As Boolean
+            Get
+                Return _motivRechnet
+            End Get
+        End Property
+
+        ''' <summary>Setzt die gemerkte Einbettung zurueck. Beim Bildwechsel und bei jeder
+        ''' Aenderung, die das Anzeigebild veraendert.</summary>
+        Public Sub VergissMotivEinbettung()
+            _motivEinbettung = Nothing
+            _motivSchluessel = ""
+            _motivPunkte.Clear()
+        End Sub
+
+        ''' <summary>Nur die gesammelten Klicks vergessen, die teure Einbettung behalten.</summary>
+        Public Sub VergissMotivPunkte()
+            _motivPunkte.Clear()
+        End Sub
+
+        ' ── Tiefen-Unschaerfe ───────────────────────────────────────────────────
+        '
+        ' Wird GEBACKEN, wie die Gitterverzerrung und aus demselben Grund: sie braucht die
+        ' Tiefenkarte, und die ist eine Modellausgabe, kein Rezeptwert. Sie in die Kette zu haengen
+        ' hiesse, bei jedem Render das Modell zu fragen. Bis zum Anwenden ist sie eine Vorschau.
+
+        Private _bokehVon As Double = 70.0
+        Private _bokehBis As Double = 100.0
+        Private _bokehStaerke As Double = 40.0
+        Private _bokehUebergang As Double = 25.0
+        Private _bokehBlende As Integer = 0
+        Private _bokehLichter As Double = 60.0
+
+        Public ReadOnly Property IsBokehVerfuegbar As Boolean
+            Get
+                Return TiefenKarteService.Verfuegbar
+            End Get
+        End Property
+
+        ''' <summary>Untere Grenze des scharfen Bandes. 0 ist am weitesten weg.
+        '''
+        ''' Zwei Grenzen statt einer Ebene mit Breite: eine echte Schaerfentiefe reicht nach hinten
+        ''' weiter als nach vorn, und das laesst sich nur so einstellen.</summary>
+        Public Property BokehVon As Double
+            Get
+                Return _bokehVon
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_bokehVon - v) < 0.0001 Then Return
+                _bokehVon = v
+                ' Die Grenzen schieben einander, statt sich zu kreuzen - eine untere Grenze ueber
+                ' der oberen ist kein Band, sondern ein Zustand, den man nicht meinen kann.
+                If _bokehVon > _bokehBis Then
+                    _bokehBis = _bokehVon
+                    Me.RaisePropertyChanged(NameOf(BokehBis))
+                End If
+                Me.RaisePropertyChanged(NameOf(BokehVon))
+                PlaneBokehVorschau()
+            End Set
+        End Property
+
+        ''' <summary>Obere Grenze des scharfen Bandes. 100 ist am naechsten.</summary>
+        Public Property BokehBis As Double
+            Get
+                Return _bokehBis
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_bokehBis - v) < 0.0001 Then Return
+                _bokehBis = v
+                If _bokehBis < _bokehVon Then
+                    _bokehVon = _bokehBis
+                    Me.RaisePropertyChanged(NameOf(BokehVon))
+                End If
+                Me.RaisePropertyChanged(NameOf(BokehBis))
+                PlaneBokehVorschau()
+            End Set
+        End Property
+
+        ''' <summary>Wie stark die Unschaerfe am fernsten Punkt wird.</summary>
+        Public Property BokehStaerke As Double
+            Get
+                Return _bokehStaerke
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_bokehStaerke - v) < 0.0001 Then Return
+                _bokehStaerke = v
+                Me.RaisePropertyChanged(NameOf(BokehStaerke))
+                Me.RaisePropertyChanged(NameOf(HasBokehChanges))
+                PlaneBokehVorschau()
+            End Set
+        End Property
+
+        ''' <summary>Wie breit die Schaerfeebene ist: klein ergibt einen schmalen scharfen Bereich,
+        ''' gross einen breiten.</summary>
+        Public Property BokehUebergang As Double
+            Get
+                Return _bokehUebergang
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(1.0, Math.Min(100.0, value))
+                If Math.Abs(_bokehUebergang - v) < 0.0001 Then Return
+                _bokehUebergang = v
+                Me.RaisePropertyChanged(NameOf(BokehUebergang))
+                PlaneBokehVorschau()
+            End Set
+        End Property
+
+        ''' <summary>Die Form der Blende: 0 rund, sonst die Zahl der Lamellen. Sie bestimmt, wie ein
+        ''' Lichtpunkt im unscharfen Bereich aussieht - rund oder als Vieleck.</summary>
+        Public Property BokehBlende As Integer
+            Get
+                Return _bokehBlende
+            End Get
+            Set(value As Integer)
+                ' Zwischen 1 und 2 gibt es keine Form: entweder rund (0) oder mindestens ein Dreieck.
+                Dim v = Math.Max(0, Math.Min(9, value))
+                If v = 1 OrElse v = 2 Then v = 0
+                If v = _bokehBlende Then Return
+                _bokehBlende = v
+                Me.RaisePropertyChanged(NameOf(BokehBlende))
+                For Each n In {NameOf(IsBlendeRund), NameOf(IsBlendeFuenf),
+                               NameOf(IsBlendeSechs), NameOf(IsBlendeSieben)}
+                    Me.RaisePropertyChanged(n)
+                Next
+                PlaneBokehVorschau()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsBlendeRund As Boolean
+            Get
+                Return _bokehBlende <= 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsBlendeFuenf As Boolean
+            Get
+                Return _bokehBlende = 5
+            End Get
+        End Property
+
+        Public ReadOnly Property IsBlendeSechs As Boolean
+            Get
+                Return _bokehBlende = 6
+            End Get
+        End Property
+
+        Public ReadOnly Property IsBlendeSieben As Boolean
+            Get
+                Return _bokehBlende = 7
+            End Get
+        End Property
+
+        ''' <summary>Wie stark Lichtpunkte als leuchtende Scheiben erhalten bleiben, statt sich
+        ''' zu einem matten Fleck zu mitteln.</summary>
+        Public Property BokehLichter As Double
+            Get
+                Return _bokehLichter
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_bokehLichter - v) < 0.0001 Then Return
+                _bokehLichter = v
+                Me.RaisePropertyChanged(NameOf(BokehLichter))
+                PlaneBokehVorschau()
+            End Set
+        End Property
+
+        Public ReadOnly Property HasBokehChanges As Boolean
+            Get
+                Return _bokehStaerke > 0.01
+            End Get
+        End Property
+
+        ''' <summary>Die Gruppe auf ihren Ausgangsstand zurueck. Das Backen kann das nicht
+        ''' zuruecknehmen - dafuer ist der Schritt zurueck da.</summary>
+        Public Sub ResetBokeh()
+            _bokehVon = 70.0
+            _bokehBis = 100.0
+            _bokehStaerke = 0.0
+            _bokehUebergang = 25.0
+            _bokehBlende = 0
+            _bokehLichter = 60.0
+            RaeumeBokehVorschauAb()
+            For Each n In {NameOf(BokehVon), NameOf(BokehBis), NameOf(BokehStaerke), NameOf(BokehUebergang),
+                           NameOf(BokehBlende), NameOf(BokehLichter), NameOf(HasBokehChanges),
+                           NameOf(IsBlendeRund), NameOf(IsBlendeFuenf), NameOf(IsBlendeSechs),
+                           NameOf(IsBlendeSieben)}
+                Me.RaisePropertyChanged(n)
+            Next
+        End Sub
+
+        ' ── Live-Vorschau der Tiefen-Unschaerfe ─────────────────────────────────
+        '
+        ' Gleiche Bauform wie bei der Gitterverzerrung und aus demselben Grund: die Wirkung wird erst
+        ' beim Anwenden in die Pixel gerechnet, aber ohne Vorschau stellt man drei Regler blind ein.
+        '
+        ' Gerechnet wird auf einer VERKLEINERTEN Kopie des Anzeigebildes ohne Objekte. Die Unschaerfe
+        ' faltet je Stufe ueber die ganze Flaeche; in voller Groesse waere das je Reglerschritt zu
+        ' teuer, und fuer die Beurteilung von Lage und Staerke reicht die kleine Fassung. Die Anzeige
+        ' zieht sie ohnehin auf den Bildbereich.
+
+        ''' <summary>Laengste Kante der Vorschaukopie.</summary>
+        Private Const BokehVorschauKante As Integer = 900
+
+        Private _bokehVorschauBasis As SKBitmap
+        Private _bokehVorschauSchluessel As String = ""
+        Private _bokehVorschauLauf As Integer = 0
+
+        Public Sub RaeumeBokehVorschauAb()
+            If String.Equals(_vorschauQuelle, "Bokeh", StringComparison.Ordinal) Then
+                VorschauBild = Nothing
+                _vorschauQuelle = ""
+            End If
+            _bokehVorschauBasis?.Dispose()
+            _bokehVorschauBasis = Nothing
+            _bokehVorschauSchluessel = ""
+            ' Ein noch laufender Anlauf darf sein Ergebnis nicht mehr einhaengen.
+            _bokehVorschauLauf += 1
+        End Sub
+
+        ''' <summary>Nach einer Reglerbewegung eine neue Vorschau anstossen.
+        '''
+        ''' Mit Wartezeit: waehrend man am Regler zieht, kommen Dutzende Aenderungen, und jede eine
+        ''' Faltung ueber das ganze Bild zu starten hiesse, dass die Anzeige immer der Maus
+        ''' hinterherhinkt. Es zaehlt nur der zuletzt angestossene Lauf.</summary>
+        Private Sub PlaneBokehVorschau()
+            If Not IsBokehVerfuegbar Then Return
+            _bokehVorschauLauf += 1
+            Dim lauf = _bokehVorschauLauf
+            Dim ignoriert = ZeichneBokehVorschauNeu(lauf)
+        End Sub
+
+        Private Async Function ZeichneBokehVorschauNeu(lauf As Integer) As Task
+            Await Task.Delay(220)
+            If lauf <> _bokehVorschauLauf Then Return
+            If Not IsBokehVerfuegbar OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+
+            If Not HasBokehChanges Then
+                RaeumeBokehVorschauAb()
+                Return
+            End If
+
+            Await _tiefeTor.WaitAsync()
+            Try
+                If lauf <> _bokehVorschauLauf Then Return
+                If Not Await StelleBokehGrundlageBereit() Then Return
+                If lauf <> _bokehVorschauLauf Then Return
+
+                Dim basis = _bokehVorschauBasis
+                Dim karte = _tiefenKarte
+                If basis Is Nothing OrElse karte Is Nothing Then Return
+                Dim von = _bokehVon, bis = _bokehBis
+                Dim staerke = _bokehStaerke, uebergang = _bokehUebergang
+                Dim ecken = _bokehBlende, lichter = _bokehLichter
+
+                SetzeVorschauRechnet(True)
+                Dim daten As Byte()
+                Try
+                    daten = Await Task.Run(
+                    Function() As Byte()
+                        Using unscharf = TiefenKarteService.TiefenUnschaerfe(basis, karte, von, bis,
+                                                                            staerke, uebergang, ecken, lichter)
+                            If unscharf Is Nothing Then Return Nothing
+                            Using bild = SKImage.FromBitmap(unscharf)
+                                Using roh = bild.Encode(SKEncodedImageFormat.Png, 90)
+                                    Return roh.ToArray()
+                                End Using
+                            End Using
+                        End Using
+                    End Function)
+                Finally
+                    SetzeVorschauRechnet(False)
+                End Try
+
+                If daten Is Nothing OrElse lauf <> _bokehVorschauLauf Then Return
+                Using strom = New IO.MemoryStream(daten)
+                    VorschauBild = New Bitmap(strom)
+                    _vorschauQuelle = "Bokeh"
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogAlways("BokehVorschau", ex.Message)
+                RaeumeBokehVorschauAb()
+            Finally
+                _tiefeTor.Release()
+            End Try
+        End Function
+
+        ''' <summary>Die verkleinerte Kopie und die Tiefenkarte fuer den aktuellen Bildstand.
+        ''' Beide haengen am selben Schluessel: aendert sich das Rezept, gelten beide nicht mehr.
+        ''' Der Aufrufer haelt <c>_tiefeTor</c>.</summary>
+        Private Async Function StelleBokehGrundlageBereit() As Task(Of Boolean)
+            Dim groesse = GetAnnotationDisplayPixelSize()
+            If groesse.Width <= 0 OrElse groesse.Height <= 0 Then Return False
+            Dim rezept = RezeptOhneObjekte()
+            If rezept Is Nothing Then Return False
+            Dim schluessel = String.Join("|", _currentImagePath, groesse.Width, groesse.Height,
+                                         ImageProcessor.ComputeBaseKey(rezept))
+            If _bokehVorschauBasis IsNot Nothing AndAlso _tiefenKarte IsNot Nothing AndAlso
+               String.Equals(_bokehVorschauSchluessel, schluessel, StringComparison.Ordinal) AndAlso
+               String.Equals(_tiefenSchluessel, schluessel, StringComparison.Ordinal) Then
+                Return True
+            End If
+
+            _tiefeRechnet = True
+            Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                    AktualisiereBeschaeftigt()
+            StatusText = LocalizationService.T("Tiefe wird berechnet…")
+                SetzeBeschaeftigtGrund(LocalizationService.T("Tiefe wird berechnet"))
+            Dim quellPfad = RenderSourcePath
+            Dim arbeitsbild = CloneWorkingFullForRender()
+            Dim brauchtKarte = _tiefenKarte Is Nothing OrElse
+                               Not String.Equals(_tiefenSchluessel, schluessel, StringComparison.Ordinal)
+            Dim paar As Tuple(Of SKBitmap, SKBitmap) = Nothing
+            Try
+                paar = Await Task.Run(
+                    Function()
+                        Using fertig = ImageProcessor.RenderAnzeigeBild(quellPfad, rezept, arbeitsbild)
+                            If fertig Is Nothing Then Return Nothing
+                            ' EIN Render fuer beides: die Tiefenkarte und die Vorschaukopie kommen aus
+                            ' demselben Bild, sonst passten sie im Zweifel nicht zusammen.
+                            Dim k As SKBitmap = Nothing
+                            If brauchtKarte Then k = TiefenKarteService.Berechne(fertig)
+                            Return Tuple.Create(VerkleinerteKopie(fertig, BokehVorschauKante), k)
+                        End Using
+                    End Function)
+            Finally
+                _tiefeRechnet = False
+                Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                    AktualisiereBeschaeftigt()
+            End Try
+
+            If paar Is Nothing OrElse paar.Item1 Is Nothing Then
+                paar?.Item2?.Dispose()
+                StatusText = LocalizationService.T("Tiefe konnte nicht berechnet werden")
+                Return False
+            End If
+            If brauchtKarte Then
+                If paar.Item2 Is Nothing Then
+                    paar.Item1.Dispose()
+                    StatusText = LocalizationService.T("Tiefe konnte nicht berechnet werden")
+                    Return False
+                End If
+                _tiefenKarte?.Dispose()
+                _tiefenKarte = paar.Item2
+                _tiefenSchluessel = schluessel
+            End If
+            _bokehVorschauBasis?.Dispose()
+            _bokehVorschauBasis = paar.Item1
+            _bokehVorschauSchluessel = schluessel
+            StatusText = ""
+            Return True
+        End Function
+
+        ''' <summary>Das aktuelle Rezept OHNE die eingefuegten Ebenen.
+        '''
+        ''' Fuer alles, was mit Tiefe zu tun hat, ist das die richtige Vorlage. Ein aufgeklebtes
+        ''' Objekt hat keine Entfernung - das Modell wuerde ihm eine andichten, und die Unschaerfe
+        ''' liefe darum herum, statt es zu treffen. In der Vorschau kommt hinzu: die Objekte werden
+        ''' beim Anwenden ohnehin nicht mitgerechnet, und scharf ueber einem verwischten Hintergrund
+        ''' zeigten sie etwas, das nachher anders aussieht.</summary>
+        Private Function RezeptOhneObjekte() As ImageAdjustments
+            Dim rezept = GetCurrentAdjustments()
+            If rezept Is Nothing Then Return Nothing
+            rezept.Annotations = New List(Of ImageAnnotation)()
+            Return rezept
+        End Function
+
+        ''' <summary>Eine Kopie, deren laengste Kante hoechstens <paramref name="kante"/> misst.
+        ''' Ist das Bild schon kleiner, wird es nur kopiert, nicht hochgezogen.</summary>
+        Private Shared Function VerkleinerteKopie(quelle As SKBitmap, kante As Integer) As SKBitmap
+            If quelle Is Nothing OrElse quelle.Width <= 0 OrElse quelle.Height <= 0 Then Return Nothing
+            Dim f = Math.Min(1.0, kante / CDbl(Math.Max(quelle.Width, quelle.Height)))
+            Dim w = Math.Max(1, CInt(Math.Round(quelle.Width * f)))
+            Dim h = Math.Max(1, CInt(Math.Round(quelle.Height * f)))
+            Dim ziel = New SKBitmap(w, h, quelle.ColorType, quelle.AlphaType)
+            If Not quelle.ScalePixels(ziel, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)) Then
+                ziel.Dispose()
+                Return Nothing
+            End If
+            Return ziel
+        End Function
+
+        ''' <summary>Die Tiefen-Unschaerfe ins Arbeitsbild backen. Ab hier ist sie Teil der Pixel.</summary>
+        Public Async Function WendeBokehAn() As Task
+            If Not TiefenKarteService.Verfuegbar OrElse Not HasBokehChanges Then Return
+            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
+
+            Await _tiefeTor.WaitAsync()
+            Try
+                _tiefeRechnet = True
+                Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                    AktualisiereBeschaeftigt()
+                StatusText = LocalizationService.T("Tiefe wird berechnet…")
+                SetzeBeschaeftigtGrund(LocalizationService.T("Tiefe wird berechnet"))
+                Dim quellPfad = RenderSourcePath
+                Dim rezept = RezeptOhneObjekte()
+                Dim arbeitsbild = CloneWorkingFullForRender()
+                Dim karte As SKBitmap = Nothing
+                Try
+                    karte = Await Task.Run(
+                        Function()
+                            Using fertig = ImageProcessor.RenderAnzeigeBild(quellPfad, rezept, arbeitsbild)
+                                If fertig Is Nothing Then Return Nothing
+                                Return TiefenKarteService.Berechne(fertig)
+                            End Using
+                        End Function)
+                Finally
+                    _tiefeRechnet = False
+                    Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                    AktualisiereBeschaeftigt()
+                End Try
+                If karte Is Nothing Then
+                    StatusText = LocalizationService.T("Tiefe konnte nicht berechnet werden")
+                    Return
+                End If
+
+                Dim von = _bokehVon, bis = _bokehBis
+                Dim staerke = _bokehStaerke, uebergang = _bokehUebergang
+                Dim ecken = _bokehBlende, lichter = _bokehLichter
+                PushUndo()
+                ' Der Schritt zurueck merkt sich nur das Rezept - der Flicken traegt die PIXEL.
+                Dim undoEintrag = _lastPushedUndoEntry
+                StatusText = LocalizationService.T("Unschärfe wird angewendet…")
+                SetzeBeschaeftigtGrund(LocalizationService.T("Unschärfe wird angewendet"))
+                EnqueueWorkingCommit(
+                    Function()
+                        Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
+                            Sub(full)
+                                Using unscharf = TiefenKarteService.TiefenUnschaerfe(full, karte, von, bis,
+                                                                                    staerke, uebergang, ecken, lichter)
+                                    If unscharf Is Nothing Then Return
+                                    Using canvas = New SKCanvas(full)
+                                        canvas.Clear(SKColors.Transparent)
+                                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                            canvas.DrawBitmap(unscharf, 0, 0, paint)
+                                        End Using
+                                    End Using
+                                End Using
+                            End Sub)
+                    End Function,
+                    Sub(patch)
+                        karte.Dispose()
+                        If patch Is Nothing Then
+                            StatusText = LocalizationService.T("Unschärfe fehlgeschlagen")
+                            Return
+                        End If
+                        If undoEintrag IsNot Nothing Then undoEintrag.Patch = patch
+                        BokehStaerke = 0
+                        RaeumeBokehVorschauAb()
+                        StatusText = LocalizationService.T("Unschärfe angewendet")
+                        SchedulePreviewUpdate()
+                    End Sub)
+            Finally
+                _tiefeTor.Release()
+            End Try
+        End Function
+
+        ' ── Objekt entfernen ────────────────────────────────────────────────────
+        '
+        ' Wie die Retusche GEBACKEN, nicht als Rezeptwert: das Ergebnis kommt aus einem Modell und
+        ' laesst sich nicht als Zahl aufheben. Die Vorlage ist die aktive Auswahl oder Maske - man
+        ' markiert, was weg soll, mit demselben Werkzeug wie sonst auch.
+
+        Public ReadOnly Property IstObjektEntfernenVerfuegbar As Boolean
+            Get
+                Return ObjektEntfernenService.Verfuegbar
+            End Get
+        End Property
+
+        ''' <summary>Der Hinweis am Knopf, wenn die Modelldatei fehlt.
+        '''
+        ''' Der Knopf wird dann GRAU statt weg. Frueher war er weg, mit der Begruendung, ein toter
+        ''' Knopf sei schlimmer als keiner - das stimmt, solange es keinen Weg gibt, ihn zum Leben zu
+        ''' erwecken. Den gibt es: der Einstellungsdialog laedt die Datei. Ein verschwundener Knopf
+        ''' verschweigt, dass es die Funktion ueberhaupt gibt.</summary>
+        Public Shared ReadOnly Property ModellFehltHinweis As String
+            Get
+                Return LocalizationService.T("Dafür fehlt eine Modelldatei. Sie lässt sich in den Einstellungen unter Modelle herunterladen.")
+            End Get
+        End Property
+
+        Public ReadOnly Property ObjektEntfernenHinweis As String
+            Get
+                If Not ObjektEntfernenService.Verfuegbar Then Return ModellFehltHinweis
+                Return LocalizationService.T("Lässt das Markierte verschwinden und setzt den Hintergrund fort. Wird in die Pixel gerechnet, wie eine Retusche.")
+            End Get
+        End Property
+
+        Public ReadOnly Property BokehHinweis As String
+            Get
+                If Not TiefenKarteService.Verfuegbar Then Return ModellFehltHinweis
+                Return LocalizationService.T("Die Unschärfe kommt je Bildpunkt aus seiner Entfernung.")
+            End Get
+        End Property
+
+        Public ReadOnly Property MotivMaskeHinweis As String
+            Get
+                If Not MotivMaskeService.Verfuegbar Then Return ModellFehltHinweis
+                Return LocalizationService.T("Objekt im Bild anklicken, die Maske entsteht von selbst.")
+            End Get
+        End Property
+
+        Public ReadOnly Property TiefenMaskeHinweis As String
+            Get
+                If Not TiefenKarteService.Verfuegbar Then Return ModellFehltHinweis
+                Return LocalizationService.T("Wählt alles, was in einem Entfernungsbereich liegt.")
+            End Get
+        End Property
+
+        Public ReadOnly Property KannObjektEntfernen As Boolean
+            Get
+                Return ObjektEntfernenService.Verfuegbar AndAlso _hasActiveSelection
+            End Get
+        End Property
+
+        ''' <summary>Die Maske einer Auswahl als Bild in QUELLgroesse. Die Auswahl liegt im
+        ''' Anzeigeraum; ueber CreateSourceMaskFromSelection wird sie zurueckgelegt, und zwar ueber
+        ''' denselben Weg wie beim Anlegen einer Maskenebene - eine zweite Umrechnung daneben waere
+        ''' eine zweite Gelegenheit, sich um ein paar Bildpunkte zu vertun.</summary>
+        Private Shared Function MaskeAlsQuellbild(m As ImageMask, breite As Integer, hoehe As Integer) As SKBitmap
+            If m Is Nothing OrElse breite <= 0 OrElse hoehe <= 0 Then Return Nothing
+            If String.IsNullOrWhiteSpace(m.PngBase64) Then Return Nothing
+            Dim w = m.Right - m.Left, h = m.Bottom - m.Top
+            If w <= 0 OrElse h <= 0 Then Return Nothing
+            Dim ziel = New SKBitmap(New SKImageInfo(breite, hoehe, SKColorType.Alpha8, SKAlphaType.Premul))
+            Try
+                ' MASSSTAB. Die Maske liegt im Raum des ANZEIGEbildes (ImageMask.SourceWidthPixels),
+                ' das Arbeitsbild hat die volle Aufloesung der Datei. Bei einem 40-Megapixel-Foto,
+                ' das auf 1600 Punkte heruntergerechnet angezeigt wird, sind das Faktor drei: die
+                ' Maske landete im linken oberen Viertel und traf, was sie treffen sollte, gar nicht.
+                Dim sx = If(m.SourceWidthPixels > 0, breite / CDbl(m.SourceWidthPixels), 1.0)
+                Dim sy = If(m.SourceHeightPixels > 0, hoehe / CDbl(m.SourceHeightPixels), 1.0)
+                Using roh = SKBitmap.Decode(Convert.FromBase64String(m.PngBase64))
+                    If roh Is Nothing Then
+                        ziel.Dispose()
+                        Return Nothing
+                    End If
+                    Using canvas = New SKCanvas(ziel)
+                        canvas.Clear(SKColors.Transparent)
+                        Using bild = SKImage.FromBitmap(roh)
+                            canvas.DrawImage(bild, New SKRect(CSng(m.Left * sx), CSng(m.Top * sy),
+                                                              CSng((m.Left + w) * sx), CSng((m.Top + h) * sy)),
+                                             New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), Nothing)
+                        End Using
+                    End Using
+                End Using
+                If m.Inverted Then
+                    ' Umgekehrte Auswahl heisst hier: alles ausser dem Markierten soll weg. Selten
+                    ' gewollt, aber wenn es dasteht, muss es auch gelten.
+                    Dim n = breite * hoehe
+                    Dim puffer(n - 1) As Byte
+                    Runtime.InteropServices.Marshal.Copy(ziel.GetPixels(), puffer, 0, n)
+                    For i = 0 To n - 1
+                        puffer(i) = CByte(255 - puffer(i))
+                    Next
+                    Runtime.InteropServices.Marshal.Copy(puffer, 0, ziel.GetPixels(), n)
+                End If
+                Return ziel
+            Catch
+                ziel.Dispose()
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Das Markierte verschwinden lassen und die Luecke fuellen.</summary>
+        Public Sub WendeObjektEntfernenAn()
+            If Not KannObjektEntfernen Then Return
+            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
+
+            Dim rezept = GetCurrentAdjustments()
+
+            PushUndo()
+            ' Der eben abgelegte Schritt zurueck merkt sich nur das REZEPT. Was hier passiert, sind
+            ' aber PIXEL: ohne den Flicken daran holt ein Schritt zurueck die Maske wieder her und
+            ' laesst die gefuellte Stelle stehen. Genau derselbe Weg wie bei Retusche und
+            ' Gitterverzerrung.
+            Dim undoEintrag = _lastPushedUndoEntry
+            StatusText = LocalizationService.T("Objekt wird entfernt…")
+                SetzeBeschaeftigtGrund(LocalizationService.T("Objekt wird entfernt"))
+            ' Der Grund eines Fehlschlags muss aus dem Hintergrund herauskommen. Ein stiller Rueck-
+            ' sprung im Commit sieht von aussen aus wie "hat funktioniert, aber nichts geaendert" -
+            ' und das ist die Meldung, die man am wenigsten gebrauchen kann.
+            Dim grund = ""
+            EnqueueWorkingCommit(
+                Function()
+                    ' Die Maske wird HIER gebaut, nicht vorher. CreateSourceMaskFromSelection laeuft
+                    ' ueber das ganze Quellbild; auf dem UI-Faden erledigt hiess das, dass nach dem
+                    ' Klick sekundenlang gar nichts passierte - auch der Hinweis "wird entfernt"
+                    ' konnte nicht erscheinen, weil der Faden blockiert war.
+                    Dim m = ImageProcessor.CreateSourceMaskFromSelection(
+                        rezept, LocalizationService.T("Objekt entfernen"))
+                    If m Is Nothing Then
+                        grund = "Maske"
+                        Return Nothing
+                    End If
+                    Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
+                        Sub(full)
+                            Using maske = MaskeAlsQuellbild(m, full.Width, full.Height)
+                                If maske Is Nothing Then
+                                    grund = "Maske"
+                                    Return
+                                End If
+                                Using gefuellt = ObjektEntfernenService.Fuelle(full, maske)
+                                    If gefuellt Is Nothing Then
+                                        grund = "Modell"
+                                        Return
+                                    End If
+                                    Using canvas = New SKCanvas(full)
+                                        canvas.Clear(SKColors.Transparent)
+                                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                            canvas.DrawBitmap(gefuellt, 0, 0, paint)
+                                        End Using
+                                    End Using
+                                End Using
+                            End Using
+                        End Sub)
+                End Function,
+                Sub(patch)
+                    If patch Is Nothing OrElse grund <> "" Then
+                        StatusText = LocalizationService.T("Entfernen fehlgeschlagen") &
+                                     If(grund = "", "", " (" & grund & ")")
+                        Return
+                    End If
+                    If undoEintrag IsNot Nothing Then undoEintrag.Patch = patch
+                    ' Die Auswahl hat ihren Zweck erfuellt. Sie stehen zu lassen hiesse, das rote
+                    ' Overlay ueber einer Stelle zu behalten, an der jetzt nichts mehr ist.
+                    '
+                    ' OHNE eigenen Schritt zurueck: der Schritt fuer das Entfernen liegt schon auf
+                    ' dem Stapel und traegt die Pixel. Ein zweiter obendrauf hiesse, dass man erst
+                    ' die Auswahl und dann noch einmal zurueck muss, um das Bild wiederzubekommen -
+                    ' und der erste Druck sieht dann aus, als taete er nichts.
+                    ClearSelection(captureUndo:=False)
+                    ' Mit den Zahlen des Durchlaufs. Sie stehen im VERLAUF und nicht nur im Fuss:
+                    ' der Statustext wird von der gleich darauf startenden Vorschau ueberschrieben,
+                    ' bevor man ihn gelesen hat.
+                    Dim bericht = ObjektEntfernenService.LetzterBericht
+                    StatusText = LocalizationService.T("Objekt entfernt") &
+                                 If(String.IsNullOrEmpty(bericht), "", " - " & bericht)
+                    _hasChanges = True
+                    AddHistoryEntry(LocalizationService.T("Objekt entfernt") &
+                                    If(String.IsNullOrEmpty(bericht), "", " - " & bericht))
+                    SchedulePreviewUpdate()
+                End Sub)
+        End Sub
+
+        ' ── Maske nach Tiefe ────────────────────────────────────────────────────
+        '
+        ' Dieselbe Bauform wie bei der Objektauswahl: das Modell laeuft EINMAL je Bild, die
+        ' Tiefenkarte wird gemerkt, und die Regler rechnen nur noch die Maske daraus neu. Der Zusatz
+        ' ist, dass es hier gar keinen Klick gibt - ein Bild rein, eine Karte raus.
+
+        Private _tiefenKarte As SKBitmap
+        Private _tiefenSchluessel As String = ""
+        Private _tiefeVon As Double = 60.0
+        Private _tiefeBis As Double = 100.0
+        Private _tiefeWeiche As Double = 8.0
+        Private _tiefeRechnet As Boolean = False
+        Private ReadOnly _tiefeTor As New SemaphoreSlim(1, 1)
+
+        Public ReadOnly Property IsTiefenMaskeVerfuegbar As Boolean
+            Get
+                Return TiefenKarteService.Verfuegbar
+            End Get
+        End Property
+
+        Public ReadOnly Property IsMaskDepthMode As Boolean
+            Get
+                Return String.Equals(_maskMode, "Tiefe", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsTiefenMaskeRechnend As Boolean
+            Get
+                Return _tiefeRechnet
+            End Get
+        End Property
+
+        ''' <summary>Der nahe Rand des gewaehlten Bereichs, 0 bis 100. 100 ist am naechsten.</summary>
+        Public Property TiefeVon As Double
+            Get
+                Return _tiefeVon
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_tiefeVon - v) < 0.0001 Then Return
+                _tiefeVon = v
+                Me.RaisePropertyChanged(NameOf(TiefeVon))
+                Dim ignoriert = ZeichneTiefenMaskeNeu()
+            End Set
+        End Property
+
+        Public Property TiefeBis As Double
+            Get
+                Return _tiefeBis
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_tiefeBis - v) < 0.0001 Then Return
+                _tiefeBis = v
+                Me.RaisePropertyChanged(NameOf(TiefeBis))
+                Dim ignoriert = ZeichneTiefenMaskeNeu()
+            End Set
+        End Property
+
+        ''' <summary>Wie weit die Maske an beiden Grenzen auslaeuft. Ohne das entstuende an jeder
+        ''' Tiefenstufe eine sichtbare Kante quer durchs Bild - eine Tiefenkarte ist stetig, eine
+        ''' harte Schwelle darin sieht man immer.</summary>
+        Public Property TiefeWeiche As Double
+            Get
+                Return _tiefeWeiche
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(50.0, value))
+                If Math.Abs(_tiefeWeiche - v) < 0.0001 Then Return
+                _tiefeWeiche = v
+                Me.RaisePropertyChanged(NameOf(TiefeWeiche))
+                Dim ignoriert = ZeichneTiefenMaskeNeu()
+            End Set
+        End Property
+
+        Public Sub VergissTiefenKarte()
+            _tiefenKarte?.Dispose()
+            _tiefenKarte = Nothing
+            _tiefenSchluessel = ""
+        End Sub
+
+        ''' <summary>Die Maske aus dem gewaehlten Tiefenbereich. Rechnet die Tiefenkarte, falls sie
+        ''' fuer diesen Bildstand noch fehlt.</summary>
+        Public Async Function ZeichneTiefenMaskeNeu() As Task
+            If Not TiefenKarteService.Verfuegbar Then Return
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+
+            Await _tiefeTor.WaitAsync()
+            Try
+                Dim groesse = GetAnnotationDisplayPixelSize()
+                If groesse.Width <= 0 OrElse groesse.Height <= 0 Then Return
+                ' DASSELBE Rezept wie die Vorschau: ohne Objekte. Zwei verschiedene Vorlagen unter
+                ' einem Schluessel waeren zwei verschiedene Tiefenkarten, je nachdem wer zuerst
+                ' gerechnet hat.
+                Dim rezept = RezeptOhneObjekte()
+                If rezept Is Nothing Then Return
+                Dim schluessel = String.Join("|", _currentImagePath, groesse.Width, groesse.Height,
+                                             ImageProcessor.ComputeBaseKey(rezept))
+                If _tiefenKarte Is Nothing OrElse Not String.Equals(_tiefenSchluessel, schluessel, StringComparison.Ordinal) Then
+                    _tiefeRechnet = True
+                    Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                    AktualisiereBeschaeftigt()
+                    StatusText = LocalizationService.T("Tiefe wird berechnet…")
+                SetzeBeschaeftigtGrund(LocalizationService.T("Tiefe wird berechnet"))
+                    Dim quellPfad = RenderSourcePath
+                    Dim arbeitsbild = CloneWorkingFullForRender()
+                    Dim neu As SKBitmap = Nothing
+                    Try
+                        neu = Await Task.Run(
+                            Function()
+                                Using fertig = ImageProcessor.RenderAnzeigeBild(quellPfad, rezept, arbeitsbild)
+                                    If fertig Is Nothing Then Return Nothing
+                                    Return TiefenKarteService.Berechne(fertig)
+                                End Using
+                            End Function)
+                    Finally
+                        _tiefeRechnet = False
+                        Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                    AktualisiereBeschaeftigt()
+                    End Try
+                    If neu Is Nothing Then
+                        StatusText = LocalizationService.T("Tiefe konnte nicht berechnet werden")
+                        Return
+                    End If
+                    _tiefenKarte?.Dispose()
+                    _tiefenKarte = neu
+                    _tiefenSchluessel = schluessel
+                End If
+
+                Dim karte = _tiefenKarte
+                Dim von = _tiefeVon, bis = _tiefeBis, weich = _tiefeWeiche
+                Dim maske = Await Task.Run(Function() TiefenKarteService.MaskeAusTiefe(karte, von, bis, weich))
+                If maske Is Nothing Then Return
+                Using maske
+                    Dim rechteck = MaskenRechteck(maske)
+                    If rechteck.Width <= 0 OrElse rechteck.Height <= 0 Then
+                        StatusText = LocalizationService.T("In diesem Tiefenbereich liegt nichts")
+                        Return
+                    End If
+                    Using ausschnitt = AusschnittAus(maske, rechteck)
+                        If ausschnitt Is Nothing Then Return
+                        ApplySelectionCandidate(ausschnitt, rechteck, "MagicWand", Nothing, Nothing,
+                                                isMask:=True, erzwingeNeu:=True)
+                    End Using
+                    StatusText = LocalizationService.T("Maske nach Tiefe gesetzt")
+                End Using
+            Finally
+                _tiefeTor.Release()
+            End Try
+        End Function
+
+        ''' <summary>Kantenschaerfe der Objektmaske, 0 bis 100. Aendert nur die Umrechnung der
+        ''' Modellausgabe in Deckung, nicht die Erkennung - das Modell wird deshalb NICHT erneut
+        ''' gefragt, die Maske entsteht in Millisekunden neu.</summary>
+        Public Property MotivMaskeKante As Double
+            Get
+                Return _motivKante
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_motivKante - v) < 0.0001 Then Return
+                _motivKante = v
+                Me.RaisePropertyChanged(NameOf(MotivMaskeKante))
+                Dim ignoriert = ZeichneMotivMaskeNeu()
+            End Set
+        End Property
+
+        ''' <summary>Umfang der Objektmaske, -100 bis 100: waechst oder schrumpft sie um die
+        ''' Kante herum.</summary>
+        Public Property MotivMaskeUmfang As Double
+            Get
+                Return _motivUmfang
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(-100.0, Math.Min(100.0, value))
+                If Math.Abs(_motivUmfang - v) < 0.0001 Then Return
+                _motivUmfang = v
+                Me.RaisePropertyChanged(NameOf(MotivMaskeUmfang))
+                Dim ignoriert = ZeichneMotivMaskeNeu()
+            End Set
+        End Property
+
+        Private _motivKante As Double = 50.0
+        Private _motivUmfang As Double = 0.0
+        ' Die MITTLERE Koernung als Vorgabe: die grobste faellt bei einem freistehenden Motiv
+        ' gern auf das ganze Bild zusammen, die feinste greift nur einen Teil heraus. Die mittlere
+        ' ist das, was man mit "dieses Objekt" meistens meint.
+        Private _motivKoernung As Integer = 1
+
+        ''' <summary>Welche Koernung gewaehlt ist: 0 fein, 1 mittel, 2 grob. Ein Klick ist
+        ''' mehrdeutig - meint man die Jacke, die Person oder die Gruppe? Das Modell beantwortet
+        ''' alle drei auf einmal, und die Wahl kostet keinen neuen Klick und keine Modellabfrage.</summary>
+        Public Property MotivMaskeKoernung As Integer
+            Get
+                Return _motivKoernung
+            End Get
+            Set(value As Integer)
+                Dim v = Math.Max(0, Math.Min(2, value))
+                If _motivKoernung = v Then Return
+                _motivKoernung = v
+                For Each n In {NameOf(MotivMaskeKoernung), NameOf(IsKoernungFein),
+                               NameOf(IsKoernungMittel), NameOf(IsKoernungGrob)}
+                    Me.RaisePropertyChanged(n)
+                Next
+                Dim ignoriert = ZeichneMotivMaskeNeu()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsKoernungFein As Boolean
+            Get
+                Return _motivKoernung = 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsKoernungMittel As Boolean
+            Get
+                Return _motivKoernung = 1
+            End Get
+        End Property
+
+        Public ReadOnly Property IsKoernungGrob As Boolean
+            Get
+                Return _motivKoernung = 2
+            End Get
+        End Property
+
+        ''' <summary>Die Maske aus den bereits gesammelten Klicks neu zeichnen. Ohne das Modell
+        ''' erneut zu fragen: die Einbettung und die Punkte stehen, nur die Umrechnung aendert sich.</summary>
+        Private Async Function ZeichneMotivMaskeNeu() As Task
+            If _motivEinbettung Is Nothing OrElse _motivPunkte.Count = 0 Then Return
+            Await _motivTor.WaitAsync()
+            Try
+                Dim einbettung = _motivEinbettung
+                Dim punkte = _motivPunkte.ToList()
+                Dim kante = _motivKante, umfang = _motivUmfang, koernung = _motivKoernung
+                Dim maske = Await Task.Run(Function() MotivMaskeService.MaskeFuer(einbettung, punkte, kante, umfang, koernung))
+                If maske Is Nothing Then Return
+                Using maske
+                    Dim rechteck = MaskenRechteck(maske)
+                    If rechteck.Width <= 0 OrElse rechteck.Height <= 0 Then Return
+                    Using ausschnitt = AusschnittAus(maske, rechteck)
+                        If ausschnitt Is Nothing Then Return
+                        ApplySelectionCandidate(ausschnitt, rechteck, "MagicWand", Nothing, Nothing,
+                                                isMask:=True, erzwingeNeu:=True)
+                    End Using
+                End Using
+            Finally
+                _motivTor.Release()
+            End Try
+        End Function
+
+        ''' <summary>Ein Klick ins Bild: die Maske des getroffenen Objekts.
+        '''
+        ''' <paramref name="dazu"/> False heisst "gehoert ausdruecklich nicht dazu" - damit schneidet
+        ''' man eine zu gross geratene Maske zurecht, ohne von vorn anzufangen. Die Punkte sammeln
+        ''' sich, bis der Modus verlassen oder die Auswahl geleert wird.</summary>
+        Public Async Function SetSelectionMotivMaske(xPercent As Double, yPercent As Double,
+                                                     dazu As Boolean) As Task
+            If Not MotivMaskeService.Verfuegbar Then Return
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+
+            Await _motivTor.WaitAsync()
+            Try
+                Dim groesse = GetAnnotationDisplayPixelSize()
+                Dim bw = groesse.Width, bh = groesse.Height
+                If bw <= 0 OrElse bh <= 0 Then Return
+
+                Dim rezept = GetCurrentAdjustments()
+                Dim schluessel = String.Join("|", _currentImagePath, bw, bh,
+                                             ImageProcessor.ComputeBaseKey(rezept))
+                If _motivEinbettung Is Nothing OrElse Not String.Equals(_motivSchluessel, schluessel, StringComparison.Ordinal) Then
+                    _motivPunkte.Clear()
+                    _motivRechnet = True
+                    Me.RaisePropertyChanged(NameOf(IsMotivMaskeRechnend))
+                    AktualisiereBeschaeftigt()
+                    StatusText = LocalizationService.T("Bild wird für die Objektauswahl gelesen…")
+                SetzeBeschaeftigtGrund(LocalizationService.T("Bild wird gelesen"))
+                    Dim quellPfad = RenderSourcePath
+                    Dim arbeitsbild = CloneWorkingFullForRender()
+                    Try
+                        _motivEinbettung = Await Task.Run(
+                            Function()
+                                Using fertig = ImageProcessor.RenderAnzeigeBild(quellPfad, rezept, arbeitsbild)
+                                    If fertig Is Nothing Then Return Nothing
+                                    Return MotivMaskeService.Kodiere(fertig)
+                                End Using
+                            End Function)
+                    Finally
+                        _motivRechnet = False
+                        Me.RaisePropertyChanged(NameOf(IsMotivMaskeRechnend))
+                    AktualisiereBeschaeftigt()
+                    End Try
+                    If _motivEinbettung Is Nothing Then
+                        StatusText = LocalizationService.T("Objektauswahl nicht möglich")
+                        Return
+                    End If
+                    _motivSchluessel = schluessel
+                End If
+
+                ' Der Modus entscheidet, was ein Klick bedeutet - dieselben drei Knoepfe wie beim
+                ' Maskenpinsel. "Neu" faengt bei jedem Klick ein neues Objekt an, "Hinzufuegen"
+                ' erweitert das begonnene, "Abziehen" nimmt eine Stelle wieder weg. Die Alt-Taste
+                ' bleibt die Abkuerzung fuer Abziehen, ohne den Modus zu wechseln.
+                If String.Equals(_selectionCombineMode, "New", StringComparison.Ordinal) AndAlso dazu Then
+                    _motivPunkte.Clear()
+                End If
+                Dim gehoertDazu = dazu AndAlso Not String.Equals(_selectionCombineMode, "Subtract", StringComparison.Ordinal)
+                If _motivPunkte.Count = 0 AndAlso Not gehoertDazu Then
+                    ' Ein Abzugspunkt ohne etwas, wovon man abziehen koennte, ergibt nichts.
+                    StatusText = LocalizationService.T("An dieser Stelle wurde kein Objekt gefunden")
+                    Return
+                End If
+                _motivPunkte.Add(New MotivMaskeService.Punkt(
+                    bw * xPercent / 100.0, bh * yPercent / 100.0, gehoertDazu))
+
+                Dim einbettung = _motivEinbettung
+                Dim punkte = _motivPunkte.ToList()
+                Dim kante = _motivKante, umfang = _motivUmfang, koernung = _motivKoernung
+                Dim maske = Await Task.Run(Function() MotivMaskeService.MaskeFuer(einbettung, punkte, kante, umfang, koernung))
+                If maske Is Nothing Then
+                    StatusText = LocalizationService.T("Objektauswahl nicht möglich")
+                    Return
+                End If
+                Using maske
+                    Dim rechteck = MaskenRechteck(maske)
+                    If rechteck.Width <= 0 OrElse rechteck.Height <= 0 Then
+                        StatusText = LocalizationService.T("An dieser Stelle wurde kein Objekt gefunden")
+                        _motivPunkte.RemoveAt(_motivPunkte.Count - 1)
+                        Return
+                    End If
+                    ' Die Auswahlmaschinerie erwartet das Raster in der Groesse des RECHTECKS, nicht
+                    ' des Bildes - so liefert es auch der Maskenpinsel. Ein bildgrosses Raster mit
+                    ' einem kleineren Rechteck daneben wird als dessen Inhalt gelesen und sitzt dann
+                    ' skaliert und versetzt.
+                    Using ausschnitt = AusschnittAus(maske, rechteck)
+                        If ausschnitt Is Nothing Then Return
+                        PushUndo()
+                        ApplySelectionCandidate(ausschnitt, rechteck, "MagicWand", Nothing, Nothing,
+                                                isMask:=True, erzwingeNeu:=True)
+                    End Using
+                    StatusText = LocalizationService.T("Objekt ausgewählt")
+                End Using
+            Finally
+                _motivTor.Release()
+            End Try
+        End Function
+
+        ''' <summary>Der Ausschnitt eines Alpha8-Rasters, in der Groesse des Rechtecks.</summary>
+        Private Shared Function AusschnittAus(maske As SKBitmap, rechteck As SKRectI) As SKBitmap
+            If maske Is Nothing OrElse rechteck.Width <= 0 OrElse rechteck.Height <= 0 Then Return Nothing
+            Dim raus = New SKBitmap(New SKImageInfo(rechteck.Width, rechteck.Height,
+                                                    SKColorType.Alpha8, SKAlphaType.Premul))
+            Dim puffer(rechteck.Width * rechteck.Height - 1) As Byte
+            For y = 0 To rechteck.Height - 1
+                Dim qy = rechteck.Top + y
+                For x = 0 To rechteck.Width - 1
+                    puffer(y * rechteck.Width + x) = maske.GetPixel(rechteck.Left + x, qy).Alpha
+                Next
+            Next
+            Runtime.InteropServices.Marshal.Copy(puffer, 0, raus.GetPixels(), puffer.Length)
+            Return raus
+        End Function
+
+        ''' <summary>Das umschliessende Rechteck aller Stellen, an denen die Maske ueberhaupt etwas
+        ''' traegt. Die Schwelle liegt bei der halben Deckung: der weiche Saum gehoert dazu, das
+        ''' Rauschen darunter nicht.</summary>
+        Private Shared Function MaskenRechteck(maske As SKBitmap) As SKRectI
+            If maske Is Nothing Then Return SKRectI.Empty
+            Dim w = maske.Width, h = maske.Height
+            Dim links = w, oben = h, rechts = -1, unten = -1
+            For y = 0 To h - 1
+                For x = 0 To w - 1
+                    If maske.GetPixel(x, y).Alpha < 128 Then Continue For
+                    If x < links Then links = x
+                    If x > rechts Then rechts = x
+                    If y < oben Then oben = y
+                    If y > unten Then unten = y
+                Next
+            Next
+            If rechts < links OrElse unten < oben Then Return SKRectI.Empty
+            Return New SKRectI(links, oben, rechts + 1, unten + 1)
+        End Function
+
         ''' <summary>Wählt das ganze Bild aus (Strg+A). Als reines Rechteck ohne Maske - das ist die
         ''' pixelgenaue und zugleich billigste Darstellung einer Voll-Auswahl; „Umkehren" macht daraus bei
         ''' Bedarf eine echte Maske.</summary>
@@ -8892,6 +11803,9 @@ Namespace ViewModels
         End Sub
 
         Public Sub ClearSelection(Optional captureUndo As Boolean = True)
+            ' Die gesammelten Klicks der Objektauswahl gehoeren zu GENAU dieser Maske. Bleiben sie
+            ' stehen, baut der naechste Klick auf einer Maske auf, die es nicht mehr gibt.
+            _motivPunkte.Clear()
             If captureUndo AndAlso _hasActiveSelection Then PushUndo()
             InvalidateSelectionLayerLink()
             CommitSelectionAdjustModeToModel()
@@ -8944,17 +11858,24 @@ Namespace ViewModels
             End Using
         End Sub
 
+        ''' <param name="erzwingeNeu">Der Kandidat ist bereits die VOLLSTAENDIGE Antwort und
+        ''' ersetzt die bisherige Auswahl, statt mit ihr verrechnet zu werden. Fuer die
+        ''' Objektauswahl: dort steckt das Hinzufuegen und Abziehen schon in den gesammelten
+        ''' Klickpunkten, aus denen das Modell jedesmal die ganze Maske neu rechnet. Wuerde sie
+        ''' zusaetzlich mit der vorigen vereinigt, koennte ein Abzugspunkt nie etwas wegnehmen -
+        ''' die kleinere neue Maske ginge in der groesseren alten unter.</param>
         Private Sub ApplySelectionCandidate(candidateMask As SKBitmap,
                                             candidateRect As SKRectI,
                                             candidateShapeMode As String,
                                             candidateXsPercent As Double(),
                                             candidateYsPercent As Double(),
-                                            Optional isMask As Boolean = False)
+                                            Optional isMask As Boolean = False,
+                                            Optional erzwingeNeu As Boolean = False)
             If candidateMask Is Nothing OrElse candidateRect.Width <= 0 OrElse candidateRect.Height <= 0 Then Return
             ' Die Auswahl/Maske ändert sich → sie ist nicht mehr die bereits promotete: eine NEUE Auswahl
             ' bekommt eine EIGENE Ebene, statt die zuvor erzeugte mitzufüllen.
             InvalidateSelectionLayerLink()
-            Dim combineMode = If(_hasActiveSelection, _selectionCombineMode, "New")
+            Dim combineMode = If(_hasActiveSelection AndAlso Not erzwingeNeu, _selectionCombineMode, "New")
             ' AUSWAHL und MASKE strikt trennen: wechselt die ART des Kandidaten
             ' gegenüber der aktiven Auswahl (Laufameisen ↔ gemalte Maske), wird NICHT kombiniert, sondern
             ' eine NEUE Auswahl begonnen. Sonst verrechnete Add/Subtract eine Geometrie-Auswahl mit einem
@@ -10274,6 +13195,15 @@ Namespace ViewModels
                     rect.Width / 100.0 * displaySize.Width,
                     rect.Height / 100.0 * displaySize.Height)
         End Function
+
+        ''' <summary>Die uebernommene Vierteldrehung. Fuer die Hilfslinien der Lineale: bei 90 und
+        ''' 270 Grad tauschen die Achsen, und eine im Quellraum senkrechte Linie steht auf dem Schirm
+        ''' waagerecht.</summary>
+        Public ReadOnly Property AppliedRotationDegrees As Integer
+            Get
+                Return _appliedRotationDegrees
+            End Get
+        End Property
 
         Public ReadOnly Property DisplayImageWidthPixels As Integer
             Get
@@ -11727,6 +14657,22 @@ Namespace ViewModels
         Public ReadOnly Property ResetLightCommand As ICommand
         Public ReadOnly Property ResetColorCommand As ICommand
         Public ReadOnly Property ResetDetailCommand As ICommand
+        Public ReadOnly Property ResetWarpGridCommand As ICommand
+        Public ReadOnly Property ResetLinienCommand As ICommand
+        Public ReadOnly Property ResetObjektVerzerrungCommand As ICommand
+        Public ReadOnly Property ApplyLinienCommand As ICommand
+        Public ReadOnly Property EntferneLetzteLinieCommand As ICommand
+        Public ReadOnly Property ClearDocumentBackgroundCommand As ICommand
+        Public ReadOnly Property ApplyBokehCommand As ICommand
+        Public ReadOnly Property ResetBokehCommand As ICommand
+        Public ReadOnly Property ObjektEntfernenCommand As ICommand
+        Public ReadOnly Property SetBokehBlendeCommand As ICommand
+        Public ReadOnly Property SetMotivKoernungCommand As ICommand
+        Public ReadOnly Property SetVerzerrenModusCommand As ICommand
+        Public ReadOnly Property WandleArtUmCommand As ICommand
+        Public ReadOnly Property SetDocumentBackgroundCommand As ICommand
+        Public ReadOnly Property ApplyWarpGridCommand As ICommand
+        Public ReadOnly Property ResetPerspectiveCommand As ICommand
         Public ReadOnly Property ApplyLensAssignmentCommand As ICommand
         Public ReadOnly Property ResetLensCorrectionCommand As ICommand
         Public ReadOnly Property ResetEffectsCommand As ICommand
@@ -11749,6 +14695,7 @@ Namespace ViewModels
         Public ReadOnly Property ResetSharpnessCommand As ICommand
         Public ReadOnly Property ResetSharpenCommand As ICommand
         Public ReadOnly Property ResetSoftenCommand As ICommand
+        Public ReadOnly Property ResetRauschenCommand As ICommand
         Public ReadOnly Property ResetGrainCommand As ICommand
         Public ReadOnly Property ResetDetailGroupCommand As ICommand
         Public ReadOnly Property ResetLutCommand As ICommand
@@ -11775,7 +14722,7 @@ Namespace ViewModels
         Public ReadOnly Property PrintCommand As ICommand
         Public ReadOnly Property DeleteCurrentCommand As ICommand
 
-        Public Sub New(mainVm As MainWindowViewModel)
+        Public Sub New(mainVm As IEditorHost)
             _mainVm = mainVm
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
             Tags = New ObservableCollection(Of String)()
@@ -12036,6 +14983,42 @@ Namespace ViewModels
                                                             PushUndo()
                                                             ResetDetailInternal()
                                                         End Sub)
+            ResetWarpGridCommand = ReactiveCommand.Create(Sub() ResetWarpGrid())
+            ClearDocumentBackgroundCommand = ReactiveCommand.Create(Sub() CanvasBackgroundColor = "#00000000")
+            SetVerzerrenModusCommand = ReactiveCommand.Create(Of String)(Sub(m) VerzerrenModus = m)
+            WandleArtUmCommand = ReactiveCommand.Create(Sub() WandleAuswahlArt(Not ActiveSelectionIsMask))
+            SetMotivKoernungCommand = ReactiveCommand.Create(Of String)(
+                Sub(wert)
+                    Dim n As Integer
+                    If Integer.TryParse(wert, n) Then MotivMaskeKoernung = n
+                End Sub)
+            ApplyBokehCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim ignoriert = WendeBokehAn()
+                End Sub)
+            ResetBokehCommand = ReactiveCommand.Create(Sub() ResetBokeh())
+            ResetLinienCommand = ReactiveCommand.Create(Sub() ResetLinien())
+            ResetObjektVerzerrungCommand = ReactiveCommand.Create(Sub() ResetObjektVerzerrung())
+            ApplyLinienCommand = ReactiveCommand.Create(Sub() ApplyLinienVerzerrung())
+            EntferneLetzteLinieCommand = ReactiveCommand.Create(Sub() EntferneLetzteLinie())
+            ObjektEntfernenCommand = ReactiveCommand.Create(Sub() WendeObjektEntfernenAn())
+            SetBokehBlendeCommand = ReactiveCommand.Create(Of String)(
+                Sub(wert)
+                    Dim n As Integer
+                    If Integer.TryParse(wert, n) Then BokehBlende = n
+                End Sub)
+            ' Die drei haeufigsten Faelle als eigene Knoepfe - Schwarz, Weiss und wieder
+            ' durchsichtig. Der Farbwaehler daneben bleibt fuer alles andere.
+            SetDocumentBackgroundCommand = ReactiveCommand.Create(Of String)(
+                Sub(wert)
+                    Select Case If(wert, "").Trim().ToLowerInvariant()
+                        Case "black", "schwarz" : CanvasBackgroundColor = "#FF000000"
+                        Case "white", "weiss" : CanvasBackgroundColor = "#FFFFFFFF"
+                        Case Else : CanvasBackgroundColor = "#00000000"
+                    End Select
+                End Sub)
+            ApplyWarpGridCommand = ReactiveCommand.Create(Sub() ApplyWarpGrid())
+            ResetPerspectiveCommand = ReactiveCommand.Create(Sub() ResetPerspectiveInternal())
             ApplyLensAssignmentCommand = ReactiveCommand.Create(Of String)(Sub(text) ApplyLensAssignment(text))
             ResetLensCorrectionCommand = ReactiveCommand.Create(Sub() ResetLensCorrection())
             ResetEffectsCommand = ReactiveCommand.Create(Sub()
@@ -12099,6 +15082,10 @@ Namespace ViewModels
                                                             PushUndo()
                                                             ResetSoftenGroupInternal()
                                                         End Sub)
+            ResetRauschenCommand = ReactiveCommand.Create(Sub()
+                                                              PushUndo()
+                                                              ResetRauschenGruppeInternal()
+                                                          End Sub)
             ResetGrainCommand = ReactiveCommand.Create(Sub()
                                                            PushUndo()
                                                            ResetGrainGroupInternal()
@@ -12419,6 +15406,70 @@ Namespace ViewModels
             Return 0
         End Function
 
+        ''' <summary>Die Schluessel der Gruppen, die nicht erscheinen sollen, als Komma-Liste.
+        '''
+        ''' Als EINE Zeichenkette und nicht als 23 einzelne Ja/Nein-Eigenschaften: die Anzeige
+        ''' fragt ueber einen Wandler mit dem Gruppenschluessel als Parameter, genau wie beim
+        ''' Vergleich von Werkzeugnamen. So kostet eine neue Gruppe eine Zeile in der Liste und
+        ''' eine im Panel - keinen neuen Code im ViewModel.</summary>
+        Public ReadOnly Property VersteckteAnpassungsgruppen As String
+            Get
+                Return AppSettingsService.NormalizeVersteckteAnpassungsgruppen(
+                    If(_mainVm?.Settings?.VersteckteAnpassungsgruppen, ""))
+            End Get
+        End Property
+
+        ''' <summary>Ist von diesem Werkzeug noch eine Gruppe uebrig? Sonst waere es ein Knopf, der
+        ''' ein leeres Panel oeffnet.</summary>
+        Public Function HatSichtbareGruppen(werkzeug As String) As Boolean
+            Dim eintrag = AppSettingsService.WerkzeugGruppen.FirstOrDefault(
+                Function(w) String.Equals(w.Werkzeug, werkzeug, StringComparison.OrdinalIgnoreCase))
+            If eintrag.Gruppen Is Nothing Then Return True
+            Dim versteckt = VersteckteAnpassungsgruppen.Split(","c).Select(Function(k) k.Trim()).ToList()
+            Return eintrag.Gruppen.Any(Function(g) Not versteckt.Contains(g, StringComparer.OrdinalIgnoreCase))
+        End Function
+
+        Public ReadOnly Property ZeigtWerkzeugAnpassen As Boolean
+            Get
+                Return HatSichtbareGruppen("Adjust")
+            End Get
+        End Property
+
+        Public ReadOnly Property ZeigtWerkzeugFarbe As Boolean
+            Get
+                Return HatSichtbareGruppen("Color")
+            End Get
+        End Property
+
+        Public ReadOnly Property ZeigtWerkzeugDetails As Boolean
+            Get
+                Return HatSichtbareGruppen("Effects")
+            End Get
+        End Property
+
+        Public ReadOnly Property ZeigtWerkzeugFilter As Boolean
+            Get
+                Return HatSichtbareGruppen("Filters")
+            End Get
+        End Property
+
+        Public Sub RefreshVersteckteAnpassungsgruppen()
+            Me.RaisePropertyChanged(NameOf(VersteckteAnpassungsgruppen))
+            For Each n In {NameOf(ZeigtWerkzeugAnpassen), NameOf(ZeigtWerkzeugFarbe),
+                           NameOf(ZeigtWerkzeugDetails), NameOf(ZeigtWerkzeugFilter)}
+                Me.RaisePropertyChanged(n)
+            Next
+            ' Steht man gerade IN einem Werkzeug, das eben verschwunden ist, muss man da raus -
+            ' sonst blickt man auf ein leeres Panel und kommt ueber die Leiste nicht zurueck.
+            Dim jetzt = _currentTool
+            If (jetzt = EditorTool.Adjust AndAlso Not ZeigtWerkzeugAnpassen) OrElse
+               (jetzt = EditorTool.Color AndAlso Not ZeigtWerkzeugFarbe) OrElse
+               (jetzt = EditorTool.Effects AndAlso Not ZeigtWerkzeugDetails) OrElse
+               (jetzt = EditorTool.Filters AndAlso Not ZeigtWerkzeugFilter) Then
+                CurrentTool = EditorTool.Selection
+            End If
+        End Sub
+
         Public Sub RefreshToolGroupOrder()
             Me.RaisePropertyChanged(NameOf(ToolGroupRowAdjust))
             Me.RaisePropertyChanged(NameOf(ToolGroupRowTransform))
@@ -12575,9 +15626,7 @@ Namespace ViewModels
             _suppressPreviewDirty = True
             Try
                 ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
-                PreviewImage = Nothing
-                ComparisonImage = Nothing
-                CurrentImage = Nothing
+                ' Geleert wurde schon oben, vor dem Setzen des Pfades - siehe dort.
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
                 ExifInfo = Nothing
                 ClearHistogramData()
@@ -13012,6 +16061,13 @@ Namespace ViewModels
         ''' bisher _hasChanges - wer nur umschaltete, bekam beim Verlassen den "Ungespeichert?"-Dialog,
         ''' und "Speichern" re-kodierte dann ein unbearbeitetes JPEG in-place.
         Private Sub SchedulePreviewUpdate(Optional markDirty As Boolean = True)
+            ' JEDE Rezeptaenderung macht eine liegende Live-Vorschau ungueltig: sie ist auf dem
+            ' alten Bildstand gerechnet. Sie stehen zu lassen hiesse, ueber dem gerade geaenderten
+            ' Bild eine Fassung von vorhin zu zeigen - und die Aenderung waere unsichtbar. Hier ist
+            ' die eine Stelle, durch die jede Aenderung geht.
+            RaeumeBokehVorschauAb()
+            RaeumeGitterVorschauAb()
+            RaeumeLinienVorschauAb()
             If markDirty AndAlso Not _suppressPreviewDirty Then
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
@@ -15554,6 +18610,14 @@ Namespace ViewModels
                 .LensDistortion = _lensDistortion,
                 .LensTca = _lensTca,
                 .LensVignetting = _lensVignetting,
+                .PerspectiveHorizontal = CSng(_perspectiveHorizontal),
+                .PerspectiveVertical = CSng(_perspectiveVertical),
+                .PerspectiveAspect = CSng(_perspectiveAspect),
+                .PerspectiveCorner0X = CSng(_perspectiveCorners(0)), .PerspectiveCorner0Y = CSng(_perspectiveCorners(1)),
+                .PerspectiveCorner1X = CSng(_perspectiveCorners(2)), .PerspectiveCorner1Y = CSng(_perspectiveCorners(3)),
+                .PerspectiveCorner2X = CSng(_perspectiveCorners(4)), .PerspectiveCorner2Y = CSng(_perspectiveCorners(5)),
+                .PerspectiveCorner3X = CSng(_perspectiveCorners(6)), .PerspectiveCorner3Y = CSng(_perspectiveCorners(7)),
+                .PerspectiveScale = CSng(_perspectiveScale),
                 .LensModel = _lensModel,
                 .LensDistortionAmount = CSng(_lensDistortionAmount),
                 .LensTcaAmount = CSng(_lensTcaAmount),
@@ -15583,6 +18647,8 @@ Namespace ViewModels
                 .NoiseReduction = CSng(_noiseReduction),
                 .NoiseReductionDetail = CSng(_noiseReductionDetail),
                 .ColorNoiseReduction = CSng(_colorNoiseReduction),
+                .FarbrauschGrob = CSng(_farbrauschGrob),
+                .FarbrauschGrobSkala = CSng(_farbrauschGrobSkala),
                 .ColorNoiseAdd = CSng(_colorNoiseAdd),
                 .NoiseReductionMethod = _noiseReductionMethod,
                 .DustScratches = CSng(_dustScratches),
@@ -15688,6 +18754,7 @@ Namespace ViewModels
                 .PixelLayerHidden = _pixelLayerHidden,
                 .SelectionScopeEnabled = _selectionScopeEnabled,
                 .HasActiveSelection = _hasActiveSelection,
+                .ActiveSelectionIsMask = _activeSelectionIsMask,
                 .SelectionXPercent = _selectionXPercent,
                 .SelectionYPercent = _selectionYPercent,
                 .SelectionWidthPercent = _selectionWidthPercent,
@@ -16012,6 +19079,8 @@ Namespace ViewModels
             _noiseReduction = adj.NoiseReduction
             _noiseReductionDetail = adj.NoiseReductionDetail
             _colorNoiseReduction = adj.ColorNoiseReduction
+            _farbrauschGrob = adj.FarbrauschGrob
+            _farbrauschGrobSkala = adj.FarbrauschGrobSkala
             _colorNoiseAdd = adj.ColorNoiseAdd
             _noiseReductionMethod = adj.NoiseReductionMethod
             _dustScratches = adj.DustScratches
@@ -16083,6 +19152,17 @@ Namespace ViewModels
             _colorGradeGlobalLuminance = adj.ColorGradeGlobalLuminance
             _colorGradeBlending = adj.ColorGradeBlending
             _rotationDegrees = adj.RotationDegrees
+            ' Verzerren gehoert zur Geometrie und muss aus dem Rezept zurueck in die Felder: die
+            ' Vorschau wird aus den FELDERN gebaut, ein nur im Rezept stehender Wert waere beim
+            ' naechsten Reglerdreh ueberschrieben und damit verloren.
+            _perspectiveHorizontal = adj.PerspectiveHorizontal
+            _perspectiveVertical = adj.PerspectiveVertical
+            _perspectiveAspect = adj.PerspectiveAspect
+            _perspectiveScale = adj.PerspectiveScale
+            _perspectiveCorners(0) = adj.PerspectiveCorner0X : _perspectiveCorners(1) = adj.PerspectiveCorner0Y
+            _perspectiveCorners(2) = adj.PerspectiveCorner1X : _perspectiveCorners(3) = adj.PerspectiveCorner1Y
+            _perspectiveCorners(4) = adj.PerspectiveCorner2X : _perspectiveCorners(5) = adj.PerspectiveCorner2Y
+            _perspectiveCorners(6) = adj.PerspectiveCorner3X : _perspectiveCorners(7) = adj.PerspectiveCorner3Y
             _straightenDegrees = adj.StraightenDegrees
             _straightenExpandCanvas = adj.StraightenExpandCanvas
             _flipH = adj.FlipHorizontal
@@ -16181,8 +19261,12 @@ Namespace ViewModels
             If resetTransientSelectionBinding Then
                 _editingLayerMaskId = ""
                 InvalidateSelectionLayerLink()
-                If _activeSelectionIsMask Then
-                    _activeSelectionIsMask = False
+                ' Die ART der Auswahl kommt aus dem wiederhergestellten Zustand, nicht aus einer
+                ' Annahme. Vorher fiel sie hier pauschal auf "Auswahl" zurueck, und nach einem
+                ' Rueckgaengig zeigte eine Maske Laufameisen statt des roten Overlays - das Overlay
+                ' baut sich naemlich nur auf, wenn die Art "Maske" ist.
+                If _activeSelectionIsMask <> adj.ActiveSelectionIsMask Then
+                    _activeSelectionIsMask = adj.ActiveSelectionIsMask
                     Me.RaisePropertyChanged(NameOf(ActiveSelectionIsMask))
                 End If
             End If
@@ -16260,6 +19344,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(HasActiveSelection))
+            Me.RaisePropertyChanged(NameOf(KannObjektEntfernen))
             Me.RaisePropertyChanged(NameOf(SelectionXPercent))
             Me.RaisePropertyChanged(NameOf(SelectionYPercent))
             Me.RaisePropertyChanged(NameOf(SelectionWidthPercent))
@@ -16399,6 +19484,8 @@ Namespace ViewModels
             _noiseReduction = 0
             _noiseReductionDetail = 0
             _colorNoiseReduction = 0
+            _farbrauschGrob = 0
+            _farbrauschGrobSkala = 50
             _colorNoiseAdd = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             _vignette = 0
@@ -16434,6 +19521,11 @@ Namespace ViewModels
             _lensVignettingAmount = 100
             _lensModel = ""
             _lensFilter = ""
+            _perspectiveHorizontal = 0
+            _perspectiveVertical = 0
+            _perspectiveAspect = 0
+            _perspectiveScale = 0
+            Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
             _whiteBalance = "Wie Aufnahme"
             _calibrationRedHue = 0
             _calibrationRedSaturation = 0
@@ -16593,6 +19685,10 @@ Namespace ViewModels
             _selectedLayersPanelTab = LayersPanelTab.Tool
             _isPickingColorFromImage = False
             _pendingColorPickCallback = Nothing
+            ' Die Pipette wird hier abgebrochen - ihre Nebenwirkung auf die Vorschau muss mit weg.
+            ' Blieb die Unterdrueckung stehen, zeigte das naechste Bild seine Filmumkehr nicht an,
+            ' sobald sie dort eingeschaltet wird: der Regler stuende auf an, das Bild bliebe negativ.
+            _suppressNegativeForPick = False
             _pixelEditLayer.ResetActiveStroke()
             _isEraserMode = False
             _eraserFillColor = "#00FFFFFF"
@@ -16773,6 +19869,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationGlowColorBrush))
 
             Me.RaisePropertyChanged(NameOf(HasActiveSelection))
+            Me.RaisePropertyChanged(NameOf(KannObjektEntfernen))
             Me.RaisePropertyChanged(NameOf(SelectionXPercent))
             Me.RaisePropertyChanged(NameOf(SelectionYPercent))
             Me.RaisePropertyChanged(NameOf(SelectionWidthPercent))
@@ -18803,10 +21900,18 @@ Namespace ViewModels
             ApplyAdjustments(adj)
             If keepIndex < 0 OrElse keepIndex >= _annotations.Count Then Return
             _selectedAnnotationIndex = keepIndex
+            ' Die MARKIERTE ZEILE gehoert dazu. ApplyAdjustments baut Objektliste und Ebenenzeilen
+            ' neu auf und raeumt dabei beides ab; nur den Index zurueckzusetzen liess das Objekt auf
+            ' dem Bild markiert erscheinen, waehrend im Ebenenpanel nichts stand. Die Zeile wird ueber
+            ' das Objekt an dieser Stelle gesucht, nicht ueber die alte Instanz - die gibt es nach
+            ' dem Neuaufbau nicht mehr.
+            _selectedLayerRow = _layerRows.FirstOrDefault(
+                Function(r) Object.ReferenceEquals(r.Annotation, _annotations(keepIndex)))
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
             Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
+            RaiseLayerPanelSelectionChanged()
         End Sub
 
         ''' <summary>True, während die Regler ein Objekt bedienen.</summary>
@@ -20140,6 +23245,8 @@ Namespace ViewModels
             _noiseReduction = 0
             _noiseReductionDetail = 0
             _colorNoiseReduction = 0
+            _farbrauschGrob = 0
+            _farbrauschGrobSkala = 50
             _colorNoiseAdd = 0
             _noiseReductionMethod = NoiseReductionMethod.Gaussian
             _dustScratches = 0
@@ -20231,6 +23338,24 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Die Rauschen-Gruppe: die drei Stufen, die im Panel zusammenstehen. Das
+        ''' Weichzeichnen gehoert NICHT dazu - es hat seine eigene Gruppe mit eigenem Knopf, und ein
+        ''' Zuruecksetzer, der ueber die Gruppengrenze hinaus greift, ueberrascht nur.</summary>
+        Private Sub ResetRauschenGruppeInternal()
+            _addNoise = 0
+            _colorNoiseReduction = 0
+            _colorNoiseAdd = 0
+            _farbrauschGrob = 0
+            _farbrauschGrobSkala = 50
+            For Each n In {NameOf(AddNoise), NameOf(ColorNoiseAmount), NameOf(ColorNoiseReduction),
+                           NameOf(ColorNoiseAdd), NameOf(FarbrauschGrob), NameOf(FarbrauschGrobSkala),
+                           NameOf(HatFarbflecken)}
+                Me.RaisePropertyChanged(n)
+            Next
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
         ''' <summary>Nur die Körnung-Gruppe (Körnung, Größe, Frequenz).</summary>
         Private Sub ResetGrainGroupInternal()
             _grain = 0
@@ -20252,6 +23377,8 @@ Namespace ViewModels
             _haze = 0
             _addNoise = 0
             _colorNoiseReduction = 0
+            _farbrauschGrob = 0
+            _farbrauschGrobSkala = 50
             _colorNoiseAdd = 0
             _structure = 0
             _glow = 0

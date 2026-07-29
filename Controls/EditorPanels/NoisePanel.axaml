@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.NoisePanel">
+    <!-- ALLES ZUM RAUSCHEN an einem Ort. "Rauschen" und "Farbrauschen" lagen vorher bei den
+         Details, mitten zwischen Struktur, Klarheit und Staub - drei Regler zu einer Sache, verteilt
+         auf zwei Gruppen. Das Weichzeichnen bleibt bewusst, wo es war: es ist ein Werkzeug fuer sich
+         und nicht nur eine Rauschminderung. -->
+    <Border Classes="adjustment-group"
+            IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=rauschen}">
+        <Expander Header="Rauschen" icons:ExpanderState.Key="rauschen">
+            <Expander.HeaderTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/grain.svg"
+                                Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Classes="icon-btn group-reset"
+                                Width="28" Height="28" Padding="0"
+                                Command="{Binding DataContext.ResetRauschenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ToolTip.Tip="Rauschen zurücksetzen">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                Width="14" Height="14" />
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </Expander.HeaderTemplate>
+            <StackPanel Spacing="2" Margin="0,8,0,0">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Rauschen" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Positiv fügt Rauschen hinzu, negativ reduziert es (gleichmäßiges Weichzeichnen)." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       DefaultValue="0"
+                                       Value="{Binding AddNoise}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AddNoise, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Farbrauschen" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Negativ entfernt Farbrauschen: geglättet werden nur die Farbanteile (Chroma), Helligkeit und Details bleiben erhalten. Positiv fügt farbiges Rauschen hinzu." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       DefaultValue="0"
+                                       Value="{Binding ColorNoiseAmount}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding ColorNoiseAmount, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                </Grid>
+
+                <!-- Die dritte Stufe. Sie arbeitet auf MEHREREN Groessen und holt damit das, woran
+                     die beiden darueber nicht herankommen: grosse Farbflecken aus hochgezogenen
+                     Aufnahmen. Ein einstufiger Filter braeuchte dafuer einen Radius, der alles
+                     andere gleich mitfrisst. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Farbflecken" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Gegen große Farbflecken aus hochgezogenen Aufnahmen. Arbeitet auf mehreren Größen und lässt Kanten und feine Struktur stehen." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding FarbrauschGrob}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding FarbrauschGrob, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsEnabled="{Binding HatFarbflecken}">
+                    <TextBlock Text="Fleckengröße" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Wie große Flecken noch erfasst werden. Höher greift weiter, kostet aber mehr Zeit." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding FarbrauschGrobSkala}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding FarbrauschGrobSkala, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+
+            </StackPanel>
+        </Expander>
+    </Border>
+</UserControl>

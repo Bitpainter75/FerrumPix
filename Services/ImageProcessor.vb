@@ -200,6 +200,51 @@ Namespace Services
         End Function
     End Class
 
+    ''' <summary>Wie ein Objekt mitverzerrt wird. Alle Angaben in Prozent des BILDES, nicht des
+    ''' Objekts: die Verzerrung wird ja am Bild eingestellt, und ein Objekt, das man danach
+    ''' verschiebt, soll dorthin passen, wo es dann liegt.</summary>
+    Public Class ObjektVerzerrung
+        ''' <summary>"Perspektive", "Gitter" oder "Linien". Leer heisst: keine.</summary>
+        Public Property Art As String = ""
+
+        ''' <summary>Perspektive: die vier Ecken des Bildes nach der Verzerrung, in Bildprozent,
+        ''' als x0,y0,x1,y1,x2,y2,x3,y3 (links oben, rechts oben, rechts unten, links unten).</summary>
+        Public Property Ecken As Double() = New Double() {}
+
+        ''' <summary>Gitter: Spalten und Zeilen, dann je Knoten x,y in Bildprozent.</summary>
+        Public Property Spalten As Integer = 0
+        Public Property Zeilen As Integer = 0
+        Public Property Knoten As Double() = New Double() {}
+
+        ''' <summary>Linien: je Linie QuelleAx, QuelleAy, QuelleBx, QuelleBy und dasselbe fuer das
+        ''' Ziel, alles in Bildprozent.</summary>
+        Public Property LinienQuelle As Double() = New Double() {}
+        Public Property LinienZiel As Double() = New Double() {}
+
+        Public ReadOnly Property IstLeer As Boolean
+            Get
+                Select Case Art
+                    Case "Perspektive" : Return Ecken Is Nothing OrElse Ecken.Length <> 8
+                    Case "Gitter" : Return Knoten Is Nothing OrElse Spalten < 1 OrElse Zeilen < 1 OrElse
+                                           Knoten.Length <> (Spalten + 1) * (Zeilen + 1) * 2
+                    Case "Linien" : Return LinienQuelle Is Nothing OrElse LinienZiel Is Nothing OrElse
+                                           LinienQuelle.Length < 4 OrElse LinienQuelle.Length <> LinienZiel.Length
+                    Case Else : Return True
+                End Select
+            End Get
+        End Property
+
+        Public Function Clone() As ObjektVerzerrung
+            Return New ObjektVerzerrung With {
+                .Art = Art,
+                .Ecken = If(Ecken Is Nothing, New Double() {}, CType(Ecken.Clone(), Double())),
+                .Spalten = Spalten, .Zeilen = Zeilen,
+                .Knoten = If(Knoten Is Nothing, New Double() {}, CType(Knoten.Clone(), Double())),
+                .LinienQuelle = If(LinienQuelle Is Nothing, New Double() {}, CType(LinienQuelle.Clone(), Double())),
+                .LinienZiel = If(LinienZiel Is Nothing, New Double() {}, CType(LinienZiel.Clone(), Double()))}
+        End Function
+    End Class
+
     Public Class ImageAnnotation
         Implements INotifyPropertyChanged
 
@@ -637,6 +682,24 @@ Namespace Services
         End Property
 
         ''' <summary>Wird die Kontur mitgemischt? Siehe _blendIncludesStroke.</summary>
+        ''' <summary>Die Verzerrung, die dieses Objekt mitmacht - oder Nothing.
+        '''
+        ''' Sie gehoert ins REZEPT und nicht in die Pixel. Beim Bild wird eine Gitter- oder
+        ''' Linienverzerrung gebacken, weil dort jeder Bildpunkt einzeln wandert und sich das nicht
+        ''' als Zahl aufheben laesst. Ein Objekt dagegen wird bei jedem Render neu gezeichnet - es
+        ''' kann seine Verzerrung als Angabe behalten und bleibt damit aenderbar: Text laesst sich
+        ''' weiter tippen, ein Bildobjekt weiter austauschen.</summary>
+        Public Property Verzerrung As ObjektVerzerrung
+
+        ''' <summary>Die EIGENE Verzerrung dieses Objekts - unabhaengig vom Bild.
+        '''
+        ''' Der Unterschied zu <see cref="Verzerrung"/> ist der Bezug: die dort ist in BILDprozent
+        ''' und kommt vom Verzerren des Bildes, das Objekt macht sie nur mit. Diese hier ist in
+        ''' Prozent des OBJEKTS und gehoert ihm allein - verschiebt man das Objekt, wandert sie mit,
+        ''' statt sich zu aendern. Deshalb zwei Felder und nicht eines: sie beantworten verschiedene
+        ''' Fragen und muessen verschieden mitwandern.</summary>
+        Public Property EigeneVerzerrung As ObjektVerzerrung
+
         Public Property BlendIncludesStroke As Boolean
             Get
                 Return _blendIncludesStroke
@@ -993,6 +1056,8 @@ Namespace Services
                 .Id = Id,
                 .GroupId = GroupId,
                 .WatermarkPresetName = WatermarkPresetName,
+                .Verzerrung = Verzerrung?.Clone(),
+                .EigeneVerzerrung = EigeneVerzerrung?.Clone(),
                 .ImagePath = ImagePath,
                 .SourceFileName = SourceFileName,
                 .XPixels = XPixels,
@@ -1311,6 +1376,14 @@ Namespace Services
         ''' bleibt unangetastet - Details bleiben stehen, Farbflecken verschwinden. Gerade bei der
         ''' echten RAW-Entwicklung sichtbar, wo die Kamera-Vorschau schon entrauscht war.
         Public Property ColorNoiseReduction As Single = 0
+
+        ''' <summary>Mehrskalige Farbrauschminderung: 0 bis 100. Die dritte Stufe neben Rauschen und
+        ''' Farbrauschen - sie holt das GROBFLECKIGE Farbrauschen, an das ein einstufiger Filter nur
+        ''' mit einem Radius herankaeme, der alles andere gleich mitfrisst.</summary>
+        Public Property FarbrauschGrob As Single = 0
+
+        ''' <summary>Wie grosse Flecken noch erfasst werden: 0 bis 100.</summary>
+        Public Property FarbrauschGrobSkala As Single = 50
         ''' <summary>Farbrauschen HINZUFUEGEN 0-100 - die Plus-Seite desselben Reglers im Panel
         ''' („Farbrauschen" ist bipolar wie „Rauschen": minus entfernt, plus faerbt ein). Getrennt
         ''' gespeichert, damit <see cref="ColorNoiseReduction"/> weiter genau das bleibt, was
@@ -1455,6 +1528,35 @@ Namespace Services
         ''' greifen weiter ineinander. Bei 50 rechnet die Kette exakt wie das frühere Split-Toning.</summary>
         Public Property ColorGradeBlending As Single = 50
         Public Property RotationDegrees As Integer = 0
+        ' ── Verzerren (perspektivisch) ──────────────────────────────────────
+        '
+        ' Alle vier laufen -100..100 und sind bei 0 wirkungslos. Sie gehoeren zur GEOMETRIE, nicht
+        ' zu den Reglern: sie veraendern, wo ein Bildpunkt landet, und stehen deshalb unten auch in
+        ' der Liste der strukturellen Felder.
+        Public Property PerspectiveHorizontal As Single = 0
+        Public Property PerspectiveVertical As Single = 0
+        Public Property PerspectiveAspect As Single = 0
+        Public Property PerspectiveScale As Single = 0
+
+        ' Freie Ecken. Acht Werte in PROZENT der Bildbreite bzw. -hoehe, im Uhrzeigersinn ab links
+        ' oben, bei 0 wirkungslos. Sie kommen ZUSAETZLICH zu den vier Reglern: die Regler kippen um
+        ' die beiden Achsen (symmetrisch, das braucht man fuer stuerzende Linien), die Ecken
+        ' erlauben jede Lage, die eine Homographie hergibt.
+        '
+        ' Warum beides und nicht nur die Ecken: die vier Regler sind in bestehenden Rezepten
+        ' gespeichert und behalten hier ihre Bedeutung unveraendert. Und sie sind der bequemere
+        ' Griff fuer den haeufigsten Fall - eine Kante geradeziehen, ohne vier Ecken einzeln zu
+        ' treffen. Zwei Wege zur selben Matrix, aber nicht zwei Kopien derselben Formel: die Regler
+        ' verschieben die Ecken, danach rechnet EINE Stelle weiter.
+        Public Property PerspectiveCorner0X As Single = 0
+        Public Property PerspectiveCorner0Y As Single = 0
+        Public Property PerspectiveCorner1X As Single = 0
+        Public Property PerspectiveCorner1Y As Single = 0
+        Public Property PerspectiveCorner2X As Single = 0
+        Public Property PerspectiveCorner2Y As Single = 0
+        Public Property PerspectiveCorner3X As Single = 0
+        Public Property PerspectiveCorner3Y As Single = 0
+
         Public Property StraightenDegrees As Single = 0
         Public Property StraightenExpandCanvas As Boolean = False
         Public Property FlipHorizontal As Boolean = False
@@ -1490,7 +1592,16 @@ Namespace Services
         Public Property CanvasHeight As Integer = 0
         Public Property LockCanvasAspect As Boolean = True
         Public Property CanvasAnchor As String = "Center"
-        Public Property CanvasBackgroundColor As String = "#FF000000"
+        ''' <summary>Die Hintergrundfarbe des DOKUMENTS, als "#AARRGGBB". Voellig durchsichtig ist
+        ''' der Ausgangszustand und aendert nichts.
+        '''
+        ''' Der Name stammt aus der Zeit, als sie nur die erweiterte Leinwand fuellte. Sie fuellt
+        ''' jetzt ALLES, was sonst durchsichtig bliebe: erweiterte Leinwand, leere Ecken von
+        ''' Begradigen und Verzerren, weggeradierte Stellen. Deshalb sitzt sie am ENDE der
+        ''' Geometriekette - jede Stufe, die Loecher hinterlaesst, waere sonst eine eigene
+        ''' Einstellung, und man muesste an jede einzeln denken. Der Feldname bleibt, damit
+        ''' gespeicherte Rezepte weiter gelesen werden.</summary>
+        Public Property CanvasBackgroundColor As String = "#00000000"
         Public Property FilterPreset As String = "Keine"
         Public Property FilterStrength As Single = 100
         Public Property LutPath As String = ""
@@ -1518,6 +1629,12 @@ Namespace Services
         ''' <summary>True nur solange die Auswahl im Editor aktiv bearbeitet wird. FPX speichert
         ''' diesen transienten UI-Zustand bewusst als False.</summary>
         Public Property HasActiveSelection As Boolean = False
+
+        ''' <summary>Art der aktiven Auswahl: True = MASKE (rotes Overlay), False = AUSWAHL
+        ''' (Laufameisen). Gehoert in den gespeicherten Zustand, weil das Wiederherstellen sie sonst
+        ''' raten muesste - und pauschal auf "Auswahl" zurueckfiel. Nach einem Rueckgaengig zeigte
+        ''' eine Maske dann Laufameisen statt des roten Overlays.</summary>
+        Public Property ActiveSelectionIsMask As Boolean = False
         Public Property SelectionXPercent As Double = 0
         Public Property SelectionYPercent As Double = 0
         Public Property SelectionWidthPercent As Double = 0
@@ -1587,6 +1704,9 @@ Namespace Services
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WorkingImageVersion", "WorkingImageHasTransparency",
             "RotationDegrees", "StraightenDegrees", "StraightenExpandCanvas", "FlipHorizontal", "FlipVertical",
+            "PerspectiveHorizontal", "PerspectiveVertical", "PerspectiveAspect", "PerspectiveScale",
+            "PerspectiveCorner0X", "PerspectiveCorner0Y", "PerspectiveCorner1X", "PerspectiveCorner1Y",
+            "PerspectiveCorner2X", "PerspectiveCorner2Y", "PerspectiveCorner3X", "PerspectiveCorner3Y",
             "CropLeftPercent", "CropTopPercent", "CropRightPercent", "CropBottomPercent",
             "ResizeWidth", "ResizeHeight", "LockResizeAspect", "ResizeFitInsideBox", "ResizeScalePercent", "NoResizeUpscale", "ResizeInterpolation",
             "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
@@ -1745,6 +1865,8 @@ Namespace Services
                 .NoiseReduction = NoiseReduction,
                 .NoiseReductionMethod = NoiseReductionMethod,
                 .ColorNoiseReduction = ColorNoiseReduction,
+                .FarbrauschGrob = FarbrauschGrob,
+                .FarbrauschGrobSkala = FarbrauschGrobSkala,
                 .ColorNoiseAdd = ColorNoiseAdd,
                 .DustScratches = DustScratches,
                 .Haze = Haze,
@@ -1812,6 +1934,14 @@ Namespace Services
                 .ColorGradeBalance = ColorGradeBalance,
                 .ColorGradeBlending = ColorGradeBlending,
                 .RotationDegrees = RotationDegrees,
+                .PerspectiveHorizontal = PerspectiveHorizontal,
+                .PerspectiveVertical = PerspectiveVertical,
+                .PerspectiveAspect = PerspectiveAspect,
+                .PerspectiveScale = PerspectiveScale,
+                .PerspectiveCorner0X = PerspectiveCorner0X, .PerspectiveCorner0Y = PerspectiveCorner0Y,
+                .PerspectiveCorner1X = PerspectiveCorner1X, .PerspectiveCorner1Y = PerspectiveCorner1Y,
+                .PerspectiveCorner2X = PerspectiveCorner2X, .PerspectiveCorner2Y = PerspectiveCorner2Y,
+                .PerspectiveCorner3X = PerspectiveCorner3X, .PerspectiveCorner3Y = PerspectiveCorner3Y,
                 .StraightenDegrees = StraightenDegrees,
                 .StraightenExpandCanvas = StraightenExpandCanvas,
                 .FlipHorizontal = FlipHorizontal,
@@ -1845,6 +1975,7 @@ Namespace Services
                 .MaskedAdjustmentLayers = If(MaskedAdjustmentLayers, New List(Of MaskedAdjustmentLayer)()).Where(Function(l) l IsNot Nothing).Select(Function(l) l.Clone()).ToList(),
                 .SelectionScopeEnabled = SelectionScopeEnabled,
                 .HasActiveSelection = HasActiveSelection,
+                .ActiveSelectionIsMask = ActiveSelectionIsMask,
                 .SelectionXPercent = SelectionXPercent,
                 .SelectionYPercent = SelectionYPercent,
                 .SelectionWidthPercent = SelectionWidthPercent,
@@ -3058,8 +3189,10 @@ Namespace Services
                 processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
                 processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
                 processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyPerspective(processed, adj))
                 processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
                 processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+                processed = ReplaceBitmap(processed, ApplyDocumentBackground(processed, adj))
 
                 Using processedBitmap = processed
                     Return ToAvaloniaBitmap(processedBitmap)
@@ -3082,8 +3215,10 @@ Namespace Services
             processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
             processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyPerspective(processed, adj))
             processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyDocumentBackground(processed, adj))
 
             Using processedBitmap = processed
                 Return ToAvaloniaBitmap(processedBitmap)
@@ -3100,8 +3235,10 @@ Namespace Services
             processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
             processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyPerspective(processed, adj))
             processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyDocumentBackground(processed, adj))
             Return processed
         End Function
 
@@ -3336,8 +3473,10 @@ Namespace Services
             processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
             processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyPerspective(processed, adj))
             processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+            processed = ReplaceBitmap(processed, ApplyDocumentBackground(processed, adj))
 
             ' Eine Auswahl wird im bereits gerenderten Display-Raum angelegt. Deshalb muss auch der
             ' unveraenderte Vergleichsstand fuer selektive Farb-/Detailanpassungen NACH der Geometrie
@@ -3416,6 +3555,12 @@ Namespace Services
             If adj.ColorNoiseReduction > 0 Then
                 processed = ReplaceBitmap(processed, ApplyColorNoiseReduction(processed, adj.ColorNoiseReduction / 100.0F))
             End If
+            ' NACH der einstufigen Glaettung: die nimmt das feine Farbkorn, diese Stufe die groben
+            ' Flecken. Umgekehrt muesste die grobe Stufe erst durch das feine Korn hindurch.
+            If adj.FarbrauschGrob > 0 Then
+                processed = ReplaceBitmap(processed, ApplyMultiskalaEntrauschen(
+                    processed, adj.FarbrauschGrob / 100.0F, adj.FarbrauschGrobSkala / 100.0F))
+            End If
             If adj.ColorNoiseAdd > 0 Then
                 processed = ReplaceBitmap(processed, ApplyColorNoiseAdd(processed, adj.ColorNoiseAdd / 100.0F))
             End If
@@ -3450,6 +3595,187 @@ Namespace Services
             End If
 
             Return processed
+        End Function
+
+
+        ''' <summary>Mehrskaliges Entrauschen der FARBE: nimmt grobfleckiges Farbrauschen weg, ohne
+        ''' weichzuzeichnen.
+        '''
+        ''' Der Unterschied zu allem, was wir sonst haben, ist die SKALA. Ein Weichzeichner - egal ob
+        ''' Gauss, Median oder kantenerhaltend - arbeitet auf einer Groesse. Grobfleckiges Rauschen
+        ''' aus hochgezogenen Aufnahmen ist aber zehn bis zwanzig Bildpunkte gross; um daran zu
+        ''' kommen, braucht so ein Filter einen Radius, der alles andere gleich mitfrisst. Genau
+        ''' deshalb sah unser Farbrausch-Regler bei solchen Bildern schwach aus - er arbeitet auf der
+        ''' falschen Skala.
+        '''
+        ''' Hier wird das Bild stattdessen in mehrere Groessenstufen ZERLEGT. Ein 20-Punkte-Fleck
+        ''' liegt auf einer groben Stufe und ist DORT ein kleiner Ausschlag - ihn wegzunehmen kostet
+        ''' fast nichts. Die Kanten des Motivs sind auf jeder Stufe grosse Ausschlaege und bleiben.
+        '''
+        ''' Geschrumpft wird mit einer Kennlinie, die grosse Ausschlaege fast unangetastet laesst
+        ''' (y = x - T hoch 2 / x oberhalb der Schwelle, null darunter). Ein glattes Abziehen der
+        ''' Schwelle von allem wuerde auch die Kanten um denselben Betrag abschwaechen - das ist der
+        ''' Unterschied zwischen "entrauscht" und "matt".
+        '''
+        ''' Angefasst werden NUR die Farbkanaele. Das Auge loest Farbdetails ohnehin kaum auf, und
+        ''' die Struktur eines Bildes steckt in der Helligkeit - die bleibt hier unberuehrt. Fuer
+        ''' Helligkeitsrauschen gibt es die beiden bestehenden Regler.</summary>
+        ''' <param name="staerke">0 bis 1.</param>
+        ''' <param name="grob">0 bis 1: wie grosse Flecken noch erfasst werden.</param>
+        Public Shared Function ApplyMultiskalaEntrauschen(source As SKBitmap, staerke As Single,
+                                                          grob As Single) As SKBitmap
+            If source Is Nothing OrElse staerke <= 0.001F Then Return CloneBitmap(source)
+            Dim w = source.Width, h = source.Height
+            If w < 8 OrElse h < 8 Then Return CloneBitmap(source)
+
+            ' Wie viele Stufen. Jede verdoppelt die erfasste Fleckengroesse; sechs Stufen reichen bis
+            ' etwa 64 Bildpunkte, und groeber als das ist kein Rauschen mehr, sondern Motiv.
+            Dim stufen = Math.Max(3, Math.Min(7, CInt(Math.Round(3.0 + grob * 4.0))))
+            Dim n = w * h
+
+            Dim quelle = CloneBitmap(source)
+            Dim ziel = New SKBitmap(w, h, source.ColorType, source.AlphaType)
+            Try
+                ' In Helligkeit und zwei Farbdifferenzen zerlegen. Nicht wegen der Norm, sondern weil
+                ' sich nur so unterschiedlich hart schrumpfen laesst.
+                Dim y(n - 1) As Single, cb(n - 1) As Single, cr(n - 1) As Single
+                Dim alpha(n - 1) As Byte
+                For j = 0 To h - 1
+                    For i = 0 To w - 1
+                        Dim p = quelle.GetPixel(i, j)
+                        Dim k = j * w + i
+                        y(k) = 0.299F * p.Red + 0.587F * p.Green + 0.114F * p.Blue
+                        cb(k) = p.Blue - y(k)
+                        cr(k) = p.Red - y(k)
+                        alpha(k) = p.Alpha
+                    Next
+                Next
+
+                ' Die Schwellen. Die Farbkanaele bekommen ein Vielfaches - dort darf es haerter zur
+                ' Sache gehen, ohne dass man es sieht.
+                ' NUR die Farbkanaele. Die Helligkeit bleibt unberuehrt, und das ist eine bewusste
+                ' Grenze: eine Schrumpfung ueber viele Stufen nimmt auch die Auslaeufer einer Kante
+                ' mit, und die tragen deren Kontrast. Gemessen fiel eine harte Kante dadurch von 120
+                ' auf 43 Stufen - am sauberen Bild genauso wie am verrauschten, es lag also nicht am
+                ' Rauschen, sondern am Verfahren. Fuer die Helligkeit gibt es die beiden bestehenden
+                ' Regler; hier geht es um das grobfleckige FARBrauschen, an das die nicht herankommen.
+                Dim schwelleC = 4.0F + staerke * 34.0F
+                SchrumpfeStufen(cb, w, h, stufen, schwelleC, 1.0F)
+                SchrumpfeStufen(cr, w, h, stufen, schwelleC, 1.0F)
+
+                For j = 0 To h - 1
+                    For i = 0 To w - 1
+                        Dim k = j * w + i
+                        Dim r = y(k) + cr(k)
+                        Dim b = y(k) + cb(k)
+                        Dim g = (y(k) - 0.299F * r - 0.114F * b) / 0.587F
+                        ziel.SetPixel(i, j, New SKColor(KlemmeByte(r), KlemmeByte(g), KlemmeByte(b), alpha(k)))
+                    Next
+                Next
+                Return ziel
+            Catch
+                ziel.Dispose()
+                Return CloneBitmap(source)
+            Finally
+                quelle.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Zerlegt einen Kanal in Groessenstufen, schrumpft jede und setzt wieder zusammen.
+        ''' Der Kanal wird an Ort und Stelle geaendert.
+        '''
+        ''' <paramref name="wachstum"/> sagt, wie die Schwelle von Stufe zu Stufe waechst. Groeber
+        ''' heisst mehr Flaeche und damit weniger Zufall - dort steht ein Ausschlag eher fuer etwas
+        ''' Echtes und die Schwelle darf mitwachsen, sonst frisst man auf den groben Stufen den
+        ''' Farbverlauf des Motivs mit.</summary>
+        Private Shared Sub SchrumpfeStufen(kanal As Single(), w As Integer, h As Integer,
+                                           stufen As Integer, schwelle As Single, wachstum As Single)
+            Dim n = w * h
+            Dim basis(n - 1) As Single
+            Array.Copy(kanal, basis, n)
+            Dim ergebnis(n - 1) As Single
+            Dim geglaettet(n - 1) As Single
+            Dim s = schwelle
+
+            For stufe = 1 To stufen
+                Dim radius = CInt(Math.Pow(2, stufe - 1))
+                Array.Copy(basis, geglaettet, n)
+                KastenUnschaerfe(geglaettet, w, h, radius)
+                ' Was die Glaettung wegnimmt, ist der Anteil DIESER Stufe.
+                For i = 0 To n - 1
+                    Dim detail = basis(i) - geglaettet(i)
+                    ergebnis(i) += Schrumpfe(detail, s)
+                Next
+                Array.Copy(geglaettet, basis, n)
+                s *= wachstum
+            Next
+
+            ' Der Rest ist der grobe Bildaufbau - der bleibt unangetastet.
+            For i = 0 To n - 1
+                kanal(i) = ergebnis(i) + basis(i)
+            Next
+        End Sub
+
+        ''' <summary>Die Schrumpfkennlinie. Unterhalb der Schwelle null, darueber wird nur ein mit
+        ''' dem Betrag FALLENDER Anteil abgezogen - ein grosser Ausschlag bleibt damit praktisch
+        ''' erhalten. Ein glattes Abziehen der Schwelle wuerde jede Kante um denselben Betrag
+        ''' abschwaechen.</summary>
+        Private Shared Function Schrumpfe(x As Single, schwelle As Single) As Single
+            Dim a = Math.Abs(x)
+            If a <= schwelle Then Return 0.0F
+            ' Deutlich ueber der Schwelle: UNANGETASTET lassen. Die weiche Kennlinie zieht auch
+            ' grossen Ausschlaegen noch etwas ab, und ueber fuenf Stufen summiert sich das - eine
+            ' harte Kante fiel so von 120 auf 41, also mehr als um die Haelfte. Was so weit ueber
+            ' der Schwelle liegt, ist kein Rauschen mehr, sondern das Motiv.
+            ' Der Uebergangsbereich ist BEWUSST schmal. Er wird ueber alle Stufen aufsummiert: an
+            ' einer harten Kante liegt der Ausschlag auf den mittleren Stufen genau in diesem Band,
+            ' und ein breiter Bereich hat die Kante von 120 auf 43 Stufen fallen lassen - am
+            ' sauberen Bild genauso wie am verrauschten. Das war kein Entrauschen mehr.
+            If a >= schwelle * 1.5F Then Return x
+            Dim weich = CSng(x - schwelle * schwelle / x)
+            Dim t = (a - schwelle) / (schwelle * 0.5F)
+            Return weich * (1.0F - t) + x * t
+        End Function
+
+        ''' <summary>Kastenunschaerfe, zweimal getrennt - waagerecht, dann senkrecht. Ueber laufende
+        ''' Summen, damit die Kosten NICHT mit dem Radius wachsen: auf den groben Stufen ist der
+        ''' Radius 32, und eine gewoehnliche Faltung waere dort unbezahlbar.</summary>
+        Private Shared Sub KastenUnschaerfe(feld As Single(), w As Integer, h As Integer, radius As Integer)
+            If radius < 1 Then Return
+            Dim zwischen(w * h - 1) As Single
+            Dim breite = radius * 2 + 1
+
+            For j = 0 To h - 1
+                Dim zeile = j * w
+                Dim summe As Single = 0
+                For i = -radius To radius
+                    summe += feld(zeile + Math.Max(0, Math.Min(w - 1, i)))
+                Next
+                For i = 0 To w - 1
+                    zwischen(zeile + i) = summe / breite
+                    Dim raus = Math.Max(0, Math.Min(w - 1, i - radius))
+                    Dim rein = Math.Max(0, Math.Min(w - 1, i + radius + 1))
+                    summe += feld(zeile + rein) - feld(zeile + raus)
+                Next
+            Next
+
+            For i = 0 To w - 1
+                Dim summe As Single = 0
+                For j = -radius To radius
+                    summe += zwischen(Math.Max(0, Math.Min(h - 1, j)) * w + i)
+                Next
+                For j = 0 To h - 1
+                    feld(j * w + i) = summe / breite
+                    Dim raus = Math.Max(0, Math.Min(h - 1, j - radius))
+                    Dim rein = Math.Max(0, Math.Min(h - 1, j + radius + 1))
+                    summe += zwischen(rein * w + i) - zwischen(raus * w + i)
+                Next
+            Next
+        End Sub
+
+        Private Shared Function KlemmeByte(v As Single) As Byte
+            If Single.IsNaN(v) Then Return 0
+            Return CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v)))))
         End Function
 
         ''' <summary>Wendet lokale Korrekturen in Ebenenreihenfolge an. Eine fehlende oder beschädigte
@@ -3898,6 +4224,14 @@ Namespace Services
                         .FlipHorizontal = geometry.FlipHorizontal, .FlipVertical = geometry.FlipVertical,
                         .StraightenDegrees = geometry.StraightenDegrees,
                         .StraightenExpandCanvas = geometry.StraightenExpandCanvas,
+                        .PerspectiveHorizontal = geometry.PerspectiveHorizontal,
+                        .PerspectiveVertical = geometry.PerspectiveVertical,
+                        .PerspectiveAspect = geometry.PerspectiveAspect,
+                        .PerspectiveScale = geometry.PerspectiveScale,
+                        .PerspectiveCorner0X = geometry.PerspectiveCorner0X, .PerspectiveCorner0Y = geometry.PerspectiveCorner0Y,
+                        .PerspectiveCorner1X = geometry.PerspectiveCorner1X, .PerspectiveCorner1Y = geometry.PerspectiveCorner1Y,
+                        .PerspectiveCorner2X = geometry.PerspectiveCorner2X, .PerspectiveCorner2Y = geometry.PerspectiveCorner2Y,
+                        .PerspectiveCorner3X = geometry.PerspectiveCorner3X, .PerspectiveCorner3Y = geometry.PerspectiveCorner3Y,
                         .ResizeWidth = geometry.ResizeWidth, .ResizeHeight = geometry.ResizeHeight,
                         .ResizeInterpolation = geometry.ResizeInterpolation,
                         .CanvasWidth = geometry.CanvasWidth, .CanvasHeight = geometry.CanvasHeight,
@@ -3907,6 +4241,7 @@ Namespace Services
                     maskPixels = ReplaceBitmap(maskPixels, ApplyCrop(maskPixels, maskGeometry))
                     maskPixels = ReplaceBitmap(maskPixels, ApplyGeometryTransforms(maskPixels, maskGeometry))
                     maskPixels = ReplaceBitmap(maskPixels, ApplyStraighten(maskPixels, maskGeometry))
+                    maskPixels = ReplaceBitmap(maskPixels, ApplyPerspective(maskPixels, maskGeometry))
                     maskPixels = ReplaceBitmap(maskPixels, ApplyResize(maskPixels, maskGeometry))
                     maskPixels = ReplaceBitmap(maskPixels, ApplyCanvasResize(maskPixels, maskGeometry))
 
@@ -4025,6 +4360,22 @@ Namespace Services
                 w = outW : h = outH
             End If
 
+            ' --- Verzerren --- (dieselbe Stelle wie im Bildweg: nach der Begradigung, vor dem
+            ' Skalieren; die Stufe laesst die Masse unveraendert, deshalb aendert sich hier nur der
+            ' Punkt und nicht w/h)
+            Dim verzerrung = ImageGeometryMapper.VerzerrungsMatrix(w, h,
+                                 adj.PerspectiveHorizontal, adj.PerspectiveVertical,
+                                 adj.PerspectiveAspect, adj.PerspectiveScale,
+                                 ImageGeometryMapper.EckenVersatz(adj))
+            If Not verzerrung.IsIdentity Then
+                Dim v = verzerrung.MapPoint(New SKPoint(CSng(x), CSng(y)))
+                x = v.X : y = v.Y
+                ' Was aus dem Rahmen kippt, wird von der Stufe abgeschnitten - fuer so einen Punkt
+                ' gibt es im Ausgabebild keine Stelle. Ohne diese Pruefung meldete der Hinweg einen
+                ' Punkt ausserhalb des Bildes als gueltig, und der Rueckweg wiese ihn ab.
+                If Not TryClampToRange(x, w) OrElse Not TryClampToRange(y, h) Then Return False
+            End If
+
             Dim resizeW = adj.ResizeWidth, resizeH = adj.ResizeHeight
             If resizeW > 0 OrElse resizeH > 0 Then
                 If resizeW <= 0 Then resizeW = CInt(Math.Round(w * (resizeH / h)))
@@ -4128,6 +4479,21 @@ Namespace Services
             If resizeW > 0 Then
                 x *= outW / afterResizeW
                 y *= outH / afterResizeH
+            End If
+
+            ' --- Verzerren zurück --- (Gegenstueck zur Vorwaertsstufe oben; die Umkehrmatrix
+            ' existiert immer, solange die Homographie nicht entartet ist)
+            ' outW/outH, NICHT rotW/rotH: an dieser Stelle liegt der Punkt im Raum NACH der
+            ' Begradigung, und genau darauf rechnet die Vorwaertsstufe.
+            Dim verzerrung = ImageGeometryMapper.VerzerrungsMatrix(outW, outH,
+                                 adj.PerspectiveHorizontal, adj.PerspectiveVertical,
+                                 adj.PerspectiveAspect, adj.PerspectiveScale,
+                                 ImageGeometryMapper.EckenVersatz(adj))
+            If Not verzerrung.IsIdentity Then
+                Dim umkehr As SKMatrix = Nothing
+                If Not verzerrung.TryInvert(umkehr) Then Return False
+                Dim v = umkehr.MapPoint(New SKPoint(CSng(x), CSng(y)))
+                x = v.X : y = v.Y
             End If
 
             ' --- Begradigung zurück (invers: erst ent-drehen, dann ent-skalieren) ---
@@ -4921,8 +5287,12 @@ Namespace Services
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.SharpenMasking,
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.ColorNoiseReduction,
+                adj.FarbrauschGrob, adj.FarbrauschGrobSkala,
                 adj.ColorNoiseAdd,
                 adj.DustScratches, adj.Haze, adj.AddNoise, adj.[Structure], adj.Glow,
+                adj.PerspectiveHorizontal, adj.PerspectiveVertical, adj.PerspectiveAspect, adj.PerspectiveScale,
+                adj.PerspectiveCorner0X, adj.PerspectiveCorner0Y, adj.PerspectiveCorner1X, adj.PerspectiveCorner1Y,
+                adj.PerspectiveCorner2X, adj.PerspectiveCorner2Y, adj.PerspectiveCorner3X, adj.PerspectiveCorner3Y,
 adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.CalibrationGreenHue, adj.CalibrationGreenSaturation,
                 adj.CalibrationBlueHue, adj.CalibrationBlueSaturation, adj.CalibrationShadowTint,
@@ -7334,6 +7704,27 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Select
         End Function
 
+        ''' <summary>Legt das Bild auf die Hintergrundfarbe des Dokuments. Ohne gesetzte Farbe kommt
+        ''' dasselbe Objekt unveraendert zurueck - kein Umkopieren fuer nichts.
+        '''
+        ''' Am Ende der Kette, damit sie ALLES fuellt, was vorher durchsichtig geblieben ist:
+        ''' erweiterte Leinwand, leere Ecken von Begradigen und Verzerren, weggeradierte Stellen.</summary>
+        Private Shared Function ApplyDocumentBackground(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing OrElse adj Is Nothing Then Return source
+            If String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor) Then Return source
+            Dim farbe As SKColor
+            If Not SKColor.TryParse(adj.CanvasBackgroundColor, farbe) Then Return source
+            ' Voellig durchsichtig heisst: keine Farbe gewuenscht.
+            If farbe.Alpha = 0 Then Return source
+
+            Dim ergebnis = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(ergebnis)
+                canvas.Clear(farbe)
+                canvas.DrawBitmap(source, 0, 0)
+            End Using
+            Return ergebnis
+        End Function
+
         Private Shared Function ApplyCanvasResize(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim targetWidth = If(adj.CanvasWidth > 0, adj.CanvasWidth, source.Width)
             Dim targetHeight = If(adj.CanvasHeight > 0, adj.CanvasHeight, source.Height)
@@ -7360,7 +7751,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
             Dim result = New SKBitmap(targetWidth, targetHeight, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
-                canvas.Clear(ParseColor(adj.CanvasBackgroundColor, SKColors.Black))
+                ' Durchsichtig lassen: gefuellt wird EINMAL am Ende der Kette
+                ' (ApplyDocumentBackground), sonst faerbte diese Stufe ihr Loch selbst und die
+                ' anderen Loecher blieben durchsichtig.
+                canvas.Clear(SKColors.Transparent)
                 canvas.DrawBitmap(source, offsetX, offsetY)
             End Using
             Return result
@@ -7452,38 +7846,28 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
             If IsPaintKind(transformed.Kind) AndAlso transformed.Strokes IsNot Nothing Then
                 transformed.Strokes = transformed.Strokes.Select(
-                    Function(stroke) TransformStrokeForGeometry(stroke, q, preWidth, preHeight, outputWidth, outputHeight, adj.FlipHorizontal, adj.FlipVertical)).
+                    Function(stroke) TransformStrokeForGeometry(stroke, preWidth, preHeight, rotation, adj.FlipHorizontal, adj.FlipVertical)).
                     Where(Function(stroke) stroke IsNot Nothing).
                     ToList()
             End If
             Return transformed
         End Function
 
-        Private Shared Function TransformStrokeForGeometry(stroke As BrushStroke, q As Integer,
+        ''' <summary>Striche in die Ausgabegeometrie. Ueber die gemeinsame Matrix des Mappers statt
+        ''' ueber eine eigene Fallunterscheidung - die war die letzte Sorte, die ihre eigene Kopie
+        ''' der Dreh- und Spiegelregeln fuehrte. Zwei Kopien derselben Formel laufen frueher oder
+        ''' spaeter auseinander; hier ist es nur deshalb nie passiert, weil beide gleichzeitig
+        ''' geschrieben wurden.</summary>
+        Private Shared Function TransformStrokeForGeometry(stroke As BrushStroke,
                                                            preWidth As Integer, preHeight As Integer,
-                                                           outputWidth As Integer, outputHeight As Integer,
+                                                           rotationDegrees As Integer,
                                                            flipH As Boolean, flipV As Boolean) As BrushStroke
             If stroke Is Nothing OrElse stroke.Points Is Nothing Then Return Nothing
+            Dim m = ImageGeometryMapper.SourceToDisplayMatrix(preWidth, preHeight, rotationDegrees, flipH, flipV)
             Dim points As New List(Of StrokePoint)(stroke.Points.Count)
             For Each p In stroke.Points
-                Dim x = p.X
-                Dim y = p.Y
-                Select Case q
-                    Case 1
-                        Dim nx = preHeight - y
-                        y = x
-                        x = nx
-                    Case 2
-                        x = preWidth - x
-                        y = preHeight - y
-                    Case 3
-                        Dim nx = y
-                        y = preWidth - x
-                        x = nx
-                End Select
-                If flipH Then x = outputWidth - x
-                If flipV Then y = outputHeight - y
-                points.Add(New StrokePoint(x, y))
+                Dim abgebildet = m.MapPoint(New SKPoint(CSng(p.X), CSng(p.Y)))
+                points.Add(New StrokePoint(abgebildet.X, abgebildet.Y))
             Next
             Return New BrushStroke(points)
         End Function
@@ -7701,6 +8085,126 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' <summary>Zeichnet ein Objekt auf eine eigene transparente Ebene, laesst - falls vorhanden - die
         ''' Pixel-Anpassungen des Objekts darauf laufen und komponiert sie mit dem angegebenen Mischmodus
         ''' ein.</summary>
+
+        ''' <summary>Verzerrt die fertig gezeichnete Ebene eines Objekts, bevor sie ins Bild kommt.
+        '''
+        ''' Der Weg ist derselbe wie beim Bild: fuer jeden Knoten eines Rasters wird die QUELLposition
+        ''' bestimmt und das Ganze als Dreiecksnetz gezeichnet. Neu ist nur, dass das Raster hier ueber
+        ''' der EBENE liegt, die Verzerrung aber am BILD eingestellt wurde - jeder Knoten muss also
+        ''' erst in Bildkoordinaten gebracht, dort verschoben und wieder zurueckgerechnet werden.
+        '''
+        ''' Die Ebene WAECHST dabei: eine Verzerrung schiebt Bildpunkte nach aussen, und was ueber den
+        ''' bisherigen Rand hinausgeht, waere sonst abgeschnitten. <paramref name="offsetX"/> und
+        ''' <paramref name="offsetY"/> werden entsprechend nachgefuehrt.</summary>
+        Friend Shared Function VerzerreObjektEbene(ebene As SKBitmap, v As ObjektVerzerrung,
+                                                   bildBreite As Integer, bildHoehe As Integer,
+                                                   ByRef offsetX As Integer, ByRef offsetY As Integer) As SKBitmap
+            If ebene Is Nothing OrElse v Is Nothing OrElse v.IstLeer Then Return Nothing
+            If bildBreite <= 0 OrElse bildHoehe <= 0 Then Return Nothing
+
+            Const Stufen As Integer = 24
+            Dim knoten = (Stufen + 1) * (Stufen + 1)
+
+            ' Wie weit sich ein Punkt der Ebene verschiebt, in BILDkoordinaten. Erst einmal fuer die
+            ' Ecken und den Rand, um zu wissen, wie weit die Ebene wachsen muss.
+            Dim zielX(knoten - 1) As Single, zielY(knoten - 1) As Single
+            Dim quellX(knoten - 1) As Single, quellY(knoten - 1) As Single
+            Dim minX = Double.MaxValue, minY = Double.MaxValue
+            Dim maxX = Double.MinValue, maxY = Double.MinValue
+
+            For zi = 0 To Stufen
+                For si = 0 To Stufen
+                    Dim i = zi * (Stufen + 1) + si
+                    ' Der Knoten in Ebenenkoordinaten, dann in Bildkoordinaten.
+                    Dim ex = si / CDbl(Stufen) * ebene.Width
+                    Dim ey = zi / CDbl(Stufen) * ebene.Height
+                    Dim bx = offsetX + ex, by = offsetY + ey
+                    Dim z = VerschiebePunkt(v, bx, by, bildBreite, bildHoehe)
+                    zielX(i) = CSng(z.X)
+                    zielY(i) = CSng(z.Y)
+                    quellX(i) = CSng(ex)
+                    quellY(i) = CSng(ey)
+                    If z.X < minX Then minX = z.X
+                    If z.X > maxX Then maxX = z.X
+                    If z.Y < minY Then minY = z.Y
+                    If z.Y > maxY Then maxY = z.Y
+                Next
+            Next
+            If maxX <= minX OrElse maxY <= minY Then Return Nothing
+
+            ' Ein Rand von einem Bildpunkt, damit die aeusserste Reihe nicht auf der Kante liegt.
+            Dim neuX = CInt(Math.Floor(minX)) - 1
+            Dim neuY = CInt(Math.Floor(minY)) - 1
+            Dim neuB = CInt(Math.Ceiling(maxX)) - neuX + 2
+            Dim neuH = CInt(Math.Ceiling(maxY)) - neuY + 2
+            ' Eine Verzerrung, die eine Ebene um das Zwanzigfache aufblaeht, ist keine Verzerrung
+            ' mehr, sondern ein Rechenfehler - dann lieber unveraendert lassen.
+            If neuB <= 0 OrElse neuH <= 0 Then Return Nothing
+            If neuB > ebene.Width * 20 + 64 OrElse neuH > ebene.Height * 20 + 64 Then Return Nothing
+
+            For i = 0 To knoten - 1
+                zielX(i) = CSng(zielX(i) - neuX)
+                zielY(i) = CSng(zielY(i) - neuY)
+            Next
+
+            Dim ergebnis = ImageGeometryMapper.VerzerreUeberGitterAuf(ebene, neuB, neuH, Stufen, Stufen,
+                                                                     zielX, zielY, quellX, quellY)
+            If ergebnis Is Nothing Then Return Nothing
+            offsetX = neuX
+            offsetY = neuY
+            Return ergebnis
+        End Function
+
+        ''' <summary>Wohin ein Bildpunkt durch die Verzerrung wandert. Alle drei Arten an einer
+        ''' Stelle, damit die Zuordnung Punkt zu Ziel nur einmal existiert.</summary>
+        Private Shared Function VerschiebePunkt(v As ObjektVerzerrung, bx As Double, by As Double,
+                                                bildBreite As Integer, bildHoehe As Integer) As SKPoint
+            Select Case v.Art
+                Case "Perspektive"
+                    ' Bilineare Abbildung des Einheitsquadrats auf das verzerrte Viereck. Genau genug
+                    ' fuer ein Objekt und ohne die Sonderfaelle einer projektiven Matrix.
+                    Dim u = bx / bildBreite, w = by / bildHoehe
+                    Dim e = v.Ecken
+                    Dim oben = (e(0) + (e(2) - e(0)) * u, e(1) + (e(3) - e(1)) * u)
+                    Dim unten = (e(6) + (e(4) - e(6)) * u, e(7) + (e(5) - e(7)) * u)
+                    Dim px = oben.Item1 + (unten.Item1 - oben.Item1) * w
+                    Dim py = oben.Item2 + (unten.Item2 - oben.Item2) * w
+                    Return New SKPoint(CSng(px / 100.0 * bildBreite), CSng(py / 100.0 * bildHoehe))
+
+                Case "Gitter"
+                    ' Zwischen den vier umgebenden Stuetzpunkten interpolieren.
+                    Dim u = Math.Max(0.0, Math.Min(1.0, bx / bildBreite)) * v.Spalten
+                    Dim w = Math.Max(0.0, Math.Min(1.0, by / bildHoehe)) * v.Zeilen
+                    Dim s0 = Math.Max(0, Math.Min(v.Spalten - 1, CInt(Math.Floor(u))))
+                    Dim z0 = Math.Max(0, Math.Min(v.Zeilen - 1, CInt(Math.Floor(w))))
+                    Dim tu = u - s0, tw = w - z0
+                    Dim K = Function(si As Integer, zi As Integer) As (X As Double, Y As Double)
+                                Dim i = (zi * (v.Spalten + 1) + si) * 2
+                                Return (v.Knoten(i), v.Knoten(i + 1))
+                            End Function
+                    Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
+                    Dim oben = (a.X + (b.X - a.X) * tu, a.Y + (b.Y - a.Y) * tu)
+                    Dim unten = (c.X + (d.X - c.X) * tu, c.Y + (d.Y - c.Y) * tu)
+                    Dim px = oben.Item1 + (unten.Item1 - oben.Item1) * tw
+                    Dim py = oben.Item2 + (unten.Item2 - oben.Item2) * tw
+                    Return New SKPoint(CSng(px / 100.0 * bildBreite), CSng(py / 100.0 * bildHoehe))
+
+                Case "Linien"
+                    Dim qp(v.LinienQuelle.Length - 1) As Double
+                    Dim zp(v.LinienZiel.Length - 1) As Double
+                    For i = 0 To qp.Length - 1
+                        Dim istX = (i Mod 2) = 0
+                        qp(i) = v.LinienQuelle(i) / 100.0 * If(istX, bildBreite, bildHoehe)
+                        zp(i) = v.LinienZiel(i) / 100.0 * If(istX, bildBreite, bildHoehe)
+                    Next
+                    ' Das Feld sagt, WOHER ein Zielpunkt seine Farbe holt. Fuer ein Objekt brauchen
+                    ' wir die Gegenrichtung - wohin ein Punkt wandert -, also werden Quelle und Ziel
+                    ' vertauscht.
+                    Return ImageGeometryMapper.LinienPunkt(bx, by, zp, qp)
+            End Select
+            Return New SKPoint(CSng(bx), CSng(by))
+        End Function
+
         Private Shared Sub DrawAnnotationViaLayer(canvas As SKCanvas, annotation As ImageAnnotation,
                                                   renderAnnotation As ImageAnnotation, kind As String, rect As SKRect,
                                                   sourceWidth As Integer, sourceHeight As Integer,
@@ -7713,16 +8217,51 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     layerCanvas.Translate(-offsetX, -offsetY)
                     DrawAnnotationOnCanvas(layerCanvas, kind, renderAnnotation, rect, sourceWidth, sourceHeight)
                 End Using
-                If HasObjectAdjustments(annotation) Then
-                    Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
-                    objectAdj.SourceWidthPixels = layer.Width
-                    objectAdj.SourceHeightPixels = layer.Height
-                    Using processedLayer = ProcessBitmapBase(layer, objectAdj)
-                        DrawAnnotationLayer(canvas, processedLayer, blendModeName)
-                    End Using
-                Else
-                    DrawAnnotationLayer(canvas, layer, blendModeName)
+
+                ' VERZERREN, bevor die Objektanpassungen greifen: die Verzerrung ist Geometrie und
+                ' gehoert vor die Farbe, so wie beim Bild auch. Die Ebene kann dabei wachsen, deshalb
+                ' wandert der Versatz mit.
+                Dim gezeichnet = layer
+                Dim zwischen As SKBitmap = Nothing
+                Dim eigene As SKBitmap = Nothing
+                Dim vx = offsetX, vy = offsetY
+
+                ' ERST die eigene Verzerrung des Objekts, DANN die des Bildes. Die eigene beschreibt
+                ' seine Form, die des Bildes, wo es im Bild liegt - in dieser Reihenfolge gelesen
+                ' ergibt beides zusammen genau das, was man auf dem Schirm erwartet.
+                If annotation IsNot Nothing AndAlso annotation.EigeneVerzerrung IsNot Nothing AndAlso
+                   Not annotation.EigeneVerzerrung.IstLeer Then
+                    Dim ox = 0, oy = 0
+                    zwischen = VerzerreObjektEbene(layer, annotation.EigeneVerzerrung,
+                                                   layer.Width, layer.Height, ox, oy)
+                    If zwischen IsNot Nothing Then
+                        gezeichnet = zwischen
+                        vx += ox
+                        vy += oy
+                    End If
                 End If
+
+                If annotation IsNot Nothing AndAlso annotation.Verzerrung IsNot Nothing AndAlso
+                   Not annotation.Verzerrung.IstLeer Then
+                    eigene = VerzerreObjektEbene(gezeichnet, annotation.Verzerrung, sourceWidth, sourceHeight, vx, vy)
+                    If eigene IsNot Nothing Then gezeichnet = eigene
+                End If
+
+                Try
+                    If HasObjectAdjustments(annotation) Then
+                        Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
+                        objectAdj.SourceWidthPixels = gezeichnet.Width
+                        objectAdj.SourceHeightPixels = gezeichnet.Height
+                        Using processedLayer = ProcessBitmapBase(gezeichnet, objectAdj)
+                            DrawAnnotationLayerAt(canvas, processedLayer, blendModeName, vx - offsetX, vy - offsetY)
+                        End Using
+                    Else
+                        DrawAnnotationLayerAt(canvas, gezeichnet, blendModeName, vx - offsetX, vy - offsetY)
+                    End If
+                Finally
+                    eigene?.Dispose()
+                    zwischen?.Dispose()
+                End Try
             End Using
         End Sub
 
@@ -7764,6 +8303,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             clone.GlowEnabled = False
             Return clone
         End Function
+
+        ''' <summary>Wie <see cref="DrawAnnotationLayer"/>, aber mit Versatz - eine verzerrte Ebene
+        ''' ist groesser als die urspruengliche und faengt weiter oben links an.</summary>
+        Private Shared Sub DrawAnnotationLayerAt(canvas As SKCanvas, layer As SKBitmap,
+                                                 blendModeName As String, dx As Integer, dy As Integer)
+            If dx = 0 AndAlso dy = 0 Then
+                DrawAnnotationLayer(canvas, layer, blendModeName)
+                Return
+            End If
+            Using paint = New SKPaint With {.BlendMode = ResolveAnnotationBlendMode(blendModeName), .IsAntialias = True}
+                canvas.DrawBitmap(layer, dx, dy, paint)
+            End Using
+        End Sub
 
         Private Shared Sub DrawAnnotationLayer(canvas As SKCanvas, layer As SKBitmap, blendModeName As String)
             Using paint = New SKPaint With {.BlendMode = ResolveAnnotationBlendMode(blendModeName), .IsAntialias = True}
@@ -10037,6 +10589,34 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
+        ''' <summary>Perspektivische Verzerrung. Die Bildmasse bleiben gleich - was aus dem Rahmen
+        ''' kippt, wird abgeschnitten, und wo nichts mehr liegt, bleibt es durchsichtig. Der Regler
+        ''' "Groesse" ist dafuer da, die leeren Ecken wieder zuzudecken.
+        '''
+        ''' Warum die Masse gleich bleiben: die Stufe laeuft im Bild- UND im Maskenweg. Wuerde sie
+        ''' die Groesse aendern, muessten beide Wege exakt dieselbe neue Groesse errechnen, sonst
+        ''' passt die Maske nicht mehr aufs Bild. Gleiche Masse machen das zur Selbstverstaendlichkeit
+        ''' statt zu einer Bedingung, an die jemand denken muss.</summary>
+        Private Shared Function ApplyPerspective(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing OrElse adj Is Nothing Then Return source
+            Dim m = ImageGeometryMapper.VerzerrungsMatrix(source.Width, source.Height,
+                                                          adj.PerspectiveHorizontal, adj.PerspectiveVertical,
+                                                          adj.PerspectiveAspect, adj.PerspectiveScale,
+                                                          ImageGeometryMapper.EckenVersatz(adj))
+            ' Unbenutzt heisst unbenutzt: kein Umkopieren, keine Neuabtastung.
+            If m.IsIdentity Then Return source
+
+            Dim ergebnis = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(ergebnis)
+                canvas.Clear(SKColors.Transparent)
+                canvas.SetMatrix(m)
+                Using paint = New SKPaint With {.IsAntialias = True}
+                    DrawBitmapSampled(canvas, source, 0, 0, SamplingHigh, paint)
+                End Using
+            End Using
+            Return ergebnis
+        End Function
+
         Private Shared Function ApplyStraighten(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim degrees = adj.StraightenDegrees
             If Math.Abs(degrees) < 0.01F Then Return source
@@ -10049,7 +10629,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
                 Dim expanded = New SKBitmap(expandedWidth, expandedHeight, source.ColorType, source.AlphaType)
                 Using canvas = New SKCanvas(expanded)
-                    canvas.Clear(ParseColor(adj.CanvasBackgroundColor, SKColors.Transparent))
+                    ' Siehe ApplyCanvasResize: gefuellt wird einmal am Ende der Kette.
+                    canvas.Clear(SKColors.Transparent)
                     canvas.Translate(expandedWidth / 2.0F, expandedHeight / 2.0F)
                     canvas.RotateDegrees(degrees)
                     Using paint = New SKPaint With {.IsAntialias = True}
@@ -11391,9 +11972,14 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         ' dann um den Drehpunkt drehen, dann die Maske an ihrer alten Stelle absetzen.
                         canvas.Translate(CSng(-l), CSng(-t))
                         canvas.RotateDegrees(CSng(degrees), CSng(pivotX), CSng(pivotY))
-                        Using paint = New SKPaint With {.IsAntialias = True, .FilterQuality = SKFilterQuality.High}
-                            canvas.DrawBitmap(decoded, New SKRect(mask.Left, mask.Top,
-                                                                  mask.Left + decoded.Width, mask.Top + decoded.Height), paint)
+                        Using paint = New SKPaint With {.IsAntialias = True}
+                            ' Ueber SKImage, weil nur DrawImage die Abtastung entgegennimmt -
+                            ' DrawBitmap hat dafuer keine Ueberladung mehr.
+                            Using bild = SKImage.FromBitmap(decoded)
+                                canvas.DrawImage(bild, New SKRect(mask.Left, mask.Top,
+                                                                  mask.Left + decoded.Width, mask.Top + decoded.Height),
+                                                 New SKSamplingOptions(SKCubicResampler.Mitchell), paint)
+                            End Using
                         End Using
                     End Using
                     Using img = SKImage.FromPixels(gedreht.PeekPixels())
@@ -11483,8 +12069,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Using skaliert = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
                     Using canvas = New SKCanvas(skaliert)
                         canvas.Clear(SKColors.Transparent)
-                        Using paint = New SKPaint With {.IsAntialias = True, .FilterQuality = SKFilterQuality.High}
-                            canvas.DrawBitmap(decoded, New SKRect(0, 0, w, h), paint)
+                        Using paint = New SKPaint With {.IsAntialias = True}
+                            Using bild = SKImage.FromBitmap(decoded)
+                                canvas.DrawImage(bild, New SKRect(0, 0, w, h),
+                                                 New SKSamplingOptions(SKCubicResampler.Mitchell), paint)
+                            End Using
                         End Using
                     End Using
                     Using img = SKImage.FromPixels(skaliert.PeekPixels())
@@ -11523,21 +12112,34 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Zauberstab-Maske am Saatpunkt in Bildpixeln. <paramref name="bounds"/> ist das umschließende
         ''' Rechteck in Bildpixeln.</summary>
         ''' <paramref name="workingFull"/>: Arbeitsbild statt Datei-Decode (siehe SaveImage; Besitz wechselt hierher).
+        ''' <summary>Das fertig gerechnete ANZEIGEBILD, wie es der Editor zeigt - Besitz beim
+        ''' Aufrufer. Fuer alles, was auf dem gesehenen Bild arbeiten muss statt auf der Datei:
+        ''' Zauberstab, Objektauswahl per Modell.
+        '''
+        ''' <paramref name="workingFull"/> ist das Arbeitsbild, falls schon eines vorliegt; sonst
+        ''' wird die Quelle gelesen. Es wird HIER verbraucht, der Aufrufer gibt es nicht selbst
+        ''' frei.</summary>
+        Public Shared Function RenderAnzeigeBild(sourcePath As String, adj As ImageAdjustments,
+                                                 Optional workingFull As SKBitmap = Nothing) As SKBitmap
+            Try
+                Using original = If(workingFull, DecodeOriented(sourcePath))
+                    If original Is Nothing Then Return Nothing
+                    Return ProcessBitmap(original, adj)
+                End Using
+            Catch ex As Exception
+                Return Nothing
+            End Try
+        End Function
+
         Public Shared Function BuildMagicWandMaskFromFile(sourcePath As String, adj As ImageAdjustments,
                                                           seedX As Integer, seedY As Integer, tolerance As Single,
                                                           ByRef bounds As SKRectI,
                                                           Optional workingFull As SKBitmap = Nothing) As SKBitmap
             bounds = SKRectI.Empty
-            Try
-                Using original = If(workingFull, DecodeOriented(sourcePath))
-                    If original Is Nothing Then Return Nothing
-                    Using processed = ProcessBitmap(original, adj)
-                        Return BuildMagicWandMask(processed, seedX, seedY, tolerance, bounds)
-                    End Using
-                End Using
-            Catch ex As Exception
-                Return Nothing
-            End Try
+            Using processed = RenderAnzeigeBild(sourcePath, adj, workingFull)
+                If processed Is Nothing Then Return Nothing
+                Return BuildMagicWandMask(processed, seedX, seedY, tolerance, bounds)
+            End Using
         End Function
 
         ''' <summary>Radius des GROBEN Chroma-Durchgangs in Pixeln des GERADE bearbeiteten Bildes.

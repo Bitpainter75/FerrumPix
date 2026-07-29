@@ -4776,10 +4776,511 @@
   <data name="Objektiv_suchen_bd4aa71c" xml:space="preserve">
     <value>Search for a lens…</value>
   </data>
-  <data name="Das_eingetragene_Objektiv_bernehmen_00fb88c7" xml:space="preserve">
-    <value>Apply the lens entered above</value>
-  </data>
   <data name="Zoom_ohne_Brennweitenangabe_nicht_zuzuordnen_abbfb8cc" xml:space="preserve">
     <value>zoom without a focal length: cannot be assigned</value>
+  </data>
+  <data name="Das_eingetragene_Objektiv_bernehmen_leeres_Feld__76078e10" xml:space="preserve">
+    <value>Apply the lens entered above; an empty field switches back to automatic detection</value>
+  </data>
+  <data name="Verzerren_88238388" xml:space="preserve">
+    <value>Distort</value>
+  </data>
+  <data name="Verzerren_zur_cksetzen_654a354d" xml:space="preserve">
+    <value>Reset distortion</value>
+  </data>
+  <data name="Senkrecht_11a7886e" xml:space="preserve">
+    <value>Vertical</value>
+  </data>
+  <data name="Waagerecht_bdd5c94a" xml:space="preserve">
+    <value>Horizontal</value>
+  </data>
+  <data name="Kippt_um_die_waagerechte_Achse_richtet_st_rzende_ae42b40d" xml:space="preserve">
+    <value>Tilts about the horizontal axis: straightens converging verticals on buildings</value>
+  </data>
+  <data name="Kippt_um_die_senkrechte_Achse_f688e84c" xml:space="preserve">
+    <value>Tilts about the vertical axis</value>
+  </data>
+  <data name="Dehnt_das_Ergebnis_in_die_Breite_oder_in_die_H_h_65e16e24" xml:space="preserve">
+    <value>Stretches the result wider or taller</value>
+  </data>
+  <data name="Holt_das_Bild_heran_um_die_leer_gewordenen_Ecken_f954af39" xml:space="preserve">
+    <value>Zooms in to cover the corners that were left empty</value>
+  </data>
+  <data name="Masken_kippen_mit_Eingef_gte_Objekte_nicht_sie_b_bde304b2" xml:space="preserve">
+    <value>Masks tilt along. Inserted objects do not - they stay rectangles.</value>
+  </data>
+  <data name="Gitter_125fce7f" xml:space="preserve">
+    <value>Grid</value>
+  </data>
+  <data name="Wie_fein_das_St_tzpunktraster_ist_Gr_ber_verzerr_77add524" xml:space="preserve">
+    <value>How fine the control point grid is. Coarser warps more softly, finer more precisely.</value>
+  </data>
+  <data name="Die_Punkte_im_Bild_ziehen_Anwenden_backt_die_Ver_0fe42cd3" xml:space="preserve">
+    <value>Drag the points in the image. Apply bakes the warp into the pixels - masks no longer fit exactly afterwards.</value>
+  </data>
+  <data name="Gitter_zur_cksetzen_7ed238ac" xml:space="preserve">
+    <value>Reset grid</value>
+  </data>
+  <data name="Verzerrung_wird_angewendet_9c7dc5f5" xml:space="preserve">
+    <value>Applying warp…</value>
+  </data>
+  <data name="Verzerren_fehlgeschlagen_b4a9d10a" xml:space="preserve">
+    <value>Warp failed</value>
+  </data>
+  <data name="Verzerrung_angewendet_9bfc032c" xml:space="preserve">
+    <value>Warp applied</value>
+  </data>
+  <data name="Drehen_und_Verzerren_d9ebe09a" xml:space="preserve">
+    <value>Rotate and distort</value>
+  </data>
+  <data name="Perspektive_e720186d" xml:space="preserve">
+    <value>Perspective</value>
+  </data>
+  <data name="Gitterverzerrung_0cbc7f6d" xml:space="preserve">
+    <value>Grid warp</value>
+  </data>
+  <data name="Die_vier_Ecken_lassen_sich_auch_direkt_im_Bild_z_61b94987" xml:space="preserve">
+    <value>The four corners can also be dragged directly in the image.</value>
+  </data>
+  <data name="Drehen_zur_cksetzen_dd5aee78" xml:space="preserve">
+    <value>Reset rotation</value>
+  </data>
+  <data name="Wieder_durchsichtig_9106760e" xml:space="preserve">
+    <value>Back to transparent</value>
+  </data>
+  <data name="F_llt_alles_was_sonst_durchsichtig_bliebe_erweit_cbc15b0b" xml:space="preserve">
+    <value>Fills everything that would otherwise stay transparent: extended canvas, empty corners after straightening or distorting, erased areas.</value>
+  </data>
+  <data name="ONNX_Runtime_1_28_75207326" xml:space="preserve">
+    <value>ONNX Runtime 1.28</value>
+  </data>
+  <data name="F_hrt_gelernte_Modelle_aus_Die_Telemetrie_ist_ab_3d10ed60" xml:space="preserve">
+    <value>Runs learned models. Telemetry is switched off, no data is transmitted. FerrumPix does not ship models and does not fetch them on its own.</value>
+  </data>
+  <data name="Bild_wird_f_r_die_Objektauswahl_gelesen_adfa3d05" xml:space="preserve">
+    <value>Reading the picture for object selection…</value>
+  </data>
+  <data name="Objektauswahl_nicht_m_glich_edc121a5" xml:space="preserve">
+    <value>Object selection not possible</value>
+  </data>
+  <data name="An_dieser_Stelle_wurde_kein_Objekt_gefunden_46aaa5e9" xml:space="preserve">
+    <value>No object found at this spot</value>
+  </data>
+  <data name="Objekt_ausgew_hlt_1a779da5" xml:space="preserve">
+    <value>Object selected</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_w_hlt_das_getroffene_Objekt_W_84abcedf" xml:space="preserve">
+    <value>One click in the picture selects the object you hit. Further clicks add areas, holding Alt takes them away again.</value>
+  </data>
+  <data name="Das_erste_Anklicken_eines_Bildes_dauert_einen_Mo_54c206a1" xml:space="preserve">
+    <value>The first click on a picture takes a moment, after that it is quick.</value>
+  </data>
+  <data name="Objekt_anklicken_die_Maske_des_getroffenen_Objek_92bf94cc" xml:space="preserve">
+    <value>Click an object: the mask of the object you hit appears by itself. Alt-click takes a spot away again</value>
+  </data>
+  <data name="Jeder_Klick_w_hlt_ein_neues_Objekt_f2dfddf3" xml:space="preserve">
+    <value>Each click selects a new object</value>
+  </data>
+  <data name="Weitere_Klicks_erweitern_die_Maske_6b27604e" xml:space="preserve">
+    <value>Further clicks extend the mask</value>
+  </data>
+  <data name="Klicks_nehmen_Stellen_wieder_weg_7f82716c" xml:space="preserve">
+    <value>Clicks take spots away again</value>
+  </data>
+  <data name="Aus_der_Objektmaske_eine_Maskenebene_erstellen_8b52f426" xml:space="preserve">
+    <value>Create a mask layer from the object mask</value>
+  </data>
+  <data name="Kante_9e4d22cf" xml:space="preserve">
+    <value>Edge</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_w_hlt_das_getroffene_Objekt_8e939938" xml:space="preserve">
+    <value>One click in the picture selects the object you hit.</value>
+  </data>
+  <data name="Wie_knapp_die_Kante_sitzt_Klein_l_sst_sie_breite_408f5c10" xml:space="preserve">
+    <value>How tightly the edge sits. Small lets it run out wider - for hair, twigs and fur. Large cuts close - for hard-edged objects.</value>
+  </data>
+  <data name="L_sst_die_Maske_um_die_Kante_herum_wachsen_oder__9feec74f" xml:space="preserve">
+    <value>Grows or shrinks the mask around its edge. If the model cuts a hair's breadth too far inside, this brings it back.</value>
+  </data>
+  <data name="Von_a4b078f9" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="Bis_0afaa0e5" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="Nach_Entfernung_w_hlen_alles_was_in_einem_Tiefen_e9b497e6" xml:space="preserve">
+    <value>Select by distance: everything within a depth range. Catches background and foreground even where the colours match</value>
+  </data>
+  <data name="W_hlt_alles_was_in_einem_Entfernungsbereich_lieg_5bd8748e" xml:space="preserve">
+    <value>Selects everything within a distance range. 100 is nearest, 0 is furthest away.</value>
+  </data>
+  <data name="Die_Tiefe_wird_einmal_je_Bild_berechnet_das_daue_4fcb924a" xml:space="preserve">
+    <value>The depth is worked out once per picture, which takes a moment.</value>
+  </data>
+  <data name="Der_ferne_Rand_des_gew_hlten_Bereichs_af1fefb1" xml:space="preserve">
+    <value>The far edge of the chosen range</value>
+  </data>
+  <data name="Der_nahe_Rand_des_gew_hlten_Bereichs_b66bb9d5" xml:space="preserve">
+    <value>The near edge of the chosen range</value>
+  </data>
+  <data name="L_sst_die_Maske_an_beiden_R_ndern_auslaufen_Ohne_dcc45785" xml:space="preserve">
+    <value>Lets the mask fade out at both edges. Without it a visible edge runs right across the picture</value>
+  </data>
+  <data name="Aus_der_Tiefenmaske_eine_Maskenebene_erstellen_9cf7e826" xml:space="preserve">
+    <value>Create a mask layer from the depth mask</value>
+  </data>
+  <data name="Tiefe_wird_berechnet_715521a6" xml:space="preserve">
+    <value>Working out the depth…</value>
+  </data>
+  <data name="Tiefe_konnte_nicht_berechnet_werden_a5373018" xml:space="preserve">
+    <value>The depth could not be worked out</value>
+  </data>
+  <data name="In_diesem_Tiefenbereich_liegt_nichts_ae23d819" xml:space="preserve">
+    <value>Nothing lies in this depth range</value>
+  </data>
+  <data name="Maske_nach_Tiefe_gesetzt_c317c8df" xml:space="preserve">
+    <value>Mask set by depth</value>
+  </data>
+  <data name="Tiefen_Unsch_rfe_f28adc70" xml:space="preserve">
+    <value>Depth blur</value>
+  </data>
+  <data name="Sch_rfe_bei_d661d52b" xml:space="preserve">
+    <value>Sharp at</value>
+  </data>
+  <data name="Tiefensch_rfe_af95e372" xml:space="preserve">
+    <value>Depth of field</value>
+  </data>
+  <data name="Die_Entfernung_die_scharf_bleibt_100_ist_am_n_ch_203b6782" xml:space="preserve">
+    <value>The distance that stays sharp. 100 is nearest</value>
+  </data>
+  <data name="Wie_stark_die_Unsch_rfe_am_fernsten_Punkt_wird_6ec3a381" xml:space="preserve">
+    <value>How strong the blur becomes at the furthest point</value>
+  </data>
+  <data name="Wie_breit_die_Sch_rfeebene_ist_klein_ergibt_eine_61db8968" xml:space="preserve">
+    <value>How wide the sharp zone is: small gives a narrow sharp band, large a broad one</value>
+  </data>
+  <data name="Wird_beim_Anwenden_in_die_Pixel_gerechnet_wie_ei_0ccb599e" xml:space="preserve">
+    <value>Apply bakes it into the pixels, the way retouching does. The depth is worked out once per picture.</value>
+  </data>
+  <data name="Unsch_rfe_wird_angewendet_fd4741ae" xml:space="preserve">
+    <value>Applying the blur…</value>
+  </data>
+  <data name="Unsch_rfe_fehlgeschlagen_78d2e115" xml:space="preserve">
+    <value>Blur failed</value>
+  </data>
+  <data name="Unsch_rfe_angewendet_e8c4387f" xml:space="preserve">
+    <value>Blur applied</value>
+  </data>
+  <data name="Umfang_der_Auswahl_2a47afaa" xml:space="preserve">
+    <value>How much to select</value>
+  </data>
+  <data name="Teil_d237b7fb" xml:space="preserve">
+    <value>Part</value>
+  </data>
+  <data name="Mittel_48577b86" xml:space="preserve">
+    <value>Middle</value>
+  </data>
+  <data name="Ganzes_3815c400" xml:space="preserve">
+    <value>Whole</value>
+  </data>
+  <data name="Nur_den_getroffenen_Teil_etwa_ein_rmel_b9b390f0" xml:space="preserve">
+    <value>Only the part you hit, such as a sleeve</value>
+  </data>
+  <data name="Den_Gegenstand_zu_dem_der_Teil_geh_rt_etwa_die_J_ca664165" xml:space="preserve">
+    <value>The thing the part belongs to, such as the jacket</value>
+  </data>
+  <data name="Das_ganze_Objekt_etwa_die_Person_c44d402b" xml:space="preserve">
+    <value>The whole object, such as the person</value>
+  </data>
+  <data name="Die_vier_Ecken_im_Bild_ziehen_281cf418" xml:space="preserve">
+    <value>Drag the four corners in the picture</value>
+  </data>
+  <data name="Das_St_tzpunktraster_im_Bild_ziehen_df10bd99" xml:space="preserve">
+    <value>Drag the control point grid in the picture</value>
+  </data>
+  <data name="Erst_w_hlen_dann_liegt_das_jeweilige_Werkzeug_be_de86f4af" xml:space="preserve">
+    <value>Choose first, then that tool appears over the picture. Clicking it again hides it.</value>
+  </data>
+  <data name="In_eine_Maske_umwandeln_3828b7ef" xml:space="preserve">
+    <value>Convert to a mask</value>
+  </data>
+  <data name="In_eine_Auswahl_umwandeln_d60b98b1" xml:space="preserve">
+    <value>Convert to a selection</value>
+  </data>
+  <data name="In_eine_Maske_umgewandelt_7f858fd9" xml:space="preserve">
+    <value>Converted to a mask</value>
+  </data>
+  <data name="In_eine_Auswahl_umgewandelt_24dcfdd7" xml:space="preserve">
+    <value>Converted to a selection</value>
+  </data>
+  <data name="Aus_der_Auswahl_eine_Maske_machen_dieselbe_Form__ffdd63f5" xml:space="preserve">
+    <value>Turn the selection into a mask: the same shape, but it grades instead of limiting</value>
+  </data>
+  <data name="Aus_der_Maske_eine_Auswahl_machen_dieselbe_Form__4bf13a6c" xml:space="preserve">
+    <value>Turn the mask into a selection: the same shape, but it limits instead of grading</value>
+  </data>
+  <data name="Verschieben_Objekte_und_Ebenen_greifen_ohne_zu_m_ac387069" xml:space="preserve">
+    <value>Move: grab objects and layers without painting</value>
+  </data>
+  <data name="Objekte_und_Ebenen_greifen_ohne_zu_malen_1d357a9f" xml:space="preserve">
+    <value>Grab objects and layers without painting.</value>
+  </data>
+  <data name="Modelle_db90f3aa" xml:space="preserve">
+    <value>Models</value>
+  </data>
+  <data name="Zwei_Funktionen_brauchen_eine_Modelldatei_Sie_ge_f583bf24" xml:space="preserve">
+    <value>Two features need a model file. They are not part of the package, and FerrumPix never fetches anything by itself. Pressing Download gets the file from GitHub, which sees this machine's IP address while it does. After that everything runs on this machine and nothing is transmitted.</value>
+  </data>
+  <data name="Wird_geladen_17fac8ea" xml:space="preserve">
+    <value>Downloading…</value>
+  </data>
+  <data name="Eine_neuere_Fassung_liegt_bereit_72c86896" xml:space="preserve">
+    <value>A newer version is available</value>
+  </data>
+  <data name="Vorhanden_a8282ce8" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="Nicht_vorhanden_759d9854" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="Herunterladen_c153d506" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Maske_nach_Entfernung_und_Tiefen_Unsch_rfe_858745e5" xml:space="preserve">
+    <value>Mask by distance and depth blur</value>
+  </data>
+  <data name="Objekt_im_Bild_anklicken_Maske_entsteht_von_selb_357e9326" xml:space="preserve">
+    <value>Click an object, the mask appears by itself</value>
+  </data>
+  <data name="Tiefe_86a28ff7" xml:space="preserve">
+    <value>Depth</value>
+  </data>
+  <data name="Objektauswahl_b10aaf65" xml:space="preserve">
+    <value>Object selection</value>
+  </data>
+  <data name="Die_geladene_Datei_stimmt_nicht_mit_der_erwartet_3cb4ff03" xml:space="preserve">
+    <value>The downloaded file does not match the expected one and was discarded</value>
+  </data>
+  <data name="Das_Herunterladen_ist_fehlgeschlagen_4ddbc189" xml:space="preserve">
+    <value>The download failed</value>
+  </data>
+  <data name="Abgebrochen_4a206f7c" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="F_hrt_gelernte_Modelle_aus_Die_Telemetrie_ist_ab_7cc00c0e" xml:space="preserve">
+    <value>Runs learned models. Telemetry is switched off, no data is transmitted. The models themselves are not part of the package and are only fetched when you ask for them.</value>
+  </data>
+  <data name="Zwei_Funktionen_brauchen_eine_Modelldatei_Sie_ge_0ed1a42c" xml:space="preserve">
+    <value>Two features need a model file. They are not part of the package.</value>
+  </data>
+  <data name="Zwei_Funktionen_brauchen_eine_Modelldatei_die_si_3131044a" xml:space="preserve">
+    <value>Two features need a model file that can be downloaded from GitHub.</value>
+  </data>
+  <data name="Rund_7b662a05" xml:space="preserve">
+    <value>Round</value>
+  </data>
+  <data name="Tiefen_Unsch_rfe_zur_cksetzen_67530835" xml:space="preserve">
+    <value>Reset depth blur</value>
+  </data>
+  <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
+    <value>How much light points stay as glowing discs instead of averaging into a dull patch</value>
+  </data>
+  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
+    <value>The shape of the aperture: round or a polygon with this many blades</value>
+  </data>
+  <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
+    <value>Remove object</value>
+  </data>
+  <data name="Markiertes_verschwinden_lassen_der_Hintergrund_w_1fd7e579" xml:space="preserve">
+    <value>Make what you marked disappear, the background is continued</value>
+  </data>
+  <data name="L_sst_das_Markierte_verschwinden_und_setzt_den_H_b9d1e718" xml:space="preserve">
+    <value>Makes what you marked disappear and continues the background. Computed into the pixels, like retouching.</value>
+  </data>
+  <data name="Es_ist_nichts_markiert_f308dcea" xml:space="preserve">
+    <value>Nothing is marked</value>
+  </data>
+  <data name="Objekt_wird_entfernt_9a359fbd" xml:space="preserve">
+    <value>Removing object…</value>
+  </data>
+  <data name="Entfernen_fehlgeschlagen_bbe17e08" xml:space="preserve">
+    <value>Removal failed</value>
+  </data>
+  <data name="Objekt_entfernt_3d51bb68" xml:space="preserve">
+    <value>Object removed</value>
+  </data>
+  <data name="Scharf_von_282f9fea" xml:space="preserve">
+    <value>Sharp from</value>
+  </data>
+  <data name="Scharf_bis_e25c03b2" xml:space="preserve">
+    <value>Sharp to</value>
+  </data>
+  <data name="Untere_Grenze_des_scharfen_Bereichs_0_ist_am_wei_27b06783" xml:space="preserve">
+    <value>Lower edge of the sharp range. 0 is furthest away</value>
+  </data>
+  <data name="Obere_Grenze_des_scharfen_Bereichs_100_ist_am_n__abaeaab6" xml:space="preserve">
+    <value>Upper edge of the sharp range. 100 is nearest</value>
+  </data>
+  <data name="Wie_weich_der_bergang_vom_scharfen_Bereich_in_di_93f7a02a" xml:space="preserve">
+    <value>How softly the sharp range fades into the blur</value>
+  </data>
+  <data name="Drei_Werkzeuge_brauchen_eine_Modelldatei_die_sic_1184d74f" xml:space="preserve">
+    <value>Three tools need a model file that can be downloaded from GitHub.</value>
+  </data>
+  <data name="Daf_r_fehlt_eine_Modelldatei_Sie_l_sst_sich_in_d_d1423b4c" xml:space="preserve">
+    <value>A model file is missing for this. It can be downloaded in the settings under Models.</value>
+  </data>
+  <data name="Die_Unsch_rfe_kommt_je_Bildpunkt_aus_seiner_Entf_5d0f7dbf" xml:space="preserve">
+    <value>The blur comes from each point's distance.</value>
+  </data>
+  <data name="Objekt_im_Bild_anklicken_die_Maske_entsteht_von__c0ead6a6" xml:space="preserve">
+    <value>Click an object in the picture, the mask appears by itself.</value>
+  </data>
+  <data name="W_hlt_alles_was_in_einem_Entfernungsbereich_lieg_a5d05441" xml:space="preserve">
+    <value>Selects everything within a range of distance.</value>
+  </data>
+  <data name="Die_Zeichenmaschine_unter_SkiaSharp_eigene_Lizen_1d502c1d" xml:space="preserve">
+    <value>The drawing engine underneath SkiaSharp - its own licence, not the wrapper's</value>
+  </data>
+  <data name="Die_native_Unterlage_der_Datenbank_eigene_Lizenz_878101f3" xml:space="preserve">
+    <value>The native layer under the database - its own licence</value>
+  </data>
+  <data name="Die_Datenbank_selbst_mitgeliefert_in_der_nativen_f33c3536" xml:space="preserve">
+    <value>The database itself, shipped inside the native layer</value>
+  </data>
+  <data name="Skia_4c0000e3" xml:space="preserve">
+    <value>Skia</value>
+  </data>
+  <data name="SQLitePCLRaw_3_50_6be15601" xml:space="preserve">
+    <value>SQLitePCLRaw 3.50</value>
+  </data>
+  <data name="SQLite_9f09ccbd" xml:space="preserve">
+    <value>SQLite</value>
+  </data>
+  <data name="Public_Domain_b95d9612" xml:space="preserve">
+    <value>Public Domain</value>
+  </data>
+  <data name="F_hrt_gelernte_Modelle_aus_Telemetrie_abgeschalt_fd8ca4d6" xml:space="preserve">
+    <value>Runs learned models, telemetry switched off</value>
+  </data>
+  <data name="Zeichenmaschine_unter_SkiaSharp_16b82ee8" xml:space="preserve">
+    <value>Drawing engine underneath SkiaSharp</value>
+  </data>
+  <data name="Native_Unterlage_der_Datenbank_087469f3" xml:space="preserve">
+    <value>Native layer under the database</value>
+  </data>
+  <data name="Die_Datenbank_selbst_a4c924b2" xml:space="preserve">
+    <value>The database itself</value>
+  </data>
+  <data name="Kalibrierdaten_f_r_Objektive_c22475f5" xml:space="preserve">
+    <value>Calibration data for lenses</value>
+  </data>
+  <data name="HEIC_HEIF_AVIF_nur_vom_System_7551d0f2" xml:space="preserve">
+    <value>HEIC/HEIF/AVIF, from the system only</value>
+  </data>
+  <data name="Keine_Ordner_im_Zwischenspeicher_d447e66a" xml:space="preserve">
+    <value>No folders in the cache</value>
+  </data>
+  <data name="1_Ordner_0f72713e" xml:space="preserve">
+    <value>1 folder</value>
+  </data>
+  <data name="0_Ordner_5b9d25fe" xml:space="preserve">
+    <value>{0} folders</value>
+  </data>
+  <data name="MobileSAM_4ec73d99" xml:space="preserve">
+    <value>MobileSAM</value>
+  </data>
+  <data name="MiDaS_60e664c7" xml:space="preserve">
+    <value>MiDaS</value>
+  </data>
+  <data name="LaMa_2aa3f618" xml:space="preserve">
+    <value>LaMa</value>
+  </data>
+  <data name="Objektauswahl_per_Klick_Modelldatei_b66c30d4" xml:space="preserve">
+    <value>Object selection by click (model file)</value>
+  </data>
+  <data name="Tiefenkarte_f_r_Maske_und_Unsch_rfe_Modelldatei_852efe34" xml:space="preserve">
+    <value>Depth map for mask and blur (model file)</value>
+  </data>
+  <data name="Objekte_entfernen_Modelldatei_084e63ee" xml:space="preserve">
+    <value>Remove objects (model file)</value>
+  </data>
+  <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
+    <value>Visible adjustment groups</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
+    <value>Decides which groups appear in the editor's adjustment area. Hiding one only changes the display: values you set are kept and keep working.</value>
+  </data>
+  <data name="Wird_berechnet_a96029ae" xml:space="preserve">
+    <value>Computing…</value>
+  </data>
+  <data name="Verzerrung_wird_angewendet_3201d123" xml:space="preserve">
+    <value>Applying distortion</value>
+  </data>
+  <data name="Tiefe_wird_berechnet_f30d2fa3" xml:space="preserve">
+    <value>Computing depth</value>
+  </data>
+  <data name="Unsch_rfe_wird_angewendet_6d2437c1" xml:space="preserve">
+    <value>Applying blur</value>
+  </data>
+  <data name="Objekt_wird_entfernt_adfff123" xml:space="preserve">
+    <value>Removing object</value>
+  </data>
+  <data name="Bild_wird_gelesen_319eaf31" xml:space="preserve">
+    <value>Reading the picture</value>
+  </data>
+  <data name="Vorschau_df968561" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="Systemsprache_ef9a107d" xml:space="preserve">
+    <value>System language</value>
+  </data>
+  <data name="Linien_52db7dcb" xml:space="preserve">
+    <value>Lines</value>
+  </data>
+  <data name="Linienverzerrung_000c55de" xml:space="preserve">
+    <value>Line warp</value>
+  </data>
+  <data name="Linien_auf_Kanten_legen_und_ziehen_a546610a" xml:space="preserve">
+    <value>Lay lines on edges and drag them</value>
+  </data>
+  <data name="Alle_Linien_entfernen_d149f8ad" xml:space="preserve">
+    <value>Remove all lines</value>
+  </data>
+  <data name="Im_Bild_eine_Linie_ber_eine_Kante_ziehen_Danach__1f1749d2" xml:space="preserve">
+    <value>Drag a line over an edge in the picture. Then drag the line, or one of its ends, to where it should be - the edge follows, and so does its surroundings, softly.</value>
+  </data>
+  <data name="Letzte_Linie_entfernen_aea3a933" xml:space="preserve">
+    <value>Remove last line</value>
+  </data>
+  <data name="Die_zuletzt_gezogene_Linie_wieder_entfernen_87acaece" xml:space="preserve">
+    <value>Remove the line you drew last</value>
+  </data>
+  <data name="Wird_beim_Anwenden_in_die_Pixel_gerechnet_wie_ei_49f92be5" xml:space="preserve">
+    <value>Computed into the pixels when applied, like retouching. Inserted objects are not warped along.</value>
+  </data>
+  <data name="Farbflecken_d36f4c7c" xml:space="preserve">
+    <value>Colour blotches</value>
+  </data>
+  <data name="Fleckengr_e_d5f77262" xml:space="preserve">
+    <value>Blotch size</value>
+  </data>
+  <data name="Rauschen_zur_cksetzen_a8f3f46f" xml:space="preserve">
+    <value>Reset noise</value>
+  </data>
+  <data name="Gegen_gro_e_Farbflecken_aus_hochgezogenen_Aufnah_42aa3ed9" xml:space="preserve">
+    <value>For large colour blotches in pushed exposures. It works across several sizes and leaves edges and fine structure alone.</value>
+  </data>
+  <data name="Wie_gro_e_Flecken_noch_erfasst_werden_H_her_grei_83950b6b" xml:space="preserve">
+    <value>How large a blotch is still caught. Higher reaches further but costs more time.</value>
+  </data>
+  <data name="Wird_beim_Anwenden_in_die_Pixel_gerechnet_wie_ei_38e958d9" xml:space="preserve">
+    <value>Computed into the pixels when applied, like retouching. Inserted objects go along without being baked in.</value>
+  </data>
+  <data name="Ein_Objekt_ist_markiert_die_vier_Anfasser_verzer_1d2b75c0" xml:space="preserve">
+    <value>An object is selected - the four handles distort that object, not the picture. The distortion belongs to the object and is not baked in.</value>
+  </data>
+  <data name="Objektverzerrung_zur_cksetzen_b62c981b" xml:space="preserve">
+    <value>Reset object distortion</value>
   </data>
 </root>

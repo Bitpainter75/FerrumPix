@@ -22,10 +22,10 @@ Namespace ViewModels
 
     Public Class MainWindowViewModel
         Inherits ViewModelBase
-        ' Der Betrachter kennt nur noch diese schmale Sicht auf den Rahmen (siehe IViewerHost) -
-        ' nicht mehr die ganze Klasse. Die Implements-Klauseln unten sind die Liste dessen, was er
-        ' anfassen darf.
-        Implements IViewerHost
+        ' Betrachter und Editor kennen nur noch je eine schmale Sicht auf den Rahmen (siehe
+        ' IViewerHost und IEditorHost) - nicht mehr die ganze Klasse. Die Implements-Klauseln unten
+        ' sind die Liste dessen, was sie anfassen duerfen.
+        Implements IViewerHost, IEditorHost
 
         Private _currentMode As AppMode
         Private _previousModeBeforeSettings As AppMode = AppMode.Gallery
@@ -75,10 +75,10 @@ Namespace ViewModels
         Private _dialogSelectedWatermarkPresetName As String = ""
         Private ReadOnly _dialogWatermarkPresets As New List(Of WatermarkPresetSettings)()
 
-        Public Property Gallery As GalleryViewModel Implements IViewerHost.Gallery
-        Public Property Viewer As ViewerViewModel
+        Public Property Gallery As GalleryViewModel Implements IViewerHost.Gallery, IEditorHost.Gallery
+        Public Property Viewer As ViewerViewModel Implements IEditorHost.Viewer
         Public Property Editor As EditorViewModel Implements IViewerHost.Editor
-        Public Property Settings As SettingsViewModel Implements IViewerHost.Settings
+        Public Property Settings As SettingsViewModel Implements IViewerHost.Settings, IEditorHost.Settings
 
         ''' <summary>Meldet die Fensterbreite an alle Leisten. Wird von MainWindow bei jeder
         ''' Größenänderung gerufen; meldet nur, wenn sich an mindestens einer Schwelle etwas
@@ -105,7 +105,7 @@ Namespace ViewModels
         Public ReadOnly Property DialogBatchRenamePreview As ObservableCollection(Of BatchRenamePreviewItem) = New ObservableCollection(Of BatchRenamePreviewItem)()
         Public ReadOnly Property DialogWatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
 
-        Public Property CurrentMode As AppMode Implements IViewerHost.CurrentMode
+        Public Property CurrentMode As AppMode Implements IViewerHost.CurrentMode, IEditorHost.CurrentMode
             Get
                 Return _currentMode
             End Get
@@ -481,7 +481,7 @@ Namespace ViewModels
         ''' Temp-Ordner, der als Ziel nicht taugt. Ein bereits geöffneter Ordner bleibt stehen - nur
         ''' wenn gar keiner da ist (Start MIT Bildparameter baut die Galerie nie auf), wird der
         ''' Startordner nachgeladen.</summary>
-        Public Sub ShowGalleryAtRealFolder()
+        Public Sub ShowGalleryAtRealFolder() Implements IEditorHost.ShowGalleryAtRealFolder
             Dim current = Gallery?.CurrentFolder
             If String.IsNullOrEmpty(current) OrElse
                current.StartsWith("immich://", StringComparison.OrdinalIgnoreCase) OrElse
@@ -2223,17 +2223,17 @@ Namespace ViewModels
         ' Die Knopfbeschriftungen sind Optional-Vorgaben und müssen deshalb Konstanten bleiben
         ' (VB verlangt konstante Ausdrücke) - übersetzt wird daher IM RUMPF, nicht in der Signatur.
         ' Genau daran lag es, dass „OK"/„Abbrechen" in jeder Sprache deutsch blieben.
-        Public Async Function ShowMessageAsync(titleText As String, messageText As String, Optional confirmText As String = "OK") As Task Implements IViewerHost.ShowMessageAsync
+        Public Async Function ShowMessageAsync(titleText As String, messageText As String, Optional confirmText As String = "OK") As Task Implements IViewerHost.ShowMessageAsync, IEditorHost.ShowMessageAsync
             Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "", LocalizationService.T(confirmText), "")
         End Function
 
-        Public Async Function ShowConfirmAsync(titleText As String, messageText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of Boolean) Implements IViewerHost.ShowConfirmAsync
+        Public Async Function ShowConfirmAsync(titleText As String, messageText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of Boolean) Implements IViewerHost.ShowConfirmAsync, IEditorHost.ShowConfirmAsync
             Dim result = Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "",
                                                LocalizationService.T(confirmText), LocalizationService.T(cancelText))
             Return result IsNot Nothing
         End Function
 
-        Public Async Function ShowSaveChangesAsync(titleText As String, messageText As String) As Task(Of SaveChangesDialogResult)
+        Public Async Function ShowSaveChangesAsync(titleText As String, messageText As String) As Task(Of SaveChangesDialogResult) Implements IEditorHost.ShowSaveChangesAsync
             Dim result = Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "",
                                                LocalizationService.T("Speichern"), LocalizationService.T("Abbrechen"),
                                                LocalizationService.T("Nicht speichern"))
@@ -2559,7 +2559,7 @@ Namespace ViewModels
                                              initialFormat As String,
                                              Optional initialJpgQuality As Integer = 0,
                                              Optional confirmText As String = "Speichern",
-                                             Optional cancelText As String = "Abbrechen") As Task(Of SaveAsDialogResult)
+                                             Optional cancelText As String = "Abbrechen") As Task(Of SaveAsDialogResult) Implements IEditorHost.ShowSaveAsAsync
             SetDialogFormats(includeFpx:=True)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             ' 0 = kein eigener Startwert, dann gilt die Einstellung.
@@ -2999,7 +2999,7 @@ Namespace ViewModels
         ''' die Ansicht blendet die Elemente damit sofort aus, statt auf den Papierkorb zu warten. Ein
         ''' fehlgeschlagenes Löschen holt sie über den Abgleich in <paramref name="afterDelete"/> zurück.</param>
         Public Async Sub RequestDeletePaths(paths As IEnumerable(Of String), Optional afterDelete As Action = Nothing,
-                                            Optional beforeDelete As Action = Nothing) Implements IViewerHost.RequestDeletePaths
+                                            Optional beforeDelete As Action = Nothing) Implements IViewerHost.RequestDeletePaths, IEditorHost.RequestDeletePaths
             Dim pathList = paths.
                 Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
                 Where(Function(p) FileOperationPolicy.CanDelete(p)).
@@ -3077,7 +3077,7 @@ Namespace ViewModels
         ''' und nicht je Ansicht: Viewer und Editor koennen beide einen Sidecar schreiben, und die
         ''' erste Fassung hatte in genau dieser Doppelung den Editor-Fall vergessen
         ''' ("auch bei Thumbnails wird nicht korrekt gedreht").</summary>
-        Public Sub ReloadThumbnailsForFile(path As String) Implements IViewerHost.ReloadThumbnailsForFile
+        Public Sub ReloadThumbnailsForFile(path As String) Implements IViewerHost.ReloadThumbnailsForFile, IEditorHost.ReloadThumbnailsForFile
             If String.IsNullOrWhiteSpace(path) Then Return
             Gallery?.RefreshThumbnailFor(path)
             ImageItem.ReloadThumbnailsFor(Viewer?.FilmstripItems, path)
@@ -3390,7 +3390,7 @@ Namespace ViewModels
         ''' Schließen gelöscht - der Editor rendert seinen Bearbeitungsstand dorthin.</summary>
         Public Sub ShowPrintDialog(imagePaths As IEnumerable(Of String),
                                    Optional title As String = Nothing,
-                                   Optional tempFile As String = Nothing) Implements IViewerHost.ShowPrintDialog
+                                   Optional tempFile As String = Nothing) Implements IViewerHost.ShowPrintDialog, IEditorHost.ShowPrintDialog
             Dim paths = If(imagePaths, Enumerable.Empty(Of String)()).
                 Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso File.Exists(p)).
                 ToList()

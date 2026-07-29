@@ -56,13 +56,37 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Die waehlbaren Sprachen, mit ihrem Namen in der jeweiligen Sprache SELBST.
+        '''
+        ''' EINE Liste, aus der sich alles andere ergibt: die Auswahlliste im Einstellungsdialog, die
+        ''' Normierung und der Waechter. Eine weitere Sprache ist damit ein Eintrag hier plus die
+        ''' resx-Dateien - und keine weitere Knopfreihe, die mit jeder Sprache unhaltbarer wird.
+        '''
+        ''' Die Namen stehen bewusst in ihrer eigenen Sprache und werden NICHT uebersetzt. Wer die
+        ''' Oberflaeche in einer Sprache sieht, die er nicht versteht, findet "Deutsch" wieder -
+        ''' "Tedesco" nicht.</summary>
+        Public Shared ReadOnly Property Sprachen As (Schluessel As String, Name As String)()
+            Get
+                Return {
+                    ("System", ""),
+                    ("German", "Deutsch"),
+                    ("English", "English"),
+                    ("Spanish", "Español"),
+                    ("French", "Français"),
+                    ("Italian", "Italiano"),
+                    ("Portuguese", "Português")}
+            End Get
+        End Property
+
         Public Shared Function NormalizeLanguageMode(value As String) As String
-            Select Case If(value, "").Trim()
-                Case "German", "English", "Spanish", "French", "Italian", "Portuguese"
-                    Return value.Trim()
-                Case Else
-                    Return "System"
-            End Select
+            Dim wert = If(value, "").Trim()
+            For Each sprache In Sprachen
+                If sprache.Schluessel <> "System" AndAlso
+                   String.Equals(sprache.Schluessel, wert, StringComparison.Ordinal) Then
+                    Return sprache.Schluessel
+                End If
+            Next
+            Return "System"
         End Function
 
         Public Shared Function T(text As String) As String

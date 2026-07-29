@@ -192,6 +192,10 @@ Namespace Services
         ''' Reihenfolge der drei Werkzeuggruppen in der linken Editor-Leiste, von oben nach unten.
         ''' Erlaubt sind genau "Adjust", "Transform" und "Tools", jeder Name genau einmal.
         Public Property EditorToolGroupOrder As String = "Adjust,Transform,Tools"
+        ''' Anpassungsgruppen, die im Editor NICHT erscheinen sollen, als Komma-Liste ihrer
+        ''' Schluessel. Leer heisst: alle sind da. Ausblenden aendert nur die Anzeige - eingestellte
+        ''' Werte bleiben erhalten und wirken weiter.
+        Public Property VersteckteAnpassungsgruppen As String = ""
         ''' Gemerkter Auf-/Zuklapp-Zustand jeder Editor-Gruppe (Expander), Schlüssel = stabiler
         ''' Gruppenname (siehe Controls.ExpanderState). Fehlt ein Schlüssel, gilt der XAML-Standard.
         Public Property EditorExpanderStates As New Dictionary(Of String, Boolean)()
@@ -412,6 +416,7 @@ Namespace Services
                 settings.EditorFitBehavior = NormalizeViewerFitBehavior(settings.EditorFitBehavior)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
+                settings.VersteckteAnpassungsgruppen = NormalizeVersteckteAnpassungsgruppen(settings.VersteckteAnpassungsgruppen)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
                 settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
@@ -496,6 +501,7 @@ Namespace Services
                 settings.EditorFitBehavior = NormalizeViewerFitBehavior(settings.EditorFitBehavior)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
+                settings.VersteckteAnpassungsgruppen = NormalizeVersteckteAnpassungsgruppen(settings.VersteckteAnpassungsgruppen)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
                 settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
@@ -675,6 +681,80 @@ Namespace Services
                 Return {"Adjust", "Transform", "Tools"}
             End Get
         End Property
+
+        ''' <summary>Die Anpassungsgruppen, die sich ausblenden lassen, mit ihrer Beschriftung.
+        '''
+        ''' EINE Liste fuer alles: den Einstellungsdialog, die Normierung und den Waechter. Die
+        ''' Schluessel sind dieselben, unter denen der Editor sich auch den Auf- und Zuklapp-Zustand
+        ''' merkt - ein zweiter Satz Namen daneben waere die erste Gelegenheit, dass beide
+        ''' auseinanderlaufen.
+        '''
+        ''' NICHT dabei sind Gruppen, die IHR Werkzeug ausmachen: Zuschneiden, Maske, Auswahl,
+        ''' Objekte, Zeichnen, Drehen und Bildgroesse. Sie auszublenden liesse ein leeres Werkzeug
+        ''' zurueck, und das ist kein Aufraeumen mehr, sondern ein kaputter Zustand.</summary>
+        Public Shared ReadOnly Property AusblendbareAnpassungsgruppen As (Schluessel As String, Bezeichnung As String)()
+            Get
+                Return {
+                    ("adjust-presets", "Anpassungen"),
+                    ("light", "Licht"),
+                    ("color", "Farbe"),
+                    ("curve", "Tonwertkurve"),
+                    ("hsl", "Farbmischer"),
+                    ("color-grading", "Farbgradierung"),
+                    ("calibration", "Kalibrierung"),
+                    ("objektivkorrektur", "Objektivkorrektur"),
+                    ("film-negative", "Filmnegativ"),
+                    ("details", "Details"),
+                    ("rauschen", "Rauschen"),
+                    ("sharpen", "Schärfe"),
+                    ("soften", "Weichzeichnen"),
+                    ("bokeh", "Tiefen-Unschärfe"),
+                    ("vignette", "Vignette"),
+                    ("grain", "Körnung"),
+                    ("frame", "Rahmen"),
+                    ("filter", "Filter"),
+                    ("lut", "LUT (.cube)"),
+                    ("xmp-preset", "XMP-Preset"),
+                    ("perspektive", "Perspektive"),
+                    ("gitterverzerrung", "Gitterverzerrung"),
+                    ("resize-canvas", "Leinwand"),
+                    ("hintergrund", "Hintergrund")}
+            End Get
+        End Property
+
+        ''' <summary>Welche Anpassungsgruppen zu welchem Werkzeug gehoeren - aber nur fuer die
+        ''' Werkzeuge, die AUSSCHLIESSLICH aus ausblendbaren Gruppen bestehen.
+        '''
+        ''' Blendet man dort alle Gruppen aus, bliebe ein Werkzeug uebrig, das man anklicken kann und
+        ''' das dann ein leeres Panel zeigt. Dann verschwindet es besser mit. Drehen und Bildgroesse
+        ''' stehen bewusst NICHT hier: sie tragen je eine Gruppe, die sich nicht ausblenden laesst,
+        ''' und koennen deshalb nie leer werden.</summary>
+        Public Shared ReadOnly Property WerkzeugGruppen As (Werkzeug As String, Gruppen As String())()
+            Get
+                Return {
+                    ("Adjust", New String() {"adjust-presets", "light", "curve", "objektivkorrektur", "film-negative"}),
+                    ("Color", New String() {"color", "hsl", "color-grading", "calibration"}),
+                    ("Effects", New String() {"details", "sharpen", "soften", "bokeh", "vignette", "grain", "frame"}),
+                    ("Filters", New String() {"filter", "lut", "xmp-preset"})}
+            End Get
+        End Property
+
+        ''' <summary>Nur bekannte Schluessel, jeder hoechstens einmal. Ein Schluessel, den es nicht
+        ''' mehr gibt, verschwindet still - sonst bliebe eine Gruppe fuer immer versteckt, weil sie
+        ''' einmal anders geheissen hat.</summary>
+        Public Shared Function NormalizeVersteckteAnpassungsgruppen(value As String) As String
+            Dim result As New List(Of String)()
+            For Each teil In If(value, "").Split(","c)
+                Dim name = teil.Trim()
+                If name.Length = 0 Then Continue For
+                Dim treffer = AusblendbareAnpassungsgruppen.FirstOrDefault(
+                    Function(e) String.Equals(e.Schluessel, name, StringComparison.OrdinalIgnoreCase))
+                If treffer.Schluessel IsNot Nothing AndAlso Not result.Contains(treffer.Schluessel) Then
+                    result.Add(treffer.Schluessel)
+                End If
+            Next
+            Return String.Join(",", result)
+        End Function
 
         ''' <summary>Sorgt dafür, dass die gespeicherte Reihenfolge IMMER eine vollständige
         ''' Permutation der drei Gruppen ist: Unbekanntes und Doppeltes fliegt raus, Fehlendes wird

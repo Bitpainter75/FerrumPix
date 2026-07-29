@@ -65,6 +65,10 @@ Public Class App
             End If
 
             LocalizationService.LanguageMode = AppSettingsService.Load().LanguageMode
+            ' EINMAL beim Start nachsehen, welche gelernten Modelle vorliegen. Danach steht fuer
+            ' diese Sitzung fest, welche Funktionen es gibt; was fehlt, blendet die Oberflaeche aus.
+            ' Vor dem ViewModel, damit dessen Bindungen schon den richtigen Stand sehen.
+            KiModellService.PruefeBestand()
             Dim vm = New MainWindowViewModel(initialImagePath)
             Dim win = New MainWindow()
             win.DataContext = vm
