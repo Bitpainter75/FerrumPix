@@ -2013,16 +2013,9 @@ Namespace ViewModels
         End Sub
 
         Private Sub LoadFolderContext(folder As String, currentPath As String)
-            ' ".fpx" gehört dazu: Projekte blättern im Viewer/Vollbild mit (Anzeige aus dem Composite).
-            ' Feste Formate plus die kanonischen RAW-Endungen (RawPreviewService.SupportedExtensions).
-            Dim exts = {
-                ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif",
-                ".ico", ".svg", ".fpx", ".psd", ".psb",
-                ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
-            }.Concat(RawPreviewService.SupportedExtensions).ToArray()
             Try
                 _folderPaths = Directory.GetFiles(folder).
-                    Where(Function(f) exts.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
+                    Where(Function(f) MediaFormatService.IsDisplayMedia(f)).
                     OrderBy(Function(f) IO.Path.GetFileName(f)).
                     ToList()
                 _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, currentPath, StringComparison.OrdinalIgnoreCase))

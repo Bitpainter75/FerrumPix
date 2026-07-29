@@ -3413,14 +3413,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))
         End Sub
 
-        ' ".fpx" gehört dazu: FerrumPix-Projekte erscheinen wie Bilder in Galerie und Filmstreifen
-        ' (Thumbnail aus dem eingebetteten Composite, siehe ThumbnailCacheService).
-        ' Anzeigbare Medien: feste Formate plus die kanonischen RAW-Endungen.
-        Private ReadOnly _imageExtensions As String() = {
-            ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif",
-            ".ico", ".svg", ".fpx", ".psd", ".psb",
-            ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
-        }.Concat(RawPreviewService.SupportedExtensions).ToArray()
+        Private ReadOnly _imageExtensions As String() = MediaFormatService.DisplayMediaExtensions
 
         ''' <summary>
         ''' Freier Speicherplatz des Laufwerks, auf dem der aktuelle Ordner liegt. Läuft im Hintergrund:
@@ -5254,7 +5247,6 @@ Namespace ViewModels
             Return AppSettingsService.Load().DevelopRawInBatch
         End Function
 
-        Private Shared ReadOnly BatchConvertExcludedExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".svg"}
         ''' <summary>Kann die Stapel-Bildbearbeitung (Groesse/Wasserzeichen/Filter) diese Datei
         ''' schreiben? Die Menuesichtbarkeit MUSS dieselbe Frage stellen wie
         ''' GetSelectedBatchEditableImageItems - sonst stehen Eintraege da, die beim Klick still
@@ -5283,7 +5275,7 @@ Namespace ViewModels
         ''' nicht - deren Eintraege blieben sonst wirkungslos sichtbar.)</summary>
         Public Shared Function IsBatchExportable(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
-            Return Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
+            Return Not MediaFormatService.IsVideo(path) AndAlso Not MediaFormatService.IsSvg(path)
         End Function
 
         ''' <summary>Formate, die die Stapel-Bildbearbeitung als QUELLE lesen kann. BMP/GIF (Skia)
@@ -6084,7 +6076,7 @@ Namespace ViewModels
         Private Async Function ExportSelectedAsync() As Task
             Dim targetItems = GetSelectedImageItems().
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
-                Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
+                Where(Function(i) IsBatchExportable(i.FilePath)).
                 ToList()
             DiagnosticLogService.LogAlways("Gallery.ExportTo", $"selected={GetSelectedImageItems().Count} exportable={targetItems.Count}")
             If targetItems.Count = 0 Then Return
@@ -6242,7 +6234,7 @@ Namespace ViewModels
         Private Async Sub BatchConvertSelected()
             Dim targetItems = GetSelectedImageItems().
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
-                Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
+                Where(Function(i) IsBatchExportable(i.FilePath)).
                 ToList()
             DiagnosticLogService.LogAlways("Gallery.BatchConvert", $"selected={GetSelectedImageItems().Count} convertible={targetItems.Count}")
             If targetItems.Count = 0 Then Return

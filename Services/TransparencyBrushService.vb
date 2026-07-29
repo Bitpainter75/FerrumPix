@@ -41,9 +41,9 @@ Namespace Services
         ''' RAW-Endungen kommen aus RawPreviewService.SupportedExtensions - eine eigene Kopie
         ''' wuerde beim naechsten neuen Format vergessen (siehe Kommentar dort).
         Private Shared ReadOnly OpaqueOnlyExtensions As String() = {
-            ".jpg", ".jpeg", ".jpe", ".jfif", ".bmp",
-            ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
-        }.Concat(RawPreviewService.SupportedExtensions).ToArray()
+            ".jpg", ".jpeg", ".jpe", ".jfif", ".bmp"
+        }.Concat(MediaFormatService.VideoExtensions).
+          Concat(RawPreviewService.SupportedExtensions).ToArray()
 
         Public Shared Function CanHaveTransparency(filePath As String) As Boolean
             If String.IsNullOrEmpty(filePath) Then Return True

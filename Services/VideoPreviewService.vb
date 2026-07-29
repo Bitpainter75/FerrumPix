@@ -12,12 +12,10 @@ Namespace Services
     ''' gehalten, weil mehrere parallele Decoder schnell mehr Last erzeugen als der Thumbnail-Cache spart.
     Public Class VideoPreviewService
 
-        Private Shared ReadOnly _videoExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
         Private Shared ReadOnly _thumbnailGate As New SemaphoreSlim(1, 1)
 
         Public Shared Function IsSupportedVideo(filePath As String) As Boolean
-            If String.IsNullOrEmpty(filePath) Then Return False
-            Return _videoExtensions.Contains(Path.GetExtension(filePath).ToLowerInvariant())
+            Return MediaFormatService.IsVideo(filePath)
         End Function
 
         Public Shared Function ExtractPreview(filePath As String, Optional maxDimension As Integer = 480, Optional timeoutMs As Integer = 4000) As MemoryStream
