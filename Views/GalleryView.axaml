@@ -150,7 +150,9 @@
                             Classes.active="{Binding HasActiveFilter}"
                             ToolTip.Tip="Filter">
                         <Button.Flyout>
-                            <Flyout Placement="BottomEdgeAlignedRight" VerticalOffset="2">
+                            <Flyout Placement="BottomEdgeAlignedRight"
+                                    VerticalOffset="2"
+                                    Opened="OnLocalizedFlyoutOpened">
                                 <StackPanel Spacing="1" MinWidth="248">
 
                                         <!-- FAVORITEN -->
@@ -396,7 +398,8 @@
                             ToolTip.Tip="Sortieren">
                         <Button.Flyout>
                             <Flyout Placement="BottomEdgeAlignedLeft"
-                                    VerticalOffset="2">
+                                    VerticalOffset="2"
+                                    Opened="OnLocalizedFlyoutOpened">
                                 <StackPanel Spacing="1" MinWidth="188">
                                     <TextBlock Text="SORTIEREN NACH" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource FP.Text.Muted}"
@@ -1059,6 +1062,7 @@
                                         Classes="thumb-card"
                                         Classes.selected="{Binding IsSelected}"
                                         Classes.navigation-selected="{Binding IsNavigationSelected}"
+                                        AttachedToVisualTree="OnGalleryItemAttachedToVisualTree"
                                         Width="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Cursor="Hand"
                                         ContextRequested="OnThumbnailContextRequested"
@@ -1493,6 +1497,7 @@
                                         Classes="thumb-card list-row"
                                         Classes.selected="{Binding IsSelected}"
                                         Classes.navigation-selected="{Binding IsNavigationSelected}"
+                                        AttachedToVisualTree="OnGalleryItemAttachedToVisualTree"
                                         Cursor="Hand"
                                         ContextRequested="OnThumbnailContextRequested"
                                         PointerPressed="OnThumbnailPointerPressed"

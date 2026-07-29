@@ -1,13 +1,16 @@
 Imports System
 Imports System.Globalization
 Imports System.Resources
+Imports System.Runtime.CompilerServices
 Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Text.RegularExpressions
+Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Controls.Primitives
 Imports Avalonia.Input
 Imports Avalonia.LogicalTree
+Imports Avalonia.VisualTree
 
 Namespace Services
 
@@ -19,6 +22,11 @@ Namespace Services
 
         Private Shared _languageMode As String = "System"
         Private Shared ReadOnly Strings As New ResourceManager("FerrumPix.Strings", GetType(LocalizationService).Assembly)
+        ''' Der URSPRUNGStext je Anzeige, schwach referenziert. Ohne ihn liest der Durchlauf den
+        ''' ANGEZEIGTEN Text als Quelle: nach dem ersten Sprachwechsel steht dort die Uebersetzung,
+        ''' und die zweite Umschaltung sucht einen Schluessel, den es nicht gibt - die Anzeige bleibt
+        ''' dann in der zuvor gewaehlten Sprache stehen.
+        Private Shared ReadOnly Ursprungstexte As New ConditionalWeakTable(Of ILogical, KnotenTexte)()
         ''' Eigene Ressourcendatei nur für die Such-Tags der Formen/Symbole-Icons (Resources/IconTags*.resx),
         ''' getrennt von den allgemeinen UI-Texten, damit sich beide unabhängig voneinander pflegen lassen.
         Private Shared ReadOnly IconTags As New ResourceManager("FerrumPix.IconTags", GetType(LocalizationService).Assembly)
@@ -51,6 +59,7 @@ Namespace Services
                     Case "fr" : Return "French"
                     Case "it" : Return "Italian"
                     Case "pt" : Return "Portuguese"
+                    Case "zh" : Return "Chinese"
                     Case Else : Return "English"
                 End Select
             End Get
@@ -74,7 +83,8 @@ Namespace Services
                     ("Spanish", "Español"),
                     ("French", "Français"),
                     ("Italian", "Italiano"),
-                    ("Portuguese", "Português")}
+                    ("Portuguese", "Português"),
+                    ("Chinese", "简体中文")}
             End Get
         End Property
 
@@ -136,6 +146,18 @@ Namespace Services
             Next
         End Sub
 
+        ''' <summary>Lokalisiert einen bereits materialisierten SICHTbaum. Inhalte aus DataTemplates -
+        ''' Flyouts, Galerie-Kacheln - liegen nicht vollstaendig im logischen Baum; ohne diesen
+        ''' Einstieg blieben sie deutsch, obwohl der Durchlauf ueber das Fenster lief.</summary>
+        Public Shared Sub ApplyToVisualTree(root As Visual)
+            If root Is Nothing Then Return
+            Dim logical = TryCast(root, ILogical)
+            If logical IsNot Nothing Then ApplyOne(logical)
+            For Each child In root.GetVisualChildren()
+                ApplyToVisualTree(child)
+            Next
+        End Sub
+
         Private Shared Function ResolveCultureCode(mode As String) As String
             Select Case NormalizeLanguageMode(mode)
                 Case "German" : Return "de"
@@ -143,6 +165,9 @@ Namespace Services
                 Case "French" : Return "fr"
                 Case "Italian" : Return "it"
                 Case "Portuguese" : Return "pt"
+                ' Chinesisch braucht die REGION: die Ressourcen liegen als zh-CN (vereinfacht), und
+                ' ein blosses "zh" wuerde sie nicht finden.
+                Case "Chinese" : Return "zh-CN"
                 Case "English" : Return ""
                 Case Else
                     Return ResolveSystemCultureCode()
@@ -151,11 +176,11 @@ Namespace Services
 
         Private Shared Function ResolveSystemCultureCode() As String
             Dim systemCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant()
-            If IsSupportedCultureCode(systemCode) Then Return systemCode
+            If IsSupportedCultureCode(systemCode) Then Return MitRegion(systemCode)
 
             For Each variableName In {"LANGUAGE", "LC_MESSAGES", "LANG"}
                 Dim code = ExtractCultureCode(Environment.GetEnvironmentVariable(variableName))
-                If IsSupportedCultureCode(code) Then Return code
+                If IsSupportedCultureCode(code) Then Return MitRegion(code)
             Next
 
             Return ""
@@ -177,11 +202,18 @@ Namespace Services
 
         Private Shared Function IsSupportedCultureCode(code As String) As Boolean
             Select Case If(code, "").ToLowerInvariant()
-                Case "de", "es", "fr", "it", "pt"
+                Case "de", "es", "fr", "it", "pt", "zh"
                     Return True
                 Case Else
                     Return False
             End Select
+        End Function
+
+        ''' <summary>Der Ressourcenname zu einem Zweibuchstaben-Code. Nur Chinesisch braucht eine
+        ''' Region: die Dateien heissen zh-CN, ein blosses "zh" findet sie nicht.</summary>
+        Private Shared Function MitRegion(code As String) As String
+            If String.Equals(code, "zh", StringComparison.OrdinalIgnoreCase) Then Return "zh-CN"
+            Return code
         End Function
 
         Private Shared Function MakeKey(text As String) As String
@@ -206,53 +238,81 @@ Namespace Services
         Public Const KeineUebersetzung As String = "no-translate"
 
         Private Shared Sub ApplyOne(node As ILogical)
+            Dim merker = Ursprungstexte.GetValue(node, Function(ignoriert) New KnotenTexte())
             Dim textBlock = TryCast(node, TextBlock)
             If textBlock IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBlock.Text) AndAlso
                Not textBlock.Classes.Contains(KeineUebersetzung) Then
-                textBlock.Text = T(textBlock.Text)
+                textBlock.Text = UebersetzeGemerkt(textBlock.Text, merker.Text)
             End If
 
             Dim content = TryCast(node, ContentControl)
             If content IsNot Nothing AndAlso TypeOf content.Content Is String Then
-                content.Content = T(CStr(content.Content))
+                content.Content = UebersetzeGemerkt(CStr(content.Content), merker.Inhalt)
             End If
 
             Dim menuItem = TryCast(node, MenuItem)
             If menuItem IsNot Nothing AndAlso TypeOf menuItem.Header Is String Then
-                menuItem.Header = T(CStr(menuItem.Header))
+                menuItem.Header = UebersetzeGemerkt(CStr(menuItem.Header), merker.MenueKopf)
             End If
 
             ' Expander und TabItem erben Header nicht von MenuItem, sondern von
             ' HeaderedContentControl - ohne diesen Zweig blieben ihre Überschriften deutsch.
             Dim headered = TryCast(node, HeaderedContentControl)
             If headered IsNot Nothing AndAlso TypeOf headered.Header Is String Then
-                headered.Header = T(CStr(headered.Header))
+                headered.Header = UebersetzeGemerkt(CStr(headered.Header), merker.Kopf)
             End If
 
             Dim textBox = TryCast(node, TextBox)
             If textBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBox.PlaceholderText) Then
-                textBox.PlaceholderText = T(textBox.PlaceholderText)
+                textBox.PlaceholderText = UebersetzeGemerkt(textBox.PlaceholderText, merker.Platzhalter)
             End If
 
             ' AutoCompleteBox ist keine TextBox, hat aber denselben Platzhalter.
             Dim autoComplete = TryCast(node, AutoCompleteBox)
             If autoComplete IsNot Nothing AndAlso Not String.IsNullOrEmpty(autoComplete.PlaceholderText) Then
-                autoComplete.PlaceholderText = T(autoComplete.PlaceholderText)
+                autoComplete.PlaceholderText = UebersetzeGemerkt(autoComplete.PlaceholderText, merker.Platzhalter)
             End If
 
             ' ComboBox erbt ihren Platzhalter ebenfalls nicht von TextBox - ohne diesen Zweig bliebe der
             ' Text einer noch leeren Auswahlliste deutsch.
             Dim comboBox = TryCast(node, ComboBox)
             If comboBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(comboBox.PlaceholderText) Then
-                comboBox.PlaceholderText = T(comboBox.PlaceholderText)
+                comboBox.PlaceholderText = UebersetzeGemerkt(comboBox.PlaceholderText, merker.Platzhalter)
             End If
 
             Dim control = TryCast(node, Control)
             If control IsNot Nothing Then
                 Dim tip = ToolTip.GetTip(control)
-                If TypeOf tip Is String Then ToolTip.SetTip(control, T(CStr(tip)))
+                If TypeOf tip Is String Then ToolTip.SetTip(control, UebersetzeGemerkt(CStr(tip), merker.Tipp))
             End If
         End Sub
+
+        ''' <summary>Uebersetzt gegen den GEMERKTEN Ursprungstext. Weicht der aktuelle Text von dem
+        ''' ab, was zuletzt gesetzt wurde, hat ihn jemand anders geschrieben - dann ist er die neue
+        ''' Quelle.</summary>
+        Private Shared Function UebersetzeGemerkt(aktuell As String, merker As TextMerker) As String
+            If merker.Quelle Is Nothing OrElse
+               Not String.Equals(aktuell, merker.Zuletzt, StringComparison.Ordinal) Then
+                merker.Quelle = aktuell
+            End If
+            Dim uebersetzt = T(merker.Quelle)
+            merker.Zuletzt = uebersetzt
+            Return uebersetzt
+        End Function
+
+        Private NotInheritable Class KnotenTexte
+            Public ReadOnly Text As New TextMerker()
+            Public ReadOnly Inhalt As New TextMerker()
+            Public ReadOnly MenueKopf As New TextMerker()
+            Public ReadOnly Kopf As New TextMerker()
+            Public ReadOnly Platzhalter As New TextMerker()
+            Public ReadOnly Tipp As New TextMerker()
+        End Class
+
+        Private NotInheritable Class TextMerker
+            Public Quelle As String
+            Public Zuletzt As String
+        End Class
     End Class
 
 End Namespace
