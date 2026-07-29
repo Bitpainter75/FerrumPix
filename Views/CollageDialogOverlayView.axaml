@@ -272,7 +272,7 @@
                                            VerticalAlignment="Center"/>
                             </Grid>
                             <Button.Flyout>
-                                <Flyout Placement="Bottom">
+                                <Flyout Opened="OnLocalizedFlyoutOpened" Placement="Bottom">
                                     <Border Background="{DynamicResource FP.Bg.Panel}"
                                             BorderBrush="{DynamicResource FP.Border.Normal}"
                                             BorderThickness="1"

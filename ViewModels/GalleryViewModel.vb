@@ -5370,7 +5370,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) IO.Path.GetExtension(source),
                                                                    uploadedAssetIds).ConfigureAwait(True)
-                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
+                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
                 RefreshAfterBatchFileRewrite(localTargets)
                 If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
@@ -5385,7 +5385,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) resize.Extension,
                                                                    uploadedAssetIds, "").ConfigureAwait(True)
-                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
+                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
                 If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
             End If
@@ -5416,7 +5416,7 @@ Namespace ViewModels
                                                                        Function(source) resize.Extension,
                                                                        "", nameBuilder).ConfigureAwait(True)
 
-            StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) geändert"
+            StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Function
 
@@ -5473,7 +5473,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) IO.Path.GetExtension(source),
                                                                    uploadedAssetIds).ConfigureAwait(True)
-                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) gefiltert"
+                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
                 RefreshAfterBatchFileRewrite(localPaths)
                 If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
@@ -5487,7 +5487,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) result.Extension,
                                                                    uploadedAssetIds, suffix).ConfigureAwait(True)
-                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) gefiltert"
+                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
                 If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
             End If
@@ -5518,7 +5518,7 @@ Namespace ViewModels
                                                                        Function(source) result.Extension,
                                                                        suffix, nameBuilder).ConfigureAwait(True)
 
-            StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) gefiltert"
+            StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Sub
 
@@ -5560,7 +5560,7 @@ Namespace ViewModels
                 Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
                     Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95, preserveMetadata:=False))
 
-                StatusText = $"{changedCount} von {targets.Count} Datei(en) bereinigt"
+                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) bereinigt"), changedCount, targets.Count)
                 RefreshAfterBatchFileRewrite(targets)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
@@ -5609,7 +5609,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) IO.Path.GetExtension(source),
                                                                    uploadedAssetIds).ConfigureAwait(True)
-                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) mit Wasserzeichen versehen"
+                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
                 RefreshAfterBatchFileRewrite(localTargets)
                 If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
@@ -5623,7 +5623,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) result.Extension,
                                                                    uploadedAssetIds, nameBuilder:=nameBuilder).ConfigureAwait(True)
-                StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) mit Wasserzeichen versehen"
+                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
                 If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
             End If
@@ -5653,7 +5653,7 @@ Namespace ViewModels
                                                                        Function(source) result.Extension,
                                                                        nameBuilder:=nameBuilder).ConfigureAwait(True)
 
-            StatusText = $"{changedCount + uploadedCount} von {targetItems.Count} Datei(en) mit Wasserzeichen versehen"
+            StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Sub
 
@@ -6312,7 +6312,7 @@ Namespace ViewModels
                     Function(source) result.Extension).ConfigureAwait(True)
             End If
 
-            StatusText = $"{convertedCount + uploadedCount} von {targetItems.Count} Datei(en) konvertiert"
+            StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) konvertiert"), convertedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
             If saveToImmich AndAlso uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
         End Sub

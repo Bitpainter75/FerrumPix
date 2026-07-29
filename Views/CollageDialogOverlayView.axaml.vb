@@ -1,5 +1,6 @@
 Imports Avalonia
 Imports Avalonia.Controls
+Imports FerrumPix.Services
 Imports Avalonia.Input
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
@@ -10,6 +11,15 @@ Namespace Views
 
     Public Class CollageDialogOverlayView
         Inherits UserControl
+
+        ''' <summary>Ein Flyout entsteht erst beim Oeffnen aus seinem Template und ist beim
+        ''' einmaligen Durchlauf ueber das Fenster noch nicht da. Ohne diesen Einstieg bleibt sein
+        ''' Inhalt in der Ausgangssprache stehen, waehrend die uebrige Oberflaeche umgeschaltet
+        ''' hat.</summary>
+        Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
+            Dim inhalt = TryCast(TryCast(sender, Flyout)?.Content, Avalonia.LogicalTree.ILogical)
+            If inhalt IsNot Nothing Then LocalizationService.ApplyTo(inhalt)
+        End Sub
 
         Private _observedVm As GalleryViewModel
         Private _isPanning As Boolean

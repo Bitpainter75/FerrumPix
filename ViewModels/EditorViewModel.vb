@@ -230,13 +230,23 @@ Namespace ViewModels
         End Class
 
         Public NotInheritable Class AnnotationBlendModeOption
+            Private ReadOnly _displayName As String
+
             Public Sub New(key As String, displayName As String)
                 Me.Key = key
-                Me.DisplayName = displayName
+                _displayName = displayName
             End Sub
 
             Public ReadOnly Property Key As String
+
+            ''' <summary>Der Anzeigename wird beim LESEN uebersetzt, nicht beim Anlegen: die Liste ist
+            ''' statisch und entsteht einmal beim Laden der Klasse - zu diesem Zeitpunkt steht die
+            ''' Sprache noch nicht fest.</summary>
             Public ReadOnly Property DisplayName As String
+                Get
+                    Return LocalizationService.T(_displayName)
+                End Get
+            End Property
 
             Public Overrides Function ToString() As String
                 Return DisplayName
@@ -3179,7 +3189,7 @@ Namespace ViewModels
         ''' ApplyAnnotations) - das Eigenschaften-Panel beschriftet den Regler entsprechend um.
         Public ReadOnly Property FillColorLabel As String
             Get
-                Return If(EffectiveAnnotationKind = "QR", "Hintergrund", "Füllung")
+                Return If(EffectiveAnnotationKind = "QR", LocalizationService.T("Hintergrund"), LocalizationService.T("Füllung"))
             End Get
         End Property
 
@@ -3187,7 +3197,7 @@ Namespace ViewModels
         ''' irreführend, da nichts umrandet wird. "Vordergrund" spiegelt das Gegenstück zu "Hintergrund".
         Public ReadOnly Property StrokeColorLabel As String
             Get
-                Return If(EffectiveAnnotationKind = "QR", "Vordergrund", "Kontur")
+                Return If(EffectiveAnnotationKind = "QR", LocalizationService.T("Vordergrund"), LocalizationService.T("Kontur"))
             End Get
         End Property
 
@@ -3892,23 +3902,23 @@ Namespace ViewModels
                     Return LocalizationService.T("Mehrfachauswahl")
                 End If
                 Select Case _currentTool
-                    Case EditorTool.Crop : Return "Zuschneiden"
-                    Case EditorTool.Resize : Return "Bildgröße"
-                    Case EditorTool.Rotate : Return "Drehen und Verzerren"
-                    Case EditorTool.Adjust : Return "Anpassen"
-                    Case EditorTool.Color : Return "Farbe"
-                    Case EditorTool.Details : Return "Details"
-                    Case EditorTool.Effects, EditorTool.Frame : Return "Effekte"
-                    Case EditorTool.Filters : Return "Filter"
-                    Case EditorTool.Transform : Return "Drehen und Verzerren"
-                    Case EditorTool.Move : Return "Verschieben"
-                    Case EditorTool.Selection : Return "Auswahl"
-                    Case EditorTool.Mask : Return "Maske"
-                    Case EditorTool.Retouch : Return If(_isCloneMode, "Stempel", If(_isRepairMode, "Reparaturpinsel", "Verwischen"))
-                    Case EditorTool.Draw : Return If(_isEraserMode, "Radiergummi", "Pinsel")
-                    Case EditorTool.Geometry, EditorTool.Insert : Return "Formen und Symbole"
+                    Case EditorTool.Crop : Return LocalizationService.T("Zuschneiden")
+                    Case EditorTool.Resize : Return LocalizationService.T("Bildgröße")
+                    Case EditorTool.Rotate : Return LocalizationService.T("Drehen und Verzerren")
+                    Case EditorTool.Adjust : Return LocalizationService.T("Anpassen")
+                    Case EditorTool.Color : Return LocalizationService.T("Farbe")
+                    Case EditorTool.Details : Return LocalizationService.T("Details")
+                    Case EditorTool.Effects, EditorTool.Frame : Return LocalizationService.T("Effekte")
+                    Case EditorTool.Filters : Return LocalizationService.T("Filter")
+                    Case EditorTool.Transform : Return LocalizationService.T("Drehen und Verzerren")
+                    Case EditorTool.Move : Return LocalizationService.T("Verschieben")
+                    Case EditorTool.Selection : Return LocalizationService.T("Auswahl")
+                    Case EditorTool.Mask : Return LocalizationService.T("Maske")
+                    Case EditorTool.Retouch : Return If(_isCloneMode, LocalizationService.T("Stempel"), If(_isRepairMode, LocalizationService.T("Reparaturpinsel"), LocalizationService.T("Verwischen")))
+                    Case EditorTool.Draw : Return If(_isEraserMode, LocalizationService.T("Radiergummi"), LocalizationService.T("Pinsel"))
+                    Case EditorTool.Geometry, EditorTool.Insert : Return LocalizationService.T("Formen und Symbole")
                     Case EditorTool.Text : Return InsertKindLabel()
-                    Case Else : Return "Werkzeug"
+                    Case Else : Return LocalizationService.T("Werkzeug")
                 End Select
             End Get
         End Property
@@ -3947,15 +3957,15 @@ Namespace ViewModels
             ' Vor dem Normalisieren prüfen: NormalizeAnnotationKind("") liefert "Text", was hier
             ' fälschlich das Text-Werkzeug anzeigen würde, obwohl gar nichts gewählt ist.
             Dim raw = If(String.IsNullOrEmpty(_pendingInsertKind), SelectedAnnotationKind, _pendingInsertKind)
-            If String.IsNullOrWhiteSpace(raw) Then Return "Einfügen"
+            If String.IsNullOrWhiteSpace(raw) Then Return LocalizationService.T("Einfügen")
 
             Select Case NormalizeAnnotationKind(raw)
-                Case "Image" : Return "Bild"
-                Case "QR" : Return "QR-Code"
-                Case "Watermark" : Return "Wasserzeichen"
-                Case "Text" : Return "Text"
+                Case "Image" : Return LocalizationService.T("Bild")
+                Case "QR" : Return LocalizationService.T("QR-Code")
+                Case "Watermark" : Return LocalizationService.T("Wasserzeichen")
+                Case "Text" : Return LocalizationService.T("Text")
                 Case Else
-                    Return "Formen und Symbole"
+                    Return LocalizationService.T("Formen und Symbole")
             End Select
         End Function
 

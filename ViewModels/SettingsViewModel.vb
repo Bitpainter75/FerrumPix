@@ -736,10 +736,10 @@ Namespace ViewModels
                 End If
 
                 If IsApplicationScaleScreenKnown Then
-                    Return $"Verfügbar: {_applicationScaleScreen}"
+                    Return String.Format(LocalizationService.T("Verfügbar: {0}"), _applicationScaleScreen)
                 End If
 
-                Return $"Der gespeicherte Bildschirm '{_applicationScaleScreen}' wurde nicht gefunden."
+                Return String.Format(LocalizationService.T("Der gespeicherte Bildschirm '{0}' wurde nicht gefunden."), _applicationScaleScreen)
             End Get
         End Property
 
@@ -1614,11 +1614,15 @@ Namespace ViewModels
 
         Public ReadOnly Property ThumbnailCacheSummaryText As String
             Get
-                If _isThumbnailCacheRefreshing Then Return "Cache wird ermittelt…"
-                If ThumbnailCacheFolders Is Nothing OrElse ThumbnailCacheFolders.Count = 0 Then Return "Kein Vorschaubild-Cache vorhanden."
+                If _isThumbnailCacheRefreshing Then Return LocalizationService.T("Cache wird ermittelt…")
+                If ThumbnailCacheFolders Is Nothing OrElse ThumbnailCacheFolders.Count = 0 Then Return LocalizationService.T("Kein Vorschaubild-Cache vorhanden.")
                 Dim count = ThumbnailCacheFolders.Sum(Function(i) i.ThumbnailCount)
                 Dim size = ThumbnailCacheFolders.Sum(Function(i) i.SizeBytes)
-                Return $"{ThumbnailCacheFolders.Count:N0} Ordner · {count:N0} Bilder · {FormatBytes(size)}"
+                ' Als EINE Zeichenkette mit Platzhaltern und nicht zusammengesetzt: die Reihenfolge
+                ' von Zahl und Wort ist nicht in jeder Sprache dieselbe.
+                Return String.Format(LocalizationService.T("{0} Ordner · {1} Bilder · {2}"),
+                                     ThumbnailCacheFolders.Count.ToString("N0"),
+                                     count.ToString("N0"), FormatBytes(size))
             End Get
         End Property
 
@@ -1728,7 +1732,7 @@ Namespace ViewModels
                                                                 Dim removed = Services.LibraryService.Instance.PurgeOrphanedRecords()
                                                                 CleanupResultMessage = If(removed = 0,
                                                                     "Keine verwaisten Einträge gefunden.",
-                                                                    $"{removed} verwaiste Einträge entfernt.")
+                                                                    String.Format(LocalizationService.T("{0} verwaiste Einträge entfernt."), removed))
                                                             End Sub)
             RefreshThumbnailCacheCommand = ReactiveCommand.Create(Sub() RefreshThumbnailCacheFolders())
             DeleteThumbnailCacheFolderCommand = ReactiveCommand.Create(Of ThumbnailCacheFolderInfo)(Sub(item)
@@ -1744,7 +1748,7 @@ Namespace ViewModels
                                                                         Dim removed = Services.ThumbnailCacheService.DeleteAllCaches()
                                                                         ThumbnailCacheResultMessage = If(removed = 0,
                                                                             "Kein Cache vorhanden.",
-                                                                            $"{removed} Vorschaubilder gelöscht.")
+                                                                            String.Format(LocalizationService.T("{0} Vorschaubilder gelöscht."), removed))
                                                                         RefreshThumbnailCacheFolders()
                                                                         _mainVm?.Gallery?.LoadCurrentFolder()
                                                                     End Sub)
@@ -2252,8 +2256,20 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsLanguageChinese))
         End Sub
 
+        ''' <summary>Nach einem Sprachwechsel. Der Baumdurchlauf ueber das Fenster erreicht nur
+        ''' LITERALE in der Anzeige - alles, was aus DATEN kommt, muss hier nachgezogen werden:
+        ''' Sammlungen, die ihren Text in sich tragen, werden neu gebaut, berechnete Texte neu
+        ''' gemeldet. Ohne das stand die halbe Einstellungsseite weiter in der alten Sprache.</summary>
         Public Sub RefreshLocalization()
             RaiseLanguageModeProperties()
+            BaueAnpassungsgruppenItems()
+            BaueModellGruppen()
+            BaueSprachOptionen()
+            For Each n In {NameOf(ThumbnailCacheSummaryText), NameOf(ThumbnailCacheFolderCountText),
+                           NameOf(LensDatabaseInfo), NameOf(AnpassungsgruppenItems),
+                           NameOf(ModellGruppen)}
+                Me.RaisePropertyChanged(n)
+            Next
         End Sub
 
         Private Shared Sub ApplyTheme(themeMode As String, accentColor As String)

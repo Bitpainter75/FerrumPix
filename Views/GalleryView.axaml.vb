@@ -69,6 +69,15 @@ Namespace Views
             If content IsNot Nothing Then LocalizationService.ApplyTo(content)
         End Sub
 
+        ''' <summary>Ein Kontextmenue entsteht erst aus dem Template, wenn es geoeffnet wird - beim
+        ''' einmaligen Durchlauf ueber das Fenster gibt es es noch nicht. Ohne diesen Einstieg bleiben
+        ''' seine Eintraege in der Ausgangssprache stehen, obwohl die uebrige Oberflaeche umgeschaltet
+        ''' hat. Der LOGISCHE Baum genuegt hier: die Menueeintraege sind Kinder des Menues.</summary>
+        Private Sub OnLocalizedMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+            Dim menu = TryCast(sender, ILogical)
+            If menu IsNot Nothing Then LocalizationService.ApplyTo(menu)
+        End Sub
+
         ''' <summary>Die Galerie erzeugt Karten und Listenzeilen erst aus dem DataTemplate, nachdem
         ''' die einmalige Fenster-Lokalisierung bereits gelaufen sein kann. Jedes neu materialisierte
         ''' Element lokalisiert deshalb nur seinen eigenen Unterbaum - auch nach Scrollen oder einem

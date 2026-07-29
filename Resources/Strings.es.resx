@@ -5312,4 +5312,304 @@
   <data name="0_Elemente_in_der_Zwischenablage_b5c5cdb9" xml:space="preserve">
     <value>{0} elementos en el portapapeles</value>
   </data>
+  <data name="Cache_wird_ermittelt_1f5b16d1" xml:space="preserve">
+    <value>Calculando la caché…</value>
+  </data>
+  <data name="0_Ordner_1_Bilder_2_852305df" xml:space="preserve">
+    <value>{0} carpetas · {1} imágenes · {2}</value>
+  </data>
+  <data name="Wie_Aufnahme_9f271022" xml:space="preserve">
+    <value>Como se tomó</value>
+  </data>
+  <data name="Tageslicht_90b33676" xml:space="preserve">
+    <value>Luz de día</value>
+  </data>
+  <data name="Bew_lkt_e819c384" xml:space="preserve">
+    <value>Nublado</value>
+  </data>
+  <data name="Gl_hlampe_de879bbf" xml:space="preserve">
+    <value>Tungsteno</value>
+  </data>
+  <data name="Leuchtstoff_d9076899" xml:space="preserve">
+    <value>Fluorescente</value>
+  </data>
+  <data name="Blitz_8882e4bb" xml:space="preserve">
+    <value>Flash</value>
+  </data>
+  <data name="Einfach_d7087f48" xml:space="preserve">
+    <value>Simple</value>
+  </data>
+  <data name="Gestrichelt_ea63fe02" xml:space="preserve">
+    <value>Discontinuo</value>
+  </data>
+  <data name="Gezackt_171301fb" xml:space="preserve">
+    <value>Zigzag</value>
+  </data>
+  <data name="Doppelt_3d7bf725" xml:space="preserve">
+    <value>Doble</value>
+  </data>
+  <data name="Punktiert_ae979bf5" xml:space="preserve">
+    <value>Punteado</value>
+  </data>
+  <data name="Wellig_5d210770" xml:space="preserve">
+    <value>Ondulado</value>
+  </data>
+  <data name="Normal_45e118d0" xml:space="preserve">
+    <value>Normal</value>
+  </data>
+  <data name="Abdunkeln_0bc5ba7b" xml:space="preserve">
+    <value>Oscurecer</value>
+  </data>
+  <data name="Multiplizieren_c048dc7a" xml:space="preserve">
+    <value>Multiplicar</value>
+  </data>
+  <data name="Farben_nachbelichten_05ec33d1" xml:space="preserve">
+    <value>Subexposición de color</value>
+  </data>
+  <data name="Aufhellen_7092e487" xml:space="preserve">
+    <value>Aclarar</value>
+  </data>
+  <data name="Negativ_multiplizieren_a8461e16" xml:space="preserve">
+    <value>Trama</value>
+  </data>
+  <data name="Farben_abwedeln_cc07199a" xml:space="preserve">
+    <value>Sobreexposición de color</value>
+  </data>
+  <data name="Hinzuf_gen_f0d37b9d" xml:space="preserve">
+    <value>Añadir</value>
+  </data>
+  <data name="Ineinanderkopieren_087dbcf3" xml:space="preserve">
+    <value>Superponer</value>
+  </data>
+  <data name="Weiches_Licht_deb1cc73" xml:space="preserve">
+    <value>Luz suave</value>
+  </data>
+  <data name="Hartes_Licht_08f1e91e" xml:space="preserve">
+    <value>Luz fuerte</value>
+  </data>
+  <data name="Differenz_58c7bd30" xml:space="preserve">
+    <value>Diferencia</value>
+  </data>
+  <data name="Ausschluss_e2802930" xml:space="preserve">
+    <value>Exclusión</value>
+  </data>
+  <data name="Lege_Zielgr_e_und_Neuberechnung_f_r_die_ausgew_h_34dddcc1" xml:space="preserve">
+    <value>Define el tamaño de destino y el remuestreo de las fotos seleccionadas.</value>
+  </data>
+  <data name="W_hle_ein_gespeichertes_Wasserzeichen_f_r_die_au_55d324b4" xml:space="preserve">
+    <value>Elige una marca de agua guardada para las fotos seleccionadas.</value>
+  </data>
+  <data name="Passe_die_Suchparameter_an_Die_nderungen_werden__469e3433" xml:space="preserve">
+    <value>Ajusta los parámetros de búsqueda. Los cambios se guardan en Buscar.</value>
+  </data>
+  <data name="Lege_Suchparameter_fest_Die_Suche_wird_im_Bereic_1fcba83c" xml:space="preserve">
+    <value>Define los parámetros de búsqueda. La búsqueda se guarda en Buscar.</value>
+  </data>
+  <data name="Lege_eine_Namensvorlage_fest_und_pr_fe_die_Vorsc_98de95d2" xml:space="preserve">
+    <value>Define un patrón de nombre y revisa la vista previa antes de renombrar.</value>
+  </data>
+  <data name="W_hle_das_Zielformat_Die_Dateien_werden_mit_neue_8f529409" xml:space="preserve">
+    <value>Elige el formato de destino. Los archivos se guardan en la misma carpeta con la nueva extensión.</value>
+  </data>
+  <data name="den_Betrachter_zu_ffnen_6e6174f3" xml:space="preserve">
+    <value>abrir el visor</value>
+  </data>
+  <data name="ein_anderes_Bild_zu_ffnen_edf3eb8c" xml:space="preserve">
+    <value>abrir otra foto</value>
+  </data>
+  <data name="den_Editor_ffnest_af65cfe1" xml:space="preserve">
+    <value>abres el editor</value>
+  </data>
+  <data name="die_Einstellungen_zu_ffnen_d7141161" xml:space="preserve">
+    <value>abrir la configuración</value>
+  </data>
+  <data name="die_Einstellungen_ffnest_44a1ab49" xml:space="preserve">
+    <value>abres la configuración</value>
+  </data>
+  <data name="zur_Galerie_zu_wechseln_bfe62822" xml:space="preserve">
+    <value>cambiar a la galería</value>
+  </data>
+  <data name="zur_Galerie_wechselst_d9e7d00d" xml:space="preserve">
+    <value>cambias a la galería</value>
+  </data>
+  <data name="den_Vollbildmodus_zu_ffnen_1fa719d6" xml:space="preserve">
+    <value>abrir pantalla completa</value>
+  </data>
+  <data name="den_Vollbildmodus_verl_sst_8464ffb9" xml:space="preserve">
+    <value>sales de pantalla completa</value>
+  </data>
+  <data name="Repariert_aus_der_Umgebung_und_blendet_die_erset_19575c60" xml:space="preserve">
+    <value>Repara a partir del entorno y funde suavemente la textura sustituida.</value>
+  </data>
+  <data name="Mittelt_die_Umgebung_des_Ziels_und_blendet_sie_w_71128e0f" xml:space="preserve">
+    <value>Promedia el entorno del destino y lo funde suavemente.</value>
+  </data>
+  <data name="Quelle_gesetzt_Ziehen_kopiert_die_Textur_von_dor_d879630c" xml:space="preserve">
+    <value>Origen definido: al arrastrar se copia la textura desde ahí.</value>
+  </data>
+  <data name="Alt_Klick_ins_Bild_setzt_zuerst_die_Quelle_aus_d_f4f82ac4" xml:space="preserve">
+    <value>Alt+clic en la imagen define primero el origen del que se copia.</value>
+  </data>
+  <data name="Verlauf_ge_ndert_6faed3c5" xml:space="preserve">
+    <value>Degradado cambiado</value>
+  </data>
+  <data name="Auswahl_eingef_gt_2526f3eb" xml:space="preserve">
+    <value>Selección pegada</value>
+  </data>
+  <data name="Maske_gef_llt_0d57f132" xml:space="preserve">
+    <value>Máscara rellenada</value>
+  </data>
+  <data name="Auswahl_gef_llt_d82e3291" xml:space="preserve">
+    <value>Selección rellenada</value>
+  </data>
+  <data name="Anpassungen_zur_ckgesetzt_e5d9f240" xml:space="preserve">
+    <value>Ajustes restablecidos</value>
+  </data>
+  <data name="Leinwandgr_e_82cc7e52" xml:space="preserve">
+    <value>Tamaño del lienzo</value>
+  </data>
+  <data name="Filterst_rke_29211c56" xml:space="preserve">
+    <value>Intensidad del filtro</value>
+  </data>
+  <data name="Objekt_Drehung_zur_ckgesetzt_cf1e3cbe" xml:space="preserve">
+    <value>Rotación del objeto restablecida</value>
+  </data>
+  <data name="F_llung_d3e74fe6" xml:space="preserve">
+    <value>Relleno</value>
+  </data>
+  <data name="Virtueller_Ordner_1432af2e" xml:space="preserve">
+    <value>Carpeta virtual</value>
+  </data>
+  <data name="Collage_konnte_nicht_erstellt_werden_09073bf7" xml:space="preserve">
+    <value>No se pudo crear el collage</value>
+  </data>
+  <data name="Papierkorb_nicht_verf_gbar_b7950bbe" xml:space="preserve">
+    <value>Papelera no disponible</value>
+  </data>
+  <data name="endg_ltig_l_schen_c7cb523b" xml:space="preserve">
+    <value>eliminar definitivamente</value>
+  </data>
+  <data name="Keine_verwaisten_Eintr_ge_gefunden_851439ee" xml:space="preserve">
+    <value>No se encontraron entradas huérfanas.</value>
+  </data>
+  <data name="Kein_Cache_f_r_diesen_Ordner_gefunden_e86f4288" xml:space="preserve">
+    <value>No se encontró caché para esta carpeta.</value>
+  </data>
+  <data name="Kein_Cache_vorhanden_839847ba" xml:space="preserve">
+    <value>No hay caché.</value>
+  </data>
+  <data name="vorhanden_f1560041" xml:space="preserve">
+    <value>presente</value>
+  </data>
+  <data name="Ordner_fehlt_b906f14d" xml:space="preserve">
+    <value>falta la carpeta</value>
+  </data>
+  <data name="0_Elemente_1_978a868f" xml:space="preserve">
+    <value>¿{0} elementos {1}?</value>
+  </data>
+  <data name="in_den_Papierkorb_verschieben_4112c8dc" xml:space="preserve">
+    <value>mover a la papelera</value>
+  </data>
+  <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
+    <value>{0} de {1} archivo(s) modificado(s)</value>
+  </data>
+  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
+    <value>{0} de {1} archivo(s) filtrado(s)</value>
+  </data>
+  <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
+    <value>{0} de {1} archivo(s) limpiado(s)</value>
+  </data>
+  <data name="0_von_1_Datei_en_mit_Wasserzeichen_versehen_5085ab83" xml:space="preserve">
+    <value>{0} de {1} archivo(s) con marca de agua</value>
+  </data>
+  <data name="0_von_1_Datei_en_konvertiert_dc3902f0" xml:space="preserve">
+    <value>{0} de {1} archivo(s) convertido(s)</value>
+  </data>
+  <data name="Verf_gbar_0_f6e7a8d8" xml:space="preserve">
+    <value>Disponible: {0}</value>
+  </data>
+  <data name="Der_gespeicherte_Bildschirm_0_wurde_nicht_gefund_9d8ef059" xml:space="preserve">
+    <value>No se encontró la pantalla guardada '{0}'.</value>
+  </data>
+  <data name="0_verwaiste_Eintr_ge_entfernt_e9cb053c" xml:space="preserve">
+    <value>Se eliminaron {0} entradas huérfanas.</value>
+  </data>
+  <data name="0_Vorschaubilder_gel_scht_18b1f596" xml:space="preserve">
+    <value>Se eliminaron {0} miniaturas.</value>
+  </data>
+  <data name="Unbekannter_Ordner_0_c6db8e1e" xml:space="preserve">
+    <value>Carpeta desconocida ({0})</value>
+  </data>
+  <data name="0_Bilder_1_2_00124d10" xml:space="preserve">
+    <value>{0} imágenes · {1} · {2}</value>
+  </data>
+  <data name="Rechteck_b4a496b4" xml:space="preserve">
+    <value>Rectángulo</value>
+  </data>
+  <data name="Abgerundetes_Rechteck_3ceb99ba" xml:space="preserve">
+    <value>Rectángulo redondeado</value>
+  </data>
+  <data name="Ellipse_8580e317" xml:space="preserve">
+    <value>Elipse</value>
+  </data>
+  <data name="Quadrat_92a0712c" xml:space="preserve">
+    <value>Cuadrado</value>
+  </data>
+  <data name="Dreieck_9f0dc157" xml:space="preserve">
+    <value>Triángulo</value>
+  </data>
+  <data name="Kegel_18b74ae9" xml:space="preserve">
+    <value>Cono</value>
+  </data>
+  <data name="Pyramide_a658f1cb" xml:space="preserve">
+    <value>Pirámide</value>
+  </data>
+  <data name="Trapez_15546e1e" xml:space="preserve">
+    <value>Trapecio</value>
+  </data>
+  <data name="Raute_c5f6f6af" xml:space="preserve">
+    <value>Rombo</value>
+  </data>
+  <data name="Polygon_85066b2c" xml:space="preserve">
+    <value>Polígono</value>
+  </data>
+  <data name="Stern_45147050" xml:space="preserve">
+    <value>Estrella</value>
+  </data>
+  <data name="Doppelstern_edf93561" xml:space="preserve">
+    <value>Estrella doble</value>
+  </data>
+  <data name="Spirale_4d3dc0cf" xml:space="preserve">
+    <value>Espiral</value>
+  </data>
+  <data name="Tropfen_fdfa2cbc" xml:space="preserve">
+    <value>Gota</value>
+  </data>
+  <data name="Sprechblase_247a896e" xml:space="preserve">
+    <value>Bocadillo</value>
+  </data>
+  <data name="Ellipse_Sprechblase_9b239ba0" xml:space="preserve">
+    <value>Bocadillo elíptico</value>
+  </data>
+  <data name="Rechteck_Sprechblase_48325dc1" xml:space="preserve">
+    <value>Bocadillo rectangular</value>
+  </data>
+  <data name="Herz_37d88743" xml:space="preserve">
+    <value>Corazón</value>
+  </data>
+  <data name="Wolke_c39cdc75" xml:space="preserve">
+    <value>Nube</value>
+  </data>
+  <data name="Pfeil_6da8ccec" xml:space="preserve">
+    <value>Flecha</value>
+  </data>
+  <data name="Linie_04dc77e5" xml:space="preserve">
+    <value>Línea</value>
+  </data>
+  <data name="Symbol_3f84ef53" xml:space="preserve">
+    <value>Símbolo</value>
+  </data>
+  <data name="Vordergrund_dbedb6b4" xml:space="preserve">
+    <value>Primer plano</value>
+  </data>
 </root>

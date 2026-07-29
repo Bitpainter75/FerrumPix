@@ -455,7 +455,10 @@ Namespace Services
         Public ReadOnly Property LayerLabel As String
             Get
                 If Not String.IsNullOrWhiteSpace(_customName) Then Return _customName
-                Dim baseLabel = GermanKindLabel(_kind)
+                ' Der TYP-Name wird uebersetzt, ein selbst gegebener Name nicht - der steht oben und
+                ' kehrt vorher zurueck. So heisst eine Ebene in jeder Sprache nach ihrer Art, waehrend
+                ' eine umbenannte Ebene ihren Namen behaelt.
+                Dim baseLabel = LocalizationService.T(GermanKindLabel(_kind))
                 Dim isSelectionKind = _kind IsNot Nothing AndAlso
                     (_kind.Equals("SelectionFill", StringComparison.OrdinalIgnoreCase) OrElse _kind.Equals("SelectionImage", StringComparison.OrdinalIgnoreCase))
                 If isSelectionKind Then

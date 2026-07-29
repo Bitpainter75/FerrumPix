@@ -21,15 +21,16 @@ Namespace Services
 
         Public ReadOnly Property DisplayName As String
             Get
-                If String.IsNullOrEmpty(FolderPath) Then Return $"Unbekannter Ordner ({CacheId})"
+                If String.IsNullOrEmpty(FolderPath) Then Return String.Format(LocalizationService.T("Unbekannter Ordner ({0})"), CacheId)
                 Return FolderPath
             End Get
         End Property
 
         Public ReadOnly Property DetailText As String
             Get
-                Dim status = If(Exists, "vorhanden", "Ordner fehlt")
-                Return $"{ThumbnailCount:N0} Bilder · {FormatBytes(SizeBytes)} · {status}"
+                Dim status = If(Exists, LocalizationService.T("vorhanden"), LocalizationService.T("Ordner fehlt"))
+                Return String.Format(LocalizationService.T("{0} Bilder · {1} · {2}"),
+                                     ThumbnailCount.ToString("N0"), FormatBytes(SizeBytes), status)
             End Get
         End Property
 

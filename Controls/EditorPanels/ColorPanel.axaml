@@ -39,7 +39,16 @@
                           HorizontalAlignment="Stretch"
                           FontSize="{DynamicResource FP.Font.Small}"
                           Margin="6,0,0,0"
-                          DropDownOpened="OnMatchWidthDropDownOpened" />
+                          DropDownOpened="OnMatchWidthDropDownOpened">
+                        <ComboBox.ItemTemplate>
+                            <!-- Angezeigt wird uebersetzt, gespeichert bleibt der deutsche WERT: er
+                                 steht im Rezept und in jedem Select Case. -->
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource UebersetzenConverter}}"
+                                           VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Temperatur"

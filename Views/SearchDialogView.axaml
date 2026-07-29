@@ -81,7 +81,7 @@
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch">
                 <Button.Flyout>
-                    <Flyout Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
+                    <Flyout Opened="OnLocalizedFlyoutOpened" Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
                         <StackPanel MinWidth="200">
                             <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="-1">
                                 <Grid ColumnDefinitions="*,20">

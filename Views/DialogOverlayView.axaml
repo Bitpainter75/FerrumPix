@@ -104,7 +104,7 @@
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Stretch">
                                     <Button.Flyout>
-                                        <Flyout Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
+                                        <Flyout Opened="OnLocalizedFlyoutOpened" Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
                                             <ItemsControl ItemsSource="{Binding DialogFormatOptions}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>

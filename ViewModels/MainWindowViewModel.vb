@@ -3012,10 +3012,11 @@ Namespace ViewModels
             Dim skipConfirmation = settings.DeleteSkipConfirmation
 
             If Not skipConfirmation Then
-                Dim verb = If(useTrash, "in den Papierkorb verschieben", "endgültig löschen")
+                Dim verb = If(useTrash, LocalizationService.T("in den Papierkorb verschieben"),
+                                        LocalizationService.T("endgültig löschen"))
                 Dim message = If(pathList.Count = 1,
                                  $"{IO.Path.GetFileName(pathList(0))} {verb}?",
-                                 $"{pathList.Count} Elemente {verb}?")
+                                 String.Format(LocalizationService.T("{0} Elemente {1}?"), pathList.Count, verb))
                 Dim confirmText = If(useTrash, "In den Papierkorb", "Löschen")
                 If Not Await ShowConfirmAsync("Löschen", message, confirmText, "Abbrechen") Then Return
             End If

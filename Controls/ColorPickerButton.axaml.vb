@@ -1,6 +1,7 @@
 Imports System.Collections.ObjectModel
 Imports Avalonia
 Imports Avalonia.Controls
+Imports FerrumPix.Services
 Imports Avalonia.Data
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
@@ -16,6 +17,15 @@ Namespace Controls
     ''' SelectedColor="{Binding ...Value, Mode=TwoWay}" verwenden.
     Public Class ColorPickerButton
         Inherits UserControl
+
+        ''' <summary>Ein Flyout entsteht erst beim Oeffnen aus seinem Template und ist beim
+        ''' einmaligen Durchlauf ueber das Fenster noch nicht da. Ohne diesen Einstieg bleibt sein
+        ''' Inhalt in der Ausgangssprache stehen, waehrend die uebrige Oberflaeche umgeschaltet
+        ''' hat.</summary>
+        Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
+            Dim inhalt = TryCast(TryCast(sender, Flyout)?.Content, Avalonia.LogicalTree.ILogical)
+            If inhalt IsNot Nothing Then LocalizationService.ApplyTo(inhalt)
+        End Sub
 
         Public Shared ReadOnly SelectedColorProperty As StyledProperty(Of Color) =
             AvaloniaProperty.Register(Of ColorPickerButton, Color)(NameOf(SelectedColor), Colors.White, defaultBindingMode:=BindingMode.TwoWay)

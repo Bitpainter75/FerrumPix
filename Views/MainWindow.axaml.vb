@@ -253,8 +253,21 @@ Namespace Views
             End Try
         End Sub
 
+        ''' <summary>Beide Baeume, und zwar in dieser Reihenfolge.
+        '''
+        ''' Der LOGISCHE Baum erreicht, was im XAML steht. Alles, was aus einem DataTemplate kommt -
+        ''' die Koepfe und Hilfstexte der Anpassungspanels, Listenzeilen, Menue- und Flyout-Inhalte -
+        ''' haengt dort NICHT drin und blieb deshalb in der Ausgangssprache stehen, obwohl die
+        ''' Uebersetzung langst vorhanden war. Der SICHTbaum erreicht genau diese Stellen, sobald sie
+        ''' materialisiert sind.
+        '''
+        ''' Zweimal zu laufen ist unschaedlich: jeder Knoten merkt sich seinen Ursprungstext, die
+        ''' zweite Uebersetzung geht also wieder von der Quelle aus und nicht vom Ergebnis.</summary>
         Private Sub ApplyLocalization()
-            Dispatcher.UIThread.Post(Sub() LocalizationService.ApplyTo(Me), DispatcherPriority.Loaded)
+            Dispatcher.UIThread.Post(Sub()
+                                         LocalizationService.ApplyTo(Me)
+                                         LocalizationService.ApplyToVisualTree(Me)
+                                     End Sub, DispatcherPriority.Loaded)
         End Sub
 
         ''' <summary>Gibt den Tastaturfokus nach dem Schließen eines Overlay-Dialogs an die Ansicht

@@ -24,6 +24,26 @@ Namespace Converters
         End Function
     End Class
 
+    ''' <summary>Zeigt den uebersetzten Text einer Auswahlliste, deren WERTE deutsch sind.
+    '''
+    ''' Die Listen der Auswahlfelder - Mischmodi, Weissabgleich, Neuberechnung, Rahmenstil - fuehren
+    ''' den deutschen Text gleichzeitig als gespeicherten Wert: er steht in der Einstellungsdatei, im
+    ''' Rezept und in jedem Select Case. Uebersetzt man die Liste selbst, passt der Vergleich nicht
+    ''' mehr. Deshalb wird nur die ANZEIGE uebersetzt, der Wert bleibt, wie er ist.</summary>
+    Public Class UebersetzenConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            Dim text = TryCast(value, String)
+            If String.IsNullOrEmpty(text) Then Return value
+            Return Services.LocalizationService.T(text)
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Return BindingOperations.DoNothing
+        End Function
+    End Class
+
     Public Class AppModeToVisibilityConverter
         Implements IValueConverter
 

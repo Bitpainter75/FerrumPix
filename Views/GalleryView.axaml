@@ -648,7 +648,7 @@
                                           <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-34,3,0,3"
                                                 ContextRequested="OnSearchNodeContextRequested">
                                               <Grid.ContextMenu>
-                                                  <ContextMenu>
+                                                  <ContextMenu Opened="OnLocalizedMenuOpened">
                                                       <MenuItem Header="Zu Favoriten hinzufügen"
                                                                 IsVisible="{Binding CanBecomeFavorite}"
                                                                 Click="OnAddNodeFavoriteClick"/>
@@ -721,7 +721,7 @@
                                       </Style>
                                   </TreeView.Styles>
                                   <TreeView.ContextMenu>
-                                      <ContextMenu MaxHeight="1000">
+                                      <ContextMenu Opened="OnLocalizedMenuOpened" MaxHeight="1000">
                                           <MenuItem Header="Zu Favoriten hinzufügen" Click="OnAddFolderFavoriteClick"/>
                                           <Separator/>
                                           <MenuItem Name="FolderTreeCreateFolderMenuItem" Header="Neuer Ordner" Click="OnContextCreateFolder"/>
@@ -779,7 +779,7 @@
                                           <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-34,3,0,3"
                                                 ContextRequested="OnSearchNodeContextRequested">
                                               <Grid.ContextMenu>
-                                                  <ContextMenu>
+                                                  <ContextMenu Opened="OnLocalizedMenuOpened">
                                                       <MenuItem Header="Zu Favoriten hinzufügen"
                                                                 IsVisible="{Binding CanBecomeFavorite}"
                                                                 Click="OnAddNodeFavoriteClick"/>
@@ -861,7 +861,7 @@
                                                 DragDrop.AllowDrop="True"
                                                 PointerPressed="OnImmichNodePointerPressed">
                                               <Grid.ContextMenu>
-                                                  <ContextMenu>
+                                                  <ContextMenu Opened="OnLocalizedMenuOpened">
                                                       <MenuItem Header="Zu Favoriten hinzufügen"
                                                                 IsVisible="{Binding CanBecomeFavorite}"
                                                                 Click="OnAddNodeFavoriteClick"/>
@@ -916,7 +916,7 @@
                                              Herkunftsbaeumen - "Aus Favoriten entfernen" steht bewusst getrennt
                                              darunter, damit es nicht mit "Loeschen" verwechselt wird. -->
                                         <Grid.ContextMenu>
-                                            <ContextMenu>
+                                            <ContextMenu Opened="OnLocalizedMenuOpened">
                                                 <MenuItem Header="Neuer Ordner" IsVisible="{Binding IsFolderFavorite}"
                                                           Click="OnFavoriteCreateFolderClick"/>
                                                 <MenuItem Header="Umbenennen" IsVisible="{Binding IsFolderFavorite}"
@@ -1031,7 +1031,7 @@
                               DragDrop.Drop="OnGalleryAreaDrop"
                               Margin="0,0,8,0">
                     <ScrollViewer.ContextMenu>
-                        <ContextMenu>
+                        <ContextMenu Opened="OnLocalizedMenuOpened">
                             <MenuItem Name="GalleryGridViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                             <MenuItem Name="GalleryGridViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
@@ -1046,7 +1046,7 @@
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
                                       ContextRequested="OnGalleryAreaContextRequested">
                             <ItemsControl.ContextMenu>
-                            <ContextMenu>
+                            <ContextMenu Opened="OnLocalizedMenuOpened">
                                 <MenuItem Name="GalleryGridCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                                 <MenuItem Name="GalleryGridPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                             </ContextMenu>
@@ -1073,7 +1073,7 @@
                                         DragDrop.DragOver="OnItemDragOver"
                                         DragDrop.Drop="OnItemDrop">
                                     <Border.ContextMenu>
-                                        <ContextMenu>
+                                        <ContextMenu Opened="OnLocalizedMenuOpened">
                                             <MenuItem Name="GridContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
                                             <MenuItem Name="GridContextCompareMenuItem" Header="Vergleichen" Click="OnContextCompare"/>
                                             <MenuItem Name="GridContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
@@ -1467,7 +1467,7 @@
                               DragDrop.Drop="OnGalleryAreaDrop"
                               Margin="0,0,8,0">
                     <ScrollViewer.ContextMenu>
-                        <ContextMenu>
+                        <ContextMenu Opened="OnLocalizedMenuOpened">
                             <MenuItem Name="GalleryListViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                             <MenuItem Name="GalleryListViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                         </ContextMenu>
@@ -1481,7 +1481,7 @@
                         <ItemsControl ItemsSource="{Binding DisplayItems}"
                                       ContextRequested="OnGalleryAreaContextRequested">
                             <ItemsControl.ContextMenu>
-                            <ContextMenu>
+                            <ContextMenu Opened="OnLocalizedMenuOpened">
                                 <MenuItem Name="GalleryListCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
                                 <MenuItem Name="GalleryListPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
                             </ContextMenu>
@@ -1507,7 +1507,7 @@
                                         DragDrop.DragOver="OnItemDragOver"
                                         DragDrop.Drop="OnItemDrop">
                                     <Border.ContextMenu>
-                                        <ContextMenu>
+                                        <ContextMenu Opened="OnLocalizedMenuOpened">
                                             <MenuItem Name="ListContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
                                             <MenuItem Name="ListContextCompareMenuItem" Header="Vergleichen" Click="OnContextCompare"/>
                                             <MenuItem Name="ListContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
@@ -1885,7 +1885,7 @@
                             IsEnabled="{Binding HasSelection}"
                             ToolTip.Tip="Menü für die Auswahl">
                         <Button.ContextMenu>
-                            <ContextMenu>
+                            <ContextMenu Opened="OnLocalizedMenuOpened">
                                 <MenuItem Name="MenuContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
                                 <MenuItem Name="MenuContextCompareMenuItem" Header="Vergleichen" Click="OnContextCompare"/>
                                 <MenuItem Name="MenuContextEditMenuItem" Header="Anpassen" Click="OnContextEdit"/>

@@ -9,7 +9,7 @@
                 <TextBlock Grid.Column="1" Name="HexTextBlock" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center"/>
             </Grid>
             <Button.Flyout>
-                <Flyout Placement="Bottom">
+                <Flyout Opened="OnLocalizedFlyoutOpened" Placement="Bottom">
                     <Border Background="{DynamicResource FP.Bg.Panel}" BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6" Padding="10">
                         <StackPanel Spacing="2" Width="230">
                             <ColorPicker Name="InnerColorPicker" ColorModel="Rgba" HorizontalAlignment="Stretch"/>

@@ -52,7 +52,18 @@ Public Class App
             End Sub
     End Sub
 
+    ''' <summary>Ein Expander erzeugt seinen Inhalt erst beim Aufklappen. Der Durchlauf ueber das
+    ''' Fenster hat ihn dann schon hinter sich, also wird hier nachgezogen - EIN Klassen-Handler fuer
+    ''' alle Expander der Anwendung, statt eines Ereignisses je Panel.</summary>
+    Private Shared Sub LokalisiereNachgeladenes()
+        Avalonia.Controls.Expander.ExpandedEvent.AddClassHandler(Of Avalonia.Controls.Expander)(
+            Sub(expander, e)
+                Services.LocalizationService.ApplyToVisualTree(expander)
+            End Sub)
+    End Sub
+
     Public Overrides Sub OnFrameworkInitializationCompleted()
+        LokalisiereNachgeladenes()
         If TypeOf ApplicationLifetime Is IClassicDesktopStyleApplicationLifetime Then
             Dim desktop = CType(ApplicationLifetime, IClassicDesktopStyleApplicationLifetime)
 
