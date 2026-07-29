@@ -322,7 +322,8 @@ Namespace ViewModels
 
         ''' <summary>Öffnet eine Immich-Sitzung im Betrachter: der Filmstreifen zeigt das ganze Album
         ''' (Pseudo-Pfade), das aktuelle Bild wird on-demand heruntergeladen.</summary>
-        Public Async Sub OpenImmichViewer(startPseudoPath As String, sessionItems As System.Collections.Generic.List(Of Models.ImageItem), Optional immichAlbumId As String = Nothing)
+        Public Async Sub OpenImmichViewer(startPseudoPath As String, sessionItems As System.Collections.Generic.List(Of Models.ImageItem),
+                                          Optional immichAlbumId As String = Nothing)
             Try
                 If CurrentMode = AppMode.Editor Then
                     If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return

@@ -181,18 +181,51 @@
                                         <RotateTransform Angle="{Binding RotationAngle}"/>
                                     </TransformGroup>
                                 </Border.RenderTransform>
-                                <Image Name="MainImage"
-                                       Source="{Binding CurrentImage}"
-                                       Stretch="Uniform"
-                                       Margin="-1"
-                                       RenderOptions.BitmapInterpolationMode="HighQuality"
-                                       PointerPressed="OnImagePointerPressed"
-                                       PointerMoved="OnImagePointerMoved"
-                                       PointerReleased="OnImagePointerReleased"
-                                       PointerCaptureLost="OnImagePointerCaptureLost"
-                                       PointerExited="OnImagePointerExited"
-                                       ContextRequested="OnImageContextRequested"
-                                       DoubleTapped="OnImageDoubleTapped" />
+                                <Grid>
+                                    <Image Name="MainImage"
+                                           Source="{Binding CurrentImage}"
+                                           Stretch="Uniform"
+                                           Margin="-1"
+                                           RenderOptions.BitmapInterpolationMode="HighQuality"
+                                           PointerPressed="OnImagePointerPressed"
+                                           PointerMoved="OnImagePointerMoved"
+                                           PointerReleased="OnImagePointerReleased"
+                                           PointerCaptureLost="OnImagePointerCaptureLost"
+                                           PointerExited="OnImagePointerExited"
+                                           ContextRequested="OnImageContextRequested"
+                                           DoubleTapped="OnImageDoubleTapped"/>
+                                    <icons:MpvVideoView Name="LivePhotoVideoView"
+                                                        IsVisible="{Binding IsMotionPhotoSurfaceActive}"
+                                                        IsHitTestVisible="False"
+                                                        Opacity="{Binding MotionPhotoVideoOpacity}">
+                                        <icons:MpvVideoView.Transitions>
+                                            <Transitions>
+                                                <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                                            </Transitions>
+                                        </icons:MpvVideoView.Transitions>
+                                    </icons:MpvVideoView>
+                                    <Border HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Margin="12"
+                                            Padding="9,5"
+                                            CornerRadius="14"
+                                            Background="#A0000000"
+                                            IsVisible="{Binding HasImmichMotionPhoto}"
+                                            PointerEntered="OnLivePhotoPillPointerEntered"
+                                            PointerExited="OnLivePhotoPillPointerExited">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/live-photo.svg"
+                                                           Width="15" Height="15"
+                                                           VerticalAlignment="Center"
+                                                           IconBrush="White"/>
+                                            <TextBlock Text="Live"
+                                                       Foreground="White"
+                                                       FontSize="{DynamicResource FP.Font.Small}"
+                                                       VerticalAlignment="Center"
+                                                       FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
                             </Border>
                             <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
                                 <Border Name="CropSelectionRect"
@@ -480,9 +513,36 @@
                                     ClipToBounds="True"
                                     PointerPressed="OnFilmstripItemPressed">
                                 <Border CornerRadius="6" ClipToBounds="True">
-                                    <Image Source="{Binding Thumbnail}"
-                                           Stretch="UniformToFill"
-                                           RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                                    <Grid>
+                                        <Image Source="{Binding Thumbnail}"
+                                               Stretch="UniformToFill"
+                                               RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                                        <Border Width="28" Height="28" CornerRadius="14"
+                                                Background="#B010161B"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                IsVisible="{Binding IsVideoFile}"
+                                                IsHitTestVisible="False">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg"
+                                                           Width="14" Height="14"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           IconBrush="White"/>
+                                        </Border>
+                                        <Border Width="22" Height="22" CornerRadius="11"
+                                                Background="#70000000"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                Margin="0,6,6,0"
+                                                IsVisible="{Binding IsImmichMotionPhoto}"
+                                                IsHitTestVisible="False">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/live-photo.svg"
+                                                           Width="13" Height="13"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           IconBrush="White"/>
+                                        </Border>
+                                    </Grid>
                                 </Border>
                             </Border>
                         </DataTemplate>
@@ -614,10 +674,43 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Background="{Binding TransparencyBackgroundBrush}">
-                <Image Name="FullscreenImage"
-                       Source="{Binding CurrentImage}"
-                       Margin="-1"
-                       RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                <Grid>
+                    <Image Name="FullscreenImage"
+                           Source="{Binding CurrentImage}"
+                           Margin="-1"
+                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                    <icons:MpvVideoView Name="FullscreenLivePhotoVideoView"
+                                        IsVisible="{Binding IsMotionPhotoSurfaceActive}"
+                                        IsHitTestVisible="False"
+                                        Opacity="{Binding MotionPhotoVideoOpacity}">
+                        <icons:MpvVideoView.Transitions>
+                            <Transitions>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                            </Transitions>
+                        </icons:MpvVideoView.Transitions>
+                    </icons:MpvVideoView>
+                    <Border HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Margin="12"
+                            Padding="9,5"
+                            CornerRadius="14"
+                            Background="#A0000000"
+                            IsVisible="{Binding HasImmichMotionPhoto}"
+                            PointerEntered="OnLivePhotoPillPointerEntered"
+                            PointerExited="OnLivePhotoPillPointerExited">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/live-photo.svg"
+                                           Width="15" Height="15"
+                                           VerticalAlignment="Center"
+                                           IconBrush="White"/>
+                            <TextBlock Text="Live"
+                                       Foreground="White"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Border>
 
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"

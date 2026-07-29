@@ -842,6 +842,7 @@ Namespace Views
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
+            Dim vm = TryCast(sender, ViewerViewModel)
             If e.PropertyName = NameOf(ViewerViewModel.IsFitToWindow) OrElse
                e.PropertyName = NameOf(ViewerViewModel.CurrentImage) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ZoomLevel) OrElse
@@ -860,6 +861,7 @@ Namespace Views
             End If
 
             If e.PropertyName = NameOf(ViewerViewModel.IsFullscreenMode) Then
+                vm?.SetMotionPhotoHover(False)
                 ApplyFullscreenImageMode()
                 ApplyVideoLayout()
                 ResetFullscreenVideoControlsVisibility()
@@ -868,6 +870,7 @@ Namespace Views
             ' ShowVideoSurface kippt beim Videoende (Fläche verschwindet) und beim erneuten Abspielen
             ' (Fläche kommt zurück) - dabei muss der Player wieder dem OpenGL-Control zugewiesen werden.
             If e.PropertyName = NameOf(ViewerViewModel.IsVideoFile) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.IsMotionPhotoSurfaceActive) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ShowVideoSurface) Then
                 UpdateActiveVideoView()
                 ResetFullscreenVideoControlsVisibility()
@@ -1000,24 +1003,38 @@ Namespace Views
         ''' NICHT mehr aus (siehe ApplyVideoLayout), wodurch der OpenGL-Renderkontext über
         ''' Vollbild-Wechsel und Video-zu-Video-Navigation hinweg bestehen bleibt.
         Private _pendingVideoAttachHandler As EventHandler
+        Private _pendingVideoAttachTarget As MpvVideoView
 
         Private Sub UpdateActiveVideoView()
             Dim vm = GetVm()
             Dim videoView = Me.FindControl(Of MpvVideoView)("TheVideoView")
-            If videoView Is Nothing Then Return
+            Dim livePhotoView = Me.FindControl(Of MpvVideoView)("LivePhotoVideoView")
+            Dim fullscreenLivePhotoView = Me.FindControl(Of MpvVideoView)("FullscreenLivePhotoVideoView")
+            If videoView Is Nothing OrElse livePhotoView Is Nothing OrElse fullscreenLivePhotoView Is Nothing Then Return
 
             If _pendingVideoAttachHandler IsNot Nothing Then
-                RemoveHandler videoView.LayoutUpdated, _pendingVideoAttachHandler
+                If _pendingVideoAttachTarget IsNot Nothing Then
+                    RemoveHandler _pendingVideoAttachTarget.LayoutUpdated, _pendingVideoAttachHandler
+                End If
                 _pendingVideoAttachHandler = Nothing
+                _pendingVideoAttachTarget = Nothing
             End If
 
-            Dim isVideoActive = vm IsNot Nothing AndAlso vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable
-            If Not isVideoActive Then
-                videoView.Player = Nothing
-                Return
+            Dim target As MpvVideoView = Nothing
+            If vm IsNot Nothing AndAlso vm.IsVideoPlaybackAvailable Then
+                If vm.IsVideoFile Then
+                    target = videoView
+                ElseIf vm.IsMotionPhotoSurfaceActive Then
+                    target = If(vm.IsFullscreenMode, fullscreenLivePhotoView, livePhotoView)
+                End If
             End If
 
-            AttachVideoPlayer(videoView, vm.VideoMediaPlayer, vm)
+            If Not Object.ReferenceEquals(videoView, target) Then videoView.Player = Nothing
+            If Not Object.ReferenceEquals(livePhotoView, target) Then livePhotoView.Player = Nothing
+            If Not Object.ReferenceEquals(fullscreenLivePhotoView, target) Then fullscreenLivePhotoView.Player = Nothing
+            If target Is Nothing Then Return
+
+            AttachVideoPlayer(target, vm.VideoMediaPlayer, vm)
         End Sub
 
         ''' Der OpenGL-Renderer wird erst nach dem ersten Layout-Durchlauf angelegt. Deshalb wird
@@ -1034,11 +1051,15 @@ Namespace Views
             handler = Sub(s As Object, e As EventArgs)
                           If target.Bounds.Width <= 0 OrElse target.Bounds.Height <= 0 Then Return
                           RemoveHandler target.LayoutUpdated, handler
-                          If Object.ReferenceEquals(_pendingVideoAttachHandler, handler) Then _pendingVideoAttachHandler = Nothing
+                          If Object.ReferenceEquals(_pendingVideoAttachHandler, handler) Then
+                              _pendingVideoAttachHandler = Nothing
+                              _pendingVideoAttachTarget = Nothing
+                          End If
                           target.Player = mediaPlayer
                           StartPendingVideoAutoplayAfterHostReady(target, mediaPlayer, vm)
                       End Sub
             _pendingVideoAttachHandler = handler
+            _pendingVideoAttachTarget = target
             AddHandler target.LayoutUpdated, handler
         End Sub
 
@@ -1048,13 +1069,21 @@ Namespace Views
                 If target Is Nothing OrElse vm Is Nothing Then Return
                 If Not Object.ReferenceEquals(target.Player, mediaPlayer) Then Return
                 If Not Object.ReferenceEquals(vm.VideoMediaPlayer, mediaPlayer) Then Return
-                If Not vm.IsVideoFile Then Return
+                If Not vm.IsVideoFile AndAlso Not vm.IsMotionPhotoSurfaceActive Then Return
                 vm.StartPendingVideoAutoplay()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
                 ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerView.StartPendingVideoAutoplayAfterHostReady", ex)
             End Try
+        End Sub
+
+        Public Sub OnLivePhotoPillPointerEntered(sender As Object, e As PointerEventArgs)
+            GetVm()?.SetMotionPhotoHover(True)
+        End Sub
+
+        Public Sub OnLivePhotoPillPointerExited(sender As Object, e As PointerEventArgs)
+            GetVm()?.SetMotionPhotoHover(False)
         End Sub
 
         Public Sub OnVideoViewTapped(sender As Object, e As TappedEventArgs)

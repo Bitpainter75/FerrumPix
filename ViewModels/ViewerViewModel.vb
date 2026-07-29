@@ -36,6 +36,14 @@ Namespace ViewModels
         ' Temp-Pfad des aktuell angezeigten Bildes ist - so bleibt der ganze Datei-/Anzeigecode gleich.
         Private _isImmichSession As Boolean = False
         Private _currentImmichAssetId As String = Nothing
+        Private _currentLivePhotoVideoId As String = Nothing
+        Private _isMotionPhotoPlaying As Boolean = False
+        Private _isMotionPhotoLoading As Boolean = False
+        Private _isMotionPhotoHoverRequested As Boolean = False
+        Private _isMotionPhotoSurfaceActive As Boolean = False
+        Private _motionPhotoVideoOpacity As Double = 0.0
+        Private _motionPhotoInteractionSequence As Integer = 0
+        Private _motionPhotoVideoPath As String = Nothing
 
         ''' <summary>True, solange der Viewer eine Immich-Album-Sitzung zeigt (Filmstreifen = Album).
         ''' Der Editor braucht das, um beim Zurückschalten die noch lebende Sitzung nicht durch eine
@@ -93,6 +101,7 @@ Namespace ViewModels
         Private _ignoreVideoTimeUpdatesUntilUtc As DateTime = DateTime.MinValue
         Private _videoPlaybackRuntimeFailed As Boolean = False
         Private _slideshowVideoEndSequence As Integer = 0
+        Private _activeVideoPath As String = Nothing
 
         Public Property FilmstripItems As BulkObservableCollection(Of ImageItem)
         Public Property Tags As ObservableCollection(Of String)
@@ -653,6 +662,30 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property HasImmichMotionPhoto As Boolean
+            Get
+                Return _isImmichSession AndAlso Not String.IsNullOrWhiteSpace(_currentLivePhotoVideoId)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsMotionPhotoPlaying As Boolean
+            Get
+                Return _isMotionPhotoPlaying
+            End Get
+        End Property
+
+        Public ReadOnly Property IsMotionPhotoSurfaceActive As Boolean
+            Get
+                Return _isMotionPhotoSurfaceActive
+            End Get
+        End Property
+
+        Public ReadOnly Property MotionPhotoVideoOpacity As Double
+            Get
+                Return _motionPhotoVideoOpacity
+            End Get
+        End Property
+
         Public ReadOnly Property ShowHistogram As Boolean
             Get
                 Return Not IsVideoFile
@@ -886,7 +919,8 @@ Namespace ViewModels
         ''' <summary>Öffnet eine Immich-Sitzung: der Filmstreifen zeigt das ganze Album (Pseudo-Pfade),
         ''' das jeweils angezeigte Original wird on-demand heruntergeladen. Reibt sich nicht mit dem
         ''' lokalen Pfad-Fluss (alles Immich-spezifische ist über _isImmichSession gekapselt).</summary>
-        Public Sub OpenImmichSession(startPseudoPath As String, sessionItems As List(Of ImageItem), Optional immichAlbumId As String = Nothing)
+        Public Sub OpenImmichSession(startPseudoPath As String, sessionItems As List(Of ImageItem),
+                                     Optional immichAlbumId As String = Nothing)
             If sessionItems Is Nothing OrElse sessionItems.Count = 0 Then Return
             _isImmichSession = True
             _immichSourceAlbumId = immichAlbumId
@@ -917,6 +951,7 @@ Namespace ViewModels
                 MarkCurrentFilmstripItem()
                 CurrentFileName = fileName
                 _currentImmichAssetId = assetId
+                SetCurrentLivePhotoVideoId(Nothing)
                 StatusInfo = LocalizationService.T("Lade…")
 
                 ' Infopanel SOFORT auf das neue Asset umschalten (Minimalstand): während des
@@ -932,6 +967,7 @@ Namespace ViewModels
                 ' setzen, damit die Property-Setter nicht sofort wieder an den Server zurückschreiben.
                 If idx < _immichSessionItems.Count Then
                     Dim meta = _immichSessionItems(idx)
+                    SetCurrentLivePhotoVideoId(meta.ImmichLivePhotoVideoId)
                     _isFavorite = meta.IsFavorite
                     Me.RaisePropertyChanged(NameOf(IsFavorite))
                     _rating = meta.Rating
@@ -1572,6 +1608,7 @@ Namespace ViewModels
 
         Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             _isImmichSession = False
+            SetCurrentLivePhotoVideoId(Nothing)
             _immichSourceAlbumId = Nothing
             If Not File.Exists(imagePath) Then Return
             ' Ein normales Oeffnen beendet einen laufenden Vergleich - sonst zeigt der Betrachter
@@ -1720,11 +1757,23 @@ Namespace ViewModels
         Private Async Sub RunImmichBitmapLoad(path As String, assetId As String, token As Integer)
             Dim bmp As Bitmap = Nothing
             Try
-                bmp = Await Task.Run(Function() DecodeViewerBitmap(path))
+                Dim localDecode = Task.Run(Function() DecodeViewerBitmap(path))
+                Dim completed = Await Task.WhenAny(localDecode, Task.Delay(2000))
+                If Object.ReferenceEquals(completed, localDecode) Then
+                    bmp = Await localDecode
+                End If
                 If bmp Is Nothing AndAlso token = System.Threading.Volatile.Read(_bitmapLoadToken) Then
                     bmp = Await ImmichService.LoadThumbnailBitmapAsync(assetId, ImmichService.PreviewSize)
                 End If
-            Catch
+                ' Manche Immich-Installationen haben für ältere Assets keine große Preview-Datei,
+                ' obwohl das Galerie-Thumbnail vorhanden ist. Ein solches Live Photo bleibt weiterhin
+                ' eine sichtbare Fotografie; die kleine Serverdarstellung ist besser als eine leere
+                ' Bühne und hält zugleich die Hover-Fläche für den verknüpften Clip erreichbar.
+                If bmp Is Nothing AndAlso token = System.Threading.Volatile.Read(_bitmapLoadToken) Then
+                    bmp = Await ImmichService.LoadThumbnailBitmapAsync(assetId, ImmichService.ThumbnailSize)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.RunImmichBitmapLoad", ex)
                 bmp = Nothing
             End Try
 
@@ -1872,6 +1921,129 @@ Namespace ViewModels
             End Try
         End Sub
 
+        Private Sub SetCurrentLivePhotoVideoId(value As String)
+            Dim normalized = If(value, "")
+            If String.Equals(_currentLivePhotoVideoId, normalized, StringComparison.Ordinal) Then Return
+            ResetMotionPhotoSurfaceImmediate()
+            _isMotionPhotoLoading = False
+            _motionPhotoVideoPath = Nothing
+            _currentLivePhotoVideoId = normalized
+            RaiseVideoPresentationProperties()
+        End Sub
+
+        Private Sub RaiseVideoPresentationProperties()
+            Me.RaisePropertyChanged(NameOf(HasImmichMotionPhoto))
+            Me.RaisePropertyChanged(NameOf(IsMotionPhotoPlaying))
+            Me.RaisePropertyChanged(NameOf(IsMotionPhotoSurfaceActive))
+            Me.RaisePropertyChanged(NameOf(MotionPhotoVideoOpacity))
+            Me.RaisePropertyChanged(NameOf(ShowHistogram))
+            Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
+            Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
+            Me.RaisePropertyChanged(NameOf(HasNoMedia))
+        End Sub
+
+        Public Sub SetMotionPhotoHover(isHovered As Boolean)
+            _isMotionPhotoHoverRequested = isHovered
+            _motionPhotoInteractionSequence += 1
+            Dim sequence = _motionPhotoInteractionSequence
+            If isHovered Then
+                BeginMotionPhotoHoverAsync(sequence)
+            Else
+                FadeOutMotionPhotoAsync(sequence, stopPlayback:=True)
+            End If
+        End Sub
+
+        Private Async Sub BeginMotionPhotoHoverAsync(sequence As Integer)
+            If Not HasImmichMotionPhoto Then Return
+            Dim motionAssetId = _currentLivePhotoVideoId
+            Dim navigationToken = System.Threading.Volatile.Read(_immichNavToken)
+            _isMotionPhotoLoading = True
+            Try
+                Dim videoPath = _motionPhotoVideoPath
+                If String.IsNullOrEmpty(videoPath) OrElse Not File.Exists(videoPath) Then
+                    Dim detail = Await ImmichService.GetAssetDetailAsync(motionAssetId)
+                    Dim fileName = If(detail?.FileName, motionAssetId & ".mp4")
+                    videoPath = Await ImmichService.DownloadOriginalToTempAsync(motionAssetId, fileName)
+                End If
+                If navigationToken <> System.Threading.Volatile.Read(_immichNavToken) OrElse
+                   sequence <> _motionPhotoInteractionSequence OrElse
+                   Not _isMotionPhotoHoverRequested OrElse
+                   Not String.Equals(_currentLivePhotoVideoId, motionAssetId, StringComparison.Ordinal) Then Return
+                If String.IsNullOrEmpty(videoPath) OrElse Not File.Exists(videoPath) Then
+                    StatusInfo = LocalizationService.T("Video konnte nicht aus Immich geladen werden")
+                    Return
+                End If
+
+                _motionPhotoVideoPath = videoPath
+                _isMotionPhotoPlaying = True
+                _isMotionPhotoSurfaceActive = True
+                _motionPhotoVideoOpacity = 0.0
+                _isVideoEnded = False
+                RaiseVideoPresentationProperties()
+                If Not LoadVideo(videoPath) Then
+                    ResetMotionPhotoSurfaceImmediate()
+                    StatusInfo = LocalizationService.T("Videowiedergabe nicht verfügbar")
+                    Return
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.BeginMotionPhotoHover", ex)
+                StatusInfo = LocalizationService.T("Video konnte nicht aus Immich geladen werden")
+            Finally
+                If navigationToken = System.Threading.Volatile.Read(_immichNavToken) AndAlso
+                   String.Equals(_currentLivePhotoVideoId, motionAssetId, StringComparison.Ordinal) Then
+                    _isMotionPhotoLoading = False
+                    RaiseVideoPresentationProperties()
+                End If
+            End Try
+        End Sub
+
+        Private Async Sub FadeInMotionPhotoAsync(sequence As Integer)
+            Await Task.Delay(80)
+            If sequence <> _motionPhotoInteractionSequence OrElse
+               Not _isMotionPhotoHoverRequested OrElse
+               Not _isMotionPhotoSurfaceActive Then Return
+            _motionPhotoVideoOpacity = 1.0
+            RaiseVideoPresentationProperties()
+        End Sub
+
+        Private Async Sub FadeOutMotionPhotoAsync(sequence As Integer, stopPlayback As Boolean)
+            _pendingVideoAutoplay = False
+            If stopPlayback AndAlso _mediaPlayer IsNot Nothing Then
+                Try
+                    _mediaPlayer.Stop()
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("VideoPlayback.StopMotionPhoto", ex)
+                End Try
+            End If
+            IsVideoPlaying = False
+            _isMotionPhotoPlaying = False
+            _motionPhotoVideoOpacity = 0.0
+            RaiseVideoPresentationProperties()
+            Await Task.Delay(150)
+            If sequence <> _motionPhotoInteractionSequence OrElse _isMotionPhotoHoverRequested Then Return
+            _isMotionPhotoSurfaceActive = False
+            RaiseVideoPresentationProperties()
+        End Sub
+
+        Private Sub ResetMotionPhotoSurfaceImmediate()
+            _motionPhotoInteractionSequence += 1
+            _isMotionPhotoHoverRequested = False
+            _isMotionPhotoPlaying = False
+            _isMotionPhotoLoading = False
+            _isMotionPhotoSurfaceActive = False
+            _motionPhotoVideoOpacity = 0.0
+            _pendingVideoAutoplay = False
+            If _mediaPlayer IsNot Nothing Then
+                Try
+                    _mediaPlayer.Stop()
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("VideoPlayback.ResetMotionPhoto", ex)
+                End Try
+            End If
+            IsVideoPlaying = False
+            RaiseVideoPresentationProperties()
+        End Sub
+
         Private Sub EnsureMediaPlayer()
             If _mediaPlayer IsNot Nothing Then Return
             If Not IsVideoPlaybackAvailable Then Return
@@ -1901,11 +2073,12 @@ Namespace ViewModels
 
         Private _pendingVideoAutoplay As Boolean = False
 
-        Private Sub LoadVideo(path As String)
+        Private Function LoadVideo(path As String) As Boolean
             EnsureMediaPlayer()
-            If _mediaPlayer Is Nothing Then Return
+            If _mediaPlayer Is Nothing Then Return False
             Try
                 _mediaPlayer.Stop()
+                _activeVideoPath = path
                 VideoPositionSeconds = 0
                 VideoDurationSeconds = 0
                 IsVideoPlaying = False
@@ -1913,10 +2086,12 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                 _mediaPlayer.Load(path)
                 _pendingVideoAutoplay = True
+                Return True
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.LoadVideo", ex)
+                Return False
             End Try
-        End Sub
+        End Function
 
         Public Sub StartPendingVideoAutoplay()
             If Not _pendingVideoAutoplay Then Return
@@ -1925,19 +2100,24 @@ Namespace ViewModels
                 _mediaPlayer?.LoadPending()
                 _mediaPlayer?.Play()
                 IsVideoPlaying = True
+                If _isMotionPhotoPlaying AndAlso _isMotionPhotoHoverRequested Then
+                    FadeInMotionPhotoAsync(_motionPhotoInteractionSequence)
+                End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.StartPendingVideoAutoplay", ex)
             End Try
         End Sub
 
         Public Sub StopVideoPlayback()
-            If _mediaPlayer Is Nothing Then Return
-            Try
-                _mediaPlayer.Stop()
-            Catch ex As Exception
-                DiagnosticLogService.LogException("VideoPlayback.StopVideoPlayback", ex)
-            End Try
+            If _mediaPlayer IsNot Nothing Then
+                Try
+                    _mediaPlayer.Stop()
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("VideoPlayback.StopVideoPlayback", ex)
+                End Try
+            End If
             IsVideoPlaying = False
+            If _isMotionPhotoPlaying OrElse _isMotionPhotoSurfaceActive Then ResetMotionPhotoSurfaceImmediate()
         End Sub
 
         Public Sub ShutdownVideo()
@@ -1962,8 +2142,8 @@ Namespace ViewModels
             If _mediaPlayer Is Nothing Then Return
 
             If _isVideoEnded Then
-                If String.IsNullOrEmpty(_currentImagePath) Then Return
-                LoadVideo(_currentImagePath)
+                If String.IsNullOrEmpty(_activeVideoPath) Then Return
+                LoadVideo(_activeVideoPath)
                 Return
             End If
 
@@ -2001,6 +2181,9 @@ Namespace ViewModels
                                           _pendingVideoAutoplay = False
                                           IsVideoPlaying = False
                                           _isVideoEnded = False
+                                          If _isMotionPhotoPlaying OrElse _isMotionPhotoSurfaceActive Then
+                                              ResetMotionPhotoSurfaceImmediate()
+                                          End If
 
                                           Dim failedPlayer = _mediaPlayer
                                           If failedPlayer IsNot Nothing Then
@@ -2010,8 +2193,7 @@ Namespace ViewModels
                                           End If
 
                                           Me.RaisePropertyChanged(NameOf(IsVideoPlaybackAvailable))
-                                          Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
-                                          Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
+                                          RaiseVideoPresentationProperties()
                                       End Sub)
         End Sub
 
@@ -2027,7 +2209,22 @@ Namespace ViewModels
                                           ' Stop-Ereignis darf die neue Wiedergabe nicht auf "pausiert" setzen.
                                           If reason = CInt(MpvInterop.MpvEndFileReason.Stop) Then Return
                                           If reason <> CInt(MpvInterop.MpvEndFileReason.Eof) Then
+                                              If IsMotionPhotoPlaying Then
+                                                  _isVideoEnded = False
+                                                  _isMotionPhotoHoverRequested = False
+                                                  _motionPhotoInteractionSequence += 1
+                                                  FadeOutMotionPhotoAsync(_motionPhotoInteractionSequence, stopPlayback:=False)
+                                              End If
                                               IsVideoPlaying = False
+                                              Return
+                                          End If
+                                          If IsMotionPhotoPlaying Then
+                                              _isVideoEnded = False
+                                              IsVideoPlaying = False
+                                              VideoPositionSeconds = VideoDurationSeconds
+                                              _isMotionPhotoHoverRequested = False
+                                              _motionPhotoInteractionSequence += 1
+                                              FadeOutMotionPhotoAsync(_motionPhotoInteractionSequence, stopPlayback:=False)
                                               Return
                                           End If
                                           If _isSlideshowPlaying Then

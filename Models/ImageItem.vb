@@ -145,18 +145,6 @@ Namespace Models
             End Get
         End Property
 
-        Public ReadOnly Property ShowMediaPlayBadge As Boolean
-            Get
-                Return IsVideoFile OrElse IsImmichMotionPhoto
-            End Get
-        End Property
-
-        Public ReadOnly Property MediaPlayTooltip As String
-            Get
-                Return If(IsImmichMotionPhoto, "Live Photo / Motion Photo", "Abspielen")
-            End Get
-        End Property
-
         ''' <summary>Lokaler Temp-Pfad des zuletzt heruntergeladenen Originals (für Viewer/Editor).
         ''' Erlaubt der Galerie, das Item beim Rückweg aus dem Viewer wiederzufinden, obwohl FilePath
         ''' ein Immich-Pseudo-Pfad ist.</summary>
@@ -891,8 +879,7 @@ Namespace Models
             _immichLivePhotoVideoId = normalized
             RaisePropertyChanged(NameOf(ImmichLivePhotoVideoId))
             RaisePropertyChanged(NameOf(IsImmichMotionPhoto))
-            RaisePropertyChanged(NameOf(ShowMediaPlayBadge))
-            RaisePropertyChanged(NameOf(MediaPlayTooltip))
+            RaisePropertyChanged(NameOf(CanEditFile))
         End Sub
 
         Public Shared Function FromFolder(folderPath As String) As ImageItem

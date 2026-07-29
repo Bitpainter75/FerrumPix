@@ -1151,20 +1151,35 @@
                                                                HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
                                                                IconBrush="{DynamicResource FP.Accent}"/>
-                                                <Button IsVisible="{Binding ShowMediaPlayBadge}"
+                                                <Button IsVisible="{Binding IsVideoFile}"
                                                         Classes="video-play-badge"
                                                         Width="46" Height="46"
                                                         CornerRadius="23"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
                                                         Click="OnVideoPlayBadgeClick"
-                                                        ToolTip.Tip="{Binding MediaPlayTooltip}">
+                                                        ToolTip.Tip="Abspielen">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg"
                                                                    Width="22" Height="22"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
                                                                    IconBrush="White"/>
                                                 </Button>
+                                                <Border Width="26" Height="26"
+                                                        CornerRadius="13"
+                                                        Background="#70000000"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        Margin="0,8,30,0"
+                                                        IsVisible="{Binding IsImmichMotionPhoto}"
+                                                        IsHitTestVisible="False">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/live-photo.svg"
+                                                                   Width="16" Height="16"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   IconBrush="White"
+                                                                   Opacity="0.9"/>
+                                                </Border>
                                                 <Button Classes="selection-badge"
                                                         Width="16"
                                                         Height="16"
@@ -1583,20 +1598,35 @@
                                                                HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
                                                                IconBrush="{DynamicResource FP.Accent}"/>
-                                                <Button IsVisible="{Binding ShowMediaPlayBadge}"
+                                                <Button IsVisible="{Binding IsVideoFile}"
                                                         Classes="video-play-badge"
                                                         Width="26" Height="26"
                                                         CornerRadius="13"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
                                                         Click="OnVideoPlayBadgeClick"
-                                                        ToolTip.Tip="{Binding MediaPlayTooltip}">
+                                                        ToolTip.Tip="Abspielen">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg"
                                                                    Width="13" Height="13"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
                                                                    IconBrush="White"/>
                                                 </Button>
+                                                <Border Width="20" Height="20"
+                                                        CornerRadius="10"
+                                                        Background="#70000000"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        Margin="0,4,22,0"
+                                                        IsVisible="{Binding IsImmichMotionPhoto}"
+                                                        IsHitTestVisible="False">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/live-photo.svg"
+                                                                   Width="12" Height="12"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   IconBrush="White"
+                                                                   Opacity="0.9"/>
+                                                </Border>
                                                 <Button Classes="selection-badge compact"
                                                         Width="14"
                                                         Height="14"
