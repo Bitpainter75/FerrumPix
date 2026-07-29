@@ -458,7 +458,7 @@ Namespace ViewModels
                     Dim ignored = Gallery.OpenFolderForImage(imagePath)
                     CurrentMode = AppMode.Gallery
                 Case "Editor"
-                    If SvgPreviewService.IsSupportedSvg(imagePath) Then
+                    If MediaFormatService.IsSvg(imagePath) Then
                         Viewer.OpenImage(imagePath)
                         CurrentMode = AppMode.Viewer
                     Else

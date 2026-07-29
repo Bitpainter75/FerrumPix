@@ -138,8 +138,6 @@ Namespace Models
         ''' ein Immich-Pseudo-Pfad ist.</summary>
         Public Property ImmichLocalPath As String
 
-        Private Shared ReadOnly _videoFormats As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
-
         Public ReadOnly Property IsRawFile As Boolean
             Get
                 Return Not IsFolder AndAlso RawPreviewService.IsSupportedRaw(FilePath)
@@ -150,13 +148,13 @@ Namespace Models
         ''' (Belichtung/Kurven/Filter usw.) ergibt dafür konzeptionell keinen Sinn.
         Public ReadOnly Property IsVectorFile As Boolean
             Get
-                Return Not IsFolder AndAlso SvgPreviewService.IsSupportedSvg(FilePath)
+                Return Not IsFolder AndAlso MediaFormatService.IsSvg(FilePath)
             End Get
         End Property
 
         Public ReadOnly Property IsVideoFile As Boolean
             Get
-                Return Not IsFolder AndAlso _videoFormats.Contains(IO.Path.GetExtension(FilePath).ToLowerInvariant())
+                Return Not IsFolder AndAlso MediaFormatService.IsVideo(FilePath)
             End Get
         End Property
 

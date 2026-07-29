@@ -636,23 +636,7 @@ Namespace Services
         End Sub
 
         Private Shared Function GuessMimeType(filePath As String) As String
-            Select Case IO.Path.GetExtension(filePath).ToLowerInvariant()
-                Case ".jpg", ".jpeg" : Return "image/jpeg"
-                Case ".png" : Return "image/png"
-                Case ".gif" : Return "image/gif"
-                Case ".webp" : Return "image/webp"
-                Case ".bmp" : Return "image/bmp"
-                Case ".tif", ".tiff" : Return "image/tiff"
-                Case ".heic" : Return "image/heic"
-                Case ".heif" : Return "image/heif"
-                Case ".avif" : Return "image/avif"
-                Case ".mp4" : Return "video/mp4"
-                Case ".mov" : Return "video/quicktime"
-                Case ".mkv" : Return "video/x-matroska"
-                Case ".avi" : Return "video/x-msvideo"
-                Case ".webm" : Return "video/webm"
-                Case Else : Return "application/octet-stream"
-            End Select
+            Return MediaFormatService.GuessMimeType(filePath)
         End Function
 
         ''' <summary>Alle Alben des Servers, alphabetisch. Leere Liste bei Fehler/keiner Konfiguration.</summary>
