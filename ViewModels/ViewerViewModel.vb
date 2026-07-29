@@ -721,7 +721,7 @@ Namespace ViewModels
 
         Public ReadOnly Property CanEdit As Boolean
             Get
-                Return Not IsVideoFile AndAlso
+                Return Not IsVideoFile AndAlso Not HasImmichMotionPhoto AndAlso
                        Not MediaFormatService.IsSvg(_currentImagePath)
             End Get
         End Property
@@ -856,7 +856,7 @@ Namespace ViewModels
                                                            ZoomLevel = 1.0
                                                        End Sub)
             EditCommand = ReactiveCommand.CreateFromTask(Async Function()
-                                                             If Not String.IsNullOrEmpty(_currentImagePath) Then
+                                                             If CanEdit AndAlso Not String.IsNullOrEmpty(_currentImagePath) Then
                                                                  Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName, forceSaveAsOnly:=_isImmichSession, immichAlbumId:=_immichSourceAlbumId)
                                                              End If
                                                          End Function)
@@ -1689,7 +1689,7 @@ Namespace ViewModels
 
         Public Async Sub OpenCropInEditor(cropLeft As Double, cropTop As Double, cropRight As Double, cropBottom As Double)
             Try
-                If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
+                If Not CanEdit OrElse String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
                 Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName, forceSaveAsOnly:=_isImmichSession, immichAlbumId:=_immichSourceAlbumId)
                 If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
                 _mainVm.Editor.CurrentTool = EditorTool.Crop
@@ -1940,6 +1940,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
             Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
             Me.RaisePropertyChanged(NameOf(HasNoMedia))
+            Me.RaisePropertyChanged(NameOf(CanEdit))
         End Sub
 
         Public Sub SetMotionPhotoHover(isHovered As Boolean)

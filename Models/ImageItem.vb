@@ -172,7 +172,7 @@ Namespace Models
 
         Public ReadOnly Property CanEditFile As Boolean
             Get
-                Return Not IsFolder AndAlso Not IsVectorFile AndAlso Not IsVideoFile
+                Return Not IsFolder AndAlso Not IsVectorFile AndAlso Not IsVideoFile AndAlso Not IsImmichMotionPhoto
             End Get
         End Property
 

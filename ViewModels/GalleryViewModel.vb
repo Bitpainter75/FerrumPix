@@ -4486,6 +4486,7 @@ Namespace ViewModels
         ''' Speichern-unter-Zwang - die Temp-Kopie wird nie in-place überschrieben, das Ergebnis landet
         ''' als neue Datei im Bilder-Ordner. (Rückschreiben nach Immich als Upload wäre ein späterer Schritt.)</summary>
         Private Async Function OpenImmichItemInEditorAsync(item As ImageItem) As Task
+            If item Is Nothing OrElse item.IsImmichMotionPhoto Then Return
             IsLoading = True
             StatusText = LocalizationService.T("Lade Bild aus Immich…")
             Try
@@ -5830,6 +5831,9 @@ Namespace ViewModels
             Try
                 For Each item In If(items, Enumerable.Empty(Of ImageItem)())
                     If item Is Nothing OrElse Not item.IsImmichAsset Then Continue For
+                    ' Wie Immichs eigener Editor: ein verknüpftes Live/Motion Photo darf nicht durch
+                    ' eine statische, bearbeitete Datei ersetzt und dadurch entkoppelt werden.
+                    If updateExisting AndAlso item.IsImmichMotionPhoto Then Continue For
                     Dim source = Await EnsureLocalPathForBatchAsync(item)
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
 
