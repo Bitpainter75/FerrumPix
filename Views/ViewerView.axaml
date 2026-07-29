@@ -640,24 +640,23 @@
               Margin="88,0,80,0"
               Background="Black"
               ClipToBounds="True"
-              IsVisible="{Binding IsVideoFile}"
-              RowDefinitions="*,Auto">
-            <icons:MpvVideoView Name="TheVideoView" Grid.Row="0"
+              IsVisible="{Binding IsVideoFile}">
+            <icons:MpvVideoView Name="TheVideoView"
                              IsVisible="{Binding ShowVideoSurface}"
                              Tapped="OnVideoViewTapped"/>
-            <Border Grid.Row="0"
-                    Background="Transparent"
+            <Border Background="Transparent"
                     PointerMoved="OnGlobalPointerActivity"
                     PointerPressed="OnVideoInputPointerPressed"
                     Tapped="OnVideoViewTapped"/>
-            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                         IsVisible="{Binding ShowVideoUnavailableNotice}">
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/video.svg" Width="40" Height="40" HorizontalAlignment="Center" Opacity="0.6"/>
                 <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
                 <TextBlock Text="mpv ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
             </StackPanel>
             <Border Name="VideoPlaybackBar"
-                    Grid.Row="1"
+                    VerticalAlignment="Bottom"
+                    HorizontalAlignment="Stretch"
                     Background="#CC1A1D24"
                     CornerRadius="8"
                     Padding="12,8"

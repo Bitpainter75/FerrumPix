@@ -377,6 +377,9 @@ Namespace Services
             TrySetOptionStringLocked("osc", "no")
             SetOptionStringLocked("keep-open", "no")
             SetOptionStringLocked("vo", "libmpv")
+            ' Wie "cover" bei Bildern: Seitenverhältnis bleibt erhalten, der Frame füllt aber
+            ' die gesamte Ausgabefläche, statt links/rechts oder oben/unten schwarze Balken zu lassen.
+            SetOptionStringLocked("panscan", "1.0")
             SetOptionStringLocked("hwdec", If(_enableHardwareAcceleration, "auto-safe", "no"))
 
             Dim result = MpvInterop.Initialize(_handle)
