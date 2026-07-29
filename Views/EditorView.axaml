@@ -283,14 +283,26 @@
 
                     <Button Classes="tool-btn-row"
                             IsVisible="{Binding ZeigtWerkzeugDetails}"
-                            ToolTip.Tip="Details und Effekte"
+                            ToolTip.Tip="Details"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Details"
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Details}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
+                                           Width="18" Height="18" />
+                            <TextBlock Text="Details" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="tool-btn-row"
+                            IsVisible="{Binding ZeigtWerkzeugEffekte}"
+                            ToolTip.Tip="Effekte"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Effects"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Effects}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Details und Effekte" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <TextBlock Text="Effekte" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -803,6 +815,11 @@
                                     <TextBlock x:Name="TextSizeBadgeText" Text="" Foreground="White" FontSize="{DynamicResource FP.Font.Small}"
                                                FontWeight="SemiBold" />
                                 </Border>
+                                <!-- Die GRIFFE des Rahmens in einer eigenen Flaeche: beim Verzerren am
+                                     Objekt sind sie weg (ZeigtObjektRahmenGriffe). Ihre Stellen sind
+                                     dann von den Verzerrungsecken belegt, und greifbar ist dort die
+                                     Verzerrung. Der Rahmen selbst bleibt stehen. -->
+                                <Panel x:Name="TextOverlayHandles" IsVisible="{Binding ZeigtObjektRahmenGriffe}">
                                 <Border Width="1" Height="20" Background="{DynamicResource FP.Accent}"
                                         HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-20,0,0"
                                         IsHitTestVisible="False" />
@@ -843,6 +860,7 @@
                                         Background="{DynamicResource FP.Accent}" BorderBrush="White"
                                         BorderThickness="1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                         Margin="0,0,-8,-8" IsHitTestVisible="False" />
+                                </Panel>
                             </Grid>
                         </Border>
                         <!-- Aufgezogenes Auswahlrechteck für Objekte (Ziehen auf freier Fläche in den
@@ -1153,21 +1171,24 @@
                             <panels:SharpnessPanel Margin="0,7,0,0"
                                                    IsVisible="{Binding ShowDetailAdjustments}" />
 
-                            <!-- VIGNETTE + KÖRNUNG (je eigene Karte im Panel) -->
-                            <panels:EffectsPanel Margin="0,7,0,0"
-                                                 IsVisible="{Binding ShowDetailAdjustments}" />
-
-                            <!-- Die Tiefen-Unschaerfe steht NACH der Vignette: sie wird gebacken,
-                                 die Vignette bleibt ein Rezeptwert - was man wieder loswird, gehoert
+                            <!-- Die Tiefen-Unschaerfe steht am Ende der Details: sie wird gebacken,
+                                 alles davor bleibt ein Rezeptwert - was man wieder loswird, gehoert
                                  vor das, was bleibt. -->
                             <panels:BokehPanel Margin="0,7,0,0"
                                                IsVisible="{Binding ShowDetailAdjustments}" />
+
+                            <!-- EFFEKTE: eigenes Werkzeug. Was hier steht, fuegt dem Bild etwas hinzu,
+                                 was vorher nicht da war - die Details darueber holen nur heraus, was
+                                 in der Aufnahme steckt. -->
+                            <!-- VIGNETTE + KÖRNUNG (je eigene Karte im Panel) -->
+                            <panels:EffectsPanel Margin="0,7,0,0"
+                                                 IsVisible="{Binding ShowEffectsAdjustments}" />
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
-                                        <Binding Path="ShowDetailAdjustments"/>
+                                        <Binding Path="ShowEffectsAdjustments"/>
                                         <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="frame"/>
                                     </MultiBinding>
                                 </Border.IsVisible>

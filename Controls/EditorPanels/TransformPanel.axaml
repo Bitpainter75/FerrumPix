@@ -117,7 +117,7 @@
                         BorderThickness="1" CornerRadius="6" Margin="0,0,0,8" Padding="8,6"
                         IsVisible="{Binding VerzerrtDasObjekt}">
                     <StackPanel Spacing="6">
-                        <TextBlock Text="Ein Objekt ist markiert - die Anfasser verzerren dieses Objekt, nicht das Bild. Die Verzerrung gehört zum Objekt und wird nicht eingebacken."
+                        <TextBlock Text="Ein Objekt ist markiert - Ecken, Raster und Linien verzerren dieses Objekt, nicht das Bild. Die Verzerrung gehört zum Objekt, wirkt sofort und wird nicht eingebacken."
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Small}" />
@@ -294,11 +294,16 @@
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding WarpGridSize, Mode=TwoWay}" Minimum="2" Maximum="12" />
                     </Grid>
+                    <!-- Hinweis und Anwenden gelten nur dem BILD. Ist ein Objekt markiert, ist die
+                         Verzerrung dort laengst eingetragen und bleibt eine Angabe - es gibt nichts
+                         zu backen. -->
                     <TextBlock Text="Die Punkte im Bild ziehen. Anwenden backt die Verzerrung in die Pixel - Masken passen danach nicht mehr genau."
+                               IsVisible="{Binding VerzerrtDasBild}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
                                Margin="0,6,0,6"/>
                     <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                            IsVisible="{Binding VerzerrtDasBild}"
                             IsEnabled="{Binding HasWarpGridChanges}"
                             Command="{Binding ApplyWarpGridCommand}">
                         <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
@@ -355,9 +360,11 @@
                                    HorizontalAlignment="Center"/>
                     </Button>
                     <TextBlock Text="Wird beim Anwenden in die Pixel gerechnet, wie eine Retusche. Eingefügte Objekte gehen mit, ohne eingebacken zu werden."
+                               IsVisible="{Binding VerzerrtDasBild}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
                     <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                            IsVisible="{Binding VerzerrtDasBild}"
                             IsEnabled="{Binding HasLinienChanges}"
                             Command="{Binding ApplyLinienCommand}">
                         <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"

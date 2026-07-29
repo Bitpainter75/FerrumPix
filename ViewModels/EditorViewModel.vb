@@ -621,6 +621,11 @@ Namespace ViewModels
             _workingCommitChain = _workingCommitChain.ContinueWith(
                 Sub(prev)
                     Dim patch As WorkingImagePatch = Nothing
+                    ' Verfallen heisst: es gibt auch keinen Abschluss. Der Callback gehoert zum
+                    ' ALTEN Bild - er wuerde die Statusmeldung des neuen ueberschreiben, dessen
+                    ' Vorschau neu anwerfen und im schlimmsten Fall Retusche-Puffer auf einen Stand
+                    ' ziehen, den dieses Bild nie hatte.
+                    Dim verfallen = False
                     Try
                         If _workingImage.InitStamp = initStamp Then
                             ' ms mitloggen: teure Einback-Renders (z. B. Klecks-Pinsel in
@@ -631,6 +636,7 @@ Namespace ViewModels
                             DiagnosticLogService.LogAlways("Editor.WorkingCommit",
                                 $"done rect={If(patch Is Nothing, "-", $"{patch.Rect.Left},{patch.Rect.Top},{patch.Rect.Width}x{patch.Rect.Height}")} ms={sw.ElapsedMilliseconds}")
                         Else
+                            verfallen = True
                             DiagnosticLogService.LogAlways("Editor.WorkingCommit", "skipped=imageChanged")
                         End If
                     Catch ex As Exception
@@ -641,7 +647,7 @@ Namespace ViewModels
                             _pendingWorkingCommits = Math.Max(0, _pendingWorkingCommits - 1)
                             AktualisiereBeschaeftigt()
                             Try
-                                If onDoneUi IsNot Nothing Then onDoneUi(patch)
+                                If Not verfallen AndAlso onDoneUi IsNot Nothing Then onDoneUi(patch)
                             Finally
                                 ' Ein Commit kann der erste GEBACKENE Inhalt sein - dann kippt bei
                                 ' RAW-Quellen der Speichern-Weg von Sidecar auf "Speichern unter".
@@ -2355,6 +2361,10 @@ Namespace ViewModels
                 UpdateShapeIconStates()
                 ' Ein anderes (oder gar kein) Objekt heißt: die Regler bedienen ein anderes Ziel.
                 RefreshObjectAdjustMode()
+                ' ... und im Verzerren-Werkzeug einen anderen RAUM: mit markiertem Objekt liegen
+                ' Gitter und Linien auf dem Objekt, ohne auf dem Bild.
+                MeldeObjektVerzerrung()
+                AktualisiereVerzerrRaum()
                 ' Objekt-Layer sind im Editor echte Overlays. Der Wechsel aktualisiert nur den
                 ' Overlay-Zustand, nicht die Pixelvorschau.
                 RequestOverlayStateNotify()
@@ -3887,7 +3897,8 @@ Namespace ViewModels
                     Case EditorTool.Rotate : Return "Drehen und Verzerren"
                     Case EditorTool.Adjust : Return "Anpassen"
                     Case EditorTool.Color : Return "Farbe"
-                    Case EditorTool.Effects, EditorTool.Frame : Return "Details und Effekte"
+                    Case EditorTool.Details : Return "Details"
+                    Case EditorTool.Effects, EditorTool.Frame : Return "Effekte"
                     Case EditorTool.Filters : Return "Filter"
                     Case EditorTool.Transform : Return "Drehen und Verzerren"
                     Case EditorTool.Move : Return "Verschieben"
@@ -3973,6 +3984,13 @@ Namespace ViewModels
         End Property
 
         Public ReadOnly Property ShowDetailAdjustments As Boolean
+            Get
+                Return _currentTool = EditorTool.Details
+            End Get
+        End Property
+
+        ''' <summary>Die hinzufuegenden Gruppen: Vignette, Koernung, Rahmen.</summary>
+        Public ReadOnly Property ShowEffectsAdjustments As Boolean
             Get
                 Return _currentTool = EditorTool.Effects
             End Get
@@ -5095,6 +5113,10 @@ Namespace ViewModels
                                NameOf(WarpGridValues)}
                     Me.RaisePropertyChanged(n)
                 Next
+                ' Ein Modus ohne Verzerren-Wahl verzerrt gar nichts - damit wechselt auch der Raum,
+                ' in dem Gitter und Linien liegen.
+                MeldeObjektVerzerrung()
+                AktualisiereVerzerrRaum()
             End Set
         End Property
 
@@ -5405,7 +5427,7 @@ Namespace ViewModels
                 werte(0) = _warpColumns
                 werte(1) = _warpRows
                 For i = 0 To _warpX.Length - 1
-                    Dim anzeige = SourcePercentToDisplayPercent(_warpX(i), _warpY(i))
+                    Dim anzeige = VerzerrRaumZuAnzeige(_warpX(i), _warpY(i))
                     If anzeige.HasValue Then
                         werte(2 + i * 2) = anzeige.Value.X
                         werte(3 + i * 2) = anzeige.Value.Y
@@ -5664,7 +5686,7 @@ Namespace ViewModels
                     Dim paare = {(l.QuelleAx, l.QuelleAy), (l.QuelleBx, l.QuelleBy),
                                  (l.ZielAx, l.ZielAy), (l.ZielBx, l.ZielBy)}
                     For j = 0 To 3
-                        Dim anzeige = SourcePercentToDisplayPercent(paare(j).Item1, paare(j).Item2)
+                        Dim anzeige = VerzerrRaumZuAnzeige(paare(j).Item1, paare(j).Item2)
                         If anzeige.HasValue Then
                             werte(1 + i * 8 + j * 2) = anzeige.Value.X
                             werte(2 + i * 8 + j * 2) = anzeige.Value.Y
@@ -5687,7 +5709,7 @@ Namespace ViewModels
         ''' <summary>Eine neue Linie beginnen. Quelle und Ziel sind dabei gleich - die Linie tut noch
         ''' nichts, sie liegt erst einmal nur da. Erst das Ziehen an ihr verzerrt.</summary>
         Public Function BeginneNeueLinie(xPercent As Double, yPercent As Double) As Boolean
-            Dim quelle = DisplayPercentToSourcePercent(xPercent, yPercent)
+            Dim quelle = AnzeigeZuVerzerrRaum(xPercent, yPercent)
             If Not quelle.HasValue Then Return False
             If _linien.Count >= MaxLinien Then Return False
             CaptureUndoState("Linien")
@@ -5718,8 +5740,8 @@ Namespace ViewModels
             Dim besteLinie = -1, besterTeil = -1
             For i = 0 To _linien.Count - 1
                 Dim l = _linien(i)
-                Dim a = SourcePercentToDisplayPercent(l.ZielAx, l.ZielAy)
-                Dim b = SourcePercentToDisplayPercent(l.ZielBx, l.ZielBy)
+                Dim a = VerzerrRaumZuAnzeige(l.ZielAx, l.ZielAy)
+                Dim b = VerzerrRaumZuAnzeige(l.ZielBx, l.ZielBy)
                 If Not a.HasValue OrElse Not b.HasValue Then Continue For
                 ' Erst die Enden: sie liegen auf der Linie, muessen also Vorrang haben.
                 For teil = 0 To 1
@@ -5738,8 +5760,8 @@ Namespace ViewModels
                 ' Dann die Linien selbst, in ihrer Mitte gefasst.
                 For i = 0 To _linien.Count - 1
                     Dim l = _linien(i)
-                    Dim a = SourcePercentToDisplayPercent(l.ZielAx, l.ZielAy)
-                    Dim b = SourcePercentToDisplayPercent(l.ZielBx, l.ZielBy)
+                    Dim a = VerzerrRaumZuAnzeige(l.ZielAx, l.ZielAy)
+                    Dim b = VerzerrRaumZuAnzeige(l.ZielBx, l.ZielBy)
                     If Not a.HasValue OrElse Not b.HasValue Then Continue For
                     Dim d = AbstandZurStrecke(xPercent, yPercent, a.Value.X, a.Value.Y, b.Value.X, b.Value.Y,
                                               slopXPercent, slopYPercent)
@@ -5793,18 +5815,18 @@ Namespace ViewModels
                 ' Die ganze Ziellinie mitnehmen: die Verschiebung wird im ANZEIGERAUM genommen und
                 ' fuer beide Enden einzeln zurueckgerechnet. Ein Versatz in Quell-Prozent waere bei
                 ' gedrehtem Bild eine andere Richtung als die, in die man zieht.
-                Dim va = SourcePercentToDisplayPercent(_linienDragZielAx, _linienDragZielAy)
-                Dim vb = SourcePercentToDisplayPercent(_linienDragZielBx, _linienDragZielBy)
+                Dim va = VerzerrRaumZuAnzeige(_linienDragZielAx, _linienDragZielAy)
+                Dim vb = VerzerrRaumZuAnzeige(_linienDragZielBx, _linienDragZielBy)
                 If Not va.HasValue OrElse Not vb.HasValue Then Return
                 Dim dx = xPercent - _linienDragStartX
                 Dim dy = yPercent - _linienDragStartY
-                Dim na = DisplayPercentToSourcePercent(va.Value.X + dx, va.Value.Y + dy)
-                Dim nb = DisplayPercentToSourcePercent(vb.Value.X + dx, vb.Value.Y + dy)
+                Dim na = AnzeigeZuVerzerrRaum(va.Value.X + dx, va.Value.Y + dy)
+                Dim nb = AnzeigeZuVerzerrRaum(vb.Value.X + dx, vb.Value.Y + dy)
                 If Not na.HasValue OrElse Not nb.HasValue Then Return
                 l.ZielAx = Klemme100(na.Value.X) : l.ZielAy = Klemme100(na.Value.Y)
                 l.ZielBx = Klemme100(nb.Value.X) : l.ZielBy = Klemme100(nb.Value.Y)
             Else
-                Dim quelle = DisplayPercentToSourcePercent(xPercent, yPercent)
+                Dim quelle = AnzeigeZuVerzerrRaum(xPercent, yPercent)
                 If Not quelle.HasValue Then Return
                 Dim nx = Klemme100(quelle.Value.X), ny = Klemme100(quelle.Value.Y)
                 Select Case _linienDragTeil
@@ -5820,7 +5842,12 @@ Namespace ViewModels
             End If
 
             MeldeLinien()
-            AktualisiereLinienVorschau()
+            If VerzerrtDasObjekt Then
+                SchreibeObjektLinien()
+                SchedulePreviewUpdate()
+            Else
+                AktualisiereLinienVorschau()
+            End If
         End Sub
 
         Private Shared Function Klemme100(wert As Double) As Double
@@ -5840,6 +5867,10 @@ Namespace ViewModels
             End If
             _linienDragIndex = -1
             _linienDragTeil = -1
+            If VerzerrtDasObjekt Then
+                SchreibeObjektLinien()
+                RefreshPreviewImmediately()
+            End If
         End Sub
 
         ''' <summary>Die zuletzt angelegte Linie wieder entfernen.</summary>
@@ -5859,6 +5890,10 @@ Namespace ViewModels
             _linienDragTeil = -1
             RaeumeLinienVorschauAb()
             MeldeLinien()
+            If VerzerrtDasObjekt Then
+                SchreibeObjektLinien()
+                RefreshPreviewImmediately()
+            End If
         End Sub
 
         ''' <summary>Die Linien als flache Felder in PIXELN des uebergebenen Bildes.</summary>
@@ -5987,6 +6022,9 @@ Namespace ViewModels
         ''' <summary>Die Linienverzerrung ins Arbeitsbild backen - derselbe Weg wie beim Raster und
         ''' aus demselben Grund: sie ist keine Matrix und laesst sich nicht als Zahl aufheben.</summary>
         Public Sub ApplyLinienVerzerrung()
+            ' Gilt die Verzerrung einem Objekt, ist sie dort laengst eingetragen und bleibt eine
+            ' Angabe - es gibt nichts zu backen.
+            If VerzerrtDasObjekt Then Return
             If Not HasLinienChanges Then Return
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
 
@@ -6146,13 +6184,65 @@ Namespace ViewModels
 
         Private _objektEckeDrag As Integer = -1
 
-        ''' <summary>Gehoeren die Anfasser gerade einem Objekt statt dem Bild?</summary>
+        ''' <summary>Gehoert das Verzerren gerade einem Objekt statt dem Bild?
+        '''
+        ''' Gilt fuer ALLE drei Arten, nicht nur fuer die Perspektive. Ein markiertes Objekt ist die
+        ''' Ansage, woran gearbeitet wird - dass die Ecken es verzerrten, Gitter und Linien aber
+        ''' weiter das Bild darunter, war genau die fehlende Entkopplung. Ohne markiertes Objekt
+        ''' bleibt alles wie bisher: die Verzerrung trifft das Bild.</summary>
         Public ReadOnly Property VerzerrtDasObjekt As Boolean
             Get
                 Return ShowTransformAdjustments AndAlso HasSelectedAnnotation AndAlso
-                       IsVerzerrenPerspektive
+                       Not String.IsNullOrEmpty(_verzerrenModus)
             End Get
         End Property
+
+        ''' <summary>Liegen die vier Eck-Anfasser auf dem Objekt? Nur in der Perspektive - Gitter und
+        ''' Linien haben ihre eigenen Anfasser.</summary>
+        Public ReadOnly Property ZeigtObjektEcken As Boolean
+            Get
+                Return VerzerrtDasObjekt AndAlso IsVerzerrenPerspektive
+            End Get
+        End Property
+
+        ''' <summary>Das Gegenstueck: die Verzerrung trifft das BILD und muss deshalb gebacken
+        ''' werden. Nur dann gibt es etwas anzuwenden.</summary>
+        Public ReadOnly Property VerzerrtDasBild As Boolean
+            Get
+                Return Not VerzerrtDasObjekt
+            End Get
+        End Property
+
+        ''' <summary>Traegt der Auswahlrahmen seine Griffe? Beim Verzerren nicht: die Ecken der
+        ''' Verzerrung liegen auf DEMSELBEN Rechteck. Zwei Werkzeuge an derselben Stelle heisst, dass
+        ''' der Zug je nach getroffenem Pixel das eine oder das andere meint - und der Rahmen zeigt
+        ''' Griffe, die dort gar nichts tun sollen. Der Rahmen selbst bleibt: man soll sehen, welches
+        ''' Objekt gemeint ist.</summary>
+        Public ReadOnly Property ZeigtObjektRahmenGriffe As Boolean
+            Get
+                Return Not VerzerrtDasObjekt
+            End Get
+        End Property
+
+        ''' <summary>Der Raum, in dem Gitter und Linien gefuehrt werden, in ANZEIGE-Prozent
+        ''' ausgedrueckt: ohne markiertes Objekt der Quellraum des Bildes, mit markiertem Objekt das
+        ''' Rechteck DES OBJEKTS. So liegt das Raster ueber dem, was es verzerrt.</summary>
+        Private Function VerzerrRaumZuAnzeige(xPercent As Double, yPercent As Double) As SKPoint?
+            If Not VerzerrtDasObjekt Then Return SourcePercentToDisplayPercent(xPercent, yPercent)
+            Dim r = GetSelectedAnnotationDisplayRectPercent()
+            If r.Width <= 0 OrElse r.Height <= 0 Then Return Nothing
+            Return New SKPoint(CSng(r.X + xPercent / 100.0 * r.Width),
+                               CSng(r.Y + yPercent / 100.0 * r.Height))
+        End Function
+
+        ''' <summary>Gegenrichtung zu <see cref="VerzerrRaumZuAnzeige"/>.</summary>
+        Private Function AnzeigeZuVerzerrRaum(xPercent As Double, yPercent As Double) As SKPoint?
+            If Not VerzerrtDasObjekt Then Return DisplayPercentToSourcePercent(xPercent, yPercent)
+            Dim r = GetSelectedAnnotationDisplayRectPercent()
+            If r.Width <= 0 OrElse r.Height <= 0 Then Return Nothing
+            Return New SKPoint(CSng((xPercent - r.X) / r.Width * 100.0),
+                               CSng((yPercent - r.Y) / r.Height * 100.0))
+        End Function
 
         Private Function AktuellesObjekt() As ImageAnnotation
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return Nothing
@@ -6175,11 +6265,15 @@ Namespace ViewModels
         ''' <summary>Die vier Ecken in ANZEIGE-Prozent, fuer das Overlay.</summary>
         Public ReadOnly Property ObjektEckenValues As Double()
             Get
-                If Not VerzerrtDasObjekt Then Return Nothing
+                If Not ZeigtObjektEcken Then Return Nothing
                 Dim roh = ObjektEckenRoh()
                 If roh Is Nothing Then Return Nothing
-                Dim x = _annotationXPercent, y = _annotationYPercent
-                Dim b = _annotationWidthPercent, h = _annotationHeightPercent
+                ' DASSELBE Rechteck wie der Auswahlrahmen: es beruecksichtigt den Anker eines
+                ' Wasserzeichens, die gespeicherten Pixel tun das nicht. Vorher lagen die
+                ' Verzerrungsecken bei einem verankerten Objekt neben dem Objekt.
+                Dim r = GetSelectedAnnotationDisplayRectPercent()
+                Dim x = r.X, y = r.Y
+                Dim b = r.Width, h = r.Height
                 If b <= 0 OrElse h <= 0 Then Return Nothing
                 Dim werte(7) As Double
                 For i = 0 To 3
@@ -6223,21 +6317,31 @@ Namespace ViewModels
             If _objektEckeDrag < 0 Then Return
             Dim a = AktuellesObjekt()
             If a Is Nothing Then Return
-            Dim b = _annotationWidthPercent, h = _annotationHeightPercent
+            Dim r = GetSelectedAnnotationDisplayRectPercent()
+            Dim b = r.Width, h = r.Height
             If b <= 0 OrElse h <= 0 Then Return
             Dim roh = ObjektEckenRoh()
             If roh Is Nothing Then Return
             ' Zurueck in Objektprozent. BEWUSST nicht geklemmt: eine Ecke ueber den Objektrand hinaus
             ' zu ziehen ist genau der Sinn der Sache - die Ebene waechst beim Zeichnen mit.
-            roh(_objektEckeDrag * 2) = (xPercent - _annotationXPercent) / b * 100.0
-            roh(_objektEckeDrag * 2 + 1) = (yPercent - _annotationYPercent) / h * 100.0
+            roh(_objektEckeDrag * 2) = (xPercent - r.X) / b * 100.0
+            roh(_objektEckeDrag * 2 + 1) = (yPercent - r.Y) / h * 100.0
             a.EigeneVerzerrung = New ObjektVerzerrung With {.Art = "Perspektive", .Ecken = roh}
             MeldeObjektVerzerrung()
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Loslassen heisst hier ANWENDEN: die Verzerrung wird sofort gerechnet, statt auf
+        ''' den Entprellzeitgeber der Vorschau zu warten.
+        '''
+        ''' Waehrend des Ziehens folgt nur das Anfasser-Viereck; das Objekt selbst haengt an der
+        ''' Vorschau, und die startet ihren Zeitgeber bei JEDER Mausbewegung neu. Das Ergebnis kam
+        ''' also erst eine Verzoegerung nach dem Loslassen - genau in dem Moment, in dem man
+        ''' hinsieht, stand noch das alte Bild.</summary>
         Public Sub EndObjektEckeDrag()
+            If _objektEckeDrag < 0 Then Return
             _objektEckeDrag = -1
+            RefreshPreviewImmediately()
         End Sub
 
         ''' <summary>Die eigene Verzerrung des markierten Objekts wieder wegnehmen.</summary>
@@ -6254,6 +6358,136 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ObjektEckenValues))
             Me.RaisePropertyChanged(NameOf(HatObjektVerzerrung))
             Me.RaisePropertyChanged(NameOf(VerzerrtDasObjekt))
+            Me.RaisePropertyChanged(NameOf(VerzerrtDasBild))
+            Me.RaisePropertyChanged(NameOf(ZeigtObjektEcken))
+            Me.RaisePropertyChanged(NameOf(ZeigtObjektRahmenGriffe))
+        End Sub
+
+        ' ── Gitter und Linien auf ein markiertes Objekt ─────────────────────────
+        '
+        ' Beide Werkzeuge fuehren ihren Zustand in dem Raum, in dem gerade verzerrt wird (siehe
+        ' VerzerrRaumZuAnzeige). Mit markiertem Objekt sind die Zahlen also OBJEKTprozent - genau
+        ' das, was die eigene Verzerrung des Objekts erwartet. Es wird darum nichts umgerechnet,
+        ' sondern nur eingetragen.
+        '
+        ' Und es wird nichts gebacken: die Verzerrung bleibt eine Angabe am Objekt und damit
+        ' aenderbar - ein verzerrter Text laesst sich weiter tippen. Ein "Anwenden" gibt es hier
+        ' deshalb nicht; es steht nur, wenn das BILD gemeint ist.
+
+        Private Sub SchreibeObjektGitter()
+            Dim a = AktuellesObjekt()
+            If a Is Nothing Then Return
+            StelleGitterBereit()
+            Dim knoten(_warpX.Length * 2 - 1) As Double
+            For i = 0 To _warpX.Length - 1
+                knoten(i * 2) = _warpX(i)
+                knoten(i * 2 + 1) = _warpY(i)
+            Next
+            If Not HasWarpGridChanges Then
+                a.EigeneVerzerrung = Nothing
+            Else
+                a.EigeneVerzerrung = New ObjektVerzerrung With {
+                    .Art = "Gitter", .Spalten = _warpColumns, .Zeilen = _warpRows, .Knoten = knoten}
+            End If
+            MeldeObjektVerzerrung()
+        End Sub
+
+        Private Sub SchreibeObjektLinien()
+            Dim a = AktuellesObjekt()
+            If a Is Nothing Then Return
+            Dim bewegte = _linien.Where(Function(l) l.IstBewegt).ToList()
+            If bewegte.Count = 0 Then
+                a.EigeneVerzerrung = Nothing
+                MeldeObjektVerzerrung()
+                Return
+            End If
+            Dim q(bewegte.Count * 4 - 1) As Double
+            Dim z(bewegte.Count * 4 - 1) As Double
+            For i = 0 To bewegte.Count - 1
+                Dim l = bewegte(i)
+                q(i * 4) = l.QuelleAx : q(i * 4 + 1) = l.QuelleAy
+                q(i * 4 + 2) = l.QuelleBx : q(i * 4 + 3) = l.QuelleBy
+                z(i * 4) = l.ZielAx : z(i * 4 + 1) = l.ZielAy
+                z(i * 4 + 2) = l.ZielBx : z(i * 4 + 3) = l.ZielBy
+            Next
+            a.EigeneVerzerrung = New ObjektVerzerrung With {
+                .Art = "Linien", .LinienQuelle = q, .LinienZiel = z}
+            MeldeObjektVerzerrung()
+        End Sub
+
+        ''' <summary>Welcher Raum gerade gilt: der Index des markierten Objekts, oder -1 fuer das
+        ''' Bild.</summary>
+        Private _verzerrRaumObjekt As Integer = -1
+        Private _gitterBildX As Double() = Nothing
+        Private _gitterBildY As Double() = Nothing
+        Private ReadOnly _linienBild As New List(Of VerzerrLinie)()
+
+        ''' <summary>Haelt Gitter und Linien in dem Raum, in dem gerade verzerrt wird.
+        '''
+        ''' Wechselt der Raum - ein Objekt wird markiert, ein anderes, oder gar keines mehr -, dann
+        ''' bedeuten dieselben Zahlen etwas anderes. Der Bildstand wird deshalb beiseite gelegt und
+        ''' kommt beim Abwaehlen zurueck; der Objektstand kommt aus dem Objekt selbst, sodass eine
+        ''' zweite Verzerrung dort weitermacht, wo die erste aufgehoert hat.</summary>
+        Private Sub AktualisiereVerzerrRaum()
+            Dim jetzt = If(VerzerrtDasObjekt, _selectedAnnotationIndex, -1)
+            If jetzt = _verzerrRaumObjekt Then Return
+
+            If _verzerrRaumObjekt < 0 Then
+                StelleGitterBereit()
+                _gitterBildX = CType(_warpX.Clone(), Double())
+                _gitterBildY = CType(_warpY.Clone(), Double())
+                _linienBild.Clear()
+                _linienBild.AddRange(_linien)
+            End If
+
+            _verzerrRaumObjekt = jetzt
+            _warpDragIndex = -1
+            _linienDragIndex = -1
+            _linienDragTeil = -1
+            RaeumeGitterVorschauAb()
+            RaeumeLinienVorschauAb()
+            _linien.Clear()
+
+            If jetzt < 0 Then
+                Dim anzahl = (_warpColumns + 1) * (_warpRows + 1)
+                If _gitterBildX IsNot Nothing AndAlso _gitterBildX.Length = anzahl Then
+                    _warpX = CType(_gitterBildX.Clone(), Double())
+                    _warpY = CType(_gitterBildY.Clone(), Double())
+                Else
+                    SetzeGitterZurueck()
+                End If
+                _linien.AddRange(_linienBild)
+            Else
+                LadeVerzerrungAusObjekt()
+            End If
+
+            MeldeLinien()
+            Me.RaisePropertyChanged(NameOf(WarpGridValues))
+            Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
+        End Sub
+
+        ''' <summary>Gitter und Linien aus der eigenen Verzerrung des markierten Objekts holen. Was
+        ''' nicht passt (andere Art, andere Rastergroesse), faengt neutral an.</summary>
+        Private Sub LadeVerzerrungAusObjekt()
+            SetzeGitterZurueck()
+            Dim a = AktuellesObjekt()
+            Dim v = a?.EigeneVerzerrung
+            If v Is Nothing OrElse v.IstLeer Then Return
+
+            If v.Art = "Gitter" AndAlso v.Spalten = _warpColumns AndAlso v.Zeilen = _warpRows Then
+                For i = 0 To _warpX.Length - 1
+                    _warpX(i) = v.Knoten(i * 2)
+                    _warpY(i) = v.Knoten(i * 2 + 1)
+                Next
+            ElseIf v.Art = "Linien" Then
+                For i = 0 To v.LinienQuelle.Length \ 4 - 1
+                    _linien.Add(New VerzerrLinie With {
+                        .QuelleAx = v.LinienQuelle(i * 4), .QuelleAy = v.LinienQuelle(i * 4 + 1),
+                        .QuelleBx = v.LinienQuelle(i * 4 + 2), .QuelleBy = v.LinienQuelle(i * 4 + 3),
+                        .ZielAx = v.LinienZiel(i * 4), .ZielAy = v.LinienZiel(i * 4 + 1),
+                        .ZielBx = v.LinienZiel(i * 4 + 2), .ZielBy = v.LinienZiel(i * 4 + 3)})
+                Next
+            End If
         End Sub
 
         ''' <summary>Fasst den naechstgelegenen Rasterpunkt an, sofern einer in Greifweite liegt.
@@ -6266,7 +6500,7 @@ Namespace ViewModels
             Dim besterAbstand = Double.MaxValue
             Dim bester = -1
             For i = 0 To _warpX.Length - 1
-                Dim anzeige = SourcePercentToDisplayPercent(_warpX(i), _warpY(i))
+                Dim anzeige = VerzerrRaumZuAnzeige(_warpX(i), _warpY(i))
                 If Not anzeige.HasValue Then Continue For
                 Dim dx = (xPercent - anzeige.Value.X) / Math.Max(0.0001, slopXPercent)
                 Dim dy = (yPercent - anzeige.Value.Y) / Math.Max(0.0001, slopYPercent)
@@ -6285,7 +6519,7 @@ Namespace ViewModels
 
         Public Sub UpdateWarpDrag(xPercent As Double, yPercent As Double)
             If _warpDragIndex < 0 Then Return
-            Dim quelle = DisplayPercentToSourcePercent(xPercent, yPercent)
+            Dim quelle = AnzeigeZuVerzerrRaum(xPercent, yPercent)
             ' Neben dem Bildinhalt (Leinwandrand, leere Begradigungsecke) gibt es keinen Quellpunkt.
             ' Der Zug bleibt dann einfach stehen, statt auf einen geratenen Wert zu springen.
             If Not quelle.HasValue Then Return
@@ -6305,11 +6539,25 @@ Namespace ViewModels
             _warpY(_warpDragIndex) = ny
             Me.RaisePropertyChanged(NameOf(WarpGridValues))
             Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
-            AktualisiereGitterVorschau()
+            ' Gilt der Zug einem OBJEKT, gibt es keine Bildvorschau zu rechnen: die Verzerrung
+            ' steht sofort am Objekt, und das Bild darunter bleibt unangetastet.
+            If VerzerrtDasObjekt Then
+                SchreibeObjektGitter()
+                SchedulePreviewUpdate()
+            Else
+                AktualisiereGitterVorschau()
+            End If
         End Sub
 
         Public Sub EndWarpDrag()
+            Dim warZug = _warpDragIndex >= 0
             _warpDragIndex = -1
+            If warZug AndAlso VerzerrtDasObjekt Then
+                ' Loslassen heisst anwenden - wie bei den Eck-Anfassern.
+                SchreibeObjektGitter()
+                RefreshPreviewImmediately()
+                Return
+            End If
             ' Die Vorschau BLEIBT nach dem Loslassen stehen: sie zeigt den Stand, den "Anwenden"
             ' backen wuerde. Sie verschwindet erst beim Zuruecksetzen, beim Anwenden oder wenn das
             ' Werkzeug gewechselt wird - sonst saehe man sein Ergebnis nur waehrend des Ziehens.
@@ -6322,12 +6570,20 @@ Namespace ViewModels
             SetzeGitterZurueck()
             Me.RaisePropertyChanged(NameOf(WarpGridValues))
             Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
+            ' Am Objekt ist das Raster die Verzerrung selbst - ein gerades Raster heisst also, dass
+            ' auch am Objekt nichts mehr stehen darf.
+            If VerzerrtDasObjekt Then
+                SchreibeObjektGitter()
+                RefreshPreviewImmediately()
+            End If
         End Sub
 
         ''' <summary>Die Verzerrung ins Arbeitsbild backen. Ab hier ist sie Teil der Pixel - genau
         ''' wie bei der Retusche, und aus demselben Grund: sie ist nicht als Rezeptwert
         ''' darstellbar.</summary>
         Public Sub ApplyWarpGrid()
+            ' Siehe ApplyLinienVerzerrung: am Objekt gibt es nichts zu backen.
+            If VerzerrtDasObjekt Then Return
             If Not HasWarpGridChanges Then Return
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
             Dim spalten = _warpColumns, zeilen = _warpRows
@@ -15443,6 +15699,12 @@ Namespace ViewModels
 
         Public ReadOnly Property ZeigtWerkzeugDetails As Boolean
             Get
+                Return HatSichtbareGruppen("Details")
+            End Get
+        End Property
+
+        Public ReadOnly Property ZeigtWerkzeugEffekte As Boolean
+            Get
                 Return HatSichtbareGruppen("Effects")
             End Get
         End Property
@@ -15456,7 +15718,8 @@ Namespace ViewModels
         Public Sub RefreshVersteckteAnpassungsgruppen()
             Me.RaisePropertyChanged(NameOf(VersteckteAnpassungsgruppen))
             For Each n In {NameOf(ZeigtWerkzeugAnpassen), NameOf(ZeigtWerkzeugFarbe),
-                           NameOf(ZeigtWerkzeugDetails), NameOf(ZeigtWerkzeugFilter)}
+                           NameOf(ZeigtWerkzeugDetails), NameOf(ZeigtWerkzeugEffekte),
+                           NameOf(ZeigtWerkzeugFilter)}
                 Me.RaisePropertyChanged(n)
             Next
             ' Steht man gerade IN einem Werkzeug, das eben verschwunden ist, muss man da raus -
@@ -15464,7 +15727,8 @@ Namespace ViewModels
             Dim jetzt = _currentTool
             If (jetzt = EditorTool.Adjust AndAlso Not ZeigtWerkzeugAnpassen) OrElse
                (jetzt = EditorTool.Color AndAlso Not ZeigtWerkzeugFarbe) OrElse
-               (jetzt = EditorTool.Effects AndAlso Not ZeigtWerkzeugDetails) OrElse
+               (jetzt = EditorTool.Details AndAlso Not ZeigtWerkzeugDetails) OrElse
+               (jetzt = EditorTool.Effects AndAlso Not ZeigtWerkzeugEffekte) OrElse
                (jetzt = EditorTool.Filters AndAlso Not ZeigtWerkzeugFilter) Then
                 CurrentTool = EditorTool.Selection
             End If
@@ -20630,6 +20894,14 @@ Namespace ViewModels
                         punchesAlpha:=punchesAlpha)
                 End Function,
                 Sub(patch)
+                    ' Kein Flicken heisst: der Strich ist NICHT ins Arbeitsbild gekommen. Das
+                    ' stillschweigend wie einen Erfolg zu behandeln hiesse, die Bruecke ueber dem
+                    ' Bild stehen zu lassen, waehrend darunter nichts ankam.
+                    If patch Is Nothing Then
+                        StatusText = LocalizationService.T("Malen fehlgeschlagen")
+                        SchedulePreviewUpdate()
+                        Return
+                    End If
                     If undoEntry IsNot Nothing Then undoEntry.Patch = patch
                     If isEraser Then Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
                     ' Der eingebackene Stand (Strich unter der Farbpipeline) zieht per Voll-Render
@@ -21622,7 +21894,8 @@ Namespace ViewModels
         ''' wäre eine eigene, neue Funktion.</summary>
         Public Shared Function IsObjectAdjustTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Adjust OrElse tool = EditorTool.Color OrElse
-                   tool = EditorTool.Effects OrElse tool = EditorTool.Filters
+                   tool = EditorTool.Details OrElse tool = EditorTool.Effects OrElse
+                   tool = EditorTool.Filters
         End Function
 
         ''' <summary>Werkzeuge, in denen ein markiertes Objekt das Ziel ist (drehen/spiegeln oder anpassen).
@@ -23008,6 +23281,16 @@ Namespace ViewModels
                         End Sub)
                 End Function,
                 Sub(patch)
+                    ' Ohne Flicken ist der Zug nicht im Arbeitsbild gelandet. Die Puffer trotzdem
+                    ' auf den vermeintlich neuen Stand zu ziehen hiesse, mit einem Sample
+                    ' weiterzuarbeiten, das es im Bild gar nicht gibt - der naechste Zug baute dann
+                    ' auf einer Erfindung auf.
+                    If patch Is Nothing Then
+                        StatusText = LocalizationService.T("Retusche fehlgeschlagen")
+                        DiagnosticLogService.LogAlways("Editor.RetouchCommit", "kein Flicken - Zug verworfen")
+                        SchedulePreviewUpdate()
+                        Return
+                    End If
                     If undoEntry IsNot Nothing Then undoEntry.Patch = patch
                     DiagnosticLogService.LogAlways("Editor.RetouchCommit",
                         $"spots={strokeSpots.Count} heal={strokeHasHeal} rect={rect.Left},{rect.Top},{rect.Width}x{rect.Height} pixels={CLng(rect.Width) * CLng(rect.Height)} ms={sw.ElapsedMilliseconds}")
@@ -23221,11 +23504,9 @@ Namespace ViewModels
                     ResetColorInternal()
                     ResetHslInternal()
                     ResetColorGradingInternal()
-                Case EditorTool.Effects
+                Case EditorTool.Details
                     ResetDetailInternal()
-                    ResetEffectsInternal()
-                Case EditorTool.Frame
-                    ResetDetailInternal()
+                Case EditorTool.Effects, EditorTool.Frame
                     ResetEffectsInternal()
                 Case EditorTool.Filters
                     ResetFilterInternal()
@@ -23683,6 +23964,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowLightAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowColorAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowDetailAdjustments))
+            Me.RaisePropertyChanged(NameOf(ShowEffectsAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowFrameAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowFilterAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowRetouchAdjustments))
@@ -24309,6 +24591,12 @@ Namespace ViewModels
         Adjust
         Filters
         Color
+        ''' <summary>DETAILS: alles, was die Zeichnung des Bildes betrifft - Details, Rauschen,
+        ''' Schaerfe, Weichzeichnen und die Tiefen-Unschaerfe. Getrennt von <see cref="Effects"/>,
+        ''' weil das eine die Aufnahme klaerer machen soll und das andere etwas hinzufuegt, das
+        ''' vorher nicht da war. Ein Werkzeug mit beidem war die laengste Liste im Editor.</summary>
+        Details
+        ''' <summary>EFFEKTE: Vignette, Koernung und Rahmen - was dem Bild hinzugefuegt wird.</summary>
         Effects
         Transform
         Retouch

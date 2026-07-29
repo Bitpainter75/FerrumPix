@@ -5285,4 +5285,13 @@
   <data name="Ein_Objekt_ist_markiert_die_Anfasser_verzerren_d_98525443" xml:space="preserve">
     <value>Un objet est sélectionné: les poignées déforment cet objet, pas l'image. La déformation appartient à l'objet et n'est pas figée.</value>
   </data>
+  <data name="Ein_Objekt_ist_markiert_Ecken_Raster_und_Linien__77671651" xml:space="preserve">
+    <value>Un objet est sélectionné: les coins, la grille et les lignes déforment cet objet, pas l'image. La déformation appartient à l'objet, agit aussitôt et n'est pas figée.</value>
+  </data>
+  <data name="Malen_fehlgeschlagen_c24fe943" xml:space="preserve">
+    <value>Échec du dessin</value>
+  </data>
+  <data name="Retusche_fehlgeschlagen_334396f7" xml:space="preserve">
+    <value>Échec de la retouche</value>
+  </data>
 </root>

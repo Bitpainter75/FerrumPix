@@ -8069,7 +8069,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     DrawAnnotationViaLayer(canvas, annotation, AnnotationStrokeOnly(renderAnnotation), kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
                                            "Normal")
-                ElseIf HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) Then
+                ElseIf HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) OrElse
+                       HatVerzerrung(annotation) Then
                     DrawAnnotationViaLayer(canvas, annotation, renderAnnotation, kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
                                            renderAnnotation.BlendMode)
@@ -8205,6 +8206,18 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return New SKPoint(CSng(bx), CSng(by))
         End Function
 
+        ''' <summary>Traegt dieses Objekt eine Verzerrung - eine eigene oder die des Bildes?
+        '''
+        ''' Entscheidet mit darueber, ob ueber eine eigene Ebene gezeichnet wird. Ohne diese Frage
+        ''' nahm der direkte Weg jedes Objekt ohne Anpassungen und ohne Mischmodus - also die
+        ''' allermeisten -, und der zeichnet unverzerrt: die Verzerrung stand im Objekt, kam im Bild
+        ''' aber nie an.</summary>
+        Private Shared Function HatVerzerrung(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing Then Return False
+            If annotation.EigeneVerzerrung IsNot Nothing AndAlso Not annotation.EigeneVerzerrung.IstLeer Then Return True
+            Return annotation.Verzerrung IsNot Nothing AndAlso Not annotation.Verzerrung.IstLeer
+        End Function
+
         Private Shared Sub DrawAnnotationViaLayer(canvas As SKCanvas, annotation As ImageAnnotation,
                                                   renderAnnotation As ImageAnnotation, kind As String, rect As SKRect,
                                                   sourceWidth As Integer, sourceHeight As Integer,
@@ -8231,13 +8244,21 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' ergibt beides zusammen genau das, was man auf dem Schirm erwartet.
                 If annotation IsNot Nothing AndAlso annotation.EigeneVerzerrung IsNot Nothing AndAlso
                    Not annotation.EigeneVerzerrung.IstLeer Then
-                    Dim ox = 0, oy = 0
-                    zwischen = VerzerreObjektEbene(layer, annotation.EigeneVerzerrung,
-                                                   layer.Width, layer.Height, ox, oy)
+                    ' Der Bezug ist das OBJEKTRECHTECK, nicht die Ebene: die eigene Verzerrung steht in
+                    ' Prozent DES OBJEKTS, die Ebene ist aber so gross wie die gerenderte Flaeche. Mit
+                    ' der Ebene als Bezug las eine kleine Verzerrung sich als eine ueber das ganze
+                    ' Bild - der Text landete weit neben seinem Rahmen.
+                    Dim rx = CInt(Math.Floor(rect.Left)), ry = CInt(Math.Floor(rect.Top))
+                    Dim rw = Math.Max(1, CInt(Math.Round(rect.Width)))
+                    Dim rh = Math.Max(1, CInt(Math.Round(rect.Height)))
+                    Dim ox = offsetX - rx, oy = offsetY - ry
+                    zwischen = VerzerreObjektEbene(layer, annotation.EigeneVerzerrung, rw, rh, ox, oy)
                     If zwischen IsNot Nothing Then
                         gezeichnet = zwischen
-                        vx += ox
-                        vy += oy
+                        ' Der zurueckgegebene Versatz liegt im Raum des Rechtecks und muss zurueck in
+                        ' Bildkoordinaten.
+                        vx = rx + ox
+                        vy = ry + oy
                     End If
                 End If
 

@@ -734,7 +734,8 @@ Namespace Services
                 Return {
                     ("Adjust", New String() {"adjust-presets", "light", "curve", "objektivkorrektur", "film-negative"}),
                     ("Color", New String() {"color", "hsl", "color-grading", "calibration"}),
-                    ("Effects", New String() {"details", "sharpen", "soften", "bokeh", "vignette", "grain", "frame"}),
+                    ("Details", New String() {"details", "rauschen", "sharpen", "soften", "bokeh"}),
+                    ("Effects", New String() {"vignette", "grain", "frame"}),
                     ("Filters", New String() {"filter", "lut", "xmp-preset"})}
             End Get
         End Property

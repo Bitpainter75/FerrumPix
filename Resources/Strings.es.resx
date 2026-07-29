@@ -5285,4 +5285,13 @@
   <data name="Ein_Objekt_ist_markiert_die_Anfasser_verzerren_d_98525443" xml:space="preserve">
     <value>Hay un objeto seleccionado: los tiradores deforman ese objeto, no la imagen. La deformación pertenece al objeto y no se fija en los píxeles.</value>
   </data>
+  <data name="Ein_Objekt_ist_markiert_Ecken_Raster_und_Linien__77671651" xml:space="preserve">
+    <value>Hay un objeto seleccionado: las esquinas, la rejilla y las líneas deforman ese objeto, no la imagen. La deformación pertenece al objeto, actúa de inmediato y no se fija en los píxeles.</value>
+  </data>
+  <data name="Malen_fehlgeschlagen_c24fe943" xml:space="preserve">
+    <value>Error al pintar</value>
+  </data>
+  <data name="Retusche_fehlgeschlagen_334396f7" xml:space="preserve">
+    <value>Error al retocar</value>
+  </data>
 </root>

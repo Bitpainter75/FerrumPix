@@ -1423,7 +1423,7 @@ Namespace Views
                     If vm.HasSelectedAnnotation Then
                         Dim overlayOutside = Me.FindControl(Of Border)("TextOverlay")
                         If overlayOutside IsNot Nothing AndAlso overlayOutside.IsVisible Then
-                            Dim outsideMode = If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None)
+                            Dim outsideMode = OhneGriffeBeimVerzerren(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None))
                             If outsideMode <> TextDragMode.None Then
                                 OnTextOverlayPointerPressed(overlayOutside, e)
                                 Return
@@ -1515,7 +1515,7 @@ Namespace Views
             ' Objektrahmens - genau uebereinander. Wer im Verzerren-Werkzeug an einer Ecke zieht,
             ' meint die Verzerrung; das Groessenaendern ist dort ueber die Regler erreichbar, die
             ' Verzerrung nur hier.
-            If vm IsNot Nothing AndAlso vm.VerzerrtDasObjekt Then
+            If vm IsNot Nothing AndAlso vm.ZeigtObjektEcken Then
                 Dim oRect = GetDisplayedImageRect(canvas, vm)
                 If oRect.Width > 0 AndAlso oRect.Height > 0 Then
                     Dim oPos = e.GetPosition(canvas)
@@ -1542,7 +1542,7 @@ Namespace Views
                 Dim overlayForHandles = Me.FindControl(Of Border)("TextOverlay")
                 If overlayForHandles IsNot Nothing AndAlso overlayForHandles.IsVisible Then
                     Dim handleRect = GetTextOverlayRect()
-                    Dim handleMode = If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), handleRect, OverlayHitRotation(vm)), TextDragMode.None)
+                    Dim handleMode = OhneGriffeBeimVerzerren(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), handleRect, OverlayHitRotation(vm)), TextDragMode.None))
                     If handleMode <> TextDragMode.None AndAlso handleMode <> TextDragMode.Move Then
                         OnTextOverlayPointerPressed(overlayForHandles, e)
                         Return
@@ -2038,7 +2038,7 @@ Namespace Views
                Not _isRetouching AndAlso Not _isTextDragging AndAlso Not _isDraggingSlider AndAlso Not _isSelectionDragging AndAlso Not _isSelectionMoveDragging AndAlso Not _isLassoDrawing AndAlso
                cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso
                cursorVm.HasSelectedAnnotation AndAlso IsLayerPlacementTool(cursorVm.CurrentTool) Then
-                Dim mode = If(SelectionAcceptsDrag(cursorVm), GetTextDragMode(e.GetPosition(cursorCanvas), GetTextOverlayRect(), OverlayHitRotation(cursorVm)), TextDragMode.None)
+                Dim mode = OhneGriffeBeimVerzerren(cursorVm, If(SelectionAcceptsDrag(cursorVm), GetTextDragMode(e.GetPosition(cursorCanvas), GetTextOverlayRect(), OverlayHitRotation(cursorVm)), TextDragMode.None))
                 cursorCanvas.Cursor = GetCursorForTextDragMode(mode, IsSelectedAnnotationTextLayer(cursorVm))
             ElseIf cursorCanvas IsNot Nothing Then
                 cursorCanvas.Cursor = Nothing
@@ -3322,7 +3322,7 @@ Namespace Views
             Dim vm = TryCast(DataContext, EditorViewModel)
             ' Ist ein Objekt markiert, gehoeren die Ecken IHM: dann liegen sie auf dem
             ' Objektrechteck, nicht auf dem Bild.
-            If vm IsNot Nothing AndAlso vm.VerzerrtDasObjekt AndAlso iw > 0 AndAlso ih > 0 Then
+            If vm IsNot Nothing AndAlso vm.ZeigtObjektEcken AndAlso iw > 0 AndAlso ih > 0 Then
                 Dim ov = vm.ObjektEckenValues
                 If ov IsNot Nothing AndAlso ov.Length = 8 Then
                     Dim ow(7) As Double
@@ -3433,7 +3433,8 @@ Namespace Views
         ''' Geometrie-/Ebenen-Werkzeugen dagegen ausgeblendet (dort wird die Auswahl ohnehin verworfen).</summary>
         Private Shared Function IsSelectionScopeTool(tool As EditorTool) As Boolean
             Select Case tool
-                Case EditorTool.Selection, EditorTool.Mask, EditorTool.Adjust, EditorTool.Color, EditorTool.Filters, EditorTool.Effects
+                Case EditorTool.Selection, EditorTool.Mask, EditorTool.Adjust, EditorTool.Color, EditorTool.Filters,
+                     EditorTool.Details, EditorTool.Effects
                     Return True
                 Case Else
                     Return False
@@ -4215,7 +4216,7 @@ Namespace Views
             End If
 
             Dim rect = GetTextOverlayRect()
-            Dim mode = If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None)
+            Dim mode = OhneGriffeBeimVerzerren(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None))
             If mode = TextDragMode.None Then Return
 
             ' Doppelklick auf den Drehgriff stellt die Lage wieder gerade.
@@ -4323,6 +4324,22 @@ Namespace Views
             Return vm IsNot Nothing AndAlso Not vm.IsSelectionGeometryLocked
         End Function
 
+        ''' <summary>Beim Verzerren am Objekt verstummen die GRIFFE des Auswahlrahmens.
+        '''
+        ''' Verzerrungsecken und Rahmengriffe sitzen auf DEMSELBEN Rechteck. Blieben beide aktiv,
+        ''' entschiede das getroffene Pixel darueber, ob man das Objekt groesser macht oder es
+        ''' verzerrt. Das VERSCHIEBEN bleibt: es hat keinen Griff, mit dem es sich streiten koennte,
+        ''' und ein Objekt aus dem Weg zu schieben, ohne das Werkzeug zu verlassen, ist genau das,
+        ''' was man beim Verzerren tut.
+        '''
+        ''' Bewusst NICHT in GetTextDragMode: die Trefferzonen dort sind reine Geometrie und werden
+        ''' auch ohne Ansicht geprueft - ein Zugriff auf den DataContext waere dort ein Fremdkoerper.</summary>
+        Private Shared Function OhneGriffeBeimVerzerren(vm As EditorViewModel, mode As TextDragMode) As TextDragMode
+            If mode = TextDragMode.None OrElse mode = TextDragMode.Move Then Return mode
+            If vm IsNot Nothing AndAlso vm.VerzerrtDasObjekt Then Return TextDragMode.None
+            Return mode
+        End Function
+
         Private Shared Function OverlayHitRotation(vm As EditorViewModel) As Double
             If vm Is Nothing Then Return 0
             Return If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation)
@@ -4411,7 +4428,7 @@ Namespace Views
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If canvas Is Nothing OrElse vm Is Nothing Then Return
-            Dim mode = If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None)
+            Dim mode = OhneGriffeBeimVerzerren(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None))
             overlay.Cursor = GetCursorForTextDragMode(mode, IsSelectedAnnotationTextLayer(vm))
         End Sub
 
