@@ -63,6 +63,7 @@ Namespace Services
                         "  Width      INTEGER NOT NULL DEFAULT 0," &
                         "  Height     INTEGER NOT NULL DEFAULT 0," &
                         "  IsFavorite INTEGER NOT NULL DEFAULT 0," &
+                        "  LivePhotoVideoId TEXT NOT NULL DEFAULT ''," &
                         "  PRIMARY KEY (ServerKey, AssetId)" &
                         ")"
                     cmd.ExecuteNonQuery()
@@ -83,12 +84,39 @@ Namespace Services
                         "  Height        INTEGER NOT NULL DEFAULT 0," &
                         "  IsFavorite    INTEGER NOT NULL DEFAULT 0," &
                         "  UpdatedAt     TEXT NOT NULL DEFAULT ''," &
+                        "  LivePhotoVideoId TEXT NOT NULL DEFAULT ''," &
                         "  PRIMARY KEY (ServerKey, AssetId)" &
                         ")"
                     cmd.ExecuteNonQuery()
                 End Using
+                Dim metaColumnAdded = EnsureColumn(conn, "AssetMeta", "LivePhotoVideoId", "TEXT NOT NULL DEFAULT ''")
+                EnsureColumn(conn, "AssetList", "LivePhotoVideoId", "TEXT NOT NULL DEFAULT ''")
+                If metaColumnAdded Then
+                    Using invalidate = conn.CreateCommand()
+                        ' Bestehende Zeilen stammen aus einer Version, die die Live-Photo-Verknüpfung
+                        ' nicht kannte. Ein leerer Wert wäre daher kein belastbarer Cache-Treffer.
+                        invalidate.CommandText = "DELETE FROM AssetMeta"
+                        invalidate.ExecuteNonQuery()
+                    End Using
+                End If
             End Using
         End Sub
+
+        Private Shared Function EnsureColumn(conn As SqliteConnection, tableName As String, columnName As String, columnSql As String) As Boolean
+            Using check = conn.CreateCommand()
+                check.CommandText = $"PRAGMA table_info({tableName})"
+                Using reader = check.ExecuteReader()
+                    While reader.Read()
+                        If String.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase) Then Return False
+                    End While
+                End Using
+            End Using
+            Using alter = conn.CreateCommand()
+                alter.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnSql}"
+                alter.ExecuteNonQuery()
+            End Using
+            Return True
+        End Function
 
         ''' <summary>Der lokal gespeicherte "Alle Fotos"-Katalog in Server-Reihenfolge. Leer, wenn
         ''' noch nie ein vollständiger Abgleich lief. Wirft nie.</summary>
@@ -99,7 +127,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT AssetId,FileName,IsVideo,FileCreatedAt,Width,Height,IsFavorite,UpdatedAt " &
+                        cmd.CommandText = "SELECT AssetId,FileName,IsVideo,FileCreatedAt,Width,Height,IsFavorite,UpdatedAt,LivePhotoVideoId " &
                                           "FROM AssetList WHERE ServerKey=$s ORDER BY Position"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         Using r = cmd.ExecuteReader()
@@ -112,7 +140,8 @@ Namespace Services
                                     .Width = If(r.IsDBNull(4), 0, r.GetInt32(4)),
                                     .Height = If(r.IsDBNull(5), 0, r.GetInt32(5)),
                                     .IsFavorite = Not r.IsDBNull(6) AndAlso r.GetInt32(6) <> 0,
-                                    .UpdatedAt = If(r.IsDBNull(7), "", r.GetString(7))
+                                    .UpdatedAt = If(r.IsDBNull(7), "", r.GetString(7)),
+                                    .LivePhotoVideoId = If(r.IsDBNull(8), "", r.GetString(8))
                                 })
                             End While
                         End Using
@@ -142,8 +171,8 @@ Namespace Services
                         End Using
                         Using ins = conn.CreateCommand()
                             ins.Transaction = transaction
-                            ins.CommandText = "INSERT INTO AssetList(ServerKey,Position,AssetId,FileName,IsVideo,FileCreatedAt,Width,Height,IsFavorite,UpdatedAt) " &
-                                              "VALUES($s,$pos,$a,$n,$v,$c,$w,$h,$f,$u)"
+                            ins.CommandText = "INSERT INTO AssetList(ServerKey,Position,AssetId,FileName,IsVideo,FileCreatedAt,Width,Height,IsFavorite,UpdatedAt,LivePhotoVideoId) " &
+                                              "VALUES($s,$pos,$a,$n,$v,$c,$w,$h,$f,$u,$live)"
                             Dim pS = ins.Parameters.Add("$s", SqliteType.Text)
                             Dim pPos = ins.Parameters.Add("$pos", SqliteType.Integer)
                             Dim pA = ins.Parameters.Add("$a", SqliteType.Text)
@@ -154,6 +183,7 @@ Namespace Services
                             Dim pH = ins.Parameters.Add("$h", SqliteType.Integer)
                             Dim pF = ins.Parameters.Add("$f", SqliteType.Integer)
                             Dim pU = ins.Parameters.Add("$u", SqliteType.Text)
+                            Dim pLive = ins.Parameters.Add("$live", SqliteType.Text)
                             pS.Value = serverKey
                             For i = 0 To assets.Count - 1
                                 Dim a = assets(i)
@@ -167,6 +197,7 @@ Namespace Services
                                 pH.Value = a.Height
                                 pF.Value = If(a.IsFavorite, 1, 0)
                                 pU.Value = If(a.UpdatedAt, "")
+                                pLive.Value = If(a.LivePhotoVideoId, "")
                                 ins.ExecuteNonQuery()
                             Next
                         End Using
@@ -186,7 +217,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,DateTaken,Tags,Width,Height,IsFavorite " &
+                        cmd.CommandText = "SELECT UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,DateTaken,Tags,Width,Height,IsFavorite,LivePhotoVideoId " &
                                           "FROM AssetMeta WHERE ServerKey=$s AND AssetId=$a"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$a", assetId)
@@ -208,7 +239,8 @@ Namespace Services
                                 .Tags = SplitTags(If(r.IsDBNull(7), "", r.GetString(7))),
                                 .Width = If(r.IsDBNull(8), 0, r.GetInt32(8)),
                                 .Height = If(r.IsDBNull(9), 0, r.GetInt32(9)),
-                                .IsFavorite = Not r.IsDBNull(10) AndAlso r.GetInt32(10) <> 0
+                                .IsFavorite = Not r.IsDBNull(10) AndAlso r.GetInt32(10) <> 0,
+                                .LivePhotoVideoId = If(r.IsDBNull(11), "", r.GetString(11))
                             }
                             Return asset
                         End Using
@@ -228,10 +260,10 @@ Namespace Services
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText =
-                            "INSERT INTO AssetMeta(ServerKey,AssetId,UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,DateTaken,Tags,Width,Height,IsFavorite) " &
-                            "VALUES($s,$a,$u,$fs,$r,$cam,$iso,$ap,$dt,$tags,$w,$h,$fav) " &
+                            "INSERT INTO AssetMeta(ServerKey,AssetId,UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,DateTaken,Tags,Width,Height,IsFavorite,LivePhotoVideoId) " &
+                            "VALUES($s,$a,$u,$fs,$r,$cam,$iso,$ap,$dt,$tags,$w,$h,$fav,$live) " &
                             "ON CONFLICT(ServerKey,AssetId) DO UPDATE SET " &
-                            "UpdatedAt=$u,FileSize=$fs,Rating=$r,Camera=$cam,Iso=$iso,Aperture=$ap,DateTaken=$dt,Tags=$tags,Width=$w,Height=$h,IsFavorite=$fav"
+                            "UpdatedAt=$u,FileSize=$fs,Rating=$r,Camera=$cam,Iso=$iso,Aperture=$ap,DateTaken=$dt,Tags=$tags,Width=$w,Height=$h,IsFavorite=$fav,LivePhotoVideoId=$live"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$a", asset.Id)
                         cmd.Parameters.AddWithValue("$u", If(asset.UpdatedAt, ""))
@@ -245,6 +277,7 @@ Namespace Services
                         cmd.Parameters.AddWithValue("$w", asset.Width)
                         cmd.Parameters.AddWithValue("$h", asset.Height)
                         cmd.Parameters.AddWithValue("$fav", If(asset.IsFavorite, 1, 0))
+                        cmd.Parameters.AddWithValue("$live", If(asset.LivePhotoVideoId, ""))
                         cmd.ExecuteNonQuery()
                     End Using
                 End Using

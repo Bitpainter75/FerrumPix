@@ -1151,14 +1151,14 @@
                                                                HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
                                                                IconBrush="{DynamicResource FP.Accent}"/>
-                                                <Button IsVisible="{Binding IsVideoFile}"
+                                                <Button IsVisible="{Binding ShowMediaPlayBadge}"
                                                         Classes="video-play-badge"
                                                         Width="46" Height="46"
                                                         CornerRadius="23"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
                                                         Click="OnVideoPlayBadgeClick"
-                                                        ToolTip.Tip="Abspielen">
+                                                        ToolTip.Tip="{Binding MediaPlayTooltip}">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg"
                                                                    Width="22" Height="22"
                                                                    HorizontalAlignment="Center"
@@ -1583,14 +1583,14 @@
                                                                HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
                                                                IconBrush="{DynamicResource FP.Accent}"/>
-                                                <Button IsVisible="{Binding IsVideoFile}"
+                                                <Button IsVisible="{Binding ShowMediaPlayBadge}"
                                                         Classes="video-play-badge"
                                                         Width="26" Height="26"
                                                         CornerRadius="13"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
                                                         Click="OnVideoPlayBadgeClick"
-                                                        ToolTip.Tip="Abspielen">
+                                                        ToolTip.Tip="{Binding MediaPlayTooltip}">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg"
                                                                    Width="13" Height="13"
                                                                    HorizontalAlignment="Center"

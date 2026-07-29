@@ -133,6 +133,30 @@ Namespace Models
             End Get
         End Property
 
+        Public ReadOnly Property ImmichLivePhotoVideoId As String
+            Get
+                Return _immichLivePhotoVideoId
+            End Get
+        End Property
+
+        Public ReadOnly Property IsImmichMotionPhoto As Boolean
+            Get
+                Return IsImmichAsset AndAlso Not String.IsNullOrWhiteSpace(_immichLivePhotoVideoId)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowMediaPlayBadge As Boolean
+            Get
+                Return IsVideoFile OrElse IsImmichMotionPhoto
+            End Get
+        End Property
+
+        Public ReadOnly Property MediaPlayTooltip As String
+            Get
+                Return If(IsImmichMotionPhoto, "Live Photo / Motion Photo", "Abspielen")
+            End Get
+        End Property
+
         ''' <summary>Lokaler Temp-Pfad des zuletzt heruntergeladenen Originals (für Viewer/Editor).
         ''' Erlaubt der Galerie, das Item beim Rückweg aus dem Viewer wiederzufinden, obwohl FilePath
         ''' ein Immich-Pseudo-Pfad ist.</summary>
@@ -615,6 +639,7 @@ Namespace Models
         ' ThumbnailCacheService - die gesamte übrige Warteschlangen-/LRU-/Dispose-Logik gilt unverändert.
         Private _immichAssetId As String = Nothing
         Private _immichOriginalFileName As String = Nothing
+        Private _immichLivePhotoVideoId As String = Nothing
         Private _immichUpdatedAt As String = ""      ' Immichs updatedAt - Invalidierung des Metadaten-Index
         Private _immichDetailState As Integer = 0   ' 0=noch nicht, 1=läuft/erledigt (je Item einmal)
         Private _fileInfoLoaded As Boolean = False
@@ -818,6 +843,7 @@ Namespace Models
             item.FileName = displayName
             item._immichAssetId = asset.Id
             item._immichOriginalFileName = asset.FileName
+            item._immichLivePhotoVideoId = If(asset.LivePhotoVideoId, "")
             item._immichUpdatedAt = asset.UpdatedAt
             item._thumbnailCancellationToken = thumbnailCancellationToken
             item._fileInfoLoaded = True
@@ -842,8 +868,10 @@ Namespace Models
         ''' (Dateigröße, Rating, Kamera/ISO/Blende, Aufnahmedatum, Stichwörter) und feuert die passenden
         ''' PropertyChanged, damit Kachel und Info-Leiste sich aktualisieren.</summary>
         Public Sub ApplyImmichDetail(fileSizeBytes As Long, rating As Integer, camera As String,
-                                     iso As Integer?, aperture As Double?, dateTaken As DateTime?, tags As List(Of String))
+                                     iso As Integer?, aperture As Double?, dateTaken As DateTime?, tags As List(Of String),
+                                     Optional livePhotoVideoId As String = Nothing)
             If Not IsImmichAsset Then Return
+            ApplyImmichLivePhotoVideoId(livePhotoVideoId)
             FileSize = fileSizeBytes
             RaisePropertyChanged(NameOf(FileSizeText))
             Me.Rating = rating
@@ -854,6 +882,17 @@ Namespace Models
             Me.Tags = If(tags, New List(Of String)())
             RaisePropertyChanged(NameOf(Tags))
             RaisePropertyChanged(NameOf(SearchText))
+        End Sub
+
+        Public Sub ApplyImmichLivePhotoVideoId(value As String)
+            If Not IsImmichAsset Then Return
+            Dim normalized = If(value, "")
+            If String.Equals(_immichLivePhotoVideoId, normalized, StringComparison.Ordinal) Then Return
+            _immichLivePhotoVideoId = normalized
+            RaisePropertyChanged(NameOf(ImmichLivePhotoVideoId))
+            RaisePropertyChanged(NameOf(IsImmichMotionPhoto))
+            RaisePropertyChanged(NameOf(ShowMediaPlayBadge))
+            RaisePropertyChanged(NameOf(MediaPlayTooltip))
         End Sub
 
         Public Shared Function FromFolder(folderPath As String) As ImageItem
@@ -1274,7 +1313,8 @@ Namespace Models
                                            If detail Is Nothing OrElse token.IsCancellationRequested Then Return
                                            Await Dispatcher.UIThread.InvokeAsync(
                                                Sub() ApplyImmichDetail(detail.FileSizeBytes, detail.Rating, detail.Camera,
-                                                                       detail.Iso, detail.Aperture, detail.ExifDateTaken, detail.Tags))
+                                                                       detail.Iso, detail.Aperture, detail.ExifDateTaken, detail.Tags,
+                                                                       detail.LivePhotoVideoId))
                                        Catch
                                        End Try
                                    End Function)

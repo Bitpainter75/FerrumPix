@@ -2239,8 +2239,9 @@ Namespace ViewModels
                         If itemsByAssetId IsNot Nothing Then
                             For Each asset In result.Items
                                 Dim known As ImageItem = Nothing
-                                If itemsByAssetId.TryGetValue(asset.Id, known) AndAlso known.IsFavorite <> asset.IsFavorite Then
-                                    known.IsFavorite = asset.IsFavorite
+                                If itemsByAssetId.TryGetValue(asset.Id, known) Then
+                                    If known.IsFavorite <> asset.IsFavorite Then known.IsFavorite = asset.IsFavorite
+                                    known.ApplyImmichLivePhotoVideoId(asset.LivePhotoVideoId)
                                 End If
                             Next
                         End If

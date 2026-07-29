@@ -30,6 +30,8 @@ Namespace Services
         Public Property Id As String = ""
         Public Property FileName As String = ""
         Public Property IsVideo As Boolean
+        ''' Immich verknüpft Live/Motion Photos als sichtbares Bild mit einem versteckten Video-Asset.
+        Public Property LivePhotoVideoId As String = ""
         Public Property FileCreatedAt As DateTime?
         Public Property ExifDateTaken As DateTime?
         Public Property Width As Integer
@@ -1042,6 +1044,7 @@ Namespace Services
                 .Id = a.Id,
                 .FileName = If(a.OriginalFileName, a.Id),
                 .IsVideo = String.Equals(a.Type, "VIDEO", StringComparison.OrdinalIgnoreCase),
+                .LivePhotoVideoId = If(a.LivePhotoVideoId, ""),
                 .FileCreatedAt = ParseDate(a.FileCreatedAt),
                 .IsFavorite = a.IsFavorite,
                 .UpdatedAt = If(a.UpdatedAt, ""),
@@ -1679,6 +1682,7 @@ Namespace Services
             ''' "timeline" | "archive" | "hidden" | "locked" (siehe IsBrowsableAsset).
             Public Property Visibility As String
             Public Property OriginalFileName As String
+            Public Property LivePhotoVideoId As String
             Public Property FileCreatedAt As String
             Public Property UpdatedAt As String
             Public Property IsFavorite As Boolean
