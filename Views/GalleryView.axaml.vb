@@ -4,6 +4,7 @@ Imports Avalonia.Input
 Imports Avalonia.Input.Platform
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Interactivity
+Imports Avalonia.LogicalTree
 Imports Avalonia.Threading
 Imports Avalonia.Media.Imaging
 Imports Avalonia.VisualTree
@@ -60,6 +61,21 @@ Namespace Views
             ' Das Control gehört dieser View-Instanz - kein Abmelden nötig, sie sterben gemeinsam.
             Dim scrubber = Me.FindControl(Of GalleryTimelineScrubber)("GalleryTimelineScrubber")
             If scrubber IsNot Nothing Then AddHandler scrubber.ScrubRequested, AddressOf OnTimelineScrubRequested
+        End Sub
+
+        Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
+            Dim flyout = TryCast(sender, Flyout)
+            Dim content = TryCast(flyout?.Content, ILogical)
+            If content IsNot Nothing Then LocalizationService.ApplyTo(content)
+        End Sub
+
+        ''' <summary>Die Galerie erzeugt Karten und Listenzeilen erst aus dem DataTemplate, nachdem
+        ''' die einmalige Fenster-Lokalisierung bereits gelaufen sein kann. Jedes neu materialisierte
+        ''' Element lokalisiert deshalb nur seinen eigenen Unterbaum - auch nach Scrollen oder einem
+        ''' Wechsel des DisplayItems-Fensters.</summary>
+        Private Sub OnGalleryItemAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
+            Dim itemRoot = TryCast(sender, Visual)
+            If itemRoot IsNot Nothing Then LocalizationService.ApplyToVisualTree(itemRoot)
         End Sub
 
         Private Sub OnDescendantGotFocus(sender As Object, e As FocusChangedEventArgs)

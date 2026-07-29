@@ -5293,4 +5293,22 @@
   <data name="Retusche_fehlgeschlagen_334396f7" xml:space="preserve">
     <value>Falha na retoque</value>
   </data>
+  <data name="Das_eingetragene_Objektiv_bernehmen_00fb88c7" xml:space="preserve">
+    <value>Aplicar a objetiva introduzida</value>
+  </data>
+  <data name="Chinesisch_e66834c6" xml:space="preserve">
+    <value>Chinês</value>
+  </data>
+  <data name="T_nung_756f0237" xml:space="preserve">
+    <value>Matiz</value>
+  </data>
+  <data name="Au_engl_hen_f1c17a23" xml:space="preserve">
+    <value>Brilho externo</value>
+  </data>
+  <data name="0_Elemente_ausgew_hlt_ea243f33" xml:space="preserve">
+    <value>{0} itens selecionados</value>
+  </data>
+  <data name="0_Elemente_in_der_Zwischenablage_b5c5cdb9" xml:space="preserve">
+    <value>{0} itens na área de transferência</value>
+  </data>
 </root>

@@ -351,7 +351,7 @@ Namespace ViewModels
                     Case "Type" : modeLabel = LocalizationService.T("Typ")
                     Case "Rating" : modeLabel = LocalizationService.T("Bewertung")
                     Case "Favorite" : modeLabel = LocalizationService.T("Favorit")
-                    Case Else : modeLabel = "Name"
+                    Case Else : modeLabel = LocalizationService.T("Name")
                 End Select
 
                 Return $"{modeLabel} {If(_sortAscending, LocalizationService.T("aufsteigend"), LocalizationService.T("absteigend"))}"
@@ -4731,7 +4731,7 @@ Namespace ViewModels
             Get
                 If SelectedItems Is Nothing OrElse SelectedItems.Count = 0 Then Return LocalizationService.T("Kein Element ausgewählt")
                 If SelectedItems.Count = 1 Then Return LocalizationService.T("1 Element ausgewählt")
-                Return $"{SelectedItems.Count} {LocalizationService.T("Elemente ausgewählt")}"
+                Return String.Format(LocalizationService.T("{0} Elemente ausgewählt"), SelectedItems.Count)
             End Get
         End Property
 
@@ -5095,7 +5095,9 @@ Namespace ViewModels
             End If
             _clipboardPaths = paths
             _clipboardCut = cut
-            StatusText = If(_clipboardPaths.Count = 1, LocalizationService.T("1 Element in der Zwischenablage"), $"{_clipboardPaths.Count} {LocalizationService.T("Elemente")} {LocalizationService.T("in der Zwischenablage")}")
+            StatusText = If(_clipboardPaths.Count = 1,
+                            LocalizationService.T("1 Element in der Zwischenablage"),
+                            String.Format(LocalizationService.T("{0} Elemente in der Zwischenablage"), _clipboardPaths.Count))
         End Sub
 
         Public Sub StoreClipboardPaths(paths As IEnumerable(Of String), cut As Boolean)
@@ -5110,7 +5112,9 @@ Namespace ViewModels
             End If
             _clipboardPaths = validPaths
             _clipboardCut = cut
-            StatusText = If(_clipboardPaths.Count = 1, LocalizationService.T("1 Element in der Zwischenablage"), $"{_clipboardPaths.Count} {LocalizationService.T("Elemente")} {LocalizationService.T("in der Zwischenablage")}")
+            StatusText = If(_clipboardPaths.Count = 1,
+                            LocalizationService.T("1 Element in der Zwischenablage"),
+                            String.Format(LocalizationService.T("{0} Elemente in der Zwischenablage"), _clipboardPaths.Count))
         End Sub
 
         Public Async Function PasteIntoFolderAsync(targetFolder As String) As Task
