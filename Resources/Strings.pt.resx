@@ -5281,4 +5281,7 @@
   <data name="Objektverzerrung_zur_cksetzen_b62c981b" xml:space="preserve">
     <value>Repor a distorção do objeto</value>
   </data>
+  <data name="Ein_Objekt_ist_markiert_die_Anfasser_verzerren_d_98525443" xml:space="preserve">
+    <value>Está selecionado um objeto: as pegas distorcem esse objeto, não a imagem. A distorção pertence ao objeto e não é fixada.</value>
+  </data>
 </root>

@@ -1511,6 +1511,26 @@ Namespace Views
                 Return
             End If
 
+            ' VERZERRUNGSECKEN ZUERST. Sie liegen auf demselben Rechteck wie die Griffe des
+            ' Objektrahmens - genau uebereinander. Wer im Verzerren-Werkzeug an einer Ecke zieht,
+            ' meint die Verzerrung; das Groessenaendern ist dort ueber die Regler erreichbar, die
+            ' Verzerrung nur hier.
+            If vm IsNot Nothing AndAlso vm.VerzerrtDasObjekt Then
+                Dim oRect = GetDisplayedImageRect(canvas, vm)
+                If oRect.Width > 0 AndAlso oRect.Height > 0 Then
+                    Dim oPos = e.GetPosition(canvas)
+                    If vm.TryBeginObjektEckeDrag((oPos.X - oRect.Left) / oRect.Width * 100.0,
+                                                 (oPos.Y - oRect.Top) / oRect.Height * 100.0,
+                                                 EckGriffTolerance / oRect.Width * 100.0,
+                                                 EckGriffTolerance / oRect.Height * 100.0) Then
+                        _isObjektEckeDragging = True
+                        e.Pointer.Capture(canvas)
+                        e.Handled = True
+                        Return
+                    End If
+                End If
+            End If
+
             ' Die Resize-/Rotier-Griffe ragen per Margin über die Bounds des TextOverlay-Borders hinaus,
             ' daher landen Klicks genau darauf hier auf dem Canvas statt auf dem Border - Griff-Erkennung
             ' deshalb zusätzlich hier prüfen. Das muss vor den werkzeugspezifischen Zweigen geschehen:
@@ -1615,22 +1635,6 @@ Namespace Views
                                            gitterSlopPixels / gitterRect.Width * 100.0,
                                            gitterSlopPixels / gitterRect.Height * 100.0) Then
                         _isWarpDragging = True
-                        e.Pointer.Capture(canvas)
-                        e.Handled = True
-                        Return
-                    End If
-                End If
-            End If
-
-            If vm IsNot Nothing AndAlso vm.VerzerrtDasObjekt Then
-                Dim oRect = GetDisplayedImageRect(canvas, vm)
-                If oRect.Width > 0 AndAlso oRect.Height > 0 Then
-                    Dim oPos = e.GetPosition(canvas)
-                    If vm.TryBeginObjektEckeDrag((oPos.X - oRect.Left) / oRect.Width * 100.0,
-                                                 (oPos.Y - oRect.Top) / oRect.Height * 100.0,
-                                                 EckGriffTolerance / oRect.Width * 100.0,
-                                                 EckGriffTolerance / oRect.Height * 100.0) Then
-                        _isObjektEckeDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return

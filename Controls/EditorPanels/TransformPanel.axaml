@@ -110,6 +110,26 @@
                 <!-- Nach dem TEXT bemessen, nicht zu gleichen Teilen: "Perspektive" ist doppelt
                      so lang wie "Gitter", und gleich breite Knoepfe lassen den einen
                      gequetscht und die anderen halb leer aussehen. -->
+                <!-- Ist ein Objekt markiert, gehoeren die Anfasser IHM. Der Hinweis steht EINMAL
+                     ueber der Wahl und nicht in jeder der drei Gruppen - er gilt fuer alle. -->
+                <Border Background="{DynamicResource FP.Bg.Input}"
+                        BorderBrush="{DynamicResource FP.Border.Normal}"
+                        BorderThickness="1" CornerRadius="6" Margin="0,0,0,8" Padding="8,6"
+                        IsVisible="{Binding VerzerrtDasObjekt}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Ein Objekt ist markiert - die Anfasser verzerren dieses Objekt, nicht das Bild. Die Verzerrung gehört zum Objekt und wird nicht eingebacken."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   FontSize="{DynamicResource FP.Font.Small}" />
+                        <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                                IsEnabled="{Binding HatObjektVerzerrung}"
+                                Command="{Binding ResetObjektVerzerrungCommand}">
+                            <TextBlock Text="Objektverzerrung zurücksetzen"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       HorizontalAlignment="Center"/>
+                        </Button>
+                    </StackPanel>
+                </Border>
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <Button Classes="ghost" Padding="12,6"
                             Command="{Binding SetVerzerrenModusCommand}" CommandParameter="Perspektive"
@@ -165,25 +185,6 @@
                     <DataTemplate>
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <!-- Ist ein Objekt markiert, gehoeren die vier Anfasser IHM. Das steht hier,
-                         weil man es sonst erst durch Ausprobieren herausfindet. -->
-                    <Border Background="{DynamicResource FP.Bg.Input}" BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6" Margin="0,0,0,8" Padding="8,6"
-                            IsVisible="{Binding VerzerrtDasObjekt}">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Ein Objekt ist markiert - die vier Anfasser verzerren dieses Objekt, nicht das Bild. Die Verzerrung gehört zum Objekt und wird nicht eingebacken."
-                                       TextWrapping="Wrap"
-                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                       FontSize="{DynamicResource FP.Font.Small}" />
-                            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
-                                    IsEnabled="{Binding HatObjektVerzerrung}"
-                                    Command="{Binding ResetObjektVerzerrungCommand}">
-                                <TextBlock Text="Objektverzerrung zurücksetzen"
-                                           FontSize="{DynamicResource FP.Font.Small}"
-                                           HorizontalAlignment="Center"/>
-                            </Button>
-                        </StackPanel>
-                    </Border>
-
                                 <icons:SvgIcon
                                     Source="avares://FerrumPix/Assets/Icons/outline/perspective.svg"
                                     Width="14" Height="14" />

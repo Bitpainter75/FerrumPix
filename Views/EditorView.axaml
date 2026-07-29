@@ -714,15 +714,21 @@
                                IsHitTestVisible="False"
                                IsVisible="{Binding HatVorschau}"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <!-- ZIndex: die Verzerrungs-Overlays liegen OBEN. Ihre Ecken sitzen bei
+                             einem markierten Objekt auf demselben Rechteck wie die Griffe des
+                             Objektrahmens - darunter waeren sie weder zu sehen noch zu greifen. -->
                         <icons:PerspectiveOverlayControl x:Name="PerspectiveOverlay"
+                                                      ZIndex="10"
                                                          StrokeBrush="{DynamicResource FP.Accent}"
                                                          IsHitTestVisible="False"
                                                          IsVisible="False" />
                         <icons:GridWarpOverlayControl x:Name="GridWarpOverlay"
+                                                      ZIndex="10"
                                                       StrokeBrush="{DynamicResource FP.Accent}"
                                                       IsHitTestVisible="False"
                                                       IsVisible="False" />
                         <icons:LineWarpOverlayControl x:Name="LineWarpOverlay"
+                                                      ZIndex="10"
                                                       StrokeBrush="{DynamicResource FP.Accent}"
                                                       IsHitTestVisible="False"
                                                       IsVisible="False" />
