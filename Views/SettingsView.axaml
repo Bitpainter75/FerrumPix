@@ -1918,18 +1918,6 @@
                                     <TextBlock Text="LGPL-2.1+" FontSize="{DynamicResource FP.Font.Caption}"/>
                                 </Button>
                             </Grid>
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <StackPanel Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock Text="libheif (optional)" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Lesen von HEIC/HEIF/AVIF - wird nur vom System geladen, nicht mitgeliefert" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/strukturag/libheif" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="14" Height="14"/>
-                                </Button>
-                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Tag="https://github.com/strukturag/libheif/blob/master/COPYING" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                    <TextBlock Text="LGPL-3.0" FontSize="{DynamicResource FP.Font.Caption}"/>
-                                </Button>
-                            </Grid>
                         </StackPanel>
 
                         <TextBlock Text="LibRaw und das mitgelieferte libvips stehen unter der LGPL. Die mitgelieferte libmpv-Laufzeit enthält LGPL- und GPL-Komponenten. Die nativen Bibliotheken werden unverändert dynamisch geladen und können durch kompatible eigene Übersetzungen ersetzt werden; Herkunftsnachweise liegen im Ordner licenses neben der Anwendung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"/>

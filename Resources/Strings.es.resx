@@ -4412,27 +4412,6 @@
   <data name="BMP_und_GIF_lassen_sich_nicht_zur_ckschreiben_es_5046f9e5" xml:space="preserve">
     <value>BMP y GIF no se pueden reescribir: se crean archivos nuevos.</value>
   </data>
-  <data name="libheif_optional_b3984920" xml:space="preserve">
-    <value>libheif (opcional)</value>
-  </data>
-  <data name="Lesen_von_HEIC_HEIF_AVIF_wird_nur_vom_System_gel_ebca6ebf" xml:space="preserve">
-    <value>Lectura de HEIC/HEIF/AVIF: se carga solo desde el sistema, no se incluye</value>
-  </data>
-  <data name="LGPL_3_0_278977ae" xml:space="preserve">
-    <value>LGPL-3.0</value>
-  </data>
-  <data name="libheif_wird_bewusst_NICHT_mitgeliefert_sondern__6db1660e" xml:space="preserve">
-    <value>libheif no se incluye deliberadamente, sino que se carga solo desde el sistema: los archivos HEIC suelen estar codificados en HEVC y la decisión sobre un decodificador HEVC corresponde a la distribución. Sin libheif, los archivos HEIC/AVIF simplemente no se abren; todo lo demás funciona igual.</value>
-  </data>
-  <data name="TIFF_Dateien_lesen_5bf61045" xml:space="preserve">
-    <value>Lectura de archivos TIFF</value>
-  </data>
-  <data name="BSD_3_Clause_d6f9c69f" xml:space="preserve">
-    <value>BSD-3-Clause</value>
-  </data>
-  <data name="BitMiracle_LibTiff_NET_2_4_a3abc5f5" xml:space="preserve">
-    <value>BitMiracle.LibTiff.NET 2.4</value>
-  </data>
   <data name="Maske_30ebc894" xml:space="preserve">
     <value>Máscara</value>
   </data>
