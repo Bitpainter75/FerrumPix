@@ -490,6 +490,15 @@
     <Style Selector="Button.icon-btn:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
     </Style>
+    <!-- Video controls sit on a dark translucent surface. White identifies an
+         available command, while the accent color keeps hover state visible
+         independently of the frame behind it. -->
+    <Style Selector="Button.icon-btn.video-control icons|SvgIcon">
+        <Setter Property="IconBrush" Value="White"/>
+    </Style>
+    <Style Selector="Button.icon-btn.video-control:pointerover icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent.Light}"/>
+    </Style>
     <Style Selector="Button.icon-btn.active">
         <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="Background" Value="Transparent"/>

@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Concurrent
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Runtime.InteropServices
@@ -16,11 +17,22 @@ Namespace Services
 
         Private ReadOnly _syncRoot As New Object()
         Private ReadOnly _enableHardwareAcceleration As Boolean
+        ' Regular libmpv commands run separately from the OpenGL render thread.
+        ' The render API requires this separation, and file or seek commands must
+        ' not block Avalonia's UI thread.
+        Private ReadOnly _commandQueue As New BlockingCollection(Of Action)()
+        Private ReadOnly _commandThread As Thread
+        Private ReadOnly _commandQueueLock As New Object()
+        Private _disposeQueued As Boolean = False
+        Private _disposeRequested As Boolean = False
 
         Private _handle As IntPtr = IntPtr.Zero
+        Private _renderContext As IntPtr = IntPtr.Zero
+        Private _getProcAddressCallback As MpvInterop.MpvOpenGlGetProcAddress
+        Private _renderUpdateCallback As MpvInterop.MpvRenderUpdateCallback
+        Private _requestRender As Action
         Private _eventThread As Thread
         Private _disposed As Boolean = False
-        Private _windowHandle As IntPtr = IntPtr.Zero
         Private _initialized As Boolean = False
         Private _pendingPath As String = Nothing
         Private _pendingPlay As Boolean = False
@@ -37,103 +49,260 @@ Namespace Services
 
         Public Sub New(enableHardwareAcceleration As Boolean)
             _enableHardwareAcceleration = enableHardwareAcceleration
+            _commandThread = New Thread(AddressOf CommandLoop) With {
+                .IsBackground = True,
+                .Name = "libmpv-command-loop"
+            }
+            _commandThread.Start()
         End Sub
 
-        Public Sub AttachWindow(windowHandle As IntPtr)
-            If windowHandle = IntPtr.Zero Then Return
+        Friend ReadOnly Property IsDisposeRequested As Boolean
+            Get
+                SyncLock _syncRoot
+                    Return _disposeRequested
+                End SyncLock
+            End Get
+        End Property
+
+        ''' <summary>Attaches libmpv to Avalonia's current OpenGL context.
+        ''' Call only from OpenGlControlBase.OnOpenGl* methods.</summary>
+        Friend Function AttachOpenGl(getProcAddress As Func(Of String, IntPtr), requestRender As Action) As Boolean
+            If getProcAddress Is Nothing OrElse requestRender Is Nothing Then Return False
 
             Try
                 SyncLock _syncRoot
-                    If _disposed OrElse _initializationFailed Then Return
-                    If _windowHandle = windowHandle AndAlso _initialized Then Return
-                    _windowHandle = windowHandle
-                    If Not _initialized Then
-                        InitializeLocked()
-                    ElseIf _handle <> IntPtr.Zero Then
-                        SetOptionStringLocked("wid", WindowHandleToUnsignedString(_windowHandle))
-                    End If
+                    If _disposed OrElse _disposeRequested OrElse _initializationFailed Then Return False
+                    If _renderContext <> IntPtr.Zero Then Return True
+
+                    InitializeCoreLocked()
+
+                    _getProcAddressCallback =
+                        Function(context As IntPtr, namePointer As IntPtr) As IntPtr
+                            Try
+                                Dim name = Marshal.PtrToStringUTF8(namePointer)
+                                If String.IsNullOrEmpty(name) Then Return IntPtr.Zero
+                                Return getProcAddress(name)
+                            Catch
+                                Return IntPtr.Zero
+                            End Try
+                        End Function
+
+                    _renderUpdateCallback =
+                        Sub(context As IntPtr)
+                            Try
+                                requestRender()
+                            Catch
+                            End Try
+                        End Sub
+                    _requestRender = requestRender
+
+                    Using apiType As New Utf8String("opengl")
+                        Dim initParams = New MpvInterop.MpvOpenGlInitParams With {
+                            .GetProcAddress = _getProcAddressCallback,
+                            .GetProcAddressContext = IntPtr.Zero
+                        }
+                        Dim initParamsPointer = Marshal.AllocHGlobal(Marshal.SizeOf(Of MpvInterop.MpvOpenGlInitParams)())
+                        Try
+                            Marshal.StructureToPtr(initParams, initParamsPointer, False)
+                            Dim parameters = {
+                                New MpvInterop.MpvRenderParam With {
+                                    .Type = MpvInterop.MpvRenderParamType.ApiType,
+                                    .Data = apiType.Pointer
+                                },
+                                New MpvInterop.MpvRenderParam With {
+                                    .Type = MpvInterop.MpvRenderParamType.OpenGlInitParams,
+                                    .Data = initParamsPointer
+                                },
+                                New MpvInterop.MpvRenderParam With {
+                                    .Type = MpvInterop.MpvRenderParamType.Invalid,
+                                    .Data = IntPtr.Zero
+                                }
+                            }
+                            Dim context As IntPtr = IntPtr.Zero
+                            Dim result = MpvInterop.RenderContextCreate(context, _handle, parameters)
+                            If result < 0 OrElse context = IntPtr.Zero Then
+                                Throw New InvalidOperationException($"Could not initialize the libmpv OpenGL renderer ({result}).")
+                            End If
+                            _renderContext = context
+                        Finally
+                            Marshal.FreeHGlobal(initParamsPointer)
+                        End Try
+                    End Using
+
+                    MpvInterop.RenderContextSetUpdateCallback(_renderContext, _renderUpdateCallback, IntPtr.Zero)
                 End SyncLock
+
+                LoadPending()
+                Return True
             Catch ex As Exception
                 HandleInitializationFailure(ex)
+                Return False
             End Try
+        End Function
+
+        ''' <summary>Detaches the renderer while Avalonia still holds its OpenGL context current.</summary>
+        Friend Sub DetachOpenGl()
+            Dim context As IntPtr
+            Dim shouldDispose As Boolean
+            SyncLock _syncRoot
+                context = _renderContext
+                _renderContext = IntPtr.Zero
+                _requestRender = Nothing
+                shouldDispose = _disposeRequested
+            End SyncLock
+
+            If context <> IntPtr.Zero Then
+                Try
+                    MpvInterop.RenderContextSetUpdateCallback(context, Nothing, IntPtr.Zero)
+                Catch
+                End Try
+                MpvInterop.RenderContextFree(context)
+            End If
+
+            _renderUpdateCallback = Nothing
+            _getProcAddressCallback = Nothing
+            If shouldDispose Then QueueDispose()
         End Sub
 
-        Public Sub DetachWindow()
+        ''' <summary>Renders the next frame into Avalonia's current framebuffer.
+        ''' Call only from OpenGlControlBase.OnOpenGlRender.</summary>
+        Friend Function RenderOpenGlFrame(framebuffer As Integer, width As Integer, height As Integer) As Boolean
+            Dim context As IntPtr
             SyncLock _syncRoot
-                _windowHandle = IntPtr.Zero
-                If _initializationFailed OrElse Not _initialized OrElse _handle = IntPtr.Zero Then Return
-                SetOptionStringLocked("wid", "-1")
+                context = _renderContext
             End SyncLock
-        End Sub
+            If context = IntPtr.Zero OrElse width <= 0 OrElse height <= 0 Then Return False
+
+            MpvInterop.RenderContextUpdate(context)
+
+            Dim fbo = New MpvInterop.MpvOpenGlFbo With {
+                .Fbo = framebuffer,
+                .Width = width,
+                .Height = height,
+                .InternalFormat = 0
+            }
+            Dim flipY As Integer = 1
+            Dim fboPointer = Marshal.AllocHGlobal(Marshal.SizeOf(Of MpvInterop.MpvOpenGlFbo)())
+            Dim flipPointer = Marshal.AllocHGlobal(Marshal.SizeOf(Of Integer)())
+            Try
+                Marshal.StructureToPtr(fbo, fboPointer, False)
+                Marshal.WriteInt32(flipPointer, flipY)
+                Dim parameters = {
+                    New MpvInterop.MpvRenderParam With {
+                        .Type = MpvInterop.MpvRenderParamType.OpenGlFbo,
+                        .Data = fboPointer
+                    },
+                    New MpvInterop.MpvRenderParam With {
+                        .Type = MpvInterop.MpvRenderParamType.FlipY,
+                        .Data = flipPointer
+                    },
+                    New MpvInterop.MpvRenderParam With {
+                        .Type = MpvInterop.MpvRenderParamType.Invalid,
+                        .Data = IntPtr.Zero
+                    }
+                }
+                Dim result = MpvInterop.RenderContextRender(context, parameters)
+                If result >= 0 Then MpvInterop.RenderContextReportSwap(context)
+                Return result >= 0
+            Finally
+                Marshal.FreeHGlobal(flipPointer)
+                Marshal.FreeHGlobal(fboPointer)
+            End Try
+        End Function
 
         Public Sub Load(path As String)
             If String.IsNullOrWhiteSpace(path) Then Return
-
-            SyncLock _syncRoot
-                _pendingPath = path
-                If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
-                SetPauseLocked(True)
-                Dim result = CommandLocked("loadfile", path, "replace")
-                If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _pendingPath = path
+                        If _initializationFailed OrElse Not _initialized OrElse _renderContext = IntPtr.Zero Then Return
+                        SetPauseLocked(True)
+                        Dim result = CommandLocked("loadfile", path, "replace")
+                        If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub LoadPending()
-            SyncLock _syncRoot
-                If String.IsNullOrWhiteSpace(_pendingPath) Then Return
-                If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
-                SetPauseLocked(True)
-                Dim result = CommandLocked("loadfile", _pendingPath, "replace")
-                If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        If String.IsNullOrWhiteSpace(_pendingPath) Then Return
+                        If _initializationFailed OrElse Not _initialized OrElse _renderContext = IntPtr.Zero Then Return
+                        SetPauseLocked(True)
+                        Dim result = CommandLocked("loadfile", _pendingPath, "replace")
+                        If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub Play()
-            SyncLock _syncRoot
-                _pendingPlay = True
-                If _initialized AndAlso Not _initializationFailed Then SetPauseLocked(False)
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _pendingPlay = True
+                        If _initialized AndAlso Not _initializationFailed Then SetPauseLocked(False)
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub Pause()
-            SyncLock _syncRoot
-                _pendingPlay = False
-                If _initialized AndAlso Not _initializationFailed Then SetPauseLocked(True)
-            End SyncLock
-        End Sub
-
-        Public Sub TogglePause()
-            SyncLock _syncRoot
-                If _initializationFailed Then Return
-                If _isPaused Then
-                    _pendingPlay = True
-                    If _initialized Then SetPauseLocked(False)
-                Else
-                    _pendingPlay = False
-                    If _initialized Then SetPauseLocked(True)
-                End If
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _pendingPlay = False
+                        If _initialized AndAlso Not _initializationFailed Then SetPauseLocked(True)
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub [Stop]()
-            SyncLock _syncRoot
-                _pendingPlay = False
-                If _initialized AndAlso Not _initializationFailed Then CommandLocked("stop")
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _pendingPlay = False
+                        If _initialized AndAlso Not _initializationFailed Then CommandLocked("stop")
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub Seek(seconds As Double)
-            SyncLock _syncRoot
-                If _initializationFailed OrElse Not _initialized Then Return
-                SetPropertyStringLocked("time-pos", Math.Max(0, seconds).ToString(CultureInfo.InvariantCulture))
-            End SyncLock
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        If _initializationFailed OrElse Not _initialized Then Return
+                        SetPropertyStringLocked("time-pos", Math.Max(0, seconds).ToString(CultureInfo.InvariantCulture))
+                    End SyncLock
+                End Sub)
         End Sub
 
         Public Sub SetMuted(value As Boolean)
-            SyncLock _syncRoot
-                _isMuted = value
-                If _initialized AndAlso Not _initializationFailed Then SetPropertyStringLocked("mute", If(value, "yes", "no"))
+            EnqueueCommand(
+                Sub()
+                    SyncLock _syncRoot
+                        _isMuted = value
+                        If _initialized AndAlso Not _initializationFailed Then SetPropertyStringLocked("mute", If(value, "yes", "no"))
+                    End SyncLock
+                End Sub)
+        End Sub
+
+        Private Sub EnqueueCommand(workItem As Action)
+            If workItem Is Nothing Then Return
+            SyncLock _commandQueueLock
+                If _disposeRequested OrElse _disposeQueued OrElse _commandQueue.IsAddingCompleted Then Return
+                _commandQueue.Add(workItem)
             End SyncLock
+        End Sub
+
+        Private Sub CommandLoop()
+            For Each workItem In _commandQueue.GetConsumingEnumerable()
+                Try
+                    workItem()
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("VideoPlayback.Command", ex)
+                End Try
+            Next
         End Sub
 
         Private Sub HandleInitializationFailure(ex As Exception)
@@ -143,7 +312,6 @@ Namespace Services
                 _initializationFailed = True
                 _disposed = True
                 _initialized = False
-                _windowHandle = IntPtr.Zero
                 handleToDestroy = _handle
                 eventThread = _eventThread
             End SyncLock
@@ -176,8 +344,8 @@ Namespace Services
             RaiseEvent InitializationFailed(ex)
         End Sub
 
-        Private Sub InitializeLocked()
-            If _initializationFailed OrElse _initialized OrElse _windowHandle = IntPtr.Zero Then Return
+        Private Sub InitializeCoreLocked()
+            If _initializationFailed OrElse _initialized Then Return
 
             MpvInterop.EnsureResolver()
             _handle = MpvInterop.Create()
@@ -188,14 +356,15 @@ Namespace Services
             SetOptionStringLocked("msg-level", "all=no")
             SetOptionStringLocked("config", "no")
             SetOptionStringLocked("input-default-bindings", "no")
-            SetOptionStringLocked("osc", "no")
+            ' FerrumPix provides its own controls and does not need mpv's OSC.
+            ' Treat the option as optional for compatibility with minimal libmpv builds.
+            TrySetOptionStringLocked("osc", "no")
             SetOptionStringLocked("keep-open", "no")
+            SetOptionStringLocked("vo", "libmpv")
+            ' Match image "cover" behavior: preserve aspect ratio while filling the
+            ' output surface instead of retaining letterbox or pillarbox bars.
+            SetOptionStringLocked("panscan", "1.0")
             SetOptionStringLocked("hwdec", If(_enableHardwareAcceleration, "auto-safe", "no"))
-            If OperatingSystem.IsLinux() Then
-                SetOptionStringLocked("vo", "gpu")
-                SetOptionStringLocked("gpu-context", "x11egl")
-            End If
-            SetOptionStringLocked("wid", WindowHandleToUnsignedString(_windowHandle))
 
             Dim result = MpvInterop.Initialize(_handle)
             If result < 0 Then Throw New InvalidOperationException($"libmpv konnte nicht initialisiert werden ({result}).")
@@ -205,13 +374,6 @@ Namespace Services
             ObservePropertyLocked(PropPause, "pause", MpvInterop.MpvFormat.Flag)
             ObservePropertyLocked(PropMute, "mute", MpvInterop.MpvFormat.Flag)
             SetPropertyStringLocked("mute", If(_isMuted, "yes", "no"))
-
-            ' Klick aufs Video toggelt Wiedergabe/Pause: Das Video sitzt in
-            ' einem NativeControlHost - Avalonia-Pointer-Events erreichen es NIE, das native
-            ' mpv-Fenster schluckt sie. Deshalb bindet mpv selbst die linke Maustaste; alle uebrigen
-            ' Default-Bindings bleiben aus (input-default-bindings=no). Der Pause-Status fliesst
-            ' ueber die bestehende pause-Observation zurueck in die Oberflaeche (Play-Knopf folgt).
-            CommandLocked("keybind", "MBTN_LEFT", "cycle pause")
 
             _eventThread = New Thread(AddressOf EventLoop) With {
                 .IsBackground = True,
@@ -315,6 +477,12 @@ Namespace Services
             End Using
         End Sub
 
+        Private Function TrySetOptionStringLocked(name As String, value As String) As Boolean
+            Using namePtr = New Utf8String(name), valuePtr = New Utf8String(value)
+                Return MpvInterop.SetOptionString(_handle, namePtr.Pointer, valuePtr.Pointer) >= 0
+            End Using
+        End Function
+
         Private Sub SetPropertyStringLocked(name As String, value As String)
             Using namePtr = New Utf8String(name), valuePtr = New Utf8String(value)
                 MpvInterop.SetPropertyString(_handle, namePtr.Pointer, valuePtr.Pointer)
@@ -326,20 +494,35 @@ Namespace Services
             SetPropertyStringLocked("pause", If(value, "yes", "no"))
         End Sub
 
-        Private Shared Function WindowHandleToUnsignedString(handle As IntPtr) As String
-            If OperatingSystem.IsLinux() Then
-                Return CUInt(handle.ToInt64() And &HFFFFFFFFL).ToString(CultureInfo.InvariantCulture)
-            End If
-
-            If IntPtr.Size <= 4 Then
-                Return CUInt(handle.ToInt32()).ToString(CultureInfo.InvariantCulture)
-            End If
-
-            Dim bytes = BitConverter.GetBytes(handle.ToInt64())
-            Return BitConverter.ToUInt64(bytes, 0).ToString(CultureInfo.InvariantCulture)
-        End Function
-
         Public Sub Dispose() Implements IDisposable.Dispose
+            Dim requestRender As Action
+            Dim canDisposeNow As Boolean
+            SyncLock _syncRoot
+                If _disposeRequested Then Return
+                _disposeRequested = True
+                requestRender = _requestRender
+                canDisposeNow = _renderContext = IntPtr.Zero
+            End SyncLock
+
+            If requestRender IsNot Nothing Then
+                Try
+                    requestRender()
+                Catch
+                End Try
+            End If
+            If canDisposeNow Then QueueDispose()
+        End Sub
+
+        Private Sub QueueDispose()
+            SyncLock _commandQueueLock
+                If _disposeQueued Then Return
+                _disposeQueued = True
+                _commandQueue.Add(AddressOf DisposeCore)
+                _commandQueue.CompleteAdding()
+            End SyncLock
+        End Sub
+
+        Private Sub DisposeCore()
             Dim handleToDestroy As IntPtr = IntPtr.Zero
             Dim eventThread As Thread = Nothing
 

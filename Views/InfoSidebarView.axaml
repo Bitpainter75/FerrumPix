@@ -6,7 +6,7 @@
 
     <!-- Gemeinsame Info-Seitenleiste (Allgemein/EXIF/IPTC/XMP) für Viewer, Editor und Galerie -
          alle drei stellen dieselben Property-/Command-Namen bereit (ExifInfo, Tags, HistogramImage,
-         IsInfoTab*, ToggleFavoriteCommand, SetRatingCommand, SetColorLabelCommand, AddTagCommand,
+         IsInfoTab*, ShowHistogram, ToggleFavoriteCommand, SetRatingCommand, SetColorLabelCommand, AddTagCommand,
          RemoveTagCommand, Rating, IsFavorite, ColorLabel/IsColorLabel*, IsInfoSidebarVisible),
          daher genügt ein einziges, DataContext-loses UserControl statt der zuvor doppelt
          gepflegten Markup-Kopie in ViewerView/EditorView. Viewer und Editor tragen den Zustand
@@ -117,18 +117,17 @@
                             </Grid>
                         </StackPanel>
 
-                        <!-- Die Trennlinien gehoeren zu den Bloecken, die sie abgrenzen: sonst
-                             stehen bei ausgeblendetem Histogramm zwei uebereinander. -->
-                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"
-                                IsVisible="{Binding IsSingleImage}"/>
+                        <StackPanel Spacing="18" IsVisible="{Binding ShowHistogram}">
+                            <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
 
-                        <StackPanel Spacing="10" IsVisible="{Binding IsSingleImage}">
-                            <TextBlock Text="Histogramm" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
-                            <Border Height="92" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
-                                <Image Source="{Binding HistogramImage}"
-                                       Stretch="Fill"
-                                       RenderOptions.BitmapInterpolationMode="LowQuality"/>
-                            </Border>
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Histogramm" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                                <Border Height="92" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
+                                    <Image Source="{Binding HistogramImage}"
+                                           Stretch="Fill"
+                                           RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                                </Border>
+                            </StackPanel>
                         </StackPanel>
 
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>

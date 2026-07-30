@@ -998,8 +998,8 @@ Namespace Views
                 ResetFullscreenVideoControlsVisibility()
             End If
 
-            ' ShowVideoSurface kippt beim Videoende (Fläche verschwindet) und beim erneuten Abspielen
-            ' (Fläche kommt zurück) - im zweiten Fall muss der Player an das neu erzeugte native Fenster.
+            ' ShowVideoSurface changes at video end and again when playback restarts,
+            ' so the player must be assigned to the OpenGL control again.
             If e.PropertyName = NameOf(ViewerViewModel.IsVideoFile) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ShowVideoSurface) Then
                 UpdateActiveVideoView()
@@ -1103,11 +1103,9 @@ Namespace Views
             bar.IsVisible = available AndAlso visibleInMode
         End Sub
 
-        ''' Positioniert das einzige VideoOverlay-Grid je nach Vollbild-Status: im Fenstermodus
-        ''' auf die Content-Zelle (Grid.Row=1/Column=0) mit demselben 88/0/80/0-Rand wie das
-        ''' Bild, im Vollbildmodus über das gesamte Fenster (RowSpan=3/ColumnSpan=2, randlos) -
-        ''' rein per Layout, ohne das VideoView selbst je ab- und wieder anzuhängen. Dadurch
-        ''' bleibt sein natives Fenster-Handle über Vollbild-Wechsel hinweg unangetastet.
+        ''' Positions the single video overlay for windowed or fullscreen display.
+        ''' Layout changes move the same control without detaching it, preserving
+        ''' the OpenGL context across fullscreen transitions.
         Private Sub ApplyVideoLayout()
             Dim vm = GetVm()
             Dim overlay = Me.FindControl(Of Grid)("VideoOverlay")
@@ -1128,10 +1126,9 @@ Namespace Views
             End If
         End Sub
 
-        ''' Weist den von ViewerViewModel gehaltenen MediaPlayer dem einzigen VideoOverlay zu
-        ''' (bzw. leert es), wenn sich IsVideoFile ändert - der Vollbild-Wechsel selbst löst dies
-        ''' NICHT mehr aus (siehe ApplyVideoLayout), wodurch das native Fenster-Handle über
-        ''' Vollbild-Wechsel und Video-zu-Video-Navigation hinweg bestehen bleibt.
+        ''' Assigns the ViewerViewModel player to the single video overlay, or clears it,
+        ''' when the active media changes. Fullscreen transitions only move the overlay,
+        ''' allowing the OpenGL context to survive fullscreen and video navigation.
         Private _pendingVideoAttachHandler As EventHandler
 
         Private Sub UpdateActiveVideoView()
@@ -1153,13 +1150,9 @@ Namespace Views
             AttachVideoPlayer(videoView, vm.VideoMediaPlayer, vm)
         End Sub
 
-        ''' Das native Fenster-Handle eines MpvVideoView-Controls entsteht erst, sobald für es
-        ''' tatsächlich ein Layout-Durchlauf stattgefunden hat (insbesondere direkt nachdem sein
-        ''' Container durch einen Sichtbarkeits-Wechsel gerade erst sichtbar wurde). MediaPlayer
-        ''' vorher zuzuweisen kann "ins Leere" binden (Ton läuft weiter, kein Bild) oder mpv
-        ''' dazu bringen, mangels Ausgabeziel kurz ein eigenes Fenster zu erzeugen. Statt einer
-        ''' geschätzten Dispatcher-Verzögerung wird hier direkt auf LayoutUpdated gewartet, bis
-        ''' das Control tatsächlich eine reale Größe hat.
+        ''' The OpenGL renderer is created after the first layout pass. Assign the
+        ''' player only once the control has a real size so libmpv receives a valid
+        ''' framebuffer from the first frame.
         Private Sub AttachVideoPlayer(target As MpvVideoView, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
             If target.Bounds.Width > 0 AndAlso target.Bounds.Height > 0 Then
                 target.Player = mediaPlayer

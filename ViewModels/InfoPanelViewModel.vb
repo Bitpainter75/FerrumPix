@@ -180,7 +180,7 @@ Namespace ViewModels
 
         ''' <summary>Alles melden, was von Auswahl und Betriebsart abhaengt.</summary>
         Private Sub RaiseStateChanged()
-            For Each propertyName In {NameOf(IsSummary), NameOf(IsSingleImage), NameOf(HasInfoContent),
+            For Each propertyName In {NameOf(IsSummary), NameOf(IsSingleImage), NameOf(ShowHistogram), NameOf(HasInfoContent),
                                       NameOf(Name), NameOf(IsInfoTabGeneral), NameOf(IsInfoTabExif),
                                       NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc)}
                 Me.RaisePropertyChanged(propertyName)
@@ -198,6 +198,16 @@ Namespace ViewModels
         Public ReadOnly Property IsSingleImage As Boolean
             Get
                 Return Not _isSummary AndAlso Not String.IsNullOrEmpty(_path)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowHistogram As Boolean
+            Get
+                If Not IsSingleImage Then Return False
+                Dim mediaName = If(_item?.ImmichOriginalFileName, "")
+                If String.IsNullOrEmpty(mediaName) Then mediaName = If(_item?.FileName, "")
+                If String.IsNullOrEmpty(mediaName) Then mediaName = _path
+                Return Not VideoPreviewService.IsSupportedVideo(mediaName)
             End Get
         End Property
 

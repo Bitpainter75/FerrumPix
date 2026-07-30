@@ -25,6 +25,12 @@ Module Program
             UsePlatformDetect().
             UseReactiveUI(AddressOf ConfigureReactiveUI).
             LogToTrace().
+            With(New AvaloniaNativePlatformOptions With {
+                .RenderingMode = New AvaloniaNativeRenderingMode() {
+                    AvaloniaNativeRenderingMode.OpenGl,
+                    AvaloniaNativeRenderingMode.Software
+                }
+            }).
             With(New X11PlatformOptions With {.UseDBusMenu = False})
     End Function
 

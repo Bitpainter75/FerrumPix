@@ -694,6 +694,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ShowHistogram As Boolean
+            Get
+                Return Not IsVideoFile
+            End Get
+        End Property
+
         ''' Ob die Inline-Videowiedergabe im Viewer verfügbar ist. Für den Viewer wird libmpv
         ''' verwendet; fehlt die Bibliothek, zeigt die View stattdessen einen Hinweis.
         Public ReadOnly Property IsVideoPlaybackAvailable As Boolean
@@ -1068,6 +1074,7 @@ Namespace ViewModels
                 LoadInfoPanelData(_currentImagePath, preserveExistingTags:=True)
                 Me.RaisePropertyChanged(NameOf(IsRawFile))
                 Me.RaisePropertyChanged(NameOf(IsVideoFile))
+                Me.RaisePropertyChanged(NameOf(ShowHistogram))
                 Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
                 Me.RaisePropertyChanged(NameOf(HasNoMedia))
                 Me.RaisePropertyChanged(NameOf(CanEdit))
@@ -1704,6 +1711,7 @@ Namespace ViewModels
             UebernehmeKatalogAttribute(imagePath)
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
+            Me.RaisePropertyChanged(NameOf(ShowHistogram))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
             Me.RaisePropertyChanged(NameOf(HasNoMedia))
             Me.RaisePropertyChanged(NameOf(CanEdit))
@@ -1727,6 +1735,7 @@ Namespace ViewModels
             LoadInfoPanelData(_currentImagePath)
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
+            Me.RaisePropertyChanged(NameOf(ShowHistogram))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
             Me.RaisePropertyChanged(NameOf(HasNoMedia))
             Me.RaisePropertyChanged(NameOf(CanEdit))
@@ -1982,6 +1991,7 @@ Namespace ViewModels
             Try
                 _mediaPlayer?.LoadPending()
                 _mediaPlayer?.Play()
+                IsVideoPlaying = True
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.StartPendingVideoAutoplay", ex)
             End Try
@@ -2024,7 +2034,13 @@ Namespace ViewModels
                 Return
             End If
 
-            _mediaPlayer.TogglePause()
+            If IsVideoPlaying Then
+                _mediaPlayer.Pause()
+                IsVideoPlaying = False
+            Else
+                _mediaPlayer.Play()
+                IsVideoPlaying = True
+            End If
         End Sub
 
         Private Sub SeekVideo(seconds As Double)
@@ -2072,6 +2088,10 @@ Namespace ViewModels
 
         Private Sub OnVideoEndReached(reason As Integer, [error] As Integer)
             Dispatcher.UIThread.Post(Sub()
+                                          ' Navigation and reload intentionally issue Stop, whose event can
+                                          ' arrive after the next file starts. The caller has already updated
+                                          ' the UI state, so a late Stop must not mark new playback as paused.
+                                          If reason = CInt(MpvInterop.MpvEndFileReason.Stop) Then Return
                                           If reason <> CInt(MpvInterop.MpvEndFileReason.Eof) Then
                                               IsVideoPlaying = False
                                               Return
@@ -2567,6 +2587,7 @@ Namespace ViewModels
             UebernehmeKatalogAttribute(_currentImagePath)
             Me.RaisePropertyChanged(NameOf(IsRawFile))
             Me.RaisePropertyChanged(NameOf(IsVideoFile))
+            Me.RaisePropertyChanged(NameOf(ShowHistogram))
             Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
             Me.RaisePropertyChanged(NameOf(HasNoMedia))
             Me.RaisePropertyChanged(NameOf(CanEdit))

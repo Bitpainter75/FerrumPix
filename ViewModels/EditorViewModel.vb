@@ -13959,6 +13959,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ShowHistogram As Boolean
+            Get
+                Return True
+            End Get
+        End Property
+
         Public ReadOnly Property InfoPlaceholderText As String
             Get
                 Return ""
