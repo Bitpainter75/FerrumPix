@@ -208,7 +208,7 @@
                                        MinHeight="34"/>
 
                         <TextBlock Grid.Row="7"
-                                   Text="Columns"
+                                   Text="Spalten"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
                         <icons:SliderValueUpDown Grid.Row="7"

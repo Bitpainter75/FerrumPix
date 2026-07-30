@@ -77,7 +77,7 @@
                 <CheckBox Content="Seitenverhältnis beibehalten"
                           IsChecked="{Binding DialogBatchResizeLockAspect}" FontSize="{DynamicResource FP.Font.Small}"
                           IsEnabled="{Binding IsDialogBatchResizeLockAspectEnabled}"
-                          ToolTip.Tip="Jedes Bild behält sein eigenes Seitenverhältnis: ein einzelner Wert begrenzt die längste Kante, zwei Values sind der Kasten, in den eingepasst wird. Ohne Haken werden die Bilder exakt auf Breite × Höhe gestreckt." />
+                          ToolTip.Tip="Jedes Bild behält sein eigenes Seitenverhältnis: ein einzelner Wert begrenzt die längste Kante, zwei Werte sind der Kasten, in den eingepasst wird. Ohne Haken werden die Bilder exakt auf Breite × Höhe gestreckt." />
                 <CheckBox Content="Nicht vergrößern"
                           IsChecked="{Binding DialogBatchResizeNoUpscale}" FontSize="{DynamicResource FP.Font.Small}"
                           ToolTip.Tip="Bilder, die bereits kleiner als die Zielgröße sind, bleiben unverändert - sonst würden sie hochgerechnet und täuschten Auflösung vor." />

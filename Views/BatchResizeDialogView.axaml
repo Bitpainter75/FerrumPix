@@ -15,7 +15,7 @@
                   IsVisible="{Binding IsDialogBatchOverwriteAvailable}"
                   IsChecked="{Binding DialogBatchResizeOverwrite, Mode=TwoWay}"
                   FontSize="{DynamicResource FP.Font.Small}"
-                  ToolTip.Tip="Schreibt die neue Größe direkt in die Bilddateien. Ohne Haken entstehen neue Files mit Formatauswahl und die Originale bleiben unangetastet."/>
+                  ToolTip.Tip="Schreibt die neue Größe direkt in die Bilddateien. Ohne Haken entstehen neue Dateien mit Formatauswahl und die Originale bleiben unangetastet."/>
 
     </StackPanel>
 </UserControl>

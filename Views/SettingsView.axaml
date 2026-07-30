@@ -257,7 +257,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Papierkorb überspringen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Löscht Files und Ordner dauerhaft, statt sie in den Papierkorb zu verschieben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Löscht Dateien und Ordner dauerhaft, statt sie in den Papierkorb zu verschieben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding DeleteSkipTrash}"
@@ -269,7 +269,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Sicherheitsabfrage beim Löschen überspringen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Löscht Files und Ordner ohne vorherige Bestätigung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Löscht Dateien und Ordner ohne vorherige Bestätigung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding DeleteSkipConfirmation}"
@@ -910,7 +910,7 @@
                         <StackPanel Spacing="8">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Sichtbare Anpassungsgruppen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt fest, welche Gruppen im Anpassungsbereich des Editors erscheinen. Ausblenden ändert nur die Anzeige: eingestellte Values bleiben erhalten und wirken weiter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Legt fest, welche Gruppen im Anpassungsbereich des Editors erscheinen. Ausblenden ändert nur die Anzeige: eingestellte Werte bleiben erhalten und wirken weiter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ItemsControl ItemsSource="{Binding AdjustmentGroupItems}" HorizontalAlignment="Stretch">
                                 <ItemsControl.ItemsPanel>
@@ -1064,7 +1064,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Fehlende XMP-Sidecars anlegen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt beim Synchronisieren auch neue .xmp-Files an, wenn noch keine existiert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Legt beim Synchronisieren auch neue .xmp-Dateien an, wenn noch keine existiert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding CreateXmpSidecarIfMissing}"
@@ -1124,7 +1124,7 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="RAW-Entwicklung" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Wie RAW-Files entwickelt und in Galerie, Betrachter und Editor angezeigt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Wie RAW-Dateien entwickelt und in Galerie, Betrachter und Editor angezeigt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -1165,7 +1165,7 @@
                         <Grid ColumnDefinitions="*,Auto" Margin="0,12,0,0">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Grundhelligkeit an das Kameramodell anpassen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="RAW-Files verschiedener Kameras kommen unterschiedlich hell aus dem Sensor. Eingeschaltet gleicht FerrumPix das anhand von Referenzwerten für über 200 Kameramodelle an, damit dieselbe Aufnahme mit verschiedenen Kameras gleich hell entwickelt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Text="RAW-Dateien verschiedener Kameras kommen unterschiedlich hell aus dem Sensor. Eingeschaltet gleicht FerrumPix das anhand von Referenzwerten für über 200 Kameramodelle an, damit dieselbe Aufnahme mit verschiedenen Kameras gleich hell entwickelt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding UseCameraBaselineTable}"
@@ -1176,7 +1176,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Objektivfehler korrigieren" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Gleicht Distortion, Farbsäume an den Bildecken und Randabdunklung anhand von Messwerten für das verwendete Objektiv aus. Objektiv und Kamera werden aus den Aufnahmedaten erkannt; liegen für das Objektiv keine Messwerte vor, bleibt das Bild unverändert. Diese Vorgabe lässt sich pro Bild im Werkzeug übersteuern." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Gleicht Verzeichnung, Farbsäume an den Bildecken und Randabdunklung anhand von Messwerten für das verwendete Objektiv aus. Objektiv und Kamera werden aus den Aufnahmedaten erkannt; liegen für das Objektiv keine Messwerte vor, bleibt das Bild unverändert. Diese Vorgabe lässt sich pro Bild im Werkzeug übersteuern." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                                 <TextBlock Text="{Binding LensDatabaseInfo}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
@@ -1374,7 +1374,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Vorschaubild-Speichercache" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Wie viele Vorschaubilder maximal gleichzeitig im Arbeitsspeicher gehalten werden. Höhere Values verringern erneutes Laden beim Scrollen, benötigen aber mehr Arbeitsspeicher." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Wie viele Vorschaubilder maximal gleichzeitig im Arbeitsspeicher gehalten werden. Höhere Werte verringern erneutes Laden beim Scrollen, benötigen aber mehr Arbeitsspeicher." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
@@ -2010,7 +2010,7 @@
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="BitMiracle.LibTiff.NET 2.4" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="TIFF-Files lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="TIFF-Dateien lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/BitMiracle/libtiff.net" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
@@ -2058,7 +2058,7 @@
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="LibRaw" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="RAW-Files entwickeln" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="RAW-Dateien entwickeln" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/LibRaw/LibRaw" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
@@ -2131,7 +2131,7 @@
                         </StackPanel>
 
                         <TextBlock Text="LibRaw und libmpv stehen unter der LGPL: sie werden unverändert und dynamisch geladen eingebunden und können durch eigene Übersetzungen derselben Version ersetzt werden. Die Lizenztexte und Herkunftsnachweise liegen im Ordner licenses neben der Anwendung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
-                        <TextBlock Text="libheif wird bewusst NICHT mitgeliefert, sondern nur vom System geladen: HEIC-Files sind meist HEVC-kodiert, und die Entscheidung über einen HEVC-Dekoder trifft die Distribution. Fehlt libheif, bleiben HEIC/AVIF-Files einfach ungeöffnet - alles andere arbeitet unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                        <TextBlock Text="libheif wird bewusst NICHT mitgeliefert, sondern nur vom System geladen: HEIC-Dateien sind meist HEVC-kodiert, und die Entscheidung über einen HEVC-Dekoder trifft die Distribution. Fehlt libheif, bleiben HEIC/AVIF-Dateien einfach ungeöffnet - alles andere arbeitet unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 

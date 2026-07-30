@@ -67,7 +67,7 @@
                             <CheckBox Content="Originale überschreiben"
                                       IsVisible="{Binding IsDialogBatchOverwriteAvailable}"
                                       IsChecked="{Binding DialogBatchWatermarkOverwrite, Mode=TwoWay}"
-                                      ToolTip.Tip="Schreibt das Wasserzeichen direkt in die Bilddateien. Ohne Haken entstehen neue Files und die Originale bleiben unangetastet."/>
+                                      ToolTip.Tip="Schreibt das Wasserzeichen direkt in die Bilddateien. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
                         </StackPanel>
 
                         <views:BatchFilterDialogView Grid.Row="3"
