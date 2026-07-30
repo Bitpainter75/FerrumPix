@@ -103,7 +103,7 @@ Namespace Views
             ElseIf e.Key = Key.Delete Then
                 e.Handled = True
                 TryCast(DataContext, EditorViewModel)?.DeleteSelectedAnnotationCommand.Execute(Nothing)
-            ElseIf e.Key = Key.D AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+            ElseIf e.Key = Key.D AndAlso PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then
                 e.Handled = True
                 TryCast(DataContext, EditorViewModel)?.DuplicateSelectedAnnotationCommand.Execute(Nothing)
             End If
@@ -150,10 +150,18 @@ Namespace Views
             Dim items As New List(Of Control)()
             Dim mehrere = vm.SelectedAnnotationCount > 1 OrElse vm.SelectedAdjustmentLayers.Count > 1
             If vm.CanGroupSelectedAnnotations Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Objekte gruppieren (Strg+G)"), "folder", vm.GroupSelectedAnnotationsCommand))
+                Dim text = LocalizationService.T("Objekte gruppieren (Strg+G)")
+                items.Add(MakeLayerMenuItem(
+                    PlatformShortcutService.FormatShortcutInLabel(
+                        text, PlatformShortcutService.FormatPrimaryShortcut("G")),
+                    "folder", vm.GroupSelectedAnnotationsCommand))
             End If
             If vm.CanUngroupSelectedAnnotations Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Gruppierung aufheben (Strg+Umschalt+G)"), "folder-x", vm.UngroupSelectedAnnotationsCommand))
+                Dim text = LocalizationService.T("Gruppierung aufheben (Strg+Umschalt+G)")
+                items.Add(MakeLayerMenuItem(
+                    PlatformShortcutService.FormatShortcutInLabel(
+                        text, PlatformShortcutService.FormatPrimaryShortcut("G", includeShift:=True)),
+                    "folder-x", vm.UngroupSelectedAnnotationsCommand))
             End If
             If items.Count > 0 Then items.Add(New Separator())
             If Not mehrere Then
@@ -163,7 +171,11 @@ Namespace Views
             If mehrere Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Objekte duplizieren"), "copy", vm.DuplicateSelectedAnnotationsCommand))
             Else
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene duplizieren (Strg+D)"), "copy", vm.DuplicateSelectedAnnotationCommand))
+                Dim text = LocalizationService.T("Ebene duplizieren (Strg+D)")
+                items.Add(MakeLayerMenuItem(
+                    PlatformShortcutService.FormatShortcutInLabel(
+                        text, PlatformShortcutService.FormatPrimaryShortcut("D")),
+                    "copy", vm.DuplicateSelectedAnnotationCommand))
             End If
             If vm.HasSelectedAdjustmentLayer Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Neue Korrektur mit derselben Maske"), "adjustments-plus", vm.AddAdjustmentWithSameMaskCommand))
@@ -304,7 +316,8 @@ Namespace Views
             ' Strg+Klick nimmt eine Objektebene zur Auswahl hinzu bzw. heraus. Das Ereignis wird dabei
             ' verbraucht: die ListBox ist einfach-auswählend und würde die Menge sonst sofort wieder
             ' auf diese eine Zeile eindampfen.
-            Dim mehrfach = e.KeyModifiers.HasFlag(KeyModifiers.Control) OrElse e.KeyModifiers.HasFlag(KeyModifiers.Shift)
+            Dim mehrfach = PlatformShortcutService.HasSelectionModifier(e.KeyModifiers) OrElse
+                           e.KeyModifiers.HasFlag(KeyModifiers.Shift)
             If mehrfach AndAlso row IsNot Nothing AndAlso (row.Annotation IsNot Nothing OrElse row.AdjustmentLayer IsNot Nothing) Then
                 Dim vm = TryCast(DataContext, EditorViewModel)
                 If vm IsNot Nothing Then

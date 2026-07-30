@@ -11,17 +11,24 @@
         WindowStartupLocation="Manual"
         Background="Transparent">
 
-    <Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource FP.Bg.Root}">
+    <Border x:Name="WindowFrame"
+            CornerRadius="8"
+            ClipToBounds="True"
+            Background="{DynamicResource FP.Bg.Root}">
         <Grid>
             <Grid x:Name="TitleBar"
                   RowDefinitions="Auto,*"
                   IsHitTestVisible="{Binding IsAppContentHitTestVisible}">
                 <!-- window-drag: hier (und nur in den Fusszeilen der Modus-Views) laesst sich das
                      Fenster verschieben - siehe MainWindow.IsInWindowDragArea. -->
-                <Border Grid.Row="0" Classes="toolbar window-drag" Height="50"
+                <Border x:Name="TopWindowDragArea"
+                        Grid.Row="0"
+                        Classes="toolbar window-drag"
+                        Height="50"
                         IsVisible="{Binding IsWindowChromeVisible}">
                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-                        <StackPanel Grid.Column="0"
+                        <StackPanel x:Name="WindowLogoPanel"
+                                    Grid.Column="0"
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center"
                                     Margin="18,0,0,0"
@@ -54,23 +61,26 @@
                  immer davor liegen statt dahinter zu verschwinden. -->
             <views:PrintDialogOverlayView x:Name="PrintDialogOverlay" ZIndex="499"/>
 
-            <StackPanel Orientation="Horizontal"
-                        Spacing="7"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Margin="0,8,8,0"
-                        IsHitTestVisible="{Binding IsAppContentHitTestVisible}"
-                        IsVisible="{Binding IsWindowChromeVisible}">
-                <Button Classes="wnd-btn" x:Name="MinimizeButton" ToolTip.Tip="Minimieren">
-                    <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Medium}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Button>
-                <Button Classes="wnd-btn" x:Name="MaximizeButton" ToolTip.Tip="Maximieren">
-                    <TextBlock x:Name="MaximizeGlyph" Text="□" FontSize="{DynamicResource FP.Glyph.Small}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Button>
-                <Button Classes="wnd-close" x:Name="CloseButton" ToolTip.Tip="Schließen">
-                    <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.XLarge}" Margin="0,-2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Button>
-            </StackPanel>
+            <Border x:Name="CustomWindowControlsHost"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,8,8,0">
+                <StackPanel x:Name="CustomWindowControls"
+                            Orientation="Horizontal"
+                            Spacing="7"
+                            IsHitTestVisible="{Binding IsAppContentHitTestVisible}"
+                            IsVisible="{Binding IsWindowChromeVisible}">
+                    <Button Classes="wnd-btn" x:Name="MinimizeButton" ToolTip.Tip="Minimieren">
+                        <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Medium}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button Classes="wnd-btn" x:Name="MaximizeButton" ToolTip.Tip="Maximieren">
+                        <TextBlock x:Name="MaximizeGlyph" Text="□" FontSize="{DynamicResource FP.Glyph.Small}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button Classes="wnd-close" x:Name="CloseButton" ToolTip.Tip="Schließen">
+                        <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.XLarge}" Margin="0,-2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+            </Border>
 
             <Border x:Name="ResizeTop" Height="5" Background="Transparent"
                     HorizontalAlignment="Stretch" VerticalAlignment="Top"

@@ -191,7 +191,25 @@ Namespace Views
                 NoteFullscreenVideoControlsActivity()
             End If
 
-            If e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+            If PlatformShortcutService.IsMacOS AndAlso
+               PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then
+                Select Case e.Key
+                    Case Key.R
+                        If e.KeyModifiers.HasFlag(KeyModifiers.Alt) Then
+                            vm.RotateRightCommand.Execute(Nothing)
+                        Else
+                            vm.RotateLeftCommand.Execute(Nothing)
+                        End If
+                        e.Handled = True
+                        Return
+                    Case Key.I
+                        vm.ToggleInfoSidebarCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
+                End Select
+            End If
+
+            If PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) Then
                 Select Case e.Key
                     Case Key.Left
                         ' Drehen liegt auf Strg+Pfeil (in Betrachter und Editor gleich),
