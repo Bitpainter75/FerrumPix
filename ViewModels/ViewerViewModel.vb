@@ -1912,6 +1912,11 @@ Namespace ViewModels
                               Nothing)
                 End Using
             End If
+            If HeifDecodeService.IsSupportedHeif(path) Then
+                Using preview = HeifDecodeService.ExtractPreview(path)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                End Using
+            End If
             If FpxService.IsFpx(path) Then
                 Using preview = FpxService.ExtractComposite(path)
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)

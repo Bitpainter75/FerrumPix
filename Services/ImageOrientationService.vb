@@ -377,6 +377,11 @@ Namespace Services
                     Return LoadOrientedAvaloniaBitmap(stream, psdRotation)
                 End Using
             End If
+            If HeifDecodeService.IsSupportedHeif(filePath) Then
+                Using stream = HeifDecodeService.ExtractPreview(filePath)
+                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
+                End Using
+            End If
             Return LoadOrientedAvaloniaBitmap(filePath)
         End Function
 

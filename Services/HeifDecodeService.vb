@@ -1,30 +1,28 @@
 Imports System
 Imports System.IO
+Imports System.Linq
 Imports System.Runtime.InteropServices
 Imports SkiaSharp
 
 Namespace Services
 
     ''' <summary>
-    ''' Liest HEIC/HEIF (und AVIF, sofern die Bibliothek den Codec mitbringt) über libheif -
-    ''' SkiaSharp kann beides nicht. Damit lassen sich iPhone-Fotos direkt ansehen und bearbeiten,
-    ''' statt sie vorher umwandeln zu müssen; geschrieben wird HEIC bewusst NICHT (siehe unten).
+    ''' Reads HEIC/HEIF and AVIF without teaching callers which platform decoder is available.
+    ''' macOS uses the built-in ImageIO frameworks. Other platforms retain the optional system
+    ''' libheif loader, so FerrumPix does not distribute an HEVC decoder or change codec policy.
     '''
-    ''' Geladen wird dynamisch über NativeLibrary.Load + Delegates, genau wie bei LibRaw: der
-    ''' DllImport-Resolver der Assembly ist bereits belegt (nur EINER erlaubt), und so bleibt die
-    ''' Verfügbarkeit sauber prüfbar. Fehlt libheif, meldet IsAvailable False und ALLES läuft wie
-    ''' bisher - HEIC-Dateien erscheinen dann einfach nicht als Bild, kein Absturz.
+    ''' The non-macOS backend loads libheif dynamically through NativeLibrary and delegates. The
+    ''' assembly already has a DllImport resolver, and only one can be registered, while explicit
+    ''' loading also keeps decoder availability testable and optional.
     '''
-    ''' NUR die Bibliothek des SYSTEMS, bewusst ohne mitgelieferten Rückfall (anders als LibRaw):
-    ''' HEIC-Dateien sind in aller Regel HEVC-kodiert, und für HEVC bestehen Patentansprüche.
-    ''' Die Entscheidung, einen HEVC-Dekoder auszuliefern, trifft damit die Distribution
-    ''' (Arch/Debian/Fedora liefern libheif+libde265 in ihren Paketquellen), nicht FerrumPix.
-    ''' Lizenzseitig ist alles unkritisch: libheif und libde265 stehen unter der LGPL-3 und werden
-    ''' unverändert dynamisch geladen - dieselbe Konstruktion wie bei LibRaw und libmpv.
+    ''' Only the system libheif is considered; there is deliberately no bundled fallback. HEIF
+    ''' images commonly use HEVC, so the decision to provide an HEVC decoder remains with the
+    ''' operating system or distribution rather than FerrumPix. The library is used unmodified
+    ''' and dynamically, following the same replaceable-system-library model as LibRaw and libmpv.
     '''
-    ''' NUR LESEN: einen Encoder gibt es hier nicht. Bearbeitete HEIC-Dateien werden wie PSD als
-    ''' neue Datei in einem schreibbaren Format gespeichert (ImageProcessor.CanEncodeToTargetExtension
-    ''' weist ein HEIC-Ziel ab), damit keine Datei still unter falscher Endung landet.
+    ''' This module is intentionally read-only. Edited HEIF files are saved to an encodable format
+    ''' instead of writing different data under the original extension. ImageProcessor rejects a
+    ''' HEIF target so an edited image can never be silently written with mismatched file contents.
     ''' </summary>
     Public NotInheritable Class HeifDecodeService
 
@@ -81,17 +79,21 @@ Namespace Services
         Private Shared _handleRelease As ReleaseFn
         Private Shared _imageRelease As ReleaseFn
 
-        ''' <summary>True, wenn libheif geladen werden konnte (Ergebnis wird gecacht).</summary>
+        ''' <summary>True when the platform ImageIO or optional libheif decoder is available.</summary>
         Public Shared ReadOnly Property IsAvailable As Boolean
             Get
+                If OperatingSystem.IsMacOS() Then
+                    Return CoreFoundationHandle <> IntPtr.Zero AndAlso ImageIoHandle <> IntPtr.Zero
+                End If
                 EnsureLoaded()
                 Return _library <> IntPtr.Zero
             End Get
         End Property
 
-        ''' <summary>Welche libheif-Variante geladen wurde - für die Diagnose und Feldberichte.</summary>
+        ''' <summary>The active platform decoder name, for diagnostics and field reports.</summary>
         Public Shared ReadOnly Property LoadedLibraryName As String
             Get
+                If OperatingSystem.IsMacOS() AndAlso IsAvailable Then Return "ImageIO"
                 EnsureLoaded()
                 Return If(_loadedLibrary, "")
             End Get
@@ -165,12 +167,17 @@ Namespace Services
             Return Marshal.GetDelegateForFunctionPointer(Of T)(NativeLibrary.GetExport(handle, name))
         End Function
 
-        ''' <summary>Dekodiert die Hauptaufnahme der Datei als Bgra8888 (Besitz beim Aufrufer) oder
-        ''' Nothing. Drehung/Spiegelung aus dem Container wendet libheif selbst an (die
-        ''' Standard-Dekodieroptionen lassen Transformationen nicht aus) - es braucht also KEINE
-        ''' zusätzliche Orientierungskorrektur, anders als beim eingebetteten RAW-Vorschaubild.</summary>
+        ''' <summary>Decodes the oriented primary image as caller-owned Bgra8888 pixels.
+        ''' ImageIO applies the container transform through kCGImageSourceCreateThumbnailWithTransform;
+        ''' libheif applies the container transformations through its default decoding options.
+        ''' Callers must therefore not apply an additional orientation correction.</summary>
         Public Shared Function TryDecode(path As String) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If OperatingSystem.IsMacOS() Then
+                Using preview = ExtractWithMacImageIo(path)
+                    Return If(preview IsNot Nothing, SKBitmap.Decode(preview), Nothing)
+                End Using
+            End If
             SyncLock _nativeLock
                 Return DecodeCore(path)
             End SyncLock
@@ -242,6 +249,9 @@ Namespace Services
         ''' <summary>Die Datei als PNG-Strom - das ist die Form, die OpenSourceStream und die
         ''' Thumbnail-Erzeugung erwarten (gleiches Muster wie PSD/ICO).</summary>
         Public Shared Function ExtractPreview(path As String) As MemoryStream
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If OperatingSystem.IsMacOS() Then Return ExtractWithMacImageIo(path)
+
             Using bmp = TryDecode(path)
                 If bmp Is Nothing Then Return Nothing
                 Using image = SKImage.FromBitmap(bmp)
@@ -260,6 +270,8 @@ Namespace Services
         ''' <summary>Maße ohne vollständiges Dekodieren - die Kopfdaten reichen dafür.</summary>
         Public Shared Function TryGetSize(path As String) As (Width As Integer, Height As Integer)
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return (0, 0)
+            If OperatingSystem.IsMacOS() Then Return TryGetSizeWithMacImageIo(path)
+
             SyncLock _nativeLock
                 Dim ctx As IntPtr = IntPtr.Zero
                 Dim handle As IntPtr = IntPtr.Zero
@@ -281,12 +293,257 @@ Namespace Services
             End SyncLock
         End Function
 
+        Private Shared Function TryGetSizeWithMacImageIo(path As String) As (Width As Integer, Height As Integer)
+            Dim url As IntPtr = IntPtr.Zero
+            Dim source As IntPtr = IntPtr.Zero
+            Dim properties As IntPtr = IntPtr.Zero
+            Try
+                url = CreateFileUrl(path)
+                If url = IntPtr.Zero Then Return (0, 0)
+                source = CGImageSourceCreateWithURL(url, IntPtr.Zero)
+                If source = IntPtr.Zero Then Return (0, 0)
+                properties = CGImageSourceCopyPropertiesAtIndex(source, UIntPtr.Zero, IntPtr.Zero)
+                If properties = IntPtr.Zero Then Return (0, 0)
+
+                Dim width = ReadDictionaryInteger(
+                    properties, ReadFrameworkConstant(ImageIoHandle, "kCGImagePropertyPixelWidth"))
+                Dim height = ReadDictionaryInteger(
+                    properties, ReadFrameworkConstant(ImageIoHandle, "kCGImagePropertyPixelHeight"))
+                Dim orientation = ReadDictionaryInteger(
+                    properties, ReadFrameworkConstant(ImageIoHandle, "kCGImagePropertyOrientation"))
+                If orientation >= 5 AndAlso orientation <= 8 Then
+                    Dim swap = width
+                    width = height
+                    height = swap
+                End If
+                Return (width, height)
+            Catch
+                Return (0, 0)
+            Finally
+                Release(properties)
+                Release(source)
+                Release(url)
+            End Try
+        End Function
+
+        Private Shared Function ExtractWithMacImageIo(path As String) As MemoryStream
+            Dim url As IntPtr = IntPtr.Zero
+            Dim source As IntPtr = IntPtr.Zero
+            Dim options As IntPtr = IntPtr.Zero
+            Dim maxPixelNumber As IntPtr = IntPtr.Zero
+            Dim image As IntPtr = IntPtr.Zero
+            Dim data As IntPtr = IntPtr.Zero
+            Dim pngType As IntPtr = IntPtr.Zero
+            Dim destination As IntPtr = IntPtr.Zero
+
+            Try
+                url = CreateFileUrl(path)
+                If url = IntPtr.Zero Then Return Nothing
+                source = CGImageSourceCreateWithURL(url, IntPtr.Zero)
+                If source = IntPtr.Zero Then Return Nothing
+
+                Dim maximum = Integer.MaxValue
+                maxPixelNumber = CFNumberCreate(IntPtr.Zero, CFNumberSInt32Type, maximum)
+                If maxPixelNumber = IntPtr.Zero Then Return Nothing
+
+                Dim keys = {
+                    ReadFrameworkConstant(ImageIoHandle, "kCGImageSourceCreateThumbnailFromImageAlways"),
+                    ReadFrameworkConstant(ImageIoHandle, "kCGImageSourceCreateThumbnailWithTransform"),
+                    ReadFrameworkConstant(ImageIoHandle, "kCGImageSourceThumbnailMaxPixelSize")
+                }
+                Dim values = {
+                    ReadFrameworkConstant(CoreFoundationHandle, "kCFBooleanTrue"),
+                    ReadFrameworkConstant(CoreFoundationHandle, "kCFBooleanTrue"),
+                    maxPixelNumber
+                }
+                If keys.Any(Function(value) value = IntPtr.Zero) OrElse
+                   values.Any(Function(value) value = IntPtr.Zero) Then Return Nothing
+
+                options = CFDictionaryCreate(
+                    IntPtr.Zero, keys, values, CType(keys.Length, UIntPtr), IntPtr.Zero, IntPtr.Zero)
+                If options = IntPtr.Zero Then Return Nothing
+                image = CGImageSourceCreateThumbnailAtIndex(source, UIntPtr.Zero, options)
+                If image = IntPtr.Zero Then Return Nothing
+
+                data = CFDataCreateMutable(IntPtr.Zero, UIntPtr.Zero)
+                pngType = CFStringCreateWithCString(IntPtr.Zero, "public.png", CFStringEncodingUtf8)
+                If data = IntPtr.Zero OrElse pngType = IntPtr.Zero Then Return Nothing
+                destination = CGImageDestinationCreateWithData(data, pngType, CType(1, UIntPtr), IntPtr.Zero)
+                If destination = IntPtr.Zero Then Return Nothing
+
+                CGImageDestinationAddImage(destination, image, IntPtr.Zero)
+                If CGImageDestinationFinalize(destination) = 0 Then Return Nothing
+
+                Dim length = CFDataGetLength(data)
+                Dim bytesPointer = CFDataGetBytePtr(data)
+                If length <= 0 OrElse bytesPointer = IntPtr.Zero OrElse length > Integer.MaxValue Then Return Nothing
+
+                Dim bytes(CInt(length) - 1) As Byte
+                Marshal.Copy(bytesPointer, bytes, 0, bytes.Length)
+                Return New MemoryStream(bytes, writable:=False)
+            Catch
+                Return Nothing
+            Finally
+                Release(destination)
+                Release(pngType)
+                Release(data)
+                Release(image)
+                Release(options)
+                Release(maxPixelNumber)
+                Release(source)
+                Release(url)
+            End Try
+        End Function
+
+        Private Shared Function CreateFileUrl(path As String) As IntPtr
+            Dim pathBytes = Text.Encoding.UTF8.GetBytes(path)
+            Return CFURLCreateFromFileSystemRepresentation(
+                IntPtr.Zero, pathBytes, CType(pathBytes.Length, UIntPtr), False)
+        End Function
+
+        Private Shared Function ReadDictionaryInteger(dictionary As IntPtr, key As IntPtr) As Integer
+            If dictionary = IntPtr.Zero OrElse key = IntPtr.Zero Then Return 0
+            Dim number = CFDictionaryGetValue(dictionary, key)
+            If number = IntPtr.Zero Then Return 0
+            Dim value As Integer
+            Return If(CFNumberGetValue(number, CFNumberSInt32Type, value) <> 0, value, 0)
+        End Function
+
+        Private Shared Function ReadFrameworkConstant(handle As IntPtr, name As String) As IntPtr
+            If handle = IntPtr.Zero Then Return IntPtr.Zero
+            Dim symbol As IntPtr
+            If Not NativeLibrary.TryGetExport(handle, name, symbol) Then Return IntPtr.Zero
+            Return Marshal.ReadIntPtr(symbol)
+        End Function
+
+        Private Shared Function LoadFrameworkIfAvailable(path As String) As IntPtr
+            If Not OperatingSystem.IsMacOS() Then Return IntPtr.Zero
+            Try
+                Return NativeLibrary.Load(path)
+            Catch
+                Return IntPtr.Zero
+            End Try
+        End Function
+
+        Private Shared Sub Release(value As IntPtr)
+            If value <> IntPtr.Zero Then CFRelease(value)
+        End Sub
+
         Private Shared Function StringToUtf8(value As String) As IntPtr
             Dim bytes = Text.Encoding.UTF8.GetBytes(value)
             Dim ptr = Marshal.AllocCoTaskMem(bytes.Length + 1)
             Marshal.Copy(bytes, 0, ptr, bytes.Length)
             Marshal.WriteByte(ptr, bytes.Length, 0)
             Return ptr
+        End Function
+
+        Private Const CoreFoundationFramework As String =
+            "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation"
+        Private Const ImageIoFramework As String =
+            "/System/Library/Frameworks/ImageIO.framework/ImageIO"
+        Private Shared ReadOnly CoreFoundationHandle As IntPtr =
+            LoadFrameworkIfAvailable(CoreFoundationFramework)
+        Private Shared ReadOnly ImageIoHandle As IntPtr =
+            LoadFrameworkIfAvailable(ImageIoFramework)
+        Private Const CFNumberSInt32Type As Integer = 3
+        Private Const CFStringEncodingUtf8 As UInteger = &H8000100UI
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CFURLCreateFromFileSystemRepresentation(
+            allocator As IntPtr,
+            buffer As Byte(),
+            bufferLength As UIntPtr,
+            <MarshalAs(UnmanagedType.I1)> isDirectory As Boolean) As IntPtr
+        End Function
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CFNumberCreate(
+            allocator As IntPtr,
+            numberType As Integer,
+            ByRef value As Integer) As IntPtr
+        End Function
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CFDictionaryCreate(
+            allocator As IntPtr,
+            keys As IntPtr(),
+            values As IntPtr(),
+            count As UIntPtr,
+            keyCallbacks As IntPtr,
+            valueCallbacks As IntPtr) As IntPtr
+        End Function
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CFDictionaryGetValue(dictionary As IntPtr, key As IntPtr) As IntPtr
+        End Function
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CFNumberGetValue(
+            number As IntPtr,
+            numberType As Integer,
+            ByRef value As Integer) As Integer
+        End Function
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CFDataCreateMutable(
+            allocator As IntPtr,
+            capacity As UIntPtr) As IntPtr
+        End Function
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CFStringCreateWithCString(
+            allocator As IntPtr,
+            value As String,
+            encoding As UInteger) As IntPtr
+        End Function
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CFDataGetLength(data As IntPtr) As Long
+        End Function
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CFDataGetBytePtr(data As IntPtr) As IntPtr
+        End Function
+
+        <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Sub CFRelease(value As IntPtr)
+        End Sub
+
+        <DllImport(ImageIoFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CGImageSourceCreateWithURL(url As IntPtr, options As IntPtr) As IntPtr
+        End Function
+
+        <DllImport(ImageIoFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CGImageSourceCopyPropertiesAtIndex(
+            source As IntPtr,
+            index As UIntPtr,
+            options As IntPtr) As IntPtr
+        End Function
+
+        <DllImport(ImageIoFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CGImageSourceCreateThumbnailAtIndex(
+            source As IntPtr,
+            index As UIntPtr,
+            options As IntPtr) As IntPtr
+        End Function
+
+        <DllImport(ImageIoFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CGImageDestinationCreateWithData(
+            data As IntPtr,
+            type As IntPtr,
+            count As UIntPtr,
+            options As IntPtr) As IntPtr
+        End Function
+
+        <DllImport(ImageIoFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Sub CGImageDestinationAddImage(
+            destination As IntPtr,
+            image As IntPtr,
+            properties As IntPtr)
+        End Sub
+
+        <DllImport(ImageIoFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CGImageDestinationFinalize(destination As IntPtr) As Integer
         End Function
 
     End Class
