@@ -84,15 +84,17 @@ Namespace Services
                 If bmp Is Nothing Then Return
                 Dim r = AnalyzeAutoAdjustments(bmp)
                 If Not r.HasMeasurement OrElse r.IsNeutral() Then Return
-                adj.Exposure = r.Exposure
-                adj.Contrast = r.Contrast
-                adj.Highlights = r.Highlights
-                adj.ShadowsLevel = r.ShadowsLevel
-                adj.Whites = r.Whites
-                adj.Blacks = r.Blacks
-                adj.Vibrance = r.Vibrance
-                adj.Temperature = r.Temperature
-                adj.Tint = r.Tint
+                ' Die Messung rechnet in Double, die Regler sind Single. Das Verengen stand
+                ' vorher unsichtbar im Compiler; ausgeschrieben ist es nachvollziehbar.
+                adj.Exposure = CSng(r.Exposure)
+                adj.Contrast = CSng(r.Contrast)
+                adj.Highlights = CSng(r.Highlights)
+                adj.ShadowsLevel = CSng(r.ShadowsLevel)
+                adj.Whites = CSng(r.Whites)
+                adj.Blacks = CSng(r.Blacks)
+                adj.Vibrance = CSng(r.Vibrance)
+                adj.Temperature = CSng(r.Temperature)
+                adj.Tint = CSng(r.Tint)
             End Using
         End Sub
 

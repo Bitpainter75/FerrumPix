@@ -79,27 +79,52 @@ Namespace Services
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}
 
         Public Shared Function Load() As List(Of FavoriteEntry)
+            Dim entries As List(Of FavoriteEntry) = Nothing
+            TryLoad(entries)
+            Return entries
+        End Function
+
+        ''' <summary>
+        ''' Liest die Favoriten und sagt, OB das gelungen ist. Der Unterschied ist der Kern:
+        ''' Aendern besteht aus Lesen und Zurueckschreiben, und nach einem misslungenen Lesen
+        ''' darf gar nicht geschrieben werden - sonst ersetzt der naechste gesetzte Favorit den
+        ''' gesamten Bestand durch eine Datei mit genau diesem einen Eintrag.
+        '''
+        ''' Liefert immer eine benutzbare Liste (fuer die Anzeige), aber False, wenn die Datei
+        ''' da war und nicht gelesen werden konnte. Eine fehlende Datei ist KEIN Fehler.
+        ''' </summary>
+        Private Shared Function TryLoad(ByRef entries As List(Of FavoriteEntry)) As Boolean
+            entries = New List(Of FavoriteEntry)()
             Try
-                If Not File.Exists(FavoritesPath) Then Return New List(Of FavoriteEntry)()
-                Return Normalize(JsonSerializer.Deserialize(Of List(Of FavoriteEntry))(File.ReadAllText(FavoritesPath)))
-            Catch
-                Return New List(Of FavoriteEntry)()
+                If Not File.Exists(FavoritesPath) Then Return True
+                entries = Normalize(JsonSerializer.Deserialize(Of List(Of FavoriteEntry))(File.ReadAllText(FavoritesPath)))
+                Return True
+            Catch ex As JsonException
+                ' Angebrochene Datei zur Seite legen, bevor irgendetwas sie ueberschreibt.
+                JsonStoreService.BackupUnreadable(FavoritesPath, "Favorites")
+                entries = New List(Of FavoriteEntry)()
+                Return False
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Favorites.Load", ex)
+                entries = New List(Of FavoriteEntry)()
+                Return False
             End Try
         End Function
 
         Public Shared Sub Save(entries As IEnumerable(Of FavoriteEntry))
-            Try
-                Directory.CreateDirectory(FavoritesDirectory)
-                File.WriteAllText(FavoritesPath, JsonSerializer.Serialize(Normalize(entries?.ToList()), JsonOptions))
-            Catch
-            End Try
+            JsonStoreService.WriteAtomic(FavoritesPath,
+                                         JsonSerializer.Serialize(Normalize(entries?.ToList()), JsonOptions),
+                                         "Favorites")
         End Sub
 
         ''' <summary>Legt den Favoriten an, wenn er noch nicht da ist. Liefert True, wenn sich die
         ''' Liste geaendert hat (der Aufrufer meldet es dann in der Statuszeile).</summary>
         Public Shared Function Add(entry As FavoriteEntry) As Boolean
             If entry Is Nothing Then Return False
-            Dim entries = Load()
+            Dim entries As List(Of FavoriteEntry) = Nothing
+            ' Nicht schreiben, wenn das Lesen misslungen ist: die Liste waere dann leer und
+            ' wuerde den ganzen Bestand ersetzen.
+            If Not TryLoad(entries) Then Return False
             If entries.Any(Function(f) String.Equals(f.Key, entry.Key, StringComparison.Ordinal)) Then Return False
             entries.Add(entry)
             Save(entries)
@@ -108,7 +133,8 @@ Namespace Services
 
         Public Shared Function Remove(key As String) As Boolean
             If String.IsNullOrWhiteSpace(key) Then Return False
-            Dim entries = Load()
+            Dim entries As List(Of FavoriteEntry) = Nothing
+            If Not TryLoad(entries) Then Return False
             Dim removed = entries.RemoveAll(Function(f) String.Equals(f.Key, key, StringComparison.Ordinal))
             If removed <= 0 Then Return False
             Save(entries)

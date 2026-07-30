@@ -2116,7 +2116,16 @@ Namespace Views
                     ' unbehandelten Ereignis weiter (siehe MainWindow.OnWindowKeyDown).
                     Case Key.V
                         e.Handled = True
-                        Await PasteClipboardIntoFolder(vm.CurrentFolder)
+                        ' Der einzige Await in diesem Ereignis. Ohne diese Grenze waere eine
+                        ' Ausnahme daraus eine unbeobachtete Aufgabe: sie kaeme nirgends an und
+                        ' koennte je nach Einstellung den Prozess beenden. Async Sub hat keinen
+                        ' Aufrufer, der sie auffangen koennte - die Grenze muss hier stehen.
+                        Try
+                            Await PasteClipboardIntoFolder(vm.CurrentFolder)
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("Gallery.Paste", ex)
+                            vm.StatusText = LocalizationService.T("Einfügen aus der Zwischenablage ist fehlgeschlagen")
+                        End Try
                         Return
                     Case Key.F
                         ' Strg+F bleibt die Suche; „Filter anwenden" liegt auf Strg+W

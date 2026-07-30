@@ -647,7 +647,13 @@ Namespace Services
                 ' die trotzdem 8 Bit liefert, wird unveraendert umgepackt.
                 If imageType <> 2 OrElse colors <> 3 OrElse (bits <> 8 AndAlso bits <> 16) Then Return Nothing
                 Dim pixelCount = CheckedPixelCount(width, height)
-                If pixelCount <= 0 OrElse pixelCount > Integer.MaxValue \ 4 Then Return Nothing
+                ' Die Schranke muss den GROESSTEN Schritt abdecken, der weiter unten gerechnet
+                ' wird, nicht nur den des Zielpuffers. Der ist 4 Byte je Pixel, die 16-Bit-Quelle
+                ' in Convert16 aber 6. Dort wird der Zeigerversatz (Zeile mal Schrittweite) fuer
+                ' IntPtr.op_Addition auf Integer verengt - mit einer festen 4-Byte-Schranke lag
+                ' der Ueberlaufpunkt INNERHALB des Erlaubten statt dahinter.
+                Dim maxBytesProPixel = Math.Max(4, 3 * (bits \ 8))
+                If pixelCount <= 0 OrElse pixelCount > Integer.MaxValue \ maxBytesProPixel Then Return Nothing
                 If dataSize < pixelCount * 3L * (bits \ 8) Then Return Nothing
 
                 Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
@@ -900,7 +906,10 @@ Namespace Services
                                 Dim yy = Math.Min(Math.Max(zy, 0), height - 1)
                                 Dim slot = yy Mod RingGroesse
                                 If ringZeile(slot) <> yy Then
-                                    Marshal.Copy(data + CLng(yy) * rowBytes, ring(slot), 0, width * 3)
+                                    ' Versatz in Integer, siehe HeifDecodeService: IntPtr addiert
+                                    ' nur Integer. Die Schranke des Aufrufers ist auf 6 Byte je
+                                    ' Pixel bemessen, also auf genau diese Schrittweite.
+                                    Marshal.Copy(data + yy * rowBytes, ring(slot), 0, width * 3)
                                     ringZeile(slot) = yy
                                 End If
                                 Return ring(slot)

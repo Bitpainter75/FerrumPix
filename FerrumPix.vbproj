@@ -20,6 +20,12 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <EnableNETAnalyzers>False</EnableNETAnalyzers>
+    <!-- Ohne diesen Schalter gilt der VB-Standard "aus": spaete Bindung und verengende
+         Umwandlungen uebersetzen stillschweigend, und die Warnungen, die sie melden wuerden,
+         sind mit abgeschaltet. Die gemeldeten "0 Warnungen" waren damit zum Teil ein Ergebnis
+         dieser Unterdrueckung. Gerade in VB ist das teuer: True wird zur Zahl -1 und nicht 1,
+         und ein Boolean, wo ein Double stehen sollte, faellt sonst niemandem auf. -->
+    <OptionStrict>On</OptionStrict>
   </PropertyGroup>
 
   <ItemGroup>

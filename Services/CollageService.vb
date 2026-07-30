@@ -299,13 +299,16 @@ Namespace Services
                         Dim rightOthers = otherIndices.Where(Function(idx, i) i Mod 4 = 3).ToList()
 
                         If topOthers.Count > 0 Then
-                            Dim w = Math.Max(1.0F, usableWidth / topOthers.Count)
+                            ' CSng vor dem Teilen: VBs "/" liefert auf zwei Integer ein Double,
+                            ' und die Slot-Felder sind Single. Ohne das rechnet die halbe Zeile
+                            ' in doppelter Genauigkeit und wird beim Zuweisen wieder verengt.
+                            Dim w = Math.Max(1.0F, CSng(usableWidth) / topOthers.Count)
                             For i = 0 To topOthers.Count - 1
                                 slots.Add(New CollageSlot With {.SourceIndex = topOthers(i), .X = margin + i * w, .Y = margin, .Width = w, .Height = topBottomHeight, .RotationDegrees = 0})
                             Next
                         End If
                         If bottomOthers.Count > 0 Then
-                            Dim w = Math.Max(1.0F, usableWidth / bottomOthers.Count)
+                            Dim w = Math.Max(1.0F, CSng(usableWidth) / bottomOthers.Count)
                             For i = 0 To bottomOthers.Count - 1
                                 slots.Add(New CollageSlot With {.SourceIndex = bottomOthers(i), .X = margin + i * w, .Y = heroY + heroCenterSize, .Width = w, .Height = topBottomHeight, .RotationDegrees = 0})
                             Next
@@ -332,7 +335,7 @@ Namespace Services
                     Dim otherY = If(position = "TOP", margin + heroHeight, CSng(margin))
                     slots.Add(New CollageSlot With {.SourceIndex = heroIndex, .X = margin, .Y = heroY, .Width = usableWidth, .Height = heroHeight, .RotationDegrees = 0})
                     If otherCount > 0 Then
-                        Dim otherWidth = Math.Max(1.0F, usableWidth / otherCount)
+                        Dim otherWidth = Math.Max(1.0F, CSng(usableWidth) / otherCount)
                         For i = 0 To otherCount - 1
                             slots.Add(New CollageSlot With {.SourceIndex = otherIndices(i), .X = margin + i * otherWidth, .Y = otherY, .Width = otherWidth, .Height = otherHeight, .RotationDegrees = 0})
                         Next

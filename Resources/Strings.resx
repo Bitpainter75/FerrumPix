@@ -5613,4 +5613,7 @@
   <data name="Vordergrund_dbedb6b4" xml:space="preserve">
     <value>Foreground</value>
   </data>
+  <data name="Einf_gen_aus_der_Zwischenablage_ist_fehlgeschlag_b55d44e1" xml:space="preserve">
+    <value>Pasting from the clipboard failed</value>
+  </data>
 </root>

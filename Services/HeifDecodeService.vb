@@ -210,14 +210,19 @@ Namespace Services
                     Dim row(rowBytes - 1) As Byte
                     Dim ziel = bitmap.GetPixels()
                     Dim zielStride = bitmap.RowBytes
+                    ' Der Versatz wird bewusst in Integer gerechnet und NICHT in Long: IntPtr
+                    ' addiert nur Integer, ein Long wuerde ohnehin wieder verengt - das frueher
+                    ' hier stehende CLng sah nach 64-Bit-Sicherheit aus, ohne welche zu geben.
+                    ' So wirft eine Ueberschreitung sichtbar, statt still umzulaufen; verhindert
+                    ' wird sie durch die Schranke weiter oben (Integer.MaxValue \ 4).
                     For y = 0 To height - 1
-                        Marshal.Copy(plane + CLng(y) * stride, row, 0, rowBytes)
+                        Marshal.Copy(plane + y * stride, row, 0, rowBytes)
                         For x = 0 To rowBytes - 4 Step 4
                             Dim r = row(x)
                             row(x) = row(x + 2)
                             row(x + 2) = r
                         Next
-                        Marshal.Copy(row, 0, ziel + CLng(y) * zielStride, rowBytes)
+                        Marshal.Copy(row, 0, ziel + y * zielStride, rowBytes)
                     Next
                     Return bitmap
                 Catch

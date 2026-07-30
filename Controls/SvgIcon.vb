@@ -167,7 +167,7 @@ Namespace Controls
 
             Dim relativePath = source.Substring(iconIndex + IconAssetPrefix.Length)
             Dim fileName = Path.GetFileName(relativePath)
-            Dim mappedFile = Nothing
+            Dim mappedFile As String = Nothing
             If Not LegacyOutlineFileMap.TryGetValue(fileName, mappedFile) Then Return source
 
             Return OutlineAssetBase & mappedFile

@@ -5611,4 +5611,7 @@
   <data name="Vordergrund_dbedb6b4" xml:space="preserve">
     <value>Primeiro plano</value>
   </data>
+  <data name="Einf_gen_aus_der_Zwischenablage_ist_fehlgeschlag_b55d44e1" xml:space="preserve">
+    <value>Falha ao colar da área de transferência</value>
+  </data>
 </root>

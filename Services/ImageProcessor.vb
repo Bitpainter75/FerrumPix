@@ -302,7 +302,7 @@ Namespace Services
         Private _textPathStartOffset As Single
         Private _letterSpacingPercent As Single
         Private _bold As Boolean
-        Private _italic As Boolean = 0
+        Private _italic As Boolean = False
         Private _fillColor2 As String = "#FFFFFFFF"
         Private _gradientAngleDegrees As Single = 0
         Private _gradientInverted As Boolean = False
@@ -10291,7 +10291,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         For row As Integer = 0 To count - 1
                             For col As Integer = 0 To modules(row).Count - 1
                                 If modules(row)(col) Then
-                                    canvas.DrawRect(left + col * cell, top + row * cell, Math.Ceiling(cell), Math.Ceiling(cell), fg)
+                                    ' Math.Ceiling liefert Double, DrawRect nimmt Single.
+                                    Dim kante = CSng(Math.Ceiling(cell))
+                                    canvas.DrawRect(left + col * cell, top + row * cell, kante, kante, fg)
                                 End If
                             Next
                         Next

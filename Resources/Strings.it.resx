@@ -5612,4 +5612,7 @@
   <data name="Vordergrund_dbedb6b4" xml:space="preserve">
     <value>Primo piano</value>
   </data>
+  <data name="Einf_gen_aus_der_Zwischenablage_ist_fehlgeschlag_b55d44e1" xml:space="preserve">
+    <value>Incolla dagli appunti non riuscito</value>
+  </data>
 </root>

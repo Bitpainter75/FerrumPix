@@ -41,7 +41,7 @@ Namespace Views
         Private _zoomInitialized As Boolean
         ' Die Bildgroesse, gegen die zuletzt eingepasst wurde.
         Private _letzteEinpassBreite As Double
-        Private _letzteEinpassHoehe As Double = False
+        Private _letzteEinpassHoehe As Double = 0
         Private _ignoreSliderChange As Boolean = False
 
         ' Pan state

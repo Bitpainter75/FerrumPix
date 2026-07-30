@@ -48,25 +48,46 @@ Namespace Services
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}
 
         Public Shared Function Load() As List(Of SearchListEntry)
+            Dim entries As List(Of SearchListEntry) = Nothing
+            TryLoad(entries)
+            Return entries
+        End Function
+
+        ''' <summary>
+        ''' Liest die Suchlisten und sagt, OB das gelungen ist. Siehe FavoritesService.TryLoad:
+        ''' nach einem misslungenen Lesen darf nicht zurueckgeschrieben werden, sonst ersetzt die
+        ''' naechste Aenderung den gesamten Bestand.
+        '''
+        ''' Liefert immer eine benutzbare Liste, aber False, wenn die Datei da war und nicht
+        ''' gelesen werden konnte. Eine fehlende Datei ist KEIN Fehler.
+        ''' </summary>
+        Private Shared Function TryLoad(ByRef entries As List(Of SearchListEntry)) As Boolean
+            entries = New List(Of SearchListEntry)()
             Try
-                If Not File.Exists(SearchListsPath) Then Return New List(Of SearchListEntry)()
-                Dim loaded = JsonSerializer.Deserialize(Of List(Of SearchListEntry))(File.ReadAllText(SearchListsPath))
-                Return Normalize(loaded)
-            Catch
-                Return New List(Of SearchListEntry)()
+                If Not File.Exists(SearchListsPath) Then Return True
+                entries = Normalize(JsonSerializer.Deserialize(Of List(Of SearchListEntry))(File.ReadAllText(SearchListsPath)))
+                Return True
+            Catch ex As JsonException
+                JsonStoreService.BackupUnreadable(SearchListsPath, "SearchLists")
+                entries = New List(Of SearchListEntry)()
+                Return False
+            Catch ex As Exception
+                DiagnosticLogService.LogException("SearchLists.Load", ex)
+                entries = New List(Of SearchListEntry)()
+                Return False
             End Try
         End Function
 
         Public Shared Sub Save(searchLists As IEnumerable(Of SearchListEntry))
-            Try
-                Directory.CreateDirectory(SearchListsDirectory)
-                File.WriteAllText(SearchListsPath, JsonSerializer.Serialize(Normalize(searchLists?.ToList()), JsonOptions))
-            Catch
-            End Try
+            JsonStoreService.WriteAtomic(SearchListsPath,
+                                         JsonSerializer.Serialize(Normalize(searchLists?.ToList()), JsonOptions),
+                                         "SearchLists")
         End Sub
 
         Public Shared Sub Delete(searchListId As String)
-            Dim entries = Load().
+            Dim geladen As List(Of SearchListEntry) = Nothing
+            If Not TryLoad(geladen) Then Return
+            Dim entries = geladen.
                 Where(Function(s) Not String.Equals(s.Id, searchListId, StringComparison.OrdinalIgnoreCase)).
                 ToList()
             Save(entries)

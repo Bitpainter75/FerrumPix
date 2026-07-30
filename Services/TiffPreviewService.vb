@@ -112,7 +112,9 @@ Namespace Services
                                 row(x) = row(x + 2)
                                 row(x + 2) = r
                             Next
-                            Marshal.Copy(row, 0, ziel + CLng(y) * zielStride, rowBytes)
+                            ' Versatz in Integer, siehe HeifDecodeService: IntPtr addiert nur
+                            ' Integer. Die Schranke ist hier MaxPixels (300 Millionen).
+                            Marshal.Copy(row, 0, ziel + y * zielStride, rowBytes)
                         Next
                         Return bitmap
                     Catch
